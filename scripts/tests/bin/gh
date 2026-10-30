@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Offline stand-in for gh: answers from $STUB_DIR, records every call in gh.calls.
+printf '%s\n' "$*" >> "$STUB_DIR/gh.calls"
+[ "${STUB_GH_FAIL:-0}" = 1 ] && { echo "stub: network down" >&2; exit 1; }
+args="$*"
+case "$args" in
+  *search/issues*) cat "$STUB_DIR/search.json";;
+  *"api user"*) echo '{"login":"design-bot"}' | { if [[ "$args" == *"--jq"* ]]; then echo design-bot; else cat; fi; };;
+  *pulls/*/files*)
+    n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+)/files.*#\1#')"
+    f="$STUB_DIR/files-$n.txt"; [ -f "$f" ] && cat "$f";;
+  *) echo "stub: unhandled gh $args" >&2; exit 1;;
+esac

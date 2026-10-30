@@ -1,0 +1,87 @@
+<!-- REVIEW BAR — prototype chrome, not the product. `design build` puts it where the
+     design:review-bar marker sits; it is the only hand-written styling in a prototype,
+     and it keeps out of the app's classes on purpose.
+     Views: each view root carries data-view="1".."n" and data-view-name="…".
+     Title: <html data-review-title="#123 · Issue title">.
+     Empty state: populated content in [data-populated], the empty one in [data-empty-view].
+     Menus: trigger data-menu-trigger="id" (+ data-menu-side="top", data-menu-align="start");
+     the menu element id="id". The style line names which style the build used. -->
+<style data-review>
+  :root{--review-h:41px;}
+  body > [data-view] .h-dvh, body > [data-view].h-dvh, body > [data-view] .h-screen, body > [data-view].h-screen{height:calc(100dvh - var(--review-h)) !important;}
+  #review{position:sticky;top:0;z-index:9999;height:var(--review-h);box-sizing:border-box;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 16px;font:500 12px/1.4 "IBM Plex Sans",system-ui,sans-serif;background:#f2f4f8;color:#161616;border-bottom:1px dashed #a2a9b0;}
+  .dark #review{background:#262626;color:#f4f4f4;border-color:#525252;}
+  #review b{font-weight:600;margin-right:4px;}
+  #review .style{opacity:.65;font-weight:400;margin-left:auto;}
+  #review .seg{display:inline-flex;gap:2px;padding:2px;border-radius:8px;border:1px solid #c1c7cd;}
+  #review .seg button{all:unset;cursor:pointer;padding:4px 10px;border-radius:6px;opacity:.7;}
+  #review .seg button[aria-pressed="true"]{background:#161616;color:#fff;opacity:1;}
+  .dark #review .seg button[aria-pressed="true"]{background:#f4f4f4;color:#161616;}
+  [data-view]:not(.review-shown){display:none !important;}
+  html.review-empty [data-populated]{display:none !important;}
+  html:not(.review-empty) [data-empty-view]{display:none !important;}
+  #review .seg[hidden]{display:none;}
+</style>
+<div id="review">
+  <b id="review-title"></b>
+  <span class="seg" id="review-views"></span>
+  <span class="seg" data-group="empty"><button data-empty="0" aria-pressed="true">Populated</button><button data-empty="1" aria-pressed="false">Empty state</button></span>
+  <span class="seg" data-group="theme"><button data-theme="light" aria-pressed="true">Light</button><button data-theme="dark" aria-pressed="false">Dark</button></span>
+  <span class="style" id="review-style"></span>
+</div>
+<script>
+  (() => {
+    const de = document.documentElement;
+    document.getElementById("review-title").textContent = de.dataset.reviewTitle || document.title;
+    document.getElementById("review-style").textContent = de.dataset.reviewStyle || "";
+    const closeMenus = () => document.querySelectorAll("[data-menu-open]").forEach((m) => { m.hidden = true; m.removeAttribute("data-menu-open"); });
+    const press = (b) => b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    const syncEmpty = () => {
+      const v = document.querySelector("[data-view].review-shown") || document.body;
+      const seg = document.querySelector('#review [data-group="empty"]');
+      if (seg) seg.hidden = !v.querySelector("[data-populated]");
+    };
+    const show = (n) => { document.querySelectorAll("[data-view]").forEach((v) => v.classList.toggle("review-shown", v.dataset.view === n)); syncEmpty(); };
+    addEventListener("DOMContentLoaded", () => {
+      const seg = document.getElementById("review-views");
+      document.querySelectorAll("[data-view]").forEach((v, i) => {
+        const b = document.createElement("button");
+        b.dataset.reviewView = v.dataset.view; b.setAttribute("aria-pressed", i === 0);
+        b.textContent = `${v.dataset.view} · ${v.dataset.viewName || "View " + v.dataset.view}`;
+        seg.appendChild(b);
+      });
+      if (!seg.children.length) seg.remove();
+      document.querySelectorAll("#review button").forEach((b) => b.addEventListener("click", () => {
+        press(b);
+        if (b.dataset.reviewView) { show(b.dataset.reviewView); scrollTo(0, 0); }
+        if (b.dataset.empty) de.classList.toggle("review-empty", b.dataset.empty === "1");
+        if (b.dataset.theme) de.classList.toggle("dark", b.dataset.theme === "dark");
+      }));
+      show(document.querySelector("[data-view]")?.dataset.view);
+      new MutationObserver(() => {
+        const d = de.classList.contains("dark"), e = de.classList.contains("review-empty");
+        document.querySelectorAll('#review [data-theme]').forEach((x) => x.setAttribute("aria-pressed", (x.dataset.theme === "dark") === d));
+        document.querySelectorAll('#review [data-empty]').forEach((x) => x.setAttribute("aria-pressed", (x.dataset.empty === "1") === e));
+      }).observe(de, { attributes: true, attributeFilter: ["class"] });
+      // Menus portal to <body> like Radix does, so a card's overflow-hidden never clips them.
+      document.querySelectorAll("[data-menu-trigger]").forEach((t) => {
+        const m = document.getElementById(t.dataset.menuTrigger);
+        if (!m) return;
+        m.hidden = true; document.body.appendChild(m);
+        Object.assign(m.style, { position: "fixed", zIndex: 60 });
+        t.addEventListener("click", (e) => {
+          e.stopPropagation(); const open = !m.hidden; closeMenus(); if (open) return;
+          m.hidden = false; m.setAttribute("data-menu-open", "");
+          const r = t.getBoundingClientRect(), w = m.offsetWidth, hgt = m.offsetHeight;
+          const up = t.dataset.menuSide === "top" || (r.bottom + 4 + hgt > innerHeight - 8 && r.top - 4 - hgt > 8);
+          m.style.top = `${up ? r.top - 4 - hgt : r.bottom + 4}px`;
+          const x = t.dataset.menuAlign === "start" ? r.left : r.right - w;
+          m.style.left = `${Math.max(8, Math.min(x, innerWidth - w - 8))}px`;
+        });
+      });
+    });
+    addEventListener("click", (e) => { if (!e.target.closest("[data-menu-open]")) closeMenus(); });
+    addEventListener("scroll", closeMenus, true);
+    addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
+  })();
+</script>

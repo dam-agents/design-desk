@@ -1,0 +1,378 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Demo</title>
+<!-- Local copies, so nothing loads from a CDN: `design vendor .` writes vendor/. -->
+<link rel="stylesheet" href="vendor/fonts.css">
+<script src="vendor/react.js"></script>
+<script src="vendor/react-dom.js"></script>
+<script src="vendor/babel.js"></script>
+<style>html,body{margin:0;height:100%;background:#f2f4f8;overflow:hidden}*{box-sizing:border-box}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+// ================= VIDEO (edit per video) =================
+const VIDEO = {
+  wordmark: 'Product',                               // the product's name, top left and on the cards
+  subtitle: 'Demo · A walkthrough',                  // mono line under the opening tagline
+  label: 'Example · Walkthrough',                    // mono label above the progress bar
+  tagline: 'One sentence on what the product is',    // opening card
+  closer: 'One sentence the viewer should leave with.', // end card
+  chips: ['Capability one', 'Capability two', 'Capability three'], // real capabilities only
+  link: 'example.com/docs',
+  accent: '#0f62fe',                                 // `design video-theme` sets this from the style
+};
+
+// ================= ENGINE (don't edit per video) =================
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const Easing = {
+  outCubic: t => 1 - Math.pow(1 - t, 3),
+  inOutCubic: t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  inOutQuart: t => t < .5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2,
+  inOutSine: t => -(Math.cos(Math.PI * t) - 1) / 2,
+  outBack: t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
+};
+const MOTION = { enter: Easing.outCubic, draw: Easing.inOutQuart, pop: Easing.outBack, glide: Easing.inOutSine };
+const tw = (T, start, dur, ease = MOTION.enter) => ease(clamp((T - start) / dur, 0, 1));
+// keys: [[t, a, b, ...], ...] → interpolated [a, b, ...] with easeInOutCubic between keys
+const keyPath = (T, keys) => {
+  if (T <= keys[0][0]) return keys[0].slice(1);
+  for (let i = 1; i < keys.length; i++) if (T <= keys[i][0]) {
+    const p = Easing.inOutCubic((T - keys[i - 1][0]) / (keys[i][0] - keys[i - 1][0] || 1));
+    return keys[i].slice(1).map((v, j) => lerp(keys[i - 1][j + 1], v, p));
+  }
+  return keys[keys.length - 1].slice(1);
+};
+const typeTimes = (str, rate = 1) => { let t = 0; return str.split('').map((ch, i) => (t += (0.1 + 0.05 * (0.5 + 0.5 * Math.sin(i * 2.3)) + (ch === '-' || ch === ' ' ? 0.12 : 0)) * rate)); };
+const typedCount = (T, start, TT) => { let n = 0; while (n < TT.length && T >= start + TT[n]) n++; return n; };
+const ShotCtx = React.createContext(null);
+const useShot = () => React.useContext(ShotCtx);
+const SHOTS = [];
+
+const SANS = "'IBM Plex Sans', system-ui, sans-serif", MONO = "'IBM Plex Mono', ui-monospace, monospace";
+const C_ACCENT_LIGHT = VIDEO.accent + '14';
+const C = { bg: '#ffffff', fg: '#121619', muted: '#4d5358', faint: '#8d9196', mutedBg: '#f2f4f8', border: '#dde1e6', accent: VIDEO.accent, accentLight: C_ACCENT_LIGHT, success: '#24a148', successLight: '#defbe6', successFg: '#15803d', warning: '#ff832b', kit: '#8a3ffc', kitLight: '#f6f2ff' };
+// Stage geometry, in 1920x1080 canvas px.
+const RAIL = { x: 96, w: 470 };
+const WIN = { x: 635, y: 91, w: 1204, h: 898 };    // step shots: window right of the rail
+const WIDE = { x: 291, y: 41, w: 1338, h: 998 };   // payoff shot: rail gone, window grows
+const AW = 1280, AH = Math.round(AW * WIN.h / WIN.w); // product UI authored at real desktop size (1280x955)
+
+// Light stage behind everything: grid + soft glow. Never changes between shots, so cuts never flash.
+function Stage({ children }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: C.mutedBg, overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(18,22,25,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(18,22,25,0.045) 1px, transparent 1px)', backgroundSize: '64px 64px', backgroundPosition: '32px 26px' }}></div>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(460px 300px at 580px 210px, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)' }}></div>
+      {children}
+    </div>
+  );
+}
+function Wordmark({ size, style }) {
+  return <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: size, lineHeight: 1, letterSpacing: '-0.02em', color: C.fg, ...style }}>{VIDEO.wordmark}</div>;
+}
+// Left rail: wordmark, step eyebrow, title, body, label + segmented progress.
+function Rail({ T, total, index, count, step, chrome, text }) {
+  const n = String(index + 1).padStart(2, '0'), of = String(count).padStart(2, '0');
+  return (
+    <>
+      <Wordmark size={44} style={{ position: 'absolute', left: RAIL.x, top: 86, opacity: chrome }} />
+      <div style={{ position: 'absolute', left: RAIL.x, top: 378, width: RAIL.w, opacity: text, transform: `translateY(${(1 - text) * 14}px)` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontFamily: MONO, fontSize: 20, letterSpacing: '0.08em' }}>
+          <span style={{ width: 28, height: 2, background: C.accent }}></span>
+          <span style={{ color: C.accent, fontWeight: 500 }}>STEP {n}</span><span style={{ color: C.faint }}>/ {of}</span>
+        </div>
+        <div style={{ marginTop: 18, fontFamily: SANS, fontSize: 60, fontWeight: 400, lineHeight: 1.08, letterSpacing: '-0.02em', color: C.fg, textWrap: 'balance' }}>{step.title}</div>
+        <div style={{ marginTop: 26, fontFamily: SANS, fontSize: 24, lineHeight: 1.5, color: C.muted, textWrap: 'pretty' }}>{step.body}</div>
+      </div>
+      <div style={{ position: 'absolute', left: RAIL.x, top: 952, width: RAIL.w, opacity: chrome }}>
+        <div style={{ fontFamily: MONO, fontSize: 16, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.muted }}>{VIDEO.label}</div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 18 }}>
+          {Array.from({ length: count }, (_, i) => (
+            <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: C.border, overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: i < index ? C.fg : C.accent, width: i < index ? '100%' : i === index ? `${(T / total) * 100}%` : 0 }}></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+// "▶▶ 4×" pill, top-right of the window: marks a wait shown faster than real time.
+function SpeedBadge({ label, p }) {
+  if (p <= 0) return null;
+  return (
+    <div style={{ position: 'absolute', right: 22, top: 22, zIndex: 95, height: 44, padding: '0 18px', borderRadius: 22, display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(22,22,22,0.88)', color: '#fff', fontFamily: SANS, fontWeight: 600, fontSize: 22, opacity: p, transform: `scale(${0.9 + 0.1 * p})`, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}>
+      <svg width={24} height={16} viewBox="0 0 24 16"><path d="M1 1 L11 8 L1 15 Z M12 1 L22 8 L12 15 Z" fill="#fff" /></svg>{label}
+    </div>
+  );
+}
+// The app window. Children are the 1280x955 app; cam = [zoom, focusX, focusY] in app px (zoom 1 = whole app fits).
+function Window({ rect, cam, content, rise, blur, children, speed }) {
+  const [z, fx, fy] = cam, k = (rect.w / AW) * z;
+  const tx = clamp(rect.w / 2 - fx * k, rect.w - AW * k, 0), ty = clamp(rect.h / 2 - fy * k, rect.h - AH * k, 0);
+  return (
+    <div style={{ position: 'absolute', left: rect.x, top: rect.y, width: rect.w, height: rect.h, borderRadius: 12, overflow: 'hidden', background: '#fff', boxShadow: '0 24px 60px rgba(18,22,25,0.10), 0 2px 6px rgba(18,22,25,0.06), 0 0 0 1px rgba(18,22,25,0.06)', opacity: rise, transform: `translateY(${(1 - rise) * 24}px)`, filter: blur ? `blur(${blur}px)` : 'none' }}>
+      <div style={{ position: 'absolute', left: 0, top: 0, width: AW, height: AH, transformOrigin: '0 0', transform: `translate(${tx}px,${ty}px) scale(${k})`, opacity: content }}>{children}</div>
+      {speed}
+    </div>
+  );
+}
+// App root inside the window. Cursor and Focus find it with closest('[data-approot]'): the root's own ref
+// isn't attached yet when a child's layout effect runs on the first frame of a shot.
+function AppRoot({ children }) {
+  return <div data-approot="" style={{ position: 'absolute', inset: 0, background: C.bg, color: C.fg, fontFamily: SANS, fontSize: 14, lineHeight: 1.5, WebkitFontSmoothing: 'antialiased', overflow: 'hidden' }}>{children}</div>;
+}
+const measure = (root, name, dx = 0.5, dy = 0.5) => {
+  const n = root && root.querySelector(`[data-t="${name}"]`); if (!n) return null;
+  const rr = root.getBoundingClientRect(), r = n.getBoundingClientRect(), k = rr.width / AW; if (!r.width) return null;
+  return { x: (r.left - rr.left) / k, y: (r.top - rr.top) / k, w: r.width / k, h: r.height / k, px: (r.left - rr.left) / k + (r.width / k) * dx, py: (r.top - rr.top) / k + (r.height / k) * dy };
+};
+// Cursor re-measures [data-t] targets every frame, so it stays on target through scrolls and reflows.
+// keys: [[t, 'target', dx?, dy?] | [t, x, y]]; clicks: [t, ...]. Drawn at constant screen size whatever the zoom.
+function LiveCursor({ keys, clicks = [] }) {
+  const { T, zoom } = useShot(); const ref = React.useRef(null);
+  React.useLayoutEffect(() => {
+    const el = ref.current, root = el && el.closest('[data-approot]'); if (!root) return;
+    let last = [AW / 2, AH / 2];
+    const ks = keys.map(k => { let p = typeof k[1] === 'string' ? measure(root, k[1], k[2], k[3]) : { px: k[1], py: k[2] }; p = p ? [p.px, p.py] : last; last = p; return [k[0], p[0], p[1]]; });
+    const [x, y] = keyPath(T, ks); el.style.left = x + 'px'; el.style.top = y + 'px';
+  });
+  const press = clicks.map(t => T >= t && T < t + 0.45 ? (T - t) / 0.45 : 0).find(v => v > 0) || 0;
+  return (
+    <div ref={ref} style={{ position: 'absolute', left: -100, top: -100, zIndex: 90, pointerEvents: 'none', transform: `scale(${1.25 / zoom})`, transformOrigin: '0 0' }}>
+      {press > 0 && <div style={{ position: 'absolute', left: -18, top: -18, width: 36, height: 36, borderRadius: 18, border: '2px solid ' + C.accent, opacity: 1 - press, transform: `scale(${0.4 + press * 0.8})` }}></div>}
+      <svg width={18} height={24} viewBox="0 0 13 19" style={{ display: 'block', transform: `scale(${press > 0 && press < 0.5 ? 0.88 : 1})`, transformOrigin: '0 0', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}>
+        <path d="M1 1 L1 15.5 L4.8 12 L7.6 18 L10 16.9 L7.3 11.1 L12 11.1 Z" fill="#000" stroke="#fff" strokeWidth={1.2} strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+// Blue focus ring around the element being clicked or typed into. p = 0..1 visibility.
+function Focus({ t, p, pad = 5, radius = 10 }) {
+  const ref = React.useRef(null);
+  React.useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    const r = measure(el.closest('[data-approot]'), t);
+    if (!r) { el.style.display = 'none'; return; }
+    Object.assign(el.style, { display: 'block', left: r.x - pad + 'px', top: r.y - pad + 'px', width: r.w + 2 * pad + 'px', height: r.h + 2 * pad + 'px' });
+  });
+  if (p <= 0) return null;
+  return <div ref={ref} style={{ position: 'absolute', zIndex: 80, pointerEvents: 'none', borderRadius: radius, border: '2px solid ' + C.accent, boxShadow: '0 0 0 4px ' + C.accent + '24', opacity: p }}></div>;
+}
+
+// ================= SHOTS (edit per video; array order = edit order) =================
+// layout: 'title' | 'step' | 'payoff' | 'outro'.  step shots carry { step: {title, body} }.
+// camera(T) → [zoom, focusX, focusY];  speed: [[start, end, '4×'], ...] for compressed waits.
+
+SHOTS.push({
+  name: 'Opening', layout: 'title', total: 3.6,
+  Piece() {
+    const { T, total } = useShot();
+    const out = 1 - tw(T, total - 0.4, 0.4);
+    const bar = tw(T, 0.5, 0.8, MOTION.draw), tag = tw(T, 0.6, 0.7), sub = tw(T, 1.3, 0.6);
+    return (
+      <div style={{ position: 'absolute', inset: 0, opacity: out }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 380, display: 'flex', justifyContent: 'center', opacity: tw(T, 0.1, 0.6), transform: `translateY(${(1 - tw(T, 0.1, 0.7)) * 20}px)` }}><Wordmark size={150} /></div>
+        <div style={{ position: 'absolute', left: 960, top: 536, width: 320 * bar, height: 3, background: C.accent, transform: 'translateX(-50%)' }}></div>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 578, textAlign: 'center', fontFamily: SANS, fontWeight: 300, fontSize: 46, color: C.fg, opacity: tag, transform: `translateY(${(1 - tag) * 14}px)` }}>{VIDEO.tagline}</div>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 656, textAlign: 'center', fontFamily: MONO, fontSize: 20, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.muted, opacity: sub }}>{VIDEO.subtitle}</div>
+      </div>
+    );
+  },
+});
+
+// Placeholder UI for the example edit. Replace it with screens recreated from the product's
+// own source (repo mode) or from its screenshots — never from memory.
+const Btn = ({ t, dark, children }) => <div data-t={t} style={{ height: 36, padding: '0 16px', display: 'inline-flex', alignItems: 'center', borderRadius: 6, background: dark ? C.fg : '#fff', color: dark ? '#fff' : C.fg, border: dark ? 'none' : '1px solid ' + C.border, fontSize: 14, fontWeight: 500 }}>{children}</div>;
+const TEMPLATES = [['Weekly report', 'A one-page summary for your team.'], ['Launch plan', 'Milestones, owners and dates.'], ['Research brief', 'Question, method, findings.']];
+
+SHOTS.push({
+  name: 'Pick a template', layout: 'step', total: 9,
+  step: { title: 'Pick a template', body: 'Each template is a ready-made starting point for one kind of document.' },
+  camera: T => keyPath(T, [[0, 1, 640, 478], [2.2, 1, 640, 478], [3.6, 1.45, 640, 430], [9, 1.45, 640, 430]]),
+  Piece() {
+    const { T } = useShot();
+    const cPick = 5.2, picked = T >= cPick, PICK = 'Research brief';
+    return (
+      <AppRoot>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(18,22,25,0.45)' }}></div>
+        <div style={{ position: 'absolute', left: 240, top: 150, width: 800, borderRadius: 10, background: '#fff', padding: 28 }}>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>New document</div>
+          <div style={{ color: C.muted }}>Start from a template</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 22 }}>
+            {TEMPLATES.map(([name, d]) => (
+              <div key={name} data-t={'tpl-' + name} style={{ border: '1px solid ' + (picked && name === PICK ? C.accent : C.border), borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{ height: 110, background: C.accentLight }}></div>
+                <div style={{ padding: 14 }}><div style={{ fontWeight: 600 }}>{name}</div><div style={{ color: C.muted, fontSize: 13 }}>{d}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <Focus t={'tpl-' + PICK} p={tw(T, cPick, 0.25)} />
+        <LiveCursor clicks={[cPick]} keys={[[0, 700, 700], [2.4, 700, 700], [cPick - 0.15, 'tpl-' + PICK], [9, 'tpl-' + PICK, 0.6, 0.7]]} />
+      </AppRoot>
+    );
+  },
+});
+
+SHOTS.push({
+  name: 'Name it', layout: 'step', total: 10,
+  step: { title: 'Name it and share it', body: 'Give it a title and choose who can see it. Only people you add can open it.' },
+  camera: T => keyPath(T, [[0, 1.5, 640, 260], [5.6, 1.5, 640, 260], [7.0, 1.5, 640, 420], [10, 1.5, 640, 420]]),
+  Piece() {
+    const { T } = useShot();
+    const NAME = 'Q3 pricing study', TT = React.useMemo(() => typeTimes(NAME), []), tType = 1.6, cCreate = 8.4;
+    const n = typedCount(T, tType, TT), typing = T > tType && T < tType + TT[TT.length - 1] + 0.3;
+    return (
+      <AppRoot>
+        <div style={{ position: 'absolute', left: 340, top: 80, width: 600, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '1.65px', color: C.muted }}>TITLE</span>
+          <div data-t="name" style={{ height: 40, padding: '0 14px', display: 'flex', alignItems: 'center', borderRadius: 6, border: '1px solid ' + C.border }}>
+            <span style={{ whiteSpace: 'pre' }}>{NAME.slice(0, n)}</span>
+            {T > 1.2 && T < 5.4 && <span style={{ width: 1, height: 18, background: C.fg, opacity: typing || Math.floor(T * 2) % 2 === 0 ? 1 : 0 }}></span>}
+          </div>
+          <span style={{ marginTop: 18, fontSize: 11, fontWeight: 500, letterSpacing: '1.65px', color: C.muted }}>WHO CAN SEE IT</span>
+          <div style={{ padding: 14, borderRadius: 8, border: '1px solid ' + C.border, background: C.accentLight }}>Only people you add · <span style={{ color: C.successFg }}>Private</span></div>
+          <div style={{ height: 120 }}></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}><Btn t="create" dark>{T >= cCreate + 0.1 ? 'Creating…' : 'Create document'}</Btn></div>
+        </div>
+        <Focus t="name" p={tw(T, 1.0, 0.25) * (1 - tw(T, 5.2, 0.25))} />
+        <Focus t="create" p={tw(T, cCreate, 0.25)} />
+        <LiveCursor clicks={[1.0, cCreate]} keys={[[0, 800, 300], [0.85, 'name', 0.3], [5.6, 'name', 0.3, 1.4], [cCreate - 0.15, 'create'], [10, 'create', 0.6, 0.8]]} />
+      </AppRoot>
+    );
+  },
+});
+
+SHOTS.push({
+  name: 'Draft', layout: 'step', total: 8, speed: [[0.4, 3.4, '4×']],
+  step: { title: 'Ask for a first draft', body: 'Describe what you need. The draft fills in the template’s sections.' },
+  Piece() {
+    const { T } = useShot();
+    const ready = tw(T, 3.4, 0.4), cSend = 6.4;
+    return (
+      <AppRoot>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 380, textAlign: 'center', opacity: 1 - ready }}>
+          <div style={{ fontSize: 28 }}>Q3 pricing study</div><div style={{ color: C.warning, fontSize: 13 }}>Preparing</div>
+        </div>
+        <div data-t="input" style={{ position: 'absolute', left: 140, right: 140, bottom: 60, height: 64, padding: '0 18px', display: 'flex', alignItems: 'center', borderRadius: 10, border: '1px solid ' + C.border, opacity: ready }}>
+          {T > 4.2 ? 'Draft the method section from last quarter’s notes' : <span style={{ color: C.faint }}>Message…</span>}
+        </div>
+        <Focus t="input" p={tw(T, 4.0, 0.25) * (1 - tw(T, cSend + 0.2, 0.25))} />
+        <LiveCursor clicks={[4.0, cSend]} keys={[[0, 640, 300], [3.6, 640, 600], [3.85, 'input', 0.3], [cSend - 0.15, 'input', 0.97], [8, 'input', 0.97, 1.2]]} />
+      </AppRoot>
+    );
+  },
+});
+
+SHOTS.push({
+  name: 'Payoff', layout: 'payoff', total: 8,
+  Piece() {
+    const { T } = useShot();
+    const scroll = lerp(0, 1700 - AH, tw(T, 2.0, 4.5, MOTION.glide)); // page scroll = translateY inside the app, not the camera
+    return (
+      <AppRoot>
+        <div style={{ position: 'absolute', left: 0, top: 0, width: AW, height: 1700, padding: '60px 120px', transform: `translateY(${-scroll}px)` }}>
+          <div style={{ fontFamily: MONO, fontSize: 12, color: C.muted }}>DRAFT · READY</div>
+          <div style={{ fontSize: 30, fontWeight: 600, marginTop: 6 }}>The finished document</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 30 }}>
+            {['Question', 'Method', 'Findings', 'Next steps'].map(v => <div key={v} style={{ border: '1px solid ' + C.border, borderRadius: 8, padding: 18, fontSize: 32, fontWeight: 600 }}>{v}</div>)}
+          </div>
+          {[0, 1, 2].map(i => <div key={i} style={{ height: 380, marginTop: 20, border: '1px solid ' + C.border, borderRadius: 8, background: C.mutedBg }}></div>)}
+        </div>
+      </AppRoot>
+    );
+  },
+});
+
+SHOTS.push({
+  name: 'Closing', layout: 'outro', total: 6,
+  Piece() {
+    const { T } = useShot();
+    const a = tw(T, 0, 0.9), tag = tw(T, 0.4, 0.7), link = tw(T, 1.3, 0.5);
+    return (
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 352, display: 'flex', justifyContent: 'center', opacity: a }}><Wordmark size={120} /></div>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 478, textAlign: 'center', fontFamily: SANS, fontWeight: 300, fontSize: 46, color: C.fg, opacity: tag, transform: `translateY(${(1 - tag) * 12}px)` }}>{VIDEO.closer}</div>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 578, display: 'flex', justifyContent: 'center', gap: 14 }}>
+          {VIDEO.chips.map((c, i) => { const p = tw(T, 0.8 + i * 0.1, 0.5); return (
+            <div key={c} style={{ height: 50, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: 6, background: '#fff', border: '1px solid ' + C.border, fontFamily: MONO, fontSize: 20, color: C.fg, opacity: p, transform: `translateY(${(1 - p) * 10}px)` }}>
+              <span style={{ width: 8, height: 8, borderRadius: 1, background: C.accent }}></span>{c}
+            </div>); })}
+        </div>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 684, textAlign: 'center', fontFamily: MONO, fontWeight: 600, fontSize: 25, color: C.accent, opacity: link }}>{VIDEO.link}</div>
+      </div>
+    );
+  },
+});
+
+// ================= PLAYER / RENDER HARNESS =================
+const Q = new URLSearchParams(location.search);
+const RENDER = Q.has('render');
+const LIST = Q.get('shot') ? SHOTS.filter(s => s.name === Q.get('shot')) : SHOTS;
+const STARTS = []; let acc = 0; LIST.forEach(s => { STARTS.push(acc); acc += s.total; });
+const DURATION = acc;
+const STEPS = SHOTS.filter(s => s.layout === 'step');
+
+function ShotHost({ shot, T, prev, next }) {
+  const { total, layout } = shot, P = shot.Piece;
+  const cam = shot.camera ? shot.camera(T) : [1, AW / 2, AH / 2];
+  const ctx = { T, CUES: shot.cues || {}, total, zoom: (WIN.w / AW) * cam[0] };
+  const body = <ShotCtx.Provider value={ctx}><P /></ShotCtx.Provider>;
+  if (layout === 'title' || layout === 'outro') return body;
+  const speed = (shot.speed || []).map(([a, b, label], i) => <SpeedBadge key={i} label={label} p={tw(T, a, 0.25) * (1 - tw(T, b - 0.25, 0.25))} />);
+  if (layout === 'step') {
+    const index = STEPS.indexOf(shot), firstIn = prev?.layout !== 'step', lastOut = next?.layout !== 'step';
+    const chrome = firstIn ? tw(T, 0, 0.6) : 1;
+    const text = tw(T, 0.1, 0.5) * (1 - tw(T, total - 0.35, 0.35));
+    const content = tw(T, 0, 0.3) * (lastOut ? 1 : 1 - tw(T, total - 0.25, 0.25));
+    return <>
+      <Rail T={T} total={total} index={index} count={STEPS.length} step={shot.step} chrome={chrome} text={text} />
+      <Window rect={WIN} cam={cam} content={content} rise={firstIn ? tw(T, 0, 0.7) : 1} speed={speed}>{body}</Window>
+    </>;
+  }
+  // payoff: rail fades out, window grows to WIDE, then dissolves (with blur) into the next shot
+  const g = tw(T, 0, 0.9, MOTION.draw), out = tw(T, total - 1.0, 1.0, MOTION.draw);
+  const rect = { x: lerp(WIN.x, WIDE.x, g), y: lerp(WIN.y, WIDE.y, g), w: lerp(WIN.w, WIDE.w, g), h: lerp(WIN.h, WIDE.h, g) };
+  const last = STEPS[STEPS.length - 1];
+  return <>
+    {prev?.layout === 'step' && <div style={{ opacity: 1 - tw(T, 0, 0.5) }}><Rail T={last.total} total={last.total} index={STEPS.length - 1} count={STEPS.length} step={last.step} chrome={1} text={0} /></div>}
+    <div style={{ opacity: 1 - out }}><Window rect={rect} cam={cam} content={1} rise={1} blur={out * 6} speed={speed}>{body}</Window></div>
+  </>;
+}
+
+function App() {
+  const [t, setT] = React.useState(Number(Q.get('t')) || 0);
+  const [playing, setPlaying] = React.useState(!RENDER && !Q.has('t'));
+  const [scale, setScale] = React.useState(1);
+  React.useEffect(() => { const f = () => setScale(Math.min(innerWidth / 1920, innerHeight / 1080)); f(); addEventListener('resize', f); return () => removeEventListener('resize', f); }, []);
+  React.useEffect(() => {
+    window.__duration = DURATION;
+    window.__setTime = (v) => new Promise(r => { setT(v); requestAnimationFrame(() => requestAnimationFrame(r)); });
+    document.fonts.ready.then(() => setTimeout(() => { window.__ready = true; }, 300));
+    const k = e => { if (e.code === 'Space') setPlaying(p => !p); if (e.code === 'ArrowRight') setT(v => Math.min(DURATION, v + 1)); if (e.code === 'ArrowLeft') setT(v => Math.max(0, v - 1)); };
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k);
+  }, []);
+  React.useEffect(() => {
+    if (!playing) return; let raf, last = performance.now();
+    const step = now => { setT(v => (v + (now - last) / 1000) % DURATION); last = now; raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step); return () => cancelAnimationFrame(raf);
+  }, [playing]);
+  let i = STARTS.findIndex((s, j) => t < s + LIST[j].total); if (i < 0) i = LIST.length - 1;
+  const shot = LIST[i], local = clamp(t - STARTS[i], 0, shot.total);
+  const k = SHOTS.indexOf(shot);
+  return (
+    <div style={{ position: 'absolute', left: '50%', top: '50%', width: 1920, height: 1080, transform: `translate(-50%,-50%) scale(${RENDER ? 1 : scale})`, overflow: 'hidden' }}>
+      <Stage><ShotHost key={shot.name} shot={shot} T={local} prev={SHOTS[k - 1]} next={SHOTS[k + 1]} /></Stage>
+      {!RENDER && <div style={{ position: 'absolute', right: 16, top: 12, fontFamily: MONO, fontSize: 16, color: '#888' }}>{shot.name} · {local.toFixed(1)}s · {t.toFixed(1)}/{DURATION.toFixed(1)}s · space/←/→</div>}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

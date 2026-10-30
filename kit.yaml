@@ -1,0 +1,130 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dam-agents/dam-starter-kits/main/kit.schema.json
+# The starter kit this definition is offered as. It lives here, beside the definition
+# it describes, so a change to the agent and a change to the kit offering it are the
+# same commit. Every schedule's task text is copied verbatim from ONBOARDING.md, the
+# source of truth.
+schemaVersion: v1
+id: design-desk
+name: Design Desk
+tagline: A design partner that explains what shipped and prototypes what's next.
+description: >-
+  Watches the pull requests merged into your product's repository and puts every
+  change to the screens on a shared Desk: screenshots, what changed, why it is like
+  this and what cannot change, in plain words for designers who do not read code.
+  Designers work through the Desk like an inbox, ask follow-up questions, and file
+  design requests; the agent says first what is possible as a design change, then
+  makes two or three variants on sample data that developers and project managers
+  vote and comment on, element by element. An approved direction becomes a live
+  prototype — the real product with only its look changed, checked by a design-only
+  guard, running on its own Environment with demo data — and then a developer spec.
+  Also makes everything the Designer kit did: decks, mockups, walkthroughs, charts,
+  demo videos and copy. Runs an hourly watch, a Desk inbox every 10 minutes, a health
+  monitor and a weekly self-audit; the Desk is one interactive artifact the owner
+  shares with the team.
+category: productivity
+icon: paint-brush
+avatar: spark
+docsUrl: https://github.com/dam-agents/design-desk#readme
+harnesses: [claude-code]
+
+# `self` is this repository, at the commit the kit was resolved at. Into $HOME, so
+# work/ (the Desk, profiles, outputs) sits beside it, git-ignored.
+seed:
+  self: true
+  into: home
+
+# The toolchain (Tailwind, React, Playwright, TypeScript, ffmpeg, fonts) goes into
+# $HOME before the first session. Idempotent; ONBOARDING runs it again and
+# `design doctor` names it as the fix.
+install:
+  command: bash "$HOME/scripts/install-toolkit.sh"
+
+connections:
+  - accepts: [github, github-enterprise]
+    required: true
+    note: >-
+      Reads merged pull requests, their issues and the product's code; clones the
+      repository to build variants and prototypes. Pushes a prototype branch or
+      files a handoff issue only when you turn that on.
+
+channels:
+  - type: slack
+    note: >-
+      Optional. People ask questions and send design requests here; answers come
+      back in the thread. New Desk items are announced only when you turn that on.
+
+# The Desk page talks to this server through the platform's Artifact API relay.
+# It must run at every boot: the platform relays to it but never starts it.
+startupItems:
+  - name: design-desk-server
+    description: The Desk's store and API on the Artifact API port (loopback only)
+    command: ~/desk/serve.sh
+    args: []
+
+resources:
+  storage: 60Gi
+  note: >-
+    A clone of each watched repository with its UI toolchain, prototype worktrees,
+    the images a live prototype builds, screenshots and video frames.
+
+# npm, PyPI and GitHub are on the trusted list. A live prototype of a product runs in
+# an Environment whose egress follows this agent's rules; the product's profile names
+# any registry its install needs, and onboarding proposes those hosts to the owner.
+egressPreset: trusted
+
+bundledSkills:
+  path: .agents/skills
+
+schedules:
+  - name: design-desk-watch-hourly
+    cron: "7 * * * *"
+    description: Turns every UI change merged in the last hour into a Desk card with screens and a plain-language explanation.
+    sessionMode: fresh
+    precheck: 'bash "$HOME/scripts/precheck.sh" watch'
+    task: >-
+      Watch run. The precheck already ran the pre-flight and found work: read the
+      worklist JSON at the path its output names, and never run preflight.sh again
+      this run. If the prompt carries no worklist path, run `bash
+      "$HOME/scripts/preflight.sh" watch` yourself. Then follow CLAUDE.md → "Watch
+      run": read exactly the worklist's read_set, dispatch every change after the
+      first, make one Desk card per change, and back up work/ at the end with `bash
+      "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or work_repo is set.
+  - name: design-desk-inbox-10m
+    cron: "*/10 * * * *"
+    description: Works what people left on the Desk — questions, design requests, variants, prototypes, specs.
+    sessionMode: fresh
+    precheck: 'bash "$HOME/scripts/precheck.sh" inbox'
+    task: >-
+      Inbox run. The precheck already ran the pre-flight and found work: read the
+      worklist JSON at the path its output names, and never run preflight.sh again
+      this run. If the prompt carries no worklist path, run `bash
+      "$HOME/scripts/preflight.sh" inbox` yourself. Then follow CLAUDE.md → "Inbox
+      run": read exactly the worklist's read_set, claim each item before working it,
+      dispatch the expensive ones after the first, and back up work/ at the end with
+      `bash "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or work_repo
+      is set.
+  - name: design-desk-monitor-15m
+    cron: "*/15 * * * *"
+    description: Checks the agent's own health from local files and reports an outage once; silent when healthy.
+    sessionMode: fresh
+    precheck: 'bash "$HOME/scripts/precheck.sh" monitor'
+    task: >-
+      Agent monitor. The precheck already ran scripts/monitor.sh and found alerts
+      due: read the worklist JSON at the path its output names, and never run
+      monitor.sh again this run. If the prompt carries no worklist path, run `bash
+      "$HOME/scripts/monitor.sh"` yourself. Then follow CLAUDE.md → "Monitor run":
+      read docs/monitor.md, report every alert of the worklist in one message,
+      acknowledge them with `bash "$HOME/scripts/monitor.sh" ack <ids>` only after
+      the send, never repair or re-run anything in response, and back up work/ with
+      `bash "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or work_repo
+      is set.
+  - name: design-desk-audit-weekly
+    cron: "0 7 * * 5"
+    description: A weekly self-check of the watch, the Desk, the prototypes and the toolchain, reported in the chat.
+    sessionMode: fresh
+    task: >-
+      Weekly audit. Run `bash "$HOME/scripts/preflight.sh" audit` first — this run is
+      ungated. Follow CLAUDE.md → "Audit run": read docs/audit.md, add the judgment
+      checks, send the report, append its line to work/AUDIT.log, and back up work/
+      with `bash "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or
+      work_repo is set.

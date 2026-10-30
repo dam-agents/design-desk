@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Design Desk</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
+    --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
+    --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+      --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
+      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --shadow: none; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
+  button { font: inherit; color: inherit; }
+  a { color: var(--accent); }
+  .app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .01em; }
+  nav { display: flex; gap: 4px; }
+  nav button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+  nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
+  nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; line-height: 18px; text-align: center; }
+  .grow { flex: 1; }
+  .me { color: var(--muted); font-size: 12px; }
+  .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .btn:hover { background: var(--soft); }
+  .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+  .btn.primary:hover { opacity: .9; }
+  .btn.small { padding: 3px 9px; font-size: 12px; }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  main { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; min-height: 0; }
+  .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; }
+  .detail { overflow: auto; padding: 24px 32px 64px; }
+  .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
+  .row:hover { background: var(--soft); }
+  .row[aria-current="true"] { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
+  .row .t { font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
+  .row .t .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; transform: translateY(-1px); }
+  .row .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .row .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
+  .empty { color: var(--muted); padding: 24px 12px; text-align: center; }
+  .filters { display: flex; gap: 6px; margin: 0 0 10px; flex-wrap: wrap; }
+  h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
+  .lead { font-size: 16px; margin: 10px 0 18px; max-width: 72ch; }
+  .sub { color: var(--muted); font-size: 12.5px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 4px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+  .section { margin: 0 0 14px; max-width: 76ch; }
+  .section h4 { margin: 0 0 4px; font-size: 14.5px; }
+  .md p { margin: 0 0 8px; } .md ul { margin: 0 0 8px; padding-left: 20px; } .md code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .shot { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); cursor: zoom-in; }
+  .shot img { display: block; width: 100%; min-height: 120px; background: var(--soft); object-fit: cover; object-position: top; max-height: 260px; }
+  .shot figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); }
+  .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 50; cursor: zoom-out; }
+  .zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; background: #fff; }
+  .steps { display: flex; gap: 0; margin: 14px 0 6px; flex-wrap: wrap; }
+  .step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; padding: 4px 10px 4px 0; }
+  .step::after { content: "›"; margin-left: 8px; opacity: .5; } .step:last-child::after { content: ""; }
+  .step .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); font-size: 11px; }
+  .step.done { color: var(--ink); } .step.done .n { background: var(--ok-soft); color: var(--ok); }
+  .step.now { color: var(--ink); font-weight: 600; } .step.now .n { background: var(--ink); color: var(--panel); }
+  .verdict { border-radius: var(--radius); padding: 14px 16px; margin: 6px 0 4px; }
+  .verdict.design { background: var(--ok-soft); } .verdict.needs-developer { background: var(--warn-soft); } .verdict.product { background: var(--info-soft); }
+  .verdict b { display: block; margin-bottom: 4px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .two ul { margin: 4px 0 0; padding-left: 18px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tabs button { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .tabs button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .frame { width: 100%; height: 72vh; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; display: block; }
+  .frame.picking { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .vbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+  .tally { display: flex; gap: 6px; flex-wrap: wrap; }
+  .threads { display: grid; gap: 10px; max-width: 80ch; }
+  .thread { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+  .thread .head { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .thread .anchor { font-family: var(--mono); font-size: 11.5px; background: var(--soft); padding: 1px 6px; border-radius: 4px; cursor: pointer; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .msg { padding: 10px 12px; } .msg + .msg { border-top: 1px dashed var(--line); }
+  .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 3px; } .msg.agent { background: var(--soft); }
+  .msg .who b { color: var(--ink); }
+  .reply { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
+  textarea, input, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
+  textarea { min-height: 64px; resize: vertical; }
+  .composer { display: grid; gap: 8px; max-width: 80ch; margin-top: 10px; }
+  .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pending { color: var(--warn); font-size: 12px; }
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; z-index: 60; max-width: calc(100% - 32px); }
+  dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog form { padding: 20px; display: grid; gap: 10px; }
+  dialog h2 { font-size: 18px; } label { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
+  .guide { max-width: 74ch; } .guide li { margin-bottom: 6px; }
+  .proto { display: grid; gap: 8px; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  .back { display: none; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    main.has-detail .list { display: none; } main:not(.has-detail) .detail { display: none; }
+    .detail { padding: 16px; } .back { display: inline-flex; margin-bottom: 10px; } .two { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="title">Design Desk</h1>
+    <nav id="nav"></nav>
+    <div class="grow"></div>
+    <span class="me" id="me"></span>
+    <button class="btn primary" id="new-request" hidden></button>
+  </header>
+  <main id="main">
+    <section class="list" id="list" aria-label="Cards"></section>
+    <section class="detail" id="detail"></section>
+  </main>
+</div>
+
+<dialog id="request-dialog">
+  <form method="dialog" id="request-form">
+    <h2 data-t="newRequest"></h2>
+    <p class="sub" data-t="requestHint"></p>
+    <label><span data-t="fTitle"></span><input name="title" maxlength="200" required /></label>
+    <label><span data-t="fProblem"></span><textarea name="problem" maxlength="4000" required></textarea></label>
+    <label><span data-t="fGoal"></span><textarea name="goal" maxlength="4000"></textarea></label>
+    <label><span data-t="fScreen"></span><input name="screen" maxlength="500" /></label>
+    <input type="hidden" name="from" />
+    <div class="actions"><button class="btn primary" value="send" data-t="send"></button><button class="btn" value="cancel" formnovalidate data-t="cancel"></button></div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  "use strict";
+  // ---------- words ----------
+  const T = {
+    en: {
+      review: "To review", requests: "Requests", shipped: "Shipped", guide: "What I can do", newRequest: "New design request",
+      requestHint: "Describe the problem in your own words. I will tell you first what can be done as a design change and what needs a developer.",
+      fTitle: "Short title", fProblem: "What is the problem, and for whom?", fGoal: "What would good look like? (optional)", fScreen: "Which screen? (optional)",
+      send: "Send", cancel: "Cancel", markReviewed: "Mark as reviewed", reviewed: "Reviewed", ask: "Ask a question", followUp: "Start a design follow-up",
+      openPr: "Open the pull request", merged: "merged", screens: "Screens", details: "Details", conversation: "Questions and comments",
+      noCards: "Nothing here yet.", allReviewed: "You have reviewed everything that shipped. ✨", pick: "Pick a card on the left.",
+      question: "Question", comment: "Comment", concern: "Concern", reply: "Reply", resolve: "Resolve", resolved: "resolved", answered: "answered",
+      waiting: "Waiting for Design Desk to answer…", writeQuestion: "Ask anything: why it works this way, what it can and can't do…", writeComment: "Write a comment…",
+      triage: "Triage", variants: "Variants", feedback: "Feedback", prototype: "Live prototype", testing: "Testing", spec: "Spec", "handed-off": "Handed off", declined: "Closed",
+      vDesign: "This is a design change", vDev: "Part of this needs a developer", vProduct: "This is a product decision",
+      vDesignTxt: "I can explore it in variants and build a live prototype of it.", vDevTxt: "I can explore the design in variants. The parts below need a developer, so the live prototype leaves them out and the spec lists them.",
+      vProductTxt: "I can sketch it as a concept to support the discussion, but it changes what the product does, so it needs a product decision first.",
+      canDo: "I can", cannotDo: "I cannot, and why", triagePending: "I am reading the request and checking what is possible. You will see the verdict here.",
+      explore: "Explore variants", revise: "Revise with the comments", build: "Build a live prototype", approve: "Approve and hand off", close: "Close the request", reopen: "Reopen",
+      prefer: "Prefer", concernVote: "Concern", commentEl: "Comment on an element", cancelPick: "Cancel", pickHint: "Click the element you want to comment on.",
+      votes: "Votes", noVariants: "No variants yet.", rationale: "Why this one", fidelity: { wireframe: "wireframe", mockup: "mockup" },
+      protoNone: "No live prototype yet.", protoBuilding: "Building the live prototype… this takes a few minutes.", protoLive: "Live — open it and click around. The data is demo data.",
+      protoFailed: "The last build failed.", protoExpired: "The prototype expired.", open: "Open the prototype", login: "Demo sign-in", expires: "Available until",
+      guard: "Design-only check", guardOk: "passed — only the look changed", guardBad: "failed — see the spec", specTitle: "Developer spec", issue: "Issue", pr: "Draft pull request",
+      sentToAgent: "Sent. Design Desk will pick it up shortly.", error: "Something went wrong", noBridge: "Open this page in the platform: it talks to its agent through the platform, which a downloaded copy cannot do.",
+      by: "by", you: "you", agent: "Design Desk", all: "All", open_: "Open", done: "Done", roleNames: { lead: "lead", designer: "designer", pm: "PM", developer: "developer", guest: "guest" },
+      guideHtml: `<h2>What Design Desk can and can't do</h2>
+<p class="lead">I keep you up to date with what ships in the product, explain it in plain words, and turn your design ideas into variants and live prototypes. I only ever change how the product <b>looks</b>, never what it <b>does</b>.</p>
+<h3>I can</h3><ul>
+<li>Show you every change to the screens as it ships, with screenshots, and explain what changed, why it is so, and what cannot change.</li>
+<li>Answer your questions about how anything works, as many times as you need. Ask on any card.</li>
+<li>Turn a design request into two or three distinct variants on sample data, for the team to compare, vote and comment on — right on the element.</li>
+<li>Build a <b>live prototype</b>: the real product with your design change, on its own instance with demo data, that everyone on the list can open and click through.</li>
+<li>Change layout, spacing, colours, typography, icons, copy, the order and grouping of things, and what opens or collapses on a screen.</li>
+<li>Write the spec a developer needs to build the approved design.</li></ul>
+<h3>I cannot — a developer has to</h3><ul>
+<li>Change what the product does: what it saves or loads, its rules and checks, who may do what, or how it talks to other systems.</li>
+<li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
+<li>Change anything behind the screens: servers, data, security, settings.</li></ul>
+<p>When a request needs any of this, I tell you before I start: I can still sketch it as a variant, and the spec names the part a developer has to do.</p>
+<h3>Who can do what</h3><ul>
+<li><b>Everyone on the list</b> reads, asks, comments and votes.</li>
+<li><b>Designers</b> start variants, revisions and live prototypes, and approve a design for handoff.</li>
+<li><b>Developers and PMs</b> comment and vote — a concern from them is exactly what we want before a developer starts.</li></ul>`,
+    },
+    cs: {
+      review: "K prohlédnutí", requests: "Požadavky", shipped: "Nasazeno", guide: "Co umím", newRequest: "Nový designový požadavek",
+      requestHint: "Popište problém vlastními slovy. Nejdřív vám řeknu, co jde udělat jako designová změna a co potřebuje vývojáře.",
+      fTitle: "Krátký název", fProblem: "V čem je problém a pro koho?", fGoal: "Jak by vypadalo dobré řešení? (nepovinné)", fScreen: "Která obrazovka? (nepovinné)",
+      send: "Odeslat", cancel: "Zrušit", markReviewed: "Označit jako prohlédnuté", reviewed: "Prohlédnuto", ask: "Zeptat se", followUp: "Navázat designovým požadavkem",
+      openPr: "Otevřít pull request", merged: "nasazeno", screens: "Obrazovky", details: "Podrobnosti", conversation: "Otázky a komentáře",
+      noCards: "Zatím tu nic není.", allReviewed: "Všechno nasazené máte prohlédnuté. ✨", pick: "Vyberte kartu vlevo.",
+      question: "Otázka", comment: "Komentář", concern: "Výhrada", reply: "Odpovědět", resolve: "Vyřešit", resolved: "vyřešeno", answered: "zodpovězeno",
+      waiting: "Čeká na odpověď Design Desku…", writeQuestion: "Zeptejte se na cokoli: proč to tak funguje, co to umí a co ne…", writeComment: "Napište komentář…",
+      triage: "Posouzení", variants: "Varianty", feedback: "Zpětná vazba", prototype: "Živý prototyp", testing: "Testování", spec: "Specifikace", "handed-off": "Předáno", declined: "Uzavřeno",
+      vDesign: "Tohle je designová změna", vDev: "Část potřebuje vývojáře", vProduct: "Tohle je produktové rozhodnutí",
+      vDesignTxt: "Prozkoumám to ve variantách a postavím z toho živý prototyp.", vDevTxt: "Design prozkoumám ve variantách. Části níže potřebují vývojáře, takže je živý prototyp vynechá a specifikace je vyjmenuje.",
+      vProductTxt: "Můžu to načrtnout jako koncept do diskuse, ale mění to, co produkt dělá, takže je nejdřív potřeba produktové rozhodnutí.",
+      canDo: "Zvládnu", cannotDo: "Nezvládnu, a proč", triagePending: "Čtu požadavek a ověřuji, co je možné. Verdikt uvidíte tady.",
+      explore: "Navrhnout varianty", revise: "Upravit podle komentářů", build: "Postavit živý prototyp", approve: "Schválit a předat", close: "Uzavřít požadavek", reopen: "Znovu otevřít",
+      prefer: "Preferuji", concernVote: "Výhrada", commentEl: "Komentovat prvek", cancelPick: "Zrušit", pickHint: "Klikněte na prvek, ke kterému chcete napsat komentář.",
+      votes: "Hlasy", noVariants: "Zatím žádné varianty.", rationale: "Proč tahle", fidelity: { wireframe: "wireframe", mockup: "mockup" },
+      protoNone: "Živý prototyp zatím není.", protoBuilding: "Stavím živý prototyp… zabere to pár minut.", protoLive: "Běží — otevřete ho a proklikejte. Data jsou ukázková.",
+      protoFailed: "Poslední sestavení selhalo.", protoExpired: "Prototyp vypršel.", open: "Otevřít prototyp", login: "Ukázkové přihlášení", expires: "Dostupný do",
+      guard: "Kontrola „jen design“", guardOk: "prošla — změnil se jen vzhled", guardBad: "neprošla — viz specifikace", specTitle: "Specifikace pro vývojáře", issue: "Issue", pr: "Draft pull request",
+      sentToAgent: "Odesláno. Design Desk se toho brzy ujme.", error: "Něco se nepovedlo", noBridge: "Otevřete tuto stránku v platformě: se svým agentem mluví přes platformu, což stažená kopie neumí.",
+      by: "od", you: "vy", agent: "Design Desk", all: "Vše", open_: "Otevřené", done: "Hotové", roleNames: { lead: "vedoucí", designer: "designér", pm: "PM", developer: "vývojář", guest: "host" },
+      guideHtml: `<h2>Co Design Desk umí a co ne</h2>
+<p class="lead">Držím vás v obraze o tom, co se v produktu nasadilo, vysvětlím to lidsky a z vašich nápadů udělám varianty a živé prototypy. Měním jen to, jak produkt <b>vypadá</b>, nikdy to, co <b>dělá</b>.</p>
+<h3>Zvládnu</h3><ul>
+<li>Ukázat každou změnu obrazovek hned, jak se nasadí, se screenshoty, a vysvětlit, co se změnilo, proč to tak je a co se změnit nedá.</li>
+<li>Odpovídat na otázky, jak cokoli funguje, kolikrát budete potřebovat. Ptejte se u kterékoli karty.</li>
+<li>Z designového požadavku udělat dvě až tři odlišné varianty na ukázkových datech, které tým porovná, odhlasuje a okomentuje — přímo u konkrétního prvku.</li>
+<li>Postavit <b>živý prototyp</b>: skutečný produkt s vaší designovou změnou, na vlastní instanci s ukázkovými daty, který si každý ze seznamu otevře a proklikne.</li>
+<li>Měnit rozvržení, mezery, barvy, typografii, ikony, texty, pořadí a seskupení věcí a to, co se na obrazovce rozbaluje a sbaluje.</li>
+<li>Napsat specifikaci, kterou vývojář potřebuje, aby schválený design postavil.</li></ul>
+<h3>Nezvládnu — to musí vývojář</h3><ul>
+<li>Změnit, co produkt dělá: co ukládá nebo načítá, jeho pravidla a kontroly, kdo co smí, jak komunikuje s jinými systémy.</li>
+<li>Přidat novou informaci, kterou produkt zatím nemá, nebo odebrat něco, co dnes člověk udělat může.</li>
+<li>Změnit cokoli za obrazovkami: servery, data, zabezpečení, nastavení.</li></ul>
+<p>Když požadavek něco z toho potřebuje, řeknu vám to dřív, než začnu: pořád to můžu načrtnout jako variantu a specifikace pojmenuje část pro vývojáře.</p>
+<h3>Kdo co může</h3><ul>
+<li><b>Každý ze seznamu</b> čte, ptá se, komentuje a hlasuje.</li>
+<li><b>Designéři</b> spouštějí varianty, úpravy a živé prototypy a schvalují design k předání.</li>
+<li><b>Vývojáři a PM</b> komentují a hlasují — jejich výhrada je přesně to, co chceme slyšet, než vývojář začne.</li></ul>`,
+    },
+  };
+  let L = T.en;
+  const t = (k) => (k in L ? L[k] : T.en[k] ?? k);
+
+  // ---------- bridge ----------
+  const bridge = window.platform;
+  async function api(method, path, body) {
+    if (!bridge) throw new Error(t("noBridge"));
+    const res = await bridge.request({ method, path, body: body === undefined ? undefined : JSON.stringify(body), contentType: body === undefined ? undefined : "application/json" });
+    let data = {};
+    try { data = JSON.parse(res.body || "{}"); } catch { data = { error: res.body }; }
+    if (res.status >= 400) throw new Error(data.error || `${res.status}`);
+    if (data.ping) { try { bridge.sendPrompt(data.ping); } catch {} }
+    return data;
+  }
+
+  // ---------- state ----------
+  const S = { me: null, tab: "review", cards: [], card: null, variant: null, picking: false, anchor: null, filter: "open", assetCache: new Map() };
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString(S.me?.language === "cs" ? "cs-CZ" : undefined, { dateStyle: "medium", timeStyle: "short" }); };
+  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 4200); };
+  const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(`${t("error")}: ${e.message}`); } };
+
+  // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
+  function md(src) {
+    const inline = (s) => esc(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    const out = []; let list = null;
+    for (const line of String(src || "").split("\n")) {
+      const li = line.match(/^\s*[-*] (.*)$/);
+      if (li) { if (!list) { list = []; } list.push(`<li>${inline(li[1])}</li>`); continue; }
+      if (list) { out.push(`<ul>${list.join("")}</ul>`); list = null; }
+      const h = line.match(/^#{1,4} (.*)$/);
+      if (h) out.push(`<h4>${inline(h[1])}</h4>`);
+      else if (line.trim()) out.push(`<p>${inline(line)}</p>`);
+    }
+    if (list) out.push(`<ul>${list.join("")}</ul>`);
+    return `<div class="md">${out.join("")}</div>`;
+  }
+
+  const roleName = (r) => (L.roleNames || T.en.roleNames)[r] || r;
+  const who = (by) => by?.agent ? `<b>${esc(t("agent"))}</b>` : `<b>${esc(by?.email === S.me?.email ? t("you") : (by?.email || "?"))}</b> · ${esc(roleName(by?.role))}`;
+
+  // ---------- header and list ----------
+  function renderNav() {
+    const unread = S.cards.filter((c) => c.kind === "change" && c.status === "new" && !c.acked).length;
+    const tabs = [["review", t("review"), unread], ["requests", t("requests")], ["shipped", t("shipped")], ["guide", t("guide")]];
+    $("#nav").innerHTML = tabs.map(([k, label, n]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
+  }
+
+  function visibleCards() {
+    if (S.tab === "review") return S.cards.filter((c) => c.kind === "change" && c.status === "new" && !c.acked);
+    if (S.tab === "shipped") return S.cards.filter((c) => c.kind === "change");
+    if (S.tab === "requests") {
+      const closed = (c) => c.status === "handed-off" || c.status === "declined";
+      return S.cards.filter((c) => c.kind === "request" && (S.filter === "all" || (S.filter === "open" ? !closed(c) : closed(c))));
+    }
+    return [];
+  }
+
+  function chipsFor(c) {
+    const out = [];
+    if (c.kind === "change") {
+      if (c.source?.pr) out.push(`<span class="chip">#${esc(c.source.pr)}</span>`);
+      if (c.screens) out.push(`<span class="chip">🖼 ${c.screens}</span>`);
+      if (c.acked) out.push(`<span class="chip ok">✓ ${esc(t("reviewed"))}</span>`);
+    } else {
+      out.push(`<span class="chip info">${esc(t(c.status))}</span>`);
+      if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : c.triage === "product" ? "info" : "warn"}">${esc({ design: t("vDesign"), "needs-developer": t("vDev"), product: t("vProduct") }[c.triage])}</span>`);
+      if (c.variants) out.push(`<span class="chip">◧ ${c.variants}</span>`);
+      if (c.prototype === "live") out.push(`<span class="chip ok">● ${esc(t("prototype"))}</span>`);
+    }
+    if (c.open_threads) out.push(`<span class="chip">💬 ${c.open_threads}</span>`);
+    return out.join("");
+  }
+
+  function renderList() {
+    const list = $("#list");
+    if (S.tab === "guide") { list.innerHTML = ""; return; }
+    const cards = visibleCards();
+    const filters = S.tab === "requests" ? `<div class="filters">${[["open", t("open_")], ["done", t("done")], ["all", t("all")]].map(([k, l]) => `<button class="btn small" data-filter="${k}" ${S.filter === k ? 'style="border-color:var(--ink)"' : ""}>${esc(l)}</button>`).join("")}</div>` : "";
+    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(S.tab === "review" ? t("allReviewed") : t("noCards"))}</div>`; return; }
+    list.innerHTML = filters + cards.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">
+      <div class="t">${c.kind === "change" && !c.acked && c.status === "new" ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div>
+      ${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
+      <div class="meta">${chipsFor(c)}</div></button>`).join("");
+  }
+
+  // ---------- detail ----------
+  async function asset(id) {
+    if (S.assetCache.has(id)) return S.assetCache.get(id);
+    const a = await api("GET", `/api/assets/${encodeURIComponent(id)}`);
+    if (S.assetCache.size > 40) S.assetCache.delete(S.assetCache.keys().next().value);
+    S.assetCache.set(id, a);
+    return a;
+  }
+  const dataUrl = (a) => a.encoding === "base64" ? `data:${a.contentType};base64,${a.data}` : `data:${a.contentType};charset=utf-8,${encodeURIComponent(a.data)}`;
+
+  function renderThreads(c) {
+    const threads = c.threads || [];
+    const rows = threads.map((th) => {
+      const anchor = th.anchor?.selector ? `<span class="anchor" data-highlight="${esc(th.anchor.variant || "")}|${esc(th.anchor.selector)}" title="${esc(th.anchor.selector)}">◎ ${esc(th.anchor.text || th.anchor.tag || th.anchor.selector)}</span>` : "";
+      const kind = th.kind === "question" ? "info" : th.kind === "concern" ? "warn" : "";
+      const state = th.state === "resolved" ? `<span class="chip ok">${esc(t("resolved"))}</span>` : th.state === "answered" ? `<span class="chip">${esc(t("answered"))}</span>` : "";
+      return `<article class="thread" id="th-${esc(th.id)}">
+        <div class="head"><span class="chip ${kind}">${esc(t(th.kind))}</span>${anchor}${state}<span class="grow"></span>${th.anchor?.variant ? `<span>${esc(th.anchor.variant)}</span>` : ""}</div>
+        ${th.messages.map((m) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${md(m.text)}</div>`).join("")}
+        ${th.needs_agent ? `<div class="msg"><span class="pending">${esc(t("waiting"))}</span></div>` : ""}
+        ${th.state !== "resolved" ? `<div class="reply"><input placeholder="${esc(t("reply"))}…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">${esc(t("reply"))}</button><button class="btn small" data-resolve="${esc(th.id)}">${esc(t("resolve"))}</button></div>` : ""}
+      </article>`;
+    }).join("");
+    const anchorNote = S.anchor ? `<div class="sub">◎ <span class="anchor">${esc(S.anchor.text || S.anchor.selector)}</span> <button class="btn small" data-clear-anchor>✕</button></div>` : "";
+    return `<h3>${esc(t("conversation"))}</h3><div class="threads">${rows}</div>
+      <div class="composer" id="composer">${anchorNote}
+        <textarea id="composer-text" maxlength="4000" placeholder="${esc(t("writeQuestion"))}"></textarea>
+        <div class="bar"><select id="composer-kind" style="width:auto"><option value="question">${esc(t("question"))}</option><option value="comment">${esc(t("comment"))}</option><option value="concern">${esc(t("concern"))}</option></select>
+        <button class="btn primary" data-open-thread>${esc(t("send"))}</button></div></div>`;
+  }
+
+  function renderChange(c) {
+    const src = c.source || {};
+    const acked = Boolean(c.acks && S.me && c.acks[S.me.email || ""]);
+    return `<button class="btn small back" data-back>←</button>
+      <h2>${esc(c.title)}</h2>
+      <div class="sub">${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener noreferrer">${esc(t("openPr"))} #${esc(src.pr)}</a>` : ""}${src.merged_at ? `<span>${esc(t("merged"))} ${esc(when(src.merged_at))}</span>` : ""}${src.author ? `<span>${esc(t("by"))} ${esc(src.author)}</span>` : ""}</div>
+      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+      <div class="actions">
+        <button class="btn ${acked ? "" : "primary"}" data-ack ${acked ? "disabled" : ""}>${esc(acked ? `✓ ${t("reviewed")}` : t("markReviewed"))}</button>
+        <button class="btn" data-focus-composer>${esc(t("ask"))}</button>
+        ${S.me?.can?.["follow-up"] ? `<button class="btn" data-follow-up>${esc(t("followUp"))}</button>` : ""}
+      </div>
+      ${(c.screens || []).length ? `<h3>${esc(t("screens"))}</h3><div class="shots">${c.screens.map((s) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${s.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
+      ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("")}` : ""}
+      ${renderThreads(c)}`;
+  }
+
+  const FLOW = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off"];
+  function renderSteps(status) {
+    const at = FLOW.indexOf(status);
+    if (status === "declined") return `<div class="steps"><span class="chip bad">${esc(t("declined"))}</span></div>`;
+    return `<div class="steps">${FLOW.map((s, i) => `<span class="step ${i < at ? "done" : i === at ? "now" : ""}"><span class="n">${i < at ? "✓" : i + 1}</span>${esc(t(s))}</span>`).join("")}</div>`;
+  }
+
+  function renderTriage(tr) {
+    if (!tr) return `<div class="panel">${esc(t("triagePending"))}</div>`;
+    const head = { design: [t("vDesign"), t("vDesignTxt")], "needs-developer": [t("vDev"), t("vDevTxt")], product: [t("vProduct"), t("vProductTxt")] }[tr.verdict];
+    const list = (xs) => xs?.length ? `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+    return `<div class="verdict ${esc(tr.verdict)}"><b>${esc(head[0])}</b>${esc(head[1])}${list(tr.reasons)}
+      ${(tr.can?.length || tr.cannot?.length) ? `<div class="two"><div><b>${esc(t("canDo"))}</b>${list(tr.can)}</div><div><b>${esc(t("cannotDo"))}</b>${list(tr.cannot)}</div></div>` : ""}</div>`;
+  }
+
+  function tallyFor(c, v) {
+    const votes = Object.values(c.votes?.[v] || {});
+    if (!votes.length) return "";
+    const by = (k) => votes.filter((x) => x.vote === k);
+    const fmt = (xs) => xs.map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {});
+    const chips = (xs, cls, label) => xs.length ? `<span class="chip ${cls}">${esc(label)} ${xs.length} · ${esc(Object.entries(fmt(xs)).map(([r, n]) => `${n} ${r}`).join(", "))}</span>` : "";
+    const notes = votes.filter((x) => x.note).map((x) => `<li><b>${esc(roleName(x.role))}</b>: ${esc(x.note)}</li>`).join("");
+    return `<div class="tally">${chips(by("prefer"), "ok", t("prefer"))}${chips(by("concern"), "warn", t("concernVote"))}</div>${notes ? `<ul class="sub" style="display:block;margin:6px 0 0 16px;padding:0">${notes}</ul>` : ""}`;
+  }
+
+  function renderVariants(c) {
+    const vs = c.variants || [];
+    if (!vs.length) return `<div class="panel sub">${esc(t("noVariants"))}</div>`;
+    if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = vs[0].id;
+    const v = vs.find((x) => x.id === S.variant);
+    const mine = c.votes?.[v.id]?.[S.me?.email || ""]?.vote;
+    return `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)} <span class="chip">${esc((L.fidelity || T.en.fidelity)[x.fidelity] || x.fidelity)}</span></button>`).join("")}</div>
+      ${v.rationale ? `<p class="sub" style="display:block;max-width:76ch"><b>${esc(t("rationale"))}:</b> ${esc(v.rationale)}</p>` : ""}
+      <div class="vbar">
+        ${S.me?.can?.vote ? `<button class="btn small" data-vote="prefer" ${mine === "prefer" ? 'style="border-color:var(--ok);color:var(--ok)"' : ""}>👍 ${esc(t("prefer"))}</button><button class="btn small" data-vote="concern" ${mine === "concern" ? 'style="border-color:var(--warn);color:var(--warn)"' : ""}>⚠ ${esc(t("concernVote"))}</button>` : ""}
+        <button class="btn small" data-pick>${esc(S.picking ? t("cancelPick") : t("commentEl"))}</button>
+        ${S.picking ? `<span class="sub">${esc(t("pickHint"))}</span>` : ""}
+      </div>
+      ${tallyFor(c, v.id)}
+      <iframe class="frame ${S.picking ? "picking" : ""}" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`;
+  }
+
+  function renderPrototype(c) {
+    const p = c.prototype || { state: "none" };
+    const msg = { none: t("protoNone"), building: t("protoBuilding"), live: t("protoLive"), failed: t("protoFailed"), expired: t("protoExpired"), "torn-down": t("protoExpired") }[p.state] || p.state;
+    const g = p.guard ? `<dt>${esc(t("guard"))}</dt><dd>${p.guard.ok ? `<span class="chip ok">✓ ${esc(t("guardOk"))}</span>` : `<span class="chip bad">✕ ${esc(t("guardBad"))}</span>`}${p.guard.summary ? ` <span class="sub">${esc(p.guard.summary)}</span>` : ""}</dd>` : "";
+    return `<div class="panel proto"><div>${esc(msg)}</div>
+      ${p.state === "live" && p.url ? `<div><a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(t("open"))} ↗</a></div>` : ""}
+      <dl class="kv">${p.login ? `<dt>${esc(t("login"))}</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}${p.login.hint ? ` <span class="sub">${esc(p.login.hint)}</span>` : ""}</dd>` : ""}
+      ${p.expires ? `<dt>${esc(t("expires"))}</dt><dd>${esc(when(p.expires))}</dd>` : ""}${g}</dl></div>`;
+  }
+
+  function renderRequest(c) {
+    const r = c.request || {};
+    const can = S.me?.can || {};
+    const closed = c.status === "declined" || c.status === "handed-off";
+    const btn = (action, label, primary) => can[action] ? `<button class="btn ${primary ? "primary" : ""}" data-action="${action}">${esc(label)}</button>` : "";
+    const actions = closed ? btn("reopen", t("reopen")) : [
+      c.status === "triage" && c.triage ? btn("explore", t("explore"), true) : "",
+      ["variants", "feedback"].includes(c.status) ? btn("revise", t("revise")) : "",
+      ["variants", "feedback", "testing"].includes(c.status) && c.triage?.verdict === "design" ? btn("build", t("build"), c.status === "feedback") : "",
+      ["feedback", "prototype", "testing"].includes(c.status) ? btn("approve", t("approve"), c.status === "testing") : "",
+      btn("close", t("close")),
+    ].join("");
+    return `<button class="btn small back" data-back>←</button>
+      <h2>${esc(c.title)}</h2>
+      <div class="sub"><span>${esc(t("by"))} ${who(c.created_by)}</span><span>${esc(when(c.created))}</span></div>
+      ${renderSteps(c.status)}
+      <div class="section">${md(r.problem)}${r.goal ? md(r.goal) : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>
+      <h3>${esc(t("triage"))}</h3>${renderTriage(c.triage)}
+      <div class="actions">${actions}</div>
+      ${(c.variants || []).length || ["variants", "feedback"].includes(c.status) ? `<h3>${esc(t("variants"))}</h3>${renderVariants(c)}` : ""}
+      ${c.prototype && c.prototype.state !== "none" ? `<h3>${esc(t("prototype"))}</h3>${renderPrototype(c)}` : ""}
+      ${c.spec?.asset ? `<h3>${esc(t("specTitle"))}</h3><div class="panel" id="spec-body">…</div>${c.spec.issue_url ? `<p><a href="${esc(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">${esc(t("issue"))} ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${esc(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">${esc(t("pr"))} ↗</a></p>` : ""}` : ""}
+      ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("")}` : ""}
+      ${renderThreads(c)}`;
+  }
+
+  // The picker runs inside the variant frame (sandboxed, opaque origin) and posts
+  // back what was clicked: a CSS path and a text snippet, the reference a developer
+  // and the agent can find in the source.
+  const PICKER = `<script>(()=>{let on=false,last=null;const css=(el)=>{const p=[];while(el&&el.nodeType===1&&p.length<6){let s=el.tagName.toLowerCase();if(el.id){p.unshift(s+"#"+el.id);break}const dv=el.getAttribute("data-view");if(dv){p.unshift(s+'[data-view="'+dv+'"]');break}const sib=[...(el.parentElement?.children||[])].filter(x=>x.tagName===el.tagName);if(sib.length>1)s+=":nth-of-type("+(sib.indexOf(el)+1)+")";p.unshift(s);el=el.parentElement}return p.join(" > ")};
+const mark=(el,c)=>{if(last){last.style.outline=last.dataset.o||"";}last=el;if(el){el.dataset.o=el.style.outline;el.style.outline=c}};
+addEventListener("message",(e)=>{const d=e.data||{};if(d.type==="desk-pick")on=!!d.on,mark(null);if(d.type==="desk-highlight"){try{const el=document.querySelector(d.selector);if(el){el.scrollIntoView({block:"center"});mark(el,"3px solid #e8a400")}}catch{}}});
+addEventListener("mouseover",(e)=>{if(on)mark(e.target,"2px solid #2f5bd3")},true);
+addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagation();const el=e.target;on=false;mark(el,"3px solid #e8a400");parent.postMessage({type:"desk-picked",selector:css(el),tag:el.tagName.toLowerCase(),text:(el.innerText||el.getAttribute("aria-label")||"").trim().replace(/\\s+/g," ").slice(0,120)},"*")},true);})();<\/script>`;
+
+  async function loadVariantFrame(c) {
+    const frame = $("#variant-frame");
+    if (!frame) return;
+    const v = (c.variants || []).find((x) => x.id === S.variant);
+    if (!v) return;
+    try {
+      const a = await asset(v.asset);
+      const html = a.encoding === "base64" ? atob(a.data) : a.data;
+      frame.srcdoc = html.includes("</body>") ? html.replace("</body>", `${PICKER}</body>`) : html + PICKER;
+      frame.onload = () => { if (S.picking) frame.contentWindow?.postMessage({ type: "desk-pick", on: true }, "*"); };
+    } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: `${t("error")}: ${e.message}` })); }
+  }
+
+  async function loadImages() {
+    for (const img of document.querySelectorAll("img[data-asset]")) {
+      if (img.src) continue;
+      try { img.src = dataUrl(await asset(img.dataset.asset)); } catch {}
+    }
+    const spec = $("#spec-body");
+    if (spec && S.card?.spec?.asset) { try { const a = await asset(S.card.spec.asset); spec.innerHTML = md(a.encoding === "base64" ? atob(a.data) : a.data); } catch (e) { spec.textContent = e.message; } }
+  }
+
+  function renderDetail() {
+    const d = $("#detail");
+    $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide");
+    if (S.tab === "guide") { d.innerHTML = `<div class="guide">${L.guideHtml || T.en.guideHtml}</div>`; return; }
+    if (!S.card) { d.innerHTML = `<div class="empty">${esc(t("pick"))}</div>`; return; }
+    const keep = $("#composer-text")?.value || "";
+    d.innerHTML = S.card.kind === "change" ? renderChange(S.card) : renderRequest(S.card);
+    if (keep && $("#composer-text")) $("#composer-text").value = keep;
+    loadImages();
+    loadVariantFrame(S.card);
+  }
+
+  // ---------- loading ----------
+  async function refreshList() { S.cards = (await api("GET", "/api/cards")).cards || []; renderNav(); renderList(); }
+  async function openCard(id, { quiet = false } = {}) {
+    const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
+    const changed = !S.card || S.card.id !== card.id || JSON.stringify(S.card) !== JSON.stringify(card);
+    if (S.card?.id !== card.id) { S.variant = null; S.anchor = null; S.picking = false; }
+    S.card = card;
+    if (!quiet || changed) { renderList(); if (!(quiet && document.activeElement?.closest?.("#composer, .reply"))) renderDetail(); }
+  }
+
+  // ---------- events ----------
+  document.addEventListener("click", guard(async (e) => {
+    const el = e.target.closest("button, [data-zoom], [data-highlight]");
+    if (!el) return;
+    const ds = el.dataset;
+    if (ds.tab) { S.tab = ds.tab; S.card = null; renderNav(); renderList(); renderDetail(); return; }
+    if (ds.filter) { S.filter = ds.filter; renderList(); return; }
+    if (ds.card) { await openCard(ds.card); return; }
+    if ("back" in ds) { S.card = null; renderList(); renderDetail(); return; }
+    if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
+    if (ds.highlight) { const [variant, selector] = ds.highlight.split("|"); if (variant && variant !== S.variant) { S.variant = variant; renderDetail(); await new Promise((r) => setTimeout(r, 400)); } $("#variant-frame")?.contentWindow?.postMessage({ type: "desk-highlight", selector }, "*"); $("#variant-frame")?.scrollIntoView({ block: "center" }); return; }
+    if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
+    if ("focusComposer" in ds) { $("#composer-text")?.focus(); $("#composer-kind").value = "question"; return; }
+    if ("followUp" in ds) { openRequestDialog(S.card); return; }
+    if ("clearAnchor" in ds) { S.anchor = null; renderDetail(); return; }
+    if ("openThread" in ds) {
+      const text = $("#composer-text").value.trim(); if (!text) return;
+      const kind = $("#composer-kind").value;
+      const anchor = S.anchor ? { ...S.anchor, variant: S.variant } : null;
+      const r = await api("POST", `/api/cards/${S.card.id}/threads`, { kind, text, anchor });
+      $("#composer-text").value = ""; S.anchor = null;
+      if (r.inbox) toast(t("sentToAgent"));
+      await openCard(S.card.id); return;
+    }
+    if (ds.sendReply) {
+      const input = document.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
+      const r = await api("POST", `/api/threads/${ds.sendReply}/messages`, { text });
+      if (r.inbox) toast(t("sentToAgent"));
+      await openCard(S.card.id); return;
+    }
+    if (ds.resolve) { await api("POST", `/api/threads/${ds.resolve}/resolve`); await openCard(S.card.id); return; }
+    if (ds.variant) { S.variant = ds.variant; S.picking = false; renderDetail(); return; }
+    if (ds.vote) {
+      const mine = S.card.votes?.[S.variant]?.[S.me?.email || ""]?.vote;
+      const vote = mine === ds.vote ? "none" : ds.vote;
+      await api("POST", `/api/cards/${S.card.id}/votes`, { variant: S.variant, vote });
+      await openCard(S.card.id);
+      // The frame has no browser dialogs, so a concern's reason goes in the composer.
+      if (vote === "concern") { $("#composer-kind").value = "concern"; $("#composer-text").focus(); $("#composer").scrollIntoView({ block: "center" }); }
+      return;
+    }
+    if ("pick" in ds) { S.picking = !S.picking; renderDetail(); return; }
+    if (ds.action) {
+      const r = await api("POST", `/api/cards/${S.card.id}/actions`, { action: ds.action });
+      if (r.inbox) toast(t("sentToAgent"));
+      await refreshList(); await openCard(S.card.id); return;
+    }
+  }));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && e.target.matches("[data-reply]")) { e.preventDefault(); document.querySelector(`[data-send-reply="${CSS.escape(e.target.dataset.reply)}"]`)?.click(); }
+  });
+
+  addEventListener("message", (e) => {
+    const frame = $("#variant-frame");
+    if (!frame || e.source !== frame.contentWindow || e.data?.type !== "desk-picked") return;
+    S.picking = false;
+    S.anchor = { selector: String(e.data.selector || "").slice(0, 500), text: String(e.data.text || "").slice(0, 120), tag: String(e.data.tag || "").slice(0, 40) };
+    const keep = $("#composer-text")?.value || "";
+    renderDetail();
+    $("#composer-kind").value = "comment"; $("#composer-text").value = keep; $("#composer-text").focus();
+  });
+
+  function openRequestDialog(from) {
+    const dlg = $("#request-dialog"), f = $("#request-form");
+    f.reset();
+    f.from.value = from ? from.id : "";
+    if (from) { f.title.value = from.title.slice(0, 180); f.screen.value = from.source?.pr ? `#${from.source.pr}` : ""; }
+    dlg.showModal();
+  }
+  $("#new-request").addEventListener("click", () => openRequestDialog(null));
+  $("#request-form").addEventListener("submit", guard(async (e) => {
+    if (e.submitter?.value !== "send") return;
+    const f = e.target;
+    const body = { title: f.title.value, problem: f.problem.value, goal: f.goal.value, screen: f.screen.value, ...(f.from.value ? { from: f.from.value } : {}) };
+    const r = await api("POST", "/api/requests", body);
+    toast(t("sentToAgent"));
+    S.tab = "requests"; await refreshList(); await openCard(r.card.id);
+  }));
+
+  function applyWords() {
+    document.documentElement.lang = S.me?.language || "en";
+    for (const el of document.querySelectorAll("[data-t]")) el.textContent = t(el.dataset.t);
+    $("#new-request").textContent = `+ ${t("newRequest")}`;
+    $("#new-request").hidden = !S.me?.can?.request;
+    $("#title").textContent = S.me?.name || "Design Desk";
+    $("#me").textContent = S.me ? `${S.me.email || ""} · ${roleName(S.me.role)}` : "";
+  }
+
+  async function start() {
+    if (!bridge) { $("#detail").innerHTML = `<div class="panel">${esc(t("noBridge"))}</div>`; $("#main").classList.add("has-detail"); return; }
+    S.me = await api("GET", "/api/me");
+    L = T[S.me.language] || T.en;
+    applyWords();
+    await refreshList();
+    if (!visibleCards().length && S.cards.some((c) => c.kind === "request")) S.tab = "requests";
+    renderNav(); renderList(); renderDetail();
+    setInterval(guard(async () => {
+      if (document.hidden) return;
+      await refreshList();
+      if (S.card) await openCard(S.card.id, { quiet: true });
+    }), 15000);
+  }
+  start().catch((e) => { $("#detail").innerHTML = `<div class="panel">${esc(t("error"))}: ${esc(e.message)}</div>`; });
+})();
+</script>
+</body>
+</html>

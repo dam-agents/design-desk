@@ -1,0 +1,81 @@
+<!-- TOUR — walkthrough chrome, not the product. `design build` puts it where the
+     design:tour marker sits. A walkthrough is a set of steps, each one changed area of
+     a real screen, with numbered pins on what changed and a sidebar of notes.
+       <section data-step="1" data-step-title="Agents list"> …the real screen… </section>
+       <span data-pin="1"></span>   inside the element that changed (it becomes position:relative)
+       <template data-notes="1"><p><b>Short name.</b> One sentence.</p>…</template>  one <p> per pin, same order
+     Title: <html data-tour-title="What's new in 2.4" data-tour-eyebrow="Release walkthrough" data-tour-stamp="Released …">. -->
+<style data-review>
+  :root{--tour-w:340px;}
+  body{margin:0;}
+  #tour-wrap{display:grid;grid-template-columns:minmax(0,1fr) var(--tour-w);gap:32px;max-width:1440px;margin:0 auto;padding:32px 40px 56px;align-items:start;font-family:inherit;}
+  @media (max-width:1060px){#tour-wrap{grid-template-columns:minmax(0,1fr);padding:20px;}}
+  [data-step]{display:none;border:1px solid rgba(128,128,128,.25);border-radius:12px;overflow:hidden;position:relative;}
+  [data-step].tour-on{display:block;}
+  [data-pin]{position:absolute;top:-11px;left:-11px;width:22px;height:22px;border-radius:999px;background:var(--tour-accent,#0f62fe);color:#fff;font:600 12px/22px "IBM Plex Sans",system-ui,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(15,98,254,.4);z-index:20;}
+  [data-pin][data-pin-side="right"]{left:auto;right:-11px;}
+  .tour-anchor{position:relative;}
+  #tour-side{position:sticky;top:32px;display:flex;flex-direction:column;gap:18px;font:400 13.5px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:inherit;}
+  #tour-side .eyebrow{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.6;margin:0 0 6px;}
+  #tour-side h1{font-size:20px;font-weight:600;margin:0;letter-spacing:-.3px;}
+  #tour-side .stamp{font-size:12.5px;opacity:.7;margin:6px 0 0;}
+  #tour-steps{display:flex;flex-direction:column;gap:2px;border-top:1px solid rgba(128,128,128,.25);border-bottom:1px solid rgba(128,128,128,.25);padding:8px 0;}
+  #tour-steps button{all:unset;display:flex;align-items:center;gap:10px;cursor:pointer;padding:7px 9px;border-radius:6px;font-weight:500;opacity:.75;}
+  #tour-steps button .sn{width:19px;height:19px;border-radius:999px;border:1px solid rgba(128,128,128,.4);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  #tour-steps button.on{background:rgba(128,128,128,.12);opacity:1;}
+  #tour-steps button.on .sn{background:currentColor;border-color:transparent;}
+  #tour-steps button.on .sn span{filter:invert(1);}
+  #tour-notes p{position:relative;margin:0;padding:12px 0 12px 32px;border-top:1px solid rgba(128,128,128,.25);}
+  #tour-notes p b{font-weight:600;}
+  #tour-notes h2 + p{border-top:none;padding-top:0;}
+  #tour-notes h2 + p::before{top:0;}
+  #tour-notes p::before{content:attr(data-n);position:absolute;left:0;top:12px;width:21px;height:21px;border-radius:999px;background:var(--tour-accent,#0f62fe);color:#fff;font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+  #tour-notes h2{font-size:15px;font-weight:600;margin:0 0 12px;}
+  #tour-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid rgba(128,128,128,.25);padding-top:14px;}
+  #tour-foot button{all:unset;cursor:pointer;height:32px;padding:0 12px;border-radius:6px;border:1px solid rgba(128,128,128,.4);font-size:13px;font-weight:500;}
+  #tour-foot button:disabled{opacity:.4;cursor:default;}
+  #tour-foot .theme{margin-left:auto;display:inline-flex;gap:2px;padding:2px;border:1px solid rgba(128,128,128,.4);border-radius:8px;}
+  #tour-foot .theme button{border:none;height:26px;font-size:12px;}
+  #tour-foot .theme button.on{background:currentColor;}
+  #tour-foot .theme button.on span{filter:invert(1);}
+  #tour-style{font-size:11.5px;opacity:.55;}
+</style>
+<script>
+  addEventListener("DOMContentLoaded", () => {
+    const de = document.documentElement, steps = [...document.querySelectorAll("[data-step]")];
+    if (!steps.length) return;
+    const accent = getComputedStyle(de).getPropertyValue("--accent").trim() || getComputedStyle(de).getPropertyValue("--primary").trim();
+    if (accent) de.style.setProperty("--tour-accent", accent);
+    const wrap = document.createElement("div"); wrap.id = "tour-wrap";
+    const stages = document.createElement("div");
+    steps[0].before(wrap); wrap.append(stages); steps.forEach((s) => stages.append(s));
+    document.querySelectorAll("[data-pin]").forEach((p) => { p.textContent = p.dataset.pin; p.parentElement.classList.add("tour-anchor"); });
+    const side = document.createElement("aside"); side.id = "tour-side";
+    const esc = (s) => (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    side.innerHTML = `<div><p class="eyebrow">${esc(de.dataset.tourEyebrow || "Walkthrough")}</p><h1>${esc(de.dataset.tourTitle || document.title)}</h1>${de.dataset.tourStamp ? `<p class="stamp">${esc(de.dataset.tourStamp)}</p>` : ""}</div>
+      <nav id="tour-steps"></nav><div id="tour-notes"></div>
+      <div id="tour-foot"><button id="tour-prev">← Back</button><button id="tour-next">Next →</button>
+      <span class="theme"><button data-theme="light" class="on"><span>Light</span></button><button data-theme="dark"><span>Dark</span></button></span></div>
+      <div id="tour-style">${esc(de.dataset.reviewStyle || "")}</div>`;
+    wrap.append(side);
+    const nav = side.querySelector("#tour-steps"), notes = side.querySelector("#tour-notes");
+    steps.forEach((s, i) => { const b = document.createElement("button"); b.innerHTML = `<span class="sn"><span>${i + 1}</span></span>${esc(s.dataset.stepTitle || "Step " + (i + 1))}`; b.onclick = () => go(i); nav.append(b); });
+    let cur = 0;
+    const go = (i) => {
+      cur = Math.max(0, Math.min(steps.length - 1, i));
+      steps.forEach((s, j) => s.classList.toggle("tour-on", j === cur));
+      [...nav.children].forEach((b, j) => b.classList.toggle("on", j === cur));
+      const t = document.querySelector(`template[data-notes="${steps[cur].dataset.step}"]`);
+      notes.innerHTML = `<h2>${esc(steps[cur].dataset.stepTitle || "")}</h2>`;
+      if (t) { notes.append(t.content.cloneNode(true)); [...notes.querySelectorAll("p")].forEach((p, k) => (p.dataset.n = k + 1)); }
+      side.querySelector("#tour-prev").disabled = cur === 0; side.querySelector("#tour-next").disabled = cur === steps.length - 1;
+      scrollTo(0, 0);
+    };
+    side.querySelector("#tour-prev").onclick = () => go(cur - 1);
+    side.querySelector("#tour-next").onclick = () => go(cur + 1);
+    side.querySelectorAll(".theme button").forEach((b) => (b.onclick = () => { side.querySelectorAll(".theme button").forEach((x) => x.classList.toggle("on", x === b)); de.classList.toggle("dark", b.dataset.theme === "dark"); }));
+    new MutationObserver(() => { const d = de.classList.contains("dark"); side.querySelectorAll(".theme button").forEach((x) => x.classList.toggle("on", (x.dataset.theme === "dark") === d)); }).observe(de, { attributes: true, attributeFilter: ["class"] });
+    addEventListener("keydown", (e) => { if (e.key === "ArrowRight") go(cur + 1); if (e.key === "ArrowLeft") go(cur - 1); });
+    go(Number(new URLSearchParams(location.search).get("step") || 1) - 1);
+  });
+</script>

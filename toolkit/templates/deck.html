@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Deck</title>
+<!-- design:fonts -->
+<style>
+  /* The only global CSS: reset, scaler, print. Slides use inline styles.
+     NOTE: a section must never carry an inline `display` — inline beats this rule
+     and the slide then shows on top of every other slide. Put layout on an inner div. */
+  html, body { margin: 0; background: #161616; height: 100%; overflow: hidden; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+           transform-origin: center center; }
+  #stage > section { position: absolute; inset: 0; display: none; }
+  #stage > section[data-active] { display: block; }
+  #count { position: fixed; right: 20px; bottom: 16px; font: 400 14px 'IBM Plex Mono', monospace;
+           color: #8d8d8d; z-index: 10; }
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    html, body { background: #fff; height: auto; overflow: visible; }
+    #stage { position: static; left: auto; top: auto; transform: none !important; }
+    #stage > section { position: relative; inset: auto; display: block !important;
+                       width: 1920px; height: 1080px; break-after: page; }
+    #count { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1 — TITLE (light). Flex lives on the inner div, never on the section. -->
+  <section data-label="Title" data-speaker-notes="Open with the one sentence you want them to leave with." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px;overflow:hidden">
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:space-between">
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">SEPT 2026</div>
+      <div>
+        <h1 style="margin:0;font-size:108px;font-weight:300;line-height:0.92;letter-spacing:-0.03em;max-width:1500px;text-wrap:pretty">The deck title, set as a plain statement.</h1>
+        <p style="margin:36px 0 0;max-width:1100px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">One line of context: who this is for and what it argues.</p>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6f6f6f">Presenter name &#183; Team</div>
+    </div>
+  </section>
+
+  <!-- 2 — TITLE (dark variant). One accent word in the headline is the only color. -->
+  <section data-label="Title dark" data-speaker-notes="Use the dark title when the deck opens cold to an unfamiliar room — it reads as a keynote rather than a document." style="box-sizing:border-box;height:100%;background:#161616;font-family:'IBM Plex Sans',sans-serif;color:#f4f4f4;padding:77px 88px;overflow:hidden">
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:space-between">
+      <div style="text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#8d8d8d">JULY 2026</div>
+      <div>
+        <h1 style="margin:0;font-size:96px;font-weight:300;line-height:0.94;letter-spacing:-0.03em;max-width:1560px;text-wrap:pretty">Shared infrastructure for accelerating <em style="font-style:normal;color:#78a9ff">AI-native</em> research</h1>
+        <p style="margin:36px 0 0;max-width:1200px;font-size:28px;line-height:1.25;color:#c6c6c6;text-wrap:pretty">Design &#183; Build &#183; Test &#183; Learn — the building blocks, and who they are for.</p>
+      </div>
+      <div>
+        <div style="height:1px;background:#393939"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:24px;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#8d8d8d">
+          <span>example.org/deck</span><span>01 / 19</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 — SECTION DIVIDER (the one place the ink background belongs) -->
+  <section data-label="Section 01" data-speaker-notes="Signpost: what this section covers and why it comes first." style="box-sizing:border-box;height:100%;background:#161616;font-family:'IBM Plex Sans',sans-serif;color:#f4f4f4;padding:77px 88px;overflow:hidden">
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#78a9ff">01</div>
+      <h1 style="margin:24px 0 0;font-size:96px;font-weight:300;line-height:0.94;letter-spacing:-0.03em;max-width:1400px;text-wrap:pretty">Where the problem starts.</h1>
+      <p style="margin:28px 0 0;max-width:1100px;font-size:28px;line-height:1.25;color:#c6c6c6;text-wrap:pretty">One line on what this section establishes.</p>
+    </div>
+  </section>
+
+  <!-- 4 — STATEMENT (use two or three times in a deck, no more) -->
+  <section data-label="Statement" data-speaker-notes="Land this one and pause. It's the turn in the argument." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px;overflow:hidden">
+    <div style="height:100%;display:flex;align-items:center">
+      <h1 style="margin:0;font-size:84px;font-weight:300;line-height:1;letter-spacing:-0.03em;max-width:1560px;text-wrap:pretty">The single sentence the rest of the deck exists to support.</h1>
+    </div>
+  </section>
+
+  <!-- 5 — THREE CARDS (numbered when it's a sequence) -->
+  <section data-label="Three cards" data-speaker-notes="Three steps, in order. Don't read the cards aloud — add the example each one came from." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">01 / APPROACH</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1500px;text-wrap:pretty">The title states the claim, not the topic.</h1>
+    <p style="margin:26px 0 0;max-width:1240px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">One sentence saying what this is and why it matters, in the audience's own words.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:96px">
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:36px 34px 40px;min-height:300px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">01</div>
+        <div style="font-size:32px;margin-top:14px">First step, as a claim</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:14px">One or two sentences of mechanism. Reach for the specific detail over the general one.</div>
+      </div>
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:36px 34px 40px;min-height:300px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">02</div>
+        <div style="font-size:32px;margin-top:14px">Second step</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:14px">Every claim here should be traceable to the source material.</div>
+      </div>
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:36px 34px 40px;min-height:300px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">03</div>
+        <div style="font-size:32px;margin-top:14px">Third step</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:14px">Three cards, never four — unless the set really is a closed set of four.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 — FOUR CARDS (only for a closed set: four interfaces, four services, four quarters) -->
+  <section data-label="Four cards" data-speaker-notes="Four is allowed here because the set is closed — there is no fifth interface. Name the one people don't expect." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">02 / INTERFACES</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1560px;text-wrap:pretty">Four ways in, and the choice is the user's.</h1>
+    <p style="margin:26px 0 0;max-width:1400px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">A closed set gets its own card each. Keep every card to one heading and two lines.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:88px">
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:32px 30px 36px;min-height:290px">
+        <div style="font-size:30px">First</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">Two lines at most. Four cards leaves no room for a third.</div>
+      </div>
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:32px 30px 36px;min-height:290px">
+        <div style="font-size:30px">Second</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">If one card needs more, the set wants three cards and a footnote.</div>
+      </div>
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:32px 30px 36px;min-height:290px">
+        <div style="font-size:30px">Third</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">Name the concrete thing, not the category it belongs to.</div>
+      </div>
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:32px 30px 36px;min-height:290px">
+        <div style="font-size:30px">Fourth</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">Never five. A fifth means the grouping is wrong.</div>
+      </div>
+    </div>
+    <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:44px;max-width:1440px">The footnote line carries the caveat that would otherwise force a fifth card.</div>
+  </section>
+
+  <!-- 7 — VISUAL SPLIT -->
+  <section data-label="Visual split" data-speaker-notes="Walk the image first, then the three points." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">03 / IN PRACTICE</div>
+    <div style="width:47%;margin-top:32px">
+      <h1 style="margin:0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;text-wrap:pretty">Show the thing itself.</h1>
+      <p style="margin:28px 0 0;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">A real screenshot or photograph beats any diagram of it. Emphasise a pivotal word by <em style="font-style:normal;color:#161616">color</em>, never italics.</p>
+      <div style="display:flex;flex-direction:column;gap:28px;margin-top:56px">
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:26px">First point, as a claim</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:6px">One or two sentences. Point at what's visible in the image.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:26px">Second point</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:6px">Name the constraint or the number the audience wouldn't guess.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:26px">Third point</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:6px">Stop at three. The rest goes in the speaker notes.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Full-bleed portrait crop. If the image's own aspect matters: background:#fff + object-fit:contain. -->
+    <div style="position:absolute;left:1064px;top:56px;width:758px;height:968px;box-shadow:0 18px 96px rgba(51,51,51,0.42)">
+      <img src="assets/screenshot.png" alt="Describe what the image shows" style="display:block;width:100%;height:100%;object-fit:cover;object-position:top center" />
+    </div>
+  </section>
+
+  <!-- 8 — WIDE VISUAL: headline and standfirst on the left, a landscape image below full width -->
+  <section data-label="Wide visual" data-speaker-notes="For a landscape screenshot that would be unreadable cropped to portrait. Say what to look at before they hunt for it." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">03 / THE SURFACE</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1200px;text-wrap:pretty">Where your team already works.</h1>
+    <div style="display:grid;grid-template-columns:1fr 620px;gap:80px;align-items:start;margin-top:26px">
+      <p style="margin:0;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">One sentence on what the image shows and the one detail to notice in it.</p>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6f6f6f;padding-top:6px">screenshot &#183; production, Aug 2026</div>
+    </div>
+    <div style="margin-top:56px;height:544px;box-shadow:0 18px 96px rgba(51,51,51,0.32)">
+      <img src="assets/wide.png" alt="Describe what the image shows" style="display:block;width:100%;height:100%;object-fit:cover;object-position:top center" />
+    </div>
+  </section>
+
+  <!-- 9 — ARTIFACT + POINTS (chart, table, meter or UI panel, built in HTML) -->
+  <section data-label="Artifact" data-speaker-notes="Read the artifact out loud once — the audience needs a moment on it before the points." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">04 / EVIDENCE</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1420px;text-wrap:pretty">Build the chart in HTML, not in an image.</h1>
+    <p style="margin:26px 0 0;max-width:1200px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">A hairline trough with an accent fill covers most bar charts. The muted accent marks a secondary or inactive row.</p>
+    <div style="display:grid;grid-template-columns:900px 1fr;gap:72px;margin-top:72px;align-items:start">
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:30px 34px 36px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">PANEL LABEL</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#525252">unit &#183; source</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:24px">
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="width:340px;font-family:'IBM Plex Mono',monospace;font-size:24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">first-row-label</div>
+            <div style="flex:1;height:34px;background:#e0e0e0;position:relative">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:62%;background:#0f62fe"></div>
+            </div>
+            <div style="width:120px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#525252">62%</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="width:340px;font-family:'IBM Plex Mono',monospace;font-size:24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">second-row-label</div>
+            <div style="flex:1;height:34px;background:#e0e0e0;position:relative">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:41%;background:#0f62fe"></div>
+            </div>
+            <div style="width:120px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#525252">41%</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div style="width:340px;font-family:'IBM Plex Mono',monospace;font-size:24px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">third-row &#183; inactive</div>
+            <div style="flex:1;height:34px;background:#e0e0e0;position:relative">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:12%;background:#a6c8ff"></div>
+            </div>
+            <div style="width:120px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#525252">12%</div>
+          </div>
+        </div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:26px">One line reading the chart: what the audience should notice, and the caveat.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:32px;padding-top:8px">
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:30px">What the data says</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:8px">The finding, stated plainly, with its number.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:30px">Why it happens</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:8px">The mechanism behind it — the part that makes the finding actionable.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:30px">What it doesn't say</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:8px">The honest limit of the evidence. Say it before someone asks.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 — FIGURES (two to four, never more) -->
+  <section data-label="Figures" data-speaker-notes="Give each number its source out loud." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">04 / SCALE</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1420px;text-wrap:pretty">Three numbers, each with its unit and source.</h1>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:120px">
+      <div style="border-top:3px solid #0f62fe;padding-top:28px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">THROUGHPUT</div>
+        <div style="font-size:120px;font-weight:300;line-height:1;letter-spacing:-0.03em;margin-top:16px">14.2k</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:16px">Requests per minute at peak, measured over Q2.</div>
+      </div>
+      <div style="border-top:3px solid #0f62fe;padding-top:28px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">LATENCY</div>
+        <div style="font-size:120px;font-weight:300;line-height:1;letter-spacing:-0.03em;margin-top:16px">280ms</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:16px">p95, end to end, same window.</div>
+      </div>
+      <div style="border-top:3px solid #0f62fe;padding-top:28px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">COST</div>
+        <div style="font-size:120px;font-weight:300;line-height:1;letter-spacing:-0.03em;margin-top:16px">&#8722;38%</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:16px">Per request against the previous architecture.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 — SPEC ROWS: a mono term and its description, hairline between. Four rows, no more. -->
+  <section data-label="Spec rows" data-speaker-notes="This is the reference slide people photograph. Read the four terms, not the descriptions." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">05 / ARCHITECTURE</div>
+        <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;text-wrap:pretty">Four services, and one pod pair per agent.</h1>
+        <p style="margin:30px 0 0;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">The left column argues; the right column is the reference. Keep the argument in prose and the parts in rows.</p>
+        <p style="margin:26px 0 0;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">A second paragraph is allowed here — this is the one layout where the text column carries real length.</p>
+      </div>
+      <div style="padding-top:11px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#6f6f6f">CORE SERVICES</div>
+        <div style="margin-top:28px">
+          <div style="height:1px;background:#e0e0e0"></div>
+          <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;padding:22px 0 24px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#161616">ui</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252">What the term is, in one sentence of plain language.</div>
+          </div>
+          <div style="height:1px;background:#e0e0e0"></div>
+          <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;padding:22px 0 24px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#161616">api-server</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252">Mono for the identifier, sans for the explanation. Never both mono.</div>
+          </div>
+          <div style="height:1px;background:#e0e0e0"></div>
+          <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;padding:22px 0 24px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#161616">controller</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252">One line each. A row that wraps to three lines belongs on its own slide.</div>
+          </div>
+          <div style="height:1px;background:#e0e0e0"></div>
+          <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;padding:22px 0 24px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#161616">agent-runtime</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252">Four rows is the ceiling; a fifth turns the slide into a manual page.</div>
+          </div>
+          <div style="height:1px;background:#e0e0e0"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 — REGISTER: a left rail label per band. The taxonomy slide. -->
+  <section data-label="Register" data-speaker-notes="This is the whole model on one slide. Walk the rail labels top to bottom — the bands are for reading, not for saying." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:80px">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">06 / THE MODEL</div>
+        <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1200px;text-wrap:pretty">One object, and everything you attach to it.</h1>
+      </div>
+      <div style="width:390px;font-size:24px;line-height:1.3;color:#6f6f6f;padding-top:8px">The right-hand note carries what the bands can't: the one sentence of why this shape.</div>
+    </div>
+    <div style="margin-top:60px;display:flex;flex-direction:column;gap:24px">
+      <!-- band 1: the accent band, for the primary object. Once per deck. -->
+      <div style="display:grid;grid-template-columns:212px 1fr;gap:0;align-items:center">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">THE OBJECT</div>
+        <div style="background:#0f62fe;color:#fff;padding:24px 30px;display:flex;justify-content:space-between;align-items:center;gap:30px">
+          <div>
+            <div style="font-size:34px">Agent</div>
+            <div style="font-size:24px;color:#d0e2ff;margin-top:8px">Isolated pod &#183; durable workspace &#183; one owner</div>
+          </div>
+          <div style="display:flex;gap:12px;flex:0 0 auto">
+            <div style="background:#a6c8ff;color:#161616;font-family:'IBM Plex Mono',monospace;font-size:24px;padding:9px 16px">plain</div>
+            <div style="background:#a6c8ff;color:#161616;font-family:'IBM Plex Mono',monospace;font-size:24px;padding:9px 16px">kind: experiment</div>
+            <div style="background:#a6c8ff;color:#161616;font-family:'IBM Plex Mono',monospace;font-size:24px;padding:9px 16px">kind: knowledge-base</div>
+          </div>
+        </div>
+      </div>
+      <!-- band 2: five equal cells -->
+      <div style="display:grid;grid-template-columns:212px 1fr;align-items:center">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">WHAT YOU ATTACH</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 20px 22px">
+            <div style="font-size:26px">Sessions</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">chat, terminal, SSH</div>
+          </div>
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 20px 22px">
+            <div style="font-size:26px">Connections</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">credentials, hosts</div>
+          </div>
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 20px 22px">
+            <div style="font-size:26px">Skills</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">installed from git</div>
+          </div>
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 20px 22px">
+            <div style="font-size:26px">Schedules</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">cron and heartbeat</div>
+          </div>
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 20px 22px">
+            <div style="font-size:26px">Channels</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">Slack, Telegram</div>
+          </div>
+        </div>
+      </div>
+      <!-- band 3: three equal cells -->
+      <div style="display:grid;grid-template-columns:212px 1fr;align-items:center">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">WHAT GOVERNS IT</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 22px 22px">
+            <div style="font-size:26px">Approvals</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">allow, deny or ask — per request</div>
+          </div>
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 22px 22px">
+            <div style="font-size:26px">Egress rules</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">where it may reach at all</div>
+          </div>
+          <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 22px 22px">
+            <div style="font-size:26px">Budgets</div>
+            <div style="font-size:24px;color:#525252;margin-top:6px">how much it may hold at once</div>
+          </div>
+        </div>
+      </div>
+      <!-- band 4: one wide cell -->
+      <div style="display:grid;grid-template-columns:212px 1fr;align-items:center">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">WHAT COMES OUT</div>
+        <div style="background:#fff;border-top:3px solid #0f62fe;padding:20px 22px 22px">
+          <div style="font-size:26px">Artifacts</div>
+          <div style="font-size:24px;color:#525252;margin-top:6px">An owner-scoped library on its own host. Outlives the agent that wrote it.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 — FLOW: three stages, arrows between, one line on what enforces it -->
+  <section data-label="Flow" data-speaker-notes="The middle stage is the point of the slide. Say what happens if it is skipped." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">07 / THE PATH</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1420px;text-wrap:pretty">Nothing reaches the outside without passing the middle.</h1>
+    <p style="margin:26px 0 0;max-width:1300px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">Three stages, left to right. Use this for a path a request takes, not for a process a person follows — that is the numbered cards.</p>
+    <div style="background:#fff;margin-top:80px;padding:40px 44px 44px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">TWO PODS PER AGENT</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6f6f6f">created, hibernated and deleted with it</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 80px 1fr 80px 1fr;align-items:start;margin-top:34px">
+        <div>
+          <div style="font-size:34px">agent pod</div>
+          <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:10px">What the stage is, and what it deliberately does not hold.</div>
+        </div>
+        <div style="font-size:34px;color:#0f62fe;text-align:center;padding-top:6px">&#8594;</div>
+        <div>
+          <div style="font-size:34px">gateway pod</div>
+          <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:10px">The stage that does the work the slide is about.</div>
+        </div>
+        <div style="font-size:34px;color:#0f62fe;text-align:center;padding-top:6px">&#8594;</div>
+        <div>
+          <div style="font-size:34px">the outside</div>
+          <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:10px">Where it ends up. Name the real systems, not "external services".</div>
+        </div>
+      </div>
+      <div style="height:1px;background:#e0e0e0;margin-top:38px"></div>
+      <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:24px">The line under the rule says what enforces the path — the reason it is not merely a convention.</div>
+    </div>
+  </section>
+
+  <!-- 14 — QUADRANT: four points, 2x2, hairline above each. For facets, not sequence. -->
+  <section data-label="Quadrant" data-speaker-notes="Four facets of one thing, in no particular order. If the audience asks which comes first, this should have been cards." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">08 / PROPERTIES</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1500px;text-wrap:pretty">Artifacts outlive the agent that made them.</h1>
+    <p style="margin:26px 0 0;max-width:1420px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">Four properties, none of which is a step. The 2&#215;2 says "these are facets"; numbered cards would say "these are stages".</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:70px 68px;margin-top:80px">
+      <div>
+        <div style="height:1px;background:#e0e0e0"></div>
+        <div style="font-size:32px;margin-top:26px">First property, as a claim</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">Two lines of mechanism. The hairline groups without shouting, which is why this layout takes four items and cards do not.</div>
+      </div>
+      <div>
+        <div style="height:1px;background:#e0e0e0"></div>
+        <div style="font-size:32px;margin-top:26px">Second property</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">Keep the four headings parallel in grammar — all noun phrases, or all verb phrases.</div>
+      </div>
+      <div>
+        <div style="height:1px;background:#e0e0e0"></div>
+        <div style="font-size:32px;margin-top:26px">Third property</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">Swap the hairline for a 3px accent rule when the four items need more separation.</div>
+      </div>
+      <div>
+        <div style="height:1px;background:#e0e0e0"></div>
+        <div style="font-size:32px;margin-top:26px">Fourth property</div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:12px">The honest limit belongs in the fourth cell, where the eye lands last.</div>
+      </div>
+    </div>
+    <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:56px;max-width:1440px">One footnote line, tying the four back to the argument.</div>
+  </section>
+
+  <!-- 15 — HORIZON COLUMNS: now / next / later, or any three ordered buckets -->
+  <section data-label="Horizon" data-speaker-notes="Commit to Now, hedge on Next, and say plainly that Later is not a promise." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">09 / ROADMAP</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1500px;text-wrap:pretty">Built with and for the people who will use it.</h1>
+    <p style="margin:26px 0 0;max-width:1420px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">Three buckets, three items each. No dates — a horizon column that carries dates becomes a commitment you will be held to.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:36px;margin-top:88px">
+      <div style="background:#fff;border-top:3px solid #0f62fe;padding:34px 34px 38px;min-height:320px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">NOW</div>
+        <div style="margin-top:26px;display:flex;flex-direction:column;gap:20px">
+          <div style="font-size:28px;line-height:1.25">The item people are already asking for</div>
+          <div style="font-size:28px;line-height:1.25">The unglamorous one that unblocks the rest</div>
+          <div style="font-size:28px;line-height:1.25">The third, and stop at three</div>
+        </div>
+      </div>
+      <div style="background:#fff;border-top:3px solid #a6c8ff;padding:34px 34px 38px;min-height:320px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#0f62fe">NEXT</div>
+        <div style="margin-top:26px;display:flex;flex-direction:column;gap:20px">
+          <div style="font-size:28px;line-height:1.25">Scoped, not started</div>
+          <div style="font-size:28px;line-height:1.25">The one that needs a decision from this room</div>
+          <div style="font-size:28px;line-height:1.25">The third</div>
+        </div>
+      </div>
+      <div style="background:#fff;border-top:3px solid #e0e0e0;padding:34px 34px 38px;min-height:320px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">LATER</div>
+        <div style="margin-top:26px;display:flex;flex-direction:column;gap:20px">
+          <div style="font-size:28px;line-height:1.25">Named so nobody asks whether you forgot it</div>
+          <div style="font-size:28px;line-height:1.25">Explicitly not a commitment</div>
+          <div style="font-size:28px;line-height:1.25">The third</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 — CADENCE ROWS + META STRIP: labelled steps left, stems right, three facts pinned to the base -->
+  <section data-label="Cadence" data-speaker-notes="The meta strip at the base answers the three questions people always ask, so you never have to field them mid-slide." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">10 / IN THE WEEK</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#6f6f6f">example &#183; one agent</div>
+    </div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1600px;text-wrap:pretty">It runs the week so nobody has to remember to.</h1>
+    <p style="margin:26px 0 0;max-width:1420px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">Left: what happens when. Right: what it leans on. Both read top to bottom.</p>
+    <div style="display:grid;grid-template-columns:1fr 700px;gap:72px;margin-top:72px;align-items:start">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">WHAT IT DOES</div>
+        <div style="margin-top:24px">
+          <div style="height:1px;background:#e0e0e0"></div>
+          <div style="display:grid;grid-template-columns:110px 1fr;gap:24px;padding:20px 0 22px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#0f62fe">MON</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252">What happens on this beat, in one line.</div>
+          </div>
+          <div style="height:1px;background:#e0e0e0"></div>
+          <div style="display:grid;grid-template-columns:110px 1fr;gap:24px;padding:20px 0 22px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#0f62fe">THU</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252">The second beat. Same shape, so the rhythm is visible.</div>
+          </div>
+          <div style="height:1px;background:#e0e0e0"></div>
+          <div style="display:grid;grid-template-columns:110px 1fr;gap:24px;padding:20px 0 22px">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#0f62fe">FRI</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252">The third, and what it leaves behind afterwards.</div>
+          </div>
+          <div style="height:1px;background:#e0e0e0"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">WHAT IT LEANS ON</div>
+        <div style="margin-top:24px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;gap:22px;align-items:stretch">
+            <div style="flex:0 0 3px;background:#0f62fe"></div>
+            <div style="font-size:26px;padding:6px 0">Schedules &#183; three weekly beats</div>
+          </div>
+          <div style="display:flex;gap:22px;align-items:stretch">
+            <div style="flex:0 0 3px;background:#0f62fe"></div>
+            <div style="font-size:26px;padding:6px 0">Channel &#183; lives in the team channel</div>
+          </div>
+          <div style="display:flex;gap:22px;align-items:stretch">
+            <div style="flex:0 0 3px;background:#0f62fe"></div>
+            <div style="font-size:26px;padding:6px 0">Workspace &#183; topics, speakers, notes</div>
+          </div>
+        </div>
+        <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:28px">One line on how little it takes to build — the surprise the audience is waiting for.</div>
+      </div>
+    </div>
+    <!-- META STRIP: pinned to the base, three label/value pairs. Reusable on any slide. -->
+    <div style="position:absolute;left:88px;right:88px;bottom:70px">
+      <div style="height:1px;background:#e0e0e0"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:24px">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">CADENCE</div>
+          <div style="font-size:26px;margin-top:10px">Three times a week</div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">WHO IT SERVES</div>
+          <div style="font-size:26px;margin-top:10px">The whole team channel</div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f">WHERE THE HUMAN STAYS</div>
+          <div style="font-size:26px;margin-top:10px">People decide; it only organizes</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 — DARK PANEL + POINTS (a dialog, terminal, or code sample) -->
+  <section data-label="Dark panel" data-speaker-notes="Use the dark panel for a decision moment or a verbatim artifact." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px 0;overflow:hidden">
+    <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">11 / THE MOMENT</div>
+    <h1 style="margin:32px 0 0;font-size:60px;font-weight:300;line-height:0.94;letter-spacing:-0.02em;max-width:1420px;text-wrap:pretty">Put the real artifact on the slide.</h1>
+    <p style="margin:26px 0 0;max-width:1200px;font-size:28px;line-height:1.25;color:#525252;text-wrap:pretty">A dialog, a terminal, a verbatim quote — rendered, not described.</p>
+    <div style="display:grid;grid-template-columns:660px 1fr;gap:80px;margin-top:76px;align-items:start">
+      <div style="background:#161616;color:#f4f4f4;box-shadow:0 14px 60px rgba(51,51,51,0.28)">
+        <div style="border-top:3px solid #0f62fe;padding:28px 32px 0;font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#78a9ff">PANEL LABEL</div>
+        <div style="padding:20px 32px 28px">
+          <div style="font-size:30px;line-height:1.3">The question being asked of the user</div>
+          <div style="background:#262626;padding:20px 22px;margin-top:20px;font-family:'IBM Plex Mono',monospace;font-size:24px;line-height:1.5">the exact command, query or payload</div>
+          <div style="font-size:24px;line-height:1.3;color:#c6c6c6;margin-top:20px">One line of context — the consequence of each answer.</div>
+        </div>
+        <div style="display:flex;gap:2px;padding:0 32px 32px">
+          <div style="flex:1;background:#0f62fe;color:#fff;text-align:center;padding:18px 0;font-size:26px">Primary</div>
+          <div style="flex:1;background:#393939;text-align:center;padding:18px 0;font-size:26px">Secondary</div>
+          <div style="flex:1;background:#393939;text-align:center;padding:18px 0;font-size:26px">Cancel</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:32px;padding-top:8px">
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:30px">What the audience is looking at</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:8px">Name the moment and who's in it.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:30px">Why it's designed this way</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:8px">The constraint that forced the choice.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:24px;align-items:flex-start">
+          <div style="flex:0 0 3px;align-self:stretch;background:#0f62fe"></div>
+          <div>
+            <div style="font-size:30px">What changes as a result</div>
+            <div style="font-size:24px;line-height:1.3;color:#525252;margin-top:8px">The consequence, stated concretely.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 — QUOTE: verbatim, attributed, nothing else -->
+  <section data-label="Quote" data-speaker-notes="Read it word for word, then say who said it and when. Never paraphrase a slide that is set as a quote." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px;overflow:hidden">
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:center;max-width:1560px">
+      <div style="width:96px;height:3px;background:#0f62fe"></div>
+      <blockquote style="margin:44px 0 0;font-size:60px;font-weight:300;line-height:1.12;letter-spacing:-0.02em;text-wrap:pretty">The verbatim sentence, cut to the part that carries the point and not one clause more.</blockquote>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6f6f6f;margin-top:44px">Role, team &#183; user interview, June 2026</div>
+    </div>
+  </section>
+
+  <!-- 19 — CLOSING: the ask, then where to go. Mirrors the title slide's rhythm. -->
+  <section data-label="Closing" data-speaker-notes="Say the ask out loud — the links are for the photograph, not for reading aloud." style="box-sizing:border-box;height:100%;background:#f4f4f4;font-family:'IBM Plex Sans',sans-serif;color:#161616;padding:77px 88px;overflow:hidden">
+    <div style="height:100%;display:flex;flex-direction:column;justify-content:space-between">
+      <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.14em;color:#0f62fe">RESOURCES</div>
+      <div>
+        <div style="width:96px;height:4px;background:#0f62fe"></div>
+        <h1 style="margin:44px 0 0;font-size:84px;font-weight:300;line-height:1;letter-spacing:-0.03em;max-width:1500px;text-wrap:pretty">The one thing you want them to do next.</h1>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:32px;margin-top:70px">
+          <div>
+            <div style="height:1px;background:#e0e0e0"></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f;margin-top:22px">REPO</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;margin-top:14px">example.org/repo</div>
+          </div>
+          <div>
+            <div style="height:1px;background:#e0e0e0"></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f;margin-top:22px">LAUNCH</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;margin-top:14px">example.org/start</div>
+          </div>
+          <div>
+            <div style="height:1px;background:#e0e0e0"></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f;margin-top:22px">WAITLIST</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;margin-top:14px">example.org/waitlist</div>
+          </div>
+          <div>
+            <div style="height:1px;background:#e0e0e0"></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-weight:300;font-size:24px;letter-spacing:0.1em;color:#6f6f6f;margin-top:22px">DOCS</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;margin-top:14px">example.org/docs</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:24px;color:#6f6f6f">
+        <span>Deck name &#183; SEPT 2026</span><span>Appendix follows</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+<div id="count"></div>
+<script>
+  // Scale 1920×1080 to fit; arrows / space / PgUp / PgDn to navigate.
+  // Opens on slide 1 by default; ?slide=4 (or #4) deep-links one.
+  const stage = document.getElementById('stage');
+  const slides = [...stage.children];
+  const count = document.getElementById('count');
+  const asked = parseInt(new URLSearchParams(location.search).get('slide') || location.hash.slice(1), 10);
+  let i = Number.isFinite(asked) ? Math.max(0, Math.min(slides.length - 1, asked - 1)) : 0;
+  function fit() {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+  function show(n) {
+    i = (n + slides.length) % slides.length;
+    slides.forEach((s, k) => k === i ? s.setAttribute('data-active', '') : s.removeAttribute('data-active'));
+    count.textContent = `${i + 1} / ${slides.length}`;
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowDown', ' ', 'PageDown'].includes(e.key)) { show(i + 1); e.preventDefault(); }
+    if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { show(i - 1); e.preventDefault(); }
+  });
+  fit(); show(i);
+</script>
+</body>
+</html>

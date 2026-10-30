@@ -1,0 +1,45 @@
+# This repository (the design-desk definition) is checked out at the agent's HOME root
+# (/home/agent), which also contains secrets and runtime state (.ssh, .claude, .config,
+# work/, checkouts/, ...). To make `git add -A` safe and never capture those, ignore
+# EVERYTHING at the top level by default, then re-include only the definition files this
+# repo actually tracks.
+#
+# NOTE: NOTHING under work/ is tracked — it is all runtime state, seeded on a fresh disk
+# from the templates in ONBOARDING.md, not from this repo.
+
+/*
+
+!/.gitignore
+!/CLAUDE.md
+!/AGENTS.md
+!/README.md
+!/ARCHITECTURE.md
+!/ONBOARDING.md
+!/kit.yaml
+!/VERSION
+!/CHANGELOG.md
+!/LICENSE
+!/docs/
+!/scripts/
+!/.github/
+!/desk/
+!/toolkit/
+
+# Runtime skill installs land in .agents/skills/ too, so the bundled ones are
+# re-included BY NAME — otherwise a cached install becomes definition content.
+!/.agents/
+/.agents/skills/*
+!/.agents/skills/brand
+!/.agents/skills/copy
+!/.agents/skills/demo-video
+!/.agents/skills/explain
+!/.agents/skills/slides
+!/.agents/skills/variants
+!/.agents/skills/walkthrough
+
+# The toolkit's packages are installed by scripts/install-toolkit.sh, never tracked.
+/toolkit/node_modules/
+
+# Never track these even if a future allowlist entry would pull them in.
+.DS_Store
+.claude/settings.local.json

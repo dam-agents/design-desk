@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# pre-push — every product checkout of this agent uses this hook (scripts/checkout.sh
+# sets core.hooksPath). It enforces what CLAUDE.md promises: a push goes only to a
+# design-desk/ branch, and only when the operator set prototype_remote.
+# git passes "<local ref> <local sha> <remote ref> <remote sha>" per ref on stdin.
+WORK="${WORK_DIR:-${HOME:-/home/agent}/work}"
+remote_cfg="$(sed -n 's/^- prototype_remote:[[:space:]]*//p' "$WORK/CONFIG.md" 2>/dev/null | head -1 | sed -e 's/[[:space:]]*#.*$//' -e 's/[[:space:]]*$//')"
+if [ -z "$remote_cfg" ] || [ "$remote_cfg" = none ]; then
+  echo "design-desk: pushing is off (prototype_remote: none) — the prototype's record is the patch on its Desk card" >&2
+  exit 1
+fi
+while read -r _local _lsha remote_ref _rsha; do
+  case "$remote_ref" in
+    refs/heads/design-desk/*) ;;
+    *) echo "design-desk: refusing to push to $remote_ref — only design-desk/ branches (CLAUDE.md → Hard invariants)" >&2; exit 1;;
+  esac
+done
+exit 0
