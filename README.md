@@ -26,7 +26,7 @@ How it is built and why: [`ARCHITECTURE.md`](ARCHITECTURE.md).
    **GitHub** connection.
 2. Turn on **Interactive artifacts** and **Environments** (Settings → tap the version five
    times → Experimental features).
-3. Answer the onboarding questions: which repositories, which language, who uses the Desk.
+3. Answer the onboarding questions: which repositories and who uses the Desk.
 4. Share the Desk page with your team: open it in the app → Share → Restricted → their emails.
    Everyone, you included, uses the Desk through that share link (or in the agent's chat).
 

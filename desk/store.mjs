@@ -26,16 +26,19 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   const shaper = role === "designer" || role === "lead";
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
-    case "vote": case "request": case "follow-up": return member;
-    case "explore": case "revise": case "approve": case "close": case "reopen": return shaper;
+    case "vote": case "request": case "follow-up": case "queue": return member;
+    case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
 }
 
+export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "archived"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up"];
+// A catalog element: one real UI part drawn in every state it can be in.
+export const ELEMENT_STATES = ["current", "stale", "building"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda"];
 
 export class DeskError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -134,6 +137,7 @@ export class Store {
         acked: viewer ? Boolean(c.acks?.[viewer]) : false,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
+        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length,
       }));
   }
 
@@ -221,8 +225,11 @@ export class Store {
 
   // A request is an idea for the design or a UI bug; a bug may come from a messenger,
   // filed by the agent on the reporter's behalf, with where to answer them (`origin`).
+  // Types: an idea for the design; a UI bug; a feature (a larger piece, usually an
+  // issue); an adjustment of UI a developer built (a pull request or a change card);
+  // a proposal the agent made for a new feature.
   createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null }) {
-    if (!["idea", "bug"].includes(type)) throw bad("type must be idea or bug");
+    if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
     const request = {
       type, problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"),
       screen: optText(screen, 500, "screen"), steps: optText(steps, LIMITS.text, "steps"),
@@ -245,6 +252,13 @@ export class Store {
   // A state change a person asks for on a request card; the agent does the work.
   act(cardId, who, action, note = "") {
     const c = this.card(cardId);
+    if (c.kind === "element") {
+      if (action !== "refresh") throw bad("a catalog element can only be refreshed");
+      if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad("that is already waiting for the agent");
+      const item = this.enqueue("catalog", cardId, null, who, optText(note, 1000, "note"));
+      this.save();
+      return { card: c, inbox: item };
+    }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
     if (closed && action !== "reopen") throw bad("this request is closed; reopen it first");
@@ -268,6 +282,47 @@ export class Store {
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     this.save();
     return { card: c, inbox: item };
+  }
+
+  // ---------- the next call's agenda ----------
+
+  // People put a card on the agenda of the team's next call; the agent writes a brief
+  // for it (what to decide); after the call the lead closes the agenda.
+  queueForCall(cardId, who, note = "") {
+    const c = this.card(cardId);
+    if (c.agenda?.status === "queued") throw bad("it is already on the next call");
+    c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, 500, "note"), brief: null };
+    c.updated = this.clock();
+    const item = who?.agent ? null : this.enqueue("agenda", cardId, null, who, c.agenda.note);
+    this.save();
+    return { card: c, inbox: item };
+  }
+
+  unqueue(cardId, who) {
+    const c = this.card(cardId);
+    if (c.agenda?.status !== "queued") throw bad("it is not on the next call");
+    const mine = c.agenda.by?.email && c.agenda.by.email === who.email;
+    if (!mine && !can(who.role, "close")) throw forbidden("only the person who added it, a designer or the lead can take it off");
+    c.agenda = { ...c.agenda, status: "removed", removed_at: this.clock() };
+    this.save();
+    return { card: c };
+  }
+
+  // The lead marks the call held: what was queued becomes presented, with the date.
+  closeCall(who, { date = null } = {}) {
+    if (!can(who.role, "close")) throw forbidden("the lead or a designer closes the call");
+    const when = optText(date, 40, "date") || this.clock();
+    const done = [];
+    for (const c of Object.values(this.db.cards)) if (c.agenda?.status === "queued") { c.agenda = { ...c.agenda, status: "presented", call: when }; done.push(c.id); }
+    this.db.calls = [...(this.db.calls || []), { at: when, by: person(who), cards: done }].slice(-100);
+    this.save();
+    return { presented: done };
+  }
+
+  agenda() {
+    return Object.values(this.db.cards).filter((c) => c.agenda?.status === "queued")
+      .sort((a, b) => a.agenda.at.localeCompare(b.agenda.at))
+      .map((c) => ({ id: c.id, kind: c.kind, title: c.title, status: c.status, type: c.request?.type || null, agenda: c.agenda, summary: c.summary || "", thumb: c.screens?.[0]?.asset || c.variants?.[0]?.asset || null }));
   }
 
   // ---------- agent actions ----------
@@ -342,21 +397,23 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
-    if (!c && fields.kind !== "change" && fields.kind !== "request") throw bad("a new card needs kind change or request");
+    if (!c && !["change", "request", "element"].includes(fields.kind)) throw bad("a new card needs kind change, request or element");
+    if (!c && fields.kind === "element" && fields.source?.file && fields.source?.export)
+      c = Object.values(this.db.cards).find((x) => x.kind === "element" && x.source?.file === fields.source.file && x.source?.export === fields.source.export) || null;
     if (!c && fields.kind === "change" && fields.source?.repo && fields.source?.pr)
       c = Object.values(this.db.cards).find((x) => x.kind === "change" && x.source?.repo === fields.source.repo && x.source?.pr === fields.source.pr) || null;
     // Everything is checked on a copy; the store changes only when all of it holds.
-    const next = c ? structuredClone(c) : { kind: fields.kind, status: fields.kind === "change" ? "new" : "triage", created: this.clock(), created_by: { agent: true },
+    const next = c ? structuredClone(c) : { kind: fields.kind, status: { change: "new", request: "triage", element: "building" }[fields.kind], created: this.clock(), created_by: { agent: true },
       sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" } };
     for (const k of AGENT_FIELDS) {
       if (fields[k] === undefined) continue;
       if (k === "title") next.title = clean(fields.title, LIMITS.title, "title");
       else if (k === "summary") next.summary = clean(fields.summary, 600, "summary");
       else if (k === "status") {
-        const ok = next.kind === "change" ? CHANGE_STATES : REQUEST_STATES;
+        const ok = { change: CHANGE_STATES, request: REQUEST_STATES, element: ELEMENT_STATES }[next.kind];
         if (!ok.includes(fields.status)) throw bad(`status must be one of ${ok.join(", ")}`);
         // A person closed it while a session worked: the session's late write must not reopen it.
         if (c && (c.status === "declined" || c.status === "handed-off") && fields.status !== c.status && !(c.status === "handed-off" && fields.status === "declined"))
@@ -366,6 +423,17 @@ export class Store {
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") next.variants = cleanVariants(fields.variants, this.db.assets);
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
+      else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
+      else if (k === "states") next.states = cleanStates(fields.states);
+      else if (k === "group") next.group = clean(fields.group, 60, "group");
+      else if (k === "elements") { if (!Array.isArray(fields.elements)) throw bad("elements must be a list"); next.elements = fields.elements.slice(0, 30).map((id) => this.card(String(id)).id); }
+      else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets);
+      else if (k === "origin") next.origin = cleanOrigin(fields.origin);
+      else if (k === "brief") {
+        // The agent's brief for the call: what is on the table and what to decide.
+        if (!next.agenda) throw bad("a brief belongs to a card on the agenda");
+        next.agenda = { ...next.agenda, brief: clean(fields.brief, 1500, "brief") };
+      }
       else next[k] = cleanLinks(k, fields[k]);
     }
     if (!next.title) throw bad("a card needs a title");
@@ -476,7 +544,30 @@ function cleanLinks(key, value) {
 function cleanOrigin(o) {
   if (typeof o !== "object") throw bad("origin must be an object");
   const str = (v, n) => (v === undefined || v === null || v === "" ? null : String(v).slice(0, n));
-  if (!["slack", "desk"].includes(o.channel)) throw bad("origin.channel must be slack or desk");
+  if (!/^[a-z][a-z0-9-]{1,30}$/.test(String(o.channel || ""))) throw bad("origin.channel is a short name: slack, telegram, github, desk…");
+  const url = str(o.url, 500);
+  if (url && !/^https?:\/\//i.test(url)) throw bad("origin.url must be http(s)");
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
+    repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40) };
+}
+
+// A catalog element's states: what each tile shows and what makes it happen.
+function cleanStates(list) {
+  if (!Array.isArray(list)) throw bad("states must be a list");
+  return list.slice(0, 60).map((x, i) => ({ name: clean(x.name, 80, `state ${i + 1} name`), how: optText(x.how, 300, `state ${i + 1} how`) }));
+}
+
+// What the agent found before designing: the context, the history, the decisions.
+function cleanResearch(r, assets) {
+  if (r === null) return null;
+  if (typeof r !== "object") throw bad("research must be an object");
+  const verdicts = ["clear", "duplicate", "deliberate", "collision", "unclear"];
+  if (!verdicts.includes(r.verdict)) throw bad(`research.verdict must be one of ${verdicts.join(", ")}`);
+  if (r.asset != null && !own(assets, r.asset)) throw bad(`research: no asset ${r.asset}`);
+  const links = Array.isArray(r.links) ? r.links.slice(0, 20).map((l) => {
+    if (!/^https?:\/\//i.test(String(l.url || ""))) throw bad("research links must be http(s)");
+    return { label: clean(l.label, 120, "link label"), url: String(l.url).slice(0, 500) };
+  }) : [];
+  return { verdict: r.verdict, summary: clean(r.summary, 2000, "research summary"), asset: r.asset ?? null, links, at: optText(r.at, 40, "at") || null };
 }

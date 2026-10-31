@@ -19,7 +19,7 @@ next run's.
    names is an orphan (report it; the operator decides), a live card whose Environment is
    gone is stale (report it).
 4. **Sample three cards** written this week: a source for every "why", screens that show the
-   change, no file paths in `what` and `why`, the `language` configured.
+   change, no file paths in `what` and `why`, plain English.
 5. **Failures** — every `failures[]` signature from the pass: cause and fix, classified
    environment / agent mistake / definition bug. A verified environment cause becomes a line
    in `work/LESSONS.md`; a definition bug is reported in full in the report (this agent files

@@ -60,7 +60,6 @@ function settings() {
   return {
     prototypeRoles: list(cfg("prototype_requesters"), ["designer", "lead"]),
     ping: cfg("desk_ping", "enabled") !== "disabled",
-    language: cfg("language", "en"),
     name: cfg("display_name", "Design Desk"),
   };
 }
@@ -105,19 +104,23 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen"];
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", language: s.language, name: s.name });
+    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue"];
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", name: s.name });
   }
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
+  if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), calls: (store.db.calls || []).slice(-5) });
   const b = m === "GET" ? {} : await body(req);
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, "the Desk is full; the owner archives old cards (docs/desk.md → Server)");
     spend(who.email || who.sub, "write");
     if ((p[1] === "cards" && p[3] === "threads" && b.kind === "question") || (p[1] === "threads" && p[3] === "messages") || p[1] === "requests" || (p[1] === "cards" && p[3] === "actions")) spend(who.email || who.sub, "item");
   }
+  if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note), s, who)); }
+  if (m === "DELETE" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.unqueue(p[2], actor));
+  if (m === "POST" && p[1] === "calls") return send(res, 200, store.closeCall(actor, b));
   if (m === "POST" && p[1] === "cards" && p[3] === "ack") { need("ack"); return send(res, 200, store.ack(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "threads") { need(b.kind === "question" ? "ask" : "comment"); return send(res, 201, withPing(store.openThread(p[2], actor, b), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need("comment"); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
@@ -152,6 +155,8 @@ async function agentRoute(req, res, url) {
   const b = m === "GET" ? {} : await body(req);
   if (m === "POST" && p[1] === "cards") return send(res, 200, store.upsertCard(b));
   if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
+  if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.queueForCall(p[2], { agent: true }, b.note));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
   if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve) }));
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));

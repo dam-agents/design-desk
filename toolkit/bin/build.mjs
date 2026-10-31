@@ -50,7 +50,7 @@ export async function main(_cmd, argv) {
   const css = compileCss(style, html);
   const fonts = fontCss(style);
   html = html.replace("<html", `<html data-review-style="${style.label.replace(/"/g, "&quot;")}"`);
-  html = html.replace("<!-- design:css -->", `<!-- ${style.label} -->\n<style>${fonts}\n${css}</style>`);
+  html = html.replace("<!-- design:css -->", () => `<!-- ${style.label} -->\n<style>${fonts}\n${css}\n${style.componentCss || ""}</style>`);
   writeFileSync(out, html);
   console.log(JSON.stringify({ built: resolve(out), style: style.label, kb: Math.round(html.length / 1024), ...(style.commit ? { commit: style.commit } : {}) }));
 }

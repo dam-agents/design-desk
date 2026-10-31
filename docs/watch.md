@@ -40,7 +40,7 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
       rules, one step per changed area, and say on the card that the screens are a rebuild.
    Look at every screen before you use it (Read the image): a sign-in page, an error or
    an empty frame is not a screen of the change.
-7. **Write the card** with the `explain` skill, in `language`. A card holds:
+7. **Write the card** with the `explain` skill. A card holds:
    - `title` — what a person can now do or see, in the product's words, not the PR title;
    - `summary` — one or two sentences, the gist;
    - `sections`, in this order, each only when it has content:
@@ -57,7 +57,10 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    `kind: change`, the fields above and `screens: [{asset, caption}]`. The store finds an
    existing card of the same PR and updates it, so a retry never makes a second card.
 9. **Record.** `bash "$HOME/scripts/ledger.sh" done <repo> <pr> <card id>`.
-10. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
+10. **Catalog.** Every element card whose `source.file` the change touched: set
+    `status: stale` and `design desk enqueue catalog C-<n>` ([catalog.md](catalog.md)).
+    Put the touched elements' ids in the change card's `elements`.
+11. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title and the Desk link (`shareUrl` of `desk_artifact`), never card text
     beyond the title. Send, then log `logev info notified …`.
 

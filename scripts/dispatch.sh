@@ -22,7 +22,7 @@ mode="$(jq -r .mode "$wl")"
 
 case "$mode" in
   watch) ARRAYS='["changes_due"]'; SECTION='Watch run'; VERB='Explain'; NOUN='PR';;
-  inbox) ARRAYS='["requests_due","variants_due","prototypes_due","handoffs_due"]'; SECTION='Inbox run'; VERB='Work'; NOUN='Desk item';;
+  inbox) ARRAYS='["requests_due","variants_due","prototypes_due","handoffs_due","catalog_due"]'; SECTION='Inbox run'; VERB='Work'; NOUN='Desk item';;
   *) echo '{"outcome":"error","error":"this mode does not fan out"}'; exit 1;;
 esac
 
@@ -58,7 +58,7 @@ if [ "$cmd" = rest ]; then
   if [ "$mode" = watch ]; then
     title="$(jq -r '.changes_due[] | "#\(.pr)"' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Explain PR $title"
   else
-    title="$(jq -r '[.requests_due, .variants_due, .prototypes_due, .handoffs_due, .questions_due, .teardowns_due] | add | .[].id' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Work Desk items ${title:-(quick ones)}"
+    title="$(jq -r '[.requests_due, .variants_due, .prototypes_due, .handoffs_due, .catalog_due, .questions_due, .teardowns_due] | map(. // []) | add | .[].id' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Work Desk items ${title:-(quick ones)}"
   fi
   jq -n --arg w "$out" --arg t "$title" '{worklist: $w, title: $t}'
   exit 0

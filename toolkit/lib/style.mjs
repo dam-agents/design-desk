@@ -20,6 +20,17 @@ const WIREFRAME = {
 };
 
 export const brandPath = () => join(WORK, "brand", "brand.json");
+
+// `style` of the clone's design profile, the one `profile` names or the first one.
+function designProfileStyle(dir) {
+  const base = join(dir, ".design-desk");
+  if (!existsSync(base)) return null;
+  const want = cfg("profile", "auto").split(":")[1];
+  const names = readdirSync(base).filter((d) => existsSync(join(base, d, "profile.json"))).sort();
+  const name = want && names.includes(want.replace(/^\.design-desk\//, "")) ? want.replace(/^\.design-desk\//, "") : names[0];
+  if (!name) return null;
+  try { return JSON.parse(readFileSync(join(base, name, "profile.json"), "utf8")).style || null; } catch { return null; }
+}
 export const loadBrand = () => (existsSync(brandPath()) ? JSON.parse(readFileSync(brandPath(), "utf8")) : null);
 
 export function resolveStyle(flag, ref = "") {
@@ -34,11 +45,21 @@ export function resolveStyle(flag, ref = "") {
   if (s === "wireframe") return { kind: "wireframe", brand: WIREFRAME, label: "Style: wireframe (grayscale)" };
   if (s.startsWith("repo:")) {
     const repo = s.slice(5);
-    const profile = loadProfile(repo);
-    if (!profile) fail(`no saved profile for ${repo} — run \`design repo detect ${repo}\`, confirm it with the user, then \`design repo save\``);
+    // The product's own design profile (`.design-desk/*/profile.json` → `style`, from the
+    // fresh clone) comes first; a profile saved by `design repo save` is the fallback for a
+    // repository that has none.
+    const saved = loadProfile(repo);
+    const { dir, commit } = cloneRepo(repo, ref || saved?.ref || "");
+    const fromRepo = designProfileStyle(dir);
+    const profile = fromRepo ? { repo, ...fromRepo } : saved;
+    if (!profile) fail(`${repo} has no .design-desk profile and no saved one — run \`design repo detect ${repo}\`, confirm it with the user, then \`design repo save\``);
     if (profile.kind === "none") fail(`${repo} has no UI code (its profile says kind: none) — use --style brand or carbon`);
-    const { dir, commit } = cloneRepo(repo, ref || profile.ref || "");
-    return { kind: "repo", repo, profile, dir, commit, uiDir: join(dir, profile.ui_dir), label: `Style: ${repo}@${commit}` };
+    // The versions this build uses are read from the fresh clone's lockfile every time; a
+    // profile saved before an upgrade would compile yesterday's styles.
+    const uiDir = join(dir, profile.ui_dir);
+    const names = ["tailwindcss", "react", "react-dom", "tailwind-merge", "clsx", profile.icon_package].filter(Boolean);
+    profile.versions = { ...(profile.versions || {}), ...lockedVersions(dir, uiDir, names) };
+    return { kind: "repo", repo, profile, dir, commit, uiDir, label: `Style: ${repo}@${commit}` };
   }
   fail(`unknown style "${s}" — use repo:<owner/name>, brand, carbon or wireframe`);
 }

@@ -8,7 +8,7 @@ exactly what the prototype changed, and what it could not change.
 
 1. Claim; set `status: spec`. Read the card whole: the request, triage, the variants and
    their votes, every thread, the prototype and its guard report.
-2. Write `/tmp/design-desk-c<n>/spec.md` in `language`, with these sections:
+2. Write `/tmp/design-desk-c<n>/spec.md`, with these sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in the requester's words, the decisions taken on the Desk (which
      variant, which concerns changed it), each with who decided.

@@ -73,7 +73,7 @@ A `questions_due` item points at a thread on a card. Read the card and the whole
 
 1. Find the answer in the product: the card's sources first, then the profile's
    architecture pages and the code at the default branch (`scripts/checkout.sh`).
-2. Answer with the `explain` skill, in `language`: the direct answer in the first
+2. Answer with the `explain` skill: the direct answer in the first
    sentence, then only what the person needs; under 200 words; one offer to go deeper.
    Write it to a file and `design desk answer T-<n> <file>`.
 3. A question that is really a request ("can it be blue?") gets the answer *and* the

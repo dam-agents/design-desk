@@ -19,6 +19,8 @@ const USAGE = `usage: design <command> [args]
   capture <base-url> <outdir> --routes <routes.json> [--login <profile.json>]
                                        screens of a running app, signed in as the profile's demo account
   pr-shots <owner/name> <pr> <outdir>  the images a pull request's body and comments carry
+  states <file.tsx> [--export <Component>] [--root <clone>]
+                                       a component's state dimensions (props, values, conditions, hooks)
   guard <worktree> --base <ref> [--profile <profile.json>]
                                        the design-only check of a prototype diff; JSON verdict
   desk <command>                       the Desk store (run \`design desk\` for its commands)
@@ -39,7 +41,7 @@ const USAGE = `usage: design <command> [args]
 `;
 const table = {
   doctor: "./doctor.mjs", repo: "./repo.mjs", profile: "./profile.mjs", build: "./build.mjs", shot: "./shot.mjs",
-  capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs",
+  capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs", states: "./states.mjs",
   "deck-new": "./deck.mjs", "deck-pdf": "./deck.mjs", "deck-check": "./deck.mjs", video: "./video.mjs", stills: "./video.mjs",
   "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs",
 };

@@ -43,8 +43,8 @@ A change card has room for all layers; an answer to a question usually needs two
 - **Concrete over abstract.** "Owners did not notice an agent had stopped" beats "improves
   visibility". Numbers as digits with units.
 - **Short sentences.** One idea each. Lists for three or more parallel things, otherwise prose.
-- Write in `language` (the config key). Keep product names and on-screen words as the
-  product shows them in that language.
+- Write in English, the language of the Desk and of everything around it. Keep product
+  names and on-screen words exactly as the product shows them.
 
 ## Grounding — never invent a reason
 

@@ -42,7 +42,6 @@ each with `complete_onboarding_step` as the answer arrives:
 | id | label |
 | --- | --- |
 | `repos` | Which product repositories to watch |
-| `language` | Which language the Desk speaks |
 | `people` | Who uses the Desk, and in which role |
 | `features` | Interactive artifacts and Environments turned on |
 | `share` | The Desk shared with the team |
@@ -141,23 +140,21 @@ Read `CLAUDE.md` → **Runtime configuration** first. If Step 2a restored a `CON
    screens?" Each must answer `gh api repos/<owner>/<name> --jq .full_name`. Write
    `watch_since` as now (UTC): changes merged before onboarding get no card. Offer, once,
    to start a few days back instead.
-2. **Language** (`language`) — "Which language should I write in on the Desk?" (default
-   English, `en`; `cs` for Czech…).
-3. **People** (`## Desk people`) — "Who will use the Desk? Their email and one role each:
+2. **People** (`## Desk people`) — "Who will use the Desk? Their email and one role each:
    designer, PM, developer, or lead." The emails must be the ones they sign in to the
    platform with.
-4. **Live prototypes** — "Should I build live prototypes on Environments?" Yes →
+3. **Live prototypes** — "Should I build live prototypes on Environments?" Yes →
    `max_prototypes` (default 2), `prototype_requesters` (default `designer, lead`). No →
    `max_prototypes: 0`.
-5. **Handoff** (`handoff`) — "When a design is approved, should the spec stay on the Desk,
+4. **Handoff** (`handoff`) — "When a design is approved, should the spec stay on the Desk,
    or should I also file a GitHub issue, or open a draft pull request?" Default `desk`.
    `issue` and `draft-pr` post on the product repository as the agent's account; say so.
    `draft-pr` also needs `prototype_remote` = that repository.
-6. **Announcements** (`notify`) — only when a Slack channel is bound: "Should I announce
+5. **Announcements** (`notify`) — only when a Slack channel is bound: "Should I announce
    new cards and request steps in the channel?" Default `disabled`.
-7. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
+6. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
    Desk store, its threads and votes cannot be rebuilt from anywhere else; recommend yes.
-8. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
+7. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
 
 Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboarding.sh"
 --config` and apply what it reports:
@@ -166,7 +163,6 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 # Design Desk configuration
 
 - display_name: Design Desk
-- language: en
 - repos: acme/widgets
 - watch_since: 2026-11-02T09:00:00Z
 - max_changes_per_run: 10
@@ -209,7 +205,7 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
    `desk_artifact` is empty: `create_artifact` with `interactive: true`, private; write
    the id to `desk_artifact`.
 4. **Share.** Ask the owner to open the Desk in the app and share it: Share → Restricted →
-   the emails of Step 3.3. Only the owner can; tick `share` when they confirm. Then give
+   the emails of Step 3.2. Only the owner can; tick `share` when they confirm. Then give
    them the share link to bookmark: the Desk loads its data there and in this agent's chat,
    not from the Artifacts page.
 

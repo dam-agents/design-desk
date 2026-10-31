@@ -154,8 +154,15 @@
       review: "To review", requests: "Requests", shipped: "Shipped", guide: "What I can do", newRequest: "New design request",
       requestHint: "Describe the problem in your own words. I will tell you first what can be done as a design change and what needs a developer.",
       fTitle: "Short title", fProblem: "What is the problem, and for whom?", fGoal: "What would good look like? (optional)", fScreen: "Which screen? (optional)",
+      nextCall: "Next call", addToCall: "Add to the next call", onCall: "On the next call", takeOff: "Take off the call", present: "Present",
+      closeCall: "Mark the call held", callEmpty: "Nothing is on the next call yet. Add a card from its page.", brief: "What we decide",
+      briefPending: "Design Desk is preparing the brief.", addedBy: "added by", exitPresent: "Exit", feature: "Feature", adjustment: "Adjustment", proposal: "Proposal",
+      research: "Context and decisions", rClear: "Clear to go", rDuplicate: "Already tracked elsewhere", rDeliberate: "Today's behaviour was a deliberate decision", rCollision: "Someone is changing this right now", rUnclear: "Not enough to go on",
+      researchPending: "Design Desk is reading the issues, pull requests and history behind this before designing.", fromIssue: "from issue", fromPr: "from pull request",
+      catalog: "Catalog", elementStates: "States", refresh: "Redraw from the current code", stale: "out of date", source: "From",
+      noSheet: "The states are being drawn.", sheetHint: "Every tile is the real element from the product's code, given the data of one state.",
       idea: "Design idea", bug: "UI bug", bugs: "Bugs", fSteps: "How to get there (optional)", bugProblem: "What is wrong, and where?", bugGoal: "What should it look like? (optional)",
-      reportedVia: "reported in Slack by", whatHappens: "What happens", shouldHappen: "What should happen", stepsTitle: "Steps",
+      reportedVia: "reported by", whatHappens: "What happens", shouldHappen: "What should happen", stepsTitle: "Steps",
       send: "Send", cancel: "Cancel", markReviewed: "Mark as reviewed", reviewed: "Reviewed", ask: "Ask a question", followUp: "Start a design follow-up",
       openPr: "Open the pull request", merged: "merged", screens: "Screens", details: "Details", conversation: "Questions and comments",
       noCards: "Nothing here yet.", allReviewed: "You have reviewed everything that shipped. ✨", pick: "Pick a card on the left.",
@@ -192,50 +199,7 @@
 <li><b>Everyone on the list</b> reads, asks and comments.</li>
 <li><b>Designers</b> start variants, revisions and live prototypes, and approve a design for handoff.</li>
 <li><b>Developers and PMs</b> also vote and file requests — a concern from them is exactly what we want before a developer starts.</li></ul>`,
-    },
-    cs: {
-      review: "K prohlédnutí", requests: "Požadavky", shipped: "Nasazeno", guide: "Co umím", newRequest: "Nový designový požadavek",
-      requestHint: "Popište problém vlastními slovy. Nejdřív vám řeknu, co jde udělat jako designová změna a co potřebuje vývojáře.",
-      fTitle: "Krátký název", fProblem: "V čem je problém a pro koho?", fGoal: "Jak by vypadalo dobré řešení? (nepovinné)", fScreen: "Která obrazovka? (nepovinné)",
-      idea: "Designový nápad", bug: "Chyba v UI", bugs: "Chyby", fSteps: "Jak se tam dostat (nepovinné)", bugProblem: "Co je špatně a kde?", bugGoal: "Jak by to mělo vypadat? (nepovinné)",
-      reportedVia: "nahlášeno ve Slacku:", whatHappens: "Co se děje", shouldHappen: "Co by se mělo dít", stepsTitle: "Kroky",
-      send: "Odeslat", cancel: "Zrušit", markReviewed: "Označit jako prohlédnuté", reviewed: "Prohlédnuto", ask: "Zeptat se", followUp: "Navázat designovým požadavkem",
-      openPr: "Otevřít pull request", merged: "nasazeno", screens: "Obrazovky", details: "Podrobnosti", conversation: "Otázky a komentáře",
-      noCards: "Zatím tu nic není.", allReviewed: "Všechno nasazené máte prohlédnuté. ✨", pick: "Vyberte kartu vlevo.",
-      question: "Otázka", comment: "Komentář", concern: "Výhrada", reply: "Odpovědět", resolve: "Vyřešit", resolved: "vyřešeno", answered: "zodpovězeno",
-      waiting: "Čeká na odpověď Design Desku…", writeQuestion: "Zeptejte se na cokoli: proč to tak funguje, co to umí a co ne…", writeComment: "Napište komentář…",
-      triage: "Posouzení", variants: "Varianty", feedback: "Zpětná vazba", prototype: "Živý prototyp", testing: "Testování", spec: "Specifikace", "handed-off": "Předáno", declined: "Uzavřeno",
-      vDesign: "Tohle je designová změna", vDev: "Část potřebuje vývojáře", vProduct: "Tohle je produktové rozhodnutí",
-      vDesignTxt: "Prozkoumám to ve variantách a postavím z toho živý prototyp.", vDevTxt: "Design prozkoumám ve variantách. Části níže potřebují vývojáře, takže je živý prototyp vynechá a specifikace je vyjmenuje.",
-      vProductTxt: "Můžu to načrtnout jako koncept do diskuse, ale mění to, co produkt dělá, takže je nejdřív potřeba produktové rozhodnutí.",
-      canDo: "Zvládnu", cannotDo: "Nezvládnu, a proč", triagePending: "Čtu požadavek a ověřuji, co je možné. Verdikt uvidíte tady.",
-      explore: "Navrhnout varianty", revise: "Upravit podle komentářů", build: "Postavit živý prototyp", approve: "Schválit a předat", close: "Uzavřít požadavek", reopen: "Znovu otevřít",
-      prefer: "Preferuji", concernVote: "Výhrada", commentEl: "Komentovat prvek", cancelPick: "Zrušit", pickHint: "Klikněte na prvek, ke kterému chcete napsat komentář.",
-      votes: "Hlasy", noVariants: "Zatím žádné varianty.", rationale: "Proč tahle", fidelity: { wireframe: "wireframe", mockup: "mockup" },
-      protoNone: "Živý prototyp zatím není.", protoBuilding: "Stavím živý prototyp… zabere to pár minut.", protoLive: "Běží — otevřete ho a proklikejte. Data jsou ukázková.",
-      protoFailed: "Poslední sestavení selhalo.", protoExpired: "Prototyp vypršel.", open: "Otevřít prototyp", login: "Ukázkové přihlášení", expires: "Dostupný do",
-      guard: "Kontrola „jen design“", guardOk: "prošla — změnil se jen vzhled", guardBad: "neprošla — viz specifikace", specTitle: "Specifikace pro vývojáře", issue: "Issue", pr: "Draft pull request",
-      sentToAgent: "Odesláno. Design Desk se toho brzy ujme.", error: "Něco se nepovedlo", noBridge: "Otevřete tuto stránku v platformě: se svým agentem mluví přes platformu, což stažená kopie neumí.",
-      by: "od", you: "vy", agent: "Design Desk", all: "Vše", open_: "Otevřené", done: "Hotové", roleNames: { lead: "vedoucí", designer: "designér", pm: "PM", developer: "vývojář", guest: "host" },
-      guideHtml: `<h2>Co Design Desk umí a co ne</h2>
-<p class="lead">Držím vás v obraze o tom, co se v produktu nasadilo, vysvětlím to lidsky a z vašich nápadů udělám varianty a živé prototypy. Měním jen to, jak produkt <b>vypadá</b>, nikdy to, co <b>dělá</b>.</p>
-<h3>Zvládnu</h3><ul>
-<li>Ukázat každou změnu obrazovek hned, jak se nasadí, se screenshoty, a vysvětlit, co se změnilo, proč to tak je a co se změnit nedá.</li>
-<li>Odpovídat na otázky, jak cokoli funguje, kolikrát budete potřebovat. Ptejte se u kterékoli karty.</li>
-<li>Z designového požadavku udělat dvě až tři odlišné varianty na ukázkových datech, které tým porovná, odhlasuje a okomentuje — přímo u konkrétního prvku.</li>
-<li>Postavit <b>živý prototyp</b>: skutečný produkt s vaší designovou změnou, na vlastní instanci s ukázkovými daty, který si každý ze seznamu otevře a proklikne.</li>
-<li>Měnit rozvržení, mezery, barvy, typografii, ikony, texty, pořadí a seskupení věcí a to, co se na obrazovce rozbaluje a sbaluje.</li>
-<li>Napsat specifikaci, kterou vývojář potřebuje, aby schválený design postavil.</li></ul>
-<h3>Nezvládnu — to musí vývojář</h3><ul>
-<li>Změnit, co produkt dělá: co ukládá nebo načítá, jeho pravidla a kontroly, kdo co smí, jak komunikuje s jinými systémy.</li>
-<li>Přidat novou informaci, kterou produkt zatím nemá, nebo odebrat něco, co dnes člověk udělat může.</li>
-<li>Změnit cokoli za obrazovkami: servery, data, zabezpečení, nastavení.</li></ul>
-<p>Když požadavek něco z toho potřebuje, řeknu vám to dřív, než začnu: pořád to můžu načrtnout jako variantu a specifikace pojmenuje část pro vývojáře.</p>
-<h3>Kdo co může</h3><ul>
-<li><b>Každý ze seznamu</b> čte, ptá se a komentuje.</li>
-<li><b>Designéři</b> spouštějí varianty, úpravy a živé prototypy a schvalují design k předání.</li>
-<li><b>Vývojáři a PM</b> navíc hlasují a zakládají požadavky — jejich výhrada je přesně to, co chceme slyšet, než vývojář začne.</li></ul>`,
-    },
+    }
   };
   let L = T.en;
   const t = (k) => (k in L ? L[k] : T.en[k] ?? k);
@@ -259,7 +223,7 @@
   // Links the agent stored open only over http(s); anything else renders inert.
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
   const myKey = () => S.me?.key || S.me?.email || "";
-  const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString(S.me?.language === "cs" ? "cs-CZ" : undefined, { dateStyle: "medium", timeStyle: "short" }); };
+  const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 4200); };
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(`${t("error")}: ${e.message}`); } };
 
@@ -288,13 +252,14 @@
   // ---------- header and list ----------
   function renderNav() {
     const unread = S.cards.filter((c) => c.kind === "change" && c.status === "new" && !c.acked).length;
-    const tabs = [["review", t("review"), unread], ["requests", t("requests")], ["shipped", t("shipped")], ["guide", t("guide")]];
+    const tabs = [["review", t("review"), unread], ["requests", t("requests")], ["shipped", t("shipped")], ["catalog", t("catalog")], ["call", t("nextCall"), S.agendaCount], ["guide", t("guide")]];
     $("#nav").innerHTML = tabs.map(([k, label, n]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
   }
 
   function visibleCards() {
     if (S.tab === "review") return S.cards.filter((c) => c.kind === "change" && c.status === "new" && !c.acked);
     if (S.tab === "shipped") return S.cards.filter((c) => c.kind === "change");
+    if (S.tab === "catalog") return S.cards.filter((c) => c.kind === "element").sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
     if (S.tab === "requests") {
       const closed = (c) => c.status === "handed-off" || c.status === "declined";
       return S.cards.filter((c) => c.kind === "request" && (S.filter === "all" || (S.filter === "bugs" ? c.type === "bug" && !closed(c) : S.filter === "open" ? !closed(c) : closed(c))));
@@ -304,14 +269,19 @@
 
   function chipsFor(c) {
     const out = [];
-    if (c.kind === "change") {
+    if (c.kind === "element") {
+      if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
+      if (c.state_count) out.push(`<span class="chip">${c.state_count} ${esc(t("elementStates").toLowerCase())}</span>`);
+      if (c.status === "stale") out.push(`<span class="chip warn">${esc(t("stale"))}</span>`);
+    } else if (c.kind === "change") {
       if (c.source?.pr) out.push(`<span class="chip">#${esc(c.source.pr)}</span>`);
       if (c.screens) out.push(`<span class="chip">🖼 ${c.screens}</span>`);
       if (c.acked) out.push(`<span class="chip ok">✓ ${esc(t("reviewed"))}</span>`);
     } else {
       if (c.type === "bug") out.push(`<span class="chip bad">🐛 ${esc(t("bug"))}</span>`);
+      else if (c.type && c.type !== "idea") out.push(`<span class="chip">${esc(t(c.type))}</span>`);
       out.push(`<span class="chip info">${esc(t(c.status))}</span>`);
-      if (c.reporter) out.push(`<span class="chip">Slack · ${esc(c.reporter)}</span>`);
+      if (c.reporter) out.push(`<span class="chip">${esc(c.reporter)}</span>`);
       if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : c.triage === "product" ? "info" : "warn"}">${esc({ design: t("vDesign"), "needs-developer": t("vDev"), product: t("vProduct") }[c.triage])}</span>`);
       if (c.variants) out.push(`<span class="chip">◧ ${c.variants}</span>`);
       if (c.prototype === "live") out.push(`<span class="chip ok">● ${esc(t("prototype"))}</span>`);
@@ -320,9 +290,45 @@
     return out.join("");
   }
 
+  function renderAgenda() {
+    const items = S.agenda || [];
+    const list = $("#list");
+    list.innerHTML = items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span></div>
+      <div class="s">${esc(a.agenda.brief || t("briefPending"))}</div><div class="meta"><span class="chip">${esc(t("addedBy"))} ${esc(a.agenda.by?.email || "Design Desk")}</span>${a.type ? `<span class="chip">${esc(t(a.type))}</span>` : ""}</div></button>`).join("")
+      : `<div class="empty">${esc(t("callEmpty"))}</div>`;
+    const d = $("#detail");
+    $("#main").classList.add("has-detail");
+    d.innerHTML = `<h2>${esc(t("nextCall"))}</h2><div class="actions">${items.length ? `<button class="btn primary" data-present>▶ ${esc(t("present"))}</button>` : ""}${S.me?.can?.close && items.length ? `<button class="btn" data-close-call>${esc(t("closeCall"))}</button>` : ""}</div>
+      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>${esc(t("brief"))}</b>${md(a.agenda.brief || t("briefPending"))}</div>`).join("")}`;
+  }
+
+  // Presenting: one agenda item at a time, full screen, arrows to move.
+  async function present(i = 0) {
+    const items = S.agenda || [];
+    if (!items.length) return;
+    const a = items[Math.max(0, Math.min(i, items.length - 1))];
+    const { card } = await api("GET", `/api/cards/${encodeURIComponent(a.id)}`);
+    let ov = $("#present");
+    if (!ov) { ov = document.createElement("div"); ov.id = "present"; ov.style.cssText = "position:fixed;inset:0;z-index:70;background:var(--bg);overflow:auto;padding:32px 48px"; document.body.append(ov); }
+    const visual = card.kind === "element" && card.sheet ? card.sheet : card.variants?.[0]?.asset || card.screens?.[0]?.asset || null;
+    ov.dataset.index = String(items.indexOf(a));
+    ov.innerHTML = `<div class="sub" style="display:flex;justify-content:space-between"><span>${items.indexOf(a) + 1} / ${items.length} · ${esc(t("nextCall"))}</span><button class="btn small" data-exit-present>${esc(t("exitPresent"))}</button></div>
+      <h2 style="font-size:28px;margin-top:12px">${esc(card.title)}</h2>${card.summary ? `<p class="lead">${esc(card.summary)}</p>` : ""}
+      <div class="panel" style="max-width:90ch"><b>${esc(t("brief"))}</b>${md(card.agenda?.brief || t("briefPending"))}</div>
+      ${(card.variants || []).length > 1 ? `<p class="sub" style="display:block;margin-top:12px">${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
+      ${visual ? `<iframe class="frame" id="present-frame" sandbox="allow-scripts" style="height:62vh;margin-top:16px"></iframe>` : ""}`;
+    if (visual) {
+      const asst = await asset(visual);
+      const frame = $("#present-frame");
+      if (asst.contentType.startsWith("image/")) frame.srcdoc = `<img src="${dataUrl(asst)}" style="max-width:100%">`;
+      else frame.srcdoc = asst.encoding === "base64" ? atob(asst.data) : asst.data;
+    }
+  }
+
   function renderList() {
     const list = $("#list");
     if (S.tab === "guide") { list.innerHTML = ""; return; }
+    if (S.tab === "call") { renderAgenda(); return; }
     const cards = visibleCards();
     const filters = S.tab === "requests" ? `<div class="filters">${[["open", t("open_")], ["bugs", t("bugs")], ["done", t("done")], ["all", t("all")]].map(([k, l]) => `<button class="btn small" data-filter="${k}" ${S.filter === k ? 'style="border-color:var(--ink)"' : ""}>${esc(l)}</button>`).join("")}</div>` : "";
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(S.tab === "review" ? t("allReviewed") : t("noCards"))}</div>`; return; }
@@ -374,10 +380,32 @@
         <button class="btn ${acked ? "" : "primary"}" data-ack ${acked ? "disabled" : ""}>${esc(acked ? `✓ ${t("reviewed")}` : t("markReviewed"))}</button>
         <button class="btn" data-focus-composer>${esc(t("ask"))}</button>
         ${S.me?.can?.["follow-up"] ? `<button class="btn" data-follow-up>${esc(t("followUp"))}</button>` : ""}
+        ${agendaButton(c)}
       </div>
       ${(c.screens || []).length ? `<h3>${esc(t("screens"))}</h3><div class="shots">${c.screens.map((s) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${s.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
       ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("")}` : ""}
       ${renderThreads(c)}`;
+  }
+
+  function renderElement(c) {
+    const src = c.source || {};
+    return `<button class="btn small back" data-back>←</button>
+      <h2>${esc(c.title)}</h2>
+      <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn">${esc(t("stale"))}</span>` : ""}${src.file ? `<span>${esc(t("source"))} <code>${esc(src.file)}</code>${src.commit ? ` @ ${esc(src.commit)}` : ""}</span>` : ""}</div>
+      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+      ${S.me?.can?.refresh ? `<div class="actions"><button class="btn" data-action="refresh">${esc(t("refresh"))}</button></div>` : ""}
+      ${(c.states || []).length ? `<h3>${esc(t("elementStates"))}</h3><ol class="md" style="max-width:80ch;padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
+      <p class="sub" style="display:block">${esc(t("sheetHint"))}</p>
+      ${c.sheet ? `<iframe class="frame" id="sheet-frame" sandbox="allow-scripts" title="${esc(c.title)}" style="height:80vh"></iframe>` : `<div class="panel sub">${esc(t("noSheet"))}</div>`}
+      ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((x) => `<div class="section"><h4>${esc(x.title)}</h4>${md(x.body)}</div>`).join("")}` : ""}
+      ${renderThreads(c)}`;
+  }
+
+  async function loadSheet(c) {
+    const frame = $("#sheet-frame");
+    if (!frame || !c.sheet) return;
+    try { const a = await asset(c.sheet); frame.srcdoc = a.encoding === "base64" ? atob(a.data) : a.data; }
+    catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: `${t("error")}: ${e.message}` })); }
   }
 
   const FLOW = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off"];
@@ -385,6 +413,24 @@
     const at = FLOW.indexOf(status);
     if (status === "declined") return `<div class="steps"><span class="chip bad">${esc(t("declined"))}</span></div>`;
     return `<div class="steps">${FLOW.map((s, i) => `<span class="step ${i < at ? "done" : i === at ? "now" : ""}"><span class="n">${i < at ? "✓" : i + 1}</span>${esc(t(s))}</span>`).join("")}</div>`;
+  }
+
+  function renderOrigin(c) {
+    const o = c.origin;
+    if (!o || o.channel !== "github" || !o.url) return "";
+    return `<p class="sub" style="display:block">${esc(t(o.kind === "pr" ? "fromPr" : "fromIssue"))} <a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.repo || "")}#${esc(o.number || "")}</a></p>`;
+  }
+
+  function renderResearch(r) {
+    if (!r) return `<div class="panel sub">${esc(t("researchPending"))}</div>`;
+    const label = { clear: t("rClear"), duplicate: t("rDuplicate"), deliberate: t("rDeliberate"), collision: t("rCollision"), unclear: t("rUnclear") }[r.verdict] || r.verdict;
+    const tone = r.verdict === "clear" ? "ok" : r.verdict === "unclear" ? "" : "warn";
+    return `<div class="panel"><span class="chip ${tone}">${esc(label)}</span>${md(r.summary)}${(r.links || []).length ? `<ul class="sub" style="display:block;margin:6px 0 0 16px;padding:0">${r.links.map((l) => `<li><a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a></li>`).join("")}</ul>` : ""}</div>`;
+  }
+
+  function agendaButton(c) {
+    if (c.agenda?.status === "queued") return `<span class="chip info">📅 ${esc(t("onCall"))}</span><button class="btn small" data-unqueue>${esc(t("takeOff"))}</button>`;
+    return S.me?.can?.queue ? `<button class="btn" data-queue>📅 ${esc(t("addToCall"))}</button>` : "";
   }
 
   function renderTriage(tr) {
@@ -437,13 +483,13 @@
     const can = S.me?.can || {};
     const closed = c.status === "declined" || c.status === "handed-off";
     const btn = (action, label, primary) => can[action] ? `<button class="btn ${primary ? "primary" : ""}" data-action="${action}">${esc(label)}</button>` : "";
-    const actions = closed ? btn("reopen", t("reopen")) : [
+    const actions = (closed ? btn("reopen", t("reopen")) : "") + agendaButton(c) + (closed ? "" : [
       c.status === "triage" && c.triage ? btn("explore", t("explore"), true) : "",
       ["variants", "feedback"].includes(c.status) ? btn("revise", t("revise")) : "",
       ["variants", "feedback", "testing"].includes(c.status) && c.triage?.verdict === "design" ? btn("build", t("build"), c.status === "feedback") : "",
       ["feedback", "prototype", "testing"].includes(c.status) ? btn("approve", t("approve"), c.status === "testing") : "",
       btn("close", t("close")),
-    ].join("");
+    ].join(""));
     return `<button class="btn small back" data-back>←</button>
       <h2>${esc(c.title)}</h2>
       <div class="sub">${r.type === "bug" ? `<span class="chip bad">🐛 ${esc(t("bug"))}</span>` : ""}${c.origin?.reporter ? `<span>${esc(t("reportedVia"))} <b>${esc(c.origin.reporter)}</b></span>` : `<span>${esc(t("by"))} ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span></div>
@@ -452,6 +498,8 @@
         ? `<div class="section"><h4>${esc(t("whatHappens"))}</h4>${md(r.problem)}${r.goal ? `<h4>${esc(t("shouldHappen"))}</h4>${md(r.goal)}` : ""}${r.steps ? `<h4>${esc(t("stepsTitle"))}</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>`
         : `<div class="section">${md(r.problem)}${r.goal ? md(r.goal) : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>`}
       ${(c.screens || []).length ? `<div class="shots">${c.screens.map((x) => `<figure class="shot" data-zoom="${esc(x.asset)}"><img alt="${esc(x.caption)}" data-asset="${esc(x.asset)}" />${x.caption ? `<figcaption>${esc(x.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
+      ${renderOrigin(c)}
+      <h3>${esc(t("research"))}</h3>${renderResearch(c.research)}
       <h3>${esc(t("triage"))}</h3>${renderTriage(c.triage)}
       <div class="actions">${actions}</div>
       ${(c.variants || []).length || ["variants", "feedback"].includes(c.status) ? `<h3>${esc(t("variants"))}</h3>${renderVariants(c)}` : ""}
@@ -496,16 +544,23 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
     const d = $("#detail");
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${L.guideHtml || T.en.guideHtml}</div>`; return; }
+    if (S.tab === "call" && !S.card) { renderAgenda(); return; }
     if (!S.card) { d.innerHTML = `<div class="empty">${esc(t("pick"))}</div>`; return; }
     const keep = $("#composer-text")?.value || "";
-    d.innerHTML = S.card.kind === "change" ? renderChange(S.card) : renderRequest(S.card);
+    d.innerHTML = S.card.kind === "change" ? renderChange(S.card) : S.card.kind === "element" ? renderElement(S.card) : renderRequest(S.card);
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
     loadVariantFrame(S.card);
+    loadSheet(S.card);
   }
 
   // ---------- loading ----------
-  async function refreshList() { S.cards = (await api("GET", "/api/cards")).cards || []; renderNav(); renderList(); }
+  async function refreshList() {
+    S.cards = (await api("GET", "/api/cards")).cards || [];
+    try { S.agenda = (await api("GET", "/api/agenda")).agenda || []; } catch { S.agenda = []; }
+    S.agendaCount = S.agenda.length;
+    renderNav(); renderList();
+  }
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const changed = !S.card || S.card.id !== card.id || JSON.stringify(S.card) !== JSON.stringify(card);
@@ -525,6 +580,11 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
     if ("back" in ds) { S.card = null; renderList(); renderDetail(); return; }
     if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
     if (ds.highlight) { const [variant, selector] = ds.highlight.split("|"); if (variant && variant !== S.variant) { S.variant = variant; renderDetail(); await new Promise((r) => setTimeout(r, 400)); } $("#variant-frame")?.contentWindow?.postMessage({ type: "desk-highlight", selector }, "*"); $("#variant-frame")?.scrollIntoView({ block: "center" }); return; }
+    if ("queue" in ds) { await api("POST", `/api/cards/${S.card.id}/agenda`, { note: "" }); toast(t("sentToAgent")); await refreshList(); await openCard(S.card.id); return; }
+    if ("unqueue" in ds) { await api("DELETE", `/api/cards/${S.card.id}/agenda`); await refreshList(); await openCard(S.card.id); return; }
+    if ("present" in ds) { await present(0); return; }
+    if ("exitPresent" in ds) { $("#present")?.remove(); return; }
+    if ("closeCall" in ds) { await api("POST", "/api/calls", {}); await refreshList(); return; }
     if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
     if ("focusComposer" in ds) { $("#composer-text")?.focus(); $("#composer-kind").value = "question"; return; }
     if ("followUp" in ds) { openRequestDialog(S.card); return; }
@@ -564,6 +624,12 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
   }));
 
   document.addEventListener("keydown", (e) => {
+    const ov = $("#present");
+    if (ov && ["ArrowRight", "ArrowLeft", "Escape"].includes(e.key)) {
+      if (e.key === "Escape") { ov.remove(); return; }
+      present(Number(ov.dataset.index) + (e.key === "ArrowRight" ? 1 : -1)).catch(() => {});
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey && e.target.matches("[data-reply]")) { e.preventDefault(); document.querySelector(`[data-send-reply="${CSS.escape(e.target.dataset.reply)}"]`)?.click(); }
   });
 
@@ -606,7 +672,7 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
   }));
 
   function applyWords() {
-    document.documentElement.lang = S.me?.language || "en";
+    document.documentElement.lang = "en";
     for (const el of document.querySelectorAll("[data-t]")) el.textContent = t(el.dataset.t);
     $("#new-request").textContent = `+ ${t("newRequest")}`;
     $("#new-request").hidden = !S.me?.can?.request;
@@ -617,7 +683,6 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
   async function start() {
     if (!bridge) { $("#detail").innerHTML = `<div class="panel">${esc(t("noBridge"))}</div>`; $("#main").classList.add("has-detail"); return; }
     S.me = await api("GET", "/api/me");
-    L = T[S.me.language] || T.en;
     applyWords();
     await refreshList();
     if (!visibleCards().length && S.cards.some((c) => c.kind === "request")) S.tab = "requests";

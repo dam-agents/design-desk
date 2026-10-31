@@ -56,7 +56,7 @@ LEDGER_HEAD=$'repo\tpr\tmerged_at\tstatus\tcard\tupdated\tattempts\tnote'
 
 config_json() {
   jq -n \
-    --arg display_name "$(cfg display_name)" --arg language "$(cfg language)" \
+    --arg display_name "$(cfg display_name)" \
     --arg repos "$(cfg repos)" --arg watch_since "$(cfg watch_since)" --arg watch_paths "$(cfg watch_paths)" \
     --arg max_changes_per_run "$(cfg max_changes_per_run)" --arg profile "$(cfg profile)" \
     --arg default_style "$(cfg default_style)" --arg prototype_requesters "$(cfg prototype_requesters)" \
@@ -66,7 +66,6 @@ config_json() {
     --arg dispatch "$(cfg dispatch)" --arg work_repo "${GITHUB_REPO_WORK:-$(cfg work_repo)}" \
     --arg audit_report "$(cfg audit_report)" --arg log_level "$(cfg log_level)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
-      language: ($language | if . == "" then "en" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
       watch_paths: ($watch_paths | if . == "" then "**/*.tsx,**/*.jsx,**/*.vue,**/*.svelte,**/*.css,**/*.scss,**/*.html" else . end),
@@ -272,6 +271,7 @@ inbox_mode() {
       variants_due: pick(["explore", "revise"]),
       prototypes_due: pick(["build"]),
       handoffs_due: pick(["handoff"]),
+      catalog_due: pick(["catalog"]),
       teardowns_due: pick(["teardown"]),
       expiring_due: $expiring,
       config:$config, logs:$logs }
@@ -279,7 +279,8 @@ inbox_mode() {
         + (if (.questions_due | length) > 0 then [".agents/skills/explain/SKILL.md"] else [] end)
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
-        + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end) | unique)'
+        + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
+        + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end) | unique)'
 }
 
 # ============================================================ AUDIT MODE ====

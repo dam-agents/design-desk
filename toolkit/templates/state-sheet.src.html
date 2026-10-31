@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en" data-review-title="Element name · every state">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Element name · every state</title>
+  <!-- design:css -->
+</head>
+<body class="bg-background text-foreground">
+  <!-- design:review-bar -->
+  <!-- One view; one <figure> per state. Each tile renders the real component with the
+       fixture from `design states` plus this state's changes (docs/catalog.md). -->
+  <div data-view="1" data-view-name="All states" class="mx-auto grid max-w-6xl grid-cols-1 gap-x-8 gap-y-6 p-8 lg:grid-cols-2">
+    <figure class="m-0 flex flex-col gap-2" data-state="1">
+      <figcaption class="text-xs text-muted-foreground"><span class="font-medium text-foreground">1. Quiet</span> · the fixture as it is</figcaption>
+      <ui-component src="path/to/component.tsx" export="Component" props='{}' mocks='{}'/>
+    </figure>
+  </div>
+</body>
+</html>

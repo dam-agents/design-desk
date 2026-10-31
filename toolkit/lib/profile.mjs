@@ -17,7 +17,10 @@ export function cloneRepo(repo, ref = "") {
   const dir = join(SCRATCH, "repos", slugOf(repo));
   run("rm", ["-rf", dir]);
   ensureDir(dirname(dir));
-  const url = /^https?:\/\//.test(repo) ? repo : `https://github.com/${repo}`;
+  // `[host/]owner/name`, the same rule as scripts/checkout.sh: a GitHub Enterprise host
+  // is the first of three parts.
+  const parts = repo.split("/");
+  const url = /^https?:\/\//.test(repo) ? repo : parts.length === 3 ? `https://${repo}` : `https://github.com/${repo}`;
   const args = ["clone", "-q", "--depth", "1", ...(ref ? ["--branch", ref] : []), url, dir];
   let r = run("git", args);
   if (r.status !== 0 && ref) { // a commit sha, not a branch

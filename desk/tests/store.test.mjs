@@ -133,5 +133,5 @@ test("a bug from Slack lands on the queue with where to answer", () => {
   assert.equal(card.origin.thread_ts, "1730000000.000100");
   assert.equal(item.kind, "request");
   assert.deepEqual(s.listCards({ kind: "request" }).map((c) => [c.type, c.reporter, c.screens]), [["bug", "Alice", 1]]);
-  assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /idea or bug/);
+  assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /type must be one of/);
 });
