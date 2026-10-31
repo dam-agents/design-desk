@@ -1,4 +1,4 @@
-// node --test desk/tests — the Desk store: roles, the inbox, claims and answers.
+// node --test desk/tests/*.test.mjs — the Desk store: roles, the inbox, claims and answers.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync } from "node:fs";

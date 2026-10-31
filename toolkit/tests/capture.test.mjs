@@ -1,4 +1,4 @@
-// node --test toolkit/tests — a capture recipe brings a page into a state before it shoots.
+// node --test toolkit/tests/*.test.mjs — a capture recipe brings a page into a state before it shoots.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";

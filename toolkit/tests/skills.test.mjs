@@ -1,4 +1,4 @@
-// node --test toolkit/tests — an action resolves to its skill, and a profile's shape is checked.
+// node --test toolkit/tests/*.test.mjs — an action resolves to its skill, and a profile's shape is checked.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
