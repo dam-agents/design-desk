@@ -410,6 +410,25 @@ HTML
   # disk, scratch, definition
   local pct; pct="$(df -P "$HOME_DIR" 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5}')"
   [ "${pct:-0}" -lt 85 ] && check disk ok "${pct:-?}% used" || check disk warn "${pct}% of the disk used — old checkouts under ~/checkouts and work/output can go (docs/audit.md)"
+  # What takes the space, so a full disk names its cause.
+  mb() { local v; v="$(du -sm "$1" 2>/dev/null | cut -f1)"; echo "${v:-0}"; }
+  check usage ok "work/output $(mb "$WORK/output") MB, Desk $(mb "$DESK_DIR") MB, checkouts $(mb "$HOME_DIR/checkouts") MB, toolchains $(mb "$HOME_DIR/.local/share/design-desk/toolchains") MB"
+  # The store refuses people's writes at 50 MB (desk/store.mjs LIMITS.dbBytes); warn well before.
+  local db_mb; db_mb="$(( $(wc -c < "$DESK_DIR/db.json" 2>/dev/null || echo 0) / 1048576 ))"
+  [ "$db_mb" -lt 40 ] && check desk_store ok "db.json ${db_mb} MB of 50" || check desk_store warn "db.json is ${db_mb} MB; at 50 MB the Desk refuses new comments and requests — archive old cards (docs/desk.md → Server)"
+  # The last final outcome of a backup: pushed, or failed after its retries.
+  local repo="${GITHUB_REPO_WORK:-$(cfg work_repo)}" lastb last_ts
+  case "$repo" in
+    (""|none|off|disabled) check backup ok "not configured (work/ is local only)" ;;
+    (*) lastb="$(grep -h '"event":"work_backup"' "$WORK"/logs/events-*.jsonl 2>/dev/null | grep -E 'pushed work/|push failed after' | tail -1)"
+        last_ts="$(jq -r '.ts // empty' <<<"$lastb" 2>/dev/null)"
+        case "$lastb" in
+          (*'"level":"error"'*) check backup fail "the last backup to $repo failed ($last_ts): $(jq -r .msg <<<"$lastb" 2>/dev/null) — check that the GitHub connection can write to $repo" ;;
+          ("") check backup warn "configured ($repo), but no backup is logged in the last 14 days" ;;
+          (*) if [ $((NOW_EPOCH - $(iso2epoch "$last_ts"))) -gt $((2 * 86400)) ]; then check backup warn "the last backup to $repo was at $last_ts, more than two days ago"
+              else check backup ok "last backup to $repo at $last_ts"; fi ;;
+        esac ;;
+  esac
   local left; left="$(find /tmp -maxdepth 1 -name 'design-desk-*' -mmin +360 2>/dev/null | wc -l | tr -d ' ')"
   [ "$left" -eq 0 ] && check tmp ok "no leftover scratch" || check tmp warn "$left leftover /tmp/design-desk-* entries older than 6 h"
   [ -z "$(git -C "$HOME_DIR" status --porcelain 2>/dev/null)" ] && check definition_clean ok "checkout clean" || check definition_clean warn "the definition checkout has local changes"
