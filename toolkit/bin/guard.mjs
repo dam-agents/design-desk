@@ -6,7 +6,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fail, run } from "../lib/core.mjs";
-import { judge } from "../lib/guard.mjs";
+import { globRe, judge } from "../lib/guard.mjs";
 
 export async function main(_cmd, argv) {
   const pos = []; let base = "", profilePath = "", patch = "";
@@ -49,7 +49,8 @@ export async function main(_cmd, argv) {
   // An ignored file never shows in the diff, yet an install from the worktree ships it
   // (a .env.local, a build output with secrets). Only dependency and build folders may be there.
   const okIgnored = /(^|\/)(node_modules|dist|build|out|coverage|\.turbo|\.next|\.cache|\.pnpm-store)\/?$|\.log$/;
-  const ignored = git("ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z").split("\0").filter(Boolean).filter((f) => !okIgnored.test(f));
+  const okByProfile = (f) => (profile.boundary.ignored_ok || []).some((g) => globRe(g).test(f.replace(/\/$/, "")) || globRe(g).test(f));
+  const ignored = git("ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z").split("\0").filter(Boolean).filter((f) => !okIgnored.test(f) && !okByProfile(f));
   if (ignored.length) {
     result.ok = false;
     result.files.push(...ignored.slice(0, 20).map((path) => ({ path, status: "?", verdict: "denied", issues: ["an ignored file in the worktree would ship with the prototype's install"], notes: [], plain: "A file outside version control would be installed with the prototype." })));
