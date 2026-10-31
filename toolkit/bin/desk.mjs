@@ -26,6 +26,12 @@ const USAGE = `usage: design desk <command>
                                            store a file; kinds: screen variant spec patch image report
   answer <T-n> <text-file|-> [--resolve]   answer a question thread
   comment <C-n> <text-file|->              add a comment thread as the agent
+  ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
+                                           their answer re-queues the step (request explore revise
+                                           build handoff figma)
+  decision <decision.json|->               record a decision: {concepts, text, why, source: {label,
+                                           url, card}, at}
+  decisions [--concept <c>] [--q <words>]  earlier decisions, newest first
   enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
 `;
 
@@ -118,6 +124,9 @@ export async function main(_cmd, argv) {
     }
     case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve) }));
     case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]) }));
+    case "ask": return out(await call("POST", `/agent/cards/${pos[0]}/ask`, { text: readArg(pos[1]), step: typeof f.step === "string" ? f.step : "" }));
+    case "decision": return out(await call("POST", "/agent/decisions", JSON.parse(readArg(pos[0]))));
+    case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
     default: process.stdout.write(USAGE); process.exit(sub ? 2 : 0);
   }

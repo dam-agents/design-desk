@@ -68,6 +68,7 @@ config_json() {
     --arg implementer_mention "$(cfg implementer_mention)" --arg issue_writeback "$(cfg issue_writeback)" --arg notify "$(cfg notify)" --arg run_model "$(cfg run_model)" \
     --arg dispatch "$(cfg dispatch)" --arg work_repo "${GITHUB_REPO_WORK:-$(cfg work_repo)}" \
     --arg audit_report "$(cfg audit_report)" --arg log_level "$(cfg log_level)" \
+    --arg figma "$(cfg figma)" --arg figma_file "$(cfg figma_file)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -94,7 +95,9 @@ config_json() {
       dispatch: ($dispatch | if . == "" then "enabled" else . end),
       work_repo: ($work_repo | if . == "" then "none" else . end),
       audit_report: ($audit_report | if . == "" then "enabled" else . end),
-      log_level: ($log_level | if . == "" then "info" else . end)}'
+      log_level: ($log_level | if . == "" then "info" else . end),
+      figma: ($figma | if . == "" then "disabled" else . end),
+      figma_file: $figma_file}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -315,6 +318,7 @@ inbox_mode() {
       catalog_due: pick(["catalog"]),
       agenda_due: pick(["agenda"]),
       teardowns_due: pick(["teardown"]),
+      figma_due: pick(["figma"]),
       expiring_due: $expiring,
       config:$config, logs:$logs }
     | .read_set = (["docs/desk.md"]
@@ -322,7 +326,9 @@ inbox_mode() {
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
-        + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end) | unique)'
+        + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
+        + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)
+        + (if (.variants_due | length) > 0 then ["docs/actions.md"] else [] end) | unique)'
 }
 
 # ============================================================ AUDIT MODE ====

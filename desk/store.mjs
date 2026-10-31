@@ -18,6 +18,7 @@ export const LIMITS = {
 };
 
 export const ROLES = ["lead", "designer", "pm", "developer", "guest"];
+const BUSY = "Design Desk is already working on this. The result appears here.";
 
 // Who may do what. The operator's roster assigns roles; the owner is always `lead`.
 // `prototypeRoles` comes from config (`prototype_requesters`).
@@ -27,7 +28,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "queue": return member;
-    case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": return shaper;
+    case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
@@ -38,7 +39,13 @@ export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "t
 export const CHANGE_STATES = ["new", "archived"];
 // A catalog element: one real UI part drawn in every state it can be in.
 export const ELEMENT_STATES = ["current", "stale", "building"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma"];
+// Thread kinds: people ask, comment, raise a concern or note a change to one element;
+// the agent asks (`asks`) when a step cannot go on without a person's answer.
+const THREAD_KINDS = ["question", "comment", "concern", "change", "asks"];
+// The step an agent's question blocks, which a person's answer resumes.
+const ASK_STEPS = ["request", "explore", "revise", "build", "handoff", "figma"];
+const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
 
 export class DeskError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -53,6 +60,13 @@ const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 // "__proto__" or "constructor" never reaches Object.prototype.
 const own = (table, id) => (typeof id === "string" && Object.hasOwn(table, id) ? table[id] : undefined);
 
+// A request without a title is named after the first sentence of its problem.
+function titleOf(title, problem) {
+  if (typeof title === "string" && title.trim()) return title;
+  const first = String(problem || "").trim().split(/(?<=[.!?])\s|\n/)[0] || "";
+  return first.length > 90 ? `${first.slice(0, 87).replace(/\s+\S*$/, "")}…` : first;
+}
+
 function clean(s, max, name) {
   if (typeof s !== "string") throw bad(`${name} must be text`);
   const t = s.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").trim();
@@ -63,7 +77,7 @@ function clean(s, max, name) {
 const optText = (s, max, name) => (s === undefined || s === null || s === "" ? "" : clean(s, max, name));
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0 }, cards: {}, threads: {}, assets: {}, inbox: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
 }
 
 export class Store {
@@ -79,6 +93,7 @@ export class Store {
   load() {
     this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8")) : emptyDb();
     for (const k of Object.keys(emptyDb())) if (this.db[k] === undefined) this.db[k] = emptyDb()[k];
+    this.db.seq = { ...emptyDb().seq, ...this.db.seq };
     this.mtime = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
   }
 
@@ -138,12 +153,22 @@ export class Store {
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length,
+        busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
+        asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
+        in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
       }));
   }
 
   getCard(id) {
     const c = this.card(id);
-    return { ...c, threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean) };
+    return { ...c, threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+  }
+
+  // Work the agent has been asked for on a card and not finished, oldest first.
+  waitingFor(cardId) {
+    return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done")
+      .sort((a, b) => a.created.localeCompare(b.created))
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created }));
   }
 
   getAsset(id) {
@@ -164,28 +189,34 @@ export class Store {
     return { acked: true };
   }
 
-  openThread(cardId, who, { kind = "comment", text, anchor = null } = {}) {
+  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null } = {}) {
     const c = this.card(cardId);
-    if (!["question", "comment", "concern"].includes(kind)) throw bad("kind must be question, comment or concern");
-    if ((c.threads || []).length >= LIMITS.threadsPerCard) throw bad("this card has too many threads; resolve some first");
+    if (!THREAD_KINDS.includes(kind)) throw bad(`kind must be one of ${THREAD_KINDS.join(", ")}`);
+    if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
+    if (kind === "asks" && !ASK_STEPS.includes(step)) throw bad(`an agent question names the step it blocks: ${ASK_STEPS.join(", ")}`);
+    if (kind === "change" && !(c.variants || []).some((v) => v.id === anchor?.variant)) throw bad("a change note belongs to one of the design options");
+    if ((c.threads || []).length >= LIMITS.threadsPerCard) throw bad("This page holds at most 300 conversations. Mark some as done first.");
     const body = clean(text, LIMITS.text, "text");
     const id = this.next("thread", "T");
     const t = {
       id, card: cardId, kind, state: "open", anchor: anchor ? cleanAnchor(anchor) : null,
-      needs_agent: kind === "question", created: this.clock(),
+      needs_agent: kind === "question" || kind === "change", created: this.clock(),
       messages: [{ by: person(who), at: this.clock(), text: body }],
+      ...(kind === "asks" ? { step } : {}),
     };
     this.db.threads[id] = t;
     c.threads = [...(c.threads || []), id];
     c.updated = this.clock();
-    const item = kind === "question" ? this.enqueue("question", cardId, id, who) : null;
+    const item = kind === "question" ? this.enqueue("question", cardId, id, who)
+      : kind === "change" ? this.pendingOrNew("revise", cardId, who)
+      : null;
     this.save();
     return { thread: t, inbox: item };
   }
 
   reply(threadId, who, text) {
     const t = this.thread(threadId);
-    if (t.messages.length >= LIMITS.messagesPerThread) throw bad("this thread is full; open a new one");
+    if (t.messages.length >= LIMITS.messagesPerThread) throw bad("This conversation is full. Start a new one below.");
     const body = clean(text, LIMITS.text, "text");
     t.messages.push({ by: person(who), at: this.clock(), text: body });
     let item = null;
@@ -196,6 +227,10 @@ export class Store {
       t.state = "open"; t.needs_agent = true;
       if (!this.openItemFor(threadId)) item = this.enqueue("question", t.card, threadId, who);
     }
+    // A person's answer to the agent's question resumes the step it blocked; a follow-up
+    // on a change note goes back to the agent with the other notes.
+    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who); }
+    if (t.kind === "change" && !who?.agent) { t.state = "open"; t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
     this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t, inbox: item };
@@ -228,16 +263,18 @@ export class Store {
   // Types: an idea for the design; a UI bug; a feature (a larger piece, usually an
   // issue); an adjustment of UI a developer built (a pull request or a change card);
   // a proposal the agent made for a new feature.
-  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null }) {
+  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "" }) {
+    if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
     const request = {
       type, problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"),
       screen: optText(screen, 500, "screen"), steps: optText(steps, LIMITS.text, "steps"),
       from: from ? this.card(String(from)).id : null,
+      figma: figma ? String(figma) : null,
     };
     const c = {
       kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),
-      title: clean(title, LIMITS.title, "title"), request,
+      title: clean(titleOf(title, problem), LIMITS.title, "title"), request,
       summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {},
       triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin) : null,
     };
@@ -253,16 +290,18 @@ export class Store {
   act(cardId, who, action, note = "") {
     const c = this.card(cardId);
     if (c.kind === "element") {
-      if (action !== "refresh") throw bad("a catalog element can only be refreshed");
-      if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad("that is already waiting for the agent");
+      if (action !== "refresh") throw bad("a catalog element can only be redrawn");
+      if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad(BUSY);
       const item = this.enqueue("catalog", cardId, null, who, optText(note, 1000, "note"));
       this.save();
       return { card: c, inbox: item };
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
-    if (closed && action !== "reopen") throw bad("this request is closed; reopen it first");
-    const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown" };
+    if (closed && action !== "reopen") throw bad("This request is closed. Press Reopen first.");
+    const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma" };
+    if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
+    if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");
     if (action === "reopen") {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
       c.status = "triage";
@@ -273,10 +312,10 @@ export class Store {
     }
     if (!kinds[action]) throw bad(`unknown action ${action}`);
     if (action === "build" && c.triage?.verdict !== "design")
-      throw forbidden(c.triage ? "this request needs a developer or a product decision, so it gets no live prototype; the spec explains why" : "the request is not triaged yet; a live prototype follows the verdict");
+      throw forbidden(c.triage ? "This request gets no live prototype because part of it needs a developer or a decision. The developer spec covers it." : "Design Desk is still checking this request. You can build a live prototype once it says what can be done.");
     if (action === "approve" && !["testing", "feedback", "prototype"].includes(c.status))
-      throw bad("approve a request once it has variants or a prototype to approve");
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad("that is already waiting for the agent");
+      throw bad("There's nothing to approve yet. Wait for the design options.");
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     if (action === "close") c.status = "declined";
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
@@ -290,7 +329,7 @@ export class Store {
   // for it (what to decide); after the call the lead closes the agenda.
   queueForCall(cardId, who, note = "") {
     const c = this.card(cardId);
-    if (c.agenda?.status === "queued") throw bad("it is already on the next call");
+    if (c.agenda?.status === "queued") throw bad("It is already on the next call.");
     c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, 500, "note"), brief: null };
     c.updated = this.clock();
     const item = who?.agent ? null : this.enqueue("agenda", cardId, null, who, c.agenda.note);
@@ -302,7 +341,7 @@ export class Store {
     const c = this.card(cardId);
     if (c.agenda?.status !== "queued") throw bad("it is not on the next call");
     const mine = c.agenda.by?.email && c.agenda.by.email === who.email;
-    if (!mine && !can(who.role, "close")) throw forbidden("only the person who added it, a designer or the lead can take it off");
+    if (!mine && !can(who.role, "close")) throw forbidden("Only the person who added it, or a designer, can take it off the call.");
     c.agenda = { ...c.agenda, status: "removed", removed_at: this.clock() };
     this.save();
     return { card: c };
@@ -326,6 +365,13 @@ export class Store {
   }
 
   // ---------- agent actions ----------
+
+  // The open (not yet claimed) item of this kind for the card, or a new one: notes written
+  // in a row are one piece of work, and one written while a session works gets its own.
+  pendingOrNew(kind, card, who, note = "") {
+    const open = Object.values(this.db.inbox).find((i) => i.card === card && i.kind === kind && i.state === "open");
+    return open || this.enqueue(kind, card, null, who, note);
+  }
 
   enqueue(kind, card, thread, who, note = "") {
     if (!INBOX_KINDS.includes(kind)) throw bad(`unknown inbox kind ${kind}`);
@@ -397,7 +443,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element"].includes(fields.kind)) throw bad("a new card needs kind change, request or element");
@@ -421,7 +467,8 @@ export class Store {
         next.status = fields.status;
       } else if (k === "sections") next.sections = cleanSections(fields.sections);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
-      else if (k === "variants") next.variants = cleanVariants(fields.variants, this.db.assets);
+      else if (k === "variants") next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
+      else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards);
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
@@ -442,6 +489,32 @@ export class Store {
     this.db.cards[next.id] = next;
     this.save();
     return { card: next };
+  }
+
+  // ---------- decisions ----------
+
+  // What the team decided and why, kept so a later change can say what it touches. The
+  // agent records them (an approved design, a call's outcome, a deliberate behaviour it
+  // found) and reads them back by concept.
+  addDecision({ concepts, text, why = "", source = null, at = null }) {
+    if (!Array.isArray(concepts) || !concepts.length) throw bad("a decision names at least one concept");
+    const d = {
+      concepts: concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()),
+      text: clean(text, 600, "decision"), why: optText(why, 1500, "why"),
+      source: source ? cleanSource(source, this.db.cards) : null,
+      at: optText(at, 40, "at") || this.clock(), recorded: this.clock(),
+    };
+    d.id = this.next("decision", "D");
+    this.db.decisions[d.id] = d;
+    this.save();
+    return { decision: d };
+  }
+
+  listDecisions({ concept = "", q = "" } = {}) {
+    const c = String(concept || "").toLowerCase(), w = String(q || "").toLowerCase();
+    return Object.values(this.db.decisions)
+      .filter((d) => (!c || d.concepts.some((x) => x.includes(c) || c.includes(x))) && (!w || `${d.text} ${d.why}`.toLowerCase().includes(w)))
+      .sort((a, b) => b.at.localeCompare(a.at));
   }
 
   addAsset({ card = null, kind, name, contentType, data, encoding = "base64" }) {
@@ -486,6 +559,8 @@ function cleanAnchor(a) {
     selector: typeof a.selector === "string" ? a.selector.slice(0, 500) : null,
     text: typeof a.text === "string" ? a.text.slice(0, 300) : null,
     tag: typeof a.tag === "string" ? a.tag.slice(0, 40) : null,
+    label: typeof a.label === "string" ? a.label.slice(0, 120) : null,
+    edit: a.edit && typeof a.edit === "object" ? { from: String(a.edit.from || "").slice(0, 300), to: String(a.edit.to || "").slice(0, 300) } : null,
   };
 }
 
@@ -507,6 +582,41 @@ function cleanRefs(list, assets, name) {
   });
 }
 
+// A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
+// page can show what changed and people's pinned notes still find their option.
+function versioned(variants, before, at) {
+  return variants.map((v) => {
+    const old = before.find((x) => x.id === v.id);
+    if (!old) return { ...v, version: 1, history: [], drawn: at };
+    const figma = v.figma_url || old.figma_url || null;
+    if (old.asset === v.asset) return { ...v, version: old.version || 1, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
+    return { ...v, version: (old.version || 1) + 1, drawn: at, figma_url: v.figma_url || null,
+      history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
+  });
+}
+
+function cleanSource(o, cards) {
+  if (typeof o !== "object" || !o) throw bad("source must be an object");
+  return {
+    label: optText(o.label, 200, "source label"),
+    url: /^https?:\/\//.test(String(o.url || "")) ? String(o.url).slice(0, 500) : null,
+    card: o.card && own(cards, String(o.card)) ? String(o.card) : null,
+  };
+}
+
+// Where else the same thing shows up, what a change to it touches, and the earlier
+// decisions that bound it — written by the agent, read by people.
+function cleanImpact(o, cards) {
+  if (typeof o !== "object" || !o) throw bad("impact must be an object");
+  const list = (xs, max, f) => (Array.isArray(xs) ? xs.slice(0, max).map(f) : []);
+  return {
+    concept: clean(o.concept, 120, "impact concept"),
+    places: list(o.places, 30, (x) => ({ where: clean(x.where, 160, "place"), how: optText(x.how, 400, "how"), screen: optText(x.screen, 120, "screen"), kind: ["screen", "component", "message", "email", "document", "other"].includes(x.kind) ? x.kind : "screen" })),
+    affects: list(o.affects, 20, (x) => ({ what: clean(x.what, 200, "affected"), why: optText(x.why, 600, "why"), source: x.source ? cleanSource(x.source, cards) : null })),
+    decisions: list(o.decisions, 20, (x) => ({ text: clean(x.text, 600, "decision"), when: optText(x.when, 40, "when"), source: x.source ? cleanSource(x.source, cards) : null })),
+  };
+}
+
 function cleanVariants(list, assets) {
   if (!Array.isArray(list)) throw bad("variants must be a list");
   return list.slice(0, 6).map((v, i) => {
@@ -515,8 +625,9 @@ function cleanVariants(list, assets) {
       id: String(v.id || `v${i + 1}`).replace(/[^a-z0-9-]/gi, "").slice(0, 20),
       name: clean(v.name, 80, "variant name"),
       rationale: optText(v.rationale, 1000, "rationale"),
-      fidelity: ["wireframe", "mockup"].includes(v.fidelity) ? v.fidelity : "mockup",
+      fidelity: ["wireframe", "mockup", "figma"].includes(v.fidelity) ? v.fidelity : "mockup",
       asset: v.asset,
+      figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
     };
   });
 }

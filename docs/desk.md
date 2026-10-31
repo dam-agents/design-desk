@@ -77,7 +77,7 @@ A `questions_due` item points at a thread on a card. Read the card and the whole
    sentence, then only what the person needs; under 200 words; one offer to go deeper.
    Write it to a file and `design desk answer T-<n> <file>`.
 3. A question that is really a request ("can it be blue?") gets the answer *and* the
-   boundary verdict in one sentence, and points to **Start a design follow-up**.
+   boundary verdict in one sentence, and points to **Adjust the design**.
 4. A question you cannot answer from sources says so and names who can (the PR author, the
    profile's `contacts`).
 
@@ -93,18 +93,26 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
 - The **Next call** tab lists the agenda with the briefs; **Present** shows one item at a
   time, full screen, with its variant, sheet or screens; comments go in the card's threads.
-- After the call the lead presses **Mark the call held**: every item becomes `presented`
-  with the date. Decisions taken in the call go into the cards' threads (a person writes them,
-  or you write what they told you in chat, attributed).
+- After the call a designer presses **Call is over — clear the list**: every item becomes
+  `presented` with the date. Decisions taken in the call go into the cards' threads (a person
+  writes them, or you write what they told you in chat, attributed), and each one is recorded
+  with `design desk decision`, the card as its source.
 
 ## Writing on the Desk
 
 - Everything on the Desk is for people who do not read code: the product's own words, no
-  file paths, no jargon the profile's glossary does not define.
+  file paths, no jargon the profile's glossary does not define. Never write a card, item or
+  thread id (`C-12`, `I-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
+  Environment name: refer to things by their title, and to steps with the words the Desk
+  shows ("Checking", "Options ready", "Live — try it", "Sent to developers").
+- When a step cannot go on without a person, ask once, with a suggested answer:
+  `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person
   closed it. People's own actions set the rest through the server.
 - When `notify` is `slack`, a request moving to `feedback`, `testing` or `handed-off` gets
-  one message in the bound channel: its title, the new step and the Desk link.
+  one message in the bound channel: "<title> — Options ready to vote on: <link>", "— Live
+  prototype ready to try: <link>" or "— Sent to developers: <link>". A private artifact link
+  opens only for people on the Desk's list; attach a picture when it helps.

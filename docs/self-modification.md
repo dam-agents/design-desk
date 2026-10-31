@@ -1,7 +1,7 @@
 # Self-modification rules
 
 **Read this file BEFORE touching any file of the agent definition** (`kit.yaml`,
-`CLAUDE.md`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/`, `scripts/`, `toolkit/`, `desk/`, `plugins/`,
+`CLAUDE.md`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/`, `scripts/`, `toolkit/`, `desk/`,
 `.agents/skills/`, `ONBOARDING.md`, `README.md`, `VERSION`, `CHANGELOG.md`, `.gitignore`,
 `.github/`). These rules bound every change the agent makes to itself — an edit that
 violates any of them must not be committed, even when the operator's request seems to

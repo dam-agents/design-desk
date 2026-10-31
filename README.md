@@ -43,9 +43,11 @@ same pull request that changes what it describes. A repository without a profile
 change cards, variants and specs; live prototypes need one. Contract: [`docs/profile.md`](docs/profile.md);
 `design profile --check-dir .design-desk/<name>` checks one in the product's checkout.
 
-Channels, trackers and a product's own procedures are plug-ins
-([`docs/plugins.md`](docs/plugins.md)): Slack intake and GitHub handoff ship in
-[`plugins/`](plugins/); a product adds its own next to its profile.
+Everything the agent does is an action done by one skill ([`docs/actions.md`](docs/actions.md)):
+the bundled skills ship in [`.agents/skills/`](.agents/skills/), and a product names its own
+(its prototyper, its issue writer), which the platform installs like any skill.
+The Desk is where the team sees and discusses the work; the operator can also do all of it in
+chat with the agent.
 
 ## Settings
 
@@ -89,7 +91,7 @@ Idle runs wake no model: each schedule's Precheck decides first.
 
 ## Contributing
 
-The skills are in [`.agents/skills/`](.agents/skills/), the plug-ins in [`plugins/`](plugins/), the `design` CLI and the guard in
+The skills are in [`.agents/skills/`](.agents/skills/), the `design` CLI and the guard in
 [`toolkit/`](toolkit/) (a language adapter per stack in `toolkit/lib/lang/`), the Desk server and page in [`desk/`](desk/). `bash scripts/tests/run.sh`
 runs the offline tests (`node --test toolkit/tests desk/tests` for the node ones). Read
 [`docs/self-modification.md`](docs/self-modification.md) before opening a PR.

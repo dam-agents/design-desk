@@ -35,8 +35,8 @@ function spend(key, kind) {
   const u = usage.get(key) || { writes: [], items: [] };
   u.writes = u.writes.filter((t) => now - t < WINDOW_MS);
   u.items = u.items.filter((t) => now - t < 3600 * 1000);
-  if (kind === "write" && u.writes.length >= WRITES_PER_WINDOW) throw new DeskError(429, "too many changes in a short time; try again in a few minutes");
-  if (kind === "item" && u.items.length >= ITEMS_PER_HOUR) throw new DeskError(429, "you sent the agent a lot in the last hour; it will get to the rest, try again later");
+  if (kind === "write" && u.writes.length >= WRITES_PER_WINDOW) throw new DeskError(429, "That's a lot of changes in a few minutes. Wait 10 minutes and try again.");
+  if (kind === "item" && u.items.length >= ITEMS_PER_HOUR) throw new DeskError(429, `You've sent Design Desk ${ITEMS_PER_HOUR} things this hour. It's working through them; try again in an hour.`);
   u[kind === "write" ? "writes" : "items"].push(now);
   usage.set(key, u);
 }
@@ -57,12 +57,28 @@ function roleOf(caller) {
 
 function settings() {
   const list = (v, d) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
+  const lead = cfgTable("Desk people").find((r) => (r.role || "").toLowerCase() === "lead");
+  const ideas = cfg("handoff", "desk");
   return {
     prototypeRoles: list(cfg("prototype_requesters"), ["designer", "lead"]),
     ping: cfg("desk_ping", "enabled") !== "disabled",
     name: cfg("display_name", "Design Desk"),
+    // Who people ask for access or help: the first lead on the roster, else the owner.
+    contact: lead?.email || "the Desk's owner",
+    figma: cfg("figma", "disabled") !== "disabled",
+    // Where an approved design goes, by request type, so the page can say it before approving.
+    handoff: {
+      feature: cfg("issue_writeback", "enabled") === "disabled" ? "desk" : "issue-comment",
+      adjustment: "coding-agent", bug: "coding-agent",
+      idea: ideas, proposal: ideas,
+    },
   };
 }
+
+// The words a person reads when their role lacks an action.
+const VERBS = { ack: "mark changes as seen", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
+  explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
+  reopen: "reopen requests", refresh: "update drawings", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here" };
 
 function isAgent(req) {
   const t = Buffer.from(String(req.headers["x-desk-agent-token"] || "")), want = agentToken();
@@ -100,12 +116,18 @@ const send = (res, status, obj) => {
 async function viewerRoute(req, res, url, who) {
   const s = settings();
   const actor = { email: who.email, sub: who.sub, role: who.deskRole };
-  const need = (action) => { if (!can(who.deskRole, action, s.prototypeRoles)) throw new DeskError(403, `your role (${who.deskRole}) cannot ${action} here; ask the Desk's owner to add you to its people list`); };
+  const need = (action) => {
+    if (can(who.deskRole, action, s.prototypeRoles)) return;
+    const verb = VERBS[action] || "do that";
+    throw new DeskError(403, who.deskRole === "guest"
+      ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
+      : `Only designers can ${verb}. Ask ${s.contact} if you need it.`);
+  };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue"];
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", name: s.name });
+    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma"];
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", name: s.name, contact: s.contact, figma: s.figma, handoff: s.handoff });
   }
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
@@ -114,15 +136,19 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), calls: (store.db.calls || []).slice(-5) });
   const b = m === "GET" ? {} : await body(req);
   if (m !== "GET") {
-    if (store.full()) throw new DeskError(507, "the Desk is full; the owner archives old cards (docs/desk.md → Server)");
+    if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && b.kind === "question") || (p[1] === "threads" && p[3] === "messages") || p[1] === "requests" || (p[1] === "cards" && p[3] === "actions")) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && p[3] === "messages") || p[1] === "requests" || (p[1] === "cards" && p[3] === "actions")) spend(who.email || who.sub, "item");
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note), s, who)); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.unqueue(p[2], actor));
   if (m === "POST" && p[1] === "calls") return send(res, 200, store.closeCall(actor, b));
   if (m === "POST" && p[1] === "cards" && p[3] === "ack") { need("ack"); return send(res, 200, store.ack(p[2], actor)); }
-  if (m === "POST" && p[1] === "cards" && p[3] === "threads") { need(b.kind === "question" ? "ask" : "comment"); return send(res, 201, withPing(store.openThread(p[2], actor, b), s, who)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "threads") {
+    need(b.kind === "question" ? "ask" : b.kind === "change" ? "change" : "comment");
+    const { kind, text, anchor } = b;
+    return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor }), s, who));
+  }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need("comment"); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "resolve") { need("comment"); return send(res, 200, store.resolve(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }
@@ -132,11 +158,20 @@ async function viewerRoute(req, res, url, who) {
     // Only what a person types: an origin (where the agent answers) is the agent's to set.
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
-    const { title, problem, goal, screen, steps, from } = b;
+    const { title, problem, goal, screen, steps, from, figma } = b;
     const type = from ? "adjustment" : b.type === "bug" ? "bug" : "idea";
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from }), s, who));
+    // Pictures a person pasted: two at most, images only, stored before the card names them.
+    const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
+    for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
+    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "" }));
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma }), s, who));
   }
-  if (m === "POST" && p[1] === "cards" && p[3] === "actions") { need(String(b.action)); return send(res, 200, withPing(store.act(p[2], actor, String(b.action), b.note), s, who)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
+    const action = String(b.action);
+    need(action.startsWith("figma-") ? "figma" : action);
+    if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
+    return send(res, 200, withPing(store.act(p[2], actor, action, b.note), s, who));
+  }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
 }
 
@@ -144,7 +179,7 @@ async function viewerRoute(req, res, url, who) {
 // from this store, never from the prompt (a viewer can send any prompt text). A guest's
 // work waits for the inbox schedule instead of starting a session of its own.
 function withPing(result, s, who) {
-  return result.inbox && s.ping && who.deskRole !== "guest" ? { ...result, ping: `Design Desk: inbox item ${result.inbox.id} is waiting. Follow CLAUDE.md → "Desk pings".` } : result;
+  return result.inbox && s.ping && who.deskRole !== "guest" ? { ...result, ping: `Design Desk: a teammate is waiting on the Desk (ref ${result.inbox.id}). Follow CLAUDE.md → "Desk pings".` } : result;
 }
 
 async function agentRoute(req, res, url) {
@@ -155,14 +190,17 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: store.getCard(it.card) }); }
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
+  if (m === "GET" && p[1] === "decisions") return send(res, 200, { decisions: store.listDecisions({ concept: url.searchParams.get("concept") || "", q: url.searchParams.get("q") || "" }) });
   const b = m === "GET" ? {} : await body(req);
-  if (m === "POST" && p[1] === "cards") return send(res, 200, store.upsertCard(b));
+  if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
   if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.queueForCall(p[2], { agent: true }, b.note));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
   if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve) }));
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));
+  if (m === "POST" && p[1] === "cards" && p[3] === "ask") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "asks", text: b.text, step: b.step }));
+  if (m === "POST" && p[1] === "decisions") return send(res, 201, store.addDecision(b));
   if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover) }));
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   if (m === "POST" && p[1] === "enqueue") return send(res, 201, (() => { store.card(String(b.card)); const it = store.enqueue(String(b.kind), String(b.card), null, { agent: true }, typeof b.note === "string" ? b.note.slice(0, 1000) : ""); store.save(); return { item: it }; })());

@@ -160,6 +160,11 @@ Read `CLAUDE.md` → **Runtime configuration** first. If Step 2a restored a `CON
 7. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
    Desk store, its threads and votes cannot be rebuilt from anywhere else; recommend yes.
 8. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
+9. **Figma** (`figma`, `figma_file`) — "Does the team design in Figma? I can import frames
+   from it and send options back as editable layers." Yes → ask the owner to add Figma's MCP
+   server (`https://mcp.figma.com/mcp`) as a Custom MCP connection with OAuth and grant it to
+   this agent, then set `figma: enabled`; ask for a file the exports should go to
+   (`figma_file`, may stay empty). No → `figma: disabled`.
 
 Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboarding.sh"
 --config` and apply what it reports:
@@ -194,6 +199,8 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 - work_repo: none
 - audit_report: enabled
 - log_level: info
+- figma: disabled
+- figma_file:
 
 ## Desk people
 
@@ -228,7 +235,12 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 product name and whether it has a boundary and an engine (`source: repo`), or that the
 repository has no profile ([docs/profile.md](docs/profile.md) → A repository without a
 profile). For a profile with an engine, propose every host in `engine.egress` to the owner
-(`egress_proposal` with `propose`), with the profile's reason.
+(`egress_proposal` with `propose`), with the profile's reason. For a profile with `skills`,
+install each skill it names from its `source` through the platform's skill install, unless
+it is installed already (`design skill <action> --repo <repo>` says which are missing), and
+tell the operator which actions they now do. For a profile with
+`catalog.elements`, build the catalog now ([docs/catalog.md](docs/catalog.md) → Keeping it
+current, "Build the catalog"), so the Catalog tab is not empty on the team's first visit.
 
 **5b — schedules.** **Kit path: the platform already created these** from `kit.yaml`;
 reconcile. Start from `mcp__platform-outbound__list_schedules` and compare **full names**.
@@ -307,11 +319,21 @@ Give the operator a short **summary**:
 2. What runs: the four schedules with their cadence and model; the Desk link; whether live
    prototypes and handoff issues are on.
 3. Day-to-day:
-   - New UI changes appear on the Desk within the hour, under **To review**.
-   - Anyone on the list asks questions on a card; designers file **New design request**,
-     press **Explore variants**, then **Build a live prototype** and **Approve and hand off**.
+   - New UI changes appear on the Desk within the hour, under **What's new**.
+   - Anyone on the list asks questions on a card; designers file **New request**, and each
+     request shows what happens next and whose turn it is.
    - In the chat: "mock up the empty state of …", "a deck from this doc", "what changed in
      the agents list this month?" — the Designer kit's deliverables are all here.
    - To change who may do what, or any setting, say so in this chat.
+4. A **welcome note** the owner can paste to the team (in Slack or an email), filled in with
+   the Desk's share link and the product's name:
+
+   > The design Desk for <product> is ready: <share link>.
+   > It shows every change to the product's screens in plain words, answers questions about
+   > why things work the way they do, and turns your design requests into options you can
+   > compare and a live version you can click through.
+   > It only ever changes how <product> looks, never what it does, and it tells you up front
+   > what needs a developer.
+   > Start with **What's new**, or press **New request**.
 
 From now on the guard short-circuits and normal runs follow `CLAUDE.md`.

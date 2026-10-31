@@ -24,7 +24,6 @@
 !/.github/
 !/desk/
 !/toolkit/
-!/plugins/
 
 # Runtime skill installs land in .agents/skills/ too, so the bundled ones are
 # re-included BY NAME — otherwise a cached install becomes definition content.
@@ -34,6 +33,10 @@
 !/.agents/skills/copy
 !/.agents/skills/demo-video
 !/.agents/skills/explain
+!/.agents/skills/figma
+!/.agents/skills/handoff-github
+!/.agents/skills/impact
+!/.agents/skills/intake-slack
 !/.agents/skills/slides
 !/.agents/skills/variants
 !/.agents/skills/walkthrough

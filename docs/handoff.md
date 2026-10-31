@@ -1,13 +1,14 @@
 # Handoff — the developer spec
 
-A `handoff` item comes from a designer's **Approve and hand off**. The spec is what a
+A `handoff` item comes from a designer's **Approve** (with the option they picked in its note). The spec is what a
 developer needs to build the approved design without asking: the design, its states and copy,
 exactly what the prototype changed, and what it could not change.
 
 ## Writing it
 
-1. Claim; set `status: spec`. Read the card whole: the request, triage, the variants and
-   their votes, every thread, the prototype and its guard report.
+1. Claim; set `status: spec`. Read the card whole: the request, triage, the impact, the
+   variants and their votes, every thread and note, the prototype and its guard report. The
+   approved option is the one the item's note names (the designer picked it on Approve).
 2. Write `/tmp/design-desk-c<n>/spec.md`, with these sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in the requester's words, the decisions taken on the Desk (which
@@ -28,19 +29,23 @@ exactly what the prototype changed, and what it could not change.
      changes (`git grep` the old strings under the profile's `tests` paths).
    - **Open questions** — anything the Desk did not settle.
 3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset}`.
-4. Deliver it with the handoff plug-in ([plugins.md](plugins.md); the bundled one is
-   [`handoff-github`](../plugins/handoff-github/SKILL.md)), by the request's type:
+4. Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
+   [actions.md](actions.md); the bundled one is
+   [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)), with the approved option's
+   pictures attached, by the request's type:
    - `feature` (flow 1) — back to the issue it came from (`issue_writeback`), where a developer
      builds from it;
    - `adjustment` and `bug` (flows 2 and 3) — to the coding agent (`implementer`,
      `implementer_mention`), which builds it into the product;
    - `idea` and `proposal` — per `handoff`: `desk` (nothing more), `issue` or `draft-pr`.
 
-   The plug-in sets `spec.issue_url` or `spec.pr_url`.
-5. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
+   The skill sets `spec.issue_url` or `spec.pr_url`.
+5. Record the approval as a decision (`design desk decision`): the impact's concept, what
+   was approved in one sentence, who approved it, and the card as its source.
+6. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
    so the developer can open it; it no longer holds a place, and the expiry pass tears it
    down once the date passes ([prototype.md](prototype.md) → Expiry).
 
 Record ordering: the issue, comment or pull request is created first and its URL written to
-the card right after; the plug-in's hidden card marker prevents a duplicate and finds a lost
+the card right after; the skill's hidden card marker prevents a duplicate and finds a lost
 URL.

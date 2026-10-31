@@ -55,6 +55,10 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    Every "why" names its source in the text ("the issue says…", "the PR's decision notes
    say…"); a reason you cannot find is written as not documented, with the PR author as
    the person to ask.
+   - `impact` — where else the same thing shows up and what the change touches, from earlier
+     decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
+     the PR records ("per week because the limit resets weekly") becomes a decision
+     (`design desk decision`) with the PR as its source.
 8. **Publish.** Upload each screen: `design desk asset <file> --kind screen --name <name>`
    (prints the asset id); write the card JSON to a file and `design desk upsert <file>` with
    `kind: change`, the fields above and `screens: [{asset, caption}]`. The store finds an

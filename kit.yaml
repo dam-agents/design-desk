@@ -47,6 +47,12 @@ connections:
       Reads merged pull requests, their issues and the product's code; clones the
       repository to build variants and prototypes. Pushes a prototype branch or
       files a handoff issue only when you turn that on.
+  - accepts: [mcp-server]
+    required: false
+    note: >-
+      Optional: Figma. Add Figma's MCP server (https://mcp.figma.com/mcp) as a Custom
+      MCP connection to import frames from Figma and send design options back as
+      editable layers; then set figma to enabled.
 
 channels:
   - type: slack

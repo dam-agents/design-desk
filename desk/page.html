@@ -18,25 +18,30 @@
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --shadow: none; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
   button { font: inherit; color: inherit; }
   a { color: var(--accent); }
-  .app { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+  .app { display: grid; grid-template-rows: auto auto 1fr; height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .01em; }
-  nav { display: flex; gap: 4px; }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
   nav button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
   nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; line-height: 18px; text-align: center; }
   .grow { flex: 1; }
   .me { color: var(--muted); font-size: 12px; }
-  .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
+  .banner.warn { background: var(--warn-soft); }
+  .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
   .btn:hover { background: var(--soft); }
   .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
   .btn.primary:hover { opacity: .9; }
   .btn.small { padding: 3px 9px; font-size: 12px; }
   .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   main { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; min-height: 0; }
+  main.wide { grid-template-columns: 1fr; } main.wide .list { display: none; }
   .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; }
   .detail { overflow: auto; padding: 24px 32px 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
@@ -49,13 +54,14 @@
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
-  .empty { color: var(--muted); padding: 24px 12px; text-align: center; }
+  .empty { color: var(--muted); padding: 24px 12px; text-align: center; max-width: 60ch; margin: 0 auto; }
   .filters { display: flex; gap: 6px; margin: 0 0 10px; flex-wrap: wrap; }
   h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
   .lead { font-size: 16px; margin: 10px 0 18px; max-width: 72ch; }
   .sub { color: var(--muted); font-size: 12.5px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 4px; }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 0; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; align-items: center; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
   .section { margin: 0 0 14px; max-width: 76ch; }
   .section h4 { margin: 0 0 4px; font-size: 14.5px; }
@@ -64,7 +70,7 @@
   .shot { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); cursor: zoom-in; }
   .shot img { display: block; width: 100%; min-height: 120px; background: var(--soft); object-fit: cover; object-position: top; max-height: 260px; }
   .shot figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); }
-  .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 50; cursor: zoom-out; }
+  .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
   .zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; background: #fff; }
   .steps { display: flex; gap: 0; margin: 14px 0 6px; flex-wrap: wrap; }
   .step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; padding: 4px 10px 4px 0; }
@@ -72,22 +78,34 @@
   .step .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); font-size: 11px; }
   .step.done { color: var(--ink); } .step.done .n { background: var(--ok-soft); color: var(--ok); }
   .step.now { color: var(--ink); font-weight: 600; } .step.now .n { background: var(--ink); color: var(--panel); }
-  .verdict { border-radius: var(--radius); padding: 14px 16px; margin: 6px 0 4px; }
+  .status { display: grid; gap: 10px; margin: 12px 0 8px; max-width: 80ch; }
+  .working { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--radius); background: var(--info-soft); }
+  .spin { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex: none; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  .next { padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); }
+  .next b { display: block; margin-bottom: 2px; }
+  .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
+  .asks .reply { border: 0; padding: 8px 0 0; }
+  details.more { position: relative; display: inline-block; }
+  details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
+  details.more .menu { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 220px; display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  details.more .menu .btn { border: 0; justify-content: flex-start; width: 100%; }
+  .verdict { border-radius: var(--radius); padding: 14px 16px; margin: 6px 0 4px; max-width: 80ch; }
   .verdict.design { background: var(--ok-soft); } .verdict.needs-developer { background: var(--warn-soft); } .verdict.product { background: var(--info-soft); }
   .verdict b { display: block; margin-bottom: 4px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
   .two ul { margin: 4px 0 0; padding-left: 18px; }
+  details.fold > summary { cursor: pointer; color: var(--muted); font-size: 13px; margin: 18px 0 8px; }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .tabs button { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
   .tabs button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  .frame { width: 100%; height: 72vh; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; display: block; }
-  .frame.picking { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .frame { width: 100%; height: 66vh; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; display: block; }
   .vbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
   .tally { display: flex; gap: 6px; flex-wrap: wrap; }
   .threads { display: grid; gap: 10px; max-width: 80ch; }
   .thread { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
   .thread .head { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
-  .thread .anchor { font-family: var(--mono); font-size: 11.5px; background: var(--soft); padding: 1px 6px; border-radius: 4px; cursor: pointer; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .anchor { font-size: 12px; background: var(--soft); padding: 1px 8px; border-radius: 999px; cursor: pointer; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; }
   .msg { padding: 10px 12px; } .msg + .msg { border-top: 1px dashed var(--line); }
   .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 3px; } .msg.agent { background: var(--soft); }
   .msg .who b { color: var(--ink); }
@@ -97,20 +115,44 @@
   .composer { display: grid; gap: 8px; max-width: 80ch; margin-top: 10px; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
-  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; z-index: 60; max-width: calc(100% - 32px); }
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; z-index: 90; max-width: calc(100% - 32px); }
   dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   dialog form { padding: 20px; display: grid; gap: 10px; }
   dialog h2 { font-size: 18px; } label { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
-  .guide { max-width: 74ch; } .guide li { margin-bottom: 6px; }
+  .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: 12.5px; color: var(--muted); display: grid; gap: 8px; }
+  .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: 6px; border: 1px solid var(--line); }
+  .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 14px; } .choices input { width: auto; }
+  .guide { max-width: 74ch; } .guide li { margin-bottom: 6px; } .guide ol { padding-left: 20px; }
   .proto { display: grid; gap: 8px; }
   .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  .impact ul { margin: 4px 0 10px; padding-left: 20px; } .impact li { margin-bottom: 4px; }
   .back { display: none; }
+  /* the design workspace */
+  #workspace { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: grid; grid-template-rows: auto 1fr; }
+  #workspace[hidden] { display: none; }
+  .ws-top { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  .ws-top .title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ws-body { display: grid; grid-template-columns: 1fr 380px; min-height: 0; }
+  .ws-stage { padding: 12px; display: grid; grid-template-rows: auto 1fr; gap: 8px; min-height: 0; }
+  .ws-stage .frame { height: 100%; }
+  .ws-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; }
+  .sel { padding: 10px 12px; border-radius: var(--radius); border: 2px solid var(--accent); background: var(--info-soft); }
+  .sel.none { border-style: dashed; border-color: var(--line); background: transparent; }
+  .sel .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .edit { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--soft); }
+  .notes { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .note { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; }
+  .note[aria-current="true"] { border-color: var(--accent); }
+  .note .h { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .note .n { font-weight: 700; color: var(--ink); }
+  .note .a { font-size: 12.5px; background: var(--soft); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; }
     main.has-detail .list { display: none; } main:not(.has-detail) .detail { display: none; }
     .detail { padding: 16px; } .back { display: inline-flex; margin-bottom: 10px; } .two { grid-template-columns: 1fr; }
+    .ws-body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; } .ws-side { border-left: 0; border-top: 1px solid var(--line); }
   }
 </style>
 </head>
@@ -121,111 +163,151 @@
     <nav id="nav"></nav>
     <div class="grow"></div>
     <span class="me" id="me"></span>
-    <button class="btn primary" id="new-request" hidden></button>
+    <button class="btn primary" id="new-request" hidden>+ New request</button>
   </header>
+  <div class="banners" id="banners"></div>
   <main id="main">
-    <section class="list" id="list" aria-label="Cards"></section>
+    <section class="list" id="list" aria-label="List"></section>
     <section class="detail" id="detail"></section>
   </main>
 </div>
 
+<div id="workspace" hidden></div>
+
 <dialog id="request-dialog">
   <form method="dialog" id="request-form">
-    <h2 data-t="newRequest"></h2>
-    <p class="sub" data-t="requestHint"></p>
-    <div class="tabs" role="radiogroup" id="type-choice"><button type="button" data-type="idea" aria-pressed="true" data-t="idea"></button><button type="button" data-type="bug" aria-pressed="false" data-t="bug"></button></div>
+    <h2 id="rq-title">New request</h2>
+    <p class="sub" id="rq-hint"></p>
+    <div class="tabs" role="radiogroup" id="type-choice">
+      <button type="button" data-type="idea" aria-pressed="true">Suggest a change</button>
+      <button type="button" data-type="bug" aria-pressed="false">Report something broken</button>
+    </div>
     <input type="hidden" name="type" value="idea" />
-    <label><span data-t="fTitle"></span><input name="title" maxlength="200" required /></label>
-    <label><span data-t="fProblem"></span><textarea name="problem" maxlength="4000" required></textarea></label>
-    <label><span data-t="fGoal"></span><textarea name="goal" maxlength="4000"></textarea></label>
-    <label><span data-t="fScreen"></span><input name="screen" maxlength="500" /></label>
-    <label data-only="bug" hidden><span data-t="fSteps"></span><textarea name="steps" maxlength="4000"></textarea></label>
+    <label><span id="rq-problem-label">What would you change, and for whom?</span><textarea name="problem" maxlength="4000" required></textarea></label>
+    <label><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
+    <label id="rq-figma" hidden><span>Figma link (optional)</span><input name="figma" maxlength="500" placeholder="https://www.figma.com/design/…" /></label>
+    <div class="drop" id="rq-drop">
+      <span>Screenshot (optional): paste it here with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="rq-file" hidden multiple /></label>. Two at most.</span>
+      <div class="thumbs" id="rq-thumbs"></div>
+    </div>
     <input type="hidden" name="from" />
-    <div class="actions"><button class="btn primary" value="send" data-t="send"></button><button class="btn" value="cancel" formnovalidate data-t="cancel"></button></div>
+    <div class="actions"><button class="btn primary" value="send">Send</button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="confirm-dialog">
+  <form method="dialog" id="confirm-form">
+    <h2 id="cf-title"></h2>
+    <div id="cf-body" class="md"></div>
+    <div id="cf-choices" class="choices"></div>
+    <label id="cf-note-wrap" hidden><span id="cf-note-label"></span><textarea name="note" maxlength="500"></textarea></label>
+    <label id="cf-url-wrap" hidden><span id="cf-url-label"></span><input name="url" maxlength="500" /></label>
+    <div class="actions"><button class="btn primary" value="ok" id="cf-ok"></button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
   </form>
 </dialog>
 
 <script>
 (() => {
   "use strict";
-  // ---------- words ----------
-  const T = {
-    en: {
-      review: "To review", requests: "Requests", shipped: "Shipped", guide: "What I can do", newRequest: "New design request",
-      requestHint: "Describe the problem in your own words. I will tell you first what can be done as a design change and what needs a developer.",
-      fTitle: "Short title", fProblem: "What is the problem, and for whom?", fGoal: "What would good look like? (optional)", fScreen: "Which screen? (optional)",
-      nextCall: "Next call", addToCall: "Add to the next call", onCall: "On the next call", takeOff: "Take off the call", present: "Present",
-      closeCall: "Mark the call held", callEmpty: "Nothing is on the next call yet. Add a card from its page.", brief: "What we decide",
-      briefPending: "Design Desk is preparing the brief.", addedBy: "added by", exitPresent: "Exit", feature: "Feature", adjustment: "Adjustment", proposal: "Proposal",
-      research: "Context and decisions", rClear: "Clear to go", rDuplicate: "Already tracked elsewhere", rDeliberate: "Today's behaviour was a deliberate decision", rCollision: "Someone is changing this right now", rUnclear: "Not enough to go on",
-      researchPending: "Design Desk is reading the issues, pull requests and history behind this before designing.", fromIssue: "from issue", fromPr: "from pull request",
-      catalog: "Catalog", elementStates: "States", refresh: "Redraw from the current code", stale: "out of date", source: "From",
-      noSheet: "The states are being drawn.", sheetHint: "Every tile is the real element from the product's code, given the data of one state.",
-      idea: "Design idea", bug: "UI bug", bugs: "Bugs", fSteps: "How to get there (optional)", bugProblem: "What is wrong, and where?", bugGoal: "What should it look like? (optional)",
-      reportedVia: "reported by", whatHappens: "What happens", shouldHappen: "What should happen", stepsTitle: "Steps",
-      send: "Send", cancel: "Cancel", markReviewed: "Mark as reviewed", reviewed: "Reviewed", ask: "Ask a question", followUp: "Adjust the design",
-      openPr: "Open the pull request", merged: "merged", screens: "Screens", details: "Details", conversation: "Questions and comments",
-      noCards: "Nothing here yet.", allReviewed: "You have reviewed everything that shipped. ✨", pick: "Pick a card on the left.",
-      question: "Question", comment: "Comment", concern: "Concern", reply: "Reply", resolve: "Resolve", resolved: "resolved", answered: "answered",
-      waiting: "Waiting for Design Desk to answer…", writeQuestion: "Ask anything: why it works this way, what it can and can't do…", writeComment: "Write a comment…",
-      triage: "Triage", variants: "Variants", feedback: "Feedback", prototype: "Live prototype", testing: "Testing", spec: "Spec", "handed-off": "Handed off", declined: "Closed",
-      vDesign: "This is a design change", vDev: "Part of this needs a developer", vProduct: "This is a product decision",
-      vDesignTxt: "I can explore it in variants and build a live prototype of it.", vDevTxt: "I can explore the design in variants. The parts below need a developer, so the live prototype leaves them out and the spec lists them.",
-      vProductTxt: "I can sketch it as a concept to support the discussion, but it changes what the product does, so it needs a product decision first.",
-      canDo: "I can", cannotDo: "I cannot, and why", triagePending: "I am reading the request and checking what is possible. You will see the verdict here.",
-      explore: "Explore variants", revise: "Revise with the comments", build: "Build a live prototype", approve: "Approve and hand off", close: "Close the request", reopen: "Reopen",
-      prefer: "Prefer", concernVote: "Concern", commentEl: "Comment on an element", cancelPick: "Cancel", pickHint: "Click the element you want to comment on.",
-      votes: "Votes", noVariants: "No variants yet.", rationale: "Why this one", fidelity: { wireframe: "wireframe", mockup: "mockup" },
-      protoNone: "No live prototype yet.", protoBuilding: "Building the live prototype… this takes a few minutes.", protoLive: "Live — open it and click around. The data is demo data.",
-      protoFailed: "The last build failed.", protoExpired: "The prototype expired.", open: "Open the prototype", login: "Demo sign-in", expires: "Available until",
-      guard: "Design-only check", guardOk: "passed — only the look changed", guardBad: "failed — see the spec", specTitle: "Developer spec", issue: "Issue", pr: "Draft pull request",
-      sentToAgent: "Sent. Design Desk will pick it up shortly.", error: "Something went wrong", noBridge: "Open this page in the platform: it talks to its agent through the platform, which a downloaded copy cannot do.",
-      by: "by", you: "you", agent: "Design Desk", all: "All", open_: "Open", done: "Done", roleNames: { lead: "lead", designer: "designer", pm: "PM", developer: "developer", guest: "guest" },
-      guideHtml: `<h2>What Design Desk can and can't do</h2>
-<p class="lead">I keep you up to date with what ships in the product, explain it in plain words, and turn your design ideas into variants and live prototypes. I only ever change how the product <b>looks</b>, never what it <b>does</b>.</p>
-<h3>I can</h3><ul>
-<li>Show you every change to the screens as it ships, with screenshots, and explain what changed, why it is so, and what cannot change.</li>
-<li>Answer your questions about how anything works, as many times as you need. Ask on any card.</li>
-<li>Turn a design request into two or three distinct variants on sample data, for the team to compare, vote and comment on — right on the element.</li>
-<li>Build a <b>live prototype</b>: the real product with your design change, on its own instance with demo data, that everyone on the list can open and click through.</li>
-<li>Change layout, spacing, colours, typography, icons, copy, the order and grouping of things, and what opens or collapses on a screen.</li>
-<li>Write the spec a developer needs to build the approved design.</li></ul>
-<h3>I cannot — a developer has to</h3><ul>
-<li>Change what the product does: what it saves or loads, its rules and checks, who may do what, or how it talks to other systems.</li>
+  // ---------- words people read ----------
+  const ROLE = { lead: "lead", designer: "designer", pm: "PM", developer: "developer", guest: "viewer" };
+  const STATUS = { triage: "Checking", variants: "Drawing options", feedback: "Options ready", prototype: "Building prototype", testing: "Live — try it", spec: "Writing the spec", "handed-off": "Sent to developers", declined: "Closed" };
+  const FIDELITY = { wireframe: "sketch", mockup: "looks like the product", figma: "from Figma" };
+  const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
+  const WORK = {
+    request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
+    "follow-up": "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
+    explore: "Drawing two or three design options.",
+    revise: "Changing the design as you asked.",
+    build: "Building the live prototype: a private copy of the product with this design. The first one can take up to an hour; you can close this page.",
+    handoff: "Writing the developer spec and sending it on.",
+    teardown: "Switching off the live prototype.",
+    figma: "Working with Figma.",
+    agenda: "Writing a short brief for the next call.",
+    catalog: "Drawing every state of this element.",
+  };
+  const HANDOFF_TO = {
+    "coding-agent": "the coding agent, which builds it into the product",
+    "issue-comment": "the GitHub issue it came from, where a developer picks it up",
+    issue: "a new GitHub issue for the developers",
+    "draft-pr": "a draft change on GitHub for the developers",
+    desk: "nobody yet: it stays here on the Desk",
+  };
+  const VERDICT = {
+    idea: {
+      design: ["Design only", "I can draw design options and build a live prototype of the one you choose."],
+      "needs-developer": ["Needs a developer", "I can draw design options that show the whole idea. The parts below need a developer, so this request gets no live prototype; the developer spec lists them."],
+      product: ["Needs a decision", "I can sketch it to support the discussion, but it changes what the product does, so the team decides first."],
+    },
+    bug: {
+      design: ["I can fix how this looks", "It's a visual fault. I'll draw the fix and can build a live prototype of it."],
+      "needs-developer": ["A developer needs to fix this", "The screen does the wrong thing, not just looks wrong. The spec gives a developer the steps and screenshots."],
+      product: ["This works as designed", "The product does this on purpose; the reason is below. If you think it should change, send it as a suggestion."],
+    },
+  };
+  const RESEARCH = { clear: "Clear to go", duplicate: "Already tracked elsewhere", deliberate: "Today's behaviour was a deliberate decision", collision: "Someone is changing this right now", unclear: "Not enough to go on — Design Desk asked you a question below" };
+  const GUIDE = () => `<h2>How Design Desk works</h2>
+<p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
+<ol>
+<li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships. Each one says where else the same thing shows up and what the change touches.</li>
+<li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
+<li><b>Ask anything</b> on any page: why something works the way it does, what can change. The answer appears right below your question.</li>
+</ol>
+<h3>Changing a design</h3>
+<p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
+<h3>What it cannot do — a developer has to</h3><ul>
+<li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
 <li>Change anything behind the screens: servers, data, security, settings.</li></ul>
-<p>When a request needs any of this, I tell you before I start: I can still sketch it as a variant, and the spec names the part a developer has to do.</p>
+<p>It still sketches such ideas, and the developer spec names the part a developer has to build.</p>
+<h3>How long things take</h3><ul>
+<li>A question or a small change: usually a few minutes.</li>
+<li>Design options: usually well under an hour.</li>
+<li>The first live prototype of a request: up to an hour; later updates are faster.</li></ul>
+<p>The page updates by itself; you can close it and come back.</p>
 <h3>Who can do what</h3><ul>
-<li><b>Everyone on the list</b> reads, asks and comments.</li>
-<li><b>Designers</b> start variants, revisions and live prototypes, and approve a design for handoff.</li>
-<li><b>Developers and PMs</b> also vote and file requests — a concern from them is exactly what we want before a developer starts.</li></ul>`,
-    }
-  };
-  let L = T.en;
-  const t = (k) => (k in L ? L[k] : T.en[k] ?? k);
+<li><b>Everyone on the list</b>: read, ask, comment.</li>
+<li><b>PMs and developers</b>: also vote, send requests and add things to the next call.</li>
+<li><b>Designers</b>: also start options, change them in the workspace, build live prototypes, approve and close.</li></ul>
+<p>Your role is shown top right; ${esc(S.me?.contact || "the Desk's owner")} changes it.</p>
+<h3>Also here</h3><ul>
+<li><b>Next call</b> — things to decide at the team's design meeting, each with a short brief.</li>
+<li><b>Catalog</b> — the product's real parts, each shown in every situation it can be in.</li>
+<li><b>Slack</b> — tell Design Desk in the team channel when something looks broken; it puts it here and answers in your thread.</li>
+<li><b>Chat</b> — the Desk's owner can do everything here also by talking to Design Desk in its chat.</li></ul>`;
 
   // ---------- bridge ----------
   const bridge = window.platform;
+  // A refusal the server explains is shown as it is; anything else gets one plain line.
+  class Said extends Error {}
   async function api(method, path, body) {
-    if (!bridge) throw new Error(t("noBridge"));
-    const res = await bridge.request({ method, path, body: body === undefined ? undefined : JSON.stringify(body), contentType: body === undefined ? undefined : "application/json" });
+    if (!bridge) throw new Said("The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.");
+    let res;
+    try { res = await bridge.request({ method, path, body: body === undefined ? undefined : JSON.stringify(body), contentType: body === undefined ? undefined : "application/json" }); }
+    catch { throw new Error("offline"); }
     let data = {};
-    try { data = JSON.parse(res.body || "{}"); } catch { data = { error: res.body }; }
-    if (res.status >= 400) throw new Error(data.error || `${res.status}`);
+    try { data = JSON.parse(res.body || "{}"); } catch { data = {}; }
+    if (res.status >= 400 && res.status < 500 && data.error) throw new Said(data.error);
+    if (res.status >= 400) throw new Error(`${res.status}`);
     if (data.ping) { try { bridge.sendPrompt(data.ping); } catch {} }
     return data;
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "review", cards: [], card: null, variant: null, picking: false, anchor: null, filter: "open", assetCache: new Map() };
+  const S = { me: null, tab: "new", newFilter: "new", reqFilter: "open", cards: [], card: null, variant: null, agenda: [], offline: false, assetCache: new Map(),
+    ws: { open: false, mode: "select", selected: null, edit: null, version: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  // Links the agent stored open only over http(s); anything else renders inert.
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
   const myKey = () => S.me?.key || S.me?.email || "";
+  const can = (a) => Boolean(S.me?.can?.[a]);
+  const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
-  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 4200); };
-  const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(`${t("error")}: ${e.message}`); } };
+  const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
+  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 4800); };
+  const fail = (e) => toast(e instanceof Said ? e.message : `Something went wrong. Try again; if it keeps happening, tell ${contact()}.`);
+  const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { fail(e); } };
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
   // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
   function md(src) {
@@ -246,99 +328,139 @@
     return `<div class="md">${out.join("")}</div>`;
   }
 
-  const roleName = (r) => (L.roleNames || T.en.roleNames)[r] || r;
-  const who = (by) => by?.agent ? `<b>${esc(t("agent"))}</b>` : `<b>${esc(by?.email && by.email === S.me?.email ? t("you") : (by?.email || "?"))}</b> · ${esc(roleName(by?.role))}`;
+  const roleName = (r) => ROLE[r] || r;
+  const who = (by) => by?.agent ? "<b>Design Desk</b>" : `<b>${esc(by?.email && by.email === S.me?.email ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
+  const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
+  const closed = (c) => c.status === "handed-off" || c.status === "declined";
+  const working = (c) => [...new Set((c.waiting || []).map((w) => w.kind).filter((k) => k !== "question"))];
+  const optionName = (c, id) => (c.variants || []).find((v) => v.id === id)?.name || "an option";
+
+  // The option designers like most; none on a tie, the only one when there is one.
+  function favourite(c) {
+    const vs = c.variants || [];
+    if (vs.length === 1) return vs[0];
+    const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
+    const s = [...vs].sort((a, b) => score(b) - score(a));
+    return s.length && score(s[0]) > 0 && score(s[0]) > score(s[1] || { id: "" }) ? s[0] : null;
+  }
+
+  // ---------- dialogs ----------
+  // A confirmation for anything that cannot be taken back; optional choice, note or link.
+  function ask({ title, body, ok, choices = null, pick = null, note = null, url = null }) {
+    const dlg = $("#confirm-dialog"), f = $("#confirm-form");
+    f.reset();
+    $("#cf-title").textContent = title;
+    $("#cf-body").innerHTML = body ? md(body) : "";
+    $("#cf-ok").textContent = ok;
+    $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="radio" name="choice" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""} required /> ${esc(c.name)}${c.hint ? ` <span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
+    $("#cf-note-wrap").hidden = !note; $("#cf-note-label").textContent = note || "";
+    $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url);
+    dlg.showModal();
+    return new Promise((resolve) => {
+      dlg.onclose = () => resolve(dlg.returnValue === "ok" ? { choice: f.querySelector("input[name=choice]:checked")?.value || null, note: f.note.value.trim(), url: f.url.value.trim() } : null);
+    });
+  }
 
   // ---------- header and list ----------
   function renderNav() {
-    const unread = S.cards.filter((c) => c.kind === "change" && c.status === "new" && !c.acked).length;
-    const tabs = [["review", t("review"), unread], ["requests", t("requests")], ["shipped", t("shipped")], ["catalog", t("catalog")], ["call", t("nextCall"), S.agendaCount], ["guide", t("guide")]];
+    const unseen = S.cards.filter((c) => c.kind === "change" && !c.acked).length;
+    const asks = S.cards.filter((c) => c.kind === "request" && c.asks && !closed(c)).length;
+    const tabs = [["new", "New", unseen], ["requests", "Requests", asks], ["call", "Next call", S.agenda.length], ["catalog", "Catalog"], ["guide", "How it works"]];
     $("#nav").innerHTML = tabs.map(([k, label, n]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
   }
 
+  function renderBanners() {
+    const out = [];
+    if (S.offline) out.push(`<div class="banner warn">Can't reach Design Desk right now. Retrying…</div>`);
+    if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, PM or developer.</div>`);
+    $("#banners").innerHTML = out.join("");
+  }
+
   function visibleCards() {
-    if (S.tab === "review") return S.cards.filter((c) => c.kind === "change" && c.status === "new" && !c.acked);
-    if (S.tab === "shipped") return S.cards.filter((c) => c.kind === "change");
+    if (S.tab === "new") return S.cards.filter((c) => c.kind === "change" && (S.newFilter === "all" || !c.acked));
     if (S.tab === "catalog") return S.cards.filter((c) => c.kind === "element").sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
-    if (S.tab === "requests") {
-      const closed = (c) => c.status === "handed-off" || c.status === "declined";
-      return S.cards.filter((c) => c.kind === "request" && (S.filter === "all" || (S.filter === "bugs" ? c.type === "bug" && !closed(c) : S.filter === "open" ? !closed(c) : closed(c))));
-    }
+    if (S.tab === "requests") return S.cards.filter((c) => c.kind === "request" && (S.reqFilter === "open" ? !closed(c) : closed(c)));
     return [];
   }
 
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function chipsFor(c) {
     const out = [];
     if (c.kind === "element") {
       if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
-      if (c.state_count) out.push(`<span class="chip">${c.state_count} ${esc(t("elementStates").toLowerCase())}</span>`);
-      if (c.status === "stale") out.push(`<span class="chip warn">${esc(t("stale"))}</span>`);
+      if (c.status === "stale") out.push(`<span class="chip warn">out of date</span>`);
+      else if (c.state_count) out.push(`<span class="chip">${plural(c.state_count, "situation", "situations")}</span>`);
     } else if (c.kind === "change") {
-      if (c.source?.pr) out.push(`<span class="chip">#${esc(c.source.pr)}</span>`);
-      if (c.screens) out.push(`<span class="chip">🖼 ${c.screens}</span>`);
-      if (c.acked) out.push(`<span class="chip ok">✓ ${esc(t("reviewed"))}</span>`);
+      if (c.in_progress) out.push(`<span class="chip warn">In progress — not shipped yet</span>`);
+      if (c.acked) out.push(`<span class="chip ok">✓ Seen</span>`);
+      if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
-      if (c.type === "bug") out.push(`<span class="chip bad">🐛 ${esc(t("bug"))}</span>`);
-      else if (c.type && c.type !== "idea") out.push(`<span class="chip">${esc(t(c.type))}</span>`);
-      out.push(`<span class="chip info">${esc(t(c.status))}</span>`);
-      if (c.reporter) out.push(`<span class="chip">${esc(c.reporter)}</span>`);
-      if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : c.triage === "product" ? "info" : "warn"}">${esc({ design: t("vDesign"), "needs-developer": t("vDev"), product: t("vProduct") }[c.triage])}</span>`);
-      if (c.variants) out.push(`<span class="chip">◧ ${c.variants}</span>`);
-      if (c.prototype === "live") out.push(`<span class="chip ok">● ${esc(t("prototype"))}</span>`);
+      if (c.asks && !closed(c)) out.push(`<span class="chip warn">Waiting for your answer</span>`);
+      else out.push(`<span class="chip ${c.busy ? "info" : ""}">${c.busy ? "● " : ""}${esc(STATUS[c.status] || c.status)}</span>`);
+      if (c.type === "bug") out.push(`<span class="chip bad">🐛 Broken</span>`);
+      else if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
-    if (c.open_threads) out.push(`<span class="chip">💬 ${c.open_threads}</span>`);
     return out.join("");
-  }
-
-  function renderAgenda() {
-    const items = S.agenda || [];
-    const list = $("#list");
-    list.innerHTML = items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span></div>
-      <div class="s">${esc(a.agenda.brief || t("briefPending"))}</div><div class="meta"><span class="chip">${esc(t("addedBy"))} ${esc(a.agenda.by?.email || "Design Desk")}</span>${a.type ? `<span class="chip">${esc(t(a.type))}</span>` : ""}</div></button>`).join("")
-      : `<div class="empty">${esc(t("callEmpty"))}</div>`;
-    const d = $("#detail");
-    $("#main").classList.add("has-detail");
-    d.innerHTML = `<h2>${esc(t("nextCall"))}</h2><div class="actions">${items.length ? `<button class="btn primary" data-present>▶ ${esc(t("present"))}</button>` : ""}${S.me?.can?.close && items.length ? `<button class="btn" data-close-call>${esc(t("closeCall"))}</button>` : ""}</div>
-      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>${esc(t("brief"))}</b>${md(a.agenda.brief || t("briefPending"))}</div>`).join("")}`;
-  }
-
-  // Presenting: one agenda item at a time, full screen, arrows to move.
-  async function present(i = 0) {
-    const items = S.agenda || [];
-    if (!items.length) return;
-    const a = items[Math.max(0, Math.min(i, items.length - 1))];
-    const { card } = await api("GET", `/api/cards/${encodeURIComponent(a.id)}`);
-    let ov = $("#present");
-    if (!ov) { ov = document.createElement("div"); ov.id = "present"; ov.style.cssText = "position:fixed;inset:0;z-index:70;background:var(--bg);overflow:auto;padding:32px 48px"; document.body.append(ov); }
-    const visual = card.kind === "element" && card.sheet ? card.sheet : card.variants?.[0]?.asset || card.screens?.[0]?.asset || null;
-    ov.dataset.index = String(items.indexOf(a));
-    ov.innerHTML = `<div class="sub" style="display:flex;justify-content:space-between"><span>${items.indexOf(a) + 1} / ${items.length} · ${esc(t("nextCall"))}</span><button class="btn small" data-exit-present>${esc(t("exitPresent"))}</button></div>
-      <h2 style="font-size:28px;margin-top:12px">${esc(card.title)}</h2>${card.summary ? `<p class="lead">${esc(card.summary)}</p>` : ""}
-      <div class="panel" style="max-width:90ch"><b>${esc(t("brief"))}</b>${md(card.agenda?.brief || t("briefPending"))}</div>
-      ${(card.variants || []).length > 1 ? `<p class="sub" style="display:block;margin-top:12px">${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
-      ${visual ? `<iframe class="frame" id="present-frame" sandbox="allow-scripts" style="height:62vh;margin-top:16px"></iframe>` : ""}`;
-    if (visual) {
-      const asst = await asset(visual);
-      const frame = $("#present-frame");
-      if (asst.contentType.startsWith("image/")) frame.srcdoc = `<img src="${dataUrl(asst)}" style="max-width:100%">`;
-      else frame.srcdoc = asst.encoding === "base64" ? atob(asst.data) : asst.data;
-    }
   }
 
   function renderList() {
     const list = $("#list");
+    const main = $("#main");
+    main.classList.toggle("wide", S.tab === "guide");
     if (S.tab === "guide") { list.innerHTML = ""; return; }
-    if (S.tab === "call") { renderAgenda(); return; }
+    if (S.tab === "call") { renderAgendaList(); return; }
     const cards = visibleCards();
-    const filters = S.tab === "requests" ? `<div class="filters">${[["open", t("open_")], ["bugs", t("bugs")], ["done", t("done")], ["all", t("all")]].map(([k, l]) => `<button class="btn small" data-filter="${k}" ${S.filter === k ? 'style="border-color:var(--ink)"' : ""}>${esc(l)}</button>`).join("")}</div>` : "";
-    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(S.tab === "review" ? t("allReviewed") : t("noCards"))}</div>`; return; }
+    const f = (key, opts) => `<div class="filters">${opts.map(([k, l]) => `<button class="btn small ${S[key] === k ? "on" : ""}" data-filter="${key}:${k}">${esc(l)}</button>`).join("")}</div>`;
+    const filters = S.tab === "new" ? f("newFilter", [["new", "Not seen yet"], ["all", "All changes"]]) : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"]]) : "";
+    const empty = {
+      new: S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : "No changes yet. They appear here soon after they ship.",
+      requests: S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
+      catalog: "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day.",
+    }[S.tab];
+    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     list.innerHTML = filters + cards.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">
-      <div class="t">${c.kind === "change" && !c.acked && c.status === "new" ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div>
+      <div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div>
       ${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></button>`).join("");
   }
 
-  // ---------- detail ----------
+  // ---------- the next call ----------
+  function renderAgendaList() {
+    const items = S.agenda;
+    $("#list").innerHTML = items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span></div>
+      <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta"><span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span></div></button>`).join("")
+      : `<div class="empty">The next call is the team's regular design meeting. To put something on it, open it and choose Add to the next call.</div>`;
+  }
+  function renderAgendaDetail() {
+    const items = S.agenda;
+    $("#detail").innerHTML = `<h2>Next call</h2><p class="hint">What the team decides at its next design meeting. Present it from here.</p>
+      <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length ? `<button class="btn" data-act="clear-call">Call is over — clear the list</button>` : ""}</div>
+      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.")}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}`;
+  }
+
+  // Presenting: one item at a time, full screen; arrows or the buttons move.
+  async function present(i = 0) {
+    const items = S.agenda;
+    if (!items.length) return;
+    const n = Math.max(0, Math.min(i, items.length - 1));
+    const { card } = await api("GET", `/api/cards/${encodeURIComponent(items[n].id)}`);
+    let ov = $("#present");
+    if (!ov) { ov = document.createElement("div"); ov.id = "present"; ov.style.cssText = "position:fixed;inset:0;z-index:75;background:var(--bg);overflow:auto;padding:28px 48px"; document.body.append(ov); }
+    const fav = favourite(card) || card.variants?.[0];
+    const visual = card.kind === "element" && card.sheet ? card.sheet : fav?.asset || card.screens?.[0]?.asset || null;
+    ov.dataset.index = String(n);
+    ov.innerHTML = `<div class="sub" style="justify-content:space-between"><span>${n + 1} / ${items.length} · Next call</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button> <button class="btn small" data-exit-present>Exit</button></span></div>
+      <h2 style="font-size:28px;margin-top:12px">${esc(card.title)}</h2>${card.summary ? `<p class="lead">${esc(card.summary)}</p>` : ""}
+      <div class="panel" style="max-width:90ch"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.")}</div>
+      ${fav && (card.variants || []).length > 1 ? `<p class="sub" style="margin-top:12px">Showing the favourite: <b>${esc(fav.name)}</b> · options: ${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
+      ${visual ? `<iframe class="frame" id="present-frame" sandbox="allow-scripts" style="height:60vh;margin-top:16px"></iframe>` : ""}`;
+    if (visual) {
+      const a = await asset(visual);
+      $("#present-frame").srcdoc = a.contentType.startsWith("image/") ? `<img src="${dataUrl(a)}" style="max-width:100%">` : decode(a);
+    }
+  }
+
+  // ---------- assets ----------
   async function asset(id) {
     if (S.assetCache.has(id)) return S.assetCache.get(id);
     const a = await api("GET", `/api/assets/${encodeURIComponent(id)}`);
@@ -347,354 +469,670 @@
     return a;
   }
   const dataUrl = (a) => a.encoding === "base64" ? `data:${a.contentType};base64,${a.data}` : `data:${a.contentType};charset=utf-8,${encodeURIComponent(a.data)}`;
+  const decode = (a) => (a.encoding === "base64" ? new TextDecoder().decode(Uint8Array.from(atob(a.data), (ch) => ch.charCodeAt(0))) : a.data);
 
-  function renderThreads(c) {
-    const threads = c.threads || [];
+  // ---------- shared pieces of a page ----------
+  const shots = (list) => (list || []).length ? `<div class="shots">${list.map((s) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${s.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : "";
+  const sections = (c) => (c.sections || []).map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("");
+  const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
+
+  // Where else the same thing shows up, what a change touches, what was decided before.
+  function renderImpact(im) {
+    if (!im) return "";
+    const li = (xs, f) => xs?.length ? `<ul>${xs.map(f).join("")}</ul>` : "";
+    return `<h3>Where else this shows up, and what it touches</h3><div class="impact section">
+      <p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li><b>${esc(p.where)}</b>${p.how ? ` — ${esc(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}
+      ${im.affects?.length ? `<p><b>What a change here touches</b></p>${li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${esc(a.why)}` : ""}${srcLink(a.source)}</li>`)}` : ""}
+      ${im.decisions?.length ? `<p><b>Earlier decisions about it</b></p>${li(im.decisions, (d) => `<li>${esc(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`)}` : ""}</div>`;
+  }
+
+  function renderThreads(c, { skipAsks = false } = {}) {
+    const threads = (c.threads || []).filter((th) => !(skipAsks && th.kind === "asks" && th.state === "open"));
+    const label = { question: ["Question", "info"], comment: ["Comment", ""], concern: ["Concern", "warn"], change: ["Change", "info"], asks: ["Design Desk asks", "warn"] };
     const rows = threads.map((th) => {
-      const anchor = th.anchor?.selector ? `<span class="anchor" data-highlight="${esc(th.anchor.variant || "")}|${esc(th.anchor.selector)}" title="${esc(th.anchor.selector)}">◎ ${esc(th.anchor.text || th.anchor.tag || th.anchor.selector)}</span>` : "";
-      const kind = th.kind === "question" ? "info" : th.kind === "concern" ? "warn" : "";
-      const state = th.state === "resolved" ? `<span class="chip ok">${esc(t("resolved"))}</span>` : th.state === "answered" ? `<span class="chip">${esc(t("answered"))}</span>` : "";
+      const [name, tone] = label[th.kind] || [th.kind, ""];
+      const anchor = th.anchor?.variant ? `<button class="anchor" data-goto="${esc(th.id)}">◎ ${esc(th.anchor.label || th.anchor.text || "an element")} in ${esc(optionName(c, th.anchor.variant))}</button>` : "";
+      const state = th.state === "resolved" ? `<span class="chip ok">done</span>` : th.state === "answered" ? `<span class="chip">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
-        <div class="head"><span class="chip ${kind}">${esc(t(th.kind))}</span>${anchor}${state}<span class="grow"></span>${th.anchor?.variant ? `<span>${esc(th.anchor.variant)}</span>` : ""}</div>
+        <div class="head"><span class="chip ${tone}">${esc(name)}</span>${anchor}${state}</div>
         ${th.messages.map((m) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${md(m.text)}</div>`).join("")}
-        ${th.needs_agent ? `<div class="msg"><span class="pending">${esc(t("waiting"))}</span></div>` : ""}
-        ${th.state !== "resolved" ? `<div class="reply"><input placeholder="${esc(t("reply"))}…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">${esc(t("reply"))}</button><button class="btn small" data-resolve="${esc(th.id)}">${esc(t("resolve"))}</button></div>` : ""}
+        ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
+        ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button></div>` : ""}
       </article>`;
     }).join("");
-    const anchorNote = S.anchor ? `<div class="sub">◎ <span class="anchor">${esc(S.anchor.text || S.anchor.selector)}</span> <button class="btn small" data-clear-anchor>✕</button></div>` : "";
-    return `<h3>${esc(t("conversation"))}</h3><div class="threads">${rows}</div>
-      <div class="composer" id="composer">${anchorNote}
-        <textarea id="composer-text" maxlength="4000" placeholder="${esc(t("writeQuestion"))}"></textarea>
-        <div class="bar"><select id="composer-kind" style="width:auto"><option value="question">${esc(t("question"))}</option><option value="comment">${esc(t("comment"))}</option><option value="concern">${esc(t("concern"))}</option></select>
-        <button class="btn primary" data-open-thread>${esc(t("send"))}</button></div></div>`;
+    return `<h3>Questions and comments</h3><div class="threads">${rows}</div>
+      <div class="composer" id="composer">
+        <textarea id="composer-text" maxlength="4000" placeholder="Ask anything: why it works this way, what could change… or leave a comment for the team."></textarea>
+        <div class="bar"><button class="btn primary" data-post="question">Ask Design Desk</button><button class="btn" data-post="comment">Comment for the team</button></div>
+        <p class="hint">Design Desk answers questions right here. It reads comments when it changes the design.</p></div>`;
   }
 
+  // ---------- a shipped change ----------
   function renderChange(c) {
     const src = c.source || {};
-    const acked = Boolean(c.acks && S.me && c.acks[myKey()]);
-    return `<button class="btn small back" data-back>←</button>
+    const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
+    const inProgress = src.pr && !src.merged_at;
+    return `<button class="btn small back" data-back>← Back</button>
       <h2>${esc(c.title)}</h2>
-      <div class="sub">${src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">${esc(t("openPr"))} #${esc(src.pr)}</a>` : ""}${src.merged_at ? `<span>${esc(t("merged"))} ${esc(when(src.merged_at))}</span>` : ""}${src.author ? `<span>${esc(t("by"))} ${esc(src.author)}</span>` : ""}</div>
+      <div class="sub">${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}</div>
+      ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
       <div class="actions">
-        <button class="btn ${acked ? "" : "primary"}" data-ack ${acked ? "disabled" : ""}>${esc(acked ? `✓ ${t("reviewed")}` : t("markReviewed"))}</button>
-        <button class="btn" data-focus-composer>${esc(t("ask"))}</button>
-        ${S.me?.can?.["follow-up"] ? `<button class="btn" data-follow-up>${esc(t("followUp"))}</button>` : ""}
+        <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Hides it from your list of new changes; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
+        <button class="btn" data-focus-composer>Ask a question</button>
+        ${can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : ""}
         ${agendaButton(c)}
       </div>
-      ${(c.screens || []).length ? `<h3>${esc(t("screens"))}</h3><div class="shots">${c.screens.map((s) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${s.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
-      ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("")}` : ""}
+      ${(c.screens || []).length ? `<h3>Screens</h3>${shots(c.screens)}` : ""}
+      ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
+      ${renderImpact(c.impact)}
+      ${src.url ? `<p class="hint"><a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">See it on GitHub ↗</a></p>` : ""}
       ${renderThreads(c)}`;
   }
 
+  // ---------- a catalog element ----------
   function renderElement(c) {
     const src = c.source || {};
-    return `<button class="btn small back" data-back>←</button>
+    return `<button class="btn small back" data-back>← Back</button>
       <h2>${esc(c.title)}</h2>
-      <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn">${esc(t("stale"))}</span>` : ""}${src.file ? `<span>${esc(t("source"))} <code>${esc(src.file)}</code>${src.commit ? ` @ ${esc(src.commit)}` : ""}</span>` : ""}</div>
+      <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn">out of date: the product changed since it was drawn</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
-      ${S.me?.can?.refresh ? `<div class="actions"><button class="btn" data-action="refresh">${esc(t("refresh"))}</button></div>` : ""}
-      ${(c.states || []).length ? `<h3>${esc(t("elementStates"))}</h3><ol class="md" style="max-width:80ch;padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
-      <p class="sub" style="display:block">${esc(t("sheetHint"))}</p>
-      ${c.sheet ? `<iframe class="frame" id="sheet-frame" sandbox="allow-scripts" title="${esc(c.title)}" style="height:80vh"></iframe>` : `<div class="panel sub">${esc(t("noSheet"))}</div>`}
-      ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((x) => `<div class="section"><h4>${esc(x.title)}</h4>${md(x.body)}</div>`).join("")}` : ""}
+      <div class="actions">${can("refresh") ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${agendaButton(c)}</div>
+      ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:80ch;padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
+      <p class="hint">Each tile is the real element, shown in one situation.</p>
+      ${c.sheet ? `<iframe class="frame" id="sheet-frame" sandbox="allow-scripts" title="${esc(c.title)}" style="height:80vh"></iframe>` : `<div class="panel hint">${working(c).length ? "Design Desk is drawing it." : "Not drawn yet."}</div>`}
+      ${sections(c)}${renderImpact(c.impact)}
+      ${src.file ? `<details class="fold"><summary>For developers</summary><p class="sub"><code>${esc(src.file)}</code>${src.export ? ` · <code>${esc(src.export)}</code>` : ""}${src.commit ? ` · ${esc(src.commit)}` : ""}</p></details>` : ""}
       ${renderThreads(c)}`;
   }
 
-  async function loadSheet(c) {
-    const frame = $("#sheet-frame");
-    if (!frame || !c.sheet) return;
-    try { const a = await asset(c.sheet); frame.srcdoc = a.encoding === "base64" ? atob(a.data) : a.data; }
-    catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: `${t("error")}: ${e.message}` })); }
-  }
-
-  const FLOW = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off"];
-  function renderSteps(status) {
-    const at = FLOW.indexOf(status);
-    if (status === "declined") return `<div class="steps"><span class="chip bad">${esc(t("declined"))}</span></div>`;
-    return `<div class="steps">${FLOW.map((s, i) => `<span class="step ${i < at ? "done" : i === at ? "now" : ""}"><span class="n">${i < at ? "✓" : i + 1}</span>${esc(t(s))}</span>`).join("")}</div>`;
-  }
-
-  function renderOrigin(c) {
-    const o = c.origin;
-    if (!o || o.channel !== "github" || !o.url) return "";
-    return `<p class="sub" style="display:block">${esc(t(o.kind === "pr" ? "fromPr" : "fromIssue"))} <a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.repo || "")}#${esc(o.number || "")}</a></p>`;
-  }
-
-  function renderResearch(r) {
-    if (!r) return `<div class="panel sub">${esc(t("researchPending"))}</div>`;
-    const label = { clear: t("rClear"), duplicate: t("rDuplicate"), deliberate: t("rDeliberate"), collision: t("rCollision"), unclear: t("rUnclear") }[r.verdict] || r.verdict;
-    const tone = r.verdict === "clear" ? "ok" : r.verdict === "unclear" ? "" : "warn";
-    return `<div class="panel"><span class="chip ${tone}">${esc(label)}</span>${md(r.summary)}${(r.links || []).length ? `<ul class="sub" style="display:block;margin:6px 0 0 16px;padding:0">${r.links.map((l) => `<li><a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a></li>`).join("")}</ul>` : ""}</div>`;
+  // ---------- a request ----------
+  function renderSteps(c) {
+    if (c.status === "declined") return `<div class="steps"><span class="chip bad">Closed</span></div>`;
+    const v = c.triage?.verdict;
+    const steps = [["check", "Checking"], ["options", "Design options"], ["feedback", "Team feedback"], ...(v && v !== "design" ? [] : [["live", "Try it live"]]), ["sent", "Sent to developers"]];
+    const at = { triage: "check", variants: "options", feedback: "feedback", prototype: "live", testing: "live", spec: "sent", "handed-off": "sent" }[c.status];
+    let i = steps.findIndex(([k]) => k === at);
+    if (c.status === "handed-off") i = steps.length;
+    return `<div class="steps">${steps.map(([, l], n) => `<span class="step ${n < i ? "done" : n === i ? "now" : ""}"><span class="n">${n < i ? "✓" : n + 1}</span>${esc(l)}</span>`).join("")}</div>`;
   }
 
   function agendaButton(c) {
-    if (c.agenda?.status === "queued") return `<span class="chip info">📅 ${esc(t("onCall"))}</span><button class="btn small" data-unqueue>${esc(t("takeOff"))}</button>`;
-    return S.me?.can?.queue ? `<button class="btn" data-queue>📅 ${esc(t("addToCall"))}</button>` : "";
+    if (c.agenda?.status === "queued") {
+      const mine = c.agenda.by?.email && c.agenda.by.email === S.me?.email;
+      return `<span class="chip info">📅 On the next call</span>${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the call</button>` : ""}`;
+    }
+    return can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>` : "";
   }
 
-  function renderTriage(tr) {
-    if (!tr) return `<div class="panel">${esc(t("triagePending"))}</div>`;
-    const head = { design: [t("vDesign"), t("vDesignTxt")], "needs-developer": [t("vDev"), t("vDevTxt")], product: [t("vProduct"), t("vProductTxt")] }[tr.verdict];
+  // What happens next, whose turn it is, and the one button that moves it on.
+  function nextFor(c) {
+    const p = c.prototype || { state: "none" };
+    const busy = working(c);
+    const design = c.triage?.verdict === "design";
+    const hasOptions = (c.variants || []).length > 0;
+    const b = (act, label, primary = false) => `<button class="btn ${primary ? "primary" : ""}" data-act="${act}">${esc(label)}</button>`;
+    if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
+    if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under New.", buttons: "" };
+    if (busy.length) return { text: "", buttons: hasOptions ? b("workspace", "Open the design workspace") : "" };
+    if (c.status === "triage" && !c.triage) return { text: "Design Desk will check this soon.", buttons: "" };
+    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", buttons: b("explore", "Draw design options", true) } : { text: "Next: a designer starts the design options.", buttons: "" };
+    if (c.status === "spec") return { text: "", buttons: "" };
+    if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
+      const failed = p.state === "failed";
+      return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
+        sub: failed ? "Design Desk wrote why in the comments below." : "", buttons: (design && can("build") ? b("build", failed ? "Try again" : "Build it again", true) : "") + (can("approve") ? b("approve", "Approve…") : "") };
+    }
+    if (c.status === "testing" || (c.status === "prototype" && p.state === "live")) {
+      return { text: "Your turn: try the live prototype and comment below.", sub: can("approve") ? "When the team is happy, approve it." : "A designer approves it when the team is happy.",
+        buttons: (can("approve") ? b("approve", "Approve…", true) : "") + (hasOptions ? b("workspace", "Open the design workspace") : "") };
+    }
+    if (["variants", "feedback"].includes(c.status) && hasOptions) {
+      const shaper = can("revise");
+      return { text: "Your turn: look at the options, 👍 the one you like or ⚠ what worries you, and comment on any part.",
+        sub: shaper ? "Then change details in the design workspace, build a live prototype, or approve one." : "A designer then changes the details, builds a live prototype or approves one.",
+        buttons: b("workspace", shaper ? "Open the design workspace" : "Comment on the design", true) + (design && can("build") ? b("build", "Build a live prototype…") : "") + (can("approve") ? b("approve", "Approve…") : "") };
+    }
+    return { text: "", buttons: "" };
+  }
+
+  function renderStatus(c) {
+    const busy = working(c);
+    const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
+    const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
+    const nx = nextFor(c);
+    const more = closed(c) ? "" : `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${c.agenda?.status === "queued" ? "" : can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>` : ""}${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}</div></details>`;
+    return `<div class="status">
+      ${asks.map((th) => `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
+        <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
+      ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${nx.text || nx.buttons ? `<div class="next">${nx.text ? `<b>${esc(nx.text)}</b>` : ""}${nx.sub ? `<span class="hint">${esc(nx.sub)}</span>` : ""}<div class="actions">${nx.buttons}${c.agenda?.status === "queued" ? agendaButton(c) : ""}${more}</div></div>` : ""}
+    </div>`;
+  }
+
+  function renderVerdict(c) {
+    const tr = c.triage;
+    if (!tr) return "";
+    const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
     const list = (xs) => xs?.length ? `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
-    return `<div class="verdict ${esc(tr.verdict)}"><b>${esc(head[0])}</b>${esc(head[1])}${list(tr.reasons)}
-      ${(tr.can?.length || tr.cannot?.length) ? `<div class="two"><div><b>${esc(t("canDo"))}</b>${list(tr.can)}</div><div><b>${esc(t("cannotDo"))}</b>${list(tr.cannot)}</div></div>` : ""}</div>`;
+    return `<h3>What can be done</h3><div class="verdict ${esc(tr.verdict)}"><b>${esc(title)}</b>${esc(text)}${list(tr.reasons)}
+      ${(tr.can?.length || tr.cannot?.length) ? `<div class="two"><div><b>As a design change</b>${list(tr.can)}</div><div><b>Needs a developer or a decision, and why</b>${list(tr.cannot)}</div></div>` : ""}</div>`;
+  }
+
+  function renderResearch(r) {
+    if (!r) return "";
+    const tone = r.verdict === "clear" ? "ok" : r.verdict === "unclear" ? "" : "warn";
+    return `<details class="fold" ${r.verdict !== "clear" ? "open" : ""}><summary>What's already known: <span class="chip ${tone}">${esc(RESEARCH[r.verdict] || r.verdict)}</span></summary><div class="panel">${md(r.summary)}${(r.links || []).length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${r.links.map((l) => `<li><a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a></li>`).join("")}</ul>` : ""}</div></details>`;
   }
 
   function tallyFor(c, v) {
     const votes = Object.values(c.votes?.[v] || {});
     if (!votes.length) return "";
     const by = (k) => votes.filter((x) => x.vote === k);
-    const fmt = (xs) => xs.map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {});
-    const chips = (xs, cls, label) => xs.length ? `<span class="chip ${cls}">${esc(label)} ${xs.length} · ${esc(Object.entries(fmt(xs)).map(([r, n]) => `${n} ${r}`).join(", "))}</span>` : "";
-    const notes = votes.filter((x) => x.note).map((x) => `<li><b>${esc(roleName(x.role))}</b>: ${esc(x.note)}</li>`).join("");
-    return `<div class="tally">${chips(by("prefer"), "ok", t("prefer"))}${chips(by("concern"), "warn", t("concernVote"))}</div>${notes ? `<ul class="sub" style="display:block;margin:6px 0 0 16px;padding:0">${notes}</ul>` : ""}`;
+    const roles = (xs) => Object.entries(xs.map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {})).map(([r, n]) => `${n} ${r}`).join(", ");
+    const chip = (xs, cls, label) => xs.length ? `<span class="chip ${cls}">${label} ${xs.length} · ${esc(roles(xs))}</span>` : "";
+    return `<div class="tally">${chip(by("prefer"), "ok", "👍")}${chip(by("concern"), "warn", "⚠")}</div>`;
   }
 
-  function renderVariants(c) {
+  function renderOptions(c) {
     const vs = c.variants || [];
-    if (!vs.length) return `<div class="panel sub">${esc(t("noVariants"))}</div>`;
-    if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = vs[0].id;
+    if (!vs.length) return "";
+    if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
-    return `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)} <span class="chip">${esc((L.fidelity || T.en.fidelity)[x.fidelity] || x.fidelity)}</span></button>`).join("")}</div>
-      ${v.rationale ? `<p class="sub" style="display:block;max-width:76ch"><b>${esc(t("rationale"))}:</b> ${esc(v.rationale)}</p>` : ""}
+    return `<h3>Design options</h3>
+      <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}</button>`).join("")}</div>
+      ${v.rationale ? `<p class="hint" style="max-width:76ch"><b>When this one wins:</b> ${esc(v.rationale)}</p>` : ""}
       <div class="vbar">
-        ${S.me?.can?.vote ? `<button class="btn small" data-vote="prefer" ${mine === "prefer" ? 'style="border-color:var(--ok);color:var(--ok)"' : ""}>👍 ${esc(t("prefer"))}</button><button class="btn small" data-vote="concern" ${mine === "concern" ? 'style="border-color:var(--warn);color:var(--warn)"' : ""}>⚠ ${esc(t("concernVote"))}</button>` : ""}
-        <button class="btn small" data-pick>${esc(S.picking ? t("cancelPick") : t("commentEl"))}</button>
-        ${S.picking ? `<span class="sub">${esc(t("pickHint"))}</span>` : ""}
+        ${can("vote") ? `<button class="btn small ${mine === "prefer" ? "on" : ""}" data-vote="prefer">👍 I like this one</button><button class="btn small ${mine === "concern" ? "on" : ""}" data-vote="concern">⚠ I have a concern</button>` : ""}
+        <button class="btn small" data-act="workspace">Open in the design workspace</button>
+        ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
+        ${tallyFor(c, v.id)}
       </div>
-      ${tallyFor(c, v.id)}
-      <iframe class="frame ${S.picking ? "picking" : ""}" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`;
+      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`;
   }
 
   function renderPrototype(c) {
     const p = c.prototype || { state: "none" };
-    const msg = { none: t("protoNone"), building: t("protoBuilding"), live: t("protoLive"), failed: t("protoFailed"), expired: t("protoExpired"), "torn-down": t("protoExpired") }[p.state] || p.state;
-    const g = p.guard ? `<dt>${esc(t("guard"))}</dt><dd>${p.guard.ok ? `<span class="chip ok">✓ ${esc(t("guardOk"))}</span>` : `<span class="chip bad">✕ ${esc(t("guardBad"))}</span>`}${p.guard.summary ? ` <span class="sub">${esc(p.guard.summary)}</span>` : ""}</dd>` : "";
-    return `<div class="panel proto"><div>${esc(msg)}</div>
-      ${p.state === "live" && p.url ? `<div><a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">${esc(t("open"))} ↗</a></div>` : ""}
-      <dl class="kv">${p.login ? `<dt>${esc(t("login"))}</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}${p.login.hint ? ` <span class="sub">${esc(p.login.hint)}</span>` : ""}</dd>` : ""}
-      ${p.expires ? `<dt>${esc(t("expires"))}</dt><dd>${esc(when(p.expires))}</dd>` : ""}${g}</dl></div>`;
+    if (p.state === "none") return "";
+    const msg = { building: "Building the live prototype…", live: "It's live. Open it and click around.", failed: "This try didn't work.", expired: "This prototype was switched off.", "torn-down": "This prototype was switched off." }[p.state] || p.state;
+    const g = p.guard ? `<dt>Look-only check</dt><dd>${p.guard.ok ? `<span class="chip ok">✓ only the look changed</span>` : `<span class="chip warn">Part of this would change what the product does, so it was left out of the prototype. The developer spec lists it.</span>`}</dd>` : "";
+    return `<h3>Live prototype</h3><div class="panel proto"><b>${esc(msg)}</b>
+      ${p.state === "live" ? `<p class="hint">You may first be asked to sign in with your usual account; then sign in to the product with the demo account below, not your own. Everything in it is made-up data; nothing you do reaches real customers. Can't open it? Ask ${esc(contact())} to add you.</p>` : ""}
+      ${p.state === "live" && p.url ? `<div><a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open the prototype ↗</a></div>` : ""}
+      <dl class="kv">${p.login ? `<dt>Demo account</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}${p.login.hint ? ` <span class="sub">${esc(p.login.hint)}</span>` : ""}</dd>` : ""}
+      ${p.expires && p.state === "live" ? `<dt>Available until</dt><dd>${esc(when(p.expires))}</dd>` : ""}${g}</dl></div>`;
   }
 
   function renderRequest(c) {
     const r = c.request || {};
-    const can = S.me?.can || {};
-    const closed = c.status === "declined" || c.status === "handed-off";
-    const btn = (action, label, primary) => can[action] ? `<button class="btn ${primary ? "primary" : ""}" data-action="${action}">${esc(label)}</button>` : "";
-    const actions = (closed ? btn("reopen", t("reopen")) : "") + agendaButton(c) + (closed ? "" : [
-      c.status === "triage" && c.triage ? btn("explore", t("explore"), true) : "",
-      ["variants", "feedback"].includes(c.status) ? btn("revise", t("revise")) : "",
-      ["variants", "feedback", "testing"].includes(c.status) && c.triage?.verdict === "design" ? btn("build", t("build"), c.status === "feedback") : "",
-      ["feedback", "prototype", "testing"].includes(c.status) ? btn("approve", t("approve"), c.status === "testing") : "",
-      btn("close", t("close")),
-    ].join(""));
-    return `<button class="btn small back" data-back>←</button>
+    const origin = c.origin?.channel === "github" && c.origin.url ? `<a href="${safeUrl(c.origin.url)}" target="_blank" rel="noopener noreferrer">${esc(c.origin.kind === "pr" ? "From a developer's change" : "From a GitHub issue")} ↗</a>` : "";
+    return `<button class="btn small back" data-back>← Back</button>
       <h2>${esc(c.title)}</h2>
-      <div class="sub">${r.type === "bug" ? `<span class="chip bad">🐛 ${esc(t("bug"))}</span>` : ""}${c.origin?.reporter ? `<span>${esc(t("reportedVia"))} <b>${esc(c.origin.reporter)}</b></span>` : `<span>${esc(t("by"))} ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span></div>
-      ${renderSteps(c.status)}
-      ${r.type === "bug"
-        ? `<div class="section"><h4>${esc(t("whatHappens"))}</h4>${md(r.problem)}${r.goal ? `<h4>${esc(t("shouldHappen"))}</h4>${md(r.goal)}` : ""}${r.steps ? `<h4>${esc(t("stepsTitle"))}</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>`
-        : `<div class="section">${md(r.problem)}${r.goal ? md(r.goal) : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>`}
-      ${(c.screens || []).length ? `<div class="shots">${c.screens.map((x) => `<figure class="shot" data-zoom="${esc(x.asset)}"><img alt="${esc(x.caption)}" data-asset="${esc(x.asset)}" />${x.caption ? `<figcaption>${esc(x.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
-      ${renderOrigin(c)}
-      <h3>${esc(t("research"))}</h3>${renderResearch(c.research)}
-      <h3>${esc(t("triage"))}</h3>${renderTriage(c.triage)}
-      <div class="actions">${actions}</div>
-      ${(c.variants || []).length || ["variants", "feedback"].includes(c.status) ? `<h3>${esc(t("variants"))}</h3>${renderVariants(c)}` : ""}
-      ${c.prototype && c.prototype.state !== "none" ? `<h3>${esc(t("prototype"))}</h3>${renderPrototype(c)}` : ""}
-      ${c.spec?.asset ? `<h3>${esc(t("specTitle"))}</h3><div class="panel" id="spec-body">…</div>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">${esc(t("issue"))} ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">${esc(t("pr"))} ↗</a></p>` : ""}` : ""}
-      ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("")}` : ""}
-      ${renderThreads(c)}`;
+      <div class="sub">${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.reporter ? `<span>reported by <b>${esc(c.origin.reporter)}</b></span>` : `<span>by ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span>${origin}</div>
+      ${renderSteps(c)}
+      ${renderStatus(c)}
+      <div class="section">${r.type === "bug" ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.goal ? `${r.type === "bug" ? "<h4>What should happen</h4>" : ""}${md(r.goal)}` : ""}${r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
+      ${shots(c.screens)}
+      ${renderVerdict(c)}
+      ${renderResearch(c.research)}
+      ${renderOptions(c)}
+      ${renderPrototype(c)}
+      ${renderImpact(c.impact)}
+      ${c.spec?.asset ? `<details class="fold"><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">Open the GitHub issue ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">Open the draft change on GitHub ↗</a></p>` : ""}` : ""}
+      ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
+      ${renderThreads(c, { skipAsks: true })}`;
   }
 
-  // The picker runs inside the variant frame (sandboxed, opaque origin) and posts
-  // back what was clicked: a CSS path and a text snippet, the reference a developer
-  // and the agent can find in the source.
-  const PICKER = `<script>(()=>{let on=false,last=null;const css=(el)=>{const p=[];while(el&&el.nodeType===1&&p.length<6){let s=el.tagName.toLowerCase();if(el.id){p.unshift(s+"#"+el.id);break}const dv=el.getAttribute("data-view");if(dv){p.unshift(s+'[data-view="'+dv+'"]');break}const sib=[...(el.parentElement?.children||[])].filter(x=>x.tagName===el.tagName);if(sib.length>1)s+=":nth-of-type("+(sib.indexOf(el)+1)+")";p.unshift(s);el=el.parentElement}return p.join(" > ")};
-const mark=(el,c)=>{if(last){last.style.outline=last.dataset.o||"";}last=el;if(el){el.dataset.o=el.style.outline;el.style.outline=c}};
-addEventListener("message",(e)=>{const d=e.data||{};if(d.type==="desk-pick")on=!!d.on,mark(null);if(d.type==="desk-highlight"){try{const el=document.querySelector(d.selector);if(el){el.scrollIntoView({block:"center"});mark(el,"3px solid #e8a400")}}catch{}}});
-addEventListener("mouseover",(e)=>{if(on)mark(e.target,"2px solid #2f5bd3")},true);
-addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagation();const el=e.target;on=false;mark(el,"3px solid #e8a400");parent.postMessage({type:"desk-picked",selector:css(el),tag:el.tagName.toLowerCase(),text:(el.innerText||el.getAttribute("aria-label")||"").trim().replace(/\\s+/g," ").slice(0,120)},"*")},true);})();<\/script>`;
+  // ---------- the design workspace ----------
+  // Runs inside the design's frame (sandboxed, opaque origin): selects and outlines what
+  // people click, edits text in place, draws numbered pins for notes, and posts back a
+  // CSS path, the text and a plain label.
+  function frameScript() {
+    let mode = "off", selected = null, hover = null, pins = [], editing = null;
+    const layer = document.createElement("div");
+    layer.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483647";
+    document.documentElement.appendChild(layer);
+    const css = (el) => { const p = []; while (el && el.nodeType === 1 && p.length < 7) { let s = el.tagName.toLowerCase(); if (el.id) { p.unshift(s + "#" + el.id); break; } const dv = el.getAttribute("data-view"); if (dv) { p.unshift(s + '[data-view="' + dv + '"]'); break; } const sib = [...(el.parentElement?.children || [])].filter((x) => x.tagName === el.tagName); if (sib.length > 1) s += ":nth-of-type(" + (sib.indexOf(el) + 1) + ")"; p.unshift(s); el = el.parentElement; } return p.join(" > "); };
+    const kind = (el) => { const t = el.tagName.toLowerCase(), r = el.getAttribute("role"); if (t === "button" || r === "button") return "Button"; if (t === "a") return "Link"; if (/^h[1-6]$/.test(t)) return "Heading"; if (["input", "textarea", "select"].includes(t)) return "Field"; if (["img", "svg", "path"].includes(t)) return "Image"; if (t === "li") return "List item"; if (t === "label") return "Label"; if (["p", "span", "small", "strong", "em", "b"].includes(t)) return "Text"; if (t === "nav") return "Navigation"; if (t === "header") return "Header"; if (["table", "tr", "td"].includes(t)) return "Table"; return "Area"; };
+    const textOf = (el) => (el.innerText || el.getAttribute("aria-label") || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ").slice(0, 120);
+    const labelOf = (el) => { const t = textOf(el); return kind(el) + (t ? " “" + (t.length > 40 ? t.slice(0, 39) + "…" : t) + "”" : ""); };
+    const find = (sel) => { try { return sel ? document.querySelector(sel) : null; } catch { return null; } };
+    const box = (el, color, label, solid) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; d.appendChild(b); } layer.appendChild(d); };
+    const draw = () => { layer.textContent = ""; for (const p of pins) { const el = find(p.selector); if (el) box(el, p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", "#" + p.n, false); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
+    addEventListener("scroll", draw, true); addEventListener("resize", draw); setInterval(draw, 700);
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-select") { selected = find(d.selector); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    addEventListener("mouseover", (e) => { if (mode === "off" || editing) return; hover = e.target; draw(); }, true);
+    addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
+    addEventListener("click", (e) => {
+      if (mode === "off") return;
+      if (editing && editing.contains(e.target)) return;
+      e.preventDefault(); e.stopPropagation();
+      const el = e.target; selected = el; hover = null; draw();
+      parent.postMessage({ type: "desk-picked", selector: css(el), tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el) }, "*");
+      if (mode === "edit") startEdit(el);
+    }, true);
+    function startEdit(el) {
+      if (el.children.length > 3 || !textOf(el)) return;
+      const before = el.innerText; editing = el;
+      el.contentEditable = "plaintext-only"; if (el.contentEditable !== "plaintext-only") el.contentEditable = "true";
+      el.focus(); getSelection().selectAllChildren(el);
+      const finish = (keep) => { el.contentEditable = "false"; el.removeEventListener("keydown", key); el.removeEventListener("blur", blur); editing = null; const after = el.innerText; if (!keep) { el.innerText = before; return; } if (after.trim() !== before.trim()) parent.postMessage({ type: "desk-edited", selector: css(el), tag: el.tagName.toLowerCase(), label: labelOf(el), from: before.trim().slice(0, 300), to: after.trim().slice(0, 300) }, "*"); };
+      const key = (k) => { if (k.key === "Enter" && !k.shiftKey) { k.preventDefault(); finish(true); } if (k.key === "Escape") { k.preventDefault(); finish(false); } };
+      const blur = () => finish(true);
+      el.addEventListener("keydown", key); el.addEventListener("blur", blur);
+    }
+  }
+  const FRAME_SCRIPT = `<script>(${frameScript.toString()})();<\/script>`;
+  const withScript = (html) => (html.includes("</body>") ? html.replace("</body>", `${FRAME_SCRIPT}</body>`) : html + FRAME_SCRIPT);
 
-  async function loadVariantFrame(c) {
-    const frame = $("#variant-frame");
-    if (!frame) return;
-    const v = (c.variants || []).find((x) => x.id === S.variant);
-    if (!v) return;
+  // Notes on elements, numbered in the order they were written, across all options.
+  function notesOf(c) {
+    return (c.threads || []).filter((th) => th.anchor?.variant).map((th, i) => ({ ...th, n: i + 1 }));
+  }
+  function noteState(c, th) {
+    if (th.state === "resolved") return ["done", "Done"];
+    const last = th.messages[th.messages.length - 1];
+    if (last?.by?.agent) return ["open", "Design Desk replied"];
+    if (th.kind === "change" && (c.waiting || []).some((w) => w.kind === "revise" && w.state === "claimed")) return ["working", "Being changed now…"];
+    if (th.kind === "change") return ["open", "Waiting for Design Desk"];
+    return ["open", th.kind === "question" ? "Question" : "Comment"];
+  }
+
+  function wsVariant(c) {
+    const vs = c.variants || [];
+    if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0])?.id;
+    return vs.find((v) => v.id === S.variant);
+  }
+
+  // The workspace is built once per option and version shown; later renders replace the
+  // top bar, the tools and the side panel only, so the design's frame keeps its state.
+  function renderWorkspace() {
+    const ws = $("#workspace");
+    const c = S.card, v = S.ws.open && c ? wsVariant(c) : null;
+    if (!v) { S.ws.open = false; S.ws.shown = null; ws.hidden = true; ws.innerHTML = ""; return; }
+    const versions = [{ version: v.version || 1, asset: v.asset }, ...(v.history || [])];
+    const showing = versions.find((h) => h.version === (S.ws.version || versions[0].version)) || versions[0];
+    const key = `${c.id}|${v.id}|${showing.asset}`;
+    ws.hidden = false;
+    if (S.ws.shown !== key || !$("#ws-frame")) {
+      ws.innerHTML = `<div class="ws-top" id="ws-top"></div><div class="ws-body"><div class="ws-stage"><div class="actions" style="margin:0" id="ws-tools"></div>
+        <iframe class="frame" id="ws-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div><aside class="ws-side" id="ws-side"></aside></div>`;
+      S.ws.shown = key;
+      loadWsFrame(c, v, showing.asset);
+    }
+    const old = showing.version !== (v.version || 1);
+    const shaper = can("change");
+    $("#ws-top").innerHTML = `<button class="btn small" data-ws-close>← Back to the request</button>
+      <span class="title" title="${esc(c.title)}">${esc(c.title)}</span>
+      <div class="tabs" style="margin:0">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>
+      ${versions.length > 1 ? `<select id="ws-version" style="width:auto">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : ""}
+      <span class="grow"></span>
+      ${S.me?.figma && can("figma") ? `<button class="btn small" data-act="figma-import">Import from Figma</button><button class="btn small" data-act="figma-export">Send to Figma</button>` : ""}
+      ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}`;
+    $("#ws-tools").innerHTML = old ? `<span class="chip warn">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `
+      <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
+      ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
+      <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
+      <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
+    renderWsSide(c, v, old);
+    sendPins(c, v);
+  }
+
+  function renderWsSide(c, v, old) {
+    const side = $("#ws-side");
+    const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
+    const shaper = can("change");
+    const sel = S.ws.selected;
+    const notes = notesOf(c).filter((n) => n.anchor.variant === v.id);
+    const busy = working(c).filter((k) => ["revise", "figma", "explore"].includes(k));
+    side.innerHTML = `<div class="sel ${sel ? "" : "none"}">
+        <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
+        <b>${esc(sel ? sel.label : "Nothing selected")}</b>
+        ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
+      </div>
+      ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
+      ${old ? "" : `<div class="composer" style="margin:0">
+        <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
+        <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${sel ? `<button class="btn small" data-ws-clear>Clear selection</button>` : ""}</div>
+        ${shaper ? `<p class="hint">Design Desk changes the design and the new version appears here by itself. Notes sent in a row are done together.</p>` : ""}
+      </div>`}
+      ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
+      <div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}</h3>
+        ${notes.length ? `<ol class="notes">${notes.map((th) => { const [st, label] = noteState(c, th); const last = th.messages[th.messages.length - 1]; return `<li class="note" data-ws-note="${esc(th.id)}" aria-current="${Boolean(sel?.selector) && sel.selector === th.anchor.selector}">
+          <div class="h"><span class="n">#${th.n}</span><span>${esc(th.anchor.label || th.anchor.text || "the whole option")}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${esc(label)}</span></div>
+          <div>${esc(th.messages[0].text)}</div>${last?.by?.agent ? `<div class="a">${esc(last.text)}</div>` : ""}</li>`; }).join("")}</ol>` : `<p class="hint">No notes yet.</p>`}
+      </div>`;
+    const nt = $("#ws-text");
+    if (nt) { nt.value = keep; if (focused) { nt.focus(); if (caret) nt.setSelectionRange(caret[0], caret[1]); } }
+  }
+
+  async function loadWsFrame(c, v, assetId) {
+    const frame = $("#ws-frame");
     try {
-      const a = await asset(v.asset);
-      const html = a.encoding === "base64" ? atob(a.data) : a.data;
-      frame.srcdoc = html.includes("</body>") ? html.replace("</body>", `${PICKER}</body>`) : html + PICKER;
-      frame.onload = () => { if (S.picking) frame.contentWindow?.postMessage({ type: "desk-pick", on: true }, "*"); };
-    } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: `${t("error")}: ${e.message}` })); }
+      const a = await asset(assetId);
+      if ($("#ws-frame") !== frame) return;
+      frame.srcdoc = withScript(decode(a));
+      frame.onload = () => {
+        const old = assetId !== v.asset;
+        frame.contentWindow?.postMessage({ type: "desk-mode", mode: old ? "off" : S.ws.mode }, "*");
+        sendPins(S.card, v);
+        if (S.ws.selected?.selector) frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*");
+      };
+    } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
+  }
+  function sendPins(c, v) {
+    const pins = notesOf(c).filter((n) => n.anchor.variant === v.id && n.anchor.selector).map((n) => ({ n: n.n, selector: n.anchor.selector, state: noteState(c, n)[0] }));
+    $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
+  }
+  const frameSay = (msg) => $("#ws-frame")?.contentWindow?.postMessage(msg, "*");
+
+  addEventListener("message", (e) => {
+    const frame = $("#ws-frame");
+    if (!frame || e.source !== frame.contentWindow) return;
+    const d = e.data || {};
+    const pickOf = (text) => ({ selector: String(d.selector || "").slice(0, 500), text: String(text || "").slice(0, 120), tag: String(d.tag || "").slice(0, 40), label: String(d.label || "").slice(0, 120) });
+    // In Edit text the frame keeps the focus: the person is typing into the design.
+    if (d.type === "desk-picked") { S.ws.selected = pickOf(d.text); S.ws.edit = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
+    if (d.type === "desk-edited") {
+      S.ws.selected = pickOf(d.to); S.ws.edit = { from: String(d.from || ""), to: String(d.to || "") };
+      renderWorkspace();
+      const t = $("#ws-text"); if (t && !t.value.trim()) t.value = `Change the text “${S.ws.edit.from}” to “${S.ws.edit.to}”.`;
+      t?.focus();
+    }
+  });
+
+  // What the workspace shows; a refresh that changes none of it leaves it alone.
+  function wsFingerprint(c) {
+    const v = (c.variants || []).find((x) => x.id === S.variant);
+    return JSON.stringify([v?.asset, v?.version, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.state, n.messages.length])]);
   }
 
+  // ---------- rendering the detail ----------
   async function loadImages() {
     for (const img of document.querySelectorAll("img[data-asset]")) {
       if (img.src) continue;
       try { img.src = dataUrl(await asset(img.dataset.asset)); } catch {}
     }
     const spec = $("#spec-body");
-    if (spec && S.card?.spec?.asset) { try { const a = await asset(S.card.spec.asset); spec.innerHTML = md(a.encoding === "base64" ? atob(a.data) : a.data); } catch (e) { spec.textContent = e.message; } }
+    if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
+    const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
+    if (vf && v) { try { vf.srcdoc = decode(await asset(v.asset)); } catch {} }
+    const sf = $("#sheet-frame");
+    if (sf && S.card?.sheet) { try { sf.srcdoc = decode(await asset(S.card.sheet)); } catch {} }
   }
 
   function renderDetail() {
     const d = $("#detail");
-    $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide");
-    if (S.tab === "guide") { d.innerHTML = `<div class="guide">${L.guideHtml || T.en.guideHtml}</div>`; return; }
-    if (S.tab === "call" && !S.card) { renderAgenda(); return; }
-    if (!S.card) { d.innerHTML = `<div class="empty">${esc(t("pick"))}</div>`; return; }
+    $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || S.tab === "call");
+    if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
+    if (S.tab === "call" && !S.card) { renderAgendaDetail(); return; }
+    if (!S.card) {
+      const n = visibleCards().length;
+      d.innerHTML = n ? `<div class="empty">Pick something on the left.</div>` : `<div class="empty">${S.cards.length ? "" : "The Desk is empty for now. "}<a href="#" data-tab="guide">How Design Desk works</a></div>`;
+      return;
+    }
     const keep = $("#composer-text")?.value || "";
     d.innerHTML = S.card.kind === "change" ? renderChange(S.card) : S.card.kind === "element" ? renderElement(S.card) : renderRequest(S.card);
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
-    loadVariantFrame(S.card);
-    loadSheet(S.card);
   }
 
   // ---------- loading ----------
   async function refreshList() {
     S.cards = (await api("GET", "/api/cards")).cards || [];
     try { S.agenda = (await api("GET", "/api/agenda")).agenda || []; } catch { S.agenda = []; }
-    S.agendaCount = S.agenda.length;
     renderNav(); renderList();
   }
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
-    const changed = !S.card || S.card.id !== card.id || JSON.stringify(S.card) !== JSON.stringify(card);
-    if (S.card?.id !== card.id) { S.variant = null; S.anchor = null; S.picking = false; }
+    const before = S.card;
+    if (before?.id !== card.id) { S.variant = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null }; }
+    const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
+    const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
+    // A redraw arrived: say so and show the latest version.
+    if (S.ws.open && before?.id === card.id) {
+      const was = (before.variants || []).find((x) => x.id === S.variant), now = (card.variants || []).find((x) => x.id === S.variant);
+      if (was && now && (now.version || 1) > (was.version || 1)) { toast(`${now.name} was updated to version ${now.version}.`); S.ws.version = null; }
+    }
     S.card = card;
-    if (!quiet || changed) { renderList(); if (!(quiet && document.activeElement?.closest?.("#composer, .reply"))) renderDetail(); }
+    if (!quiet || changed) {
+      renderList();
+      if (!(quiet && document.activeElement?.closest?.("#composer, .reply"))) renderDetail();
+    }
+    if (S.ws.open && (!quiet || wsChanged)) renderWorkspace();
   }
 
   // ---------- events ----------
+  async function act(name) {
+    const c = S.card;
+    if (name === "workspace") { S.ws.open = true; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); return; }
+    if (name === "queue") {
+      const r = await ask({ title: "Add to the next call", body: "The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.", ok: "Add to the call", note: "What should the team decide? (optional)" });
+      if (!r) return;
+      await api("POST", `/api/cards/${c.id}/agenda`, { note: r.note });
+      toast("Added to the next call. Design Desk will write a short brief.");
+      await refreshList(); await openCard(c.id); return;
+    }
+    if (name === "unqueue") { await api("DELETE", `/api/cards/${c.id}/agenda`); await refreshList(); await openCard(c.id); return; }
+    if (name === "clear-call") {
+      const r = await ask({ title: "Is the call over?", body: "This clears the next-call list for everyone. Each item is marked as shown today.", ok: "Clear the list" });
+      if (!r) return;
+      await api("POST", "/api/calls", {}); await refreshList(); renderDetail(); return;
+    }
+    let note = "";
+    const options = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
+    if (name === "approve") {
+      const to = HANDOFF_TO[S.me?.handoff?.[c.request?.type || "idea"]] || HANDOFF_TO.desk;
+      const fav = favourite(c);
+      const r = await ask({ title: "Approve a design", body: `Design Desk writes the developer spec for the option you pick and sends it to ${to}. Once sent, it can't be taken back.`, ok: "Approve", choices: options.length ? options : null, pick: fav?.id || null });
+      if (!r) return; note = r.choice || "";
+    }
+    if (name === "build") {
+      const fav = favourite(c);
+      const r = await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. The first one can take up to an hour.", ok: "Build it", choices: options.length > 1 ? options : null, pick: fav?.id || options[0]?.id || null });
+      if (!r) return; note = r.choice || options[0]?.id || "";
+    }
+    if (name === "close") {
+      const r = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. You can reopen it later.", ok: "Close it" });
+      if (!r) return;
+    }
+    if (name === "figma-export") {
+      const v = (c.variants || []).find((x) => x.id === S.variant);
+      const r = await ask({ title: "Send to Figma", body: `Design Desk puts **${v?.name || "this option"}** into Figma as editable layers and links it here.`, ok: "Send" });
+      if (!r) return; note = v?.id || "";
+    }
+    if (name === "figma-import") {
+      const r = await ask({ title: "Import from Figma", body: "Paste a link to a frame in Figma (in Figma: right-click the frame → Copy link). Design Desk adds it as a design option and rebuilds it from the product's real parts.", ok: "Import", url: "Link to the Figma frame" });
+      if (!r) return; note = r.url;
+    }
+    const res = await api("POST", `/api/cards/${c.id}/actions`, { action: name, note });
+    if (res.inbox) toast(name === "close" ? "Closed." : "Sent. Design Desk is on it; this page updates by itself.");
+    await refreshList(); await openCard(c.id);
+  }
+  function tallyText(c, id) {
+    const votes = Object.values(c.votes?.[id] || {});
+    const up = votes.filter((x) => x.vote === "prefer").length, down = votes.filter((x) => x.vote === "concern").length;
+    return [up ? `👍 ${up}` : "", down ? `⚠ ${down}` : ""].filter(Boolean).join(" · ");
+  }
+
+  async function post(kind) {
+    const text = $("#composer-text").value.trim(); if (!text) return;
+    const r = await api("POST", `/api/cards/${S.card.id}/threads`, { kind, text });
+    $("#composer-text").value = "";
+    if (r.inbox) toast("Sent. Design Desk answers right here.");
+    await openCard(S.card.id);
+  }
+
+  async function wsSend() {
+    const c = S.card, v = wsVariant(c);
+    const text = $("#ws-text")?.value.trim(); if (!text || !v) return;
+    const sel = S.ws.selected;
+    const anchor = { variant: v.id, ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label } : { label: "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}) };
+    const kind = can("change") ? "change" : "comment";
+    await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
+    $("#ws-text").value = ""; S.ws.edit = null;
+    toast(kind === "change" ? "Sent. Design Desk is changing it; the design updates here by itself." : "Comment added.");
+    await openCard(c.id);
+  }
+
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("button, [data-zoom], [data-highlight]");
+    const el = e.target.closest("button, a[data-tab], [data-zoom], [data-ws-note]");
     if (!el) return;
     const ds = el.dataset;
-    if (ds.tab) { S.tab = ds.tab; S.card = null; renderNav(); renderList(); renderDetail(); return; }
-    if (ds.filter) { S.filter = ds.filter; renderList(); return; }
+    if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1"); return; }
+    if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; renderList(); renderDetail(); return; }
     if (ds.card) { await openCard(ds.card); return; }
     if ("back" in ds) { S.card = null; renderList(); renderDetail(); return; }
     if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
-    if (ds.highlight) { const [variant, selector] = ds.highlight.split("|"); if (variant && variant !== S.variant) { S.variant = variant; renderDetail(); await new Promise((r) => setTimeout(r, 400)); } $("#variant-frame")?.contentWindow?.postMessage({ type: "desk-highlight", selector }, "*"); $("#variant-frame")?.scrollIntoView({ block: "center" }); return; }
-    if ("queue" in ds) { await api("POST", `/api/cards/${S.card.id}/agenda`, { note: "" }); toast(t("sentToAgent")); await refreshList(); await openCard(S.card.id); return; }
-    if ("unqueue" in ds) { await api("DELETE", `/api/cards/${S.card.id}/agenda`); await refreshList(); await openCard(S.card.id); return; }
-    if ("present" in ds) { await present(0); return; }
+    if (ds.present !== undefined) { await present(Number(ds.present)); return; }
     if ("exitPresent" in ds) { $("#present")?.remove(); return; }
-    if ("closeCall" in ds) { await api("POST", "/api/calls", {}); await refreshList(); return; }
     if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
-    if ("focusComposer" in ds) { $("#composer-text")?.focus(); $("#composer-kind").value = "question"; return; }
-    if ("followUp" in ds) { openRequestDialog(S.card); return; }
-    if ("clearAnchor" in ds) { S.anchor = null; renderDetail(); return; }
-    if ("openThread" in ds) {
-      const text = $("#composer-text").value.trim(); if (!text) return;
-      const kind = $("#composer-kind").value;
-      const anchor = S.anchor ? { ...S.anchor, variant: S.variant } : null;
-      const r = await api("POST", `/api/cards/${S.card.id}/threads`, { kind, text, anchor });
-      $("#composer-text").value = ""; S.anchor = null;
-      if (r.inbox) toast(t("sentToAgent"));
-      await openCard(S.card.id); return;
-    }
+    if ("focusComposer" in ds) { $("#composer-text")?.focus(); $("#composer")?.scrollIntoView({ block: "center" }); return; }
+    if ("adjust" in ds) { openRequestDialog(S.card); return; }
+    if (ds.post) { await post(ds.post); return; }
     if (ds.sendReply) {
       const input = document.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
       const r = await api("POST", `/api/threads/${ds.sendReply}/messages`, { text });
-      if (r.inbox) toast(t("sentToAgent"));
-      await openCard(S.card.id); return;
+      if (r.inbox) toast("Sent. Design Desk is on it.");
+      await refreshList(); await openCard(S.card.id); return;
     }
     if (ds.resolve) { await api("POST", `/api/threads/${ds.resolve}/resolve`); await openCard(S.card.id); return; }
-    if (ds.variant) { S.variant = ds.variant; S.picking = false; renderDetail(); return; }
+    if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
     if (ds.vote) {
       const mine = S.card.votes?.[S.variant]?.[myKey()]?.vote;
       const vote = mine === ds.vote ? "none" : ds.vote;
       await api("POST", `/api/cards/${S.card.id}/votes`, { variant: S.variant, vote });
       await openCard(S.card.id);
-      // The frame has no browser dialogs, so a concern's reason goes in the composer.
-      if (vote === "concern") { $("#composer-kind").value = "concern"; $("#composer-text").focus(); $("#composer").scrollIntoView({ block: "center" }); }
+      if (vote === "concern") { const t = $("#composer-text"); t.value = `My concern about “${optionName(S.card, S.variant)}”: `; t.focus(); $("#composer").scrollIntoView({ block: "center" }); }
       return;
     }
-    if ("pick" in ds) { S.picking = !S.picking; renderDetail(); return; }
-    if (ds.action) {
-      const r = await api("POST", `/api/cards/${S.card.id}/actions`, { action: ds.action });
-      if (r.inbox) toast(t("sentToAgent"));
-      await refreshList(); await openCard(S.card.id); return;
+    if (ds.goto) {
+      const th = (S.card.threads || []).find((x) => x.id === ds.goto);
+      if (!th?.anchor?.variant) return;
+      S.variant = th.anchor.variant; S.ws.open = true; S.ws.version = null;
+      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element" } : null;
+      renderWorkspace(); return;
+    }
+    if (ds.act) { await act(ds.act); return; }
+    // the workspace
+    if ("wsClose" in ds) { S.ws.open = false; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
+    if (ds.wsVariant) { S.variant = ds.wsVariant; S.ws.selected = null; S.ws.edit = null; S.ws.version = null; renderWorkspace(); return; }
+    if (ds.wsMode) { S.ws.mode = ds.wsMode; renderWorkspace(); frameSay({ type: "desk-mode", mode: ds.wsMode }); return; }
+    if ("wsSend" in ds) { await wsSend(); return; }
+    if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
+    if (ds.wsNote) {
+      const th = (S.card.threads || []).find((x) => x.id === ds.wsNote);
+      if (!th?.anchor) return;
+      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element" } : null;
+      S.ws.edit = null;
+      renderWorkspace();
+      frameSay({ type: "desk-select", selector: th.anchor.selector || null });
+      return;
     }
   }));
+
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsVariant(S.card)?.version || 1) ? null : n; renderWorkspace(); }
+  });
 
   document.addEventListener("keydown", (e) => {
     const ov = $("#present");
     if (ov && ["ArrowRight", "ArrowLeft", "Escape"].includes(e.key)) {
       if (e.key === "Escape") { ov.remove(); return; }
-      present(Number(ov.dataset.index) + (e.key === "ArrowRight" ? 1 : -1)).catch(() => {});
+      present(Number(ov.dataset.index) + (e.key === "ArrowRight" ? 1 : -1)).catch(fail);
       return;
     }
+    if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; renderWorkspace(); renderDetail(); return; }
     if (e.key === "Enter" && !e.shiftKey && e.target.matches("[data-reply]")) { e.preventDefault(); document.querySelector(`[data-send-reply="${CSS.escape(e.target.dataset.reply)}"]`)?.click(); }
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.id === "ws-text") { e.preventDefault(); $("[data-ws-send]")?.click(); }
   });
 
-  addEventListener("message", (e) => {
-    const frame = $("#variant-frame");
-    if (!frame || e.source !== frame.contentWindow || e.data?.type !== "desk-picked") return;
-    S.picking = false;
-    S.anchor = { selector: String(e.data.selector || "").slice(0, 500), text: String(e.data.text || "").slice(0, 120), tag: String(e.data.tag || "").slice(0, 40) };
-    const keep = $("#composer-text")?.value || "";
-    renderDetail();
-    $("#composer-kind").value = "comment"; $("#composer-text").value = keep; $("#composer-text").focus();
-  });
-
+  // ---------- the request dialog ----------
+  const pictures = [];
   function setType(type) {
     const f = $("#request-form");
     f.type.value = type;
     for (const b of document.querySelectorAll("#type-choice button")) b.setAttribute("aria-pressed", String(b.dataset.type === type));
-    for (const el of f.querySelectorAll("[data-only]")) el.hidden = el.dataset.only !== type;
-    f.problem.previousElementSibling.textContent = t(type === "bug" ? "bugProblem" : "fProblem");
-    f.goal.previousElementSibling.textContent = t(type === "bug" ? "bugGoal" : "fGoal");
+    $("#rq-problem-label").textContent = type === "bug" ? "What's wrong, and where? What did you expect instead?" : "What would you change, and for whom?";
   }
   document.addEventListener("click", (e) => { const b = e.target.closest("#type-choice button"); if (b) setType(b.dataset.type); });
 
+  // A picture is shrunk in the browser before it is sent: 1600 px wide at most, JPEG.
+  async function addPicture(file) {
+    if (pictures.length >= 2 || !/^image\//.test(file.type)) return;
+    const img = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / img.width);
+    const canvas = Object.assign(document.createElement("canvas"), { width: Math.round(img.width * scale), height: Math.round(img.height * scale) });
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    let q = 0.82, url = canvas.toDataURL("image/jpeg", q);
+    while (url.length > 600 * 1024 && q > 0.4) { q -= 0.15; url = canvas.toDataURL("image/jpeg", q); }
+    pictures.push({ contentType: "image/jpeg", data: url.split(",")[1], preview: url });
+    $("#rq-thumbs").innerHTML = pictures.map((p) => `<img alt="" src="${p.preview}" />`).join("");
+  }
+  $("#rq-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addPicture(f); e.target.value = ""; }));
+  $("#request-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addPicture(it.getAsFile()); } }));
+
   function openRequestDialog(from) {
     const dlg = $("#request-dialog"), f = $("#request-form");
-    f.reset();
+    f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
     setType("idea");
     $("#type-choice").hidden = Boolean(from);
+    $("#rq-figma").hidden = !S.me?.figma;
+    $("#rq-title").textContent = from ? "Adjust this change" : "New request";
+    $("#rq-hint").textContent = from
+      ? "Tell Design Desk what should look different. It draws options; once a designer approves one, the coding agent builds it into the product."
+      : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
+    if (from) $("#rq-problem-label").textContent = `What should look different in “${from.title}”?`;
     f.from.value = from ? from.id : "";
-    if (from) { f.title.value = from.title.slice(0, 180); f.screen.value = from.source?.pr ? `#${from.source.pr}` : ""; }
     dlg.showModal();
   }
   $("#new-request").addEventListener("click", () => openRequestDialog(null));
   $("#request-form").addEventListener("submit", guard(async (e) => {
     if (e.submitter?.value !== "send") return;
     const f = e.target;
-    const body = { type: f.type.value, title: f.title.value, problem: f.problem.value, goal: f.goal.value, screen: f.screen.value, steps: f.steps.value, ...(f.from.value ? { from: f.from.value } : {}) };
+    const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
+      ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await api("POST", "/api/requests", body);
-    toast(t("sentToAgent"));
-    S.tab = "requests"; await refreshList(); await openCard(r.card.id);
+    toast("Sent. Design Desk first checks what can be done; this page updates by itself.");
+    S.tab = "requests"; S.reqFilter = "open"; await refreshList(); await openCard(r.card.id);
   }));
 
-  function applyWords() {
-    document.documentElement.lang = "en";
-    for (const el of document.querySelectorAll("[data-t]")) el.textContent = t(el.dataset.t);
-    $("#new-request").textContent = `+ ${t("newRequest")}`;
-    $("#new-request").hidden = !S.me?.can?.request;
+  function applyMe() {
+    $("#new-request").hidden = !can("request");
     $("#title").textContent = S.me?.name || "Design Desk";
     $("#me").textContent = S.me ? `${S.me.email || ""} · ${roleName(S.me.role)}` : "";
+    renderBanners();
+  }
+
+  // One timer: every 15 s, every 4 s while the open request waits for Design Desk.
+  let tick = 0;
+  async function poll() {
+    tick += 1;
+    if (document.hidden) return;
+    const fast = S.card && working(S.card).length > 0;
+    if (!fast && tick % 4 !== 0) return;
+    try {
+      await refreshList();
+      if (S.card) await openCard(S.card.id, { quiet: true });
+      if (S.offline) { S.offline = false; renderBanners(); }
+    } catch (e) {
+      if (!(e instanceof Said) && !S.offline) { S.offline = true; renderBanners(); }
+    }
   }
 
   async function start() {
-    if (!bridge) { $("#detail").innerHTML = `<div class="panel">${esc(t("noBridge"))}</div>`; $("#main").classList.add("has-detail"); return; }
+    if (!bridge) { $("#detail").innerHTML = `<div class="panel">The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.</div>`; $("#main").classList.add("has-detail"); return; }
     S.me = await api("GET", "/api/me");
-    applyWords();
+    applyMe();
     await refreshList();
-    if (!visibleCards().length && S.cards.some((c) => c.kind === "request")) S.tab = "requests";
+    // First visit, or an empty Desk: start with how it works.
+    if (!store.get("desk-guide-seen") || !S.cards.length) { S.tab = "guide"; store.set("desk-guide-seen", "1"); }
+    else if (!visibleCards().length && S.cards.some((c) => c.kind === "request" && !closed(c))) S.tab = "requests";
     renderNav(); renderList(); renderDetail();
-    setInterval(guard(async () => {
-      if (document.hidden) return;
-      await refreshList();
-      if (S.card) await openCard(S.card.id, { quiet: true });
-    }), 15000);
+    setInterval(() => { poll().catch(() => {}); }, 4000);
   }
-  start().catch((e) => { $("#detail").innerHTML = `<div class="panel">${esc(t("error"))}: ${esc(e.message)}</div>`; });
+  start().catch((e) => { $("#detail").innerHTML = `<div class="panel">${esc(e instanceof Said ? e.message : `Design Desk can't be reached right now. Try again in a minute; if it keeps happening, tell the Desk's owner.`)}</div>`; });
 })();
 </script>
 </body>

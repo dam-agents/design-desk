@@ -69,7 +69,11 @@ read from) and `source` (`repo`, `saved` or `default`).
   preset.
 - `catalog.elements` — the elements worth having in the catalog: `{name, group, file,
   export}` ([catalog.md](catalog.md)).
-- `plugins` — the product's own plug-ins, paths relative to the profile ([plugins.md](plugins.md)).
+- `skills` — the product's own skills by action, each `{skill, source}`: the skill's name and
+  the repository the platform installs it from ([actions.md](actions.md)), for example
+  `"options": {"skill": "dam-prototyper", "source": "dam-agents/dam-prototyper"}`.
+- `figma` — `{library}`: the link of the product's Figma library, for linking its components
+  to code (the `figma` skill).
 
 `design profile <owner/name> --check` (or `--check-dir .design-desk/<profile>` in the product's
 checkout) checks this shape and that every path it names exists; the onboarding's live check

@@ -45,6 +45,10 @@ The person deciding sees it on the card, and every later step builds on it.
 7. A `deliberate`, `duplicate` or `collision` verdict goes on the next call's agenda with the
    question it raises (`design desk enqueue`… → [desk.md](desk.md) → The next call), and the
    triage says what that means for the request.
+8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
+   else the same thing shows up, what a change touches, and the earlier decisions about it,
+   written as `impact` on the card. A deliberate behaviour you found becomes a decision
+   (`design desk decision`), with its source, unless the Desk already has it.
 
 Variants, the prototype and the spec all take the research into account: they respect a
 deliberate decision unless the team chose to reverse it, avoid a pull request in flight or
@@ -71,13 +75,16 @@ The person deciding should know it before a single variant exists.
    `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. `design desk done I-<n> --outcome triaged`.
 
-A request too vague to triage gets a **question thread from you** instead (`design desk
-comment C-<n> <file>`): one question, with your best guess as the suggested answer.
+A request too vague to triage gets **one question from you** instead, with your best guess
+as the suggested answer: `design desk ask C-<n> <file> --step request`. The Desk shows it at
+the top of the request; the person's answer puts the request back on the queue. Close your
+item with `--outcome asked`.
 
 ## Variants (`variants_due`: `explore` and `revise`)
 
 Variants are quick, static and on **sample data**: the place to compare directions before
-anyone builds. Make them with the `variants` skill.
+anyone builds. Make them with the skill `design skill options --repo <repo>` names (the
+bundled `variants`, or the product's own), and revise them with the `revise` action's.
 
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
   `status: variants`, make two or three genuinely distinct approaches
@@ -86,10 +93,23 @@ anyone builds. Make them with the `variants` skill.
   grayscale boxes) when the question is structure or flow, `mockup` (the product's styles)
   when it is the look. A `needs-developer` request still gets variants; the parts a
   developer must add are drawn and labelled "needs a developer" in the variant.
-- **revise** — read every thread on the card, the anchored ones first (an anchor names a
-  variant and an element), and every vote with its note. Change what the comments ask,
-  keep what people preferred, drop a direction nobody preferred when there is a clear
-  winner. Then add one comment as the agent: what changed, per comment, in a list.
+- **revise** — two kinds of work arrive as `revise`:
+  - **Notes on elements** from the design workspace: threads of kind `change`, each anchored
+    to one option (`anchor.variant`) and, usually, one element (`anchor.selector`, its text and
+    a plain `label`; `anchor.edit` is a text the person typed in place: `{from, to}`). Apply
+    every open `change` thread of the card to the option's own source (kept under
+    `work/output/`), rebuild, look, and upload the result as the **same option id** with its
+    new asset: the Desk numbers the version and keeps the earlier one. Then answer each note
+    (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
+    could not ("that would change what the product does; the spec lists it").
+  - **Redraw with all comments**: read every thread and vote, change what they ask, keep
+    what people preferred, drop a direction nobody preferred when there is a clear winner,
+    and add one comment listing what changed per comment.
+
+  People wait for notes with the page open, so a note's run is short: change only what the
+  notes ask, rebuild only that option, and before closing the item look at the inbox once
+  more (`design desk inbox`): a `revise` for the same card that arrived meanwhile is claimed
+  and done in the same run.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
   `variants: [{id, name, rationale, fidelity, asset}]` (rationale: one line on when this
   one wins) and `status: feedback` in one `design desk upsert`.
@@ -101,14 +121,14 @@ anyone builds. Make them with the `variants` skill.
 ## UI bugs
 
 A UI bug is a request of type `bug`: something on a screen looks or behaves wrong. People
-file one on the Desk (**New design request → UI bug**) or tell you in Slack; either way it
+file one on the Desk (**New request → Report something broken**) or tell you in Slack; either way it
 waits in the same queue and gets the same triage.
 
 ### From a channel
 
-A report that arrives on a channel is put on the queue by that channel's intake plug-in
-([plugins.md](plugins.md)); the bundled one is
-[`intake-slack`](../plugins/intake-slack/SKILL.md) (`bug_reports: enabled`).
+A report that arrives on a channel is put on the queue by the `bug-intake` action
+([actions.md](actions.md)); the bundled skill is
+[`intake-slack`](../.agents/skills/intake-slack/SKILL.md) (`bug_reports: enabled`).
 It reads the report whole, asks once only what is missing, merges a report of a bug already
 queued into its card, files the rest with `design desk report`, and answers in the thread.
 

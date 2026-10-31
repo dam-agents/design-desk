@@ -37,7 +37,8 @@ What is new:
 | Change cards fan out: one session per merged PR | Each card is independent and expensive (clone, screens, reading the PR and the docs). |
 | Nothing is posted on GitHub by default | Design notes on merged PRs are noise for developers. The handoff can file an issue or a draft PR, behind an opt-in. |
 | No push by default; the prototype diff is kept as a patch in `work/` | `work/` is backed up; a branch on the target repository is an outward write and an opt-in. |
-| Channels, trackers and product specifics are **plug-ins** (`plugins/`, or a product's own next to its profile) | The core reads a request, triages, designs and writes a spec the same way everywhere; how a Slack report is taken in or a spec reaches GitHub or a coding agent is one skill each, swapped without touching the core ([docs/plugins.md](docs/plugins.md)). |
+| Everything the agent does is an **action** done by one **skill**; the platform manages the skills, and a product's profile or the operator names another skill for an action | A product brings its own prototyper or issue writer without a change here; the Desk, the chat, Slack and the schedules start the same actions, and the Desk shows every result ([docs/actions.md](docs/actions.md)). |
+| The Desk is the presentation and comment layer; the work is also possible in chat | The team reviews, comments and decides on one shared page; the operator can steer any action turn by turn in chat, and the result still lands on the Desk. |
 | The guard reads code through a **language adapter** (`toolkit/lib/lang/`) | TSX/React is the first; a file in a language no adapter reads is refused, so a new stack is a new adapter, never a looser rule. |
 | Plain language is a contract | Cards and answers follow the `explain` skill: a gist first, then layers; every "why" is grounded in a PR, a decision record or an architecture page, or it says that it is not documented and who to ask. |
 
@@ -95,6 +96,13 @@ These parts are written against the platform's documented contracts but were not
 - The live prototype engine (`.design-desk/dam/bin/env` in the DAM repository): an Environment install of DAM from a prototype worktree with the backchannel on, the demo account, the UI-only rebuild, and the `tunnel` verb that gives the agent's own browser a local address for screenshots.
 - `design capture` against a running install (it signs in through the form the profile's `capture.login` names; the screenshot code itself is the Designer kit's, which is proven).
 - The Desk page against the real Artifact API relay (the server and the store have offline tests).
+
+- Figma through the platform: Figma's remote MCP server admits only some MCP clients, so a
+  Custom MCP connection with OAuth may be refused; the REST fallback reads frames but cannot
+  write layers, and `generate_figma_design` is limited to some clients.
+- Pictures attached to GitHub issues with `gh … --attach`, which needs a GitHub CLI that has it.
+- The design workspace against the real relay: element picking and text editing run inside
+  the option's sandboxed frame, tested only through the local harness.
 
 The first onboarding runs `scripts/verify-onboarding.sh --live`, which probes each of them.
 

@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { HOME, cfg, fail, run, warn } from "../lib/core.mjs";
 import { loadProfile } from "../lib/profile.mjs";
+import { ACTIONS } from "../lib/actions.mjs";
 
 const isList = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
 const has = (dir, rel) => typeof rel === "string" && existsSync(join(dir, rel));
@@ -38,7 +39,7 @@ export function checkProfile(p, dir, root) {
     req(has(dir, "bin/env"), "engine.bin", "an engine needs bin/env next to profile.json (docs/profile.md → The engine contract)");
     for (const e of p.engine.egress || []) req(e.host && e.why, "engine.egress", `egress entry ${JSON.stringify(e)} needs host and why`);
   }
-  for (const pl of p.plugins || []) req(has(dir, join(pl, "SKILL.md")), "plugins", `plug-in ${pl}: no SKILL.md under the profile`);
+  for (const [action, x] of Object.entries(p.skills || {})) req(ACTIONS[action] && typeof (x?.skill ?? x) === "string", "skills", `skills.${action}: an action of docs/actions.md with {skill, source}`);
   req(has(dir, "PROFILE.md"), "PROFILE.md", "PROFILE.md (the words for people) is missing");
   return out;
 }

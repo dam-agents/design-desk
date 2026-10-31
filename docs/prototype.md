@@ -21,10 +21,11 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree C-<n> <repo>` → a checkout of the
    default branch on `design-desk/c<n>-<slug>`, printed as JSON with its path and base.
    An existing worktree of the card is reused (an update).
-3. **Change the code.** Implement the chosen direction — the variant with the most
-   `prefer` votes from designers, or the one the request's comments settled; ask in a
-   comment when it is a tie — in the product's own components, styles and copy, following
-   the profile's `PROFILE.md`. Touch only the paths `boundary.allow` admits.
+3. **Change the code.** Implement the option the item's note names (the person picked it
+   when they pressed Build), at its latest version with every applied note — in the
+   product's own components, styles and copy, following the profile's `PROFILE.md`. An item
+   without a note takes the option with the most `prefer` votes from designers; on a tie ask
+   (`design desk ask C-<n> <file> --step build`) and stop. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
    `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
    <design-desk@users.noreply.github.com>`.
@@ -51,7 +52,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 8. `done --outcome live`.
 
 A failure at any step: `prototype.state: failed`, one comment on the card saying what did
-not work in plain words, the technical detail in the events log, and the Environment kept
+not work in plain words and that a designer can press Try again, the technical detail in the events log, and the Environment kept
 for the operator only when the operator is debugging it; otherwise delete it.
 
 ## Update

@@ -65,7 +65,7 @@ test("a request that needs a developer gets no live prototype", () => {
   s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "needs-developer", reasons: ["The week comes from the server."] } });
   assert.throws(() => s.act(card.id, alice, "build"), /needs a developer/);
   assert.equal(s.act(card.id, alice, "approve").inbox.kind, "handoff");
-  assert.throws(() => s.act(card.id, alice, "approve"), /already waiting/);
+  assert.throws(() => s.act(card.id, alice, "approve"), /already working on this/);
 });
 
 test("input limits and asset size are enforced", () => {
@@ -118,7 +118,7 @@ test("a closed request takes no work and no late status from a session", () => {
   s.act(card.id, alice, "reopen");
   assert.equal(s.getCard(card.id).status, "triage");
   const fresh2 = s.createRequest(alice, { title: "Untriaged", problem: "x" }).card;
-  assert.throws(() => s.act(fresh2.id, alice, "build"), /not triaged/);
+  assert.throws(() => s.act(fresh2.id, alice, "build"), /still checking/);
 });
 
 test("a bug from Slack lands on the queue with where to answer", () => {
@@ -134,4 +134,35 @@ test("a bug from Slack lands on the queue with where to answer", () => {
   assert.equal(item.kind, "request");
   assert.deepEqual(s.listCards({ kind: "request" }).map((c) => [c.type, c.reporter, c.screens]), [["bug", "Alice", 1]]);
   assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /type must be one of/);
+});
+
+test("change notes on elements wake the agent once; its redraw keeps the earlier version", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts. It has three buttons." });
+  assert.equal(card.title, "The empty list shouts.");
+  const a1 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "One button", asset: a1 }] });
+  const anchor = { variant: "v1", selector: "button", text: "Create agent" };
+  const first = s.openThread(card.id, alice, { kind: "change", text: "Make it secondary", anchor }).inbox;
+  const second = s.openThread(card.id, alice, { kind: "change", text: "Shorter title", anchor }).inbox;
+  assert.equal(first.id, second.id);
+  assert.deepEqual(s.getCard(card.id).waiting.map((w) => w.kind), ["request", "revise"]);
+  const a2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>2</p>", encoding: "utf8" }).asset.id;
+  const v = s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "One button", asset: a2 }] }).card.variants[0];
+  assert.equal(v.version, 2);
+  assert.equal(v.history[0].asset, a1);
+});
+
+test("a person's answer to the agent's question resumes the blocked step", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "Make it nicer." });
+  const done = Object.values(s.db.inbox).find((i) => i.card === card.id);
+  s.claim(done.id, "run-1"); s.done(done.id, "run-1", "asked");
+  const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Which screen?", step: "request" });
+  assert.throws(() => s.openThread(card.id, alice, { kind: "asks", text: "x", step: "request" }), /only Design Desk/);
+  const { inbox: item } = s.reply(thread.id, alice, "The agents list.");
+  assert.equal(item.kind, "request");
+  assert.equal(s.listDecisions().length, 0);
+  s.addDecision({ concepts: ["Spend"], text: "Spend is per week.", source: { card: card.id } });
+  assert.equal(s.listDecisions({ concept: "spend" }).length, 1);
 });
