@@ -3,6 +3,7 @@
 #
 #   ledger.sh claim <repo> <pr>            the run takes the PR: in_progress
 #   ledger.sh done  <repo> <pr> <card>     its card is on the Desk: carded
+#   ledger.sh open  <repo> <pr> <card>     an open PR's card is on the Desk; it is due again once merged
 #   ledger.sh skip  <repo> <pr> <reason>   nothing a person would notice changed: skipped
 #   ledger.sh fail  <repo> <pr> <reason>   it failed; the pre-flight retries it up to 3 times
 #   ledger.sh show  <repo> <pr>            its last row, as JSON
@@ -26,7 +27,7 @@ out() { jq -cn "$@"; }
 die() { out --arg e "$1" '{outcome:"error", error:$e}'; exit 1; }
 
 cmd="${1:-}"; repo="${2:-}"; pr="${3:-}"; arg="${4:-}"
-[ -n "$cmd" ] && [ -n "$repo" ] && [ -n "$pr" ] || die "usage: ledger.sh claim|done|skip|fail|show <repo> <pr> [card|reason]"
+[ -n "$cmd" ] && [ -n "$repo" ] && [ -n "$pr" ] || die "usage: ledger.sh claim|done|open|skip|fail|show <repo> <pr> [card|reason]"
 case "$pr" in *[!0-9]*) die "pr must be a number";; esac
 mkdir -p "$WORK"; [ -f "$LEDGER" ] || printf '%s\n' "$HEAD" > "$LEDGER"
 
@@ -64,6 +65,9 @@ case "$cmd" in
       carded|skipped) out --arg s "$status" --arg c "$card" '{outcome:"held", reason:("already " + $s), card:$c}'; exit 0;;
     esac
     printf '%s\t%s\t%s\tin_progress\t%s\t%s\t%s\t%s\n' "$repo" "$pr" "$merged" "$card" "$NOW" "$attempts" "claimed by ${LOG_RUN:-session}" >> "$LEDGER";;
+  open)
+    [ -n "$arg" ] || die "open needs the card id"
+    printf '%s\t%s\t%s\topen\t%s\t%s\t%s\t\n' "$repo" "$pr" "$merged" "$(clean "$arg")" "$NOW" "$attempts" >> "$LEDGER";;
   done)
     [ -n "$arg" ] || die "done needs the card id"
     printf '%s\t%s\t%s\tcarded\t%s\t%s\t%s\t\n' "$repo" "$pr" "$merged" "$(clean "$arg")" "$NOW" "$attempts" >> "$LEDGER";;

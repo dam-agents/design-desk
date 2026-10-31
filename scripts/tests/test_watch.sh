@@ -25,7 +25,7 @@ assert "two changes, the cap" '.changes_due | length == 2' "$out"
 assert "UI PRs only, newest search order" '[.changes_due[].pr] == [11, 14]' "$out"
 assert "first-time kind" '[.changes_due[].kind] | all(. == "first")' "$out"
 assert "UI files listed" '.changes_due[0].ui_files == ["src/agents/list.tsx"]' "$out"
-assert "a title from ids" '.title == "Explain PR #11, #14"' "$out"
+assert "a title from ids" '.title == "Explain #11, #14"' "$out"
 assert "read_set names the watch doc" '.read_set | index("docs/watch.md") != null' "$out"
 assert "config resolved with defaults" '.config.handoff == "desk" and .config.max_changes_per_run == 2' "$out"
 assert "the rest wait" '.logs | map(test("wait for the next run")) | any' "$out"
@@ -51,6 +51,35 @@ for i in 1 2 3; do
 done
 assert "three failures are counted" '.row.attempts == 3 and .row.card == ""' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 14)"
 assert "and the PR is not retried again" '[.changes_due[]?.pr] | index(14) == null' "$(bash "$ROOT/scripts/preflight.sh" watch)"
+
+# Open PRs get a card before they ship; labelled issues become requests.
+cat > "$STUB_DIR/open.json" <<'JSON'
+{"incomplete_results":false,"items":[{"number":21,"title":"New schedule picker","html_url":"https://github.com/acme/widgets/pull/21","user":{"login":"erin"},"pull_request":{"merged_at":null}}]}
+JSON
+cat > "$STUB_DIR/issues.json" <<'JSON'
+{"incomplete_results":false,"items":[{"number":30,"title":"Redesign the empty Home","html_url":"https://github.com/acme/widgets/issues/30","user":{"login":"frank"}}]}
+JSON
+printf 'src/schedules/picker.tsx
+' > "$STUB_DIR/files-21.txt"
+printf -- '- repos: acme/widgets
+- watch_since: 2026-10-01T00:00:00Z
+- max_changes_per_run: 5
+' > "$WORK_DIR/CONFIG.md"
+out5="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "the open PR is due as open" '[.changes_due[] | select(.pr == 21) | .state] == ["open"]' "$out5"
+assert "the labelled issue is due" '[.issues_due[].issue] == [30]' "$out5"
+assert "issues bring the requests doc" '.read_set | index("docs/requests.md") != null' "$out5"
+bash "$ROOT/scripts/ledger.sh" open acme/widgets 21 C-7 >/dev/null
+printf '{"incomplete_results":false,"items":[]}' > "$STUB_DIR/open.json"
+jq '.items += [{"number":21,"title":"New schedule picker","html_url":"https://github.com/acme/widgets/pull/21","user":{"login":"erin"},"pull_request":{"merged_at":"2026-10-25T10:00:00Z"}}]' "$STUB_DIR/search.json" > "$STUB_DIR/s2" && mv "$STUB_DIR/s2" "$STUB_DIR/search.json"
+out6="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "once merged, the open card is due again" '[.changes_due[] | select(.pr == 21) | .kind] == ["merged"]' "$out6"
+printf -- '- repos: acme/widgets
+- watch_since: 2026-10-01T00:00:00Z
+- issue_label: none
+- watch_open_prs: disabled
+' > "$WORK_DIR/CONFIG.md"
+assert "issue_label none and watch_open_prs disabled turn both off" '(.issues_due | length) == 0 and ([.changes_due[]? | select(.state == "open")] | length) == 0' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 
 # A failed listing is never an answer.
 out4="$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" watch)"

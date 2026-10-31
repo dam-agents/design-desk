@@ -21,7 +21,7 @@ cmd="${1:-}"; wl="${2:-}"
 mode="$(jq -r .mode "$wl")"
 
 case "$mode" in
-  watch) ARRAYS='["changes_due"]'; SECTION='Watch run'; VERB='Explain'; NOUN='PR';;
+  watch) ARRAYS='["changes_due","issues_due"]'; SECTION='Watch run'; VERB='Explain'; NOUN='PR';;
   inbox) ARRAYS='["requests_due","variants_due","prototypes_due","handoffs_due","catalog_due"]'; SECTION='Inbox run'; VERB='Work'; NOUN='Desk item';;
   *) echo '{"outcome":"error","error":"this mode does not fan out"}'; exit 1;;
 esac
@@ -34,7 +34,7 @@ if [ "$cmd" = plan ]; then
     arr="$(jq -r .array <<<"$e")"; id="$(jq -r .item.id <<<"$e")"
     safe="$(printf '%s' "$id" | tr -c 'A-Za-z0-9-' '-' | sed 's/-\{2,\}/-/g; s/-$//' | cut -c1-48)"
     unit="$TMP/design-desk-worklist-$mode-unit-$safe-$(date -u +%Y%m%dT%H%M%SZ)-$$.json"
-    if [ "$mode" = watch ]; then label="$(jq -r '"#\(.item.pr)"' <<<"$e")"; else label="$id"; fi
+    if [ "$mode" = watch ]; then label="$(jq -r '"#\(.item.pr // .item.issue)"' <<<"$e")"; else label="$id"; fi
     ( umask 077
       jq --arg a "$arr" --argjson item "$(jq -c .item <<<"$e")" --arg by "${LOG_RUN:-session}" --arg title "$VERB $NOUN $label" --argjson arrays "$ARRAYS" '
         . as $w | reduce ($arrays[]) as $k ($w; .[$k] = [])
@@ -56,7 +56,7 @@ if [ "$cmd" = rest ]; then
   ( umask 077; jq --argjson ids "$ids" --argjson arrays "$ARRAYS" '
       reduce ($arrays[]) as $k (.; .[$k] = [ (.[$k] // [])[] | select(.id as $i | $ids | index($i) | not) ])' "$wl" > "$out" )
   if [ "$mode" = watch ]; then
-    title="$(jq -r '.changes_due[] | "#\(.pr)"' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Explain PR $title"
+    title="$(jq -r '(.changes_due + (.issues_due // []))[] | "#\(.pr // .issue)"' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Explain $title"
   else
     title="$(jq -r '[.requests_due, .variants_due, .prototypes_due, .handoffs_due, .catalog_due, .questions_due, .teardowns_due] | map(. // []) | add | .[].id' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Work Desk items ${title:-(quick ones)}"
   fi

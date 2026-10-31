@@ -81,6 +81,22 @@ A `questions_due` item points at a thread on a card. Read the card and the whole
 4. A question you cannot answer from sources says so and names who can (the PR author, the
    profile's `contacts`).
 
+## The next call
+
+The team meets regularly; the Desk keeps the list of what to show at the next call.
+
+- People add any card with **Add to the next call** (members) and a note; the agent adds its
+  proposals, research verdicts that need a decision, prototypes ready for testing, and
+  handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`).
+- **The brief** (`agenda_due`): for every card added by a person, write `brief` on the card —
+  three to six lines: what is on the table, what changed since it was last seen, and the
+  decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
+- The **Next call** tab lists the agenda with the briefs; **Present** shows one item at a
+  time, full screen, with its variant, sheet or screens; comments go in the card's threads.
+- After the call the lead presses **Mark the call held**: every item becomes `presented`
+  with the date. Decisions taken in the call go into the cards' threads (a person writes them,
+  or you write what they told you in chat, attributed).
+
 ## Writing on the Desk
 
 - Everything on the Desk is for people who do not read code: the product's own words, no

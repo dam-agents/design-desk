@@ -28,7 +28,20 @@ exactly what the prototype changed, and what it could not change.
      changes (`git grep` the old strings under the profile's `tests` paths).
    - **Open questions** — anything the Desk did not settle.
 3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset}`.
-4. Deliver per `handoff`:
+4. Deliver by the request's type:
+   - `feature` (flow 1) — with `issue_writeback: enabled`, one comment on the origin issue:
+     the chosen design in a sentence, the screens (upload them to the comment as images, or
+     link the Desk), the states and copy table, the open questions, the Desk link, and the
+     marker `<!-- design-desk card=C-<n> -->`; a later revision edits that comment. A
+     developer builds from it. Set `spec.issue_url` to the comment's URL.
+   - `adjustment` and `bug` (flows 2 and 3) — to the coding agent, per `implementer`:
+     `pr-comment` — one comment on the pull request (or, for a bug, on a new issue) with the
+     spec, the patch, and `implementer_mention` as its first line when set (for example a
+     coding agent's handle), so the agent that watches it implements the change into the
+     product; `issue` — a new issue with the spec, the patch attached, and the profile's
+     `handoff.labels`, for a coding agent that takes labelled issues. The marker rule above
+     holds for both. The coding agent's own pull request is then reviewed like any other.
+   - `idea` and `proposal` — per `handoff`:
    - `desk` — nothing more; the spec is on the card.
    - `issue` — `gh issue create -R <repo> --title "<card title>" --body-file spec.md` with the
      profile's `handoff.labels`; one issue per card: before creating, look for an open issue

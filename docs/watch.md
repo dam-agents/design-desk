@@ -1,7 +1,10 @@
 # Watch run — one merged change, one Desk card
 
-A watch worklist's `changes_due` lists pull requests merged since `watch_since` that touch
-the product's UI files and have no card yet. Each becomes one card a designer can read in two
+A watch worklist's `changes_due` lists pull requests that touch the product's UI files and have
+no card yet: merged since `watch_since`, and, with `watch_open_prs: enabled`, open ones —
+so a designer sees a developer's new UI while it can still change. An entry's `state` is
+`open` or `merged`; `kind: merged` is an open PR's card that has now shipped.
+`issues_due` (labelled issues) is [requests.md](requests.md) → Issues. Each becomes one card a designer can read in two
 minutes and understand without opening the code. Work them one by one; with several, the
 run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out).
 
@@ -56,11 +59,19 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    (prints the asset id); write the card JSON to a file and `design desk upsert <file>` with
    `kind: change`, the fields above and `screens: [{asset, caption}]`. The store finds an
    existing card of the same PR and updates it, so a retry never makes a second card.
-9. **Record.** `bash "$HOME/scripts/ledger.sh" done <repo> <pr> <card id>`.
+9. **Record.** An open PR: `bash "$HOME/scripts/ledger.sh" open <repo> <pr> <card id>` (it is
+   due again when it merges: then update the same card — the store finds it by the PR — say
+   it shipped, and `ledger.sh done`). A merged PR: `ledger.sh done <repo> <pr> <card id>`.
 10. **Catalog.** Every element card whose `source.file` the change touched: set
     `status: stale` and `design desk enqueue catalog C-<n>` ([catalog.md](catalog.md)).
     Put the touched elements' ids in the change card's `elements`.
-11. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
+11. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —
+    not a fix, not a tweak — and fewer than `max_proposals_per_week` proposals were made in
+    the last seven days, file a request of type `proposal` from the card (`request.from`),
+    research it from what you just read, and enqueue `explore`: the inbox run makes two or
+    three design proposals the team can pick from, adjust and comment on. Put it on the next
+    call (`design desk agenda C-<n> --note "Design Desk proposes"`).
+12. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title and the Desk link (`shareUrl` of `desk_artifact`), never card text
     beyond the title. Send, then log `logev info notified …`.
 

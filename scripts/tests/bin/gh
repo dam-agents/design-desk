@@ -4,7 +4,12 @@ printf '%s\n' "$*" >> "$STUB_DIR/gh.calls"
 [ "${STUB_GH_FAIL:-0}" = 1 ] && { echo "stub: network down" >&2; exit 1; }
 args="$*"
 case "$args" in
-  *search/issues*) cat "$STUB_DIR/search.json";;
+  *search/issues*)
+    case "$args" in
+      *"is:issue"*) cat "$STUB_DIR/issues.json" 2>/dev/null || echo '{"incomplete_results":false,"items":[]}';;
+      *"is:open"*) cat "$STUB_DIR/open.json" 2>/dev/null || echo '{"incomplete_results":false,"items":[]}';;
+      *) cat "$STUB_DIR/search.json";;
+    esac;;
   *"api user"*) echo '{"login":"design-bot"}' | { if [[ "$args" == *"--jq"* ]]; then echo design-bot; else cat; fi; };;
   *pulls/*/files*)
     n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+)/files.*#\1#')"

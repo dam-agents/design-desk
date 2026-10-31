@@ -146,15 +146,20 @@ Read `CLAUDE.md` → **Runtime configuration** first. If Step 2a restored a `CON
 3. **Live prototypes** — "Should I build live prototypes on Environments?" Yes →
    `max_prototypes` (default 2), `prototype_requesters` (default `designer, lead`). No →
    `max_prototypes: 0`.
-4. **Handoff** (`handoff`) — "When a design is approved, should the spec stay on the Desk,
+4. **Issues and the coding agent** — "Which label marks an issue that needs design work?"
+   (`issue_label`, default `design`; `none` turns it off.) "When a designer adjusts a
+   developer's UI or fixes a UI bug, how does the coding agent get it — a comment on the pull
+   request, or a new issue? Does it answer to a handle?" (`implementer`, `implementer_mention`.)
+   Both post on the product repository as the agent's account; say so.
+5. **Handoff** (`handoff`) — "When a design is approved, should the spec stay on the Desk,
    or should I also file a GitHub issue, or open a draft pull request?" Default `desk`.
    `issue` and `draft-pr` post on the product repository as the agent's account; say so.
    `draft-pr` also needs `prototype_remote` = that repository.
-5. **Announcements** (`notify`) — only when a Slack channel is bound: "Should I announce
+6. **Announcements** (`notify`) — only when a Slack channel is bound: "Should I announce
    new cards and request steps in the channel?" Default `disabled`.
-6. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
+7. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
    Desk store, its threads and votes cannot be rebuilt from anywhere else; recommend yes.
-7. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
+8. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
 
 Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboarding.sh"
 --config` and apply what it reports:
@@ -176,6 +181,13 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 - desk_ping: enabled
 - desk_artifact:
 - bug_reports: enabled
+- watch_open_prs: enabled
+- issue_label: design
+- proposals: enabled
+- max_proposals_per_week: 3
+- implementer: pr-comment
+- implementer_mention:
+- issue_writeback: enabled
 - notify: disabled
 - run_model: default
 - dispatch: enabled

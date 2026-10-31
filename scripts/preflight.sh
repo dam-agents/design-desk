@@ -62,7 +62,10 @@ config_json() {
     --arg default_style "$(cfg default_style)" --arg prototype_requesters "$(cfg prototype_requesters)" \
     --arg max_prototypes "$(cfg max_prototypes)" --arg prototype_expiry_days "$(cfg prototype_expiry_days)" \
     --arg prototype_remote "$(cfg prototype_remote)" --arg handoff "$(cfg handoff)" \
-    --arg desk_ping "$(cfg desk_ping)" --arg bug_reports "$(cfg bug_reports)" --arg notify "$(cfg notify)" --arg run_model "$(cfg run_model)" \
+    --arg desk_ping "$(cfg desk_ping)" --arg bug_reports "$(cfg bug_reports)" \
+    --arg watch_open_prs "$(cfg watch_open_prs)" --arg issue_label "$(cfg issue_label)" --arg proposals "$(cfg proposals)" \
+    --arg max_proposals_per_week "$(cfg max_proposals_per_week)" --arg implementer "$(cfg implementer)" \
+    --arg implementer_mention "$(cfg implementer_mention)" --arg issue_writeback "$(cfg issue_writeback)" --arg notify "$(cfg notify)" --arg run_model "$(cfg run_model)" \
     --arg dispatch "$(cfg dispatch)" --arg work_repo "${GITHUB_REPO_WORK:-$(cfg work_repo)}" \
     --arg audit_report "$(cfg audit_report)" --arg log_level "$(cfg log_level)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
@@ -79,6 +82,13 @@ config_json() {
       handoff: ($handoff | if . == "" then "desk" else . end),
       desk_ping: ($desk_ping | if . == "" then "enabled" else . end),
       bug_reports: ($bug_reports | if . == "" then "enabled" else . end),
+      watch_open_prs: ($watch_open_prs | if . == "" then "enabled" else . end),
+      issue_label: ($issue_label | if . == "" then "design" else . end),
+      proposals: ($proposals | if . == "" then "enabled" else . end),
+      max_proposals_per_week: ($max_proposals_per_week | tonumber? // 3),
+      implementer: ($implementer | if . == "" then "pr-comment" else . end),
+      implementer_mention: $implementer_mention,
+      issue_writeback: ($issue_writeback | if . == "" then "enabled" else . end),
       notify: ($notify | if . == "" then "disabled" else . end),
       run_model: ($run_model | if . == "" then "default" else . end),
       dispatch: ($dispatch | if . == "" then "enabled" else . end),
@@ -155,47 +165,62 @@ watch_mode() {
   [ -n "$SINCE" ] || fail_out "watch_since is not set in work/CONFIG.md — onboarding writes it; without it every merged PR in history would be due"
   since_day="${SINCE%%T*}"
   ensure_ledger
-  local DUE; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"
-  local ndue=0 deferred=0 skipped=0 seen=0 lookups=0
+  local DUE ISSUES; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"; ISSUES="$(mktemp "${TMPDIR:-/tmp}/design-desk-issues.XXXXXX")"
+  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0
   # One files call per new candidate; a backlog is spread over passes so a pass stays
   # well inside the Precheck's budget (about 2 s a call through the gateway).
   local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
   local stale_s=$((3 * 3600))
-  for repo in $(printf '%s' "$REPOS" | tr ',' ' '); do
-    local slug; slug="$(repo_slug "$repo")"
-    local hostargs=(); case "$repo" in */*/*) hostargs=(--hostname "${repo%%/*}");; esac
-    # One batched call: every PR merged since the watermark day (search caps at 100
-    # per page; the cap below keeps a backlog spread over runs).
-    # Pages of 100, oldest-updated last; up to 5 pages (500 PRs) a pass, so a backlog
-    # after an outage is read whole instead of silently cut at the first page.
-    items='{"items":[]}'
-    local page=1 got
+  local OPEN_PRS LABEL; OPEN_PRS="$(jq -r '.watch_open_prs' <<<"$CONF")"; LABEL="$(jq -r '.issue_label' <<<"$CONF")"
+  # search <repo> <query> → every item, in pages of 100, up to 5 pages (500) a pass.
+  search() {
+    local q="$2" out='{"items":[]}' page=1 got
     while [ "$page" -le 5 ]; do
-      got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="repo:$slug is:pr is:merged merged:>=$since_day" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" \
-        || fail_out "could not list merged pull requests of $repo (gh api search/issues failed) — is the GitHub connection granted?"
-      jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || fail_out "the search for $repo answered without an item list"
-      [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$repo: the search reported incomplete results — the rest come next run"
-      items="$(jq -c --argjson more "$(jq -c .items <<<"$got")" '.items += $more' <<<"$items")"
+      # Runs in a command substitution: a failure returns, and the caller fails the pass.
+      got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="$q" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" || return 1
+      jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || return 1
+      [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$1: the search reported incomplete results — the rest come next run"
+      out="$(jq -c --argjson more "$(jq -c .items <<<"$got")" '.items += $more' <<<"$out")"
       [ "$(jq '.items | length' <<<"$got")" -eq 100 ] || break
       page=$((page + 1))
     done
-    [ "$page" -gt 5 ] && log "$repo: more than 500 merged PRs since $since_day — the oldest wait for later passes"
+    [ "$page" -gt 5 ] && log "$1: more than 500 results for \"$q\" — the oldest wait for later passes"
+    printf '%s' "$out"
+  }
+  # The ledger's last row for (repo, number) decides: kind of work, or a reason to skip.
+  decide() {  # <repo> <number> <state: merged|open|issue> → prints kind or nothing
+    local row status updated attempts
+    row="$(awk -F'\t' -v r="$1" -v p="$2" 'NR>1 && $1==r && $2==p' "$LEDGER" | tail -1)"
+    status="$(cut -f4 <<<"$row")"; updated="$(cut -f6 <<<"$row")"; attempts="$(cut -f7 <<<"$row")"
+    case "$status" in
+      carded|skipped|dispatched) return 0;;
+      open) [ "$3" = merged ] && echo merged; return 0;;   # carded while open; now it shipped
+      due|in_progress)
+        [ $((NOW_EPOCH - $(iso2epoch "$updated"))) -ge "$stale_s" ] || { log "$1#$2: $status since $updated — left to its session"; return 0; }
+        echo takeover;;
+      failed) [ "${attempts:-0}" -lt 3 ] || { log "$1#$2: failed ${attempts} times — left for the audit"; return 0; }; echo retry;;
+      "") echo first;;
+    esac
+  }
+  for repo in $(printf '%s' "$REPOS" | tr ',' ' '); do
+    local slug; slug="$(repo_slug "$repo")"
+    local hostargs=(); case "$repo" in */*/*) hostargs=(--hostname "${repo%%/*}");; esac
+    local items more found
+    found="$(search "$repo" "repo:$slug is:pr is:merged merged:>=$since_day")" \
+      || fail_out "could not list merged pull requests of $repo (gh api search/issues failed) — is the GitHub connection granted?"
+    items="$(jq -c '.items |= map(. + {state: "merged"})' <<<"$found")"
+    # Open pull requests too: a developer's UI is seen, and adjusted, before it ships.
+    if [ "$OPEN_PRS" = enabled ]; then
+      more="$(search "$repo" "repo:$slug is:pr is:open created:>=$since_day")" || fail_out "could not list open pull requests of $repo"
+      items="$(jq -c --argjson more "$(jq -c '.items | map(. + {state: "open"})' <<<"$more")" '.items += $more' <<<"$items")"
+    fi
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
-    while IFS=$'\t' read -r num merged title url author; do
+    while IFS=$'\t' read -r num state merged title url author; do
       [ -n "$num" ] || continue
       seen=$((seen + 1))
-      [ "$(iso2epoch "$merged")" -ge "$(iso2epoch "$SINCE")" ] || continue
-      local row status updated attempts kind=""
-      row="$(awk -F'\t' -v r="$repo" -v p="$num" 'NR>1 && $1==r && $2==p' "$LEDGER" | tail -1)"
-      status="$(cut -f4 <<<"$row")"; updated="$(cut -f6 <<<"$row")"; attempts="$(cut -f7 <<<"$row")"
-      case "$status" in
-        carded|skipped|dispatched) continue;;
-        due|in_progress)
-          [ $((NOW_EPOCH - $(iso2epoch "$updated"))) -ge "$stale_s" ] || { log "$repo#$num: $status since $updated — left to its session"; continue; }
-          kind="takeover";;
-        failed) [ "${attempts:-0}" -lt 3 ] || { log "$repo#$num: failed ${attempts} times — left for the audit"; continue; }; kind="retry";;
-        "") kind="first";;
-      esac
+      [ "$state" = open ] || [ "$(iso2epoch "$merged")" -ge "$(iso2epoch "$SINCE")" ] || continue
+      local kind; kind="$(decide "$repo" "$num" "$state")"
+      [ -n "$kind" ] || continue
       if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
       lookups=$((lookups + 1))
       # Per candidate: its files, to keep only PRs that touch the UI.
@@ -205,28 +230,43 @@ watch_mode() {
       ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
       n=$(printf '%s\n' "$ui" | grep -c . || true)
       if [ "$n" -eq 0 ]; then
-        printf '%s\t%s\t%s\tskipped\t\t%s\t0\tno UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" >> "$LEDGER"
+        [ "$state" = merged ] && printf '%s\t%s\t%s\tskipped\t\t%s\t0\tno UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" >> "$LEDGER"
         skipped=$((skipped + 1)); continue
       fi
-      printf '%s\t%s\t%s\tdue\t\t%s\t%s\t%s UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" "${attempts:-0}" "$n" >> "$LEDGER"
+      printf '%s\t%s\t%s\tdue\t\t%s\t0\t%s, %s UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" "$state" "$n" >> "$LEDGER"
       ndue=$((ndue + 1))
-      jq -cn --arg id "$repo#$num" --arg repo "$repo" --argjson pr "$num" --arg title "$title" --arg url "$url" \
+      jq -cn --arg id "$repo#$num" --arg repo "$repo" --argjson pr "$num" --arg state "$state" --arg title "$title" --arg url "$url" \
         --arg merged "$merged" --arg author "$author" --arg kind "$kind" --argjson n "$n" \
         --argjson files "$(printf '%s\n' "$ui" | head -40 | jq -R . | jq -s '[.[] | select(length>0)]')" \
-        '{id:$id, repo:$repo, pr:$pr, title:$title, url:$url, merged_at:$merged, author:$author, kind:$kind, ui_file_count:$n, ui_files:$files}' >> "$DUE"
-      log "$repo#$num: merged $merged, $n UI files — due ($kind)"
-    done < <(jq -r '.items[] | [.number, (.pull_request.merged_at // ""), (.title | gsub("[\t\n]"; " ")), .html_url, .user.login] | @tsv' <<<"$items")
+        '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, kind:$kind, ui_file_count:$n, ui_files:$files}' >> "$DUE"
+      log "$repo#$num: $state${merged:+ $merged}, $n UI files — due ($kind)"
+    done < <(jq -r '.items[] | [.number, .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n]"; " ")), .html_url, .user.login] | @tsv' <<<"$items")
+    # Issues that ask for design work: a label the team puts on them.
+    if [ "$LABEL" != none ]; then
+      found="$(search "$repo" "repo:$slug is:issue is:open label:\"$LABEL\"")" || fail_out "could not list the issues labelled $LABEL in $repo"
+      while IFS=$'\t' read -r num title url author; do
+        [ -n "$num" ] || continue
+        local kind; kind="$(decide "$repo" "$num" issue)"
+        [ -n "$kind" ] || continue
+        printf '%s\t%s\t\tdue\t\t%s\t0\tissue\n' "$repo" "$num" "$NOW_ISO" >> "$LEDGER"
+        nissues=$((nissues + 1))
+        jq -cn --arg id "$repo#$num" --arg repo "$repo" --argjson n "$num" --arg title "$title" --arg url "$url" --arg author "$author" --arg kind "$kind" \
+          '{id:$id, repo:$repo, issue:$n, title:$title, url:$url, author:$author, kind:$kind}' >> "$ISSUES"
+        log "$repo#$num: issue labelled $LABEL — due ($kind)"
+      done < <(jq -r '.items[] | [.number, (.title | gsub("[\t\n]"; " ")), .html_url, .user.login] | @tsv' <<<"$found")
+    fi
   done
-  [ "$skipped" -gt 0 ] && log "$skipped merged PRs touch no UI file — skipped"
-  [ "$deferred" -gt 0 ] && log "$deferred more merged PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
-  printf '%s changes_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
-  local arr; arr="$(jq -s '.' "$DUE")"; rm -f "$DUE"
-  [ "$ndue" -gt 0 ] || quiet_out
-  logev info preflight "watch: $ndue changes due"
-  jq -n --argjson due "$arr" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    --arg title "$(jq -r '.[].pr | "#\(.)"' <<<"$arr" | title_for Explain "PR")" \
-    '{mode:"watch", nothing_to_do:false, title:$title, read_set:["docs/watch.md", ".agents/skills/explain/SKILL.md"],
-      changes_due:$due, config:$config, logs:$logs}'
+  [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
+  [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
+  printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
+  local arr iss; arr="$(jq -s '.' "$DUE")"; iss="$(jq -s '.' "$ISSUES")"; rm -f "$DUE" "$ISSUES"
+  [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || quiet_out
+  logev info preflight "watch: $ndue changes, $nissues issues due"
+  jq -n --argjson due "$arr" --argjson issues "$iss" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    --arg title "$( { jq -r '.[].pr | "#\(.)"' <<<"$arr"; jq -r '.[].issue | "#\(.)"' <<<"$iss"; } | title_for Explain "")" \
+    '{mode:"watch", nothing_to_do:false, title:($title | sub("Explain  "; "Explain ")),
+      read_set: (["docs/watch.md", ".agents/skills/explain/SKILL.md"] + (if ($issues | length) > 0 then ["docs/requests.md"] else [] end)),
+      changes_due:$due, issues_due:$issues, config:$config, logs:$logs}'
 }
 
 # ============================================================ INBOX MODE ====
@@ -272,6 +312,7 @@ inbox_mode() {
       prototypes_due: pick(["build"]),
       handoffs_due: pick(["handoff"]),
       catalog_due: pick(["catalog"]),
+      agenda_due: pick(["agenda"]),
       teardowns_due: pick(["teardown"]),
       expiring_due: $expiring,
       config:$config, logs:$logs }

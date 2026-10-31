@@ -15,6 +15,9 @@ const USAGE = `usage: design desk <command>
   cards [--kind change|request]            list cards
   card <C-n>                               one card with its threads
   upsert <card.json|->                     create or update a card (agent fields only)
+  request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
+                                           {type, title, problem, goal, from, origin, screens}
+  agenda <C-n> [--note <text>]             put a card on the next call's agenda
   report <bug.json|->                      put a UI bug someone reported on the queue as a request
                                            of type bug: {title, problem, goal, steps, screen,
                                            screens: [{asset, caption}], origin: {channel, chat,
@@ -91,6 +94,12 @@ export async function main(_cmd, argv) {
       let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }
       return out(await call("POST", "/agent/cards", doc));
     }
+    case "request": {
+      if (!pos[0]) fail("usage: design desk request <request.json|->");
+      let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }
+      return out(await call("POST", "/agent/requests", doc));
+    }
+    case "agenda": return out(await call("POST", `/agent/cards/${pos[0]}/agenda`, { note: typeof f.note === "string" ? f.note : "" }));
     case "report": {
       if (!pos[0]) fail("usage: design desk report <bug.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }

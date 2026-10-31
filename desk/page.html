@@ -163,7 +163,7 @@
       noSheet: "The states are being drawn.", sheetHint: "Every tile is the real element from the product's code, given the data of one state.",
       idea: "Design idea", bug: "UI bug", bugs: "Bugs", fSteps: "How to get there (optional)", bugProblem: "What is wrong, and where?", bugGoal: "What should it look like? (optional)",
       reportedVia: "reported by", whatHappens: "What happens", shouldHappen: "What should happen", stepsTitle: "Steps",
-      send: "Send", cancel: "Cancel", markReviewed: "Mark as reviewed", reviewed: "Reviewed", ask: "Ask a question", followUp: "Start a design follow-up",
+      send: "Send", cancel: "Cancel", markReviewed: "Mark as reviewed", reviewed: "Reviewed", ask: "Ask a question", followUp: "Adjust the design",
       openPr: "Open the pull request", merged: "merged", screens: "Screens", details: "Details", conversation: "Questions and comments",
       noCards: "Nothing here yet.", allReviewed: "You have reviewed everything that shipped. ✨", pick: "Pick a card on the left.",
       question: "Question", comment: "Comment", concern: "Concern", reply: "Reply", resolve: "Resolve", resolved: "resolved", answered: "answered",
@@ -657,6 +657,7 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
     const dlg = $("#request-dialog"), f = $("#request-form");
     f.reset();
     setType("idea");
+    $("#type-choice").hidden = Boolean(from);
     f.from.value = from ? from.id : "";
     if (from) { f.title.value = from.title.slice(0, 180); f.screen.value = from.source?.pr ? `#${from.source.pr}` : ""; }
     dlg.showModal();

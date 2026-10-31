@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # proto.sh — the mechanics of a live prototype (docs/prototype.md).
 #
-#   proto.sh worktree C-<n> <repo> [slug]   a worktree of the repo's default branch on the
+#   proto.sh worktree C-<n> <repo> [slug] [--ref <ref>]
+#                                           a worktree of the repo's default branch (or of <ref>,
+#                                           e.g. pull/42/head for an open pull request) on the
 #                                           branch design-desk/c<n>-<slug>; reused when it exists
 #   proto.sh run C-<n> <verb>               the profile's bin/env <verb> (up|update|status|
 #                                           credentials|tunnel|untunnel|down) with the engine variables
@@ -27,14 +29,20 @@ mkdir -p "$STATE"
 
 case "$cmd" in
   worktree)
-    repo="${3:-}"; [ -n "$repo" ] || err "usage: proto.sh worktree C-<n> <repo> [slug]"
+    repo="${3:-}"; [ -n "$repo" ] || err "usage: proto.sh worktree C-<n> <repo> [slug] [--ref <ref>]"
+    ref=""; slugarg="${4:-}"; [ "$slugarg" = "--ref" ] && { ref="${5:-}"; slugarg=""; }; [ "${5:-}" = "--ref" ] && ref="${6:-}"
     if [ -f "$META" ] && [ -d "$(jq -r .worktree "$META")" ]; then cat "$META"; exit 0; fi
     co="$(bash "$SCRIPT_DIR/checkout.sh" "$repo")" || { printf '%s\n' "$co"; exit 1; }
     clone="$(jq -r .dir <<<"$co")"; def="$(jq -r .default_branch <<<"$co")"; base="$(jq -r .head <<<"$co")"
-    slug="$(printf '%s' "${4:-change}" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | sed 's/-\{2,\}/-/g; s/^-//; s/-$//' | cut -c1-32)"
+    slug="$(printf '%s' "${slugarg:-change}" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | sed 's/-\{2,\}/-/g; s/^-//; s/-$//' | cut -c1-32)"
     branch="design-desk/c$n-${slug:-change}"
     wt="$HOME_DIR/checkouts/proto-c$n"
-    git -C "$clone" worktree add -q -B "$branch" "$wt" "origin/$def" 2>/dev/null || err "git worktree add failed for $branch"
+    start="origin/$def"
+    if [ -n "$ref" ]; then
+      git -C "$clone" fetch -q origin "$ref" 2>/dev/null || err "cannot fetch $ref"
+      start="$(git -C "$clone" rev-parse FETCH_HEAD)"; base="$start"
+    fi
+    git -C "$clone" worktree add -q -B "$branch" "$wt" "$start" 2>/dev/null || err "git worktree add failed for $branch"
     prof="$(cd "$HOME_DIR" && node "$HOME_DIR/toolkit/bin/design.mjs" profile "$repo" --clone "$clone" 2>/dev/null | jq -r '.dir // empty')"
     jq -n --arg repo "$repo" --arg wt "$wt" --arg branch "$branch" --arg base "$base" --arg def "$def" --arg clone "$clone" --arg prof "$prof" \
       '{repo:$repo, worktree:$wt, branch:$branch, base:$base, default_branch:$def, clone:$clone, profile_dir:$prof}' > "$META"

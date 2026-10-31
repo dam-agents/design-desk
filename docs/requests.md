@@ -1,10 +1,56 @@
-# Design requests — triage, then variants
+# Design requests — research, triage, variants
 
-A design request is a card a person files on the Desk (**New design request**, or **Start a
-design follow-up** from a change card). It moves through triage, variants and feedback before
-any live prototype ([prototype.md](prototype.md)) and the spec ([handoff.md](handoff.md)).
+A design request is a card in the Desk's queue. It moves through research, triage, variants
+and feedback before any live prototype ([prototype.md](prototype.md)) and the handoff
+([handoff.md](handoff.md)).
 
-## Triage (`requests_due`)
+## The three ways work arrives
+
+| Flow | Starts as | Type | Ends as |
+| --- | --- | --- | --- |
+| 1. Large and new | a GitHub issue with the `issue_label` label (the watch files it, [watch.md](watch.md)) | `feature` | the approved design written back into the issue; a developer builds it |
+| 2. Small, built first | a developer's pull request with a basic UI (a change card, open or merged) → **Adjust the design** | `adjustment` | the adjusted design sent to the coding agent (`implementer`) to build into the product |
+| 3. Reported | a UI bug, or something that looks wrong to someone (Desk or Slack) | `bug` | as flow 2 |
+
+Ideas filed on the Desk (`idea`) and the agent's own proposals for new features
+(`proposal`, [watch.md](watch.md) step 10) end per `handoff`.
+
+## Research (`requests_due`, before triage)
+
+Before anything is designed, know what is already there: whether the request is tracked,
+where the code came from, who owns it, and whether today's behaviour was someone's decision.
+The person deciding sees it on the card, and every later step builds on it.
+
+1. **Issues.** `gh issue list -R <repo> --state all --limit 30 --search "<keywords>"` with the
+   request's words, the UI text and the component names you find; read the relevant ones
+   with their comments. A closed `not planned` issue often carries the reason.
+2. **The code.** The few files that implement the screen (the profile's `screens`, then a
+   search for the UI text).
+3. **History.** Per key file: `git log --follow --date=short --format='%h %ad %an %s' -- <file>`
+   (the clone may be partial: read history through `gh` when it is), map key commits to
+   their pull requests (`gh api repos/<o>/<r>/commits/<sha>/pulls`) and read those: body,
+   decision notes, review comments. That is where the reasons live.
+4. **In flight.** Open pull requests touching the same files or behaviour
+   (`gh pr list -R <repo> --state open --json number,title,author,files`), and closed ones
+   that tried this before.
+5. **Deliberate or accidental.** A PR or review that argues for the behaviour, a test that
+   asserts it, an architecture page that describes it, an issue closed as not planned →
+   deliberate. No discussion anywhere, or a later change that broke an earlier intent →
+   accidental.
+6. **Record it on the card** with the `explain` skill, in plain words: `research: {verdict,
+   summary, links}`. `verdict`: `clear`, `duplicate`, `deliberate`, `collision` (someone is
+   changing it now) or `unclear`. The summary names the history in one or two lines, what is
+   in flight, and who owns the decision. Keep the full notes as an asset (`--kind report`)
+   and set `research.asset`.
+7. A `deliberate`, `duplicate` or `collision` verdict goes on the next call's agenda with the
+   question it raises (`design desk enqueue`… → [desk.md](desk.md) → The next call), and the
+   triage says what that means for the request.
+
+Variants, the prototype and the spec all take the research into account: they respect a
+deliberate decision unless the team chose to reverse it, avoid a pull request in flight or
+build on it, and link the issues they relate to.
+
+## Triage (`requests_due`, after research)
 
 Triage answers one question before any work: **what of this can be done as a design change?**
 The person deciding should know it before a single variant exists.
@@ -105,6 +151,24 @@ in their thread: `reply` with `chatId` = `origin.chat` and `threadTs` = `origin.
 the verdict in one sentence and what happens next. The same reply when the request is
 handed off or closed. These are replies in the thread the reporter started, never a new
 post; a reply the messenger refuses is logged, and the card is the record.
+
+## Issues (`issues_due`, flow 1)
+
+A watch worklist's `issues_due` lists open issues labelled `issue_label`. Per issue:
+`ledger.sh claim <repo> <number>`, read it with its comments, then file a request of type
+`feature`: write the JSON with the issue's title and problem in plain words and
+`origin: {channel: "github", kind: "issue", repo, number, url}`, and run
+`design desk request <file>`; then `ledger.sh done <repo> <number> <card>`. Its
+research and triage follow in the inbox run. Never comment on the issue at intake; the
+write-back comes with the approved design ([handoff.md](handoff.md)).
+
+## Adjusting a developer's UI (flow 2)
+
+A change card (an open or merged pull request) has **Adjust the design**: it files a request
+of type `adjustment` with `request.from` = the change card. Research reads the pull request
+first. Variants start from the UI the developer built (its screens on the change card are
+the "before"); a live prototype branches from the pull request's head when it is still open
+(`proto.sh worktree C-<n> <repo> --ref pull/<n>/head`), else from the default branch.
 
 ## Chat and Slack
 

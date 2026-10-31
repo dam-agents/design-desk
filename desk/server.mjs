@@ -130,7 +130,10 @@ async function viewerRoute(req, res, url, who) {
     need(b.from ? "follow-up" : "request");
     if (b.from) store.card(String(b.from));
     // Only what a person types: an origin (where the agent answers) is the agent's to set.
-    const { title, problem, goal, screen, steps, type, from } = b;
+    // A person files an idea, a bug, or an adjustment of a change card; features and
+    // proposals are the agent's (from an issue, from a shipped change).
+    const { title, problem, goal, screen, steps, from } = b;
+    const type = from ? "adjustment" : b.type === "bug" ? "bug" : "idea";
     return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from }), s, who));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") { need(String(b.action)); return send(res, 200, withPing(store.act(p[2], actor, String(b.action), b.note), s, who)); }
