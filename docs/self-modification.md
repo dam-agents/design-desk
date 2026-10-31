@@ -161,7 +161,7 @@ harness, an external service — rather than fixing it at its source:
   with a readable worklist at the path it prints when work is due.
 - **A toolkit or skill change is looked at.** Build and screenshot one page in each style the
   change touches (`design build … --style <style>`, `design shot`), open the light and the
-  dark shot, and run `node --test toolkit/tests desk/tests`.
+  dark shot, and run `node --test toolkit/tests/*.test.mjs desk/tests/*.test.mjs`.
 - **A large payload never travels in argv.** `--arg` / `--argjson` carry scalars; a list
   API's body reaches `jq` on stdin, in a file or through `--slurpfile`.
 - **`kit.yaml` carries what a new instance needs.** A change to a required connection, a

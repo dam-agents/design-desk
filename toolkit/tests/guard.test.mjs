@@ -1,4 +1,4 @@
-// node --test toolkit/tests — the design-only guard's verdicts on small diffs.
+// node --test toolkit/tests/*.test.mjs — the design-only guard's verdicts on small diffs.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { compare, classifyPath, judge } from "../lib/guard.mjs";

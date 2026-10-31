@@ -12,6 +12,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Republish the Desk page ([docs/desk.md](docs/desk.md) → **Publishing the page**): its header gains a day / night switch.
 
+## 1.0.1 — 2026-10-31
+
+**Upgrade:**
+Nothing — the test runner and docs are read from the checkout.
+
 ## 1.0.0 — 2026-10-31
 
 **Upgrade:**
