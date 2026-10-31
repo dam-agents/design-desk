@@ -68,7 +68,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    due again when it merges: then update the same card — the store finds it by the PR — say
    it shipped, and `ledger.sh done`). A merged PR: `ledger.sh done <repo> <pr> <card id>`.
    A merged or closed PR with a `pr<n>` screens instance: delete it ([screens.md](screens.md)
-   → Clean up).
+   → Clean up). With the product map, update the screens the change touched
+   ([map.md](map.md) → Keep it current).
 10. **Catalog.** Every element card whose `source.file` the change touched: set
     `status: stale` and `design desk enqueue catalog C-<n>` ([catalog.md](catalog.md)).
     Put the touched elements' ids in the change card's `elements`.

@@ -1,7 +1,7 @@
 // design desk <command> — the agent's side of the Desk. Every write goes through the
 // Desk server (its store has one writer), authenticated by work/desk/.agent-token.
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { WORK, fail } from "../lib/core.mjs";
 
@@ -32,6 +32,17 @@ const USAGE = `usage: design desk <command>
   decision <decision.json|->               record a decision: {concepts, text, why, source: {label,
                                            url, card}, at}
   decisions [--concept <c>] [--q <words>]  earlier decisions, newest first
+  fetch <A-n> <file>                       save an asset (an option's page, a screen) to a file
+  poll-open <C-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
+                                           [{variant, ts}], closes, url, channel}
+  poll-update <C-n> <P-n> [--synced <iso>] [--result <text>]
+                                           mark a poll synced, or close it with its result
+  slack-votes <C-n> <votes.json|->         one option's reactions as they are now: {variant,
+                                           voters: [{email, slack_id, name, vote}]}
+  relay <C-n> <comment.json|->             a reply under an option in Slack, as a comment, once:
+                                           {variant, name, email, text, slack_ts, url}
+  find-poll <ts>                           which card, poll and option a Slack message belongs to
+  find-finding <ref>                       the request an automated test finding was already filed as
   enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
 `;
 
@@ -126,6 +137,18 @@ export async function main(_cmd, argv) {
     case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]) }));
     case "ask": return out(await call("POST", `/agent/cards/${pos[0]}/ask`, { text: readArg(pos[1]), step: typeof f.step === "string" ? f.step : "" }));
     case "decision": return out(await call("POST", "/agent/decisions", JSON.parse(readArg(pos[0]))));
+    case "fetch": {
+      const a = await call("GET", `/agent/assets/${pos[0]}`);
+      if (!pos[1]) fail("usage: design desk fetch <A-n> <file>");
+      writeFileSync(pos[1], Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8"));
+      return out({ saved: pos[1], contentType: a.contentType, name: a.name });
+    }
+    case "poll-open": return out(await call("POST", `/agent/cards/${pos[0]}/polls`, JSON.parse(readArg(pos[1]))));
+    case "poll-update": return out(await call("POST", `/agent/cards/${pos[0]}/polls/${pos[1]}`, { synced: typeof f.synced === "string" ? f.synced : null, result: typeof f.result === "string" ? f.result : null }));
+    case "slack-votes": return out(await call("POST", `/agent/cards/${pos[0]}/slack-votes`, JSON.parse(readArg(pos[1]))));
+    case "relay": return out(await call("POST", `/agent/cards/${pos[0]}/relay`, JSON.parse(readArg(pos[1]))));
+    case "find-poll": return out(await call("GET", `/agent/polls?ts=${encodeURIComponent(pos[0] || "")}`));
+    case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
     default: process.stdout.write(USAGE); process.exit(sub ? 2 : 0);

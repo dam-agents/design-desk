@@ -81,6 +81,9 @@ A `questions_due` item points at a thread on a card. Read the card and the whole
 4. A question you cannot answer from sources says so and names who can (the PR author, the
    profile's `contacts`).
 
+A question that asks to see something ("how does it look when…") is answered with a picture
+of the product in that state: the `show` action ([actions.md](actions.md)).
+
 ## The next call
 
 The team meets regularly; the Desk keeps the list of what to show at the next call.

@@ -2,7 +2,7 @@
 
 The catalog shows the product's real UI elements, each drawn in every state it can be in,
 side by side: an agent row running, asleep, over budget, with a long name… A designer opens
-the **Catalog** tab on the Desk, picks an element, and sees all of it at once.
+**Product → Elements** on the Desk, picks an element, and sees all of it at once.
 
 Every tile is the **real component from the product's code**, rendered with the data of
 one state. Data the component would fetch comes from mocks, so no app, server or account is
@@ -13,7 +13,7 @@ needed, and the tiles change when the code changes.
 A card of kind `element` on the Desk:
 
 - `title` — the element's name in the product's words ("Agent row");
-- `group` — its family on the Catalog tab ("Lists and rows", "Status", "Dialogs");
+- `group` — its family under Product → Elements ("Lists and rows", "Status", "Dialogs");
 - `summary` — one sentence: what it is and where people see it;
 - `source` — `{repo, file, export, commit}`: the component, at the commit drawn;
 - `states` — one entry per tile: `name` and `how` it happens, in plain words;

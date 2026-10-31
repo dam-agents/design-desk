@@ -222,7 +222,7 @@
 (() => {
   "use strict";
   // ---------- words people read ----------
-  const ROLE = { lead: "lead", designer: "designer", pm: "PM", developer: "developer", guest: "viewer" };
+  const ROLE = { lead: "lead", designer: "designer", pm: "PM", developer: "developer", guest: "viewer", slack: "in Slack" };
   const STATUS = { triage: "Checking", variants: "Drawing options", feedback: "Options ready", prototype: "Building prototype", testing: "Live — try it", spec: "Writing the spec", "handed-off": "Sent to developers", declined: "Closed" };
   const FIDELITY = { wireframe: "sketch", mockup: "looks like the product", figma: "from Figma" };
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
@@ -238,6 +238,7 @@
     agenda: "Writing a short brief for the next call.",
     catalog: "Drawing every state of this element.",
     screens: "Checking the screenshots that were added and writing their captions.",
+    slack: "Posting the options to Slack for votes and comments.",
   };
   const HANDOFF_TO = {
     "coding-agent": "the coding agent, which builds it into the product",
@@ -264,7 +265,7 @@
 <ol>
 <li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships. Each one says where else the same thing shows up and what the change touches.</li>
 <li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
-<li><b>Ask anything</b> on any page: why something works the way it does, what can change. The answer appears right below your question.</li>
+<li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <h3>Changing a design</h3>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
@@ -285,7 +286,8 @@
 <p>Your role is shown top right; ${esc(S.me?.contact || "the Desk's owner")} changes it.</p>
 <h3>Also here</h3><ul>
 <li><b>Next call</b> — things to decide at the team's design meeting, each with a short brief.</li>
-<li><b>Catalog</b> — the product's real parts, each shown in every situation it can be in.</li>
+<li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable.</li>
+<li><b>Weekly digest</b> — under New: what changed in the product's UX this week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
 <li><b>Slack</b> — tell Design Desk in the team channel when something looks broken; it puts it here and answers in your thread.</li>
 <li><b>Chat</b> — the Desk's owner can do everything here also by talking to Design Desk in its chat.</li></ul>`;
 
@@ -307,7 +309,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "new", newFilter: "new", reqFilter: "open", cards: [], card: null, variant: null, agenda: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "new", newFilter: "new", reqFilter: "open", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, agenda: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -327,6 +329,7 @@
     const inline = (s) => esc(s)
       .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+      .replace(/!\[([^\]]*)\]\(asset:(A-\d+)\)/g, '<figure class="shot" style="max-width:520px;margin:6px 0" data-zoom="$2"><img alt="$1" data-asset="$2" /><figcaption>$1</figcaption></figure>')
       .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     const out = []; let list = null;
     for (const line of String(src || "").split("\n")) {
@@ -342,7 +345,9 @@
   }
 
   const roleName = (r) => ROLE[r] || r;
-  const who = (by) => by?.agent ? "<b>Design Desk</b>" : `<b>${esc(by?.email && by.email === S.me?.email ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
+  const who = (by) => by?.agent ? "<b>Design Desk</b>"
+    : by?.via === "slack" ? `<b>${esc(by.name || by.email || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
+    : `<b>${esc(by?.email && by.email === S.me?.email ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
   const working = (c) => [...new Set((c.waiting || []).map((w) => w.kind).filter((k) => k !== "question"))];
@@ -376,9 +381,9 @@
 
   // ---------- header and list ----------
   function renderNav() {
-    const unseen = S.cards.filter((c) => c.kind === "change" && !c.acked).length;
+    const unseen = S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && !c.acked).length;
     const asks = S.cards.filter((c) => c.kind === "request" && c.asks && !closed(c)).length;
-    const tabs = [["new", "New", unseen], ["requests", "Requests", asks], ["call", "Next call", S.agenda.length], ["catalog", "Catalog"], ["guide", "How it works"]];
+    const tabs = [["new", "New", unseen], ["requests", "Requests", asks], ["call", "Next call", S.agenda.length], ["product", "Product"], ["guide", "How it works"]];
     $("#nav").innerHTML = tabs.map(([k, label, n]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
   }
 
@@ -390,8 +395,11 @@
   }
 
   function visibleCards() {
-    if (S.tab === "new") return S.cards.filter((c) => c.kind === "change" && (S.newFilter === "all" || !c.acked));
-    if (S.tab === "catalog") return S.cards.filter((c) => c.kind === "element").sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
+    if (S.tab === "new") return S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && (S.newFilter === "all" || !c.acked));
+    if (S.tab === "product" && S.productFilter !== "decisions") {
+      const kind = S.productFilter === "elements" ? "element" : "screen";
+      return S.cards.filter((c) => c.kind === kind).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
+    }
     if (S.tab === "requests") return S.cards.filter((c) => c.kind === "request" && (S.reqFilter === "open" ? !closed(c) : closed(c)));
     return [];
   }
@@ -399,7 +407,11 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function chipsFor(c) {
     const out = [];
-    if (c.kind === "element") {
+    if (c.kind === "digest") out.push(`<span class="chip info">Weekly digest</span>`);
+    else if (c.kind === "screen") {
+      if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
+      if (c.path) out.push(`<span class="chip"><code>${esc(c.path)}</code></span>`);
+    } else if (c.kind === "element") {
       if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
       if (c.status === "stale") out.push(`<span class="chip warn">out of date</span>`);
       else if (c.state_count) out.push(`<span class="chip">${plural(c.state_count, "situation", "situations")}</span>`);
@@ -408,6 +420,7 @@
       if (c.acked) out.push(`<span class="chip ok">✓ Seen</span>`);
       if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
+      if (c.automated) out.push(`<span class="chip info">🧪 From automated tests</span>`);
       if (c.asks && !closed(c)) out.push(`<span class="chip warn">Waiting for your answer</span>`);
       else out.push(`<span class="chip ${c.busy ? "info" : ""}">${c.busy ? "● " : ""}${esc(STATUS[c.status] || c.status)}</span>`);
       if (c.type === "bug") out.push(`<span class="chip bad">🐛 Broken</span>`);
@@ -424,17 +437,37 @@
     if (S.tab === "call") { renderAgendaList(); return; }
     const cards = visibleCards();
     const f = (key, opts) => `<div class="filters">${opts.map(([k, l]) => `<button class="btn small ${S[key] === k ? "on" : ""}" data-filter="${key}:${k}">${esc(l)}</button>`).join("")}</div>`;
-    const filters = S.tab === "new" ? f("newFilter", [["new", "Not seen yet"], ["all", "All changes"]]) : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"]]) : "";
+    const filters = S.tab === "new" ? f("newFilter", [["new", "Not seen yet"], ["all", "All"]]) : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"]])
+      : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"]]) : "";
+    if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(filters); return; }
     const empty = {
       new: S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : "No changes yet. They appear here soon after they ship.",
       requests: S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
-      catalog: "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day.",
+      product: S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
+        : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.",
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     list.innerHTML = filters + cards.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">
       <div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div>
       ${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></button>`).join("");
+  }
+
+  // ---------- decisions ----------
+  function renderDecisionList(filters) {
+    const list = $("#list");
+    const rows = S.decisions.map((d) => `<button class="row" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span>${esc(d.text)}</span></div>
+      <div class="meta"><span class="chip">${esc(day(d.at))}</span>${d.concepts.slice(0, 3).map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></button>`).join("");
+    list.innerHTML = `${filters}<input id="decision-q" placeholder="Search decisions…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery ? "No decision matches." : "No decisions recorded yet. Approved designs, outcomes of the next call and deliberate behaviour Design Desk finds land here."}</div>`}`;
+  }
+  async function loadDecisions() {
+    try { S.decisions = (await api("GET", `/api/decisions?q=${encodeURIComponent(S.decisionQuery)}`)).decisions || []; } catch { S.decisions = []; }
+  }
+  function renderDecision(d) {
+    return `<button class="btn small back" data-back>← Back</button><h2>${esc(d.text)}</h2>
+      <div class="sub"><span>${esc(day(d.at))}</span>${d.concepts.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>
+      ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
+      ${d.source ? `<h3>Where it was decided</h3><p>${srcLink(d.source) || "—"}</p>` : ""}`;
   }
 
   // ---------- the next call ----------
@@ -485,9 +518,21 @@
   const decode = (a) => (a.encoding === "base64" ? new TextDecoder().decode(Uint8Array.from(atob(a.data), (ch) => ch.charCodeAt(0))) : a.data);
 
   // ---------- shared pieces of a page ----------
-  const FROM = { pr: "from the pull request", instance: "from Design Desk's copy of the product", prototype: "from the live prototype", rebuild: "drawn from the code, not a real screen" };
+  const FROM = { pr: "from the pull request", instance: "from Design Desk's copy of the product", prototype: "from the live prototype", rebuild: "drawn from the code, not a real screen", test: "from an automated test" };
   const fromOf = (s) => s.source === "person" ? `added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "";
-  const shots = (list) => (list || []).length ? `<div class="shots">${list.map((s) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${s.caption || fromOf(s) ? `<figcaption>${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`).join("")}</div>` : "";
+  const figure = (s, label) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
+  // Before and after of one screen sit side by side, with the differences drawn on the third.
+  function shots(list) {
+    list = list || [];
+    if (!list.length) return "";
+    const pairs = [...new Set(list.filter((x) => x.stage).map((x) => x.pair))];
+    const rows = pairs.map((pair) => {
+      const of = (stage) => list.find((x) => x.pair === pair && x.stage === stage);
+      return `<h4 style="margin:12px 0 6px">${esc(pair)}</h4><div class="shots">${[["before", "Before"], ["after", "After"], ["diff", "What changed"]].map(([st, l]) => of(st) ? figure(of(st), l) : "").join("")}</div>`;
+    }).join("");
+    const single = list.filter((x) => !x.stage);
+    return rows + (single.length ? `<div class="shots" style="margin-top:${rows ? 12 : 0}px">${single.map((x) => figure(x)).join("")}</div>` : "");
+  }
 
   // The agent's own install of the product: where people try a change and take pictures.
   function renderInstance(c) {
@@ -558,6 +603,48 @@
       ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
       ${renderImpact(c.impact)}
       ${src.url ? `<p class="hint"><a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">See it on GitHub ↗</a></p>` : ""}
+      ${renderThreads(c)}`;
+  }
+
+  // ---------- a screen of the product ----------
+  function renderScreen(c) {
+    const els = (c.elements || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean);
+    const changes = (c.changes || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean);
+    const open = c.instance?.url && c.path ? `${c.instance.url.replace(/\/$/, "")}${c.path}` : null;
+    return `<button class="btn small back" data-back>← Back</button>
+      <h2>${esc(c.title)}</h2>
+      <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}${c.status === "stale" ? `<span class="chip warn">changed since these pictures</span>` : ""}</div>
+      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+      ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
+      <div class="actions">${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}<button class="btn" data-focus-composer>Ask about this screen</button>${agendaButton(c)}</div>
+      <h3>Screens</h3>${shots(c.screens) || `<p class="hint">No pictures yet.</p>`}
+      ${els.length ? `<h3>Parts on this screen</h3><div class="actions">${els.map((e) => `<button class="anchor" data-card="${esc(e.id)}">${esc(e.title)}</button>`).join("")}</div>` : ""}
+      <h3>Why it is like this</h3><div id="timeline" class="section"><p class="hint">Loading the decisions and changes…</p></div>
+      ${sections(c)}${renderImpact(c.impact)}
+      ${renderThreads(c)}`;
+  }
+  // Decisions about the screen's concepts and the changes that shaped it, newest first.
+  async function loadTimeline(c) {
+    const box = $("#timeline");
+    if (!box) return;
+    const seen = new Map();
+    for (const concept of c.concepts || []) {
+      try { for (const d of (await api("GET", `/api/decisions?concept=${encodeURIComponent(concept)}`)).decisions || []) seen.set(d.id, d); } catch {}
+    }
+    const items = [
+      ...[...seen.values()].map((d) => ({ at: d.at, html: `<b>Decided:</b> ${esc(d.text)}${d.why ? ` <span class="hint" style="display:inline">— ${esc(d.why)}</span>` : ""}${srcLink(d.source)}` })),
+      ...(c.changes || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((x) => ({ at: x.source?.merged_at || x.created, html: `<b>Changed:</b> <button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>` })),
+    ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    box.innerHTML = items.length ? `<ul>${items.map((x) => `<li><span class="hint" style="display:inline">${esc(day(x.at))}</span> ${x.html}</li>`).join("")}</ul>` : `<p class="hint">No recorded decisions or changes yet.</p>`;
+  }
+
+  function renderDigest(c) {
+    const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
+    return `<button class="btn small back" data-back>← Back</button>
+      <h2>${esc(c.title)}</h2><div class="sub"><span class="chip info">Weekly digest</span>${c.period ? `<span>${esc(c.period)}</span>` : ""}</div>
+      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+      <div class="actions"><button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""}>${seen ? "✓ Seen" : "Got it"}</button>${agendaButton(c)}</div>
+      ${shots(c.screens)}${sections(c)}
       ${renderThreads(c)}`;
   }
 
@@ -678,9 +765,21 @@
         ${can("vote") ? `<button class="btn small ${mine === "prefer" ? "on" : ""}" data-vote="prefer">👍 I like this one</button><button class="btn small ${mine === "concern" ? "on" : ""}" data-vote="concern">⚠ I have a concern</button>` : ""}
         <button class="btn small" data-act="workspace">Open in the design workspace</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
+        ${S.me?.slack && can("share") && !(c.polls || []).some((x) => x.state === "open") && !working(c).includes("slack") ? `<button class="btn small" data-act="slack-share">Share in Slack</button>` : ""}
         ${tallyFor(c, v.id)}
       </div>
+      ${renderPolls(c)}
       <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`;
+  }
+
+  // Votes in Slack: open until their date, then the result.
+  function renderPolls(c) {
+    const polls = c.polls || [];
+    if (!polls.length) return "";
+    const slackVotes = Object.values(c.votes || {}).reduce((n, box) => n + Object.values(box).filter((x) => x.via === "slack").length, 0);
+    return polls.slice(-2).map((p) => p.state === "open"
+      ? `<p class="hint">💬 Voting in Slack until ${esc(when(p.closes))}${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack so far` : ""}. Reactions and replies there come to this page.${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
+      : `<p class="hint">💬 Slack vote closed ${esc(day(p.closed))}${p.result ? `: ${esc(p.result)}` : ""}${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`).join("");
   }
 
   function renderPrototype(c) {
@@ -700,7 +799,7 @@
     const origin = c.origin?.channel === "github" && c.origin.url ? `<a href="${safeUrl(c.origin.url)}" target="_blank" rel="noopener noreferrer">${esc(c.origin.kind === "pr" ? "From a developer's change" : "From a GitHub issue")} ↗</a>` : "";
     return `<button class="btn small back" data-back>← Back</button>
       <h2>${esc(c.title)}</h2>
-      <div class="sub">${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.reporter ? `<span>reported by <b>${esc(c.origin.reporter)}</b></span>` : `<span>by ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span>${origin}</div>
+      <div class="sub">${c.origin?.automated ? `<span class="chip info">🧪 From automated tests</span>` : ""}${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.automated ? `<span>found by <b>${esc(c.origin.tool || "an automated test")}</b>${c.origin.check ? ` · ${esc(c.origin.check)} check` : ""}${c.origin.severity ? ` · ${esc(c.origin.severity)} severity` : ""}${c.origin.build ? ` · ${esc(c.origin.build)}` : ""}</span>` : c.origin?.reporter ? `<span>reported by <b>${esc(c.origin.reporter)}</b></span>` : `<span>by ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span>${origin}</div>
       ${renderSteps(c)}
       ${renderStatus(c)}
       <div class="section">${r.type === "bug" ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.goal ? `${r.type === "bug" ? "<h4>What should happen</h4>" : ""}${md(r.goal)}` : ""}${r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
@@ -898,15 +997,21 @@
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || S.tab === "call");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
     if (S.tab === "call" && !S.card) { renderAgendaDetail(); return; }
+    if (S.tab === "product" && S.productFilter === "decisions") {
+      d.innerHTML = S.decision ? renderDecision(S.decision) : `<div class="empty">Every decision the team made about the product, with where it was made. Pick one, or search.</div>`;
+      $("#main").classList.toggle("has-detail", Boolean(S.decision));
+      return;
+    }
     if (!S.card) {
       const n = visibleCards().length;
       d.innerHTML = n ? `<div class="empty">Pick something on the left.</div>` : `<div class="empty">${S.cards.length ? "" : "The Desk is empty for now. "}<a href="#" data-tab="guide">How Design Desk works</a></div>`;
       return;
     }
     const keep = $("#composer-text")?.value || "";
-    d.innerHTML = S.card.kind === "change" ? renderChange(S.card) : S.card.kind === "element" ? renderElement(S.card) : renderRequest(S.card);
+    d.innerHTML = { change: renderChange, element: renderElement, screen: renderScreen, digest: renderDigest }[S.card.kind]?.(S.card) ?? renderRequest(S.card);
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
+    if (S.card.kind === "screen") loadTimeline(S.card);
   }
 
   // ---------- loading ----------
@@ -968,6 +1073,13 @@
       const r = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. You can reopen it later.", ok: "Close it" });
       if (!r) return;
     }
+    if (name === "slack-share") {
+      const at = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(15, 0, 0, 0); return d.toISOString(); };
+      const r = await ask({ title: "Share in Slack", body: "Design Desk posts these options to the team's Slack channel, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.",
+        ok: "Post to Slack", choices: [{ id: String(at(1)), name: "Close tomorrow at 15:00" }, { id: String(at(3)), name: "Close in 3 days" }, { id: String(at(7)), name: "Close in a week" }], pick: String(at(3)), note: "What should people look at? (optional)" });
+      if (!r) return;
+      note = JSON.stringify({ closes: r.choice, note: r.note });
+    }
     if (name === "figma-export") {
       const v = (c.variants || []).find((x) => x.id === S.variant);
       const r = await ask({ title: "Send to Figma", body: `Design Desk puts **${v?.name || "this option"}** into Figma as editable layers and links it here.`, ok: "Send" });
@@ -1012,9 +1124,10 @@
     if (!el) return;
     const ds = el.dataset;
     if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1"); return; }
-    if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; renderList(); renderDetail(); return; }
+    if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
+    if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
     if (ds.card) { await openCard(ds.card); return; }
-    if ("back" in ds) { S.card = null; renderList(); renderDetail(); return; }
+    if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }
     if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
     if (ds.present !== undefined) { await present(Number(ds.present)); return; }
     if ("exitPresent" in ds) { $("#present")?.remove(); return; }
@@ -1063,6 +1176,14 @@
       return;
     }
   }));
+
+  let searchTimer = null;
+  document.addEventListener("input", (e) => {
+    if (e.target.id !== "decision-q") return;
+    S.decisionQuery = e.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => { await loadDecisions(); const pos = e.target.selectionStart; renderList(); const q = $("#decision-q"); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 300);
+  });
 
   document.addEventListener("change", (e) => {
     if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsVariant(S.card)?.version || 1) ? null : n; renderWorkspace(); }

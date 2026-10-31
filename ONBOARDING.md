@@ -158,8 +158,11 @@ Read `CLAUDE.md` → **Runtime configuration** first. If Step 2a restored a `CON
    or should I also file a GitHub issue, or open a draft pull request?" Default `desk`.
    `issue` and `draft-pr` post on the product repository as the agent's account; say so.
    `draft-pr` also needs `prototype_remote` = that repository.
-6. **Announcements** (`notify`) — only when a Slack channel is bound: "Should I announce
-   new cards and request steps in the channel?" Default `disabled`.
+6. **Slack** — only when a Slack channel is bound: "Should I announce new cards and request
+   steps in the channel?" (`notify`, default `disabled`) and "Should designers be able to
+   share design options there for votes and comments?" (`slack_polls`, default `disabled`;
+   `slack_poll_channel` when the agent is bound to more than one channel). And "Should the
+   weekly UX digest also go to the channel?" (`digest: slack`; default `desk`, only on the Desk).
 7. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
    Desk store, its threads and votes cannot be rebuilt from anywhere else; recommend yes.
 8. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
@@ -206,6 +209,9 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 - figma_file:
 - screens: disabled
 - max_screen_prs: 2
+- slack_polls: disabled
+- slack_poll_channel:
+- digest: desk
 
 ## Desk people
 
@@ -245,7 +251,7 @@ install each skill it names from its `source` through the platform's skill insta
 it is installed already (`design skill <action> --repo <repo>` says which are missing), and
 tell the operator which actions they now do. For a profile with
 `catalog.elements`, build the catalog now ([docs/catalog.md](docs/catalog.md) → Keeping it
-current, "Build the catalog"), so the Catalog tab is not empty on the team's first visit.
+current, "Build the catalog"), so Product → Elements is not empty on the team's first visit.
 
 **5b — schedules.** **Kit path: the platform already created these** from `kit.yaml`;
 reconcile. Start from `mcp__platform-outbound__list_schedules` and compare **full names**.
@@ -295,6 +301,17 @@ Never use an in-process cron.
 > "$HOME/scripts/monitor.sh" ack <ids>` only after the send, never repair or re-run
 > anything in response, and back up work/ with `bash "$HOME/scripts/work-backup.sh"
 > persist` when GITHUB_REPO_WORK or work_repo is set.
+
+**`design-desk-digest-weekly`** — cron `0 8 * * 4`, `sessionMode: fresh`, precheck
+`bash "$HOME/scripts/precheck.sh" digest`, sessionTitle `Write the weekly digest`. Task:
+
+> Weekly digest. The precheck already ran the pre-flight and found a week to report: read
+> the worklist JSON at the path its output names, and never run preflight.sh again this
+> run. If the prompt carries no worklist path, run `bash "$HOME/scripts/preflight.sh"
+> digest` yourself. Then follow CLAUDE.md → "Digest run": read docs/digest.md, write the
+> week's digest card with the themes in people's feedback, post it to Slack when digest is
+> slack, and back up work/ with `bash "$HOME/scripts/work-backup.sh" persist` when
+> GITHUB_REPO_WORK or work_repo is set.
 
 **`design-desk-audit-weekly`** — cron `0 7 * * 5`, `sessionMode: fresh`, no precheck,
 sessionTitle `Audit design-desk`. Task:

@@ -276,6 +276,8 @@ while IFS= read -r f; do
   dir="$(dirname "$f")"
   while IFS= read -r l; do
     case "$l" in http://*|https://*|mailto:*|\#*) continue ;; esac
+    # any other scheme (asset:, platform:) names no file
+    case "$l" in [a-zA-Z]*:*) continue ;; esac
     # placeholder link targets in examples are not real paths
     case "$l" in "<"*|*"…"*|*'$'*|*"{"*|*" "*) continue ;; esac
     target="${l%%#*}"; [ -n "$target" ] || continue

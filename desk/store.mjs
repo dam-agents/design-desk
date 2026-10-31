@@ -28,7 +28,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "queue": case "screens": return member;
-    case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": return shaper;
+    case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
@@ -39,10 +39,10 @@ export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "t
 export const CHANGE_STATES = ["new", "archived"];
 // A catalog element: one real UI part drawn in every state it can be in.
 export const ELEMENT_STATES = ["current", "stale", "building"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma", "screens"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma", "screens", "slack"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
-const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild"];
+const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
 // Thread kinds: people ask, comment, raise a concern or note a change to one element;
 // the agent asks (`asks`) when a step cannot go on without a person's answer.
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks"];
@@ -80,7 +80,7 @@ function clean(s, max, name) {
 const optText = (s, max, name) => (s === undefined || s === null || s === "" ? "" : clean(s, max, name));
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
 }
 
 export class Store {
@@ -159,6 +159,8 @@ export class Store {
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
+        automated: Boolean(c.origin?.automated),
+        path: c.path || null, period: c.period || null,
       }));
   }
 
@@ -302,8 +304,10 @@ export class Store {
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
     if (closed && action !== "reopen") throw bad("This request is closed. Press Reopen first.");
-    const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma" };
+    const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
+    if (action === "slack-share" && !(c.variants || []).length) throw bad("There are no design options to share yet.");
+    if (action === "slack-share" && (c.polls || []).some((x) => x.state === "open")) throw bad("These options are already being voted on in Slack.");
     if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");
     if (action === "reopen") {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
@@ -446,23 +450,27 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
-    if (!c && !["change", "request", "element"].includes(fields.kind)) throw bad("a new card needs kind change, request or element");
+    if (!c && !["change", "request", "element", "screen", "digest"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen or digest");
+    if (!c && fields.kind === "screen" && fields.path)
+      c = Object.values(this.db.cards).find((x) => x.kind === "screen" && x.path === String(fields.path)) || null;
+    if (!c && fields.kind === "digest" && fields.period)
+      c = Object.values(this.db.cards).find((x) => x.kind === "digest" && x.period === String(fields.period)) || null;
     if (!c && fields.kind === "element" && fields.source?.file && fields.source?.export)
       c = Object.values(this.db.cards).find((x) => x.kind === "element" && x.source?.file === fields.source.file && x.source?.export === fields.source.export) || null;
     if (!c && fields.kind === "change" && fields.source?.repo && fields.source?.pr)
       c = Object.values(this.db.cards).find((x) => x.kind === "change" && x.source?.repo === fields.source.repo && x.source?.pr === fields.source.pr) || null;
     // Everything is checked on a copy; the store changes only when all of it holds.
-    const next = c ? structuredClone(c) : { kind: fields.kind, status: { change: "new", request: "triage", element: "building" }[fields.kind], created: this.clock(), created_by: { agent: true },
+    const next = c ? structuredClone(c) : { kind: fields.kind, status: { change: "new", request: "triage", element: "building", screen: "current", digest: "new" }[fields.kind], created: this.clock(), created_by: { agent: true },
       sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" } };
     for (const k of AGENT_FIELDS) {
       if (fields[k] === undefined) continue;
       if (k === "title") next.title = clean(fields.title, LIMITS.title, "title");
       else if (k === "summary") next.summary = clean(fields.summary, 600, "summary");
       else if (k === "status") {
-        const ok = { change: CHANGE_STATES, request: REQUEST_STATES, element: ELEMENT_STATES }[next.kind];
+        const ok = { change: CHANGE_STATES, request: REQUEST_STATES, element: ELEMENT_STATES, screen: ELEMENT_STATES, digest: CHANGE_STATES }[next.kind];
         if (!ok.includes(fields.status)) throw bad(`status must be one of ${ok.join(", ")}`);
         // A person closed it while a session worked: the session's late write must not reopen it.
         if (c && (c.status === "declined" || c.status === "handed-off") && fields.status !== c.status && !(c.status === "handed-off" && fields.status === "declined"))
@@ -474,6 +482,11 @@ export class Store {
       else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards);
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
       else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
+      else if (k === "path") next.path = clean(String(fields.path), 300, "path");
+      else if (k === "how") next.how = clean(fields.how, 600, "how");
+      else if (k === "period") next.period = clean(String(fields.period), 40, "period");
+      else if (k === "concepts") { if (!Array.isArray(fields.concepts)) throw bad("concepts must be a list"); next.concepts = fields.concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()); }
+      else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
@@ -494,6 +507,86 @@ export class Store {
     this.db.cards[next.id] = next;
     this.save();
     return { card: next };
+  }
+
+  // ---------- votes in Slack ----------
+
+  // The agent posts a request's options to Slack, one reply per option, and people vote
+  // with reactions. The poll remembers where the posts are; the agent syncs it while it
+  // is open and closes it on its date or when the request moves on.
+  openPoll(cardId, { chat, root_ts, posts, closes, url = null, channel = null }) {
+    const c = this.card(cardId);
+    if (!Array.isArray(posts) || !posts.length) throw bad("a poll needs one post per option");
+    for (const x of posts) if (!(c.variants || []).some((v) => v.id === x.variant)) throw bad(`no option ${x.variant}`);
+    const poll = {
+      id: this.next("poll", "P"), state: "open", opened: this.clock(), synced: null,
+      chat: clean(String(chat || ""), 80, "chat"), root_ts: clean(String(root_ts || ""), 40, "root_ts"),
+      channel: optText(channel, 80, "channel"), url: /^https:\/\//.test(String(url || "")) ? String(url).slice(0, 300) : null,
+      closes: clean(String(closes || ""), 40, "closes"),
+      posts: posts.slice(0, 6).map((x) => ({ variant: String(x.variant), ts: clean(String(x.ts || ""), 40, "ts") })),
+    };
+    c.polls = [...(c.polls || []), poll];
+    c.updated = this.clock();
+    this.save();
+    return { poll };
+  }
+
+  updatePoll(cardId, pollId, { synced = null, result = null } = {}) {
+    const c = this.card(cardId);
+    const poll = (c.polls || []).find((x) => x.id === pollId);
+    if (!poll) throw missing(`no poll ${pollId} on ${cardId}`);
+    if (synced) poll.synced = clean(String(synced), 40, "synced");
+    if (result !== null) { poll.state = "closed"; poll.closed = this.clock(); poll.result = clean(String(result), 600, "result"); }
+    c.updated = this.clock();
+    this.save();
+    return { poll };
+  }
+
+  // The reactions on one option's post, as they are now. A person's own vote on the Desk
+  // wins over their reaction; a reaction taken back takes the vote away.
+  slackVotes(cardId, variant, voters) {
+    const c = this.card(cardId);
+    if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
+    if (!Array.isArray(voters)) throw bad("voters must be a list");
+    c.votes = c.votes || {};
+    const box = (c.votes[variant] = c.votes[variant] || {});
+    for (const [k, x] of Object.entries(box)) if (x.via === "slack") delete box[k];
+    for (const v of voters.slice(0, 500)) {
+      if (!["prefer", "concern"].includes(v.vote)) continue;
+      const key = clean(String(v.key || ""), 200, "voter key");
+      if (box[key]) continue;
+      box[key] = { vote: v.vote, role: optText(v.role, 20, "role") || "slack", name: optText(v.name, 120, "name") || null, via: "slack", at: this.clock(), note: "" };
+    }
+    c.updated = this.clock();
+    this.save();
+    return { votes: c.votes[variant] };
+  }
+
+  // A reply someone wrote under an option in Slack becomes a comment on that option, once.
+  relayComment(cardId, { variant, name, email = null, role = null, text, slack_ts, url = null }) {
+    const c = this.card(cardId);
+    if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
+    const ts = clean(String(slack_ts || ""), 40, "slack_ts");
+    const seen = (c.threads || []).map((t) => this.db.threads[t]).find((t) => t?.slack_ts === ts);
+    if (seen) return { thread: seen, duplicate: true };
+    const { thread } = this.openThread(cardId, { via: "slack", name, email, role: role || "slack" }, { kind: "comment", text, anchor: { variant, label: "the whole option" } });
+    thread.slack_ts = ts;
+    if (/^https:\/\//.test(String(url || ""))) thread.slack_url = String(url).slice(0, 300);
+    this.save();
+    return { thread };
+  }
+
+  findFinding(ref) {
+    const c = Object.values(this.db.cards).find((x) => x.origin?.automated && x.origin.ref === ref);
+    return c ? { card: c.id, status: c.status, title: c.title } : null;
+  }
+
+  findPoll(ts) {
+    for (const c of Object.values(this.db.cards)) for (const poll of c.polls || []) {
+      const post = poll.root_ts === ts ? { variant: null } : poll.posts.find((x) => x.ts === ts);
+      if (post) return { card: c.id, poll: poll.id, state: poll.state, variant: post.variant };
+    }
+    return null;
   }
 
   // ---------- screens people add ----------
@@ -568,6 +661,7 @@ export class Store {
 function person(who) {
   if (!who) return { agent: true };
   if (who.agent) return { agent: true };
+  if (who.via === "slack") return { email: who.email || null, role: who.role || "slack", name: who.name || null, via: "slack" };
   return { email: who.email || null, role: who.role || "guest" };
 }
 
@@ -601,6 +695,7 @@ function cleanRefs(list, assets, name) {
     return {
       asset, caption: typeof s === "object" ? optText(s.caption, 300, "caption") : "",
       ...(SCREEN_SOURCES.includes(s?.source) ? { source: s.source } : {}),
+      ...(["before", "after", "diff"].includes(s?.stage) ? { stage: s.stage, pair: optText(s.pair, 120, "pair") || "screen" } : {}),
       ...(s?.by && typeof s.by === "object" ? { by: { email: optText(s.by.email, 200, "email") || null, role: optText(s.by.role, 20, "role") || null } } : {}),
     };
   });
@@ -698,7 +793,9 @@ function cleanOrigin(o) {
   if (url && !/^https?:\/\//i.test(url)) throw bad("origin.url must be http(s)");
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
-    reporter: str(o.reporter, 120), at: str(o.at, 40) };
+    reporter: str(o.reporter, 120), at: str(o.at, 40),
+    // A finding an automated test posted (Quality Inspector), not a person's report.
+    ...(o.automated ? { automated: true, tool: str(o.tool, 80), check: str(o.check, 40), severity: ["high", "medium", "low"].includes(o.severity) ? o.severity : null, ref: str(o.ref, 80), build: str(o.build, 80) } : {}) };
 }
 
 // A catalog element's states: what each tile shows and what makes it happen.

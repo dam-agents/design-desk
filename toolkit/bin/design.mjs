@@ -15,6 +15,7 @@ const USAGE = `usage: design <command> [args]
   profile <owner/name> --check | --check-dir <dir>   validate a design profile's shape
   skill [<action>] [--repo <owner/name>]  which skill does an action (docs/actions.md)
   where <file> --export <Component> --root <clone>   where else the data an element shows appears
+  diff <before> <after> <out.jpg>      the after picture with every changed region outlined
   build <src.html> <out.html> [--style repo:<owner/name>|brand|carbon|wireframe] [--ref <ref>]
                                        compile a variant, mockup or walkthrough source
   shot <page.html|url> <outdir> [--width 1440] [--views] [--dark] [--click <selector>]...
@@ -46,7 +47,7 @@ const table = {
   doctor: "./doctor.mjs", repo: "./repo.mjs", profile: "./profile.mjs", build: "./build.mjs", shot: "./shot.mjs",
   capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs", states: "./states.mjs",
   "deck-new": "./deck.mjs", "deck-pdf": "./deck.mjs", "deck-check": "./deck.mjs", video: "./video.mjs", stills: "./video.mjs",
-  "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs", skill: "./skill.mjs", where: "./where.mjs",
+  "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs", skill: "./skill.mjs", where: "./where.mjs", diff: "./diff.mjs",
 };
 if (!cmd || !table[cmd]) { process.stdout.write(USAGE); process.exit(cmd ? 2 : 0); }
 const mod = await import(table[cmd]);

@@ -180,3 +180,23 @@ test("screenshots a person adds wake the agent once and keep who added them", ()
   s.upsertCard({ id: card.id, screens: screens.map((x) => ({ ...x, caption: "The list" })) });
   assert.equal(s.getCard(card.id).screens[0].by.email, bob.email);
 });
+
+test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relayed once", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  const a = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "One button", asset: a }] });
+  assert.throws(() => s.act(card.id, alice, "slack-share", "{}") && s.act(card.id, alice, "slack-share", "{}"), /already working/);
+  const { poll } = s.openPoll(card.id, { chat: "C0123", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2026-11-06T14:00:00Z" });
+  assert.deepEqual(s.findPoll("1.1"), { card: card.id, poll: poll.id, state: "open", variant: "v1" });
+  s.vote(card.id, alice, { variant: "v1", vote: "concern" });
+  s.slackVotes(card.id, "v1", [{ key: alice.email, vote: "prefer" }, { key: "slack:U1", vote: "prefer", name: "Jana" }]);
+  assert.equal(s.getCard(card.id).votes.v1[alice.email].vote, "concern");
+  assert.equal(s.getCard(card.id).votes.v1["slack:U1"].via, "slack");
+  s.slackVotes(card.id, "v1", []);
+  assert.equal(s.getCard(card.id).votes.v1["slack:U1"], undefined);
+  s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" });
+  assert.equal(s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" }).duplicate, true);
+  assert.equal(s.getCard(card.id).threads.filter((t) => t.slack_ts === "1.2")[0].messages[0].by.via, "slack");
+  assert.equal(s.updatePoll(card.id, poll.id, { result: "One button: 1 👍" }).poll.state, "closed");
+});

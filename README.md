@@ -85,6 +85,7 @@ chat. The list, with defaults: [`CLAUDE.md`](CLAUDE.md) → **Runtime configurat
 | Watch | hourly | merged PRs that touch the UI → Desk cards |
 | Inbox | every 10 minutes, and at once when someone acts on the Desk | questions, requests, variants, prototypes, specs |
 | Monitor | every 15 minutes | the agent's own health, from local files; silent when healthy |
+| Digest | Thursdays | the week's UX digest and the themes in people's feedback, on the Desk and optionally in Slack |
 | Audit | Fridays | a weekly self-check, reported in the chat |
 
 Idle runs wake no model: each schedule's Precheck decides first.

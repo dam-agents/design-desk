@@ -2,10 +2,13 @@
 # screens.sh — the mechanics of a screens instance (docs/screens.md): the agent's own install
 # of the product, for screenshots of what shipped and for people to try it.
 #
-#   screens.sh sync <repo> [--pr <n>]   the instance `main` at the default branch's head, or
-#                                       `pr<n>` at that pull request's head: its worktree moved
-#                                       there and installed (bin/env up). A commit already
-#                                       installed is never installed again. Prints its meta.
+#   screens.sh sync <repo> [--pr <n> | --at <sha>]
+#                                       the instance `main` at the default branch's head (or at
+#                                       <sha> of it: the commit before a merge, for "before"
+#                                       pictures), or `pr<n>` at that pull request's head: its
+#                                       worktree moved there and installed (bin/env up). A commit
+#                                       already installed is never installed again, and main never
+#                                       moves back. Prints its meta, with "moved": true|false.
 #   screens.sh run <name> <verb>        bin/env status|credentials|tunnel|untunnel|down
 #   screens.sh remove <name>            the worktree and the local state (delete the
 #                                       Environment first: delete_environment <env>)
@@ -44,8 +47,9 @@ cmd="${1:-}"
 case "$cmd" in
   sync)
     repo="${2:-}"; [ -n "$repo" ] || err "usage: screens.sh sync <repo> [--pr <n>]"
-    name=main; ref=""
+    name=main; ref=""; at=""
     [ "${3:-}" = "--pr" ] && { case "${4:-}" in ''|*[!0-9]*) err "--pr needs a number";; esac; name="pr$4"; ref="pull/$4/head"; }
+    [ "${3:-}" = "--at" ] && { case "${4:-}" in ''|*[!0-9a-f]*) err "--at needs a commit sha";; esac; at="$4"; }
     state="$ROOT/$name"; meta="$state/meta.json"; mkdir -p "$state"
     if ! mkdir "$state/.lock" 2>/dev/null; then
       if [ -n "$(find "$state/.lock" -maxdepth 0 -mmin +90 2>/dev/null)" ]; then rm -rf "$state/.lock"; mkdir "$state/.lock" 2>/dev/null || err "cannot take the lock of $name"
@@ -56,12 +60,16 @@ case "$cmd" in
     clone="$(jq -r .dir <<<"$co")"; def="$(jq -r .default_branch <<<"$co")"
     if [ -n "$ref" ]; then git -C "$clone" fetch -q origin "$ref" 2>/dev/null || err "cannot fetch $ref"; target="$(git -C "$clone" rev-parse FETCH_HEAD)"
     else git -C "$clone" fetch -q origin "$def" 2>/dev/null || err "cannot fetch $def"; target="$(git -C "$clone" rev-parse "origin/$def")"; fi
+    if [ -n "$at" ]; then
+      target="$(git -C "$clone" rev-parse --verify -q "$at^{commit}")" || err "no commit $at"
+      git -C "$clone" merge-base --is-ancestor "$target" "origin/$def" 2>/dev/null || err "$at is not on $def"
+    fi
     wt="$HOME_DIR/checkouts/screens-$name"
     if [ ! -d "$wt" ]; then git -C "$clone" worktree add -q --detach "$wt" "$target" 2>/dev/null || err "git worktree add failed for $name"; fi
     # Never install the same commit twice, and never move main backwards.
     installed="$(jq -r '.commit // empty' "$meta" 2>/dev/null)"
-    if [ "$installed" = "$target" ]; then cat "$meta"; exit 0; fi
-    if [ "$name" = main ] && [ -n "$installed" ] && git -C "$clone" merge-base --is-ancestor "$target" "$installed" 2>/dev/null; then cat "$meta"; exit 0; fi
+    if [ "$installed" = "$target" ]; then jq '. + {moved: false}' "$meta"; exit 0; fi
+    if [ "$name" = main ] && [ -n "$installed" ] && git -C "$clone" merge-base --is-ancestor "$target" "$installed" 2>/dev/null; then jq '. + {moved: false, ahead: true}' "$meta"; exit 0; fi
     git -C "$wt" checkout -q --detach "$target" 2>/dev/null || err "cannot move the worktree of $name to $target"
     prof="$(cd "$HOME_DIR" && node "$HOME_DIR/toolkit/bin/design.mjs" profile "$repo" --clone "$clone" 2>/dev/null | jq -r '.dir // empty')"
     jq -n --arg repo "$repo" --arg name "$name" --arg env "$(env_of "$name")" --arg wt "$wt" --arg clone "$clone" --arg prof "$prof" \
@@ -76,7 +84,7 @@ case "$cmd" in
       logev error screens "$name install of ${target:0:7} failed — $state/env-up.log"
       cat "$meta"; exit 1
     fi
-    cat "$meta";;
+    jq '. + {moved: true}' "$meta";;
   run)
     name="${2:-}"; verb="${3:-}"; valid "$name" || err "an instance is main or pr<n>"
     case "$verb" in status|credentials|tunnel|untunnel|down) engine "$name" "$verb";; *) err "verb must be status, credentials, tunnel, untunnel or down";; esac;;

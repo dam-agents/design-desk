@@ -64,6 +64,24 @@ Environments.
    address of `engine.open_endpoint` from `list_environments` and the demo account. Keep the
    recipe under `work/output/screens/C-<n>/` for the next run.
 
+## Before and after (a merged change)
+
+A merged change's card shows each changed screen before and after, with the differences
+outlined. The `main` instance only moves forward, so the watch takes merged changes in merge
+order, and one at a time: a run that finds `main` busy checks again every minute for 20
+minutes, then takes the pull request's own pictures instead.
+
+1. **Before.** When `main` is at or behind the merge's first parent: `screens.sh sync <repo>
+   --at <merge>^1`, then the change's recipe → each shot `stage: "before"`.
+   `main` already past it (another change was installed first): no instance "before"; the
+   pull request's own "before" picture, when it has one, takes its place (`source: "pr"`).
+2. **After.** `screens.sh sync <repo> --at <merge>`, the same recipe → `stage: "after"`.
+3. **What changed.** Per pair: `design diff <before> <after> <diff.jpg>` → `stage: "diff"`,
+   captioned with what it outlines ("2 areas changed: the heading and the button").
+   `changed_pct` 0: say the screen looks the same and keep only "after".
+4. Every picture of a pair carries the same `pair` (the shot's name). The screen's card on
+   the product map gets the "after" pictures and the change in its `changes` ([map.md](map.md)).
+
 ## Screenshots people add (`screens_due`)
 
 People add screenshots on a card with **Add screenshots**. For each new screen with

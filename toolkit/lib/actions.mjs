@@ -8,6 +8,9 @@ import { HOME, TOOLKIT } from "./core.mjs";
 export const ACTIONS = {
   "explain-change": { skill: "explain", doc: "docs/watch.md", does: "a card for a shipped or open UI change: screens, what, why, what cannot change" },
   answer: { skill: "explain", doc: "docs/desk.md", does: "answer a question about how the product works or why" },
+  show: { skill: "show-me", does: "answer \"show me how it looks\" with a picture of the product in that state" },
+  map: { doc: "docs/map.md", does: "the product map: every main screen, how to get there, why it is like it is" },
+  digest: { doc: "docs/digest.md", does: "the weekly digest of the product's UX and the themes in people's feedback" },
   research: { doc: "docs/requests.md", does: "issues, pull requests, history and earlier decisions behind a request" },
   triage: { doc: "docs/boundary.md", does: "what can be done as a design change, what needs a developer or a decision" },
   impact: { skill: "impact", does: "where else the same thing shows up and what a change touches, from earlier decisions" },
@@ -19,6 +22,8 @@ export const ACTIONS = {
   "bug-intake": { skill: "intake-slack", does: "put a UI bug reported on a channel on the Desk's queue" },
   "figma-import": { skill: "figma", does: "bring a Figma frame in as a design option built from the product's parts" },
   "figma-export": { skill: "figma", does: "send a design option to Figma as editable layers" },
+  "share-options": { skill: "slack-polls", does: "post a request's options to Slack for votes and comments" },
+  "poll-sync": { skill: "slack-polls", does: "bring Slack votes and replies to the Desk; close a vote with its result" },
   catalog: { doc: "docs/catalog.md", does: "draw a real UI element in every state" },
   brief: { doc: "docs/desk.md", does: "the brief of an item on the next call" },
   deck: { skill: "slides", does: "a slide deck and its PDF" },

@@ -37,6 +37,8 @@
 !/.agents/skills/handoff-github
 !/.agents/skills/impact
 !/.agents/skills/intake-slack
+!/.agents/skills/show-me
+!/.agents/skills/slack-polls
 !/.agents/skills/slides
 !/.agents/skills/variants
 !/.agents/skills/walkthrough

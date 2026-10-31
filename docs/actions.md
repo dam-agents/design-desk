@@ -16,6 +16,9 @@ its `SKILL.md` is; read it before doing the action.
 | --- | --- | --- | --- |
 | `explain-change` | a card for a shipped or open UI change | the watch schedule; chat "explain #123" | `explain`, [watch.md](watch.md) |
 | `answer` | answer a question | a Desk question; Slack; chat | `explain`, [desk.md](desk.md) → Questions |
+| `show` | "show me how it looks": a picture of the product in that state | a Desk question; Slack; chat | `show-me` |
+| `map` | the product map: screens, how to get there, why each is like it is | the first screens instance; after each merged change | [map.md](map.md) |
+| `digest` | the weekly digest and the themes in people's feedback | the weekly digest schedule | [digest.md](digest.md) |
 | `research` | issues, pull requests, history, earlier decisions | every new request; chat | [requests.md](requests.md) → Research |
 | `triage` | what can be done as a design change | every new request; chat "can we…?" | [boundary.md](boundary.md), [requests.md](requests.md) → Triage |
 | `impact` | where else the same thing shows up, what a change touches | every change card and request; chat "what would this affect?" | `impact` |
@@ -27,6 +30,8 @@ its `SKILL.md` is; read it before doing the action.
 | `bug-intake` | put a reported UI bug on the queue | a Slack message | `intake-slack` |
 | `figma-import` | a Figma frame as an option rebuilt from the product's parts | Import from Figma; a Figma link in a request or chat | `figma` |
 | `figma-export` | an option or a prototype into Figma as layers | Send to Figma; chat | `figma` |
+| `share-options` | post the options to Slack, one message each, for 👍 / ⚠️ votes and replies | Share in Slack; chat | `slack-polls` |
+| `poll-sync` | bring Slack votes and replies to the Desk; close the vote with its result | every 30 minutes while a vote is open | `slack-polls` |
 | `catalog` | a real element drawn in every state | onboarding; Update the drawing; the watch | [catalog.md](catalog.md) |
 | `brief` | what the next call decides about an item | Add to the next call | [desk.md](desk.md) → The next call |
 | `deck`, `walkthrough`, `video`, `brand`, `copy` | the Designer kit's deliverables | chat; Slack | `slides`, `walkthrough`, `demo-video`, `brand`, `copy` |

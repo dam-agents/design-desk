@@ -126,6 +126,19 @@ schedules:
       the send, never repair or re-run anything in response, and back up work/ with
       `bash "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or work_repo
       is set.
+  - name: design-desk-digest-weekly
+    cron: "0 8 * * 4"
+    description: A weekly page of what happened to the product's UX, with the themes in people's feedback.
+    sessionMode: fresh
+    precheck: 'bash "$HOME/scripts/precheck.sh" digest'
+    task: >-
+      Weekly digest. The precheck already ran the pre-flight and found a week to report:
+      read the worklist JSON at the path its output names, and never run preflight.sh
+      again this run. If the prompt carries no worklist path, run `bash
+      "$HOME/scripts/preflight.sh" digest` yourself. Then follow CLAUDE.md → "Digest run":
+      read docs/digest.md, write the week's digest card with the themes in people's
+      feedback, post it to Slack when digest is slack, and back up work/ with `bash
+      "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or work_repo is set.
   - name: design-desk-audit-weekly
     cron: "0 7 * * 5"
     description: A weekly self-check of the watch, the Desk, the prototypes and the toolchain, reported in the chat.

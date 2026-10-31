@@ -45,6 +45,19 @@ assert "dispatch disabled keeps all" 'length == 0' "$(bash "$ROOT/scripts/dispat
 
 printf '{"updated":"%s","open":[],"claimed":[]}' "$new" > "$WORK_DIR/desk/inbox.json"; rm "$WORK_DIR/desk/db.json"
 assert "empty inbox is quiet" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+
+# An open Slack vote with no inbox item is due to sync every 30 minutes, and to close on
+# its date or once its request moved on.
+recent="$(date -u -v-5M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
+cat > "$WORK_DIR/desk/db.json" <<JSON
+{"version":1,"cards":{
+ "C-5":{"id":"C-5","kind":"request","status":"feedback","polls":[{"id":"P-1","state":"open","closes":"2099-01-01T00:00:00Z","synced":"$recent"},{"id":"P-2","state":"open","closes":"2099-01-01T00:00:00Z","synced":null}]},
+ "C-6":{"id":"C-6","kind":"request","status":"handed-off","polls":[{"id":"P-3","state":"open","closes":"2099-01-01T00:00:00Z","synced":"$recent"}]}}}
+JSON
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "polls due: never synced, and the one whose request moved on" '[.polls_due[] | [.id, .close]] == [["P-2", false], ["P-3", true]]' "$out"
+assert "the slack-polls skill is read" '.read_set | index(".agents/skills/slack-polls/SKILL.md")' "$out"
+rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"
 assert "a broken inbox file is an error" '.error | test("not an inbox")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 finish

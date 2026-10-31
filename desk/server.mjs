@@ -55,6 +55,14 @@ function roleOf(caller) {
   return ROLES.includes(role) ? role : "guest";
 }
 
+// The roster role of a person met in Slack, by the email the workspace discloses.
+function slackRole(email) {
+  if (!email) return "slack";
+  const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === String(email).toLowerCase());
+  const role = (row?.role || "").toLowerCase();
+  return ROLES.includes(role) && role !== "guest" ? role : "slack";
+}
+
 function settings() {
   const list = (v, d) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
   const lead = cfgTable("Desk people").find((r) => (r.role || "").toLowerCase() === "lead");
@@ -66,6 +74,7 @@ function settings() {
     // Who people ask for access or help: the first lead on the roster, else the owner.
     contact: lead?.email || "the Desk's owner",
     figma: cfg("figma", "disabled") !== "disabled",
+    slack: cfg("slack_polls", "disabled") === "enabled",
     // Where an approved design goes, by request type, so the page can say it before approving.
     handoff: {
       feature: cfg("issue_writeback", "enabled") === "disabled" ? "desk" : "issue-comment",
@@ -78,7 +87,7 @@ function settings() {
 // The words a person reads when their role lacks an action.
 const VERBS = { ack: "mark changes as seen", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
-  reopen: "reopen requests", refresh: "update drawings", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here" };
+  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here" };
 
 function isAgent(req) {
   const t = Buffer.from(String(req.headers["x-desk-agent-token"] || "")), want = agentToken();
@@ -126,14 +135,15 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens"];
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", name: s.name, contact: s.contact, figma: s.figma, handoff: s.handoff });
+    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share"];
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", name: s.name, contact: s.contact, figma: s.figma, slack: s.slack, handoff: s.handoff });
   }
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), calls: (store.db.calls || []).slice(-5) });
+  if (m === "GET" && p[1] === "decisions") return send(res, 200, { decisions: store.listDecisions({ concept: url.searchParams.get("concept") || "", q: url.searchParams.get("q") || "" }).slice(0, 200) });
   const b = m === "GET" ? {} : await body(req);
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
@@ -176,8 +186,9 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
-    need(action.startsWith("figma-") ? "figma" : action);
+    need(action.startsWith("figma-") ? "figma" : action === "slack-share" ? "share" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
+    if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
     return send(res, 200, withPing(store.act(p[2], actor, action, b.note), s, who));
   }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
@@ -199,6 +210,9 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: store.getCard(it.card) }); }
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "decisions") return send(res, 200, { decisions: store.listDecisions({ concept: url.searchParams.get("concept") || "", q: url.searchParams.get("q") || "" }) });
+  if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
+  if (m === "GET" && p[1] === "polls") return send(res, 200, { poll: store.findPoll(String(url.searchParams.get("ts") || "")) });
+  if (m === "GET" && p[1] === "findings") return send(res, 200, { finding: store.findFinding(String(url.searchParams.get("ref") || "")) });
   const b = m === "GET" ? {} : await body(req);
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
   if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
@@ -209,6 +223,14 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));
   if (m === "POST" && p[1] === "cards" && p[3] === "ask") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "asks", text: b.text, step: b.step }));
   if (m === "POST" && p[1] === "decisions") return send(res, 201, store.addDecision(b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "polls" && !p[4]) return send(res, 201, store.openPoll(p[2], b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "polls" && p[4]) return send(res, 200, store.updatePoll(p[2], p[4], b));
+  // A Slack voter's role is the roster's for their email, never one the agent names.
+  if (m === "POST" && p[1] === "cards" && p[3] === "slack-votes") {
+    const voters = (Array.isArray(b.voters) ? b.voters : []).map((v) => ({ ...v, key: v.email ? String(v.email).toLowerCase() : `slack:${v.slack_id || v.key}`, role: slackRole(v.email) }));
+    return send(res, 200, store.slackVotes(p[2], String(b.variant || ""), voters));
+  }
+  if (m === "POST" && p[1] === "cards" && p[3] === "relay") return send(res, 201, store.relayComment(p[2], { ...b, role: slackRole(b.email) }));
   if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover) }));
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   if (m === "POST" && p[1] === "enqueue") return send(res, 201, (() => { store.card(String(b.card)); const it = store.enqueue(String(b.kind), String(b.card), null, { agent: true }, typeof b.note === "string" ? b.note.slice(0, 1000) : ""); store.save(); return { item: it }; })());

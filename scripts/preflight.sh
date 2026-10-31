@@ -18,6 +18,8 @@
 #            file the Desk server rewrites on every change) → questions_due,
 #            requests_due, variants_due, prototypes_due, handoffs_due, teardowns_due,
 #            expiring_due (docs/desk.md).
+#   digest — the week in the Desk's store, and 30 days of feedback for its themes
+#            (docs/digest.md); nothing in a quiet week or once the week's digest exists.
 #   audit  — deterministic health checks (docs/audit.md).
 #
 # Requires: bash, jq, gh, curl, sed/grep/cut/tr, GNU date (the machine).
@@ -70,6 +72,7 @@ config_json() {
     --arg audit_report "$(cfg audit_report)" --arg log_level "$(cfg log_level)" \
     --arg figma "$(cfg figma)" --arg figma_file "$(cfg figma_file)" \
     --arg screens "$(cfg screens)" --arg max_screen_prs "$(cfg max_screen_prs)" \
+    --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg digest "$(cfg digest)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -100,7 +103,10 @@ config_json() {
       figma: ($figma | if . == "" then "disabled" else . end),
       figma_file: $figma_file,
       screens: ($screens | if . == "" then "disabled" else . end),
-      max_screen_prs: ($max_screen_prs | tonumber? // 2)}'
+      max_screen_prs: ($max_screen_prs | tonumber? // 2),
+      slack_polls: ($slack_polls | if . == "" then "disabled" else . end),
+      slack_poll_channel: $slack_poll_channel,
+      digest: ($digest | if . == "" then "desk" else . end)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -301,16 +307,28 @@ inbox_mode() {
         | select(if $closed then $left <= 0 else ($left < 86400 and .prototype.expiry_checked != .prototype.expires) end)
         | {id: ("E-" + .id), card: .id, env: .prototype.env, expires: .prototype.expires, closed: $closed} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
+  # An open Slack vote is synced every 30 minutes, and closed on its date or once its
+  # request has moved past the options (approved, handed off, closed).
+  local polls="[]"
+  if [ -f "$DB" ]; then
+    polls="$(jq -c --argjson now "$NOW_EPOCH" '
+      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+      [ .cards[] | . as $c | (.polls // [])[] | select(.state == "open")
+        | (((.closes | epoch) <= $now) or (($c.status | IN("variants", "feedback", "prototype", "testing")) | not)) as $close
+        | select($close or .synced == null or ($now - (.synced | epoch)) >= 1800)
+        | {id: .id, card: $c.id, close: $close, closes: .closes} ]' "$DB" 2>/dev/null || echo '[]')"
+  fi
   local n; n="$(jq 'length' <<<"$items")"
-  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ]; then
+  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ]; then
     log "Desk inbox empty"; printf '%s due=0\n' "$NOW_ISO" >> "$WORK/INBOX.log"; quiet_out
   fi
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind) on \(.card)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): prototype of \(.card) expires \(.expires) — extend or let it go"' <<<"$expiring")
+  while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack vote on \(.card) — \(if .close then "close it" else "sync it" end)"' <<<"$polls")
   printf '%s due=%s expiring=%s\n' "$NOW_ISO" "$n" "$(jq 'length' <<<"$expiring")" >> "$WORK/INBOX.log"
   logev info preflight "inbox: $n items due"
-  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; [ -n "$ids" ] && printf '%s\n' "$ids" | title_for Work "Desk items" || printf 'Extend Desk prototypes'; })" '
+  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; else printf 'Sync Slack votes'; fi; })" '
     def pick(k): [ $items[] | select(.kind as $x | k | index($x)) ];
     { mode:"inbox", nothing_to_do:false, title:$title,
       questions_due: pick(["question"]),
@@ -323,6 +341,8 @@ inbox_mode() {
       teardowns_due: pick(["teardown"]),
       figma_due: pick(["figma"]),
       screens_due: pick(["screens"]),
+      slack_due: pick(["slack"]),
+      polls_due: $polls,
       expiring_due: $expiring,
       config:$config, logs:$logs }
     | .read_set = (["docs/desk.md"]
@@ -333,6 +353,7 @@ inbox_mode() {
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)
         + (if (.screens_due | length) > 0 then ["docs/screens.md"] else [] end)
+        + (if (.slack_due + .polls_due | length) > 0 then [".agents/skills/slack-polls/SKILL.md"] else [] end)
         + (if (.variants_due | length) > 0 then ["docs/actions.md"] else [] end) | unique)'
 }
 
@@ -448,9 +469,48 @@ HTML
     '{mode:"audit", nothing_to_do:false, title:"Audit design-desk", read_set:["docs/audit.md"], checks:$checks, failures:$failures, stats:$stats, config:$config, logs:$logs}'
 }
 
+# ============================================================ DIGEST MODE ===
+# The week in the Desk's own store: what shipped, what was asked, decided and voted on, and
+# 30 days of what people said, for the themes. Read-only; nothing in a quiet week.
+digest_mode() {
+  local DB="$DESK_DIR/db.json" CONF period
+  CONF="$(config_json)"
+  [ "$(jq -r .digest <<<"$CONF")" = disabled ] && { log "digest disabled"; quiet_out; }
+  [ -f "$DB" ] || { log "no Desk store yet"; quiet_out; }
+  period="$(date -u +%G-W%V)"
+  local out
+  out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" '
+    def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+    def within($s): ((. // "") | epoch) >= ($now - $s);
+    (7 * 86400) as $week | (30 * 86400) as $month
+    | [.cards[]] as $cards
+    | {
+      done: any($cards[]; .kind == "digest" and .period == $period),
+      changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | within($week)))
+                 | {id, title, merged_at: .source.merged_at, in_progress: (.source.merged_at == null), screen: ([.screens[]? | select(.stage == "after" or .stage == null) | .asset][0])} ],
+      requests_new: [ $cards[] | select(.kind == "request" and (.created | within($week))) | {id, title, type: .request.type, status} ],
+      handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | within($week))) | {id, title} ],
+      waiting: [ $cards[] | select(.agenda.status == "queued") | {id, title, note: .agenda.note} ],
+      polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | within($week))) | {card: $c.id, title: $c.title, state, closes, result} ],
+      decisions: [ (.decisions // {})[] | select(.recorded | within($week)) | {id, text, concepts} ],
+      feedback: ([ ($cards[] | select(.kind == "request" and .request.type == "bug" and (.created | within($month)))
+                   | {card: .id, kind: (if .origin.automated then "test finding" else "bug" end), text: ((.title + ": " + (.request.problem // ""))[0:240])}),
+                 (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.created | within($month)) and (.messages[0].by.agent != true))
+                   | {card, kind, text: (.messages[0].text[0:240])}) ] | .[0:150])
+    }' "$DB" 2>/dev/null)" || fail_out "cannot read the Desk store at $DB"
+  if [ "$(jq -r .done <<<"$out")" = true ]; then log "the digest of $period is written"; quiet_out; fi
+  if [ "$(jq '(.changes + .requests_new + .handed_off + .decisions + .feedback) | length' <<<"$out")" -eq 0 ]; then
+    log "a quiet week: nothing to digest for $period"; quiet_out
+  fi
+  log "digest $period: $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.feedback|length) pieces of feedback"' <<<"$out")"
+  jq -n --argjson d "$out" --arg period "$period" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md"], config:$config, logs:$logs} | del(.done)'
+}
+
 case "$MODE" in
   watch) watch_mode ;;
   inbox) inbox_mode ;;
+  digest) digest_mode ;;
   audit) audit_mode ;;
   *) fail_out "unknown mode: $MODE" ;;
 esac
