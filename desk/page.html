@@ -191,7 +191,7 @@
       <div class="thumbs" id="rq-thumbs"></div>
     </div>
     <input type="hidden" name="from" />
-    <div class="actions"><button class="btn primary" value="send">Send</button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -203,7 +203,7 @@
       <span>Paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="sh-file" hidden multiple /></label>. Four at most.</span>
       <div class="thumbs" id="sh-thumbs"></div>
     </div>
-    <div class="actions"><button class="btn primary" value="send">Add</button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -214,7 +214,7 @@
     <div id="cf-choices" class="choices"></div>
     <label id="cf-note-wrap" hidden><span id="cf-note-label"></span><textarea name="note" maxlength="500"></textarea></label>
     <label id="cf-url-wrap" hidden><span id="cf-url-label"></span><input name="url" maxlength="500" /></label>
-    <div class="actions"><button class="btn primary" value="ok" id="cf-ok"></button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="ok" id="cf-ok"></button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -363,6 +363,15 @@
   }
 
   // ---------- dialogs ----------
+  // The Desk runs in a sandboxed frame without allow-forms, so a form never submits:
+  // a dialog's buttons check the fields and close it, and its "close" handler does the work.
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("dialog [data-close]");
+    if (!b) return;
+    const dlg = b.closest("dialog");
+    if (b.dataset.close !== "cancel" && !dlg.querySelector("form").reportValidity()) return;
+    dlg.close(b.dataset.close);
+  });
   // A confirmation for anything that cannot be taken back; optional choice, note or link.
   function ask({ title, body, ok, choices = null, pick = null, note = null, url = null }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
@@ -373,7 +382,7 @@
     $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="radio" name="choice" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""} required /> ${esc(c.name)}${c.hint ? ` <span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
     $("#cf-note-wrap").hidden = !note; $("#cf-note-label").textContent = note || "";
     $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url);
-    dlg.showModal();
+    dlg.returnValue = ""; dlg.showModal();
     return new Promise((resolve) => {
       dlg.onclose = () => resolve(dlg.returnValue === "ok" ? { choice: f.querySelector("input[name=choice]:checked")?.value || null, note: f.note.value.trim(), url: f.url.value.trim() } : null);
     });
@@ -1228,9 +1237,9 @@
   const addShot = (f) => addPicture(f, added, "#sh-thumbs", 4);
   $("#sh-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addShot(f); e.target.value = ""; }));
   $("#shots-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addShot(it.getAsFile()); } }));
-  function openShotsDialog() { added.length = 0; $("#sh-thumbs").innerHTML = ""; $("#shots-dialog").showModal(); }
-  $("#shots-form").addEventListener("submit", guard(async (e) => {
-    if (e.submitter?.value !== "send" || !added.length) return;
+  function openShotsDialog() { added.length = 0; $("#sh-thumbs").innerHTML = ""; $("#shots-dialog").returnValue = ""; $("#shots-dialog").showModal(); }
+  $("#shots-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send" || !added.length) return;
     await api("POST", `/api/cards/${S.card.id}/screens`, { images: added.map(({ contentType, data }) => ({ contentType, data })) });
     toast("Added. Design Desk checks them and writes their captions.");
     await openCard(S.card.id);
@@ -1250,12 +1259,12 @@
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
     if (from) $("#rq-problem-label").textContent = `What should look different in “${from.title}”?`;
     f.from.value = from ? from.id : "";
-    dlg.showModal();
+    dlg.returnValue = ""; dlg.showModal();
   }
   $("#new-request").addEventListener("click", () => openRequestDialog(null));
-  $("#request-form").addEventListener("submit", guard(async (e) => {
-    if (e.submitter?.value !== "send") return;
-    const f = e.target;
+  $("#request-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send") return;
+    const f = $("#request-form");
     const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
       ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await api("POST", "/api/requests", body);
