@@ -166,3 +166,17 @@ test("a person's answer to the agent's question resumes the blocked step", () =>
   s.addDecision({ concepts: ["Spend"], text: "Spend is per week.", source: { card: card.id } });
   assert.equal(s.listDecisions({ concept: "spend" }).length, 1);
 });
+
+test("screenshots a person adds wake the agent once and keep who added them", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "change", title: "Spend in the list", source: { repo: "acme/widgets", pr: 9 } });
+  const shot = () => s.addAsset({ kind: "screen", name: "x", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
+  const first = s.addScreens(card.id, bob, [shot()]).inbox;
+  const second = s.addScreens(card.id, alice, [shot()]).inbox;
+  assert.equal(first.id, second.id);
+  const screens = s.getCard(card.id).screens;
+  assert.deepEqual(screens.map((x) => [x.source, x.by.email]), [["person", bob.email], ["person", alice.email]]);
+  // The agent's caption keeps who added it.
+  s.upsertCard({ id: card.id, screens: screens.map((x) => ({ ...x, caption: "The list" })) });
+  assert.equal(s.getCard(card.id).screens[0].by.email, bob.email);
+});

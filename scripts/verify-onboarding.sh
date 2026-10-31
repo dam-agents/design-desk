@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min figma figma_file"
+KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min figma figma_file screens max_screen_prs"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -129,6 +129,7 @@ else
   enum audit_report enabled disabled
   enum log_level info debug
   enum figma enabled disabled
+  enum screens enabled disabled
   ff="$(cfg figma_file)"; [ -z "$ff" ] || printf '%s' "$ff" | grep -qE '^https://([a-z0-9-]+\.)?figma\.com/' || fail config_figma_file "figma_file is '$ff'" "a link to a Figma file, or empty"
   if grep -qx '## Skills' "$CONFIG"; then
     shdr="$(sed -n '/^## Skills$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
@@ -145,7 +146,7 @@ else
     (''|none|off|disabled) ;;
     (*) printf '%s' "$wr" | grep -qE '^([a-z0-9.-]+/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || fail config_work_repo "work_repo is '$wr'" "[host/]owner/name of a private repository, or none";;
   esac
-  for k in max_changes_per_run max_prototypes prototype_expiry_days; do v="$(cfg "$k")"; case "$v" in ''|*[!0-9]*) [ -z "$v" ] || fail "config_$k" "$k is not a whole number" "a number, e.g. 2";; esac; done
+  for k in max_changes_per_run max_prototypes prototype_expiry_days max_screen_prs; do v="$(cfg "$k")"; case "$v" in ''|*[!0-9]*) [ -z "$v" ] || fail "config_$k" "$k is not a whole number" "a number, e.g. 2";; esac; done
   w="$(cfg watch_since)"; [ -z "$w" ] || printf '%s' "$w" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' || fail config_watch_since "watch_since is '$w'" "an ISO UTC time like 2026-11-02T09:00:00Z"
   for r in $(cfg repos | tr ',' ' '); do
     [ "$r" = none ] && continue

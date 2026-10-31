@@ -32,6 +32,7 @@ What is new:
 | Roles come from the operator's roster in `work/CONFIG.md`, matched by the platform-verified email | The page cannot forge the caller headers, so the email is real identity. Unknown viewers are guests: they read and comment, they cannot start expensive work. |
 | Viewer prompts are wake-up pings that carry an item id only | A viewer can send any text to the agent. The agent reads the work from its own store, and handles only the closed set of Desk actions. |
 | Live prototypes run in **platform Environments**, one per request | An Environment is a sandbox the agent owns, with its own addresses, an access list, an expiry, and no credentials. DAM can install itself into one from a checkout, and rebuilds only the images that changed — for a design change, only the UI. |
+| The agent keeps its **own install of the product** for screenshots (`screens`), like a developer agent's install per issue | A pull request without pictures still gets real screens; people open the same install from the card, try the change with a demo account, and add their own pictures; a recipe of steps brings it into the state a screen needs. |
 | Variants are static HTML on mock data | Fast, cheap, safe to throw away; the `designer` build pipeline already compiles the product's real styles, so a variant looks like the product. |
 | The design-only guard is a script, not a prompt rule | "Never change logic" is the rule non-technical requesters rely on. A rule whose violation still produces output is enforced, not narrated: path allow/deny lists from the profile, and a logic fingerprint of every changed component (imports, hooks, handlers, conditions) that must not change. |
 | Change cards fan out: one session per merged PR | Each card is independent and expensive (clone, screens, reading the PR and the docs). |
@@ -101,6 +102,8 @@ These parts are written against the platform's documented contracts but were not
   Custom MCP connection with OAuth may be refused; the REST fallback reads frames but cannot
   write layers, and `generate_figma_design` is limited to some clients.
 - Pictures attached to GitHub issues with `gh … --attach`, which needs a GitHub CLI that has it.
+- The screens instance end to end: an install of the default branch in an Environment, the
+  demo data a recipe makes through the product's screens, and the capture over the tunnel.
 - The design workspace against the real relay: element picking and text editing run inside
   the option's sandboxed frame, tested only through the local harness.
 
@@ -108,9 +111,6 @@ The first onboarding runs `scripts/verify-onboarding.sh --live`, which probes ea
 
 ## Not built yet, on purpose
 
-- **A showcase Environment** that runs the latest default branch, so the watch can capture
-  live screens of every change; today the screens come from the pull request (DAM requires UI
-  proof in every UI PR) or a static rebuild, and `profile.capture.base_url` is the hook for it.
 - **Demo data** in a prototype beyond its demo account: DAM's prototype starts empty, like a new
   user's install; a profile `seed/` is the place for it.
 - **A harness adapter** (hooks for tool failures and outages, an auto-mode allow list, a tool

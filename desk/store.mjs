@@ -27,7 +27,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   const shaper = role === "designer" || role === "lead";
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
-    case "vote": case "request": case "follow-up": case "queue": return member;
+    case "vote": case "request": case "follow-up": case "queue": case "screens": return member;
     case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
@@ -39,7 +39,10 @@ export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "t
 export const CHANGE_STATES = ["new", "archived"];
 // A catalog element: one real UI part drawn in every state it can be in.
 export const ELEMENT_STATES = ["current", "stale", "building"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma", "screens"];
+// Where a screen on a card came from: the pull request, the agent's screens instance, a
+// person, a live prototype, or a rebuild drawn from the code.
+const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild"];
 // Thread kinds: people ask, comment, raise a concern or note a change to one element;
 // the agent asks (`asks`) when a step cannot go on without a person's answer.
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks"];
@@ -443,7 +446,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element"].includes(fields.kind)) throw bad("a new card needs kind change, request or element");
@@ -469,6 +472,8 @@ export class Store {
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
       else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards);
+      else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
+      else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
@@ -489,6 +494,21 @@ export class Store {
     this.db.cards[next.id] = next;
     this.save();
     return { card: next };
+  }
+
+  // ---------- screens people add ----------
+
+  // A person adds screenshots to a card (a shipped change the pull request showed no
+  // picture of, say); the agent checks each shows the change, and captions it.
+  addScreens(cardId, who, assetIds) {
+    const c = this.card(cardId);
+    if (!assetIds.length) throw bad("Add at least one picture.");
+    const added = assetIds.map((asset) => ({ asset, caption: "", source: "person", by: person(who) }));
+    c.screens = [...(c.screens || []), ...added].slice(-30);
+    c.updated = this.clock();
+    const item = this.pendingOrNew("screens", cardId, who);
+    this.save();
+    return { card: c, inbox: item };
   }
 
   // ---------- decisions ----------
@@ -578,7 +598,11 @@ function cleanRefs(list, assets, name) {
   return list.slice(0, 30).map((s) => {
     const asset = typeof s === "string" ? s : s.asset;
     if (!own(assets, asset)) throw bad(`${name}: no asset ${asset}`);
-    return { asset, caption: typeof s === "object" ? optText(s.caption, 300, "caption") : "" };
+    return {
+      asset, caption: typeof s === "object" ? optText(s.caption, 300, "caption") : "",
+      ...(SCREEN_SOURCES.includes(s?.source) ? { source: s.source } : {}),
+      ...(s?.by && typeof s.by === "object" ? { by: { email: optText(s.by.email, 200, "email") || null, role: optText(s.by.role, 20, "role") || null } } : {}),
+    };
   });
 }
 
@@ -615,6 +639,20 @@ function cleanImpact(o, cards) {
     affects: list(o.affects, 20, (x) => ({ what: clean(x.what, 200, "affected"), why: optText(x.why, 600, "why"), source: x.source ? cleanSource(x.source, cards) : null })),
     decisions: list(o.decisions, 20, (x) => ({ text: clean(x.text, 600, "decision"), when: optText(x.when, 40, "when"), source: x.source ? cleanSource(x.source, cards) : null })),
   };
+}
+
+// The agent's own install of the product a card's screens came from, for people to open.
+function cleanInstance(o) {
+  if (typeof o !== "object" || !o) throw bad("instance must be an object");
+  if (!/^https?:\/\//.test(String(o.url || ""))) throw bad("instance.url must be an http(s) address");
+  const login = o.login && typeof o.login === "object" ? { user: optText(o.login.user, 120, "user"), password: optText(o.login.password, 200, "password"), hint: optText(o.login.hint, 300, "hint") } : null;
+  return { url: String(o.url).slice(0, 500), login, name: optText(o.name, 40, "instance name"), ref: optText(o.ref, 120, "ref"), commit: optText(o.commit, 40, "commit"), updated: optText(o.updated, 40, "updated") };
+}
+
+// What to capture: the screens and states a person can take pictures of, in plain words.
+function cleanShotlist(list) {
+  if (!Array.isArray(list)) throw bad("shotlist must be a list");
+  return list.slice(0, 12).map((x) => ({ name: clean(x.name, 120, "shot name"), how: optText(x.how, 600, "how"), path: optText(x.path, 300, "path") }));
 }
 
 function cleanVariants(list, assets) {

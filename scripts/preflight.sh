@@ -69,6 +69,7 @@ config_json() {
     --arg dispatch "$(cfg dispatch)" --arg work_repo "${GITHUB_REPO_WORK:-$(cfg work_repo)}" \
     --arg audit_report "$(cfg audit_report)" --arg log_level "$(cfg log_level)" \
     --arg figma "$(cfg figma)" --arg figma_file "$(cfg figma_file)" \
+    --arg screens "$(cfg screens)" --arg max_screen_prs "$(cfg max_screen_prs)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -97,7 +98,9 @@ config_json() {
       audit_report: ($audit_report | if . == "" then "enabled" else . end),
       log_level: ($log_level | if . == "" then "info" else . end),
       figma: ($figma | if . == "" then "disabled" else . end),
-      figma_file: $figma_file}'
+      figma_file: $figma_file,
+      screens: ($screens | if . == "" then "disabled" else . end),
+      max_screen_prs: ($max_screen_prs | tonumber? // 2)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -319,6 +322,7 @@ inbox_mode() {
       agenda_due: pick(["agenda"]),
       teardowns_due: pick(["teardown"]),
       figma_due: pick(["figma"]),
+      screens_due: pick(["screens"]),
       expiring_due: $expiring,
       config:$config, logs:$logs }
     | .read_set = (["docs/desk.md"]
@@ -328,6 +332,7 @@ inbox_mode() {
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)
+        + (if (.screens_due | length) > 0 then ["docs/screens.md"] else [] end)
         + (if (.variants_due | length) > 0 then ["docs/actions.md"] else [] end) | unique)'
 }
 

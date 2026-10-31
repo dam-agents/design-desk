@@ -195,6 +195,18 @@
   </form>
 </dialog>
 
+<dialog id="shots-dialog">
+  <form method="dialog" id="shots-form">
+    <h2>Add screenshots</h2>
+    <p class="sub" id="sh-hint">Take them in the product and paste them here. Design Desk checks that each one shows the change, and writes its caption.</p>
+    <div class="drop">
+      <span>Paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="sh-file" hidden multiple /></label>. Four at most.</span>
+      <div class="thumbs" id="sh-thumbs"></div>
+    </div>
+    <div class="actions"><button class="btn primary" value="send">Add</button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+  </form>
+</dialog>
+
 <dialog id="confirm-dialog">
   <form method="dialog" id="confirm-form">
     <h2 id="cf-title"></h2>
@@ -225,6 +237,7 @@
     figma: "Working with Figma.",
     agenda: "Writing a short brief for the next call.",
     catalog: "Drawing every state of this element.",
+    screens: "Checking the screenshots that were added and writing their captions.",
   };
   const HANDOFF_TO = {
     "coding-agent": "the coding agent, which builds it into the product",
@@ -472,7 +485,22 @@
   const decode = (a) => (a.encoding === "base64" ? new TextDecoder().decode(Uint8Array.from(atob(a.data), (ch) => ch.charCodeAt(0))) : a.data);
 
   // ---------- shared pieces of a page ----------
-  const shots = (list) => (list || []).length ? `<div class="shots">${list.map((s) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${s.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : "";
+  const FROM = { pr: "from the pull request", instance: "from Design Desk's copy of the product", prototype: "from the live prototype", rebuild: "drawn from the code, not a real screen" };
+  const fromOf = (s) => s.source === "person" ? `added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "";
+  const shots = (list) => (list || []).length ? `<div class="shots">${list.map((s) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${s.caption || fromOf(s) ? `<figcaption>${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`).join("")}</div>` : "";
+
+  // The agent's own install of the product: where people try a change and take pictures.
+  function renderInstance(c) {
+    const i = c.instance, list = c.shotlist || [];
+    if (!i && !list.length) return "";
+    const link = (path) => i?.url ? `${i.url.replace(/\/$/, "")}${path || ""}` : "";
+    return `<div class="panel" style="max-width:80ch;margin-top:12px">
+      ${i ? `<b>Try it yourself</b><p class="hint">Design Desk runs its own copy of the product${i.ref ? ` at ${esc(i.ref)}` : ""}${i.commit ? ` (${esc(i.commit.slice(0, 7))})` : ""}, with made-up data. Sign in with the demo account below, not your own.</p>
+        <div class="actions"><a class="btn primary" href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer">Open the product ↗</a>${can("screens") ? `<button class="btn" data-add-shots>Add screenshots</button>` : ""}</div>
+        ${i.login ? `<dl class="kv"><dt>Demo account</dt><dd><code>${esc(i.login.user || "")}</code>${i.login.password ? ` / <code>${esc(i.login.password)}</code>` : ""}${i.login.hint ? ` <span class="sub">${esc(i.login.hint)}</span>` : ""}</dd></dl>` : ""}` : ""}
+      ${list.length ? `<p style="margin:12px 0 4px"><b>What to capture</b></p><ol class="md" style="padding-left:20px;margin:0">${list.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — ${esc(x.how)}` : ""}${x.path && i?.url ? ` <a href="${safeUrl(link(x.path))}" target="_blank" rel="noopener noreferrer">open ↗</a>` : ""}</li>`).join("")}</ol>` : ""}
+    </div>`;
+  }
   const sections = (c) => (c.sections || []).map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("");
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
 
@@ -523,7 +551,10 @@
         ${can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : ""}
         ${agendaButton(c)}
       </div>
-      ${(c.screens || []).length ? `<h3>Screens</h3>${shots(c.screens)}` : ""}
+      ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : `<p class="hint">No screenshots yet.${can("screens") && !c.instance ? " Have one? Add it." : ""}</p>`}
+      ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
+      ${renderInstance(c)}
       ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
       ${renderImpact(c.impact)}
       ${src.url ? `<p class="hint"><a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">See it on GitHub ↗</a></p>` : ""}
@@ -990,6 +1021,7 @@
     if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
     if ("focusComposer" in ds) { $("#composer-text")?.focus(); $("#composer")?.scrollIntoView({ block: "center" }); return; }
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
+    if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { await post(ds.post); return; }
     if (ds.sendReply) {
       const input = document.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
@@ -1059,17 +1091,29 @@
   document.addEventListener("click", (e) => { const b = e.target.closest("#type-choice button"); if (b) setType(b.dataset.type); });
 
   // A picture is shrunk in the browser before it is sent: 1600 px wide at most, JPEG.
-  async function addPicture(file) {
-    if (pictures.length >= 2 || !/^image\//.test(file.type)) return;
+  async function addPicture(file, list = pictures, thumbs = "#rq-thumbs", max = 2) {
+    if (list.length >= max || !/^image\//.test(file.type)) return;
     const img = await createImageBitmap(file);
     const scale = Math.min(1, 1600 / img.width);
     const canvas = Object.assign(document.createElement("canvas"), { width: Math.round(img.width * scale), height: Math.round(img.height * scale) });
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
     let q = 0.82, url = canvas.toDataURL("image/jpeg", q);
     while (url.length > 600 * 1024 && q > 0.4) { q -= 0.15; url = canvas.toDataURL("image/jpeg", q); }
-    pictures.push({ contentType: "image/jpeg", data: url.split(",")[1], preview: url });
-    $("#rq-thumbs").innerHTML = pictures.map((p) => `<img alt="" src="${p.preview}" />`).join("");
+    list.push({ contentType: "image/jpeg", data: url.split(",")[1], preview: url });
+    $(thumbs).innerHTML = list.map((p) => `<img alt="" src="${p.preview}" />`).join("");
   }
+
+  const added = [];
+  const addShot = (f) => addPicture(f, added, "#sh-thumbs", 4);
+  $("#sh-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addShot(f); e.target.value = ""; }));
+  $("#shots-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addShot(it.getAsFile()); } }));
+  function openShotsDialog() { added.length = 0; $("#sh-thumbs").innerHTML = ""; $("#shots-dialog").showModal(); }
+  $("#shots-form").addEventListener("submit", guard(async (e) => {
+    if (e.submitter?.value !== "send" || !added.length) return;
+    await api("POST", `/api/cards/${S.card.id}/screens`, { images: added.map(({ contentType, data }) => ({ contentType, data })) });
+    toast("Added. Design Desk checks them and writes their captions.");
+    await openCard(S.card.id);
+  }));
   $("#rq-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addPicture(f); e.target.value = ""; }));
   $("#request-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addPicture(it.getAsFile()); } }));
 

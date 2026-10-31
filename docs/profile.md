@@ -104,6 +104,7 @@ services…). Keep it under 200 lines; link instead of copying.
 | `update` | applies the worktree's current change to an installed Environment, fast | progress lines |
 | `status` | — | `{"state": "running" \| "installing" \| "failed" \| "absent" \| "unknown", "detail": "…"}`; `unknown` (exit 1) when the check itself failed: try again later, never mark the prototype failed for it |
 | `credentials` | — | `{"user": "…", "password": "…", "hint": "…"}` — a demo account only |
+| (any verb) | `PROTO_PORT`, when set, is the backchannel port the caller picked (screens instances use 4900–4950, prototypes the engine's own) | — |
 | `tunnel` | optional: opens a local address to the running prototype for this agent's own browser (the public addresses need a person's sign-in) | `{"url": "http://localhost:…"}`, or `{"error": "…"}` and exit 1 when nothing answers |
 | `untunnel` | closes it | — |
 | `down` | optional cleanup before the Environment is deleted | — |

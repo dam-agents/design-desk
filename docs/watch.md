@@ -34,13 +34,14 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
 6. **Screens**, best source first; each screen is a JPEG under 700 KB with a one-line caption:
    1. The images the PR carries: `design pr-shots <repo> <pr> /tmp/design-desk-<pr>/shots`.
       Use those that show the change; drop logos, diagrams and terminal output.
-   2. A running instance the profile names (`profile.capture.base_url`, often a showcase
-      Environment): `design capture <base-url> <dir> --routes <routes.json> --login <profile.json>`
-      with the routes the change touched (`profile.capture.routes` maps screens to paths),
-      and `DESK_DEMO_USER` / `DESK_DEMO_PASSWORD` set from that instance's demo account
-      (`credentials` of its engine). Without them the capture is signed out: check the shots.
+   2. The screens instance (`screens: enabled`): the merged change on `main`, an open pull
+      request on its own `pr<n>`, with a shot list and a recipe ([screens.md](screens.md)).
+      The card gets the instance's link and demo account, so people try it and add pictures.
    3. Neither: rebuild the changed screen statically with the `walkthrough` skill's markup
-      rules, one step per changed area, and say on the card that the screens are a rebuild.
+      rules, one step per changed area, `source: "rebuild"`, and write the shot list on the
+      card so a person can add real screenshots.
+   Every screen carries its `source` (`pr`, `instance`, `rebuild`); people's own are
+   `person`.
    Look at every screen before you use it (Read the image): a sign-in page, an error or
    an empty frame is not a screen of the change.
 7. **Write the card** with the `explain` skill. A card holds:
@@ -66,6 +67,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
 9. **Record.** An open PR: `bash "$HOME/scripts/ledger.sh" open <repo> <pr> <card id>` (it is
    due again when it merges: then update the same card — the store finds it by the PR — say
    it shipped, and `ledger.sh done`). A merged PR: `ledger.sh done <repo> <pr> <card id>`.
+   A merged or closed PR with a `pr<n>` screens instance: delete it ([screens.md](screens.md)
+   → Clean up).
 10. **Catalog.** Every element card whose `source.file` the change touched: set
     `status: stale` and `design desk enqueue catalog C-<n>` ([catalog.md](catalog.md)).
     Put the touched elements' ids in the change card's `elements`.

@@ -143,7 +143,10 @@ Read `CLAUDE.md` → **Runtime configuration** first. If Step 2a restored a `CON
 2. **People** (`## Desk people`) — "Who will use the Desk? Their email and one role each:
    designer, PM, developer, or lead." The emails must be the ones they sign in to the
    platform with.
-3. **Live prototypes** — "Should I build live prototypes on Environments?" Yes →
+3. **Live prototypes and screens** — "Should I build live prototypes on Environments? And
+   keep my own copy of the product for screenshots of what ships, which people can open and
+   try?" (`screens`, `max_screen_prs`; both need Environments and a profile with an engine.)
+   Live prototypes: yes →
    `max_prototypes` (default 2), `prototype_requesters` (default `designer, lead`). No →
    `max_prototypes: 0`.
 4. **Issues and the coding agent** — "Which label marks an issue that needs design work?"
@@ -201,6 +204,8 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 - log_level: info
 - figma: disabled
 - figma_file:
+- screens: disabled
+- max_screen_prs: 2
 
 ## Desk people
 

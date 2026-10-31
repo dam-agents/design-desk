@@ -23,7 +23,8 @@ last backup (failed, missing, or older than two days), and the version.
    step (status unchanged, no thread activity) are listed by id and title.
 3. **Environments** — `list_environments` against the cards: an Environment no live card
    names is an orphan (report it; the operator decides), a live card whose Environment is
-   gone is stale (report it).
+   gone is stale (report it). `screens` is not an orphan while `screens: enabled`; a
+   `screens-pr<n>` whose pull request is no longer open is (`screens.sh list`).
 4. **Sample three cards** written this week: a source for every "why", screens that show the
    change, no file paths in `what` and `why`, plain English.
 5. **Failures** — every `failures[]` signature from the pass: cause and fix, classified
