@@ -28,7 +28,7 @@ assert "UI files listed" '.changes_due[0].ui_files == ["src/agents/list.tsx"]' "
 assert "a title from ids" '.title == "Explain PR #11, #14"' "$out"
 assert "read_set names the watch doc" '.read_set | index("docs/watch.md") != null' "$out"
 assert "config resolved with defaults" '.config.handoff == "desk" and .config.max_changes_per_run == 2' "$out"
-assert "deferred logged" '.logs | map(test("deferred")) | any' "$out"
+assert "the rest wait" '.logs | map(test("wait for the next run")) | any' "$out"
 assert "skipped logged" '.logs | map(test("touch no UI")) | any' "$out"
 
 # Second pass: 11 and 14 are due (fresh), 12 skipped, so only 15 is new.
@@ -42,6 +42,15 @@ printf 'acme/widgets\t14\t2026-10-22T10:00:00Z\tin_progress\t\t2026-10-01T00:00:
 printf 'acme/widgets\t15\t2026-10-23T10:00:00Z\tcarded\tC-2\t2026-10-30T00:00:00Z\t0\t\n' >> "$WORK_DIR/CHANGES.tsv"
 out3="$(bash "$ROOT/scripts/preflight.sh" watch)"
 assert "only the stale one" '[.changes_due[].pr] == [14] and .changes_due[0].kind == "takeover"' "$out3"
+
+# A PR that keeps failing stops after three attempts (the ledger keeps empty fields).
+printf -- '- repos: acme/widgets\n- watch_since: 2026-10-01T00:00:00Z\n- max_changes_per_run: 2\n' > "$WORK_DIR/CONFIG.md"
+for i in 1 2 3; do
+  bash "$ROOT/scripts/ledger.sh" claim acme/widgets 14 >/dev/null
+  bash "$ROOT/scripts/ledger.sh" fail acme/widgets 14 "render failed" >/dev/null
+done
+assert "three failures are counted" '.row.attempts == 3 and .row.card == ""' "$(bash "$ROOT/scripts/ledger.sh" show acme/widgets 14)"
+assert "and the PR is not retried again" '[.changes_due[]?.pr] | index(14) == null' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 
 # A failed listing is never an answer.
 out4="$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" watch)"

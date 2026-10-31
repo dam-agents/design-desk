@@ -97,3 +97,58 @@ test("a new presentational component file passes, a judged diff with a hook does
   assert.equal(r.ok, false);
   assert.deepEqual(r.files.map((f) => f.verdict), ["ok", "ui-state", "denied"]);
 });
+
+// Bypasses an independent review found; each must stay a behaviour change.
+const notLook = (head, why) => {
+  const r = verdict(head);
+  assert.ok(!["ok", "ui-state"].includes(r.verdict), `${why}: ${JSON.stringify(r)}`);
+};
+
+test("an expression in a class or a style that acts is behaviour", () => {
+  notLook(BASE.replace('<li key={a.id} className="flex gap-2 p-2">', '<li key={a.id} className={(del.mutate(a.id), "flex")}>'), "a call in className");
+  notLook(BASE.replace('<li key={a.id} className="flex gap-2 p-2">', '<li key={a.id} data-x={() => del.mutate(a.id)}>'), "a handler hidden in data-*");
+});
+
+test("new markup that calls, decides on data, or shows new data is behaviour", () => {
+  notLook(BASE.replace("<span>{a.name}</span>", "<span>{a.name}</span>{del.mutate(a.id)}"), "a call as a child");
+  notLook(BASE.replace("</ul>\n  );", "</ul>\n  );").replace("<span>{a.name}</span>", "<span>{a.name}</span>{!a.isAdmin && <TrashCan />}"), "a new condition");
+  notLook(BASE.replace("<span>{a.name}</span>", "<span>{a.name}</span><code>{a.apiToken}</code>"), "a field not shown before");
+  notLook(BASE.replace("<span>{a.name}</span>", '<span dangerouslySetInnerHTML={{ __html: a.name }} />'), "raw HTML");
+  notLook(BASE.replace("<Button variant=\"ghost\"", '<Button type="submit" variant="ghost"'), "a new submit");
+});
+
+test("addresses, methods and statuses in code keep their text", () => {
+  const withConst = BASE.replace("export function AgentList", 'const ENDPOINT = "/api/agents";\nexport function AgentList');
+  assert.equal(compare(withConst, withConst.replace('"/api/agents"', '"/api/admin/wipe"'), FILE, profile).verdict, "logic");
+  const withLink = BASE.replace("<span>{a.name}</span>", '<Link to={"/agents"}>{a.name}</Link>');
+  assert.equal(compare(withLink, withLink.replace('to={"/agents"}', 'to={"/admin"}'), FILE, profile).verdict, "logic");
+});
+
+test("statement order matters", () => {
+  const head = BASE.replace("  if (!agents.length) return <p className=\"text-muted\">No agents yet.</p>;\n", "")
+    .replace("    </ul>\n  );\n}", "    </ul>\n  );\n  if (!agents.length) return <p className=\"text-muted\">No agents yet.</p>;\n}");
+  assert.equal(verdict(head).verdict, "logic");
+});
+
+test("a callback parameter is not a free pass, a new component cannot smuggle an action", () => {
+  const head = BASE
+    .replace('import { cn } from "@/lib/utils";', 'import { useState } from "react";\nimport { cn } from "@/lib/utils";')
+    .replace("const del = useDeleteAgent();", "const del = useDeleteAgent();\n  const [o, setO] = useState(false);")
+    .replace("<span>{a.name}</span>", "<span onClick={(e) => { setO(!o); e.currentTarget.form.requestSubmit(); }}>{a.name}</span>");
+  notLook(head, "event parameter");
+  const quick = BASE.replace("export function AgentList", "function Quick({ run }: { run: () => void }) {\n  return <button onClick={run}>Go</button>;\n}\nexport function AgentList")
+    .replace("<span>{a.name}</span>", "<span>{a.name}</span><Quick run={() => del.mutate(a.id)} />");
+  notLook(quick, "a prop that is not on*");
+});
+
+test("a rename out of a denied folder is denied", () => {
+  const r = judge([{ path: "src/modules/agents/components/auth.ts", oldPath: "src/modules/agents/api/auth.ts", status: "M" }], profile, () => "export const a = 1;\n");
+  assert.equal(r.files[0].verdict, "denied");
+});
+
+test("rewording copy in a template child stays the look", () => {
+  const b = BASE.replace("<span>{a.name}</span>", "<span>{`${a.name} agent`}</span>");
+  assert.equal(compare(b, b.replace("agent`}", "assistant`}"), FILE, profile).verdict, "ok");
+  const c = BASE.replace("export function AgentList", "const rowClass = `flex ${\"gap-2\"}`;\nexport function AgentList");
+  assert.equal(compare(c, c.replace('"gap-2"', '"gap-3"'), FILE, profile).verdict, "ok");
+});

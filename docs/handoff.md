@@ -39,7 +39,8 @@ exactly what the prototype changed, and what it could not change.
      <branch> --title "design: <card title>" --body-file spec.md`, the same marker in the
      body, once per card. Set `spec.pr_url`. Never mark it ready, never merge.
 5. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
-   so the developer can open it; teardown follows ([prototype.md](prototype.md) → Teardown).
+   so the developer can open it; it no longer holds a place, and the expiry pass tears it
+   down once the date passes ([prototype.md](prototype.md) → Expiry).
 
 Record ordering: the issue or pull request is created first and its URL written to the card
 right after (a duplicate is prevented by the marker search, a lost URL is found by it).

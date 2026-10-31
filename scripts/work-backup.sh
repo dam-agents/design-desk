@@ -77,7 +77,9 @@ seed_clone() {
 # .git, then lay down the current state. tar keeps this a pure READ of work/.
 sync_in() {
   find "$LOCAL" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + 2>/dev/null || true
-  ( cd "$WORK" && tar -c --exclude='./.git' -f - . ) \
+  # The Desk's agent token stays on this machine; a restore makes the server mint none
+  # and keep the one it has.
+  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' -f - . ) \
     | ( cd "$LOCAL" && tar -xf - ) || return 1
   return 0
 }
@@ -140,7 +142,7 @@ restore() {
   # existing files
   # with the same names are overwritten, nothing is deleted.
   if ( cd "$LOCAL" && git rev-parse HEAD >/dev/null 2>&1 ); then
-    ( cd "$LOCAL" && tar -c --exclude='./.git' -f - . ) | ( cd "$WORK" && tar -xf - ) \
+    ( cd "$LOCAL" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' -f - . ) | ( cd "$WORK" && tar -xf - ) \
       && { say "restored work/ from remote."; logev info work_backup "restored work/ from remote"; } \
       || { say "restore copy failed."; logev warn work_backup "restore copy failed"; }
   else

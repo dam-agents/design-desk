@@ -85,6 +85,8 @@ services…). Keep it under 200 lines; link instead of copying.
 | `update` | applies the worktree's current change to an installed Environment, fast | progress lines |
 | `status` | — | `{"state": "running" \| "installing" \| "failed" \| "absent", "detail": "…"}` |
 | `credentials` | — | `{"user": "…", "password": "…", "hint": "…"}` — a demo account only |
+| `tunnel` | optional: opens a local address to the running prototype for this agent's own browser (the public addresses need a person's sign-in) | `{"url": "http://localhost:…"}` |
+| `untunnel` | closes it | — |
 | `down` | optional cleanup before the Environment is deleted | — |
 
 A profile without `bin/env` gets variants and specs, no live prototype; the card says so.

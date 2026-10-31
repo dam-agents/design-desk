@@ -9,8 +9,9 @@ const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
   inbox                                    open and claimed inbox items
   item <I-n>                               one inbox item with its card
-  claim <I-n> [--takeover]                 claim an item for this session (DESK_SESSION)
-  done <I-n> [--outcome <text>]            mark a claimed item done
+  claim <I-n> --session <id> [--takeover]  claim an item for this run (or DESK_SESSION)
+  done <I-n> --session <id> [--outcome <text>]
+                                           mark a claimed item done, with the same id
   cards [--kind change|request]            list cards
   card <C-n>                               one card with its threads
   upsert <card.json|->                     create or update a card (agent fields only)
@@ -24,14 +25,21 @@ const USAGE = `usage: design desk <command>
 const TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml",
   ".html": "text/html", ".md": "text/markdown", ".patch": "text/x-diff", ".diff": "text/x-diff", ".json": "application/json", ".txt": "text/plain" };
 
-function readArg(p) { return p === "-" ? readFileSync(0, "utf8") : readFileSync(p, "utf8"); }
+function readArg(p) {
+  if (!p) fail("give the text as a file, or - for stdin");
+  try { return p === "-" ? readFileSync(0, "utf8") : readFileSync(p, "utf8"); } catch (e) { fail(`cannot read ${p}: ${e.code || e.message}`); }
+}
 
+const BOOLEAN = new Set(["resolve", "takeover"]);
 function flags(argv) {
   const pos = [], f = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a.startsWith("--")) { const k = a.slice(2); f[k] = argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[++i] : true; }
-    else pos.push(a);
+    if (!a.startsWith("--")) { pos.push(a); continue; }
+    const k = a.slice(2);
+    if (BOOLEAN.has(k)) f[k] = true;
+    else if (i + 1 < argv.length) f[k] = argv[++i];
+    else fail(`--${k} needs a value`);
   }
   return { pos, f };
 }
@@ -59,16 +67,18 @@ const out = (o) => console.log(JSON.stringify(o, null, 1));
 export async function main(_cmd, argv) {
   const [sub, ...rest] = argv;
   const { pos, f } = flags(rest);
-  const session = process.env.DESK_SESSION || "";
+  // An export does not survive between two commands of a harness, so the id travels
+  // as a flag; the env var is the fallback for a shell that keeps it.
+  const session = (typeof f.session === "string" && f.session) || process.env.DESK_SESSION || "";
   switch (sub) {
     case "health": return out(await call("GET", "/health"));
     case "inbox": return out(await call("GET", "/agent/inbox"));
     case "item": return out(await call("GET", `/agent/items/${pos[0]}`));
     case "claim":
-      if (!session) fail("set DESK_SESSION to this run's id first (docs/desk.md → Claims)");
+      if (!session) fail("pass --session <this run's id> (docs/desk.md → Claims)");
       return out(await call("POST", `/agent/items/${pos[0]}/claim`, { session, takeover: Boolean(f.takeover) }));
     case "done":
-      if (!session) fail("set DESK_SESSION to this run's id first (docs/desk.md → Claims)");
+      if (!session) fail("pass --session <the id you claimed with> (docs/desk.md → Claims)");
       return out(await call("POST", `/agent/items/${pos[0]}/done`, { session, outcome: f.outcome || "done" }));
     case "cards": return out(await call("GET", `/agent/cards${f.kind ? `?kind=${encodeURIComponent(f.kind)}` : ""}`));
     case "card": return out(await call("GET", `/agent/cards/${pos[0]}`));
@@ -89,7 +99,7 @@ export async function main(_cmd, argv) {
       }));
     }
     case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve) }));
-    case "comment": return out(await call("POST", `/agent/threads/${pos[0]}/comment`, { text: readArg(pos[1]) }));
+    case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]) }));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
     default: process.stdout.write(USAGE); process.exit(sub ? 2 : 0);
   }

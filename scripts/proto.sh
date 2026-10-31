@@ -4,7 +4,7 @@
 #   proto.sh worktree C-<n> <repo> [slug]   a worktree of the repo's default branch on the
 #                                           branch design-desk/c<n>-<slug>; reused when it exists
 #   proto.sh run C-<n> <verb>               the profile's bin/env <verb> (up|update|status|
-#                                           credentials|down) with the engine variables
+#                                           credentials|tunnel|untunnel|down) with the engine variables
 #   proto.sh remove C-<n>                   the worktree and its local branch (never a pushed one)
 #   proto.sh show C-<n>                     what this card's prototype has on disk
 #
@@ -41,14 +41,14 @@ case "$cmd" in
     logev info prototype "$card worktree $branch"
     cat "$META";;
   run)
-    verb="${3:-}"; case "$verb" in up|update|status|credentials|down) ;; *) err "verb must be up, update, status, credentials or down";; esac
+    verb="${3:-}"; case "$verb" in up|update|status|credentials|tunnel|untunnel|down) ;; *) err "verb must be up, update, status, credentials, tunnel, untunnel or down";; esac
     [ -f "$META" ] || err "no worktree for $card yet — proto.sh worktree first"
     prof="$(jq -r .profile_dir "$META")"
     [ -n "$prof" ] && [ -f "$prof/bin/env" ] || err "the product's profile has no bin/env, so it gets no live prototype (docs/profile.md)"
     # The profile's engine is read from the default branch (the clone), never the worktree.
     export PROTO_NAME="c$n" PROTO_WORKTREE="$(jq -r .worktree "$META")" PROTO_BASE="$(jq -r .base "$META")" PROTO_PROFILE_DIR="$prof" PROTO_STATE="$STATE"
     case "$verb" in
-      status|credentials) bash "$prof/bin/env" "$verb";;
+      status|credentials|tunnel|untunnel) bash "$prof/bin/env" "$verb";;
       *) logev info prototype "$card $verb start"
          if bash "$prof/bin/env" "$verb" 2>&1 | tee -a "$STATE/env-$verb.log"; then logev info prototype "$card $verb done"
          else logev error prototype "$card $verb failed — $STATE/env-$verb.log"; exit 1; fi;;

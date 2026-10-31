@@ -184,9 +184,9 @@
 <li>Change anything behind the screens: servers, data, security, settings.</li></ul>
 <p>When a request needs any of this, I tell you before I start: I can still sketch it as a variant, and the spec names the part a developer has to do.</p>
 <h3>Who can do what</h3><ul>
-<li><b>Everyone on the list</b> reads, asks, comments and votes.</li>
+<li><b>Everyone on the list</b> reads, asks and comments.</li>
 <li><b>Designers</b> start variants, revisions and live prototypes, and approve a design for handoff.</li>
-<li><b>Developers and PMs</b> comment and vote — a concern from them is exactly what we want before a developer starts.</li></ul>`,
+<li><b>Developers and PMs</b> also vote and file requests — a concern from them is exactly what we want before a developer starts.</li></ul>`,
     },
     cs: {
       review: "K prohlédnutí", requests: "Požadavky", shipped: "Nasazeno", guide: "Co umím", newRequest: "Nový designový požadavek",
@@ -225,9 +225,9 @@
 <li>Změnit cokoli za obrazovkami: servery, data, zabezpečení, nastavení.</li></ul>
 <p>Když požadavek něco z toho potřebuje, řeknu vám to dřív, než začnu: pořád to můžu načrtnout jako variantu a specifikace pojmenuje část pro vývojáře.</p>
 <h3>Kdo co může</h3><ul>
-<li><b>Každý ze seznamu</b> čte, ptá se, komentuje a hlasuje.</li>
+<li><b>Každý ze seznamu</b> čte, ptá se a komentuje.</li>
 <li><b>Designéři</b> spouštějí varianty, úpravy a živé prototypy a schvalují design k předání.</li>
-<li><b>Vývojáři a PM</b> komentují a hlasují — jejich výhrada je přesně to, co chceme slyšet, než vývojář začne.</li></ul>`,
+<li><b>Vývojáři a PM</b> navíc hlasují a zakládají požadavky — jejich výhrada je přesně to, co chceme slyšet, než vývojář začne.</li></ul>`,
     },
   };
   let L = T.en;
@@ -249,6 +249,9 @@
   const S = { me: null, tab: "review", cards: [], card: null, variant: null, picking: false, anchor: null, filter: "open", assetCache: new Map() };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Links the agent stored open only over http(s); anything else renders inert.
+  const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
+  const myKey = () => S.me?.key || S.me?.email || "";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString(S.me?.language === "cs" ? "cs-CZ" : undefined, { dateStyle: "medium", timeStyle: "short" }); };
   const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 4200); };
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(`${t("error")}: ${e.message}`); } };
@@ -273,7 +276,7 @@
   }
 
   const roleName = (r) => (L.roleNames || T.en.roleNames)[r] || r;
-  const who = (by) => by?.agent ? `<b>${esc(t("agent"))}</b>` : `<b>${esc(by?.email === S.me?.email ? t("you") : (by?.email || "?"))}</b> · ${esc(roleName(by?.role))}`;
+  const who = (by) => by?.agent ? `<b>${esc(t("agent"))}</b>` : `<b>${esc(by?.email && by.email === S.me?.email ? t("you") : (by?.email || "?"))}</b> · ${esc(roleName(by?.role))}`;
 
   // ---------- header and list ----------
   function renderNav() {
@@ -353,10 +356,10 @@
 
   function renderChange(c) {
     const src = c.source || {};
-    const acked = Boolean(c.acks && S.me && c.acks[S.me.email || ""]);
+    const acked = Boolean(c.acks && S.me && c.acks[myKey()]);
     return `<button class="btn small back" data-back>←</button>
       <h2>${esc(c.title)}</h2>
-      <div class="sub">${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener noreferrer">${esc(t("openPr"))} #${esc(src.pr)}</a>` : ""}${src.merged_at ? `<span>${esc(t("merged"))} ${esc(when(src.merged_at))}</span>` : ""}${src.author ? `<span>${esc(t("by"))} ${esc(src.author)}</span>` : ""}</div>
+      <div class="sub">${src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">${esc(t("openPr"))} #${esc(src.pr)}</a>` : ""}${src.merged_at ? `<span>${esc(t("merged"))} ${esc(when(src.merged_at))}</span>` : ""}${src.author ? `<span>${esc(t("by"))} ${esc(src.author)}</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
       <div class="actions">
         <button class="btn ${acked ? "" : "primary"}" data-ack ${acked ? "disabled" : ""}>${esc(acked ? `✓ ${t("reviewed")}` : t("markReviewed"))}</button>
@@ -398,7 +401,7 @@
     if (!vs.length) return `<div class="panel sub">${esc(t("noVariants"))}</div>`;
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = vs[0].id;
     const v = vs.find((x) => x.id === S.variant);
-    const mine = c.votes?.[v.id]?.[S.me?.email || ""]?.vote;
+    const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)} <span class="chip">${esc((L.fidelity || T.en.fidelity)[x.fidelity] || x.fidelity)}</span></button>`).join("")}</div>
       ${v.rationale ? `<p class="sub" style="display:block;max-width:76ch"><b>${esc(t("rationale"))}:</b> ${esc(v.rationale)}</p>` : ""}
       <div class="vbar">
@@ -415,7 +418,7 @@
     const msg = { none: t("protoNone"), building: t("protoBuilding"), live: t("protoLive"), failed: t("protoFailed"), expired: t("protoExpired"), "torn-down": t("protoExpired") }[p.state] || p.state;
     const g = p.guard ? `<dt>${esc(t("guard"))}</dt><dd>${p.guard.ok ? `<span class="chip ok">✓ ${esc(t("guardOk"))}</span>` : `<span class="chip bad">✕ ${esc(t("guardBad"))}</span>`}${p.guard.summary ? ` <span class="sub">${esc(p.guard.summary)}</span>` : ""}</dd>` : "";
     return `<div class="panel proto"><div>${esc(msg)}</div>
-      ${p.state === "live" && p.url ? `<div><a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(t("open"))} ↗</a></div>` : ""}
+      ${p.state === "live" && p.url ? `<div><a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">${esc(t("open"))} ↗</a></div>` : ""}
       <dl class="kv">${p.login ? `<dt>${esc(t("login"))}</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}${p.login.hint ? ` <span class="sub">${esc(p.login.hint)}</span>` : ""}</dd>` : ""}
       ${p.expires ? `<dt>${esc(t("expires"))}</dt><dd>${esc(when(p.expires))}</dd>` : ""}${g}</dl></div>`;
   }
@@ -441,7 +444,7 @@
       <div class="actions">${actions}</div>
       ${(c.variants || []).length || ["variants", "feedback"].includes(c.status) ? `<h3>${esc(t("variants"))}</h3>${renderVariants(c)}` : ""}
       ${c.prototype && c.prototype.state !== "none" ? `<h3>${esc(t("prototype"))}</h3>${renderPrototype(c)}` : ""}
-      ${c.spec?.asset ? `<h3>${esc(t("specTitle"))}</h3><div class="panel" id="spec-body">…</div>${c.spec.issue_url ? `<p><a href="${esc(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">${esc(t("issue"))} ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${esc(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">${esc(t("pr"))} ↗</a></p>` : ""}` : ""}
+      ${c.spec?.asset ? `<h3>${esc(t("specTitle"))}</h3><div class="panel" id="spec-body">…</div>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">${esc(t("issue"))} ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">${esc(t("pr"))} ↗</a></p>` : ""}` : ""}
       ${(c.sections || []).length ? `<h3>${esc(t("details"))}</h3>${c.sections.map((s) => `<div class="section"><h4>${esc(s.title)}</h4>${md(s.body)}</div>`).join("")}` : ""}
       ${renderThreads(c)}`;
   }
@@ -532,7 +535,7 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
     if (ds.resolve) { await api("POST", `/api/threads/${ds.resolve}/resolve`); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; S.picking = false; renderDetail(); return; }
     if (ds.vote) {
-      const mine = S.card.votes?.[S.variant]?.[S.me?.email || ""]?.vote;
+      const mine = S.card.votes?.[S.variant]?.[myKey()]?.vote;
       const vote = mine === ds.vote ? "none" : ds.vote;
       await api("POST", `/api/cards/${S.card.id}/votes`, { variant: S.variant, vote });
       await openCard(S.card.id);

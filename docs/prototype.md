@@ -14,7 +14,8 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 1. **Check.** Claim the item. The card's `triage.verdict` is `design` (the server refuses a
    build otherwise; re-check anyway). Count cards with `prototype.state` `live` or
    `building`: at `max_prototypes`, answer on the card with a comment naming the
-   prototypes that hold the places and stop (`done --outcome "no free place"`).
+   prototypes that hold the places and stop (`done --outcome "no free place"`). Only open
+   requests count; a closed one's prototype waits for its expiry teardown.
    `create_environment` missing from your tools → comment that the owner must turn on
    Environments, tell the operator, stop.
 2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree C-<n> <repo>` → a checkout of the
@@ -24,8 +25,9 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    `prefer` votes from designers, or the one the request's comments settled; ask in a
    comment when it is a tie — in the product's own components, styles and copy, following
    the profile's `PROFILE.md`. Touch only the paths `boundary.allow` admits.
-   Commit on the branch (`git -C <worktree> commit -am "design: <title>"`, identity
-   `Design Desk <design-desk@users.noreply.github.com>`).
+   Commit everything on the branch, new files included: `git -C <worktree> add -A` then
+   `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
+   <design-desk@users.noreply.github.com>`.
 4. **Guard.** `design guard <worktree> --base <base> --profile <profile.json> --patch
    /tmp/design-desk-c<n>/prototype.patch > /tmp/design-desk-c<n>/guard.json`. Not `ok` →
    [boundary.md](boundary.md) → When the guard refuses. Upload the report and the patch
@@ -41,8 +43,11 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 7. **Publish.** `list_environments` gives the endpoint address of `engine.open_endpoint`;
    `proto.sh run C-<n> credentials` gives the demo sign-in. Set `prototype: {state: "live",
    url, login: {user, password, hint}, env: "c<n>", expires, …}` and `status: testing`.
-   Capture two or three screens of the changed screen through the Link
-   (`design capture`, [watch.md](watch.md) step 6) and add them to the card's `screens`.
+   Capture two or three screens of the changed screen: `proto.sh run C-<n> tunnel` prints
+   a local `url` (the public one needs a person's sign-in); then `DESK_DEMO_USER=… 
+   DESK_DEMO_PASSWORD=… design capture <url> <dir> --routes <routes.json> --login
+   <profile.json>` with the demo sign-in, add the shots to the card's `screens`, and
+   `proto.sh run C-<n> untunnel`. A profile without `tunnel` gets no prototype screens.
 8. `done --outcome live`.
 
 A failure at any step: `prototype.state: failed`, one comment on the card saying what did
@@ -57,11 +62,17 @@ changed — for a UI change, the UI) instead of `up`.
 
 ## Expiry (`expiring_due`)
 
-An entry names a live prototype expiring within a day. While its request is `testing` and a
-person commented or voted in the last three days, extend it: `update_environment` with
-`expires: <prototype_expiry_days>d`, then set `prototype.expires`. Otherwise let it expire
-and set `prototype.state: expired` after the date; the patch and the guard report stay on
-the card.
+An entry names a live prototype; it is not an inbox item, so there is nothing to claim or
+mark done. Every entry gets a decision once:
+
+- `closed: false` (expiring within a day) — while its request is `testing` and a person
+  commented or voted in the last three days, extend it: `update_environment` with `expires:
+  <prototype_expiry_days>d`, then set `prototype.expires` to the new date. Otherwise let it
+  run out. Either way set `prototype.expiry_checked` to the `expires` you decided on, so the
+  next ticks stay quiet.
+- `closed: true` (its request is closed and the date passed) — tear it down as below.
+
+The patch and the guard report stay on the card.
 
 ## Teardown (`teardowns_due`)
 

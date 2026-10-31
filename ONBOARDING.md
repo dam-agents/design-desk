@@ -94,7 +94,11 @@ Step 3) → restore first, so an earlier Desk comes back:
 
 ```bash
 mkdir -p /home/agent/work
+# The Desk server (a Login item) is already running with an empty store in memory:
+# stop it for the restore, so it cannot write that empty store over the restored one.
+rc-service --user design-desk-server stop >/dev/null 2>&1 || true
 LOG_JOB=session bash "$HOME/scripts/work-backup.sh" restore
+rc-service --user design-desk-server start >/dev/null 2>&1 || true
 ```
 
 **2b — always**, creating only what is missing (never overwrite a restored file):
@@ -204,7 +208,9 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
    `desk_artifact` is empty: `create_artifact` with `interactive: true`, private; write
    the id to `desk_artifact`.
 4. **Share.** Ask the owner to open the Desk in the app and share it: Share → Restricted →
-   the emails of Step 3.3. Only the owner can; tick `share` when they confirm.
+   the emails of Step 3.3. Only the owner can; tick `share` when they confirm. Then give
+   them the share link to bookmark: the Desk loads its data there and in this agent's chat,
+   not from the Artifacts page.
 
 ## Step 5 — Product profiles and schedules
 

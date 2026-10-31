@@ -9,6 +9,12 @@ if [ -z "$remote_cfg" ] || [ "$remote_cfg" = none ]; then
   echo "design-desk: pushing is off (prototype_remote: none) — the prototype's record is the patch on its Desk card" >&2
   exit 1
 fi
+# The destination must be the configured repository, whatever remote name it has here.
+url="${2:-}"; want="${remote_cfg#*/}"; case "$remote_cfg" in */*/*) ;; *) want="$remote_cfg";; esac
+case "$url" in
+  *"/$want"|*"/$want.git"|*":$want"|*":$want.git") ;;
+  *) echo "design-desk: refusing to push to $url — prototype_remote is $remote_cfg" >&2; exit 1;;
+esac
 while read -r _local _lsha remote_ref _rsha; do
   case "$remote_ref" in
     refs/heads/design-desk/*) ;;

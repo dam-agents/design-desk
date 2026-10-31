@@ -129,7 +129,9 @@ ui_paths_for() {
   local repo="$1" clone prof paths
   clone="$HOME_DIR/checkouts/$(printf '%s' "$repo" | tr '/' '_')"
   if [ -d "$clone/.git" ]; then
-    for prof in $(git -C "$clone" ls-tree -r --name-only origin/HEAD -- .design-desk 2>/dev/null | grep '/profile.json$' | head -1); do
+    local want; want="$(cfg profile)"
+    case "$want" in "$repo":*) want=".design-desk/${want#"$repo":}"; want="${want%/}/profile.json"; want="${want/.design-desk\/.design-desk\//.design-desk/}";; *) want="";; esac
+    for prof in ${want:-$(git -C "$clone" ls-tree -r --name-only origin/HEAD -- .design-desk 2>/dev/null | grep '/profile.json$' | sort | head -1)}; do
       paths="$(git -C "$clone" show "origin/HEAD:$prof" 2>/dev/null | jq -r '(.ui.paths // []) | join(",")' 2>/dev/null)"
       [ -n "$paths" ] && { printf '%s' "$paths"; return; }
     done
@@ -154,17 +156,30 @@ watch_mode() {
   since_day="${SINCE%%T*}"
   ensure_ledger
   local DUE; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"
-  local ndue=0 deferred=0 skipped=0 seen=0
+  local ndue=0 deferred=0 skipped=0 seen=0 lookups=0
+  # One files call per new candidate; a backlog is spread over passes so a pass stays
+  # well inside the Precheck's budget (about 2 s a call through the gateway).
+  local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
   local stale_s=$((3 * 3600))
   for repo in $(printf '%s' "$REPOS" | tr ',' ' '); do
     local slug; slug="$(repo_slug "$repo")"
     local hostargs=(); case "$repo" in */*/*) hostargs=(--hostname "${repo%%/*}");; esac
     # One batched call: every PR merged since the watermark day (search caps at 100
     # per page; the cap below keeps a backlog spread over runs).
-    items="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="repo:$slug is:pr is:merged merged:>=$since_day" -f sort=updated -f order=desc -f per_page=100 2>/dev/null)" \
-      || fail_out "could not list merged pull requests of $repo (gh api search/issues failed) — is the GitHub connection granted?"
-    jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$items" || fail_out "the search for $repo answered without an item list"
-    [ "$(jq -r '.incomplete_results' <<<"$items")" = "true" ] && log "$repo: the search reported incomplete results — the rest come next run"
+    # Pages of 100, oldest-updated last; up to 5 pages (500 PRs) a pass, so a backlog
+    # after an outage is read whole instead of silently cut at the first page.
+    items='{"items":[]}'
+    local page=1 got
+    while [ "$page" -le 5 ]; do
+      got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="repo:$slug is:pr is:merged merged:>=$since_day" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" \
+        || fail_out "could not list merged pull requests of $repo (gh api search/issues failed) — is the GitHub connection granted?"
+      jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || fail_out "the search for $repo answered without an item list"
+      [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$repo: the search reported incomplete results — the rest come next run"
+      items="$(jq -c --argjson more "$(jq -c .items <<<"$got")" '.items += $more' <<<"$items")"
+      [ "$(jq '.items | length' <<<"$got")" -eq 100 ] || break
+      page=$((page + 1))
+    done
+    [ "$page" -gt 5 ] && log "$repo: more than 500 merged PRs since $since_day — the oldest wait for later passes"
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
     while IFS=$'\t' read -r num merged title url author; do
       [ -n "$num" ] || continue
@@ -181,7 +196,8 @@ watch_mode() {
         failed) [ "${attempts:-0}" -lt 3 ] || { log "$repo#$num: failed ${attempts} times — left for the audit"; continue; }; kind="retry";;
         "") kind="first";;
       esac
-      if [ "$ndue" -ge "$MAXN" ]; then deferred=$((deferred + 1)); continue; fi
+      if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
+      lookups=$((lookups + 1))
       # Per candidate: its files, to keep only PRs that touch the UI.
       local files ui n
       files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
@@ -202,7 +218,7 @@ watch_mode() {
     done < <(jq -r '.items[] | [.number, (.pull_request.merged_at // ""), (.title | gsub("[\t\n]"; " ")), .html_url, .user.login] | @tsv' <<<"$items")
   done
   [ "$skipped" -gt 0 ] && log "$skipped merged PRs touch no UI file — skipped"
-  [ "$deferred" -gt 0 ] && log "$deferred more due PRs deferred to the next run (max_changes_per_run=$MAXN)"
+  [ "$deferred" -gt 0 ] && log "$deferred more merged PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
   printf '%s changes_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
   local arr; arr="$(jq -s '.' "$DUE")"; rm -f "$DUE"
   [ "$ndue" -gt 0 ] || quiet_out
@@ -226,13 +242,17 @@ inbox_mode() {
     def epoch: (sub("Z$"; "") + "Z") | fromdateiso8601? // 0;
     [ (.open[] | . + {takeover:false}),
       (.claimed[] | select(($now - (.claimed_at | epoch)) >= $ttl) | . + {takeover:true}) ]' "$INBOX")"
+  # A live prototype whose expiry is within a day (and not yet decided for that date),
+  # or whose request is closed and whose expiry passed, is due once.
   local expiring="[]"
   if [ -f "$DB" ]; then
     expiring="$(jq -c --argjson now "$NOW_EPOCH" '
-      def epoch: (sub("Z$"; "") + "Z") | fromdateiso8601? // 0;
-      [ .cards[] | select(.kind == "request" and .prototype.state == "live" and (.status != "declined" and .status != "handed-off"))
-        | select(.prototype.expires != null and ((.prototype.expires | epoch) - $now) < 86400)
-        | {id: ("E-" + .id), card: .id, env: .prototype.env, expires: .prototype.expires} ]' "$DB" 2>/dev/null || echo '[]')"
+      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+      [ .cards[] | select(.kind == "request" and (.prototype.state == "live" or .prototype.state == "building") and .prototype.expires != null)
+        | (.status == "declined" or .status == "handed-off") as $closed
+        | ((.prototype.expires | epoch) - $now) as $left
+        | select(if $closed then $left <= 0 else ($left < 86400 and .prototype.expiry_checked != .prototype.expires) end)
+        | {id: ("E-" + .id), card: .id, env: .prototype.env, expires: .prototype.expires, closed: $closed} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   local n; n="$(jq 'length' <<<"$items")"
   if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ]; then

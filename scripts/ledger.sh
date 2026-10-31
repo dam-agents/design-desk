@@ -35,7 +35,8 @@ last_row() { awk -F'\t' -v r="$repo" -v p="$pr" 'NR>1 && $1==r && $2==p' "$LEDGE
 if [ "$cmd" = show ]; then
   row="$(last_row)"
   [ -n "$row" ] || { out '{outcome:"ok", row:null}'; exit 0; }
-  IFS=$'\t' read -r r p m s c u a n <<<"$row"
+  f() { printf '%s' "$row" | cut -f"$1"; }
+  r="$(f 1)"; p="$(f 2)"; m="$(f 3)"; s="$(f 4)"; c="$(f 5)"; u="$(f 6)"; a="$(f 7)"; n="$(f 8)"
   out --arg r "$r" --arg p "$p" --arg m "$m" --arg s "$s" --arg c "$c" --arg u "$u" --arg a "$a" --arg n "$n" \
     '{outcome:"ok", row:{repo:$r, pr:($p|tonumber), merged_at:$m, status:$s, card:$c, updated:$u, attempts:($a|tonumber? // 0), note:$n}}'
   exit 0
@@ -51,7 +52,9 @@ done
 trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 
 row="$(last_row)"
-IFS=$'\t' read -r _r _p merged status card _u attempts _n <<<"${row:-}"
+# cut keeps empty fields (an IFS read would merge the tabs around an empty card).
+merged="$(printf '%s' "${row:-}" | cut -f3)"; status="$(printf '%s' "${row:-}" | cut -f4)"
+card="$(printf '%s' "${row:-}" | cut -f5)"; attempts="$(printf '%s' "${row:-}" | cut -f7)"
 attempts="${attempts:-0}"; case "$attempts" in *[!0-9]*|'') attempts=0;; esac
 clean() { printf '%s' "$1" | tr '\t\n' '  ' | cut -c1-200; }
 

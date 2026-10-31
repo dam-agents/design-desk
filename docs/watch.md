@@ -33,7 +33,9 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
       Use those that show the change; drop logos, diagrams and terminal output.
    2. A running instance the profile names (`profile.capture.base_url`, often a showcase
       Environment): `design capture <base-url> <dir> --routes <routes.json> --login <profile.json>`
-      with the routes the change touched (`profile.capture.routes` maps screens to paths).
+      with the routes the change touched (`profile.capture.routes` maps screens to paths),
+      and `DESK_DEMO_USER` / `DESK_DEMO_PASSWORD` set from that instance's demo account
+      (`credentials` of its engine). Without them the capture is signed out: check the shots.
    3. Neither: rebuild the changed screen statically with the `walkthrough` skill's markup
       rules, one step per changed area, and say on the card that the screens are a rebuild.
    Look at every screen before you use it (Read the image): a sign-in page, an error or

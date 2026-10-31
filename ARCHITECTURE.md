@@ -55,9 +55,9 @@ flowchart LR
   inbox -->|spec| handoff[Handoff:<br/>Desk, issue or draft PR]
 ```
 
-- **Watch run** (`scripts/preflight.sh watch`, every 30 min, Precheck): one search call lists PRs merged since the watermark in the watched repositories; a files call per candidate keeps those that touch the profile's UI paths.
+- **Watch run** (`scripts/preflight.sh watch`, hourly, Precheck): one search call lists PRs merged since the watermark in the watched repositories; a files call per candidate keeps those that touch the profile's UI paths.
   The run keeps the first PR and dispatches the rest; each session reads the PR, its linked issue, its decision block and the architecture pages it touches, captures the screens, and writes one card.
-- **Inbox run** (`scripts/preflight.sh inbox`, every 5 min, Precheck over a local file only): questions to answer, requests to triage, variants to make or revise, prototypes to build or update, specs to write, Environments to tear down.
+- **Inbox run** (`scripts/preflight.sh inbox`, every 10 min, Precheck over a local file only): questions to answer, requests to triage, variants to make or revise, prototypes to build or update, specs to write, Environments to tear down.
   A viewer's ping starts the same work at once; the claim in the store keeps the two from doing it twice.
 - **Monitor** (every 15 min) and **weekly audit**, as every agent made with the creator.
 - **On request**: everything the `designer` kit did, from the chat or a Slack DM.
@@ -90,8 +90,21 @@ Clones and prototype worktrees live in `$HOME/checkouts/`, outside `work/`, and 
 
 These parts are written against the platform's documented contracts but were not run end to end before the first commit:
 
-- The live prototype engine (`.design-desk/dam/bin/env` in the DAM repository): an Environment install of DAM from a prototype worktree, the demo seed, and the UI-only rebuild.
-- Live screenshots through the Environment Link.
+- The live prototype engine (`.design-desk/dam/bin/env` in the DAM repository): an Environment install of DAM from a prototype worktree with the backchannel on, the demo account, the UI-only rebuild, and the `tunnel` verb that gives the agent's own browser a local address for screenshots.
+- `design capture` against a running install (it is written for Keycloak's sign-in form; the screenshot code itself is the Designer kit's, which is proven).
 - The Desk page against the real Artifact API relay (the server and the store have offline tests).
 
 The first onboarding runs `scripts/verify-onboarding.sh --live`, which probes each of them.
+
+## Not built yet, on purpose
+
+- **A showcase Environment** that runs the latest default branch, so the watch can capture
+  live screens of every change; today the screens come from the pull request (DAM requires UI
+  proof in every UI PR) or a static rebuild, and `profile.capture.base_url` is the hook for it.
+- **Demo data** in a prototype beyond its demo account: DAM's prototype starts empty, like a new
+  user's install; a profile `seed/` is the place for it.
+- **A harness adapter** (hooks for tool failures and outages, an auto-mode allow list, a tool
+  deny list). The push rule is enforced by a git `pre-push` hook instead; merges and
+  non-draft PRs stay a written rule until the adapter exists.
+- **Anonymous issues on this definition repository**: the audit reports definition bugs to the
+  operator only.

@@ -12,6 +12,9 @@ export const LIMITS = {
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
   assetBytes: 720 * 1024,
   claimTtlMin: 120,
+  // The whole store is one file rewritten on every change; past this people's writes
+  // are refused until the operator archives old cards.
+  dbBytes: 50 * 1024 * 1024,
 };
 
 export const ROLES = ["lead", "designer", "pm", "developer", "guest"];
@@ -43,6 +46,10 @@ const missing = (m) => new DeskError(404, m);
 
 const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
+// Ids come from people's requests; only an own key of the table is an entry, so
+// "__proto__" or "constructor" never reaches Object.prototype.
+const own = (table, id) => (typeof id === "string" && Object.hasOwn(table, id) ? table[id] : undefined);
+
 function clean(s, max, name) {
   if (typeof s !== "string") throw bad(`${name} must be text`);
   const t = s.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").trim();
@@ -63,16 +70,34 @@ export class Store {
     this.dbPath = join(dir, "db.json");
     this.assetDir = join(dir, "assets");
     mkdirSync(this.assetDir, { recursive: true });
+    this.load();
+  }
+
+  load() {
     this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8")) : emptyDb();
     for (const k of Object.keys(emptyDb())) if (this.db[k] === undefined) this.db[k] = emptyDb()[k];
+    this.mtime = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
+  }
+
+  // Another writer replaced db.json (a restore from the backup): read it before acting,
+  // so the memory of this process never writes an older store over it.
+  reloadIfChanged() {
+    const m = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
+    if (m !== this.mtime) { this.load(); return true; }
+    return false;
   }
 
   save() {
+    const text = JSON.stringify(this.db);
     const tmp = `${this.dbPath}.tmp-${process.pid}`;
-    writeFileSync(tmp, JSON.stringify(this.db));
+    writeFileSync(tmp, text);
     renameSync(tmp, this.dbPath);
+    this.mtime = statSync(this.dbPath).mtimeMs;
+    this.bytes = text.length;
     this.writeInbox();
   }
+
+  full() { return (this.bytes ?? (existsSync(this.dbPath) ? statSync(this.dbPath).size : 0)) > LIMITS.dbBytes; }
 
   // inbox.json is what the inbox pre-flight reads: a local file, so an idle tick
   // never wakes the model and never needs the server to answer.
@@ -91,8 +116,9 @@ export class Store {
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
 
-  card(id) { const c = this.db.cards[id]; if (!c) throw missing(`no card ${id}`); return c; }
-  thread(id) { const t = this.db.threads[id]; if (!t) throw missing(`no thread ${id}`); return t; }
+  card(id) { const c = own(this.db.cards, id); if (!c) throw missing(`no card ${id}`); return c; }
+  thread(id) { const t = own(this.db.threads, id); if (!t) throw missing(`no thread ${id}`); return t; }
+  item(id) { const i = own(this.db.inbox, id); if (!i) throw missing(`no inbox item ${id}`); return i; }
 
   // ---------- reads ----------
 
@@ -116,7 +142,7 @@ export class Store {
   }
 
   getAsset(id) {
-    const a = this.db.assets[id];
+    const a = own(this.db.assets, id);
     if (!a) throw missing(`no asset ${id}`);
     const buf = readFileSync(join(this.assetDir, a.file));
     const text = /^text\/|json|svg/.test(a.contentType);
@@ -155,12 +181,15 @@ export class Store {
   reply(threadId, who, text) {
     const t = this.thread(threadId);
     if (t.messages.length >= LIMITS.messagesPerThread) throw bad("this thread is full; open a new one");
-    t.messages.push({ by: person(who), at: this.clock(), text: clean(text, LIMITS.text, "text") });
+    const body = clean(text, LIMITS.text, "text");
+    t.messages.push({ by: person(who), at: this.clock(), text: body });
     let item = null;
     // A follow-up to a question goes back to the agent; a comment stays between people.
+    // An item already claimed is being answered from what it saw, so a new message gets
+    // an item of its own unless one is still open.
     if (t.kind === "question") {
       t.state = "open"; t.needs_agent = true;
-      if (!this.pendingFor(threadId)) item = this.enqueue("question", t.card, threadId, who);
+      if (!this.openItemFor(threadId)) item = this.enqueue("question", t.card, threadId, who);
     }
     this.card(t.card).updated = this.clock();
     this.save();
@@ -194,7 +223,7 @@ export class Store {
     const c = {
       id, kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),
       title: clean(title, LIMITS.title, "title"),
-      request: { problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"), screen: optText(screen, 500, "screen"), from },
+      request: { problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"), screen: optText(screen, 500, "screen"), from: from ? this.card(String(from)).id : null },
       summary: "", sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {},
       triage: null, prototype: { state: "none" }, spec: null,
     };
@@ -208,6 +237,8 @@ export class Store {
   act(cardId, who, action, note = "") {
     const c = this.card(cardId);
     if (c.kind !== "request") throw bad("only a design request takes actions");
+    const closed = c.status === "declined" || c.status === "handed-off";
+    if (closed && action !== "reopen") throw bad("this request is closed; reopen it first");
     const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown" };
     if (action === "reopen") {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
@@ -218,11 +249,11 @@ export class Store {
       return { card: c, inbox: item };
     }
     if (!kinds[action]) throw bad(`unknown action ${action}`);
-    if (action === "build" && c.triage?.verdict && c.triage.verdict !== "design")
-      throw forbidden("this request needs a developer or a product decision, so it gets no live prototype; the spec explains why");
+    if (action === "build" && c.triage?.verdict !== "design")
+      throw forbidden(c.triage ? "this request needs a developer or a product decision, so it gets no live prototype; the spec explains why" : "the request is not triaged yet; a live prototype follows the verdict");
     if (action === "approve" && !["testing", "feedback", "prototype"].includes(c.status))
       throw bad("approve a request once it has variants or a prototype to approve");
-    if (this.pendingFor(null, cardId, kinds[action])) throw bad("that is already waiting for the agent");
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad("that is already waiting for the agent");
     if (action === "close") c.status = "declined";
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
@@ -236,35 +267,38 @@ export class Store {
     if (!INBOX_KINDS.includes(kind)) throw bad(`unknown inbox kind ${kind}`);
     const id = this.next("item", "I");
     const it = { id, kind, card, thread, by: person(who), note, created: this.clock(), state: "open" };
+    // A question item knows how many messages its thread had, so an answer closes only
+    // what it could have read.
+    if (thread) it.msg_count = this.thread(thread).messages.length;
     this.db.inbox[id] = it;
     return it;
   }
 
-  pendingFor(thread, card = null, kind = null) {
-    return Object.values(this.db.inbox).find((i) => i.state !== "done" &&
-      (thread ? i.thread === thread : i.card === card && i.kind === kind));
+  openItemFor(thread) {
+    return Object.values(this.db.inbox).find((i) => i.state === "open" && i.thread === thread);
   }
 
   // A claim is the inbox lock: one session per item. A claim older than the TTL is
   // taken over only by an explicit `takeover`, which the pre-flight decides.
   claim(itemId, session, { takeover = false } = {}) {
-    const it = this.db.inbox[itemId];
-    if (!it) throw missing(`no inbox item ${itemId}`);
+    const it = this.item(itemId);
     if (it.state === "done") throw new DeskError(409, `${itemId} is done`);
     if (it.state === "claimed" && it.claimed_by !== session) {
       const age = (Date.parse(this.clock()) - Date.parse(it.claimed_at)) / 60000;
       if (!takeover || age < LIMITS.claimTtlMin) throw new DeskError(409, `${itemId} is claimed by ${it.claimed_by} since ${it.claimed_at}`);
     }
-    it.state = "claimed"; it.claimed_by = clean(session, 200, "session"); it.claimed_at = this.clock();
+    const by = clean(String(session || ""), 200, "session");
+    it.state = "claimed"; it.claimed_by = by; it.claimed_at = this.clock();
+    if (it.thread) it.seen = this.thread(it.thread).messages.length;
     this.save();
     return { item: it, card: this.getCard(it.card) };
   }
 
   done(itemId, session, outcome = "done") {
-    const it = this.db.inbox[itemId];
-    if (!it) throw missing(`no inbox item ${itemId}`);
+    const it = this.item(itemId);
     if (it.state === "claimed" && it.claimed_by !== session) throw new DeskError(409, `${itemId} is claimed by ${it.claimed_by}`);
-    it.state = "done"; it.done_at = this.clock(); it.outcome = clean(outcome, 500, "outcome");
+    const why = clean(typeof outcome === "string" ? outcome : "done", 500, "outcome");
+    it.state = "done"; it.done_at = this.clock(); it.outcome = why;
     if (it.thread && it.kind === "question") {
       const t = this.db.threads[it.thread];
       if (t && t.state === "answered") t.needs_agent = false;
@@ -275,12 +309,21 @@ export class Store {
 
   answer(threadId, text, { resolve = false } = {}) {
     const t = this.thread(threadId);
-    t.messages.push({ by: { agent: true }, at: this.clock(), text: clean(text, LIMITS.text, "text") });
-    t.state = resolve ? "resolved" : "answered";
-    t.needs_agent = false;
-    // The answer is the item's whole work, so it closes the question's inbox item.
-    for (const it of Object.values(this.db.inbox))
-      if (it.thread === threadId && it.kind === "question" && it.state !== "done") { it.state = "done"; it.done_at = this.clock(); it.outcome = "answered"; }
+    const body = clean(text, LIMITS.text, "text");
+    // The answer closes the items it could have read: the claimed ones, and open ones
+    // whose message was already there when a claim read the thread. A message that came
+    // later keeps its own item open, and the thread keeps waiting for the agent.
+    const items = Object.values(this.db.inbox).filter((it) => it.thread === threadId && it.kind === "question" && it.state !== "done");
+    const claimed = items.filter((it) => it.state === "claimed");
+    const seen = claimed.length ? Math.max(...claimed.map((it) => it.seen ?? t.messages.length)) : t.messages.length;
+    t.messages.push({ by: { agent: true }, at: this.clock(), text: body });
+    let waiting = false;
+    for (const it of items) {
+      if (it.state === "claimed" || (it.msg_count ?? 0) <= seen) { it.state = "done"; it.done_at = this.clock(); it.outcome = "answered"; }
+      else waiting = true;
+    }
+    t.state = waiting ? "open" : resolve ? "resolved" : "answered";
+    t.needs_agent = waiting;
     this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t };
@@ -291,39 +334,37 @@ export class Store {
   // are never overwritten.
   upsertCard(fields) {
     const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels"];
-    let c = fields.id ? this.db.cards[fields.id] : null;
+    let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
-    if (!c) {
-      if (fields.kind !== "change" && fields.kind !== "request") throw bad("a new card needs kind change or request");
-      if (fields.kind === "change" && fields.source?.repo && fields.source?.pr) {
-        const dup = Object.values(this.db.cards).find((x) => x.kind === "change" && x.source?.repo === fields.source.repo && x.source?.pr === fields.source.pr);
-        if (dup) c = dup;
-      }
-      if (!c) {
-        const id = this.next("card", "C");
-        c = { id, kind: fields.kind, status: fields.kind === "change" ? "new" : "triage", created: this.clock(), created_by: { agent: true },
-          sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" } };
-        this.db.cards[id] = c;
-      }
-    }
+    if (!c && fields.kind !== "change" && fields.kind !== "request") throw bad("a new card needs kind change or request");
+    if (!c && fields.kind === "change" && fields.source?.repo && fields.source?.pr)
+      c = Object.values(this.db.cards).find((x) => x.kind === "change" && x.source?.repo === fields.source.repo && x.source?.pr === fields.source.pr) || null;
+    // Everything is checked on a copy; the store changes only when all of it holds.
+    const next = c ? structuredClone(c) : { kind: fields.kind, status: fields.kind === "change" ? "new" : "triage", created: this.clock(), created_by: { agent: true },
+      sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" } };
     for (const k of AGENT_FIELDS) {
       if (fields[k] === undefined) continue;
-      if (k === "title") c.title = clean(fields.title, LIMITS.title, "title");
-      else if (k === "summary") c.summary = clean(fields.summary, 600, "summary");
+      if (k === "title") next.title = clean(fields.title, LIMITS.title, "title");
+      else if (k === "summary") next.summary = clean(fields.summary, 600, "summary");
       else if (k === "status") {
-        const ok = c.kind === "change" ? CHANGE_STATES : REQUEST_STATES;
+        const ok = next.kind === "change" ? CHANGE_STATES : REQUEST_STATES;
         if (!ok.includes(fields.status)) throw bad(`status must be one of ${ok.join(", ")}`);
-        c.status = fields.status;
-      } else if (k === "sections") c.sections = cleanSections(fields.sections);
-      else if (k === "screens") c.screens = cleanRefs(fields.screens, this.db.assets, "screens");
-      else if (k === "variants") c.variants = cleanVariants(fields.variants, this.db.assets);
-      else if (k === "triage") c.triage = cleanTriage(fields.triage);
-      else c[k] = fields[k];
+        // A person closed it while a session worked: the session's late write must not reopen it.
+        if (c && (c.status === "declined" || c.status === "handed-off") && fields.status !== c.status && !(c.status === "handed-off" && fields.status === "declined"))
+          throw new DeskError(409, `${c.id} is ${c.status}; only a person reopens it`);
+        next.status = fields.status;
+      } else if (k === "sections") next.sections = cleanSections(fields.sections);
+      else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
+      else if (k === "variants") next.variants = cleanVariants(fields.variants, this.db.assets);
+      else if (k === "triage") next.triage = cleanTriage(fields.triage);
+      else next[k] = cleanLinks(k, fields[k]);
     }
-    if (!c.title) throw bad("a card needs a title");
-    c.updated = this.clock();
+    if (!next.title) throw bad("a card needs a title");
+    if (!c) { next.id = this.next("card", "C"); }
+    next.updated = this.clock();
+    this.db.cards[next.id] = next;
     this.save();
-    return { card: c };
+    return { card: next };
   }
 
   addAsset({ card = null, kind, name, contentType, data, encoding = "base64" }) {
@@ -384,7 +425,7 @@ function cleanRefs(list, assets, name) {
   if (!Array.isArray(list)) throw bad(`${name} must be a list`);
   return list.slice(0, 30).map((s) => {
     const asset = typeof s === "string" ? s : s.asset;
-    if (!assets[asset]) throw bad(`${name}: no asset ${asset}`);
+    if (!own(assets, asset)) throw bad(`${name}: no asset ${asset}`);
     return { asset, caption: typeof s === "object" ? optText(s.caption, 300, "caption") : "" };
   });
 }
@@ -392,7 +433,7 @@ function cleanRefs(list, assets, name) {
 function cleanVariants(list, assets) {
   if (!Array.isArray(list)) throw bad("variants must be a list");
   return list.slice(0, 6).map((v, i) => {
-    if (!assets[v.asset]) throw bad(`variant ${i + 1}: no asset ${v.asset}`);
+    if (!own(assets, v.asset)) throw bad(`variant ${i + 1}: no asset ${v.asset}`);
     return {
       id: String(v.id || `v${i + 1}`).replace(/[^a-z0-9-]/gi, "").slice(0, 20),
       name: clean(v.name, 80, "variant name"),
@@ -407,4 +448,17 @@ function cleanTriage(t) {
   if (!t || !["design", "needs-developer", "product"].includes(t.verdict)) throw bad("triage verdict must be design, needs-developer or product");
   const list = (x, n) => (Array.isArray(x) ? x.slice(0, 12).map((s) => clean(s, 600, n)) : []);
   return { verdict: t.verdict, reasons: list(t.reasons, "reason"), can: list(t.can, "can"), cannot: list(t.cannot, "cannot") };
+}
+
+// The agent's free-form fields are objects whose links the page renders: only http(s).
+function cleanLinks(key, value) {
+  if (value === null) return null;
+  if (typeof value !== "object" || Array.isArray(value) && key !== "labels") throw bad(`${key} must be an object`);
+  const copy = structuredClone(value);
+  const walk = (o) => { for (const [k, v] of Object.entries(o)) {
+    if (v && typeof v === "object") walk(v);
+    else if (/url$/i.test(k) && v != null && !/^https?:\/\//i.test(String(v))) throw bad(`${key}.${k} must be an http(s) address`);
+  } };
+  walk(copy);
+  return copy;
 }

@@ -17,9 +17,11 @@ file is how that promise is kept and how it is explained.
 
 Edge cases, decided once:
 
-- **Showing information the screen already has** (a value the component already receives) is
-  design. Showing information it does not receive is `needs-developer`, even when the
-  product has it elsewhere.
+- **Showing information the screen already shows** somewhere else on it is design. Showing a
+  field it does not show today is `needs-developer`, even when the screen receives it: the
+  field may be private, or not loaded for every user, and a developer decides that.
+- Copy lives in the markup. A string in the code around it (a constant, a toast) is code,
+  because a string there can just as well be an address or a status.
 - **Hiding** something behind a disclosure is design; **removing** it is not.
 - **A condition inside a style** (which color a status shows) is design; a condition on
   whether something is offered is not.
@@ -51,11 +53,16 @@ checks the exact diff of a prototype and prints one JSON object:
 - exit 1 — at least one refusal; exit 2 — the check could not run (no profile boundary, a
   git error). **Exit 2 is never a pass.**
 
-How it decides: the profile's `boundary.allow` and `boundary.deny` path lists first; then,
-for code, a fingerprint of each changed file — the modules it uses, every statement outside
-the markup, and what the markup wires to behaviour (handlers, links, values, conditions,
-lists, data passed to components). Markup structure, classes, styles, copy and presentational
-components are not in it, so moving, restyling and rewording leave it unchanged.
+How it decides: the profile's `boundary.allow` and `boundary.deny` path lists first (a rename
+by both paths); then, for code, a fingerprint of each changed file — the modules it uses,
+every statement outside the markup in its order, and what the markup wires to behaviour
+(handlers, links, values, conditions, lists, data passed to components, and any attribute
+whose expression calls or assigns). Markup structure, classes, styles, copy and
+presentational components are not in it, so moving, restyling and rewording leave it
+unchanged. New markup may only read what the old markup read, call formatting and the new
+view state's setters, and add no condition on existing data. Files git ignores in the
+worktree (other than dependency and build folders) fail the check: they would ship with the
+install unseen.
 
 When the guard refuses:
 

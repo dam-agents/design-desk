@@ -46,6 +46,15 @@ export async function main(_cmd, argv) {
     return r.status === 0 ? r.stdout : null;
   };
   const result = judge(list, profile, readSide);
+  // An ignored file never shows in the diff, yet an install from the worktree ships it
+  // (a .env.local, a build output with secrets). Only dependency and build folders may be there.
+  const okIgnored = /(^|\/)(node_modules|dist|build|out|coverage|\.turbo|\.next|\.cache|\.pnpm-store)\/?$|\.log$/;
+  const ignored = git("ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z").split("\0").filter(Boolean).filter((f) => !okIgnored.test(f));
+  if (ignored.length) {
+    result.ok = false;
+    result.files.push(...ignored.slice(0, 20).map((path) => ({ path, status: "?", verdict: "denied", issues: ["an ignored file in the worktree would ship with the prototype's install"], notes: [], plain: "A file outside version control would be installed with the prototype." })));
+    result.summary = `${result.summary} Ignored files in the worktree: ${ignored.slice(0, 5).join(", ")}.`;
+  }
   if (patch) writeFileSync(patch, git("diff", "--binary", mergeBase));
   console.log(JSON.stringify({ base: mergeBase.slice(0, 12), ...result }, null, 1));
   process.exit(result.ok ? 0 : 1);

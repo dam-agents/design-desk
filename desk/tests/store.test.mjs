@@ -75,3 +75,48 @@ test("input limits and asset size are enforced", () => {
   const { asset } = s.addAsset({ kind: "variant", contentType: "text/html", encoding: "utf8", data: "<p>hi</p>" });
   assert.equal(s.getAsset(asset.id).data, "<p>hi</p>");
 });
+
+test("ids that name Object.prototype members are not entries", () => {
+  const s = fresh();
+  for (const id of ["__proto__", "constructor", "toString"]) {
+    assert.throws(() => s.ack(id, alice), /no card/);
+    assert.throws(() => s.openThread(id, alice, { kind: "comment", text: "x" }), /no card/);
+    assert.throws(() => s.getAsset(id), /no asset/);
+    assert.throws(() => s.claim(id, "s1"), /no inbox item/);
+  }
+  assert.equal(({}).acks, undefined);
+  assert.equal(({}).threads, undefined);
+});
+
+test("a follow-up asked while the agent answers keeps its own item", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 3 } });
+  const { thread, inbox: first } = s.openThread(card.id, bob, { kind: "question", text: "Why weekly?" });
+  s.claim(first.id, "s1");
+  const { inbox: second } = s.reply(thread.id, bob, "And per person?");
+  assert.ok(second, "the follow-up gets an item although the first is claimed");
+  s.answer(thread.id, "Because the limit resets weekly.");
+  assert.deepEqual(inbox(s).open.map((i) => i.id), [second.id]);
+  assert.equal(s.getCard(card.id).threads[0].needs_agent, true);
+});
+
+test("a failed card write leaves nothing behind", () => {
+  const s = fresh();
+  assert.throws(() => s.upsertCard({ kind: "change", title: "Ghost", summary: "x".repeat(700) }), /longer than 600/);
+  assert.throws(() => s.upsertCard({ kind: "change", title: "Ghost", screens: ["A-99"] }), /no asset/);
+  assert.equal(s.listCards().length, 0);
+  assert.throws(() => s.upsertCard({ kind: "request", title: "Bad link", prototype: { state: "live", url: "javascript:alert(1)" } }), /http/);
+});
+
+test("a closed request takes no work and no late status from a session", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Calmer", problem: "It shouts." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Copy only."] } });
+  s.act(card.id, alice, "close");
+  assert.throws(() => s.act(card.id, alice, "explore"), /closed/);
+  assert.throws(() => s.upsertCard({ id: card.id, status: "feedback" }), /only a person reopens/);
+  s.act(card.id, alice, "reopen");
+  assert.equal(s.getCard(card.id).status, "triage");
+  const fresh2 = s.createRequest(alice, { title: "Untriaged", problem: "x" }).card;
+  assert.throws(() => s.act(fresh2.id, alice, "build"), /not triaged/);
+});
