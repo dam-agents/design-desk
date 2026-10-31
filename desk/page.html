@@ -133,10 +133,13 @@
   <form method="dialog" id="request-form">
     <h2 data-t="newRequest"></h2>
     <p class="sub" data-t="requestHint"></p>
+    <div class="tabs" role="radiogroup" id="type-choice"><button type="button" data-type="idea" aria-pressed="true" data-t="idea"></button><button type="button" data-type="bug" aria-pressed="false" data-t="bug"></button></div>
+    <input type="hidden" name="type" value="idea" />
     <label><span data-t="fTitle"></span><input name="title" maxlength="200" required /></label>
     <label><span data-t="fProblem"></span><textarea name="problem" maxlength="4000" required></textarea></label>
     <label><span data-t="fGoal"></span><textarea name="goal" maxlength="4000"></textarea></label>
     <label><span data-t="fScreen"></span><input name="screen" maxlength="500" /></label>
+    <label data-only="bug" hidden><span data-t="fSteps"></span><textarea name="steps" maxlength="4000"></textarea></label>
     <input type="hidden" name="from" />
     <div class="actions"><button class="btn primary" value="send" data-t="send"></button><button class="btn" value="cancel" formnovalidate data-t="cancel"></button></div>
   </form>
@@ -151,6 +154,8 @@
       review: "To review", requests: "Requests", shipped: "Shipped", guide: "What I can do", newRequest: "New design request",
       requestHint: "Describe the problem in your own words. I will tell you first what can be done as a design change and what needs a developer.",
       fTitle: "Short title", fProblem: "What is the problem, and for whom?", fGoal: "What would good look like? (optional)", fScreen: "Which screen? (optional)",
+      idea: "Design idea", bug: "UI bug", bugs: "Bugs", fSteps: "How to get there (optional)", bugProblem: "What is wrong, and where?", bugGoal: "What should it look like? (optional)",
+      reportedVia: "reported in Slack by", whatHappens: "What happens", shouldHappen: "What should happen", stepsTitle: "Steps",
       send: "Send", cancel: "Cancel", markReviewed: "Mark as reviewed", reviewed: "Reviewed", ask: "Ask a question", followUp: "Start a design follow-up",
       openPr: "Open the pull request", merged: "merged", screens: "Screens", details: "Details", conversation: "Questions and comments",
       noCards: "Nothing here yet.", allReviewed: "You have reviewed everything that shipped. ✨", pick: "Pick a card on the left.",
@@ -192,6 +197,8 @@
       review: "K prohlédnutí", requests: "Požadavky", shipped: "Nasazeno", guide: "Co umím", newRequest: "Nový designový požadavek",
       requestHint: "Popište problém vlastními slovy. Nejdřív vám řeknu, co jde udělat jako designová změna a co potřebuje vývojáře.",
       fTitle: "Krátký název", fProblem: "V čem je problém a pro koho?", fGoal: "Jak by vypadalo dobré řešení? (nepovinné)", fScreen: "Která obrazovka? (nepovinné)",
+      idea: "Designový nápad", bug: "Chyba v UI", bugs: "Chyby", fSteps: "Jak se tam dostat (nepovinné)", bugProblem: "Co je špatně a kde?", bugGoal: "Jak by to mělo vypadat? (nepovinné)",
+      reportedVia: "nahlášeno ve Slacku:", whatHappens: "Co se děje", shouldHappen: "Co by se mělo dít", stepsTitle: "Kroky",
       send: "Odeslat", cancel: "Zrušit", markReviewed: "Označit jako prohlédnuté", reviewed: "Prohlédnuto", ask: "Zeptat se", followUp: "Navázat designovým požadavkem",
       openPr: "Otevřít pull request", merged: "nasazeno", screens: "Obrazovky", details: "Podrobnosti", conversation: "Otázky a komentáře",
       noCards: "Zatím tu nic není.", allReviewed: "Všechno nasazené máte prohlédnuté. ✨", pick: "Vyberte kartu vlevo.",
@@ -290,7 +297,7 @@
     if (S.tab === "shipped") return S.cards.filter((c) => c.kind === "change");
     if (S.tab === "requests") {
       const closed = (c) => c.status === "handed-off" || c.status === "declined";
-      return S.cards.filter((c) => c.kind === "request" && (S.filter === "all" || (S.filter === "open" ? !closed(c) : closed(c))));
+      return S.cards.filter((c) => c.kind === "request" && (S.filter === "all" || (S.filter === "bugs" ? c.type === "bug" && !closed(c) : S.filter === "open" ? !closed(c) : closed(c))));
     }
     return [];
   }
@@ -302,7 +309,9 @@
       if (c.screens) out.push(`<span class="chip">🖼 ${c.screens}</span>`);
       if (c.acked) out.push(`<span class="chip ok">✓ ${esc(t("reviewed"))}</span>`);
     } else {
+      if (c.type === "bug") out.push(`<span class="chip bad">🐛 ${esc(t("bug"))}</span>`);
       out.push(`<span class="chip info">${esc(t(c.status))}</span>`);
+      if (c.reporter) out.push(`<span class="chip">Slack · ${esc(c.reporter)}</span>`);
       if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : c.triage === "product" ? "info" : "warn"}">${esc({ design: t("vDesign"), "needs-developer": t("vDev"), product: t("vProduct") }[c.triage])}</span>`);
       if (c.variants) out.push(`<span class="chip">◧ ${c.variants}</span>`);
       if (c.prototype === "live") out.push(`<span class="chip ok">● ${esc(t("prototype"))}</span>`);
@@ -315,7 +324,7 @@
     const list = $("#list");
     if (S.tab === "guide") { list.innerHTML = ""; return; }
     const cards = visibleCards();
-    const filters = S.tab === "requests" ? `<div class="filters">${[["open", t("open_")], ["done", t("done")], ["all", t("all")]].map(([k, l]) => `<button class="btn small" data-filter="${k}" ${S.filter === k ? 'style="border-color:var(--ink)"' : ""}>${esc(l)}</button>`).join("")}</div>` : "";
+    const filters = S.tab === "requests" ? `<div class="filters">${[["open", t("open_")], ["bugs", t("bugs")], ["done", t("done")], ["all", t("all")]].map(([k, l]) => `<button class="btn small" data-filter="${k}" ${S.filter === k ? 'style="border-color:var(--ink)"' : ""}>${esc(l)}</button>`).join("")}</div>` : "";
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(S.tab === "review" ? t("allReviewed") : t("noCards"))}</div>`; return; }
     list.innerHTML = filters + cards.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">
       <div class="t">${c.kind === "change" && !c.acked && c.status === "new" ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div>
@@ -437,9 +446,12 @@
     ].join("");
     return `<button class="btn small back" data-back>←</button>
       <h2>${esc(c.title)}</h2>
-      <div class="sub"><span>${esc(t("by"))} ${who(c.created_by)}</span><span>${esc(when(c.created))}</span></div>
+      <div class="sub">${r.type === "bug" ? `<span class="chip bad">🐛 ${esc(t("bug"))}</span>` : ""}${c.origin?.reporter ? `<span>${esc(t("reportedVia"))} <b>${esc(c.origin.reporter)}</b></span>` : `<span>${esc(t("by"))} ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span></div>
       ${renderSteps(c.status)}
-      <div class="section">${md(r.problem)}${r.goal ? md(r.goal) : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>
+      ${r.type === "bug"
+        ? `<div class="section"><h4>${esc(t("whatHappens"))}</h4>${md(r.problem)}${r.goal ? `<h4>${esc(t("shouldHappen"))}</h4>${md(r.goal)}` : ""}${r.steps ? `<h4>${esc(t("stepsTitle"))}</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>`
+        : `<div class="section">${md(r.problem)}${r.goal ? md(r.goal) : ""}${r.screen ? `<p class="sub">▣ ${esc(r.screen)}</p>` : ""}</div>`}
+      ${(c.screens || []).length ? `<div class="shots">${c.screens.map((x) => `<figure class="shot" data-zoom="${esc(x.asset)}"><img alt="${esc(x.caption)}" data-asset="${esc(x.asset)}" />${x.caption ? `<figcaption>${esc(x.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
       <h3>${esc(t("triage"))}</h3>${renderTriage(c.triage)}
       <div class="actions">${actions}</div>
       ${(c.variants || []).length || ["variants", "feedback"].includes(c.status) ? `<h3>${esc(t("variants"))}</h3>${renderVariants(c)}` : ""}
@@ -565,9 +577,20 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
     $("#composer-kind").value = "comment"; $("#composer-text").value = keep; $("#composer-text").focus();
   });
 
+  function setType(type) {
+    const f = $("#request-form");
+    f.type.value = type;
+    for (const b of document.querySelectorAll("#type-choice button")) b.setAttribute("aria-pressed", String(b.dataset.type === type));
+    for (const el of f.querySelectorAll("[data-only]")) el.hidden = el.dataset.only !== type;
+    f.problem.previousElementSibling.textContent = t(type === "bug" ? "bugProblem" : "fProblem");
+    f.goal.previousElementSibling.textContent = t(type === "bug" ? "bugGoal" : "fGoal");
+  }
+  document.addEventListener("click", (e) => { const b = e.target.closest("#type-choice button"); if (b) setType(b.dataset.type); });
+
   function openRequestDialog(from) {
     const dlg = $("#request-dialog"), f = $("#request-form");
     f.reset();
+    setType("idea");
     f.from.value = from ? from.id : "";
     if (from) { f.title.value = from.title.slice(0, 180); f.screen.value = from.source?.pr ? `#${from.source.pr}` : ""; }
     dlg.showModal();
@@ -576,7 +599,7 @@ addEventListener("click",(e)=>{if(!on)return;e.preventDefault();e.stopPropagatio
   $("#request-form").addEventListener("submit", guard(async (e) => {
     if (e.submitter?.value !== "send") return;
     const f = e.target;
-    const body = { title: f.title.value, problem: f.problem.value, goal: f.goal.value, screen: f.screen.value, ...(f.from.value ? { from: f.from.value } : {}) };
+    const body = { type: f.type.value, title: f.title.value, problem: f.problem.value, goal: f.goal.value, screen: f.screen.value, steps: f.steps.value, ...(f.from.value ? { from: f.from.value } : {}) };
     const r = await api("POST", "/api/requests", body);
     toast(t("sentToAgent"));
     S.tab = "requests"; await refreshList(); await openCard(r.card.id);

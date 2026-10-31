@@ -62,7 +62,7 @@ config_json() {
     --arg default_style "$(cfg default_style)" --arg prototype_requesters "$(cfg prototype_requesters)" \
     --arg max_prototypes "$(cfg max_prototypes)" --arg prototype_expiry_days "$(cfg prototype_expiry_days)" \
     --arg prototype_remote "$(cfg prototype_remote)" --arg handoff "$(cfg handoff)" \
-    --arg desk_ping "$(cfg desk_ping)" --arg notify "$(cfg notify)" --arg run_model "$(cfg run_model)" \
+    --arg desk_ping "$(cfg desk_ping)" --arg bug_reports "$(cfg bug_reports)" --arg notify "$(cfg notify)" --arg run_model "$(cfg run_model)" \
     --arg dispatch "$(cfg dispatch)" --arg work_repo "${GITHUB_REPO_WORK:-$(cfg work_repo)}" \
     --arg audit_report "$(cfg audit_report)" --arg log_level "$(cfg log_level)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
@@ -79,6 +79,7 @@ config_json() {
       prototype_remote: ($prototype_remote | if . == "" then "none" else . end),
       handoff: ($handoff | if . == "" then "desk" else . end),
       desk_ping: ($desk_ping | if . == "" then "enabled" else . end),
+      bug_reports: ($bug_reports | if . == "" then "enabled" else . end),
       notify: ($notify | if . == "" then "disabled" else . end),
       run_model: ($run_model | if . == "" then "default" else . end),
       dispatch: ($dispatch | if . == "" then "enabled" else . end),

@@ -126,7 +126,9 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "requests") {
     need(b.from ? "follow-up" : "request");
     if (b.from) store.card(String(b.from));
-    return send(res, 201, withPing(store.createRequest(actor, b), s, who));
+    // Only what a person types: an origin (where the agent answers) is the agent's to set.
+    const { title, problem, goal, screen, steps, type, from } = b;
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from }), s, who));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") { need(String(b.action)); return send(res, 200, withPing(store.act(p[2], actor, String(b.action), b.note), s, who)); }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
@@ -149,6 +151,7 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   const b = m === "GET" ? {} : await body(req);
   if (m === "POST" && p[1] === "cards") return send(res, 200, store.upsertCard(b));
+  if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
   if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve) }));
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));

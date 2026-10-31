@@ -14,7 +14,8 @@ description: >-
   Designers work through the Desk like an inbox, ask follow-up questions, and file
   design requests; the agent says first what is possible as a design change, then
   makes two or three variants on sample data that developers and project managers
-  vote and comment on, element by element. An approved direction becomes a live
+  vote and comment on, element by element. UI bugs reported on the Desk or in
+  Slack join the same queue. An approved direction becomes a live
   prototype — the real product with only its look changed, checked by a design-only
   guard, running on its own Environment with demo data — and then a developer spec.
   Also makes everything the Designer kit did: decks, mockups, walkthroughs, charts,
@@ -50,8 +51,9 @@ connections:
 channels:
   - type: slack
     note: >-
-      Optional. People ask questions and send design requests here; answers come
-      back in the thread. New Desk items are announced only when you turn that on.
+      Optional. People ask questions, send design requests and report UI bugs here
+      (a screenshot is enough); each bug goes on the Desk's queue and its reporter
+      hears back in the thread. New Desk items are announced only when you turn that on.
 
 # The Desk page talks to this server through the platform's Artifact API relay.
 # It must run at every boot: the platform relays to it but never starts it.

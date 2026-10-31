@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name language repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min"
+KNOWN_KEYS="display_name language repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact bug_reports notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -112,6 +112,7 @@ else
   enum() { local k="$1" v; v="$(cfg "$k")"; shift; [ -z "$v" ] && return; for a in "$@"; do [ "$v" = "$a" ] && return; done; fail "config_$k" "$k is '$v'" "use one of: $*"; }
   enum handoff desk issue draft-pr
   enum desk_ping enabled disabled
+  enum bug_reports enabled disabled
   enum notify disabled slack
   enum dispatch enabled disabled
   enum audit_report enabled disabled

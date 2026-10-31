@@ -120,3 +120,18 @@ test("a closed request takes no work and no late status from a session", () => {
   const fresh2 = s.createRequest(alice, { title: "Untriaged", problem: "x" }).card;
   assert.throws(() => s.act(fresh2.id, alice, "build"), /not triaged/);
 });
+
+test("a bug from Slack lands on the queue with where to answer", () => {
+  const s = fresh();
+  const shot = s.addAsset({ kind: "screen", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset;
+  const { card, inbox: item } = s.createRequest({ agent: true }, {
+    type: "bug", title: "The spend amount overflows on narrow screens", problem: "On a phone the amount runs over the row's edge.",
+    goal: "It wraps or shortens.", steps: "Open Agents on a phone", screens: [{ asset: shot.id, caption: "From Slack" }],
+    origin: { channel: "slack", chat: "C0123ABCD", thread_ts: "1730000000.000100", reporter: "Alice" },
+  });
+  assert.equal(card.request.type, "bug");
+  assert.equal(card.origin.thread_ts, "1730000000.000100");
+  assert.equal(item.kind, "request");
+  assert.deepEqual(s.listCards({ kind: "request" }).map((c) => [c.type, c.reporter, c.screens]), [["bug", "Alice", 1]]);
+  assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /idea or bug/);
+});

@@ -179,6 +179,7 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 - handoff: desk
 - desk_ping: enabled
 - desk_artifact:
+- bug_reports: enabled
 - notify: disabled
 - run_model: default
 - dispatch: enabled

@@ -15,6 +15,10 @@ const USAGE = `usage: design desk <command>
   cards [--kind change|request]            list cards
   card <C-n>                               one card with its threads
   upsert <card.json|->                     create or update a card (agent fields only)
+  report <bug.json|->                      put a UI bug someone reported on the queue as a request
+                                           of type bug: {title, problem, goal, steps, screen,
+                                           screens: [{asset, caption}], origin: {channel, chat,
+                                           thread_ts, message_ts, reporter}}
   asset <file> --kind <k> [--card C-n] [--name <n>] [--type <media/type>]
                                            store a file; kinds: screen variant spec patch image report
   answer <T-n> <text-file|-> [--resolve]   answer a question thread
@@ -86,6 +90,11 @@ export async function main(_cmd, argv) {
       if (!pos[0]) fail("usage: design desk upsert <card.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }
       return out(await call("POST", "/agent/cards", doc));
+    }
+    case "report": {
+      if (!pos[0]) fail("usage: design desk report <bug.json|->");
+      let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }
+      return out(await call("POST", "/agent/reports", doc));
     }
     case "asset": {
       const file = pos[0];

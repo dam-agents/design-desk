@@ -133,6 +133,7 @@ export class Store {
         open_threads: (c.threads || []).filter((t) => this.db.threads[t]?.state !== "resolved").length,
         acked: viewer ? Boolean(c.acks?.[viewer]) : false,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
+        type: c.request?.type || null, reporter: c.origin?.reporter || null,
       }));
   }
 
@@ -218,15 +219,23 @@ export class Store {
     return { votes: c.votes };
   }
 
-  createRequest(who, { title, problem, goal = "", screen = "", from = null }) {
-    const id = this.next("card", "C");
-    const c = {
-      id, kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),
-      title: clean(title, LIMITS.title, "title"),
-      request: { problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"), screen: optText(screen, 500, "screen"), from: from ? this.card(String(from)).id : null },
-      summary: "", sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {},
-      triage: null, prototype: { state: "none" }, spec: null,
+  // A request is an idea for the design or a UI bug; a bug may come from a messenger,
+  // filed by the agent on the reporter's behalf, with where to answer them (`origin`).
+  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null }) {
+    if (!["idea", "bug"].includes(type)) throw bad("type must be idea or bug");
+    const request = {
+      type, problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"),
+      screen: optText(screen, 500, "screen"), steps: optText(steps, LIMITS.text, "steps"),
+      from: from ? this.card(String(from)).id : null,
     };
+    const c = {
+      kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),
+      title: clean(title, LIMITS.title, "title"), request,
+      summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {},
+      triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin) : null,
+    };
+    const id = this.next("card", "C");
+    c.id = id;
     this.db.cards[id] = c;
     const item = this.enqueue(from ? "follow-up" : "request", id, null, who);
     this.save();
@@ -461,4 +470,13 @@ function cleanLinks(key, value) {
   } };
   walk(copy);
   return copy;
+}
+
+// Where a reported bug came from, so the agent can answer the reporter in their thread.
+function cleanOrigin(o) {
+  if (typeof o !== "object") throw bad("origin must be an object");
+  const str = (v, n) => (v === undefined || v === null || v === "" ? null : String(v).slice(0, n));
+  if (!["slack", "desk"].includes(o.channel)) throw bad("origin.channel must be slack or desk");
+  return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
+    reporter: str(o.reporter, 120), at: str(o.at, 40) };
 }
