@@ -37,9 +37,9 @@ say() { echo "work-backup: $*"; }
 # The env var wins; a scheduled run has no session exports, so work/CONFIG.md carries
 # the same value as `work_repo`.
 if [ -z "${GITHUB_REPO_WORK:-}" ]; then
-  GITHUB_REPO_WORK="$(sed -n 's/^- work_repo:[[:space:]]*//p' "${WORK_DIR:-${HOME:-/home/agent}/work}/CONFIG.md" 2>/dev/null | head -1 | sed -e 's/[[:space:]]*#.*$//' -e 's/[[:space:]]*$//')"
-  [ "$GITHUB_REPO_WORK" = none ] && GITHUB_REPO_WORK=""
+  CONFIG="$WORK/CONFIG.md"; . "$SCRIPT_DIR/lib/config.sh" 2>/dev/null && GITHUB_REPO_WORK="$(cfg work_repo)"
 fi
+case "${GITHUB_REPO_WORK:-}" in (none|off|disabled) GITHUB_REPO_WORK="";; esac
 if [ -z "${GITHUB_REPO_WORK:-}" ]; then
   say "GITHUB_REPO_WORK unset — local-only, nothing to $MODE."; exit 0
 fi
@@ -79,7 +79,7 @@ sync_in() {
   find "$LOCAL" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + 2>/dev/null || true
   # The Desk's agent token stays on this machine; a restore makes the server mint none
   # and keep the one it has.
-  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' -f - . ) \
+  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' --exclude='./output' --exclude='./logs' -f - . ) \
     | ( cd "$LOCAL" && tar -xf - ) || return 1
   return 0
 }

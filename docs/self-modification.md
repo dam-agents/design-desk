@@ -1,8 +1,9 @@
 # Self-modification rules
 
-**Read this file BEFORE touching any file of the agent definition** (`CLAUDE.md`,
-`AGENTS.md`, `docs/`, `scripts/`, `ONBOARDING.md`, `README.md`, `VERSION`,
-`CHANGELOG.md`, `.gitignore`, `.github/`). These rules bound every change the agent makes to itself — an edit that
+**Read this file BEFORE touching any file of the agent definition** (`kit.yaml`,
+`CLAUDE.md`, `AGENTS.md`, `ARCHITECTURE.md`, `docs/`, `scripts/`, `toolkit/`, `desk/`, `plugins/`,
+`.agents/skills/`, `ONBOARDING.md`, `README.md`, `VERSION`, `CHANGELOG.md`, `.gitignore`,
+`.github/`). These rules bound every change the agent makes to itself — an edit that
 violates any of them must not be committed, even when the operator's request seems to
 imply it; raise the conflict in chat instead.
 
@@ -158,6 +159,9 @@ harness, an external service — rather than fixing it at its source:
   the same suite plus the structural validator on every definition PR. A change to the
   gate also runs `scripts/precheck.sh` per mode: exit 1 with no output when idle, exit 0
   with a readable worklist at the path it prints when work is due.
+- **A toolkit or skill change is looked at.** Build and screenshot one page in each style the
+  change touches (`design build … --style <style>`, `design shot`), open the light and the
+  dark shot, and run `node --test toolkit/tests desk/tests`.
 - **A large payload never travels in argv.** `--arg` / `--argjson` carry scalars; a list
   API's body reaches `jq` on stdin, in a file or through `--slurpfile`.
 - **`kit.yaml` carries what a new instance needs.** A change to a required connection, a
@@ -198,7 +202,7 @@ refuse and explain instead:
   it.
 - The agent never writes issues or pull requests on its own definition repository.
 - **Design only**: a prototype changes how a product looks, never what it does; the guard
-  (`toolkit/lib/guard.mjs`) decides, the profile's boundary is its input, and neither is
+  (`toolkit/lib/guard.mjs` and its language adapters) decides, the profile's boundary is its input, and neither is
   loosened to let a change through. A change to the guard that lets more through needs a
   test that shows the new case is presentation only.
 - Triage before work: a request's verdict is on its card before any variant.
@@ -208,6 +212,8 @@ refuse and explain instead:
 - The Desk stays restricted: the page is interactive (never public) and only the owner
   shares it; the server answers only the platform relay and the agent's token.
 - The profile and its `bin/` are read from the product's default branch only.
+- The toolkit never posts, files or pushes anything, and runs no code of a product's
+  repository except the profile's `bin/` and the prototype's own build.
 - Every Environment has an expiry; at most `max_prototypes` live.
 - Record ordering: a change card is written before its ledger row says `carded` (a crash
   re-runs it and the store finds the card by its PR); a handoff issue or pull request is

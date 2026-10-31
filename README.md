@@ -40,7 +40,12 @@ Everything specific to one product lives in that product's repository, under
 `.design-desk/<name>/`: what counts as UI, which paths a design change may touch, where the
 "why" is documented, how to run a live prototype. The product team keeps it current in the
 same pull request that changes what it describes. A repository without a profile still gets
-change cards, variants and specs; live prototypes need one. Contract: [`docs/profile.md`](docs/profile.md).
+change cards, variants and specs; live prototypes need one. Contract: [`docs/profile.md`](docs/profile.md);
+`design profile --check-dir .design-desk/<name>` checks one in the product's checkout.
+
+Channels, trackers and a product's own procedures are plug-ins
+([`docs/plugins.md`](docs/plugins.md)): Slack intake and GitHub handoff ship in
+[`plugins/`](plugins/); a product adds its own next to its profile.
 
 ## Settings
 
@@ -84,8 +89,8 @@ Idle runs wake no model: each schedule's Precheck decides first.
 
 ## Contributing
 
-The skills are in [`.agents/skills/`](.agents/skills/), the `design` CLI and the guard in
-[`toolkit/`](toolkit/), the Desk server and page in [`desk/`](desk/). `bash scripts/tests/run.sh`
+The skills are in [`.agents/skills/`](.agents/skills/), the plug-ins in [`plugins/`](plugins/), the `design` CLI and the guard in
+[`toolkit/`](toolkit/) (a language adapter per stack in `toolkit/lib/lang/`), the Desk server and page in [`desk/`](desk/). `bash scripts/tests/run.sh`
 runs the offline tests (`node --test toolkit/tests desk/tests` for the node ones). Read
 [`docs/self-modification.md`](docs/self-modification.md) before opening a PR.
 To look at the Desk page locally: `DESK_PORT=5599 WORK_DIR=/tmp/dd node desk/server.mjs` and

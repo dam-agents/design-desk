@@ -248,7 +248,7 @@ fi
 # guess is either a gate that passes drifted readers or one that fails identical
 # ones. The residual: this is structural, not semantic — a script that sources the
 # lib and then parses CONFIG.md again under another name still passes.
-for f in scripts/preflight.sh scripts/verify-onboarding.sh; do
+for f in scripts/preflight.sh scripts/verify-onboarding.sh scripts/work-backup.sh scripts/monitor.sh; do
   [ -f "$f" ] || continue
   if grep -q 'lib/config\.sh' "$f"; then
     pass "$f sources the shared config reader"

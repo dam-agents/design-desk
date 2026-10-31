@@ -76,6 +76,9 @@ agent needs GitHub connected, and offer brand/Carbon mode meanwhile.
 
 Never build from memory. In the clone (`design repo clone` prints its path):
 
+0. **The product's design profile** — its `PROFILE.md` (`design profile <owner/name>` names
+   it): the taste rules, the words, how the shell is read, how its own parts are drawn.
+   Its rules win over this skill's defaults.
 1. **The shell** — the profile's `shell` files; follow their imports to the layout, the
    navigation and its items in order, the page column and its width.
 2. **The screen this changes**, and the shared components it uses (the profile's `components`
@@ -87,7 +90,18 @@ Never build from memory. In the clone (`design repo clone` prints its path):
 5. **Derived numbers** ("4 enabled", "2 of 4 on") — read the function that computes them and
    make sample data agree.
 
-Note which files you built from; the delivery message names them.
+Note which files you built from; the delivery message names them, and what you looked for
+and could not find.
+
+- **The issue and the code disagree** (a label, a step, a screen that has moved) → build
+  from the code and say so in the delivery.
+- **Earlier mockups exist** (on the issue, the pull request or the card) → read them and
+  keep what was already agreed; a variant that drops it says why.
+- **Icons** — never draw one or use a letter tile; use the icon the product already uses for
+  the closest action, by the name the code imports, and say so when the action is new.
+- **Menus and popovers** overlay the page through the review bar; never position one by hand.
+- **Dialogs** reuse the markup of the product's own dialog component (the profile names it);
+  a destructive action follows the product's confirm pattern.
 
 ## 5. Brand / Carbon mode
 
@@ -171,6 +185,7 @@ that's too big (often a class `cn()` would have overridden), text overflow, a cl
 broken dark mode or empty state. Fix and rebuild until it holds.
 
 Self-check:
+- the product's `PROFILE.md` read, and its rules kept;
 - built into the real screen (or, without a repo, a complete plausible one), not a floating card;
 - approaches distinct and each simple; no rationale text on the page;
 - classes and copy from the source; no hand-written CSS;

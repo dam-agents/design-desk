@@ -23,3 +23,5 @@ assert() {
     echo "  ✗ $1"; echo "    filter: $2"; echo "    json: $(printf '%s' "$3" | head -c 600)"; FAILS=$((FAILS + 1)); fi
 }
 finish() { [ "$FAILS" -eq 0 ]; }
+# The toolkit tests need node 20+; an older node skips them.
+need_node() { node -e "process.exit(+process.versions.node.split('.')[0] >= 20 ? 0 : 1)" 2>/dev/null || { echo "  skip: needs node 20+"; exit 0; }; }

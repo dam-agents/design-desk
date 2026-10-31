@@ -37,6 +37,8 @@ What is new:
 | Change cards fan out: one session per merged PR | Each card is independent and expensive (clone, screens, reading the PR and the docs). |
 | Nothing is posted on GitHub by default | Design notes on merged PRs are noise for developers. The handoff can file an issue or a draft PR, behind an opt-in. |
 | No push by default; the prototype diff is kept as a patch in `work/` | `work/` is backed up; a branch on the target repository is an outward write and an opt-in. |
+| Channels, trackers and product specifics are **plug-ins** (`plugins/`, or a product's own next to its profile) | The core reads a request, triages, designs and writes a spec the same way everywhere; how a Slack report is taken in or a spec reaches GitHub or a coding agent is one skill each, swapped without touching the core ([docs/plugins.md](docs/plugins.md)). |
+| The guard reads code through a **language adapter** (`toolkit/lib/lang/`) | TSX/React is the first; a file in a language no adapter reads is refused, so a new stack is a new adapter, never a looser rule. |
 | Plain language is a contract | Cards and answers follow the `explain` skill: a gist first, then layers; every "why" is grounded in a PR, a decision record or an architecture page, or it says that it is not documented and who to ask. |
 
 ## Components
@@ -91,7 +93,7 @@ Clones and prototype worktrees live in `$HOME/checkouts/`, outside `work/`, and 
 These parts are written against the platform's documented contracts but were not run end to end before the first commit:
 
 - The live prototype engine (`.design-desk/dam/bin/env` in the DAM repository): an Environment install of DAM from a prototype worktree with the backchannel on, the demo account, the UI-only rebuild, and the `tunnel` verb that gives the agent's own browser a local address for screenshots.
-- `design capture` against a running install (it is written for Keycloak's sign-in form; the screenshot code itself is the Designer kit's, which is proven).
+- `design capture` against a running install (it signs in through the form the profile's `capture.login` names; the screenshot code itself is the Designer kit's, which is proven).
 - The Desk page against the real Artifact API relay (the server and the store have offline tests).
 
 The first onboarding runs `scripts/verify-onboarding.sh --live`, which probes each of them.

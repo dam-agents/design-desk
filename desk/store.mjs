@@ -110,7 +110,7 @@ export class Store {
       if (it.state === "open") open.push(pick(it));
       else if (it.state === "claimed") claimed.push({ ...pick(it), claimed_by: it.claimed_by, claimed_at: it.claimed_at });
     }
-    const doc = { updated: this.clock(), open, claimed };
+    const doc = { updated: this.clock(), claim_ttl_min: LIMITS.claimTtlMin, open, claimed };
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);

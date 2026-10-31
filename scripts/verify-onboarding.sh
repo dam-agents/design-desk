@@ -73,7 +73,14 @@ if [ "$STRUCTURE" = 1 ]; then
   head -1 "$HOME_DIR/.gitignore" 2>/dev/null | grep -qx '/\*' && ok gitignore "allowlist" || fail gitignore "the .gitignore is not an allowlist" "restore it from origin/main"
   if [ -f "$HOME_DIR/.design-desk-onboarded" ]; then ok sentinel "$(cat "$HOME_DIR/.design-desk-onboarded")"
   else fail sentinel "no onboarding sentinel" "ONBOARDING.md → Step 6"; fi
-  [ -x "$HOME_DIR/bin/design" ] && ok toolkit "~/bin/design" || fail toolkit "~/bin/design is missing" "bash \"\$HOME/scripts/install-toolkit.sh\""
+  if [ ! -x "$HOME_DIR/bin/design" ]; then fail toolkit "~/bin/design is missing" "bash \"\$HOME/scripts/install-toolkit.sh\""
+  elif out="$("$HOME_DIR/bin/design" doctor 2>&1)"; then ok toolkit "~/bin/design, design doctor passes"
+  else fail toolkit "design doctor: $(printf '%s\n' "$out" | grep -m1 '^FAIL' || echo failed)" "bash \"\$HOME/scripts/install-toolkit.sh\", then design doctor"; fi
+  missing=""
+  for s in $(sed -nE 's|^!/\.agents/skills/([A-Za-z0-9_-]+)$|\1|p' "$HOME_DIR/.gitignore" 2>/dev/null); do
+    [ -f "$HOME_DIR/.agents/skills/$s/SKILL.md" ] || missing="$missing $s"
+  done
+  [ -z "$missing" ] && ok skills "bundled skills present" || fail skills "missing bundled skills:$missing" "git -C \$HOME checkout -- .agents/skills"
   [ -x "$HOME_DIR/desk/serve.sh" ] && ok desk_launcher "desk/serve.sh" || fail desk_launcher "desk/serve.sh is missing or not executable" "git -C \$HOME checkout -- desk/serve.sh"
 
   # -------------------------------------------------------------- schedules
@@ -122,13 +129,23 @@ else
   enum audit_report enabled disabled
   enum log_level info debug
   case "$(cfg default_style)" in ""|auto|brand|carbon|wireframe|repo:*) ;; *) fail config_default_style "default_style is '$(cfg default_style)'" "auto, brand, carbon, wireframe or repo:<owner/name>";; esac
+  ds="$(cfg default_style)"
+  case "$ds" in
+    (repo:*) case ", $(cfg repos), " in (*", ${ds#repo:}, "*) ;; (*) fail config_default_style "default_style names ${ds#repo:}, which is not in repos" "add it to repos or pick another style";; esac;;
+    (brand) [ -f "$WORK/brand/brand.json" ] || fail config_default_style "default_style is brand but no brand is saved" "save one with the brand skill, or use wireframe";;
+  esac
+  wr="$(cfg work_repo)"
+  case "$wr" in
+    (''|none|off|disabled) ;;
+    (*) printf '%s' "$wr" | grep -qE '^([a-z0-9.-]+/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || fail config_work_repo "work_repo is '$wr'" "[host/]owner/name of a private repository, or none";;
+  esac
   for k in max_changes_per_run max_prototypes prototype_expiry_days; do v="$(cfg "$k")"; case "$v" in ''|*[!0-9]*) [ -z "$v" ] || fail "config_$k" "$k is not a whole number" "a number, e.g. 2";; esac; done
   w="$(cfg watch_since)"; [ -z "$w" ] || printf '%s' "$w" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' || fail config_watch_since "watch_since is '$w'" "an ISO UTC time like 2026-11-02T09:00:00Z"
   for r in $(cfg repos | tr ',' ' '); do
     [ "$r" = none ] && continue
     printf '%s' "$r" | grep -qE '^([a-z0-9.-]+/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || fail config_repos "'$r' is not [host/]owner/name" "fix repos"
   done
-  unknown="$(sed -nE 's/^- ([A-Za-z0-9_.-]+):.*/\1/p' "$CONFIG" | while read -r k; do case " $KNOWN_KEYS " in *" $k "*) ;; *) printf '%s ' "$k";; esac; done)"
+  unknown="$(sed -nE 's/^- ([A-Za-z0-9_.-]+):.*/\1/p' "$CONFIG" | while read -r k; do case " $KNOWN_KEYS " in (*" $k "*) ;; (*) printf '%s ' "$k";; esac; done)"
   [ -z "$unknown" ] && ok config_keys "every bullet is a known key" || fail config_keys "unknown keys (invisible to the runtime): $unknown" "rename to the documented key (CLAUDE.md → Runtime configuration) or delete"
   if grep -qx '## Desk people' "$CONFIG"; then
     hdr="$(sed -n '/^## Desk people$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
@@ -148,11 +165,23 @@ if [ "$LIVE" = 1 ]; then
     case "$r" in */*/*) h=(--hostname "${r%%/*}"); s="${r#*/}";; *) h=(); s="$r";; esac
     gh api ${h[@]+"${h[@]}"} "repos/$s" --jq .full_name >/dev/null 2>&1 && ok "repo_$s" "readable" || fail "repo_$s" "cannot read $r" "grant the GitHub connection access to it, or fix repos"
   done
+  command -v design >/dev/null 2>&1 || PATH="$HOME_DIR/bin:$PATH"
+  for r in $(cfg repos | tr ',' ' '); do
+    [ "$r" = none ] && continue
+    if out="$(design profile "$r" --check 2>&1)"; then ok "profile_${r##*/}" "design profile passes its check"
+    elif printf '%s' "$out" | grep -q 'has no .design-desk profile'; then warn "profile_${r##*/}" "$r has no design profile; variants use a saved style profile (docs/profile.md → A repository without a profile)"
+    else fail "profile_${r##*/}" "$(printf '%s\n' "$out" | grep -m1 -E '^FAIL|design:' || echo 'the check failed')" "tell the product team; the profile lives in their repository (docs/profile.md)"; fi
+  done
   if curl -sf --max-time 3 "http://127.0.0.1:${DESK_PORT:-5555}/health" >/dev/null; then ok desk_server "answers on 127.0.0.1:${DESK_PORT:-5555}"
   else fail desk_server "the Desk server does not answer" "bash \"\$HOME/scripts/desk-service.sh\" install (docs/desk.md → Server)"; fi
   [ -n "$(cfg desk_artifact)" ] && ok desk_artifact "$(cfg desk_artifact)" || fail desk_artifact "the Desk page was never published" "docs/desk.md → Publishing the page"
-  command -v design >/dev/null 2>&1 || PATH="$HOME_DIR/bin:$PATH"
-  design doctor >/dev/null 2>&1 && ok doctor "design doctor passes" || warn doctor "design doctor reports a problem — run it and apply its fix: lines"
+  t="$(mktemp -d "${TMPDIR:-/tmp}/design-desk-verify.XXXXXX")"
+  printf '%s\n' '<!doctype html><html lang="en" data-review-title="v"><head><meta charset="utf-8"><title>v</title><!-- design:css --></head>' \
+    '<body><!-- design:review-bar --><div data-view="1" data-view-name="V" class="p-6 bg-background"><button class="rounded-md bg-primary px-3 text-primary-foreground">Ok</button></div></body></html>' > "$t/v.src.html"
+  if WORK_DIR="$t/work" design build "$t/v.src.html" "$t/v.html" --style wireframe >/dev/null 2>&1 \
+     && WORK_DIR="$t/work" design shot "$t/v.html" "$t/shots" --width 600 >/dev/null 2>&1 && [ -s "$t/shots/1-light.png" ]; then ok render "built and screenshotted a wireframe page"
+  else fail render "a build or screenshot failed" "design doctor, apply its fix: lines, then re-run"; fi
+  rm -rf "$t"
   for m in watch inbox; do
     out="$(bash "$SCRIPT_DIR/preflight.sh" "$m" 2>/dev/null)"
     if printf '%s' "$out" | jq -e 'has("nothing_to_do") and (.error == null)' >/dev/null 2>&1; then ok "preflight_$m" "valid worklist"

@@ -42,7 +42,7 @@ read from) and `source` (`repo`, `saved` or `default`).
   },
   "screens": { "Agents list": "web/src/modules/agents/views/agents-view.tsx" },
   "capture": { "base_url": "", "routes": { "Agents list": "/agents" },
-               "login": { "path": "/", "user_field": "#username", "password_field": "#password", "submit": "#kc-login" } },
+               "login": { "path": "/", "user_field": "#username", "password_field": "#password", "submit": "button[type=submit]" } },
   "engine": { "endpoints": [{ "name": "app", "port": 4444 }], "open_endpoint": "app", "storage": "40Gi" },
   "handoff": { "labels": ["design"] },
   "tests": ["web/src/**/__tests__/**", "e2e/**"],
@@ -52,7 +52,11 @@ read from) and `source` (`repo`, `saved` or `default`).
 
 - `ui.paths` — what counts as a UI change for the watch.
 - `style` — the designer's repo profile (`design repo detect` proposes one), so variants
-  compile the product's real styles.
+  compile the product's real styles: `ui_dir`, `styling`, `css_entry`, `icon_package` (the
+  package `<ui-icon>` draws from), `class_merge`, `shell` and `components` (where the variants
+  skill reads the frame and the parts). For the catalog, `mock_modules` (path patterns whose
+  exports are stubbed when a component renders outside the app: data hooks, stores, API
+  clients) and `render_wrappers` (`{src, export}` providers every tile renders inside).
 - `boundary` — the guard's input ([boundary.md](boundary.md)). Without `allow`, nothing can
   be a design change and the guard refuses to run. `ignored_ok` lists the ignored build
   outputs the product's own install leaves in a worktree (dependency folders and `dist/`
@@ -60,7 +64,16 @@ read from) and `source` (`repo`, `saved` or `default`).
 - `docs` — where the "why" lives, read when explaining.
 - `screens`, `capture` — where each screen is in code and at which address it renders.
   `capture.login` signs in with the demo account `bin/env credentials` prints.
-- `engine` — the Environment a live prototype needs: endpoints, the one people open, disk.
+- `engine` — the Environment a live prototype needs: endpoints, the one people open, disk,
+  and `egress`: `{host, why}` per host the install must reach beyond the platform's trusted
+  preset.
+- `catalog.elements` — the elements worth having in the catalog: `{name, group, file,
+  export}` ([catalog.md](catalog.md)).
+- `plugins` — the product's own plug-ins, paths relative to the profile ([plugins.md](plugins.md)).
+
+`design profile <owner/name> --check` (or `--check-dir .design-desk/<profile>` in the product's
+checkout) checks this shape and that every path it names exists; the onboarding's live check
+runs it for every repository with a profile.
 
 ## `PROFILE.md`
 

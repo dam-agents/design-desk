@@ -152,3 +152,10 @@ test("rewording copy in a template child stays the look", () => {
   const c = BASE.replace("export function AgentList", "const rowClass = `flex ${\"gap-2\"}`;\nexport function AgentList");
   assert.equal(compare(c, c.replace('"gap-2"', '"gap-3"'), FILE, profile).verdict, "ok");
 });
+
+test("code no adapter reads is denied, even on allow_other", () => {
+  const profile = { boundary: { allow: ["web/**"], allow_other: ["web/**"] } };
+  assert.equal(classifyPath("web/src/Panel.vue", profile).verdict, "denied");
+  assert.equal(classifyPath("web/scripts/build.py", profile).verdict, "denied");
+  assert.equal(classifyPath("web/src/notes.md", profile).verdict, "ok");
+});

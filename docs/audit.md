@@ -5,6 +5,10 @@ this run adds the judgment checks and sends one report. It is **read-only toward
 outside `work/`** and repairs nothing: a finding is reported, the fix is the operator's or the
 next run's.
 
+The pass checks, among others, the GitHub login, the Desk server, the toolchain
+(`design doctor`, then a real wireframe build and screenshot), the saved brand and repo
+profiles, the ledger, live prototypes against `max_prototypes`, the disk and the version.
+
 ## Judgment checks
 
 1. **Schedules** — `mcp__platform-outbound__list_schedules`: the four `design-desk-*`

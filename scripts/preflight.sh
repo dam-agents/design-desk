@@ -275,7 +275,8 @@ inbox_mode() {
   CONF="$(config_json)"
   if [ ! -f "$INBOX" ]; then log "no Desk inbox yet ($INBOX) — the Desk server has not started"; quiet_out; fi
   jq -e '.open | type == "array"' "$INBOX" >/dev/null 2>&1 || fail_out "$INBOX is not an inbox document — the Desk server writes it; see docs/desk.md → Server"
-  ttl_s=$((120 * 60))
+  # The server owns the claim TTL and writes it into the inbox.
+  ttl_s=$(( $(jq -r '.claim_ttl_min // 120' "$INBOX") * 60 ))
   # Open items, plus claimed ones whose claim is past its TTL (the session died).
   local items
   items="$(jq -c --argjson now "$NOW_EPOCH" --argjson ttl "$ttl_s" '
@@ -339,6 +340,35 @@ audit_mode() {
   else check desk_server fail "the Desk server does not answer on 127.0.0.1:${DESK_PORT:-5555} — rc-service --user design-desk-server status (docs/desk.md → Server)"; fi
   [ -n "$(cfg desk_artifact)" ] && check desk_artifact ok "$(cfg desk_artifact)" || check desk_artifact warn "desk_artifact is not set — the Desk page was never published (docs/desk.md → Publishing the page)"
   [ "$(cfg_table 'Desk people' | grep -c . || true)" -gt 0 ] && check desk_people ok "$(cfg_table 'Desk people' | grep -c .) people" || check desk_people warn "the Desk people table is empty — everyone but the owner is a guest"
+
+  # toolchain: the design command, a real build and screenshot, saved brand and repo profiles
+  local DESIGN="$HOME_DIR/bin/design" t out
+  if [ ! -x "$DESIGN" ]; then check toolchain fail "~/bin/design is missing — bash \"\$HOME/scripts/install-toolkit.sh\""
+  elif out="$("$DESIGN" doctor 2>&1)"; then check toolchain ok "design doctor passed"
+  else check toolchain fail "design doctor: $(printf '%s\n' "$out" | grep -m1 '^FAIL' || echo failed) — bash \"\$HOME/scripts/install-toolkit.sh\", then design doctor"; fi
+  if [ -x "$DESIGN" ]; then
+    t="$(mktemp -d "${TMPDIR:-/tmp}/design-desk-audit.XXXXXX")"
+    cat > "$t/a.src.html" <<'HTML'
+<!doctype html><html lang="en" data-review-title="audit"><head><meta charset="utf-8"><title>audit</title><!-- design:css --></head>
+<body><!-- design:review-bar --><div data-view="1" data-view-name="Audit" class="p-6 bg-background text-foreground"><h1 class="text-xl font-semibold">Audit</h1><button class="mt-2 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">Ok</button></div></body></html>
+HTML
+    if WORK_DIR="$t/work" "$DESIGN" build "$t/a.src.html" "$t/a.html" --style wireframe >/dev/null 2>"$t/err" \
+       && WORK_DIR="$t/work" "$DESIGN" shot "$t/a.html" "$t/shots" --width 600 >/dev/null 2>>"$t/err" && [ -s "$t/shots/1-light.png" ]; then
+      check render ok "built and screenshotted a wireframe page"
+    else check render fail "a build or screenshot failed: $(grep -m1 -E 'design:|Error' "$t/err" || echo unknown) — design doctor, then re-run the audit"; fi
+    rm -rf "$t"
+  fi
+  if [ -f "$WORK/brand/brand.json" ]; then
+    jq -e '.colors.accent | test("^#[0-9a-fA-F]{6}$")' "$WORK/brand/brand.json" >/dev/null 2>&1 \
+      && check brand ok "$(jq -r '.name // "saved brand"' "$WORK/brand/brand.json")" \
+      || check brand fail "work/brand/brand.json does not parse or has no #rrggbb colors.accent — save the brand again (design brand save)"
+  fi
+  local bad="" n=0 p
+  for p in "$WORK"/profiles/*.yaml; do
+    [ -e "$p" ] || continue; n=$((n+1))
+    grep -qE '^repo: ' "$p" && grep -qE '^(kind|styling): ' "$p" || bad="$bad $(basename "$p")"
+  done
+  [ -z "$bad" ] && check repo_profiles ok "$n saved" || check repo_profiles fail "malformed:$bad — design repo detect <owner/name> again"
 
   # backup invariants
   [ -d "$WORK/.git" ] && check work_git fail "work/.git exists — work/ must never be a git repo (concurrent runs corrupt it)" || check work_git ok "work/ is a plain directory"

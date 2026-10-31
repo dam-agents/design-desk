@@ -57,7 +57,7 @@ export function resolveStyle(flag, ref = "") {
     // The versions this build uses are read from the fresh clone's lockfile every time; a
     // profile saved before an upgrade would compile yesterday's styles.
     const uiDir = join(dir, profile.ui_dir);
-    const names = ["tailwindcss", "react", "react-dom", "tailwind-merge", "clsx", profile.icon_package].filter(Boolean);
+    const names = ["tailwindcss", "react", "react-dom", "tailwind-merge", "clsx", "@carbon/pictograms-react", profile.icon_package].filter(Boolean);
     profile.versions = { ...(profile.versions || {}), ...lockedVersions(dir, uiDir, names) };
     return { kind: "repo", repo, profile, dir, commit, uiDir, label: `Style: ${repo}@${commit}` };
   }

@@ -1,6 +1,6 @@
 // <ui-icon name="ChevronLeft" size="16" class="…"/> — an icon from the package the
 // style uses (the repo's own, or Carbon), by the same name the source code imports.
-// <ui-pictogram name="Robot"/> — a Carbon pictogram (Carbon styles and Carbon repos).
+// <ui-pictogram name="Robot"/> — a Carbon pictogram, at the repo's locked version when it has one.
 import { join } from "node:path";
 import { fail, attrs, tagRe, req, slugOf } from "./core.mjs";
 import { toolchain } from "./toolchain.mjs";
@@ -39,12 +39,15 @@ export function renderIcons(html, style) {
     return render(h(C, { ...(size ? a.size(size) : {}), ...(className ? { className } : {}), "aria-hidden": "true", ...rest }));
   });
   if (/<ui-pictogram\b/.test(html)) {
-    const picto = req("@carbon/pictograms-react");
+    const v = style.kind === "repo" && style.profile?.versions?.["@carbon/pictograms-react"];
+    const reactV = style.profile?.versions?.react || "18.3.1";
+    const r = v ? toolchain(`icons-${slugOf(style.repo)}`, { "@carbon/pictograms-react": v, react: reactV, "react-dom": style.profile?.versions?.["react-dom"] || reactV }).req : req;
+    const picto = r("@carbon/pictograms-react");
     html = html.replace(tagRe("ui-pictogram"), (_, s) => {
       const { name, class: className, ...rest } = attrs(s);
       const C = picto[name];
-      if (!C) fail(`no pictogram "${name}" in @carbon/pictograms-react`);
-      return req("react-dom/server").renderToStaticMarkup(req("react").createElement(C, { ...(className ? { className } : {}), ...rest }));
+      if (!C) fail(`no pictogram "${name}" in @carbon/pictograms-react${v ? `@${v}` : ""}`);
+      return r("react-dom/server").renderToStaticMarkup(r("react").createElement(C, { ...(className ? { className } : {}), ...rest }));
     });
   }
   return html;

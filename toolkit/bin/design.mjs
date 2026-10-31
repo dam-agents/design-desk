@@ -12,6 +12,8 @@ const USAGE = `usage: design <command> [args]
   repo show <owner/name>               print the saved profile
   profile <owner/name> [--clone <dir>] the product's design profile: .design-desk/ in the repo's
                                        default branch, else the saved one; prints JSON
+  profile <owner/name> --check | --check-dir <dir>   validate a design profile's shape
+  plugins [<owner/name>]               the bundled plug-ins, and the ones the repo's profile lists
   build <src.html> <out.html> [--style repo:<owner/name>|brand|carbon|wireframe] [--ref <ref>]
                                        compile a variant, mockup or walkthrough source
   shot <page.html|url> <outdir> [--width 1440] [--views] [--dark] [--click <selector>]...
@@ -43,7 +45,7 @@ const table = {
   doctor: "./doctor.mjs", repo: "./repo.mjs", profile: "./profile.mjs", build: "./build.mjs", shot: "./shot.mjs",
   capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs", states: "./states.mjs",
   "deck-new": "./deck.mjs", "deck-pdf": "./deck.mjs", "deck-check": "./deck.mjs", video: "./video.mjs", stills: "./video.mjs",
-  "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs",
+  "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs", plugins: "./plugins.mjs",
 };
 if (!cmd || !table[cmd]) { process.stdout.write(USAGE); process.exit(cmd ? 2 : 0); }
 const mod = await import(table[cmd]);

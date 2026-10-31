@@ -29,4 +29,7 @@ if command -v node >/dev/null && node -e "process.exit(+process.versions.node.sp
   assert "node cfg agrees" '.display_name == "Team Desk" and .repos == "acme/widgets, acme/site"' "$js"
   assert "node cfgTable agrees" '.people | length == 2 and .[0].role == "designer"' "$js"
 fi
+printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' '- default_style: repo:acme/other' > "$WORK_DIR/CONFIG.md"
+out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)" && { echo "  ✗ verify passes a default_style outside repos"; FAILS=$((FAILS+1)); }
+printf '%s' "$out" | grep -q '^FAIL config_default_style' || { echo "  ✗ verify names config_default_style: $out"; FAILS=$((FAILS+1)); }
 finish

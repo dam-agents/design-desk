@@ -8,7 +8,8 @@
 // a component's own size or position; no `&amp;` inside a class; no unhandled <ui-*> tag.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { TOOLKIT, fail, req } from "../lib/core.mjs";
+import { TOOLKIT, fail, req, slugOf } from "../lib/core.mjs";
+import { toolchain } from "../lib/toolchain.mjs";
 import { resolveStyle, compileCss, fontCss } from "../lib/style.mjs";
 import { renderIcons } from "../lib/icons.mjs";
 import { renderComponents } from "../lib/components.mjs";
@@ -26,10 +27,11 @@ export async function main(_cmd, argv) {
   html = renderIcons(html, style);
   html = await renderComponents(html, style);
 
-  // cn(): resolve conflicting utilities the way the app does. Only for Tailwind styles.
+  // cn(): resolve conflicting utilities the way the app does, with the app's tailwind-merge.
   const tailwind = style.kind !== "repo" || style.profile.styling === "tailwind";
   if (tailwind && (style.kind !== "repo" || style.profile.class_merge === "tailwind-merge")) {
-    const { twMerge } = req("tailwind-merge");
+    const v = style.kind === "repo" && style.profile.versions?.["tailwind-merge"];
+    const { twMerge } = v ? toolchain(`merge-${slugOf(style.repo)}`, { "tailwind-merge": v }).req("tailwind-merge") : req("tailwind-merge");
     html = html.replace(/(\sclass=")([^"]*)(")/g, (_, a, cls, b) => a + twMerge(cls.replace(/\s+/g, " ").trim()) + b);
   }
 

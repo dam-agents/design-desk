@@ -8,7 +8,7 @@ the agent definition itself.
 
 | Path | Kind | Holds |
 | --- | --- | --- |
-| `/home/agent` (outer) | git repo, remote `$DEFINITION_REPO` (`origin`) | Definition: `kit.yaml`, `CLAUDE.md`, `AGENTS.md`, `ONBOARDING.md`, `README.md`, `docs/`, `scripts/`, `VERSION`, `CHANGELOG.md`, `.gitignore`, `LICENSE`. |
+| `/home/agent` (outer) | git repo, remote `$DEFINITION_REPO` (`origin`) | Definition: `kit.yaml`, `CLAUDE.md`, `AGENTS.md`, `ARCHITECTURE.md`, `ONBOARDING.md`, `README.md`, `docs/`, `scripts/`, `toolkit/`, `desk/`, `plugins/`, `.agents/skills/` (the bundled ones), `VERSION`, `CHANGELOG.md`, `.gitignore`, `LICENSE`. |
 | `/home/agent/work` | **plain data directory** (no `.git`) | Live runtime state. Shared across concurrent runs; the source of truth. |
 | `$GITHUB_REPO_WORK` | git remote | Durable, versioned **backup** of `work/`. Written only via a disposable tmpfs clone (below). |
 
@@ -110,12 +110,15 @@ to `main`, never auto-merge**, and only when deliberately asked — never as par
 scheduled run:
 
 ```bash
+origin="$(git -C /home/agent remote get-url origin)"            # https://<host>/<owner>/<name>(.git)
+DEF_HOST="$(printf '%s' "$origin" | sed -E 's#^https?://([^/]+)/.*#\1#')"
+DEFINITION_REPO="$(printf '%s' "$origin" | sed -E 's#^https?://[^/]+/##; s#\.git$##')"
 git -C /home/agent fetch origin main
 git -C /home/agent checkout -b "fix/<short-slug>" origin/main
-git -C /home/agent add -- kit.yaml CLAUDE.md AGENTS.md ONBOARDING.md README.md VERSION CHANGELOG.md .gitignore LICENSE docs scripts
+git -C /home/agent add -- kit.yaml CLAUDE.md AGENTS.md ARCHITECTURE.md ONBOARDING.md README.md VERSION CHANGELOG.md .gitignore LICENSE docs scripts toolkit desk plugins .agents/skills
 git -C /home/agent commit -m "<describe the change>"
 git -C /home/agent push -u origin "fix/<short-slug>"
-gh pr create --repo "$DEFINITION_REPO" --base main --head "fix/<short-slug>" \
+gh pr create -R "$DEF_HOST/$DEFINITION_REPO" --base main --head "fix/<short-slug>" \
   --title "<title>" --body "<what and why>"
 ```
 
@@ -129,3 +132,7 @@ The definition repo may sit on a different host than the systems the agent works
 **every definition-repo call names its host** — `-R "$DEF_HOST/$DEFINITION_REPO"` for
 `gh pr`/`gh issue`, `--hostname "$DEF_HOST"` for `gh api`. The outer-repo `origin` URL
 already carries it, so plain `git fetch`/`push` need nothing extra.
+
+A change to `toolkit/package.json` or its lockfile is installed by re-running
+`bash "$HOME/scripts/install-toolkit.sh"` once it is merged and pulled; `design doctor` then
+confirms the toolchain.
