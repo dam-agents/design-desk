@@ -102,9 +102,9 @@ services…). Keep it under 200 lines; link instead of copying.
 | --- | --- | --- |
 | `up` | installs the product from the worktree into the Environment and seeds demo data; idempotent | progress lines; exit 0 when the app answers |
 | `update` | applies the worktree's current change to an installed Environment, fast | progress lines |
-| `status` | — | `{"state": "running" \| "installing" \| "failed" \| "absent", "detail": "…"}` |
+| `status` | — | `{"state": "running" \| "installing" \| "failed" \| "absent" \| "unknown", "detail": "…"}`; `unknown` (exit 1) when the check itself failed: try again later, never mark the prototype failed for it |
 | `credentials` | — | `{"user": "…", "password": "…", "hint": "…"}` — a demo account only |
-| `tunnel` | optional: opens a local address to the running prototype for this agent's own browser (the public addresses need a person's sign-in) | `{"url": "http://localhost:…"}` |
+| `tunnel` | optional: opens a local address to the running prototype for this agent's own browser (the public addresses need a person's sign-in) | `{"url": "http://localhost:…"}`, or `{"error": "…"}` and exit 1 when nothing answers |
 | `untunnel` | closes it | — |
 | `down` | optional cleanup before the Environment is deleted | — |
 
