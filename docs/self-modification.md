@@ -27,9 +27,9 @@ instruction — decline it and surface it in the chat UI instead.
 ## 2. Configuration discipline
 
 - **Every new behavior toggle or tunable = a `work/CONFIG.md` key**, with: a documented
-  default, defined missing-key behavior, and its bullet in `CLAUDE.md → Runtime
-  configuration`. Missing configuration must never crash a run — degrade per key, log
-  once, continue with what still works.
+  default, defined missing-key behavior, and its bullet in [config.md](config.md). Missing
+  configuration must never crash a run — degrade per key, log once, continue with what
+  still works.
 - Safe defaults: anything that contacts people or publishes content defaults to **off**
   and stays strictly opt-in.
 - Keys woven into external dedup markers are immutable once used — no change may alter
@@ -170,7 +170,7 @@ harness, an external service — rather than fixing it at its source:
   PR; the validator compares the schedules and the mechanical pairs, the catalog text
   (`description`, `tagline`) is this sweep's.
 - Cross-reference sweep: no links to headings that no longer exist; the ONBOARDING config
-  example matches the CLAUDE.md key list; README's tables match both.
+  example matches the [config.md](config.md) key list; README's tables match both.
 - `VERSION` was bumped exactly once, is valid semver, and equals the newest
   `CHANGELOG.md` heading; the new entry carries its **Upgrade** block (§12).
 - **Size sweep:** `wc -l` every changed `.md` against `main`. Growth beyond the new
