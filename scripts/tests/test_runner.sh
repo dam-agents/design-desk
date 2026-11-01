@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The runner's node step: every *.test.mjs, nested ones too, and a FAIL when a tests
-# directory has none — never a PASS that ran no test.
+# directory has none or cannot be listed — never a PASS that ran no test or only some.
 . "$(dirname "$0")/lib.sh"
 repo="$SANDBOX/repo"
 mkdir -p "$repo/scripts/tests" "$repo/toolkit/tests" "$repo/desk/tests" "$SANDBOX/fakenode"
@@ -29,4 +29,11 @@ rm -f "$SANDBOX/node-args"
 args="$(sed -E 's#.*/(toolkit|desk)/tests/#\1/tests/#' "$SANDBOX/node-args" 2>/dev/null | tr '\n' ' ')"
 [ "$args" = "toolkit/tests/a.test.mjs toolkit/tests/unit/b.test.mjs desk/tests/c.test.mjs " ] \
   || { echo "  ✗ node --test must get every *.test.mjs, nested too, and nothing else: $args"; FAILS=$((FAILS+1)); }
+
+# an unreadable subdirectory: find lists part of the tests and fails
+mkdir -p "$repo/toolkit/tests/locked"; chmod 000 "$repo/toolkit/tests/locked"
+[ "$(run)" = 1 ] || { echo "  ✗ a failed test listing must fail the runner"; FAILS=$((FAILS+1)); }
+grep -q 'FAIL  node --test: cannot list the tests in toolkit/tests' "$SANDBOX/out" \
+  || { echo "  ✗ the failure must name the directory it could not list"; FAILS=$((FAILS+1)); }
+chmod 755 "$repo/toolkit/tests/locked"
 finish

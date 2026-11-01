@@ -94,7 +94,7 @@ Idle runs wake no model: each schedule's Precheck decides first.
 
 The skills are in [`.agents/skills/`](.agents/skills/), the `design` CLI and the guard in
 [`toolkit/`](toolkit/) (a language adapter per stack in `toolkit/lib/lang/`), the Desk server and page in [`desk/`](desk/). `bash scripts/tests/run.sh`
-runs the offline tests (`node --test toolkit/tests/*.test.mjs desk/tests/*.test.mjs` for the node ones). Read
+runs the offline tests, the node ones in `toolkit/tests` and `desk/tests` included. Read
 [`docs/self-modification.md`](docs/self-modification.md) before opening a PR.
 To look at the Desk page locally: `DESK_PORT=5599 WORK_DIR=/tmp/dd node desk/server.mjs` and
 `node desk/dev/harness.mjs 5600 5599`, then open `http://localhost:5600/?as=alice@example.com`.
