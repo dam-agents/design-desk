@@ -7,6 +7,12 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.2.0 — 2026-11-01
+
+**Upgrade:**
+Nothing — docs are re-read per run. The configuration keys moved from `CLAUDE.md` to
+[docs/config.md](docs/config.md); `work/CONFIG.md` does not change.
+
 ## 1.1.1 — 2026-11-01
 
 **Upgrade:**

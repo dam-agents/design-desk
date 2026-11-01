@@ -11,12 +11,12 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: bash -n all scripts
         run: |
           set -e
           find scripts -name '*.sh' -print0 | xargs -0 -n1 bash -n
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: toolkit packages (no install scripts)
