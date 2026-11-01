@@ -1,8 +1,9 @@
 # Configuration keys
 
 Every key of `work/CONFIG.md`, with its default in parentheses. The parsing contract and the
-missing-file rule are in [CLAUDE.md](../CLAUDE.md) → **Runtime configuration**; a run reads
-the values already resolved in its worklist's `config`. A missing key takes its default.
+missing-file rule are in [CLAUDE.md](../CLAUDE.md) → **Runtime configuration**. Every run
+loads `work/CONFIG.md` at run start; a gated run also gets the values resolved in its
+worklist's `config`. A missing key takes its default.
 
 - `display_name` (`Design Desk`) — the Desk's title.
 - `repos` — comma-separated `[host/]owner/name` the watch reads (default `none`: no watch);
