@@ -117,11 +117,16 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await cf.button("Cancel").click();
     await settled(actions, 0, "Cancel confirms nothing");
     await closeRequest();
+    await desk.evaluate(() => { document.querySelector("#confirm-form [name=note]").value = "Kept after a failure"; window.failNext = true; });
     await cf.button("Close it").click();
-    await desk.waitForFunction((p) => calls.some((c) => c.method === "POST" && c.path === p), actions);
+    await desk.waitForSelector("#confirm-dialog[open] .toast", { state: "attached" });
+    assert.equal(await desk.inputValue("#confirm-form [name=note]"), "Kept after a failure", "a failed action keeps what was typed");
+    await cf.button("Close it").click();
+    await desk.waitForFunction((p) => calls.filter((c) => c.method === "POST" && c.path === p).length === 2, actions);
+    assert.equal(await cf.open(), false, "a second OK goes through");
     await closeRequest();
     await cf.close();
-    await settled(actions, 1, "a close after an OK confirms nothing");
+    await settled(actions, 2, "a close after an OK confirms nothing");
 
     // The screenshot dialog, on a shipped change.
     const sh = dialog("shots-dialog"), screens = "/api/cards/ch1/screens";

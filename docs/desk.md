@@ -38,7 +38,7 @@ served by the Desk server through the platform's Artifact API relay.
   submission before its `submit` event. A control in `desk/page.html` never submits a form;
   a dialog button carries `data-close`; Enter in a dialog `input` presses it (a `textarea`
   keeps Enter for a new line), and the work runs on the dialog's `close` event.
-  A send that fails opens its dialog again with what the person typed.
+  When a dialog's action fails, the dialog opens again with what the person typed or picked.
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
