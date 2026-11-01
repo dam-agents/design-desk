@@ -202,7 +202,7 @@
       <div class="thumbs" id="rq-thumbs"></div>
     </div>
     <input type="hidden" name="from" />
-    <div class="actions"><button class="btn primary" value="send">Send</button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -214,7 +214,7 @@
       <span>Paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="sh-file" hidden multiple /></label>. Four at most.</span>
       <div class="thumbs" id="sh-thumbs"></div>
     </div>
-    <div class="actions"><button class="btn primary" value="send">Add</button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -225,7 +225,7 @@
     <div id="cf-choices" class="choices"></div>
     <label id="cf-note-wrap" hidden><span id="cf-note-label"></span><textarea name="note" maxlength="500"></textarea></label>
     <label id="cf-url-wrap" hidden><span id="cf-url-label"></span><input name="url" maxlength="500" /></label>
-    <div class="actions"><button class="btn primary" value="ok" id="cf-ok"></button><button class="btn" value="cancel" formnovalidate>Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="ok" id="cf-ok"></button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -330,9 +330,12 @@
   const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
-  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 4800); };
+  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; (document.querySelector("dialog[open]") || document.body).append(el); setTimeout(() => el.remove(), 4800); };
   const fail = (e) => toast(e instanceof Said ? e.message : `Something went wrong. Try again; if it keeps happening, tell ${contact()}.`);
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { fail(e); } };
+  // A send that fails opens its dialog again with what the person typed; the toast says why.
+  // Every dialog sends through it (docs/desk.md → Where it works).
+  const sendOrReopen = async (dlg, send) => { try { return await send(); } catch (e) { dlg.returnValue = ""; dlg.showModal(); throw e; } };
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
   // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
@@ -374,8 +377,18 @@
   }
 
   // ---------- dialogs ----------
+  // A form never submits here (docs/desk.md → Where it works): a dialog's buttons check
+  // the fields and close it, and its "close" handler does the work.
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("dialog [data-close]");
+    if (!b) return;
+    const dlg = b.closest("dialog");
+    if (b.dataset.close !== "cancel" && !dlg.querySelector("form").reportValidity()) return;
+    dlg.close(b.dataset.close);
+  });
   // A confirmation for anything that cannot be taken back; optional choice, note or link.
-  function ask({ title, body, ok, choices = null, pick = null, note = null, url = null }) {
+  // `send(answer)` does the action; ask() resolves to its result, or to null on Cancel.
+  function ask({ title, body, ok, choices = null, pick = null, note = null, url = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
@@ -384,9 +397,13 @@
     $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="radio" name="choice" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""} required /> ${esc(c.name)}${c.hint ? ` <span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
     $("#cf-note-wrap").hidden = !note; $("#cf-note-label").textContent = note || "";
     $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url);
-    dlg.showModal();
+    dlg.returnValue = ""; dlg.showModal();
     return new Promise((resolve) => {
-      dlg.onclose = () => resolve(dlg.returnValue === "ok" ? { choice: f.querySelector("input[name=choice]:checked")?.value || null, note: f.note.value.trim(), url: f.url.value.trim() } : null);
+      dlg.onclose = async () => {
+        if (dlg.returnValue !== "ok") { resolve(null); return; }
+        const answer = { choice: f.querySelector("input[name=choice]:checked")?.value || null, note: f.note.value.trim(), url: f.url.value.trim() };
+        try { resolve(await sendOrReopen(dlg, () => send(answer))); } catch (e) { fail(e); }
+      };
     });
   }
 
@@ -1055,52 +1072,53 @@
     const c = S.card;
     if (name === "workspace") { S.ws.open = true; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); return; }
     if (name === "queue") {
-      const r = await ask({ title: "Add to the next call", body: "The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.", ok: "Add to the call", note: "What should the team decide? (optional)" });
+      const r = await ask({ title: "Add to the next call", body: "The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.", ok: "Add to the call", note: "What should the team decide? (optional)",
+        send: (a) => api("POST", `/api/cards/${c.id}/agenda`, { note: a.note }) });
       if (!r) return;
-      await api("POST", `/api/cards/${c.id}/agenda`, { note: r.note });
       toast("Added to the next call. Design Desk will write a short brief.");
       await refreshList(); await openCard(c.id); return;
     }
     if (name === "unqueue") { await api("DELETE", `/api/cards/${c.id}/agenda`); await refreshList(); await openCard(c.id); return; }
     if (name === "clear-call") {
-      const r = await ask({ title: "Is the call over?", body: "This clears the next-call list for everyone. Each item is marked as shown today.", ok: "Clear the list" });
+      const r = await ask({ title: "Is the call over?", body: "This clears the next-call list for everyone. Each item is marked as shown today.", ok: "Clear the list", send: () => api("POST", "/api/calls", {}) });
       if (!r) return;
-      await api("POST", "/api/calls", {}); await refreshList(); renderDetail(); return;
+      await refreshList(); renderDetail(); return;
     }
-    let note = "";
+    const post = (note) => api("POST", `/api/cards/${c.id}/actions`, { action: name, note });
+    let res = null;
     const options = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
     if (name === "approve") {
       const to = HANDOFF_TO[S.me?.handoff?.[c.request?.type || "idea"]] || HANDOFF_TO.desk;
       const fav = favourite(c);
-      const r = await ask({ title: "Approve a design", body: `Design Desk writes the developer spec for the option you pick and sends it to ${to}. Once sent, it can't be taken back.`, ok: "Approve", choices: options.length ? options : null, pick: fav?.id || null });
-      if (!r) return; note = r.choice || "";
+      res = await ask({ title: "Approve a design", body: `Design Desk writes the developer spec for the option you pick and sends it to ${to}. Once sent, it can't be taken back.`, ok: "Approve", choices: options.length ? options : null, pick: fav?.id || null, send: (a) => post(a.choice || "") });
+      if (!res) return;
     }
     if (name === "build") {
       const fav = favourite(c);
-      const r = await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. The first one can take up to an hour.", ok: "Build it", choices: options.length > 1 ? options : null, pick: fav?.id || options[0]?.id || null });
-      if (!r) return; note = r.choice || options[0]?.id || "";
+      res = await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. The first one can take up to an hour.", ok: "Build it", choices: options.length > 1 ? options : null, pick: fav?.id || options[0]?.id || null, send: (a) => post(a.choice || options[0]?.id || "") });
+      if (!res) return;
     }
     if (name === "close") {
-      const r = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. You can reopen it later.", ok: "Close it" });
-      if (!r) return;
+      res = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. You can reopen it later.", ok: "Close it", send: () => post("") });
+      if (!res) return;
     }
     if (name === "slack-share") {
       const at = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(15, 0, 0, 0); return d.toISOString(); };
-      const r = await ask({ title: "Share in Slack", body: "Design Desk posts these options to the team's Slack channel, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.",
-        ok: "Post to Slack", choices: [{ id: String(at(1)), name: "Close tomorrow at 15:00" }, { id: String(at(3)), name: "Close in 3 days" }, { id: String(at(7)), name: "Close in a week" }], pick: String(at(3)), note: "What should people look at? (optional)" });
-      if (!r) return;
-      note = JSON.stringify({ closes: r.choice, note: r.note });
+      res = await ask({ title: "Share in Slack", body: "Design Desk posts these options to the team's Slack channel, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.",
+        ok: "Post to Slack", choices: [{ id: String(at(1)), name: "Close tomorrow at 15:00" }, { id: String(at(3)), name: "Close in 3 days" }, { id: String(at(7)), name: "Close in a week" }], pick: String(at(3)), note: "What should people look at? (optional)",
+        send: (a) => post(JSON.stringify({ closes: a.choice, note: a.note })) });
+      if (!res) return;
     }
     if (name === "figma-export") {
       const v = (c.variants || []).find((x) => x.id === S.variant);
-      const r = await ask({ title: "Send to Figma", body: `Design Desk puts **${v?.name || "this option"}** into Figma as editable layers and links it here.`, ok: "Send" });
-      if (!r) return; note = v?.id || "";
+      res = await ask({ title: "Send to Figma", body: `Design Desk puts **${v?.name || "this option"}** into Figma as editable layers and links it here.`, ok: "Send", send: () => post(v?.id || "") });
+      if (!res) return;
     }
     if (name === "figma-import") {
-      const r = await ask({ title: "Import from Figma", body: "Paste a link to a frame in Figma (in Figma: right-click the frame → Copy link). Design Desk adds it as a design option and rebuilds it from the product's real parts.", ok: "Import", url: "Link to the Figma frame" });
-      if (!r) return; note = r.url;
+      res = await ask({ title: "Import from Figma", body: "Paste a link to a frame in Figma (in Figma: right-click the frame → Copy link). Design Desk adds it as a design option and rebuilds it from the product's real parts.", ok: "Import", url: "Link to the Figma frame", send: (a) => post(a.url) });
+      if (!res) return;
     }
-    const res = await api("POST", `/api/cards/${c.id}/actions`, { action: name, note });
+    res ||= await post("");
     if (res.inbox) toast(name === "close" ? "Closed." : "Sent. Design Desk is on it; this page updates by itself.");
     await refreshList(); await openCard(c.id);
   }
@@ -1208,8 +1226,10 @@
       return;
     }
     if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; renderWorkspace(); renderDetail(); return; }
-    if (e.key === "Enter" && !e.shiftKey && e.target.matches("[data-reply]")) { e.preventDefault(); document.querySelector(`[data-send-reply="${CSS.escape(e.target.dataset.reply)}"]`)?.click(); }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.id === "ws-text") { e.preventDefault(); $("[data-ws-send]")?.click(); }
+    // Enter in a dialog's field would submit its form (docs/desk.md → Where it works): it presses the dialog's own button.
+    if (e.key === "Enter" && !e.isComposing && e.target.matches("dialog input")) { e.preventDefault(); e.target.closest("dialog").querySelector("[data-close]:not([data-close=cancel])")?.click(); return; }
+    if (e.key === "Enter" && !e.isComposing && !e.shiftKey && e.target.matches("[data-reply]")) { e.preventDefault(); document.querySelector(`[data-send-reply="${CSS.escape(e.target.dataset.reply)}"]`)?.click(); }
+    if (e.key === "Enter" && !e.isComposing && (e.metaKey || e.ctrlKey) && e.target.id === "ws-text") { e.preventDefault(); $("[data-ws-send]")?.click(); }
   });
 
   // ---------- the request dialog ----------
@@ -1239,10 +1259,10 @@
   const addShot = (f) => addPicture(f, added, "#sh-thumbs", 4);
   $("#sh-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addShot(f); e.target.value = ""; }));
   $("#shots-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addShot(it.getAsFile()); } }));
-  function openShotsDialog() { added.length = 0; $("#sh-thumbs").innerHTML = ""; $("#shots-dialog").showModal(); }
-  $("#shots-form").addEventListener("submit", guard(async (e) => {
-    if (e.submitter?.value !== "send" || !added.length) return;
-    await api("POST", `/api/cards/${S.card.id}/screens`, { images: added.map(({ contentType, data }) => ({ contentType, data })) });
+  function openShotsDialog() { added.length = 0; $("#sh-thumbs").innerHTML = ""; $("#shots-dialog").returnValue = ""; $("#shots-dialog").showModal(); }
+  $("#shots-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send" || !added.length) return;
+    await sendOrReopen(e.target, () => api("POST", `/api/cards/${S.card.id}/screens`, { images: added.map(({ contentType, data }) => ({ contentType, data })) }));
     toast("Added. Design Desk checks them and writes their captions.");
     await openCard(S.card.id);
   }));
@@ -1261,7 +1281,7 @@
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
     if (from) $("#rq-problem-label").textContent = `What should look different in “${from.title}”?`;
     f.from.value = from ? from.id : "";
-    dlg.showModal();
+    dlg.returnValue = ""; dlg.showModal();
   }
   $("#new-request").addEventListener("click", () => openRequestDialog(null));
 
@@ -1280,12 +1300,12 @@
   });
   systemDark.addEventListener("change", renderTheme);
   renderTheme();
-  $("#request-form").addEventListener("submit", guard(async (e) => {
-    if (e.submitter?.value !== "send") return;
-    const f = e.target;
+  $("#request-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send") return;
+    const f = $("#request-form");
     const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
       ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
-    const r = await api("POST", "/api/requests", body);
+    const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
     toast("Sent. Design Desk first checks what can be done; this page updates by itself.");
     S.tab = "requests"; S.reqFilter = "open"; await refreshList(); await openCard(r.card.id);
   }));

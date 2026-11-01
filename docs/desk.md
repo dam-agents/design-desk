@@ -34,6 +34,13 @@ served by the Desk server through the platform's Artifact API relay.
 - **Where it works.** An interactive page talks to its agent only on its share link (for the
   people on the list, the owner included) or docked in this agent's own chat; opened from
   the Artifacts page elsewhere, it shows but cannot load or save. Tell people to use the link.
+  The page runs in a sandboxed frame without `allow-forms`: the browser blocks every form
+  submission before its `submit` event. A control in `desk/page.html` never submits a form;
+  a dialog button carries `data-close`; Enter in a dialog `input` presses it (a `textarea`
+  keeps Enter for a new line), and the work runs on the dialog's `close` event.
+  When a dialog's action fails, the dialog opens again with what the person typed or picked.
+  `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
+  only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
   same emails go in `## Desk people` with a role. The owner needs the Interactive artifacts
   feature on (Settings → five taps on the version → Experimental features). Never set the
