@@ -7,11 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.0.2 — 2026-10-31
+## 1.1.1 — 2026-11-01
 
 **Upgrade:**
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). Until then, its dialogs send nothing.
+
+## 1.1.0 — 2026-11-01
+
+**Upgrade:**
+Republish the Desk page ([docs/desk.md](docs/desk.md) → **Publishing the page**): its header gains a day / night switch.
 
 ## 1.0.1 — 2026-10-31
 

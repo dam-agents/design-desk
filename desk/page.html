@@ -4,6 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Design Desk</title>
+<script>
+  // Before the first paint, so a chosen mode never flashes the other one.
+  try { const t = localStorage.getItem("desk-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+</script>
 <style>
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
@@ -12,11 +16,16 @@
     --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   }
+  /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+    :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
-      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --shadow: none; }
+      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --shadow: none; color-scheme: dark; }
   }
+  :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
+    --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
+    --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --shadow: none; color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
@@ -31,6 +40,7 @@
   nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; line-height: 18px; text-align: center; }
   .grow { flex: 1; }
   .me { color: var(--muted); font-size: 12px; }
+  .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
   .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
   .banner.warn { background: var(--warn-soft); }
   .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
@@ -163,6 +173,7 @@
     <nav id="nav"></nav>
     <div class="grow"></div>
     <span class="me" id="me"></span>
+    <button class="btn theme" id="theme" type="button"></button>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
   </header>
   <div class="banners" id="banners"></div>
@@ -1262,6 +1273,22 @@
     dlg.returnValue = ""; dlg.showModal();
   }
   $("#new-request").addEventListener("click", () => openRequestDialog(null));
+
+  // Day and night: the switch remembers a choice per browser; without one, the system's mode.
+  const systemDark = matchMedia("(prefers-color-scheme: dark)");
+  const isDark = () => (document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light")) === "dark";
+  function renderTheme() {
+    const b = $("#theme"), dark = isDark();
+    b.textContent = dark ? "☀" : "☾";
+    const label = dark ? "Switch to day mode" : "Switch to night mode";
+    b.title = label; b.setAttribute("aria-label", label);
+  }
+  $("#theme").addEventListener("click", () => {
+    const next = isDark() ? "light" : "dark";
+    document.documentElement.dataset.theme = next; store.set("desk-theme", next); renderTheme();
+  });
+  systemDark.addEventListener("change", renderTheme);
+  renderTheme();
   $("#request-dialog").addEventListener("close", guard(async (e) => {
     if (e.target.returnValue !== "send") return;
     const f = $("#request-form");
