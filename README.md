@@ -52,7 +52,7 @@ chat with the agent.
 ## Settings
 
 Every setting lives in the agent's `work/CONFIG.md` and is changed by asking the agent in its
-chat. The list, with defaults: [`CLAUDE.md`](CLAUDE.md) → **Runtime configuration**.
+chat. The list, with defaults: [`docs/config.md`](docs/config.md).
 
 | Env var | Purpose |
 | --- | --- |

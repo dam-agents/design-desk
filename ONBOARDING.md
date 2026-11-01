@@ -133,7 +133,7 @@ fi
 
 ## Step 3 — Configure (`work/CONFIG.md`, one short conversation)
 
-Read `CLAUDE.md` → **Runtime configuration** first. If Step 2a restored a `CONFIG.md`,
+Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
 **keep its values** and ask only for what is missing.
 
 1. **Repositories** (`repos`) — "Which repositories should I watch for changes to the

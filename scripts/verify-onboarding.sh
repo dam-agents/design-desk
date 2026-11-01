@@ -155,7 +155,7 @@ else
     printf '%s' "$r" | grep -qE '^([a-z0-9.-]+/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || fail config_repos "'$r' is not [host/]owner/name" "fix repos"
   done
   unknown="$(sed -nE 's/^- ([A-Za-z0-9_.-]+):.*/\1/p' "$CONFIG" | while read -r k; do case " $KNOWN_KEYS " in (*" $k "*) ;; (*) printf '%s ' "$k";; esac; done)"
-  [ -z "$unknown" ] && ok config_keys "every bullet is a known key" || fail config_keys "unknown keys (invisible to the runtime): $unknown" "rename to the documented key (CLAUDE.md → Runtime configuration) or delete"
+  [ -z "$unknown" ] && ok config_keys "every bullet is a known key" || fail config_keys "unknown keys (invisible to the runtime): $unknown" "rename to the documented key (docs/config.md) or delete"
   if grep -qx '## Desk people' "$CONFIG"; then
     hdr="$(sed -n '/^## Desk people$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
     [ "$hdr" = "|email|role|" ] && ok desk_people_header "| email | role |" || fail desk_people_header "the Desk people table header is '$hdr'" "use | email | role |"
