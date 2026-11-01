@@ -363,8 +363,8 @@
   }
 
   // ---------- dialogs ----------
-  // The Desk runs in a sandboxed frame without allow-forms, so a form never submits:
-  // a dialog's buttons check the fields and close it, and its "close" handler does the work.
+  // A form never submits here (docs/desk.md → Where it works): a dialog's buttons check
+  // the fields and close it, and its "close" handler does the work.
   document.addEventListener("click", (e) => {
     const b = e.target.closest("dialog [data-close]");
     if (!b) return;
