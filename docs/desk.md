@@ -36,8 +36,8 @@ served by the Desk server through the platform's Artifact API relay.
   the Artifacts page elsewhere, it shows but cannot load or save. Tell people to use the link.
   The page runs in a sandboxed frame without `allow-forms`: the browser blocks every form
   submission before its `submit` event. A control in `desk/page.html` never submits a form;
-  a dialog button carries `data-close` and its work runs on the dialog's `close` event
-  (`desk/tests/page.test.mjs` checks both in such a frame).
+  a dialog button carries `data-close`, Enter in a dialog field presses it, and the work runs
+  on the dialog's `close` event (`desk/tests/page.test.mjs` drives every dialog in such a frame).
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
   same emails go in `## Desk people` with a role. The owner needs the Interactive artifacts
   feature on (Settings → five taps on the version → Experimental features). Never set the

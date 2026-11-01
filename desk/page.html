@@ -1217,6 +1217,8 @@
       return;
     }
     if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; renderWorkspace(); renderDetail(); return; }
+    // Enter in a dialog's field would submit its form (docs/desk.md → Where it works): it presses the dialog's own button.
+    if (e.key === "Enter" && e.target.matches("dialog input")) { e.preventDefault(); e.target.closest("dialog").querySelector("[data-close]:not([data-close=cancel])")?.click(); return; }
     if (e.key === "Enter" && !e.shiftKey && e.target.matches("[data-reply]")) { e.preventDefault(); document.querySelector(`[data-send-reply="${CSS.escape(e.target.dataset.reply)}"]`)?.click(); }
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.id === "ws-text") { e.preventDefault(); $("[data-ws-send]")?.click(); }
   });
