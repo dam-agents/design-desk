@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The runner's node step: every *.test.mjs, nested ones too, and a FAIL when a tests
-# directory has none — never a PASS that ran no test.
+# directory has none or cannot be listed — never a PASS that ran no test or only some.
 . "$(dirname "$0")/lib.sh"
 repo="$SANDBOX/repo"
 mkdir -p "$repo/scripts/tests" "$repo/toolkit/tests" "$repo/desk/tests" "$SANDBOX/fakenode"
@@ -29,4 +29,19 @@ rm -f "$SANDBOX/node-args"
 args="$(sed -E 's#.*/(toolkit|desk)/tests/#\1/tests/#' "$SANDBOX/node-args" 2>/dev/null | tr '\n' ' ')"
 [ "$args" = "toolkit/tests/a.test.mjs toolkit/tests/unit/b.test.mjs desk/tests/c.test.mjs " ] \
   || { echo "  ✗ node --test must get every *.test.mjs, nested too, and nothing else: $args"; FAILS=$((FAILS+1)); }
+
+# a find that lists part of toolkit/tests and fails — a stub, not chmod, which root ignores
+mkdir -p "$SANDBOX/fakefind"
+cat > "$SANDBOX/fakefind/find" <<EOF
+#!/usr/bin/env bash
+case "\$1" in */toolkit/tests) echo "\$1/a.test.mjs"; echo "find: \$1/locked: Permission denied" >&2; exit 1;; esac
+exec "$(command -v find)" "\$@"
+EOF
+chmod +x "$SANDBOX/fakefind/find"
+rc="$(PATH="$SANDBOX/fakefind:$SANDBOX/fakenode:$PATH" bash "$repo/scripts/tests/run.sh" > "$SANDBOX/out" 2>&1; echo $?)"
+[ "$rc" = 1 ] || { echo "  ✗ a failed test listing must fail the runner"; FAILS=$((FAILS+1)); }
+grep -q 'FAIL  node --test: cannot list the tests in toolkit/tests$' "$SANDBOX/out" \
+  || { echo "  ✗ the failure must name the directory it could not list"; FAILS=$((FAILS+1)); }
+grep -q 'locked: Permission denied' "$SANDBOX/out" \
+  || { echo "  ✗ the failure must show find's error"; FAILS=$((FAILS+1)); }
 finish

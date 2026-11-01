@@ -29,15 +29,23 @@ for t in "$DIR"/test_*.sh; do
   fi
 done
 if command -v node >/dev/null 2>&1 && node -e "process.exit(+process.versions.node.split('.')[0] >= 20 ? 0 : 1)" 2>/dev/null; then
-  # Files, not directories: node 21+ no longer expands a directory argument. find,
+  # Files, not directories: node 21 to 25 do not expand a directory argument. find,
   # not a glob: a glob that matches nothing runs no test on node 21+ and still passes.
-  files=(); missing=
+  # A find that fails lists only part of the tests: it fails the step with its error.
+  files=(); missing=; unlisted=
+  list=/tmp/design-desk-node-list.$$
   for d in toolkit desk; do
     n=${#files[@]}
-    while IFS= read -r f; do files+=("$f"); done < <(find "$DIR/../../$d/tests" -type f -name '*.test.mjs' 2>/dev/null | sort)
+    if ! find "$DIR/../../$d/tests" -type f -name '*.test.mjs' >"$list" 2>"$list.err"; then
+      cat "$list.err"; unlisted="$unlisted $d/tests"; continue
+    fi
+    while IFS= read -r f; do files+=("$f"); done < <(sort "$list")
     [ "${#files[@]}" -gt "$n" ] || missing="$missing $d/tests"
   done
-  if [ -n "$missing" ]; then
+  rm -f "$list" "$list.err"
+  if [ -n "$unlisted" ]; then
+    echo "FAIL  node --test: cannot list the tests in$unlisted"; fail=$((fail + 1))
+  elif [ -n "$missing" ]; then
     echo "FAIL  node --test: no *.test.mjs in$missing"; fail=$((fail + 1))
   elif node --test "${files[@]}" >/tmp/design-desk-node-tests.$$ 2>&1; then
     echo "PASS  node --test (toolkit, desk)"; pass=$((pass + 1))
