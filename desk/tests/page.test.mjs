@@ -88,6 +88,12 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.press("#request-dialog input[name=screen]", "Enter");
     await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/requests").length === 2);
     assert.equal(await rq.open(), false, "Enter in a field sends the request");
+    await desk.click("#new-request");
+    await desk.fill("#request-dialog textarea[name=problem]", "Still typing");
+    await desk.evaluate(() => document.querySelector("#request-dialog input[name=screen]")
+      .dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true })));
+    await settled("/api/requests", 2, "an Enter that ends a composition sends nothing");
+    await rq.button("Cancel").click();
 
     // The confirmation dialog, through "Close this request…".
     const cf = dialog("confirm-dialog"), actions = "/api/cards/r1/actions";
