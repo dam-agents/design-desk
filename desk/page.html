@@ -330,9 +330,11 @@
   const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
-  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 4800); };
+  const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; (document.querySelector("dialog[open]") || document.body).append(el); setTimeout(() => el.remove(), 4800); };
   const fail = (e) => toast(e instanceof Said ? e.message : `Something went wrong. Try again; if it keeps happening, tell ${contact()}.`);
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { fail(e); } };
+  // A send that fails opens its dialog again with what the person typed; the toast says why.
+  const sendOrReopen = async (dlg, send) => { try { return await send(); } catch (e) { dlg.returnValue = ""; dlg.showModal(); throw e; } };
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
   // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
@@ -1253,7 +1255,7 @@
   function openShotsDialog() { added.length = 0; $("#sh-thumbs").innerHTML = ""; $("#shots-dialog").returnValue = ""; $("#shots-dialog").showModal(); }
   $("#shots-dialog").addEventListener("close", guard(async (e) => {
     if (e.target.returnValue !== "send" || !added.length) return;
-    await api("POST", `/api/cards/${S.card.id}/screens`, { images: added.map(({ contentType, data }) => ({ contentType, data })) });
+    await sendOrReopen(e.target, () => api("POST", `/api/cards/${S.card.id}/screens`, { images: added.map(({ contentType, data }) => ({ contentType, data })) }));
     toast("Added. Design Desk checks them and writes their captions.");
     await openCard(S.card.id);
   }));
@@ -1296,7 +1298,7 @@
     const f = $("#request-form");
     const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
       ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
-    const r = await api("POST", "/api/requests", body);
+    const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
     toast("Sent. Design Desk first checks what can be done; this page updates by itself.");
     S.tab = "requests"; S.reqFilter = "open"; await refreshList(); await openCard(r.card.id);
   }));

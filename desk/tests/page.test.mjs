@@ -29,6 +29,7 @@ window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header" };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
+  if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true } }
     : path === "/api/cards" ? { cards: [change] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
@@ -43,7 +44,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
   const browser = chromium();
   if (!browser) return t.skip("no browser here");
   let pw;
-  try { pw = req("playwright-core"); } catch { return t.skip("toolkit dependencies are not installed"); }
+  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
   Object.assign(process.env, browser.env);
   const server = createServer((r, res) => {
     res.setHeader("content-type", "text/html");
@@ -94,6 +95,15 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
       .dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true })));
     await settled("/api/requests", 2, "an Enter that ends a composition sends nothing");
     await rq.button("Cancel").click();
+    await desk.click("#new-request");
+    await desk.fill("#request-dialog textarea[name=problem]", "Kept after a failure");
+    await desk.evaluate(() => { window.failNext = true; });
+    await rq.button("Send").click();
+    await desk.waitForSelector("#request-dialog[open] .toast", { state: "attached" });
+    assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "Kept after a failure", "a failed send keeps the text");
+    await rq.button("Send").click();
+    await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/requests").length === 4);
+    assert.equal(await rq.open(), false, "a second Send goes through");
 
     // The confirmation dialog, through "Close this request…".
     const cf = dialog("confirm-dialog"), actions = "/api/cards/r1/actions";
@@ -129,11 +139,15 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await sh.button("Cancel").click();
     await settled(screens, 0, "Cancel sends nothing");
     await withPicture();
+    await desk.evaluate(() => { window.failNext = true; });
     await sh.button("Add").click();
-    await desk.waitForFunction((p) => calls.some((c) => c.method === "POST" && c.path === p), screens);
+    await desk.waitForSelector("#shots-dialog[open] .toast", { state: "attached" });
+    assert.equal(await desk.locator("#sh-thumbs img").count(), 1, "a failed Add keeps the picture");
+    await sh.button("Add").click();
+    await desk.waitForFunction((p) => calls.filter((c) => c.method === "POST" && c.path === p).length === 2, screens);
     await withPicture();
     await sh.close();
-    await settled(screens, 1, "a close after an Add sends nothing");
+    await settled(screens, 2, "a close after an Add sends nothing");
   } finally {
     await chrome.close();
     server.close();
