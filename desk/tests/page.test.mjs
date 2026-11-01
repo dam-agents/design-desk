@@ -1,4 +1,4 @@
-// node --test desk/tests/*.test.mjs — the Desk page runs in a sandboxed frame without
+// node --test desk/tests/page.test.mjs — the Desk page runs in a sandboxed frame without
 // allow-forms (docs/desk.md → Where it works): the browser blocks a form's submission
 // before its submit event fires.
 import { test } from "node:test";

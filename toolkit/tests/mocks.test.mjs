@@ -1,4 +1,4 @@
-// node --test toolkit/tests/*.test.mjs — module stubs for rendering a component in a state.
+// node --test toolkit/tests/mocks.test.mjs — module stubs for rendering a component in a state.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { exportNames, stubSource } from "../lib/mocks.mjs";
