@@ -33,6 +33,9 @@ worklist's `config`. A missing key takes its default.
   bound channel) | `disabled`.
 - `slack_polls` (`disabled`) — `enabled`: designers share options in Slack for 👍 / ⚠️ votes
   and replies (the `slack-polls` skill); `slack_poll_channel` — where (empty: the bound channel).
+- `slack_council` (`disabled`) — `enabled`: anyone in a request's Slack thread asks for changes
+  and gets new options or versions back there (the `slack-council` skill); `council_sync_min`
+  (`30`) — how often an open thread is read for asks that do not mention the agent.
 - `figma` (`disabled`) — `enabled` once Figma is connected (the `figma` skill); `figma_file` —
   a Figma file link that exports go to (empty: a new file per request).
 - `## Skills` table, `| action | skill |`: another installed skill for an action
