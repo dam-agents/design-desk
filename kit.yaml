@@ -14,8 +14,9 @@ description: >-
   Designers work through the Desk like an inbox, ask follow-up questions, and file
   design requests; the agent says first what is possible as a design change, then
   makes two or three variants on sample data that developers and project managers
-  vote and comment on, element by element. UI bugs reported on the Desk or in
-  Slack join the same queue. An approved direction becomes a live
+  vote and comment on, element by element. UI bugs reported on the Desk, and design
+  requests and UI bugs sent in Slack join the same queue; Slack gets its answer in
+  the thread. An approved direction becomes a live
   prototype — the real product with only its look changed, checked by a design-only
   guard, running on its own Environment with demo data — and then a developer spec.
   Also makes everything the Designer kit did: decks, mockups, walkthroughs, charts,
