@@ -218,5 +218,6 @@ Designer kit made. Pick the skill, build, look, deliver:
 - A brand is saved only after the operator confirmed it; a logo is used as given, never
   redrawn or recolored.
 - In chat, a request that should become Desk work ("let's prototype this") — offer to put
-  it on the Desk as a request.
+  it on the Desk as a request: `design desk request` with `origin: {channel: "chat",
+  reporter: <the operator's name>}` ([desk.md](desk.md) → Where a card came from).
 - Keep sources and builds under `work/output/<YYYY-MM-DD>-<slug>/`.

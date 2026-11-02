@@ -159,10 +159,10 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
   its author, merged or open); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`
   (an issue or PR), `chat` (the operator asked you in the direct session) or `agent` (your own);
-  `reporter` (the person's name or login, shown as the author whatever the channel); `url`
-  (their thread, the issue); and when a scheduled run filed it, `job` (`watch`, `digest`) and
-  `event: {label, url, card}` — what it acted on, in plain words ("PR #12 shipped", "labelled
-  design"), with its link and the card it came out of.
+  `reporter` (the person's name or login, required on every channel but `agent`, shown as
+  the author); `url` (their thread, the issue); and when a scheduled run filed it, `job`
+  (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
+  ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person

@@ -168,6 +168,14 @@ test("every request says where it came from, and what a run filed it on", () => 
   assert.equal(rows[issue.id].origin.reporter, "frank");
   assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", job: "Watch run" } }), /origin.job/);
   assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "telegram", reporter: "Gita" } }), /origin.channel must be one of slack, github, chat, agent/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", job: "audit" } }), /origin.job must be one of watch, digest/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", event: "PR #12 shipped" } }), /origin.event must be an object/);
+  // The operator asks in the direct session (docs/requests.md → Chat and Slack): a person's
+  // channel names the person, so the row has its author.
+  const chat = s.createRequest({ agent: true }, { problem: "Prototype the calmer header.", origin: { channel: "chat", reporter: "Gita" } }).card;
+  assert.equal(s.listCards({ kind: "request" }).find((c) => c.id === chat.id).origin.reporter, "Gita");
+  for (const channel of ["slack", "github", "chat"])
+    assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel } }), new RegExp(`origin.reporter is required for the ${channel} channel`));
 });
 
 test("change notes on elements wake the agent once; its redraw keeps the earlier version", () => {

@@ -38,6 +38,8 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
 
 // Where a request the agent files came from (docs/desk.md → Where a card came from).
 export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
+// The scheduled runs that file requests on their own (`origin.job`).
+export const ORIGIN_JOBS = ["watch", "digest"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
 export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add"];
@@ -1040,7 +1042,10 @@ function cleanOrigin(o, cards) {
   if (!ORIGIN_CHANNELS.includes(o.channel)) throw bad(`origin.channel must be one of ${ORIGIN_CHANNELS.join(", ")}`);
   const url = str(o.url, 500);
   if (url && !/^https?:\/\//i.test(url)) throw bad("origin.url must be http(s)");
-  if (o.job && !/^[a-z][a-z0-9-]{1,30}$/.test(String(o.job))) throw bad("origin.job is a run's short name: watch, digest…");
+  // A person's channel names the person: the Desk shows them as the author.
+  if (o.channel !== "agent" && !str(o.reporter, 120)) throw bad(`origin.reporter is required for the ${o.channel} channel: the person's name or login`);
+  if (o.job && !ORIGIN_JOBS.includes(o.job)) throw bad(`origin.job must be one of ${ORIGIN_JOBS.join(", ")}`);
+  if (o.event != null && (typeof o.event !== "object" || Array.isArray(o.event))) throw bad("origin.event must be an object: {label, url, card}");
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40),

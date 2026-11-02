@@ -467,7 +467,8 @@
     digest: '<rect x="2.2" y="3" width="11.6" height="11" rx="1.5"/><path d="M2.2 6.5h11.6M5.5 1.8v2.4M10.5 1.8v2.4"/>',
     auto: '<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/>',
   };
-  const JOB = { watch: "hourly check", digest: "weekly digest", inbox: "inbox check", audit: "weekly audit" };
+  // The runs that file on their own (store.mjs ORIGIN_JOBS), in the team's words.
+  const JOB = { watch: "hourly check", digest: "weekly digest" };
   const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
   function origin(c) {
     const o = c.origin || {}, by = c.by || c.created_by || {}, from = c.from || c.request?.from || null;
