@@ -23,15 +23,18 @@ test("nothing on the page submits a form", () => {
 });
 
 // A stand-in bridge records every call; the server answers just enough for a lead's Desk
-// with one request and one shipped change.
+// with one shipped change, a weekly digest and two open requests, one of them waiting for
+// an answer.
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } };
+const digest = { id: "d1", kind: "digest", title: "This week", status: "new" };
+const requests = [{ id: "r2", kind: "request", title: "Softer colours", status: "triage", asks: true }, { id: "r3", kind: "request", title: "A wider sidebar", status: "triage" }];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true } }
-    : path === "/api/cards" ? { cards: [change, { id: "d1", kind: "digest", title: "This week", status: "new" }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [change, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
     : path === "/api/cards/e1" ? { card: { id: "e1", kind: "element", title: "The agent row", status: "building", wanted: { part: "The agent row", where: "", show: "" }, created_by: { email: "lead@example.com", role: "lead" } } }
@@ -67,6 +70,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
       // A close with no value keeps the last one (as Escape does in some browsers).
       close: () => desk.evaluate((i) => document.getElementById(i).close(), id),
     });
+
+    // Requests counts the open ones, like Next call; amber while one waits for an answer.
+    await desk.waitForSelector('[data-tab="requests"] .count');
+    assert.equal(await desk.textContent('[data-tab="requests"] .count'), "2", "the tab counts every open request");
+    assert.equal(await desk.getAttribute('[data-tab="requests"] .count', "class"), "count warn", "one waits for an answer");
 
     // The request dialog.
     const rq = dialog("request-dialog");
