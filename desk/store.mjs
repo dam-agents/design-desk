@@ -34,6 +34,8 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   }
 }
 
+// Where a request the agent files came from (docs/desk.md → Where a card came from).
+export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "archived"];
@@ -832,7 +834,7 @@ function cleanLinks(key, value) {
 function cleanOrigin(o, cards) {
   if (typeof o !== "object") throw bad("origin must be an object");
   const str = (v, n) => (v === undefined || v === null || v === "" ? null : String(v).slice(0, n));
-  if (!/^[a-z][a-z0-9-]{1,30}$/.test(String(o.channel || ""))) throw bad("origin.channel is a short name: slack, telegram, github, desk…");
+  if (!ORIGIN_CHANNELS.includes(o.channel)) throw bad(`origin.channel must be one of ${ORIGIN_CHANNELS.join(", ")}`);
   const url = str(o.url, 500);
   if (url && !/^https?:\/\//i.test(url)) throw bad("origin.url must be http(s)");
   if (o.job && !/^[a-z][a-z0-9-]{1,30}$/.test(String(o.job))) throw bad("origin.job is a run's short name: watch, digest…");

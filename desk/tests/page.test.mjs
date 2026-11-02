@@ -27,12 +27,13 @@ test("nothing on the page submits a form", () => {
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45", author: "dana" } };
+const asked = { id: "r3", kind: "request", title: "A calmer header", status: "triage", by: { agent: true }, origin: { channel: "chat", reporter: "Gita" } };
 const bug = { id: "r2", kind: "request", title: "Totals overflow", status: "triage", type: "bug", by: { agent: true }, origin: { channel: "slack", reporter: "Carla", url: "https://acme.slack.com/archives/C0123ABCD/p1" } };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true } }
-    : path === "/api/cards" ? { cards: [change, bug] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [change, bug, asked] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/cards/r1" ? { card: { id: "r1", kind: "request", title: "Bigger send button", status: "triage" } }
     : path === "/api/cards/ch1" ? { card: change } : {};
@@ -168,6 +169,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click('[data-tab="requests"]');
     const prov = '.row.item:has([data-card="r2"]) .prov';
     assert.match(await desk.textContent(prov), /Slack.*by Carla/);
+    assert.match(await desk.textContent('.row.item:has([data-card="r3"]) .prov'), /Chat with Design Desk.*by Gita/, "the reporter is the author whatever the channel");
     assert.equal(await desk.getAttribute(`${prov} a`, "href"), "https://acme.slack.com/archives/C0123ABCD/p1", "the source links to the thread");
     await desk.click('.row.item:has([data-card="r2"]) .meta', { force: true });
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r2"));

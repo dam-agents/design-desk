@@ -140,7 +140,7 @@ test("a bug from Slack lands on the queue with where to answer", () => {
 
 test("every request says where it came from, and what a run filed it on", () => {
   const s = fresh();
-  const change = s.upsertCard({ kind: "change", title: "Pinned reports", source: { repo: "acme/widgets", pr: 12, url: "https://github.com/acme/widgets/pull/12", author: "dana" } }).card;
+  const change = s.upsertCard({ kind: "change", title: "Pinned reports", source: { repo: "acme/widgets", pr: 12, url: "https://github.com/acme/widgets/pull/12", author: "dana", merged_at: "2026-11-01T10:00:00Z" } }).card;
   const idea = s.createRequest(alice, { problem: "The send button is small." }).card;
   const proposal = s.createRequest({ agent: true }, { type: "proposal", problem: "Group the pins.", from: change.id,
     origin: { channel: "agent", job: "watch", event: { label: "PR #12 shipped", url: "https://github.com/acme/widgets/pull/12", card: change.id } } }).card;
@@ -153,6 +153,7 @@ test("every request says where it came from, and what a run filed it on", () => 
   assert.deepEqual([rows[proposal.id].by, rows[proposal.id].from, rows[proposal.id].origin.job], [{ agent: true }, change.id, "watch"]);
   assert.equal(rows[issue.id].origin.reporter, "frank");
   assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", job: "Watch run" } }), /origin.job/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "telegram", reporter: "Gita" } }), /origin.channel must be one of slack, github, chat, agent/);
 });
 
 test("change notes on elements wake the agent once; its redraw keeps the earlier version", () => {

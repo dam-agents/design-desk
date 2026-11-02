@@ -56,7 +56,7 @@
   .detail { overflow: auto; padding: 24px 32px 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
   .row:hover { background: var(--soft); }
-  .row[aria-current="true"] { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
+  .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
   .row .t { font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
   .row .t .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; transform: translateY(-1px); }
   .row .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -418,6 +418,7 @@
     const out = (url, text) => url ? `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${text}&nbsp;↗</a>` : text;
     const num = (kind, n) => `${kind}${n ? ` #${esc(n)}` : ""}`;
     let kind, src, author = "", run = o.job || "", event = o.event ? out(o.event.url, esc(o.event.label || "what it came from")) : "";
+    // The person behind it is the reporter, whatever the channel (docs/desk.md → Where a card came from).
     if (c.kind === "change") {
       const s = c.source || {};
       [kind, src, author, run] = ["pr", out(s.url, num("PR", s.pr)), s.author, "watch"];
@@ -428,7 +429,8 @@
       event = out(o.url, esc([o.check && `${o.check} check`, o.build && `build ${o.build}`, o.ref].filter(Boolean).join(" · ") || "a test finding"));
     } else if (o.channel === "slack") [kind, src, author] = ["slack", out(o.url, "Slack"), o.reporter];
     else if (o.channel === "github") [kind, src, author] = [o.kind === "pr" ? "pr" : "issue", out(o.url, num(o.kind === "pr" ? "PR" : "Issue", o.number)), o.reporter];
-    else if (by.agent) [kind, src] = ["agent", "Design Desk"];
+    else if (o.channel === "chat") [kind, src, author] = ["desk", "Chat with Design Desk", o.reporter];
+    else if (by.agent) [kind, src, author] = ["agent", "Design Desk", o.reporter];
     else [kind, src, author] = ["desk", "Desk", by.email && by.email === S.me?.email ? "you" : by.email || "someone"];
     // Filed with no person asking: by one of Design Desk's runs, or from an automated test.
     const what = [run && esc(JOB[run] || run), event].filter(Boolean).join(" · ");
@@ -555,8 +557,8 @@
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     // New and Requests say where each came from; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests";
-    list.innerHTML = filters + cards.map((c) => `<div class="row item" aria-current="${S.card?.id === c.id}">
-      <button class="open" data-card="${esc(c.id)}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div></button>
+    list.innerHTML = filters + cards.map((c) => `<div class="row item">
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div></button>
       ${sourced ? origin(c) : ""}${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
