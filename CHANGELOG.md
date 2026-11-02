@@ -21,6 +21,13 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    sketch ([docs/issues.md](docs/issues.md)); `issue_news: enabled` turns it on.
 4. Re-run `bash "$HOME/scripts/verify-onboarding.sh" --config`.
 
+## 1.14.1 — 2026-11-02
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Until then, the page keeps its
+narrow text and list columns on a wide window.
+
 ## 1.14.0 — 2026-11-02
 
 **Upgrade:**
