@@ -361,7 +361,7 @@ Then tick the last checklist item and call `mark_onboarding_complete` — only n
 Give the operator a short **summary**:
 
 1. The final `work/CONFIG.md` (verbatim).
-2. What runs: the four schedules with their cadence and model; the Desk link; whether live
+2. What runs: every schedule of Step 5b with its cadence and model; the Desk link; whether live
    prototypes and handoff issues are on.
 3. Day-to-day:
    - New UI changes appear on the Desk within the hour, under **What's new**.

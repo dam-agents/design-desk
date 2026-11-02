@@ -529,3 +529,15 @@ test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   const d = s.upsertCard({ kind: "issue", title: "Closed one", bucket: "backlog", source: { repo: "acme/widgets", issue: 32 }, status: "archived" }).card;
   assert.throws(() => s.act(d.id, pm, "draw"), /closed/);
 });
+
+test("an issue's drawing record is a whole-number failure count and a short note", () => {
+  const s = fresh();
+  const c = s.upsertCard({ kind: "issue", title: "One", bucket: "sprint", source: { repo: "acme/widgets", issue: 50 } }).card;
+  assert.deepEqual(s.upsertCard({ id: c.id, draw: { failures: 1, note: "The instance did not start." } }).card.draw, { failures: 1, note: "The instance did not start." });
+  assert.throws(() => s.upsertCard({ id: c.id, draw: { failures: "1" } }), /whole number/);
+  assert.throws(() => s.upsertCard({ id: c.id, draw: { failures: 1.5 } }), /whole number/);
+  assert.throws(() => s.upsertCard({ id: c.id, draw: { note: "n".repeat(301) } }), /longer than 300/);
+  assert.throws(() => s.upsertCard({ id: c.id, draw: [] }), /must be an object/);
+  const change = s.upsertCard({ kind: "change", title: "Two", source: { repo: "acme/widgets", pr: 9 } }).card;
+  assert.throws(() => s.upsertCard({ id: change.id, draw: { failures: 0 } }), /belongs to an issue/);
+});

@@ -13,10 +13,9 @@ last backup (failed, missing, or older than two days), and the version.
 
 ## Judgment checks
 
-1. **Schedules** — `mcp__platform-outbound__list_schedules`: the four `design-desk-*`
-   schedules exist, are enabled (or knowingly off), fire (`status.lastRun` within 1.5× the
-   cron's interval) and match `kit.yaml`: task text, `precheck` on watch, inbox and monitor,
-   none on the audit, `model` = `run_model` (none under `default`). Report drift; changing a
+1. **Schedules** — `mcp__platform-outbound__list_schedules`: every `design-desk-*`
+   schedule of `kit.yaml` exists, is are enabled (or knowingly off), fire (`status.lastRun` within 1.5× the
+   cron's interval) and match `kit.yaml`: task text, `precheck` on every schedule but the audit, none on the audit, `model` = `run_model` (none under `default`). Report drift; changing a
    schedule is the operator's call.
 2. **The Desk** — the page artifact `desk_artifact` still exists (`list_artifacts` or a
    `get`); the server answered (`checks.desk_server`); requests older than 14 days without a

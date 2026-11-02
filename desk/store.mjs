@@ -653,14 +653,15 @@ export class Store {
       else if (k === "concepts") { if (!Array.isArray(fields.concepts)) throw bad("concepts must be a list"); next.concepts = fields.concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()); }
       else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
-      else if (["bucket", "needs", "sketches", "style"].includes(k)) {
+      else if (["bucket", "needs", "sketches", "style", "draw"].includes(k)) {
         if (next.kind !== "issue") throw bad(`${k} belongs to an issue`);
         if (k === "bucket") { if (!ISSUE_BUCKETS.includes(fields.bucket)) throw bad(`bucket must be one of ${ISSUE_BUCKETS.join(", ")}`); next.bucket = fields.bucket; }
         else if (k === "needs") next.needs = cleanNeeds(fields.needs);
         else if (k === "sketches") {
           if (Array.isArray(fields.sketches) && fields.sketches.length > LIMITS.issue.sketches) throw bad(`an issue has at most ${LIMITS.issue.sketches} sketches`);
           next.sketches = cleanRefs(fields.sketches, this.db.assets, "sketches");
-        } else next.style = optText(fields.style, 200, "style");
+        } else if (k === "draw") next.draw = cleanDraw(fields.draw);
+        else next.style = optText(fields.style, 200, "style");
       }
       else if (k === "attention") {
         if (next.kind !== "change") throw bad("attention is judged on change cards; a request's comes from where it stands");
@@ -1155,6 +1156,16 @@ function cleanNeeds(list) {
   if (!Array.isArray(list) || !list.length) throw bad("needs is a list of 1 to 3 short bullets");
   if (list.length > LIMITS.issue.needs) throw bad(`an issue has at most ${LIMITS.issue.needs} needs`);
   return list.map((x) => clean(String(x), LIMITS.issue.need, "need"));
+}
+
+// How an issue's drawing went: the pre-flight stops offering it after two failures, so
+// `failures` is a whole number, and `note` says in one sentence why it failed.
+function cleanDraw(d) {
+  if (d === null) return null;
+  if (typeof d !== "object" || Array.isArray(d)) throw bad("draw must be an object: {failures, note}");
+  const failures = d.failures ?? 0;
+  if (!Number.isInteger(failures) || failures < 0 || failures > 100) throw bad("draw.failures must be a whole number from 0 to 100");
+  return { failures, note: optText(d.note, 300, "draw note") };
 }
 
 // A catalog element's states: what each tile shows and what makes it happen.
