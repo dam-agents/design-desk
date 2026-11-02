@@ -22,7 +22,8 @@ automated test findings, comments, concerns and questions people left.
    without names, the screens it is about, and the requests it already has.
 3. A theme with three pieces or more, or with a high-severity test finding, and no request
    yet: file a proposal (`design desk request` with `type: proposal`, the theme as its
-   problem, `from` the change or request it came out of when there is one) and suggest it for
+   problem, `from` the change or request it came out of when there is one, `origin: {channel:
+   "agent", job: "digest", event: {label: "a theme in feedback, <period>"}}`) and suggest it for
    the next call (`design desk agenda C-<n> --note "A theme in feedback: <name>"`).
 
 ## The card

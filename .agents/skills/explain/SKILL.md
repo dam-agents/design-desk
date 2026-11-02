@@ -28,7 +28,8 @@ what to design, what to ask, what to tell a user. Write so that they can.
 3. **One offer to go deeper**, at the end, when there is more: "Ask if you want to know how
    the limit is counted."
 
-A change card has room for all layers; an answer to a question usually needs two.
+Short and structured: a change card is a one-sentence summary and, per layer, one to three
+one-line bullets, and only the layers the reader acts on; an answer usually needs two layers.
 
 ## Words
 

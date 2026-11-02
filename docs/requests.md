@@ -12,8 +12,8 @@ and feedback before any live prototype ([prototype.md](prototype.md)) and the ha
 | 2. Small, built first | a developer's pull request with a basic UI (a change card, open or merged) → **Adjust the design** | `adjustment` | the adjusted design sent to the coding agent (`implementer`) to build into the product |
 | 3. Reported | a UI bug, or something that looks wrong to someone (Desk or Slack) | `bug` | as flow 2 |
 
-Ideas filed on the Desk (`idea`) and the agent's own proposals for new features
-(`proposal`, [watch.md](watch.md) step 10) end per `handoff`.
+Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
+(`proposal`, [watch.md](watch.md) step 11) end per `handoff`.
 
 ## Research (`requests_due`, before triage)
 
@@ -73,7 +73,10 @@ The person deciding should know it before a single variant exists.
 4. Write `triage` on the card: `verdict`, `reasons` (one or two plain sentences), `can` and
    `cannot` (each a short list, each `cannot` with its reason in the person's terms). Keep
    `status: triage`. Put the request's own words in `summary` only if its title is unclear.
-5. `design desk done I-<n> --outcome triaged`.
+5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
+   `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
+   `design desk inbox` already holds an open `explore` item of the card.
+6. `design desk done I-<n> --outcome triaged`.
 
 A request too vague to triage gets **one question from you** instead, with your best guess
 as the suggested answer: `design desk ask C-<n> <file> --step request`. The Desk shows it at
@@ -144,18 +147,33 @@ Triage as above, with the bug's own verdicts:
 - `product` — it works as designed. Explain why, with the source, in `reasons`.
 
 Find the screen in the code (and on a running instance when the profile has one) and say
-in `reasons` whether you could see the fault there. After triage, tell the reporter once
-in their thread: `reply` with `chatId` = `origin.chat` and `threadTs` = `origin.thread_ts`:
-the verdict in one sentence and what happens next. The same reply when the request is
-handed off or closed. These are replies in the thread the reporter started, never a new
-post; a reply the messenger refuses is logged, and the card is the record.
+in `reasons` whether you could see the fault there.
+
+## Answering in the thread
+
+A request with a Slack `origin` (a bug, a design someone asked for) is answered in the
+thread they started: `reply` with `chatId` = `origin.chat` and `threadTs` =
+`origin.thread_ts`, never a new post, whatever `notify` says. One text reply per step, in
+the words the Desk shows:
+
+- after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.";
+- options on the card (`feedback`): "Options ready to vote on: <link>", one line per option
+  (its name and when it wins); then one reply per option with its PNG still (`design shot`),
+  one attachment per reply;
+- live (`testing`): "Live prototype ready to try: <link>"; handed off: "Sent to developers:
+  <link>"; closed: one sentence why.
+
+The link is the Desk's, with the access note of
+[`intake-slack`](../.agents/skills/intake-slack/SKILL.md) (*In that Slack turn*, step 5). A reply the messenger
+refuses is logged, and the card is the record.
 
 ## Issues (`issues_due`, flow 1)
 
 A watch worklist's `issues_due` lists open issues labelled `issue_label`. Per issue:
 `ledger.sh claim <repo> <number>`, read it with its comments, then file a request of type
 `feature`: write the JSON with the issue's title and problem in plain words and
-`origin: {channel: "github", kind: "issue", repo, number, url}`, and run
+`origin: {channel: "github", kind: "issue", repo, number, url, reporter: <author login>,
+job: "watch", event: {label: "labelled <issue_label>"}}`, and run
 `design desk request <file>`; then `ledger.sh done <repo> <number> <card>`. Its
 research and triage follow in the inbox run. Never comment on the issue at intake; the
 write-back comes with the approved design ([handoff.md](handoff.md)).
@@ -175,6 +193,7 @@ Designer kit made. Pick the skill, build, look, deliver:
 
 | Asked for | Skill |
 | --- | --- |
+| In Slack, a design of the product's UI | a request: [`intake-slack`](../.agents/skills/intake-slack/SKILL.md) → Design requests |
 | Clickable mockup, wireframe, design options | `variants` |
 | Step-by-step tour, "what's new", onboarding guide | `walkthrough` |
 | Slide deck, talk, readout (+ PDF) | `slides` |
@@ -184,6 +203,7 @@ Designer kit made. Pick the skill, build, look, deliver:
 | A chart, dashboard or stat tiles | the harness's `dataviz` skill, in the style's colors |
 | "Why does X work like this?" | the `explain` skill, sources as in [desk.md](desk.md) → Questions |
 | "This is broken / looks wrong" | [UI bugs](#ui-bugs) → From a channel |
+| "Make it…", "how would it look if…" in a request's thread (`slack_council: enabled`) | `slack-council` |
 
 - **Ask only what blocks the work**, once, with a suggested answer (which repo, which
   screen, who the deck is for); otherwise take the smallest reasonable reading and say what
@@ -197,7 +217,7 @@ Designer kit made. Pick the skill, build, look, deliver:
   made up are labelled illustrative. In Slack, also attach HTML or a PNG still.
 - A brand is saved only after the operator confirmed it; a logo is used as given, never
   redrawn or recolored.
-- A request that should become Desk work ("let's prototype this") — offer to put it on the
-  Desk as a request; in Slack create it only when the person asks, with their words as the
-  problem.
+- In chat, a request that should become Desk work ("let's prototype this") — offer to put
+  it on the Desk as a request: `design desk request` with `origin: {channel: "chat",
+  reporter: <the operator's name>}` ([desk.md](desk.md) → Where a card came from).
 - Keep sources and builds under `work/output/<YYYY-MM-DD>-<slug>/`.

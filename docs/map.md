@@ -22,6 +22,8 @@ A card of kind `screen`, found again by its `path`:
   words: the timeline "Why it is like this" lists the decisions about them;
 - `changes` — the change cards that touched it, oldest first;
 - `instance` — as on a change card, so people open the screen in the copy.
+- `history` — its earlier pictures, kept by the store when new ones replace them
+  ([catalog.md](catalog.md) → History).
 
 ## Build it
 
@@ -36,6 +38,24 @@ is turned on), and again on request ("rebuild the product map"):
 3. `how`, `summary`, `concepts` from the screen's code and the glossary; `elements` from the
    catalog cards whose component the screen renders.
 4. `design desk upsert` with `kind: screen`; the store updates the card of the same `path`.
+
+## A screen someone added (`map_due`)
+
+A designer pressed **+ Add**: the card (`status: building`) has `wanted` — `part` (the screen
+in their words), `where` (their clicks or an address), `show` (what the pictures should
+have) — and maybe their screenshot.
+
+1. Claim the item. Match `wanted` and the screenshot against the profile's `screens` and
+   `capture.routes`, then the product's routes and navigation.
+2. Two candidates, or none you are sure of → `design desk ask C-<n> <file> --step map` with
+   your best guess, then done with `--outcome asked`; their answer queues it again.
+3. Already mapped (the store refuses a second card of one `path`: `409` names it), or no
+   such screen in the product → `status: dropped` and one section saying which screen it is
+   or why, with its source.
+4. Otherwise **Build it** steps 2–4 for this one screen, `wanted.show` in the recipe's data,
+   `design desk upsert` with the card's `id`, `path`, the instance's pictures (they replace
+   the person's) and `status: current`.
+5. `design desk done I-<n> --session <id> --outcome mapped` (or `dropped`).
 
 ## Keep it current
 

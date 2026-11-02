@@ -4,8 +4,8 @@ A watch worklist's `changes_due` lists pull requests that touch the product's UI
 no card yet: merged since `watch_since`, and, with `watch_open_prs: enabled`, open ones —
 so a designer sees a developer's new UI while it can still change. An entry's `state` is
 `open` or `merged`; `kind: merged` is an open PR's card that has now shipped.
-`issues_due` (labelled issues) is [requests.md](requests.md) → Issues. Each becomes one card a designer can read in two
-minutes and understand without opening the code. Work them one by one; with several, the
+`issues_due` (labelled issues) is [requests.md](requests.md) → Issues. Each becomes one card a designer reads in under a minute
+and understands without opening the code. Work them one by one; with several, the
 run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out).
 
 ## Per change
@@ -44,12 +44,17 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    `person`.
    Look at every screen before you use it (Read the image): a sign-in page, an error or
    an empty frame is not a screen of the change.
-7. **Write the card** with the `explain` skill. A card holds:
+7. **Write the card** with the `explain` skill: short, structured, only what a designer acts
+   on. The store refuses longer text (`LIMITS.change`, `desk/store.mjs`). A card holds:
    - `title` — what a person can now do or see, in the product's words, not the PR title;
-   - `summary` — one or two sentences, the gist;
-   - `sections`, in this order, each only when it has content:
-     `what` (What changed) · `why` (Why it is like this) · `limits` (What cannot change, and why) ·
-     `good-to-know` (states and edge cases: empty, loading, error, permissions, long text,
+     at most 90 characters;
+   - `summary` — one sentence, the gist; at most 180 characters;
+   - `sections`, in this order, each only when it has content, each one to three one-line
+     bullets (at most 400 characters) and its `source: {label, url}` — where it comes from
+     ("the issue #12", "the PR's decision notes", "not documented — ask <author>"):
+     `what` (What changed) · `why` (Why it is like this; the page folds it, with `limits`
+     and `good-to-know`) · `limits` (What cannot change, and why) ·
+     `good-to-know` (states and edge cases that matter: empty, error, permissions, long text,
      small screens) · `questions` (open design questions you noticed: an inconsistency with
      the design system, a missing state, copy that breaks the product's words);
    - `source` — `{repo, pr, url, merged_at, author}`.
@@ -60,6 +65,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
      the PR records ("per week because the limit resets weekly") becomes a decision
      (`design desk decision`) with the PR as its source.
+   - `attention` — whether a designer should look at it, and why ([desk.md](desk.md) →
+     Needs a designer).
 8. **Publish.** Upload each screen: `design desk asset <file> --kind screen --name <name>`
    (prints the asset id); write the card JSON to a file and `design desk upsert <file>` with
    `kind: change`, the fields above and `screens: [{asset, caption}]`. The store finds an
@@ -76,9 +83,11 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
 11. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —
     not a fix, not a tweak — and fewer than `max_proposals_per_week` proposals were made in
     the last seven days, file a request of type `proposal` from the card (`request.from`),
-    research it from what you just read, and enqueue `explore`: the inbox run makes two or
-    three design proposals the team can pick from, adjust and comment on. Suggest it for the
-    next call (`design desk agenda C-<n> --note "Design Desk proposes"`).
+    with `origin: {channel: "agent", job: "watch", event: {label, url, card}}` ([desk.md](desk.md)
+    → Where a card came from): `label` "PR #<n> shipped" once `source.merged_at` is set,
+    else "PR #<n> opened"; research it from what you just read, and enqueue `explore`: the
+    inbox run makes two or three design proposals the team can pick from, adjust and comment
+    on. Suggest it for the next call (`design desk agenda C-<n> --note "Design Desk proposes"`).
 12. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title and the Desk link (`shareUrl` of `desk_artifact`), never card text
     beyond the title. Send, then log `logev info notified …`.
@@ -89,8 +98,10 @@ and go on with the next change; the pre-flight retries it up to three times.
 ## Self-check before the next change
 
 - The card says what a person can now **do or see**, not what the code does.
+- Nothing a designer would not act on: no restated summary, no filler, every bullet one line.
 - Every section has a source or says it has none; no invented reason.
 - Every screen was looked at, shows the change, and has a caption.
+- `attention` says whether a designer should look at it, with its reasons.
 - No internal identifiers beyond the PR link: no file paths in `what` and `why` (a path may
   appear only in `limits` when it names where a developer would work).
 - The ledger row is `carded`, `skipped` or `failed`; `/tmp/design-desk-<pr>` is removed.
