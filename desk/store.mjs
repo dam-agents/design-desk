@@ -1012,9 +1012,22 @@ function cleanRefs(list, assets, name) {
       asset, caption: typeof s === "object" ? optText(s.caption, 300, "caption") : "",
       ...(SCREEN_SOURCES.includes(s?.source) ? { source: s.source } : {}),
       ...(["before", "after", "diff"].includes(s?.stage) ? { stage: s.stage, pair: optText(s.pair, 120, "pair") || "screen" } : {}),
+      ...(Array.isArray(s?.marks) && s.marks.length ? { marks: cleanMarks(s.marks) } : {}),
       ...(s?.by && typeof s.by === "object" ? { by: { email: optText(s.by.email, 200, "email") || null, role: optText(s.by.role, 20, "role") || null } } : {}),
     };
   });
+}
+
+// Where the change is on a picture: boxes as fractions of its width and height (0–1), from
+// `design diff`'s `marks`; the page outlines them when a person asks.
+function cleanMarks(list) {
+  const f = (v) => Math.min(1, Math.max(0, Math.round(Number(v) * 10000) / 10000));
+  if (list.length > 20) throw bad("marks: at most 20 (design diff's `marks`)");
+  return list.map((m) => {
+    if (!m || typeof m !== "object" || ![m.x, m.y, m.w, m.h].every((v) => Number.isFinite(Number(v)))) throw bad("marks: each is {x, y, w, h} between 0 and 1");
+    const x = f(m.x), y = f(m.y);
+    return { x, y, w: f(Math.min(m.w, 1 - x)), h: f(Math.min(m.h, 1 - y)) };
+  }).filter((m) => m.w > 0 && m.h > 0);
 }
 
 // Dates are compared as instants: an agent's date can carry an offset (`git log %cI`).
@@ -1068,7 +1081,7 @@ function cleanImpact(o, cards) {
   const list = (xs, max, f) => (Array.isArray(xs) ? xs.slice(0, max).map(f) : []);
   return {
     concept: clean(o.concept, 120, "impact concept"),
-    places: list(o.places, 30, (x) => ({ where: clean(x.where, 160, "place"), how: optText(x.how, 400, "how"), screen: optText(x.screen, 120, "screen"), kind: ["screen", "component", "message", "email", "document", "other"].includes(x.kind) ? x.kind : "screen" })),
+    places: list(o.places, 30, (x) => ({ where: clean(x.where, 160, "place"), how: optText(x.how, 400, "how"), screen: optText(x.screen, 120, "screen"), card: ["screen", "element"].includes(own(cards, x.card)?.kind) ? x.card : null, kind: ["screen", "component", "message", "email", "document", "other"].includes(x.kind) ? x.kind : "screen" })),
     affects: list(o.affects, 20, (x) => ({ what: clean(x.what, 200, "affected"), why: optText(x.why, 600, "why"), source: x.source ? cleanSource(x.source, cards) : null })),
     decisions: list(o.decisions, 20, (x) => ({ text: clean(x.text, 600, "decision"), when: optText(x.when, 40, "when"), source: x.source ? cleanSource(x.source, cards) : null })),
   };
