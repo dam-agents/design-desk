@@ -66,7 +66,7 @@ On its date, or when the request moved on (approved, closed):
    platform allows it): "🗳️ *<request title>* — the vote is closed. <result>. <What happens
    next: "A designer takes B on" / "The team decides on the next call">."
 4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. A tie or a strong
-   concern goes on the next call (`design desk agenda C-<n> --note "Slack vote: <result>"`).
+   concern is suggested for the next call (`design desk agenda C-<n> --note "Slack vote: <result>"`).
 
 ## In a Slack turn
 

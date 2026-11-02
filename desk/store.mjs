@@ -27,8 +27,8 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   const shaper = role === "designer" || role === "lead";
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
-    case "vote": case "request": case "follow-up": case "queue": case "screens": return member;
-    case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": return shaper;
+    case "vote": case "request": case "follow-up": case "screens": return member;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
@@ -160,7 +160,7 @@ export class Store {
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         automated: Boolean(c.origin?.automated),
-        path: c.path || null, period: c.period || null,
+        path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
       }));
   }
 
@@ -332,16 +332,38 @@ export class Store {
 
   // ---------- the next call's agenda ----------
 
-  // People put a card on the agenda of the team's next call; the agent writes a brief
-  // for it (what to decide); after the call the lead closes the agenda.
-  queueForCall(cardId, who, note = "") {
+  // A designer puts a card on the agenda of the team's next call, with the option to
+  // present; the agent writes a brief for it (what to decide); after the call the lead
+  // closes the agenda. The agent only suggests a card; a designer adds it or not.
+  queueForCall(cardId, who, note = "", variant = null) {
     const c = this.card(cardId);
+    if (who?.agent) throw forbidden("only a designer puts a card on the next call; the agent suggests it");
     if (c.agenda?.status === "queued") throw bad("It is already on the next call.");
-    c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, 500, "note"), brief: null };
+    const vs = c.variants || [];
+    if (vs.length && !vs.some((v) => v.id === variant)) throw bad("Pick the design option to present.");
+    c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, 500, "note"), variant: vs.length ? variant : null, brief: null };
+    delete c.call_suggestion;
     c.updated = this.clock();
-    const item = who?.agent ? null : this.enqueue("agenda", cardId, null, who, c.agenda.note);
+    const item = this.enqueue("agenda", cardId, null, who, c.agenda.note);
     this.save();
     return { card: c, inbox: item };
+  }
+
+  suggestForCall(cardId, note = "") {
+    const c = this.card(cardId);
+    if (c.agenda?.status === "queued") return { card: c };
+    c.call_suggestion = { note: optText(note, 500, "note"), at: this.clock() };
+    c.updated = this.clock();
+    this.save();
+    return { card: c };
+  }
+
+  dismissSuggestion(cardId, who) {
+    if (!can(who.role, "queue")) throw forbidden("Only a designer decides what goes on the next call.");
+    const c = this.card(cardId);
+    delete c.call_suggestion;
+    this.save();
+    return { card: c };
   }
 
   unqueue(cardId, who) {
@@ -368,7 +390,9 @@ export class Store {
   agenda() {
     return Object.values(this.db.cards).filter((c) => c.agenda?.status === "queued")
       .sort((a, b) => a.agenda.at.localeCompare(b.agenda.at))
-      .map((c) => ({ id: c.id, kind: c.kind, title: c.title, status: c.status, type: c.request?.type || null, agenda: c.agenda, summary: c.summary || "", thumb: c.screens?.[0]?.asset || c.variants?.[0]?.asset || null }));
+      .map((c) => ({ id: c.id, kind: c.kind, title: c.title, status: c.status, type: c.request?.type || null, agenda: c.agenda, summary: c.summary || "",
+        option: (c.variants || []).find((v) => v.id === c.agenda.variant)?.name || null,
+        thumb: (c.variants || []).find((v) => v.id === c.agenda.variant)?.asset || c.screens?.[0]?.asset || null }));
   }
 
   // ---------- agent actions ----------

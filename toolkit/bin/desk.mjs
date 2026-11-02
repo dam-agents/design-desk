@@ -17,7 +17,7 @@ const USAGE = `usage: design desk <command>
   upsert <card.json|->                     create or update a card (agent fields only)
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
-  agenda <C-n> [--note <text>]             put a card on the next call's agenda
+  agenda <C-n> [--note <text>]             suggest a card for the next call; a designer adds it
   report <bug.json|->                      put a UI bug someone reported on the queue as a request
                                            of type bug: {title, problem, goal, steps, screen,
                                            screens: [{asset, caption}], origin: {channel, chat,

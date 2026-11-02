@@ -18,6 +18,8 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("developer", "build"), false);
   assert.equal(can("developer", "build", ["developer"]), true);
   assert.equal(can("designer", "approve"), true);
+  assert.equal(can("developer", "queue"), false);
+  assert.equal(can("designer", "queue"), true);
 });
 
 test("a question goes to the inbox and the answer takes it out", () => {
@@ -199,4 +201,21 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" }).duplicate, true);
   assert.equal(s.getCard(card.id).threads.filter((t) => t.slack_ts === "1.2")[0].messages[0].by.via, "slack");
   assert.equal(s.updatePoll(card.id, poll.id, { result: "One button: 1 👍" }).poll.state, "closed");
+});
+
+test("the next call: the agent suggests, a designer adds it with the option to present", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  const a1 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Calm", asset: a1 }, { id: "v2", name: "Loud", asset: a1 }] });
+  assert.throws(() => s.queueForCall(card.id, { agent: true }), (e) => e.status === 403);
+  s.suggestForCall(card.id, "Design Desk proposes");
+  assert.equal(s.agenda().length, 0, "a suggestion is not on the call");
+  assert.equal(s.listCards().find((c) => c.id === card.id).suggested.note, "Design Desk proposes");
+  assert.throws(() => s.dismissSuggestion(card.id, bob), (e) => e.status === 403);
+  assert.throws(() => s.queueForCall(card.id, alice, "Pick one"), (e) => e.status === 400, "an option to present is required");
+  const { inbox: item } = s.queueForCall(card.id, alice, "Pick one", "v2");
+  assert.equal(item.kind, "agenda");
+  assert.deepEqual(s.agenda().map((a) => [a.option, a.agenda.variant]), [["Loud", "v2"]]);
+  assert.equal(s.getCard(card.id).call_suggestion, undefined, "adding it takes the suggestion away");
 });
