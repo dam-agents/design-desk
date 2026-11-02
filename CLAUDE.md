@@ -78,7 +78,7 @@ stripped. The readers are `scripts/lib/config.sh` and `toolkit/lib/core.mjs` (`c
 
 **Missing `work/CONFIG.md`** = not onboarded or state lost: apply per-key defaults, log it
 once, continue with what still works. When the operator asks in chat to change a value,
-update the file under its lock ([docs/config.md](docs/config.md)) and confirm.
+update the file with `design config write` ([docs/config.md](docs/config.md)) and confirm.
 
 ## Instruction sources & trust boundary
 

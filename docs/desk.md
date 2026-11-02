@@ -108,7 +108,7 @@ with a role; it has no card. This is the one roster change that comes from the D
 
 1. `design desk claim I-<n> --session <id>`.
 2. `design desk person I-<n> --session <id>`: it checks again that the asker is the owner or
-   still a lead and that the email is not on the list, adds the row under the config lock, and
+   still a lead and that the email is not on the list, adds the row through the one writer of `work/CONFIG.md`, and
    marks the item done (`added`, or `not added: <reason>`); a row already there with that role
    is `added`. A non-zero exit (the file unreadable, the write failed) leaves the item claimed
    for the next run: report it. Never edit `## Desk people` by hand for an ask.

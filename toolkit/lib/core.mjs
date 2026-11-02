@@ -1,6 +1,7 @@
 // Shared paths and helpers for the Design Desk toolkit. Every bin/ script imports this.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, mkdirSync, renameSync, rmdirSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,6 +62,30 @@ export function tableIn(text, heading) {
     rows.push(Object.fromEntries(head.map((h, i) => [h, (c[i] || "").replace(/^[`"']|[`"']$/g, "")])));
   }
   return rows;
+}
+
+// Every writer of work/CONFIG.md goes through here (docs/config.md → Writing the file):
+// a mkdir lock (one older than 60 s is a dead writer's), the file read again under it,
+// `change(text)` applied to what is there now, and the whole file replaced by a rename.
+export const configSha = (text) => createHash("sha256").update(text).digest("hex");
+export function writeConfig(work, change) {
+  const path = join(work, "CONFIG.md"), lock = join(work, ".CONFIG.lock");
+  for (let waited = 0; ; waited += 1) {
+    try { mkdirSync(lock); break; } catch (e) {
+      if (e.code !== "EEXIST") throw e;
+      let age = 0; try { age = (Date.now() - statSync(lock).mtimeMs) / 1000; } catch { continue; }
+      if (age > 60) { try { rmdirSync(lock); } catch {} continue; }
+      if (waited >= 120) throw new Error("work/CONFIG.md stayed locked for two minutes");
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+    }
+  }
+  try {
+    const next = change(readFileSync(path, "utf8"));
+    const tmp = `${path}.tmp-${process.pid}`;
+    writeFileSync(tmp, next);
+    renameSync(tmp, path);
+    return next;
+  } finally { try { rmdirSync(lock); } catch {} }
 }
 
 // work/CONFIG.md with one more `| email | role |` row in `## Desk people`: after its

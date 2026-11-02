@@ -12,9 +12,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
 the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**). A lead can now ask on the People
-tab for a new person on `## Desk people`; inbox runs work it as `people_due`
-([docs/desk.md](docs/desk.md) → **People**). Nothing to configure.
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Change `work/CONFIG.md` only with
+`design config write` from now on ([docs/config.md](docs/config.md) → **Writing the file**).
 
 ## 1.11.1 — 2026-11-02
 

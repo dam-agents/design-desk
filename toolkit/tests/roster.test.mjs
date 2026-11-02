@@ -50,3 +50,19 @@ test("the write: under the lock, once; a dead writer's lock is taken over", () =
   assert.throws(() => addRosterRow(work, "alex@example.com", "pm"), /already on the list/);
   assert.equal(existsSync(lock), false, "a refused write releases the lock too");
 });
+
+test("design config write: only over the file as it was read, and always under the lock", async () => {
+  const { writeIfUnchanged, Changed } = await import("../bin/config.mjs");
+  const { configSha } = await import("../lib/core.mjs");
+  const work = mkdtempSync(join(tmpdir(), "config-"));
+  writeFileSync(join(work, "CONFIG.md"), CONFIG);
+  const read = configSha(CONFIG);
+  // A lead's row lands between the operator's read and write: the write is refused, the row stays.
+  addRosterRow(work, "alex@example.com", "pm");
+  assert.throws(() => writeIfUnchanged(work, CONFIG.replace("Desk", "Studio"), read), (e) => e instanceof Changed);
+  assert.match(readFileSync(join(work, "CONFIG.md"), "utf8"), /alex@example\.com/);
+  const now = readFileSync(join(work, "CONFIG.md"), "utf8");
+  writeIfUnchanged(work, now.replace("display_name: Desk", "display_name: Studio"), configSha(now));
+  assert.match(readFileSync(join(work, "CONFIG.md"), "utf8"), /display_name: Studio[\s\S]*alex@example\.com/);
+  assert.equal(existsSync(join(work, ".CONFIG.lock")), false);
+});

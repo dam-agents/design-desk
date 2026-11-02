@@ -1,9 +1,9 @@
 // design desk <command> — the agent's side of the Desk. Every write goes through the
 // Desk server (its store has one writer), authenticated by work/desk/.agent-token.
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
-import { mkdirSync, readFileSync, renameSync, rmdirSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { WORK, fail, tableIn, withRosterRow } from "../lib/core.mjs";
+import { WORK, fail, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
 import { ADDABLE_ROLES, rosterOf } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
@@ -136,26 +136,8 @@ async function person(id, session) {
   return { item: id, email, role, outcome: verdict.outcome };
 }
 
-// One writer of work/CONFIG.md at a time: every writer holds work/.CONFIG.lock
-// (docs/config.md). The file is read again under it and replaced whole by a rename.
-export function addRosterRow(work, email, role) {
-  const path = join(work, "CONFIG.md"), lock = join(work, ".CONFIG.lock");
-  for (let waited = 0; ; waited += 1) {
-    try { mkdirSync(lock); break; } catch (e) {
-      if (e.code !== "EEXIST") throw e;
-      let age = 0; try { age = (Date.now() - statSync(lock).mtimeMs) / 1000; } catch { continue; }
-      if (age > 60) { try { rmdirSync(lock); } catch {} continue; }
-      if (waited >= 120) throw new Error("work/CONFIG.md stayed locked for two minutes");
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
-    }
-  }
-  try {
-    const text = readFileSync(path, "utf8");
-    const tmp = `${path}.tmp-${process.pid}`;
-    writeFileSync(tmp, withRosterRow(text, email, role));
-    renameSync(tmp, path);
-  } finally { try { rmdirSync(lock); } catch {} }
-}
+// The row goes in through the one writer of work/CONFIG.md (docs/config.md).
+export const addRosterRow = (work, email, role) => writeConfig(work, (text) => withRosterRow(text, email, role));
 
 export async function main(_cmd, argv) {
   const [sub, ...rest] = argv;
