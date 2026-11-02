@@ -1807,7 +1807,7 @@
     const r = await sendOrReopen(e.target, () => api("POST", "/api/product", body));
     toast(r.existing ? "That screen is already in Product. Here it is." : "Added. Design Desk finds it in the product; this page updates by itself.");
     S.tab = "product"; S.productFilter = r.card.kind === "element" ? "elements" : "screens";
-    await refreshList(); renderNav(); await openCard(r.card.id);
+    await refreshList(); renderNav(); renderBanners(); await openCard(r.card.id);
   }));
 
   // Day and night: the switch remembers a choice per browser; without one, the system's mode.
@@ -1832,7 +1832,7 @@
       ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
     toast("Sent. Design Desk first checks what can be done; this page updates by itself.");
-    S.tab = "requests"; S.reqFilter = "open"; await refreshList(); await openCard(r.card.id);
+    S.tab = "requests"; S.reqFilter = "open"; renderBanners(); await refreshList(); await openCard(r.card.id);
   }));
 
   function applyMe() {

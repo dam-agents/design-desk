@@ -105,6 +105,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await rq.button("Send").click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     assert.equal(await rq.open(), false, "Send closes the dialog");
+    assert.equal(await desk.getAttribute("#banners details.intro", "data-intro"), "requests", "a sent request opens Requests with its intro");
     const sent = await posts("/api/requests");
     assert.equal(sent.length, 1);
     assert.equal(JSON.parse(sent[0].body).problem, "Make the send button bigger");
