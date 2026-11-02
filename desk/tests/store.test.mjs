@@ -247,6 +247,70 @@ test("change notes on elements wake the agent once; its redraw keeps the earlier
   assert.equal(v.history[0].asset, a1);
 });
 
+test("comments on options: replies, done and reopen, and a designer has them worked in together", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { problem: "The settings page is hard to scan." });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Tabs", asset: a }, { id: "v2", name: "One page", asset: a }] });
+  const anchor = { variant: "v1", selector: "button", text: "Save", view: "2", view_name: "Billing" };
+  const one = s.openThread(card.id, bob, { kind: "comment", text: "Save is easy to miss", anchor });
+  assert.equal(one.inbox, null);
+  assert.deepEqual([one.thread.anchor.view, one.thread.anchor.view_name], ["2", "Billing"]);
+  const two = s.openThread(card.id, bob, { kind: "concern", text: "Too many tabs", anchor: { variant: "v1", label: "the whole option" } }).thread;
+  const loose = s.openThread(card.id, bob, { kind: "comment", text: "Nice work" }).thread;
+  s.reply(one.thread.id, alice, "Agreed");
+  s.resolve(one.thread.id, alice);
+  assert.throws(() => s.reopenThread(two.id, alice), /still open/);
+  assert.equal(s.reopenThread(one.thread.id, alice).thread.state, "open");
+  assert.throws(() => s.workIn(card.id, alice, [loose.id]), /one of the design options/);
+  assert.throws(() => s.workIn(card.id, alice, ["T-999"]), /no conversation/);
+  const { threads, inbox: item } = s.workIn(card.id, alice, [one.thread.id, two.id]);
+  assert.deepEqual(threads.map((t) => [t.kind, t.was, t.needs_agent]), [["change", "comment", true], ["change", "concern", true]]);
+  assert.equal(item.kind, "revise");
+  // Worked in again while the revise waits: the same item.
+  assert.equal(s.workIn(card.id, alice, [two.id]).inbox.id, item.id);
+  // A change note marked done and reopened goes back to the agent.
+  s.resolve(two.id, alice);
+  assert.equal(s.reopenThread(two.id, alice).inbox.id, item.id);
+});
+
+test("only a designer picks the winning option; votes only suggest one", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });
+  const triaged = Object.values(s.db.inbox).find((i) => i.card === card.id);
+  s.claim(triaged.id, "run-1"); s.done(triaged.id, "run-1", "checked");
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Table", asset: a }, { id: "v2", name: "Cards", asset: a }] });
+  s.vote(card.id, alice, { variant: "v1", vote: "prefer" });
+  assert.equal(can("designer", "choose"), true);
+  assert.equal(can("pm", "choose"), false);
+  assert.throws(() => s.choose(card.id, { agent: true }, "v2"), (e) => e.status === 403);
+  assert.throws(() => s.choose(card.id, alice, "v9"), /Pick one/);
+  assert.equal(s.choose(card.id, alice, "v2").card.chosen.variant, "v2");
+  assert.match(s.getCard(card.id).attention.reasons.join(), /picked an option/);
+  // The agent's card writes never carry the pick.
+  s.upsertCard({ id: card.id, chosen: { variant: "v1" } });
+  assert.equal(s.getCard(card.id).chosen.variant, "v2");
+  // The next call presents the designer's pick, not the vote's favourite.
+  assert.equal(s.queueForCall(card.id, alice).card.agenda.variant, "v2");
+  assert.equal(s.choose(card.id, alice, null).card.chosen, undefined);
+  s.choose(card.id, alice, "v2");
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Table", asset: a }] });
+  assert.equal(s.getCard(card.id).chosen, undefined, "an option that is gone is no longer the winner");
+});
+
+test("Send designs to Slack is one slack item scoped send, and needs options", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "A new empty state." });
+  assert.throws(() => s.act(card.id, alice, "slack-send", "{}"), /no design options/);
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Calm", asset: a }] });
+  const { inbox: item } = s.act(card.id, alice, "slack-send", JSON.stringify({ variants: "all", note: "" }));
+  assert.deepEqual([item.kind, item.scope], ["slack", "send"]);
+  assert.deepEqual(inbox(s).open.find((i) => i.id === item.id).scope, "send");
+  assert.throws(() => s.act(card.id, alice, "slack-send", "{}"), /already working/);
+});
+
 test("a person's answer to the agent's question resumes the blocked step", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "Make it nicer." });

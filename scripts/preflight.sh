@@ -72,7 +72,7 @@ config_json() {
     --arg audit_report "$(cfg audit_report)" --arg log_level "$(cfg log_level)" \
     --arg figma "$(cfg figma)" --arg figma_file "$(cfg figma_file)" \
     --arg screens "$(cfg screens)" --arg max_screen_prs "$(cfg max_screen_prs)" \
-    --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg digest "$(cfg digest)" \
+    --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
     --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
@@ -106,6 +106,7 @@ config_json() {
       screens: ($screens | if . == "" then "disabled" else . end),
       max_screen_prs: ($max_screen_prs | tonumber? // 2),
       slack_polls: ($slack_polls | if . == "" then "disabled" else . end),
+      slack_send: ($slack_send | if . == "" then "disabled" else . end),
       slack_poll_channel: $slack_poll_channel,
       digest: ($digest | if . == "" then "desk" else . end),
       slack_council: ($slack_council | if . == "" then "disabled" else . end),

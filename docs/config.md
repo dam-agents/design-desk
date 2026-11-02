@@ -39,6 +39,9 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   bound channel) | `disabled`.
 - `slack_polls` (`disabled`) — `enabled`: designers share options in Slack for 👍 / ⚠️ votes
   and replies (the `slack-polls` skill); `slack_poll_channel` — where (empty: the bound channel).
+- `slack_send` (`disabled`) — `enabled`: **Send designs to Slack** posts pictures of a request's
+  options to `slack_poll_channel` (the `slack-polls` skill → Send); a request from Slack has the
+  button whatever this says, and its pictures go to its own thread.
 - `slack_council` (`disabled`) — `enabled`: anyone in a request's Slack thread asks for changes
   and gets new options or versions back there (the `slack-council` skill); `council_sync_min`
   (`30`) — how often an open thread is read for asks that do not mention the agent.
