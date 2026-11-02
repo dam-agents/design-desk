@@ -135,3 +135,5 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
   one message in the bound channel: "<title> — Options ready to vote on: <link>", "— Live
   prototype ready to try: <link>" or "— Sent to developers: <link>". A private artifact link
   opens only for people on the Desk's list; attach a picture when it helps.
+- A request with a Slack `origin` gets its news in its own thread instead, after triage too,
+  whatever `notify` says ([requests.md](requests.md) → Answering in the thread).

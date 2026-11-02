@@ -28,6 +28,7 @@ its `SKILL.md` is; read it before doing the action.
 | `spec` | the developer spec of an approved design | Approve; chat | [handoff.md](handoff.md) |
 | `deliver` | send the spec to the issue, a coding agent, an issue or a draft pull request | after the spec | `handoff-github` |
 | `bug-intake` | put a reported UI bug on the queue | a Slack message | `intake-slack` |
+| `request-intake` | put a design asked for in Slack on the queue; the options go back to its thread | a Slack message | `intake-slack` |
 | `figma-import` | a Figma frame as an option rebuilt from the product's parts | Import from Figma; a Figma link in a request or chat | `figma` |
 | `figma-export` | an option or a prototype into Figma as layers | Send to Figma; chat | `figma` |
 | `share-options` | post the options to Slack, one message each, for 👍 / ⚠️ votes and replies | Share in Slack; chat | `slack-polls` |
