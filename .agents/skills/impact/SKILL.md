@@ -71,7 +71,9 @@ On a card, one `design desk upsert` with:
                  "source": {"label": "pull request #5810", "url": "https://github.com/…"}}]}}
 ```
 
-`kind` is one of `screen`, `component`, `message`, `email`, `document`, `other`. At most 30
+`kind` is one of `screen`, `component`, `message`, `email`, `document`, `other`. A place that
+is a screen or a part in Product (`design desk cards --kind screen`, `--kind element`) carries
+its `card` id, and the page opens it from there. At most 30
 places, 20 effects, 20 decisions; the most important first.
 
 In chat, the same three lists in plain words.

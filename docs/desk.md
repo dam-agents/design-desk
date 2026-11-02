@@ -47,6 +47,9 @@ served by the Desk server through the platform's Artifact API relay.
   screen while it scrolls (an open item's back bar, the presentation's Exit, a picture's Close).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
+- **Tab intros.** Every tab but How it works opens with a foldable intro (what it shows, what
+  you can do and, where a tab has a flow, step by step), `INTRO` in `desk/page.html`; each person's fold stays in their
+  browser. A change that adds, renames or removes a tab's action updates its intro too.
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
   same emails go in `## Desk people` with a role. The owner needs the Interactive artifacts
   feature on (Settings → five taps on the version → Experimental features). Never set the
