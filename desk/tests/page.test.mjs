@@ -53,25 +53,34 @@ window.platform = { async request({ method, path, body }) {
 </script>`;
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
 
-test("every dialog acts once from a sandboxed frame, and only on its own button", async (t) => {
+// The page in a sandboxed frame with a stand-in bridge; null (the test skipped) when this
+// machine has no browser or no toolkit dependencies.
+async function launch(t, bridge) {
   const browser = chromium();
-  if (!browser) return t.skip("no browser here");
+  if (!browser) { t.skip("no browser here"); return null; }
   let pw;
-  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") { t.skip("toolkit dependencies are not installed"); return null; } throw e; }
   Object.assign(process.env, browser.env);
   const server = createServer((r, res) => {
     res.setHeader("content-type", "text/html");
-    res.end(r.url === "/desk" ? page.replace("<script>", BRIDGE + "<script>")
+    res.end(r.url === "/desk" ? page.replace("<script>", bridge + "<script>")
       : `<!doctype html><iframe sandbox="allow-scripts allow-modals" src="/desk" style="width:1000px;height:700px"></iframe>`);
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
+  const top = await chrome.newPage();
+  await top.goto(`http://127.0.0.1:${server.address().port}/`);
+  const desk = top.frames().find((f) => f.url().endsWith("/desk"));
+  const posts = (path) => desk.evaluate((p) => calls.filter((c) => c.method === "POST" && c.path === p), path);
+  const settled = async (path, n, why) => { await top.waitForTimeout(300); assert.equal((await posts(path)).length, n, why); };
+  return { top, desk, posts, settled, close: async () => { await chrome.close(); server.close(); } };
+}
+
+test("every dialog acts once from a sandboxed frame, and only on its own button", async (t) => {
+  const run = await launch(t, BRIDGE);
+  if (!run) return;
+  const { top, desk, posts, settled } = run;
   try {
-    const top = await chrome.newPage();
-    await top.goto(`http://127.0.0.1:${server.address().port}/`);
-    const desk = top.frames().find((f) => f.url().endsWith("/desk"));
-    const posts = (path) => desk.evaluate((p) => calls.filter((c) => c.method === "POST" && c.path === p), path);
-    const settled = async (path, n, why) => { await top.waitForTimeout(300); assert.equal((await posts(path)).length, n, why); };
     const dialog = (id) => ({
       open: () => desk.evaluate((i) => document.getElementById(i).open, id),
       button: (name) => desk.locator(`#${id} .actions button`, { hasText: name }),
@@ -232,8 +241,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.match(await panel(3), /Everything a viewer can, and:\s+Vote on options/);
     assert.doesNotMatch(await panel(4), /Everything|Same as/, "the smallest role lists its own");
   } finally {
-    await chrome.close();
-    server.close();
+    await run.close();
   }
 });
 
@@ -286,5 +294,96 @@ test("Needs a designer filters New and Requests, and New opens on All", async (t
   } finally {
     await chrome.close();
     server.close();
+  }
+});
+
+// A designer's Desk with an overdue change of two pictures, and a request whose build waits
+// for the answers to the agent's form.
+const DAY = 864e5;
+const BRIDGE_NEW = `<script>
+window.calls = [];
+const created = new Date(Date.now() - 30 * ${DAY}).toISOString();
+const svg = (c) => ({ contentType: "image/svg+xml", encoding: "utf8", data: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><rect width="4" height="3" fill="' + c + '"/></svg>' });
+const change = { id: "ch2", kind: "change", title: "See which agents stopped", summary: "A red dot marks a stopped agent.", created, handled: null,
+  source: { repo: "acme/widgets", pr: 11 }, screens: [{ asset: "A-1", caption: "The list" }, { asset: "A-2", caption: "The card" }],
+  sections: [{ key: "what", title: "What changed", body: "- A red dot.", source: { label: "PR #11", url: "https://github.com/acme/widgets/pull/11" } },
+    { key: "why", title: "Why it is like this", body: "- Owners missed stopped agents.", source: { label: "not documented" } }] };
+const request = { id: "r2", kind: "request", title: "Bigger send button", status: "feedback", created, triage: { verdict: "design", reasons: [] },
+  variants: [{ id: "v1", name: "Calm", asset: "A-3" }], prototype: { state: "none" },
+  threads: [{ id: "t1", kind: "asks", state: "open", step: "build", messages: [{ by: { agent: true }, at: created, text: "Two things." }],
+    questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Send", "Send message"] }] }] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", due_days: 21, can: { handle: true, build: true, comment: true, ask: true } }
+    : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { id: "ch3", kind: "change", title: "Handled already", status: "handled", created, handled: created, attention: { level: "designer", reasons: ["a new screen"] } }, { ...request, variants: 1, threads: undefined, asks: true }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/ch2" ? { card: change } : path === "/api/cards/r2" ? { card: request }
+    : path === "/api/assets/A-1" ? svg("red") : path === "/api/assets/A-2" ? svg("blue") : path === "/api/assets/A-3" ? { contentType: "text/html", encoding: "utf8", data: "<p>Calm</p>" } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+</script>`;
+
+test("a change shows its age and gets handled, pictures step through, the form and the build send what they show", async (t) => {
+  const run = await launch(t, BRIDGE_NEW);
+  if (!run) return;
+  const { desk, posts } = run;
+  const sent = async (path, n) => { await desk.waitForFunction(([p, k]) => calls.filter((c) => c.method === "POST" && c.path === p).length === k, [path, n]); return JSON.parse((await posts(path))[n - 1].body); };
+  try {
+    // An overdue change, its sources and its folded explanation.
+    await desk.click('[data-tab="new"]');
+    await desk.waitForSelector('[data-card="ch2"]');
+    const row = '.row.item:has([data-card="ch2"])';
+    assert.match(await desk.getAttribute(row, "class"), /overdue/, "a change past due_days is marked in the list");
+    assert.match(await desk.textContent(`${row} .meta`), /Overdue · 30 days open/);
+    assert.doesNotMatch(await desk.getAttribute('.row.item:has([data-card="ch3"])', "class"), /overdue/, "a handled change is not overdue");
+    const rows = () => desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card));
+    await desk.click('[data-filter="newFilter:open"]');
+    assert.deepEqual(await rows(), ["ch2"], "Not handled lists only the changes nobody marked handled");
+    await desk.click('[data-filter="newFilter:designer"]');
+    assert.deepEqual(await rows(), [], "a handled change leaves Needs a designer");
+    await desk.click('[data-filter="newFilter:all"]');
+    await desk.click('[data-card="ch2"]');
+    await desk.waitForSelector("[data-handle]");
+    assert.equal(await desk.getAttribute(".sec-head .chip a", "href"), "https://github.com/acme/widgets/pull/11", "a section links its source");
+    assert.equal(await desk.locator("details.sec").count(), 1, "the explaining section is folded, what changed is not");
+    assert.match(await desk.textContent("details.sec summary"), /Why it is like this[\s\S]*Source: not documented/);
+    await desk.click('[data-handle="1"]');
+    assert.deepEqual(await sent("/api/cards/ch2/handled", 1), { handled: true });
+
+    // The gallery steps through the change's pictures.
+    await desk.click('[data-zoom="A-1"]');
+    await desk.waitForSelector(".zoom figcaption");
+    assert.equal(await desk.textContent(".zoom figcaption"), "1 / 2 · The list");
+    await desk.press("body", "ArrowRight");
+    await desk.waitForFunction(() => document.querySelector(".zoom figcaption").textContent.startsWith("2 / 2"));
+    await desk.click(".zoom .gal.next");
+    await desk.waitForFunction(() => document.querySelector(".zoom figcaption").textContent === "1 / 2 · The list");
+    await desk.press("body", "Escape");
+    assert.equal(await desk.locator(".zoom").count(), 0, "Escape closes the gallery");
+
+    // The agent's form: one answer and one left to it, then all left to it.
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r2"]');
+    await desk.waitForSelector("#form-t1");
+    await desk.check('#form-t1 input[name="q-t1-0"][value="Nothing"]');
+    await desk.fill('#form-t1 fieldset[data-q="0"] [data-q-note]', "Keep it calm.");
+    await desk.click('[data-send-form="t1"]');
+    assert.deepEqual(await sent("/api/threads/t1/answers", 1), { answers: [{ choice: "Nothing", note: "Keep it calm." }, { choice: null, note: "" }] });
+    await desk.waitForSelector('[data-skip-form="t1"]');
+    await desk.click('[data-skip-form="t1"]');
+    assert.deepEqual(await sent("/api/threads/t1/answers", 2), { answers: [{ choice: null, note: "" }, { choice: null, note: "" }] });
+
+    // Build asks first unless the designer unticks it.
+    const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
+    await desk.click('[data-act="build"]');
+    assert.equal(await desk.isChecked("#confirm-form [name=check]"), true, "Ask me first is ticked");
+    await cf("Build it").click();
+    assert.deepEqual(await sent("/api/cards/r2/actions", 1), { action: "build", note: "v1", ask_first: true });
+    await desk.waitForSelector('[data-act="build"]');
+    await desk.click('[data-act="build"]');
+    await desk.uncheck("#confirm-form [name=check]");
+    await cf("Build it").click();
+    assert.equal((await sent("/api/cards/r2/actions", 2)).ask_first, false);
+  } finally {
+    await run.close();
   }
 });

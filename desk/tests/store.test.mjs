@@ -61,6 +61,35 @@ test("a change card is found again by its pull request, people's data survives",
   assert.ok(b.acks[alice.email], "acks are not the agent's to overwrite");
 });
 
+test("a change card stays short, and a designer marks it handled", () => {
+  const s = fresh();
+  assert.throws(() => s.upsertCard({ kind: "change", title: "x".repeat(91) }), /longer than 90/);
+  assert.throws(() => s.upsertCard({ kind: "change", title: "One", summary: "y".repeat(181) }), /longer than 180/);
+  assert.throws(() => s.upsertCard({ kind: "change", title: "One", sections: [{ key: "what", title: "What changed", body: "z".repeat(401), source: { label: "PR #9" } }] }), /longer than 400/);
+  assert.throws(() => s.upsertCard({ kind: "change", title: "One", sections: [{ key: "why", title: "Why", body: "Because." }] }), /needs source.label/);
+  assert.throws(() => s.upsertCard({ kind: "change", title: "One", sections: Array(6).fill({ title: "T", body: "b" }) }), /at most 5 sections/);
+  const c = s.upsertCard({ kind: "change", title: "One", summary: "Short.", source: { repo: "acme/widgets", pr: 9 },
+    sections: [{ key: "why", title: "Why it is like this", body: "- Owners missed stopped agents.", source: { label: "the issue #8", url: "https://github.com/acme/widgets/issues/8" } }] }).card;
+  assert.equal(c.sections[0].source.label, "the issue #8");
+  assert.equal(s.listCards({ kind: "change" })[0].handled, null);
+  assert.equal(can("developer", "handle"), false);
+  assert.equal(can("designer", "handle"), true);
+  assert.throws(() => s.upsertCard({ id: c.id, status: "handled" }), /only a designer/);
+  s.handle(c.id, alice);
+  assert.equal(s.getCard(c.id).status, "handled");
+  assert.throws(() => s.upsertCard({ id: c.id, status: "new" }), /only a designer/);
+  assert.equal(s.upsertCard({ id: c.id, status: "archived" }).card.status, "archived", "a handled change can still be archived");
+  assert.throws(() => s.upsertCard({ id: c.id, status: "new" }), /only a designer/, "an archived handled change does not go back to new");
+  assert.equal(s.getCard(c.id).status, "archived");
+  s.handle(c.id, alice);
+  assert.equal(s.listCards({ kind: "change" })[0].handled, s.getCard(c.id).handled.at);
+  s.handle(c.id, alice, false);
+  assert.equal(s.getCard(c.id).status, "new");
+  assert.equal(s.getCard(c.id).handled, undefined);
+  const r = s.createRequest(alice, { title: "Bigger button", problem: "Hard to hit." }).card;
+  assert.throws(() => s.handle(r.id, alice), /only a change/);
+});
+
 test("claims: one session per item, takeover only past the TTL", () => {
   let now = "2026-10-30T10:00:00Z";
   const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => now });
@@ -118,7 +147,7 @@ test("a follow-up asked while the agent answers keeps its own item", () => {
 
 test("a failed card write leaves nothing behind", () => {
   const s = fresh();
-  assert.throws(() => s.upsertCard({ kind: "change", title: "Ghost", summary: "x".repeat(700) }), /longer than 600/);
+  assert.throws(() => s.upsertCard({ kind: "change", title: "Ghost", summary: "x".repeat(700) }), /longer than 180/);
   assert.throws(() => s.upsertCard({ kind: "change", title: "Ghost", screens: ["A-99"] }), /no asset/);
   assert.equal(s.listCards().length, 0);
   assert.throws(() => s.upsertCard({ kind: "request", title: "Bad link", prototype: { state: "live", url: "javascript:alert(1)" } }), /http/);
@@ -207,6 +236,33 @@ test("a person's answer to the agent's question resumes the blocked step", () =>
   assert.equal(s.listDecisions().length, 0);
   s.addDecision({ concepts: ["Spend"], text: "Spend is per week.", source: { card: card.id } });
   assert.equal(s.listDecisions({ concept: "spend" }).length, 1);
+});
+
+test("before a build the agent asks a form; the answer resumes the build with its option", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "Make it nicer." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "triaged"); }
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] } });
+  const { inbox: build } = s.act(card.id, alice, "build", "v2", { askFirst: true });
+  assert.equal(build.ask_first, true);
+  assert.equal(inbox(s).open.find((i) => i.id === build.id).ask_first, true, "the inbox file carries it too");
+  s.claim(build.id, "run-2"); s.done(build.id, "run-2", "asked");
+  assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things.", step: "build", questions: [] }), /1 to 6/);
+  assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "One.", step: "build", questions: [{ text: "Empty list?", options: ["A hint"] }] }), /2 to 4 options/);
+  assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "One.", step: "build", questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "a hint" }] }), /suggested must be one/);
+  const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things.", step: "build",
+    questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Save", "Done"] }] });
+  assert.throws(() => s.answerForm(thread.id, alice, [{ choice: "Maybe" }, {}]), /not an option/);
+  const { inbox: again } = s.answerForm(thread.id, alice, [{ choice: "Nothing", note: "Keep it calm." }, { choice: null }]);
+  assert.equal(again.kind, "build");
+  assert.equal(again.note, "v2", "the answer keeps the option the designer picked");
+  assert.match(s.thread(thread.id).messages[1].text, /Nothing — Keep it calm\.[\s\S]*Leave it to Design Desk/);
+  assert.throws(() => s.answerForm(thread.id, alice, [{}, {}]), /already answered/);
+  assert.deepEqual(s.thread(thread.id).answers[0], { choice: "Nothing", note: "Keep it calm." });
+  const long = "q".repeat(300), opts = ["o".repeat(120), "p".repeat(120)];
+  const { thread: big } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Six.", step: "build", questions: Array(6).fill({ text: long, options: opts }) });
+  s.answerForm(big.id, alice, Array(6).fill({ choice: opts[0], note: "n".repeat(500) }));
+  assert.equal(s.thread(big.id).state, "answered", "six full answers fit in the reply");
 });
 
 test("screenshots a person adds wake the agent once and keep who added them", () => {

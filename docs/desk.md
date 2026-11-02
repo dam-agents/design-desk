@@ -61,7 +61,7 @@ owner is `lead`, anyone else on the share list is `guest`.
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment |
 | `developer`, `pm` | also vote, file a request, start a follow-up from a change, add screenshots |
-| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack |
 | roles in `prototype_requesters` | start a live prototype |
 
 The page's **People** tab shows the roster and each role's actions, from `GET /api/people`;
@@ -133,7 +133,7 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
   breaks the product's patterns or its catalog elements, a missing state (empty, loading,
   error), or a screen with an open request or a theme in feedback; else `fyi`. One to five
   reasons, each a short phrase in the product's words ("a new screen", "its own grey instead of
-  the product's"). It leaves the filter once the person saw it.
+  the product's"). It leaves the filter once the person saw it or a designer marked it handled.
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are ready, or its live prototype is ready to approve.
@@ -163,6 +163,9 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
   the author); `url` (their thread, the issue); and when a scheduled run filed it, `job`
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
+- A change card counts the days since it appeared until a designer marks it handled
+  (status `handled`, a person's action only); past `change_due_days` the page shows it red
+  as overdue.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person
