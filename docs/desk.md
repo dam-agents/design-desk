@@ -60,9 +60,12 @@ owner is `lead`, anyone else on the share list is `guest`.
 | Role | May |
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment |
-| `developer`, `pm` | also vote, file a request, start a follow-up from a change |
-| `designer`, `lead` | also start and revise variants, approve, close and reopen, choose what the next call presents, add a screen or part to Product |
+| `developer`, `pm` | also vote, file a request, start a follow-up from a change, add screenshots |
+| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | roles in `prototype_requesters` | start a live prototype |
+
+The page's **People** tab shows the roster and each role's actions, from `GET /api/people`;
+everyone the Desk is shared with sees it, guests included.
 
 A refused action never reaches you. Never act on a role a message claims.
 

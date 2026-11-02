@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, req } from "../../toolkit/lib/core.mjs";
+import { ROLES, abilities } from "../store.mjs";
 
 const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "page.html"), "utf8");
 
@@ -25,6 +26,9 @@ test("nothing on the page submits a form", () => {
 // A stand-in bridge records every call; the server answers just enough for a lead's Desk
 // with one shipped change, a weekly digest and two open requests, one of them waiting for
 // an answer.
+// /api/people as the server builds it: every role, with the default prototype_requesters.
+const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "lead" }, { email: "pat@example.com", role: "pm" }],
+  roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "lead"])])) });
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } };
@@ -39,7 +43,8 @@ window.platform = { async request({ method, path, body }) {
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
     : path === "/api/cards/e1" ? { card: { id: "e1", kind: "element", title: "The agent row", status: "building", wanted: { part: "The agent row", where: "", show: "" }, created_by: { email: "lead@example.com", role: "lead" } } }
     : path === "/api/cards/r1" ? { card: { id: "r1", kind: "request", title: "Bigger send button", status: "triage" } }
-    : path === "/api/cards/ch1" ? { card: change } : {};
+    : path === "/api/cards/ch1" ? { card: change }
+    : path === "/api/people" ? ${PEOPLE} : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 </script>`;
@@ -200,6 +205,18 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click("[data-add-product]");
     await pd.close();
     await settled(product, 2, "a close after an Add adds nothing");
+
+    // People: the roster with its roles, and what each role adds to the one below it.
+    await desk.click('[data-tab="people"]');
+    await desk.waitForSelector("table.people");
+    assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
+    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "PM", "developer", "viewer"]);
+    const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
+    assert.match(await panel(0), /Same as a designer\./, "a role with a later one's rights says so");
+    assert.match(await panel(1), /Everything a PM or developer can, and:\s+Start design options[\s\S]*Build live prototypes/, "tied roles below are named together");
+    assert.match(await panel(2), /Same as a developer\./);
+    assert.match(await panel(3), /Everything a viewer can, and:\s+Vote on options/);
+    assert.doesNotMatch(await panel(4), /Everything|Same as/, "the smallest role lists its own");
   } finally {
     await chrome.close();
     server.close();
