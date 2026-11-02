@@ -817,7 +817,9 @@
   const FROM = { pr: "from the pull request", instance: "from Design Desk's copy of the product", prototype: "from the live prototype", rebuild: "drawn from the code, not a real screen", test: "from an automated test" };
   const fromOf = (s) => s.source === "person" ? `added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "";
   const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
-  const figure = (s, label) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
+  // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
+  // carries the "after" one's marks); they are drawn only once the two prove the same size.
+  const figure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
   // The agent's questions as a form: each has its options and "Leave it to Design Desk",
   // which is picked until a person chooses; one button leaves all of them.
   function askForm(th) {
@@ -839,7 +841,9 @@
     const pairs = [...new Set(list.filter((x) => x.stage).map((x) => x.pair))];
     const rows = pairs.map((pair) => {
       const of = (stage) => list.find((x) => x.pair === pair && x.stage === stage);
-      return `<h4 style="margin:12px 0 6px">${esc(pair)}</h4><div class="shots">${[["before", "Before"], ["after", "After"], ["diff", "What changed"]].map(([st, l]) => of(st) ? figure(of(st), l) : "").join("")}</div>`;
+      // Marks are measured on the "after" picture: a "before" one with no "after" gets none.
+      const before = of("before") && !of("after") ? { ...of("before"), marks: [] } : of("before");
+      return `<h4 style="margin:12px 0 6px">${esc(pair)}</h4><div class="shots">${[["before", "Before", before], ["after", "After", of("after")], ["diff", "What changed", of("diff")]].map(([st, l, s]) => s ? figure(s, l, st === "before" ? of("after")?.asset : null) : "").join("")}</div>`;
     }).join("");
     const single = list.filter((x) => !x.stage);
     return outlineToggle(list) + rows + (single.length ? `<div class="shots" style="margin-top:${rows ? 12 : 0}px">${single.map((x) => figure(x)).join("")}</div>` : "");
@@ -1407,11 +1411,25 @@
       if (img.src) continue;
       try { img.src = dataUrl(await asset(img.dataset.asset)); } catch {}
     }
+    await checkFrames();
     const spec = $("#spec-body");
     if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     if (vf && v) { try { vf.srcdoc = decode(await asset(v.asset)); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
+  }
+
+  // A picture that carries another picture's marks keeps them only when both have the same
+  // width and height (docs/screens.md → Before and after); otherwise its frames would sit on
+  // what did not change, so they go, from the card and from the gallery.
+  async function checkFrames() {
+    for (const f of document.querySelectorAll("figure[data-frame]")) {
+      const own = f.querySelector("img"), other = document.querySelector(`figure[data-zoom="${CSS.escape(f.dataset.frame)}"] img`);
+      const size = async (img) => { try { await img.decode(); return `${img.naturalWidth}x${img.naturalHeight}`; } catch { return null; } };
+      const [a, b] = await Promise.all([size(own), other ? size(other) : null]);
+      if (!a || a !== b) { for (const m of f.querySelectorAll(".mark")) m.remove(); delete f.dataset.marks; }
+      delete f.dataset.frame;
+    }
   }
 
   function renderDetail() {
