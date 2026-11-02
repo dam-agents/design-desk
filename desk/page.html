@@ -327,6 +327,16 @@
   </form>
 </dialog>
 
+<dialog id="person-dialog">
+  <form method="dialog" id="person-form">
+    <h2>Add a person</h2>
+    <p class="sub">Design Desk puts them on the list with the role you pick. The Desk's owner still shares the Desk with them in the app, so they can open it.</p>
+    <label><span>Their email — the one they sign in with</span><input name="email" type="email" maxlength="254" required placeholder="e.g. alex@example.com" /></label>
+    <div id="pe-roles" class="choices"></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send">Ask Design Desk</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
 <dialog id="confirm-dialog">
   <form method="dialog" id="confirm-form">
     <h2 id="cf-title"></h2>
@@ -406,6 +416,7 @@
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
     [["share"], "Share options in Slack", "slack"],
+    [["people"], "Ask Design Desk to add people to the list"],
   ];
   const RESEARCH = { clear: "Clear to go", duplicate: "Already tracked elsewhere", deliberate: "Today's behaviour was a deliberate decision", collision: "Someone is changing this right now", unclear: "Not enough to go on — Design Desk asked you a question below" };
   const GUIDE = () => `<h2>How Design Desk works</h2>
@@ -697,8 +708,9 @@
         ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
       steps: ["Pick Screens, Elements or Decisions.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
     people: { about: "who is on this Desk, and what each role can do",
-      see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked."],
-      can: [[`To get another role, or to add someone, ask ${esc(contact())}.`]] },
+      see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked.", "Asks to add someone, and where each one stands."],
+      can: [["<b>+ Add a person</b>: Design Desk puts them on the list as a designer, PM or developer.", "people"],
+        [`To get another role, or to make someone a lead, ask ${esc(contact())}.`]] },
   });
   function renderIntro() {
     const it = INTRO()[S.tab];
@@ -856,11 +868,19 @@
       const list = same ? `<p>Same as a ${names([same])}.</p>` : below.length ? `<p>Everything a ${names(below)} can, and:</p>` : "";
       return `<div class="panel"><h4>${esc(roleName(r))}${S.me?.role === r ? ` <span class="chip">your role</span>` : ""}</h4><p>${esc(ROLE_ABOUT[r])}</p>${list}${more.length ? `<ul>${more.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
     }).join("");
+    // A lead's asks to add someone: waiting, added, or not added with Design Desk's reason.
+    const asked = (P.asks || []).map((a) => {
+      const chip = a.state !== "done" ? `<span class="chip info">● Design Desk is adding them</span>`
+        : a.outcome === "added" ? `<span class="chip ok">✓ Added</span>` : `<span class="chip warn">Not added</span>`;
+      const why = a.state === "done" && a.outcome !== "added" ? ` ${esc(String(a.outcome || "").replace(/^not added:\s*/i, ""))}` : "";
+      return `<tr><td>${esc(a.email)}</td><td>${esc(roleName(a.role))}</td><td>${chip}${why}<div class="sub">${esc(a.by || "A lead")} asked · ${esc(when(a.created))}</div></td></tr>`;
+    }).join("");
     return `<h2>People and roles</h2>
-      <p class="lead">Who has which role on this Desk, and what each role can do. ${esc(contact())} adds people and changes roles.</p>
-      <h3>People</h3>
+      <p class="lead">Who has which role on this Desk, and what each role can do. ${can("people") ? "Add someone with <b>+ Add a person</b>; Design Desk puts them on the list. " : ""}${esc(contact())} changes roles${can("people") ? "" : " and adds people"}.</p>
+      <div class="sec-head"><h3>People</h3>${can("people") ? `<button class="btn small primary" data-add-person style="margin-left:auto">+ Add a person</button>` : ""}</div>
       ${rows ? `<table class="people"><thead><tr><th>Email</th><th>Role</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Nobody has a role yet.</div>`}
       <p class="sub">The Desk's owner is always a lead. Anyone else the Desk is shared with is a viewer.</p>
+      ${asked ? `<h3>Asked to add</h3><table class="people"><thead><tr><th>Email</th><th>Role</th><th>Where it stands</th></tr></thead><tbody>${asked}</tbody></table>` : ""}
       <h3>Roles</h3>
       <div class="roles">${roles}</div>`;
   }
@@ -1789,6 +1809,7 @@
     if (ds.look !== undefined) { if (ds.look) { S.look = ds.look; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); } return; }
     if ("lookSide" in ds) { S.lookSide = !S.lookSide; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); return; }
     if ("addProduct" in ds) { openProductDialog(); return; }
+    if ("addPerson" in ds) { openPersonDialog(); return; }
     if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }
     if (ds.zoom) {
       const list = [];
@@ -2003,6 +2024,21 @@
     await refreshList(); renderNav(); renderBanners(); await openCard(r.card.id);
   }));
 
+  // ---------- the Add a person dialog ----------
+  function openPersonDialog() {
+    $("#person-form").reset();
+    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> ${esc(roleName(r))} <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
+    const dlg = $("#person-dialog"); dlg.returnValue = ""; dlg.showModal();
+  }
+  $("#person-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send") return;
+    const f = $("#person-form");
+    const body = { email: f.email.value.trim(), role: f.querySelector("input[name=role]:checked")?.value };
+    await sendOrReopen(e.target, () => api("POST", "/api/people", body));
+    toast("Sent. Design Desk adds them to the list; this page updates by itself.");
+    await loadPeople(); if (S.tab === "people") renderDetail();
+  }));
+
   // Day and night: the switch remembers a choice per browser; without one, the system's mode.
   const systemDark = matchMedia("(prefers-color-scheme: dark)");
   const isDark = () => (document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light")) === "dark";
@@ -2048,6 +2084,7 @@
     try {
       await refreshList();
       if (S.card) await openCard(S.card.id, { quiet: true });
+      if (S.tab === "people" && S.people?.asks?.some((a) => a.state !== "done")) { await loadPeople(); if (S.tab === "people") renderDetail(); }
       if (S.offline) { S.offline = false; renderBanners(); }
     } catch (e) {
       if (!(e instanceof Said) && !S.offline) { S.offline = true; renderBanners(); }

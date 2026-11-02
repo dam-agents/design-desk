@@ -38,6 +38,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     case "draw": return shaper || role === "pm";
     case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": case "handle": case "choose": return shaper;
     case "build": return prototypeRoles.includes(role);
+    case "people": return role === "lead";
     default: return false;
   }
 }
@@ -48,7 +49,7 @@ export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
 export const ORIGIN_JOBS = ["watch", "digest"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "people"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // The roster as the server reads a role (`## Desk people` rows): the first row of an email
@@ -60,6 +61,11 @@ export function rosterOf(rows) {
     .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
 }
 
+// The roles a lead may ask Design Desk to give a new person (docs/desk.md → People);
+// making a lead stays the operator's.
+export const ADDABLE_ROLES = ["designer", "pm", "developer"];
+const EMAIL = /^[^\s@|`<>]+@[^\s@|`<>]+\.[^\s@|`<>]+$/;
+
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "handled", "archived"];
@@ -70,7 +76,7 @@ export const ELEMENT_STATES = ["current", "stale", "building", "dropped"];
 export const ISSUE_STATES = ["open", "archived"];
 // Where an issue stands in the team's plan: the current sprint, someone's, or the backlog.
 export const ISSUE_BUCKETS = ["sprint", "assigned", "backlog"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
@@ -174,7 +180,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -471,6 +477,31 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // A lead asks Design Desk to put a person on the Desk's list with a role; the agent
+  // writes the row (docs/desk.md → People). `roster` is the list the server reads now.
+  askForPerson(who, { email, role }, roster = [], { owner = false } = {}) {
+    const e = clean(String(email ?? ""), 254, "email").toLowerCase();
+    if (!EMAIL.test(e)) throw bad("That is not an email address.");
+    if (!ADDABLE_ROLES.includes(role)) throw bad(`role must be one of ${ADDABLE_ROLES.join(", ")}`);
+    const on = roster.find((r) => r.email === e);
+    if (on) throw bad(`${e} is already on the list.`);
+    if (Object.values(this.db.inbox).some((i) => i.kind === "person" && i.state !== "done" && i.person?.email === e)) throw bad(BUSY);
+    const it = this.enqueue("person", null, null, who);
+    it.person = { email: e, role };
+    // The owner is a lead whatever the roster says; the agent's re-check needs to know.
+    if (owner) it.by.owner = true;
+    this.save();
+    return { inbox: it };
+  }
+
+  // The People tab's asks: every one still waiting, and the answered ones of the last two weeks.
+  peopleAsks() {
+    const since = Date.parse(this.clock()) - 14 * 86400 * 1000;
+    return Object.values(this.db.inbox).filter((i) => i.kind === "person" && i.person && (i.state !== "done" || Date.parse(i.done_at) >= since))
+      .sort((a, b) => b.created.localeCompare(a.created) || Number(b.id.slice(2)) - Number(a.id.slice(2))).slice(0, 20)
+      .map((i) => ({ id: i.id, email: i.person.email, role: i.person.role, by: i.by?.email || null, created: i.created, state: i.state, outcome: i.outcome || null, done_at: i.done_at || null }));
+  }
+
   // A state change a person asks for on a request card; the agent does the work.
   act(cardId, who, action, note = "", { askFirst = false } = {}) {
     const c = this.card(cardId);
@@ -633,7 +664,7 @@ export class Store {
     it.state = "claimed"; it.claimed_by = by; it.claimed_at = this.clock();
     if (it.thread) it.seen = this.thread(it.thread).messages.length;
     this.save();
-    return { item: it, card: this.getCard(it.card) };
+    return { item: it, card: it.card ? this.getCard(it.card) : null };
   }
 
   done(itemId, session, outcome = "done") {

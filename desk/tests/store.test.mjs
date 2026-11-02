@@ -29,6 +29,29 @@ test("the roster: the first row of an email counts, an unknown role is a guest's
     [{ email: "alice@example.com", role: "designer" }, { email: "dave@example.com", role: "guest" }]);
 });
 
+test("a lead asks for a new person: one item with no card, the roster and open asks refuse twins", () => {
+  assert.equal(can("lead", "people"), true);
+  assert.equal(can("designer", "people"), false);
+  const s = fresh();
+  const lead = { email: "lee@example.com", role: "lead" };
+  const roster = [{ email: "alice@example.com", role: "designer" }];
+  const { inbox: item } = s.askForPerson(lead, { email: " Alex@Example.com ", role: "pm" }, roster);
+  assert.equal(item.card, null);
+  assert.deepEqual(inbox(s).open.map((i) => [i.kind, i.person]), [["person", { email: "alex@example.com", role: "pm" }]]);
+  assert.throws(() => s.askForPerson(lead, { email: "alex@example.com", role: "designer" }, roster), /already working/);
+  assert.throws(() => s.askForPerson(lead, { email: "alice@example.com", role: "pm" }, roster), /already on the list/);
+  assert.throws(() => s.askForPerson(lead, { email: "carol@example.com", role: "lead" }, roster), /role must be one of/);
+  assert.throws(() => s.askForPerson(lead, { email: "a|b@example.com", role: "pm" }, roster), /not an email/);
+  // The agent claims it without a card and answers it with its outcome.
+  assert.equal(item.by.owner, undefined, "a roster lead is not the owner");
+  assert.equal(s.askForPerson({ email: "own@example.com", role: "lead" }, { email: "dee@example.com", role: "developer" }, roster, { owner: true }).inbox.by.owner, true);
+  assert.equal(s.claim(item.id, "run-1").card, null);
+  s.done(item.id, "run-1", "added");
+  // An item without its payload (an older store, a hand-made one) never breaks the list.
+  s.enqueue("person", null, null, lead);
+  assert.deepEqual(s.peopleAsks().map((a) => [a.email, a.state, a.outcome, a.by]), [["dee@example.com", "open", null, "own@example.com"], ["alex@example.com", "done", "added", "lee@example.com"]]);
+});
+
 test("abilities: every action, as can() answers it", () => {
   assert.deepEqual(Object.keys(abilities("pm", ["designer"])), ACTIONS);
   assert.equal(abilities("pm", ["designer"]).build, false);

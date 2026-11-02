@@ -28,6 +28,8 @@ const USAGE = `usage: design <command> [args]
   guard <worktree> --base <ref> [--profile <profile.json>]
                                        the design-only check of a prototype diff; JSON verdict
   desk <command>                       the Desk store (run \`design desk\` for its commands)
+  config sha | write <file> --from <sha>
+                                       change work/CONFIG.md under its lock, only when unchanged since read
   deck-new <deck.html> [--style brand|carbon]
                                        start a deck from the template, in the style's colors and fonts
   deck-pdf <deck.html> <out.pdf>       print a deck to PDF, one page per slide
@@ -45,7 +47,7 @@ const USAGE = `usage: design <command> [args]
 `;
 const table = {
   doctor: "./doctor.mjs", repo: "./repo.mjs", profile: "./profile.mjs", build: "./build.mjs", shot: "./shot.mjs",
-  capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs", states: "./states.mjs",
+  capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs", config: "./config.mjs", states: "./states.mjs",
   "deck-new": "./deck.mjs", "deck-pdf": "./deck.mjs", "deck-check": "./deck.mjs", video: "./video.mjs", stills: "./video.mjs",
   "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs", skill: "./skill.mjs", where: "./where.mjs", diff: "./diff.mjs",
 };

@@ -3,7 +3,8 @@
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { WORK, fail } from "../lib/core.mjs";
+import { WORK, fail, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
+import { ADDABLE_ROLES, rosterOf } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
@@ -12,6 +13,8 @@ const USAGE = `usage: design desk <command>
   claim <I-n> --session <id> [--takeover]  claim an item for this run (or DESK_SESSION)
   done <I-n> --session <id> [--outcome <text>]
                                            mark a claimed item done, with the same id
+  person <I-n> --session <id>              work a lead's ask to add a person: re-check it, add the
+                                           row to ## Desk people, and mark the item done
   cards [--kind change|request|issue]      list cards
   card <C-n>                               one card with its threads
   upsert <card.json|->                     create or update a card (agent fields only)
@@ -99,6 +102,43 @@ export async function call(method, path, body) {
 
 const out = (o) => console.log(JSON.stringify(o, null, 1));
 
+// A lead's ask to add a person (docs/desk.md → People), decided on work/CONFIG.md as it
+// is now: the row already there with that role is `added` (a run that wrote it and died
+// before done); otherwise the asker is the owner or still a lead, and the role one a lead
+// may give. `{ write: true }` when the row is still to be added.
+export function personVerdict(item, text) {
+  const { email, role } = item.person;
+  const roster = rosterOf(tableIn(text, "Desk people"));
+  const on = roster.find((r) => r.email === email);
+  if (on) return { outcome: on.role === role ? "added" : `not added: ${email} is already on the list.` };
+  const asker = roster.find((r) => r.email === String(item.by?.email || "").toLowerCase());
+  if (!item.by?.owner && asker?.role !== "lead") return { outcome: `not added: ${item.by?.email || "the person who asked"} is no longer a lead.` };
+  if (!ADDABLE_ROLES.includes(role)) return { outcome: `not added: a lead cannot give the role ${role}.` };
+  return { write: true };
+}
+
+// A file that cannot be read, or a row that cannot be written, ends the command with an
+// error and leaves the item claimed: the next run takes it over and tries again.
+async function person(id, session) {
+  const { item } = await call("GET", `/agent/items/${id}`);
+  if (item.kind !== "person" || !item.person) fail(`${id} is not an ask to add a person`);
+  const { email, role } = item.person;
+  const read = () => { try { return readFileSync(join(WORK, "CONFIG.md"), "utf8"); } catch (e) { fail(`cannot read work/CONFIG.md (${e.code || e.message}); ${id} stays claimed for the next run`); } };
+  let verdict = personVerdict(item, read());
+  if (verdict.write) {
+    try { addRosterRow(WORK, email, role); verdict = { outcome: "added" }; }
+    catch (e) {
+      verdict = personVerdict(item, read());
+      if (verdict.write) fail(`cannot add the row: ${e.message}; ${id} stays claimed for the next run`);
+    }
+  }
+  await call("POST", `/agent/items/${id}/done`, { session, outcome: verdict.outcome });
+  return { item: id, email, role, outcome: verdict.outcome };
+}
+
+// The row goes in through the one writer of work/CONFIG.md (docs/config.md).
+export const addRosterRow = (work, email, role) => writeConfig(work, (text) => withRosterRow(text, email, role));
+
 export async function main(_cmd, argv) {
   const [sub, ...rest] = argv;
   const { pos, f } = flags(rest);
@@ -115,6 +155,10 @@ export async function main(_cmd, argv) {
     case "done":
       if (!session) fail("pass --session <the id you claimed with> (docs/desk.md → Claims)");
       return out(await call("POST", `/agent/items/${pos[0]}/done`, { session, outcome: f.outcome || "done" }));
+    case "person": {
+      if (!session) fail("pass --session <the id you claimed with> (docs/desk.md → Claims)");
+      return out(await person(pos[0], session));
+    }
     case "cards": return out(await call("GET", `/agent/cards${f.kind ? `?kind=${encodeURIComponent(f.kind)}` : ""}`));
     case "card": return out(await call("GET", `/agent/cards/${pos[0]}`));
     case "upsert": {

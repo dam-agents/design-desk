@@ -1,6 +1,7 @@
 // Shared paths and helpers for the Design Desk toolkit. Every bin/ script imports this.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +41,12 @@ export function cfg(key, fallback = "") {
 export function cfgTable(heading) {
   let text = "";
   try { text = readFileSync(join(WORK, "CONFIG.md"), "utf8"); } catch { return []; }
+  return tableIn(text, heading);
+}
+
+// The same rows, from CONFIG.md text already read (a reader that must tell a missing
+// file from an empty table reads the file itself).
+export function tableIn(text, heading) {
   const lines = text.split("\n");
   const start = lines.findIndex((l) => l.trim() === `## ${heading}`);
   if (start < 0) return [];
@@ -55,6 +62,76 @@ export function cfgTable(heading) {
     rows.push(Object.fromEntries(head.map((h, i) => [h, (c[i] || "").replace(/^[`"']|[`"']$/g, "")])));
   }
   return rows;
+}
+
+// Every writer of work/CONFIG.md goes through here (docs/config.md → Writing the file):
+// the lock, the file read again under it (missing: empty), `change(text)` applied to what
+// is there now, and the whole file replaced by a rename.
+export const configSha = (text) => createHash("sha256").update(text).digest("hex");
+export function writeConfig(work, change) {
+  const path = join(work, "CONFIG.md");
+  const release = lockDir(join(work, ".CONFIG.lock"));
+  try {
+    let text = "";
+    try { text = readFileSync(path, "utf8"); } catch (e) { if (e.code !== "ENOENT") throw e; }
+    const next = change(text);
+    const tmp = `${path}.tmp-${process.pid}`;
+    writeFileSync(tmp, next);
+    renameSync(tmp, path);
+    return next;
+  } finally { release(); }
+}
+
+// A lock that a dead holder never keeps and two waiters never both take. The lock is a
+// directory holding one file named after its holder (`<pid>-<random>`); a writer that made
+// the directory holds it once its own file is the only one there. A waiter removes a dead
+// holder's file by that unique name, so a new holder's file is never touched, and then the
+// directory only when it is empty (rmdir refuses one with a file in it). A holder whose
+// directory vanished before its file went in, or that finds another file, starts over.
+const alive = (name) => { try { process.kill(Number.parseInt(name, 10), 0); return true; } catch (e) { return e.code === "EPERM"; } };
+const nap = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+export function lockDir(lock, { timeoutMs = 120000 } = {}) {
+  const me = `${process.pid}-${createHash("sha256").update(`${Math.random()}${Date.now()}`).digest("hex").slice(0, 12)}`;
+  const files = () => { try { return readdirSync(lock); } catch { return null; } };
+  for (const until = Date.now() + timeoutMs; ;) {
+    let made = true;
+    try { mkdirSync(lock); } catch (e) { if (e.code !== "EEXIST") throw e; made = false; }
+    if (made) {
+      try { writeFileSync(join(lock, me), "", { flag: "wx" }); } catch (e) { if (e.code === "ENOENT") continue; throw e; }
+      const held = files();
+      if (held?.length === 1 && held[0] === me) return () => { try { unlinkSync(join(lock, me)); } catch {} try { rmdirSync(lock); } catch {} };
+      try { unlinkSync(join(lock, me)); } catch {}
+    } else {
+      const held = files() || [];
+      for (const f of held) if (!alive(f)) try { unlinkSync(join(lock, f)); } catch {}
+      // Empty: a dead holder's, or one a writer made a moment ago; only an old one goes.
+      let age = 0; try { age = Date.now() - statSync(lock).mtimeMs; } catch {}
+      if (held.every((f) => !alive(f)) && (held.length > 0 || age > 5000)) try { rmdirSync(lock); } catch {}
+    }
+    if (Date.now() > until) throw new Error("work/CONFIG.md stayed locked for two minutes");
+    nap(50 + Math.floor(Math.random() * 200));
+  }
+}
+
+// work/CONFIG.md with one more `| email | role |` row in `## Desk people`: after its
+// last row, or a new table at the end. A cell that could break the table, or an email
+// already on it, is refused (docs/desk.md → People).
+export function withRosterRow(text, email, role) {
+  for (const v of [email, role]) if (!/^[^\s|`<>]+$/.test(String(v || ""))) throw new Error(`"${v}" cannot go in the table`);
+  const lines = text.split("\n");
+  const start = lines.findIndex((l) => l.trim() === "## Desk people");
+  const row = `| ${email} | ${role} |`;
+  if (start < 0) return `${text.replace(/\n*$/, "\n")}\n## Desk people\n\n| email | role |\n| --- | --- |\n${row}\n`;
+  let end = lines.length, last = -1;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^#{1,2} /.test(lines[i])) { end = i; break; }
+    if (lines[i].trim().startsWith("|")) last = i;
+  }
+  const taken = lines.slice(start + 1, end).some((l) => l.trim().startsWith("|") && (l.split("|")[1] || "").trim().replace(/^[`"']|[`"']$/g, "").toLowerCase() === email.toLowerCase());
+  if (taken) throw new Error(`${email} is already on the list`);
+  if (last < 0) lines.splice(start + 1, 0, "", "| email | role |", "| --- | --- |", row);
+  else lines.splice(last + 1, 0, row);
+  return lines.join("\n");
 }
 
 // The browser every screenshot, PDF and video uses. Order: $CHROMIUM, the image's

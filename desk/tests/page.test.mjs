@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, req } from "../../toolkit/lib/core.mjs";
-import { ROLES, abilities } from "../store.mjs";
+import { ROLES, ADDABLE_ROLES, abilities } from "../store.mjs";
 
 const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "page.html"), "utf8");
 
@@ -28,7 +28,7 @@ test("nothing on the page submits a form", () => {
 // an answer.
 // /api/people as the server builds it: every role, with the default prototype_requesters.
 const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "lead" }, { email: "pat@example.com", role: "pm" }],
-  roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "lead"])])) });
+  roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "lead"])])), addable: ADDABLE_ROLES });
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45", author: "dana" } };
@@ -40,7 +40,7 @@ const requests = [
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
-  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true },
+  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true },
       skills: [{ name: "copy", does: "Write the words", on: true }, { name: "brand", does: "Use a saved brand", on: false }] }
     : path === "/api/cards" ? { cards: [change, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
@@ -243,11 +243,24 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "PM", "developer", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Same as a designer\./, "a role with a later one's rights says so");
+    assert.match(await panel(0), /Everything a designer can, and:\s+Ask Design Desk to add people to the list/, "only a lead adds people");
     assert.match(await panel(1), /Everything a PM can, and:\s+Start design options[\s\S]*Build live prototypes/, "a role names the largest one below it");
     assert.match(await panel(2), /Everything a developer can, and:\s+Draw an issue/, "a PM also has issues drawn");
     assert.match(await panel(3), /Everything a viewer can, and:\s+Vote on options/);
     assert.doesNotMatch(await panel(4), /Everything|Same as/, "the smallest role lists its own");
+
+    // A lead asks Design Desk to add a person with a role; the roles to pick leave out lead.
+    const pe = dialog("person-dialog");
+    await desk.click("[data-add-person]");
+    assert.equal(await pe.open(), true);
+    assert.deepEqual(await desk.locator("#pe-roles input").evaluateAll((xs) => xs.map((x) => x.value)), ["designer", "pm", "developer"]);
+    await pe.button("Ask Design Desk").click();
+    assert.equal(await pe.open(), true, "an Ask without an email stays open");
+    await desk.fill("#person-form [name=email]", "alex@example.com");
+    await desk.check('#pe-roles input[value="pm"]');
+    await pe.button("Ask Design Desk").click();
+    await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/people").length >= 2);
+    assert.deepEqual((await posts("/api/people")).map((c) => JSON.parse(c.body)), [{ email: "alex@example.com", role: "pm" }]);
   } finally {
     await run.close();
   }
@@ -302,7 +315,7 @@ test("every tab but How it works opens with its intro, which stays folded once f
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"][open]`);
   }
-  assert.doesNotMatch(await desk.textContent('#banners [data-intro="people"]'), /not with your role/);
+  assert.match(await desk.textContent('#banners [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   await desk.click('[data-tab="new"]');
