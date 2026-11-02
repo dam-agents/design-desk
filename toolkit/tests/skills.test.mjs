@@ -1,7 +1,7 @@
 // node --test toolkit/tests/skills.test.mjs — an action resolves to its skill, and a profile's shape is checked.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkProfile } from "../bin/profile.mjs";
@@ -41,6 +41,10 @@ test("New request offers installed skills only, figma with Figma on, bundled wor
   const mixed = offer({ paths: [extra, bundled] });
   assert.deepEqual(mixed["acme-proto"], { name: "acme-proto", does: "Draw options in the Acme kit.", on: false }, "an unknown skill: its first sentence, off");
   assert.deepEqual(mixed.copy, { name: "copy", does: "A product's own copy skill.", on: false }, "a product's skill under a bundled name takes no bundled words");
+  const link = join(mkdtempSync(join(tmpdir(), "dd-link-")), "skills");
+  symlinkSync(bundled, link);
+  const linked = offer({ paths: [link] });
+  assert.deepEqual([linked.copy.on, linked.impact.on, linked.impact.does], [true, true, "Show where else the same thing appears"], "a linked skills root still finds the bundled skills");
 });
 
 test("a profile check names an empty allow list, a missing screen and an unknown action", () => {

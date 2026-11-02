@@ -1,8 +1,8 @@
 // The actions Design Desk can take, each done by one skill. A product's design profile
 // (`skills`) or work/CONFIG.md (`## Skills`) names another installed skill for an action;
 // the bundled one is the fallback. docs/actions.md is the contract.
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join, resolve as absolute } from "node:path";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { join, resolve as absolute } from "node:path";
 import { HOME, TOOLKIT } from "./core.mjs";
 
 export const ACTIONS = {
@@ -84,7 +84,9 @@ export function resolve(action, { config = {}, profile = {} } = {}) {
 // a comma list): the installed ones only, `figma` only with Figma on. A bundled skill says
 // what it adds in plain words and whether it starts on; any other one, a product's own of
 // the same name included, shows the first sentence of its description and starts off.
-const BUNDLED = absolute(TOOLKIT, "..", ".agents/skills");
+// Real paths on both sides: on the platform ~/.claude/skills is a link to ~/.agents/skills.
+const real = (p) => { try { return realpathSync(p); } catch { return absolute(p); } };
+const BUNDLED = real(join(TOOLKIT, "..", ".agents/skills"));
 export const SWITCHES = {
   copy: ["Write the words: labels, empty states, errors", true],
   impact: ["Show where else the same thing appears", true],
@@ -99,7 +101,8 @@ export function requestSkills(list, { figma = false, paths = skillPaths(), warn 
     if (name === "figma" && !figma) continue;
     const path = findSkill(name, paths);
     if (!path) continue;
-    let [does, on] = dirname(dirname(absolute(path))) === BUNDLED && SWITCHES[name] || ["", false];
+    const bundled = BUNDLED === real(join(path, "..", ".."));
+    let [does, on] = bundled && SWITCHES[name] || ["", false];
     if (!does) {
       try {
         const head = readFileSync(path, "utf8").split(/\n---/)[0];
