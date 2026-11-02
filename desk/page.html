@@ -536,7 +536,7 @@
     const items = S.agenda, ideas = suggested();
     $("#detail").innerHTML = `<h2>Next call</h2><p class="hint">What designers chose to show at the team's next design meeting. Present it from here.</p>
       <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length ? `<button class="btn" data-act="clear-call">Call is over — clear the list</button>` : ""}</div>
-      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.")}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}
+      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}
       ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the call until a designer adds it: open it and choose Add to the next call, or Not now.</p>
         <ul>${ideas.map((c) => `<li><button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>${c.suggested.note ? ` <span class="sub" style="display:inline">${esc(c.suggested.note)}</span>` : ""}</li>`).join("")}</ul>` : ""}`;
   }

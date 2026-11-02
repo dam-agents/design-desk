@@ -213,9 +213,28 @@ test("the next call: the agent suggests, a designer adds it with the option to p
   assert.equal(s.agenda().length, 0, "a suggestion is not on the call");
   assert.equal(s.listCards().find((c) => c.id === card.id).suggested.note, "Design Desk proposes");
   assert.throws(() => s.dismissSuggestion(card.id, bob), (e) => e.status === 403);
-  assert.throws(() => s.queueForCall(card.id, alice, "Pick one"), (e) => e.status === 400, "an option to present is required");
+  assert.throws(() => s.queueForCall(card.id, alice, "Pick one", "v9"), (e) => e.status === 400, "an unknown option is refused");
   const { inbox: item } = s.queueForCall(card.id, alice, "Pick one", "v2");
   assert.equal(item.kind, "agenda");
   assert.deepEqual(s.agenda().map((a) => [a.option, a.agenda.variant]), [["Loud", "v2"]]);
   assert.equal(s.getCard(card.id).call_suggestion, undefined, "adding it takes the suggestion away");
+  s.unqueue(card.id, alice);
+  s.vote(card.id, alice, { variant: "v2", vote: "prefer" });
+  s.queueForCall(card.id, alice, "From an older page");
+  assert.equal(s.agenda()[0].agenda.variant, "v2", "a page that sends no option presents the favourite");
+});
+
+test("the next call: a designer's Not now holds, a closed request takes no suggestion", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  s.suggestForCall(card.id, "Design Desk proposes");
+  s.dismissSuggestion(card.id, alice);
+  assert.equal(s.suggestForCall(card.id, "Design Desk proposes again").reason, "a designer said Not now to it");
+  assert.equal(s.getCard(card.id).call_suggestion, undefined, "Not now is not undone by the next suggestion");
+  const { card: other } = s.createRequest(alice, { problem: "The header is too tall." });
+  s.suggestForCall(other.id, "Slack vote: a tie");
+  s.act(other.id, alice, "close");
+  assert.equal(s.getCard(other.id).call_suggestion, undefined, "closing a request drops its suggestion");
+  s.suggestForCall(other.id, "Again");
+  assert.equal(s.getCard(other.id).call_suggestion, undefined, "a closed request takes no suggestion");
 });

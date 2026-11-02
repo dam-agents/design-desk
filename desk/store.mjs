@@ -323,7 +323,7 @@ export class Store {
     if (action === "approve" && !["testing", "feedback", "prototype"].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
-    if (action === "close") c.status = "declined";
+    if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     this.save();
@@ -334,33 +334,39 @@ export class Store {
 
   // A designer puts a card on the agenda of the team's next call, with the option to
   // present; the agent writes a brief for it (what to decide); after the call the lead
-  // closes the agenda. The agent only suggests a card; a designer adds it or not.
+  // closes the agenda. The agent only suggests a card; a designer adds it or says Not now.
   queueForCall(cardId, who, note = "", variant = null) {
     const c = this.card(cardId);
     if (who?.agent) throw forbidden("only a designer puts a card on the next call; the agent suggests it");
     if (c.agenda?.status === "queued") throw bad("It is already on the next call.");
     const vs = c.variants || [];
+    // A page published before the option picker sends none: the favourite, else the first.
+    if (vs.length && variant == null) variant = (favouriteOf(c) || vs[0]).id;
     if (vs.length && !vs.some((v) => v.id === variant)) throw bad("Pick the design option to present.");
     c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, 500, "note"), variant: vs.length ? variant : null, brief: null };
-    delete c.call_suggestion;
+    delete c.call_suggestion; delete c.call_dismissed;
     c.updated = this.clock();
     const item = this.enqueue("agenda", cardId, null, who, c.agenda.note);
     this.save();
     return { card: c, inbox: item };
   }
 
+  // A designer's Not now holds: the agent does not suggest that card again until a designer
+  // puts it on a call. A closed request takes no suggestion.
   suggestForCall(cardId, note = "") {
     const c = this.card(cardId);
-    if (c.agenda?.status === "queued") return { card: c };
+    const skip = c.agenda?.status === "queued" ? "it is already on the next call" : c.call_dismissed ? "a designer said Not now to it" : c.status === "declined" ? "the request is closed" : null;
+    if (skip) return { card: c, suggested: false, reason: skip };
     c.call_suggestion = { note: optText(note, 500, "note"), at: this.clock() };
     c.updated = this.clock();
     this.save();
-    return { card: c };
+    return { card: c, suggested: true };
   }
 
   dismissSuggestion(cardId, who) {
     if (!can(who.role, "queue")) throw forbidden("Only a designer decides what goes on the next call.");
     const c = this.card(cardId);
+    if (c.call_suggestion) c.call_dismissed = { by: person(who), at: this.clock(), note: c.call_suggestion.note };
     delete c.call_suggestion;
     this.save();
     return { card: c };
@@ -391,6 +397,7 @@ export class Store {
     return Object.values(this.db.cards).filter((c) => c.agenda?.status === "queued")
       .sort((a, b) => a.agenda.at.localeCompare(b.agenda.at))
       .map((c) => ({ id: c.id, kind: c.kind, title: c.title, status: c.status, type: c.request?.type || null, agenda: c.agenda, summary: c.summary || "",
+        source: c.source || null, origin: c.origin ? { repo: c.origin.repo, url: c.origin.url } : null,
         option: (c.variants || []).find((v) => v.id === c.agenda.variant)?.name || null,
         thumb: (c.variants || []).find((v) => v.id === c.agenda.variant)?.asset || c.screens?.[0]?.asset || c.variants?.[0]?.asset || null }));
   }
@@ -500,6 +507,7 @@ export class Store {
         if (c && (c.status === "declined" || c.status === "handed-off") && fields.status !== c.status && !(c.status === "handed-off" && fields.status === "declined"))
           throw new DeskError(409, `${c.id} is ${c.status}; only a person reopens it`);
         next.status = fields.status;
+        if (next.status === "declined") delete next.call_suggestion;
       } else if (k === "sections") next.sections = cleanSections(fields.sections);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
@@ -680,6 +688,15 @@ export class Store {
       db_bytes: existsSync(this.dbPath) ? statSync(this.dbPath).size : 0,
     };
   }
+}
+
+// The option designers like most, as the page shows it: none on a tie, the only one when there is one.
+function favouriteOf(c) {
+  const vs = c.variants || [];
+  if (vs.length === 1) return vs[0];
+  const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
+  const s = [...vs].sort((a, b) => score(b) - score(a));
+  return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
 }
 
 function person(who) {

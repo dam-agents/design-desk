@@ -101,7 +101,9 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
   for a request with options, the option to present. The agent never adds one: it
   **suggests** its proposals, research verdicts that need a decision, prototypes ready for
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
-  suggestion shows on the card and in the tab until a designer adds it or says **Not now**.
+  suggestion shows on the card and in the tab until a designer adds it or says **Not now**;
+  after **Not now** the store keeps the card from being suggested again. Without an option
+  picked (an older page), the favourite is presented.
 - **The brief** (`agenda_due`): for every card on the call, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
