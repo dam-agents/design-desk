@@ -222,3 +222,55 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     server.close();
   }
 });
+
+// Needs a designer (docs/desk.md): New opens on All, the filter keeps what waits for a
+// designer, a seen change leaves it, and the choice survives a reload.
+const LIST = `<script>
+const cards = [
+  { id: "c1", kind: "change", title: "A new settings page", acked: false, attention: { level: "designer", reasons: ["a new screen"] } },
+  { id: "c2", kind: "change", title: "Tighter rows", acked: false, attention: { level: "fyi", reasons: ["follows the list pattern"] } },
+  { id: "c3", kind: "change", title: "Seen already", acked: true, attention: { level: "designer", reasons: ["its own grey"] } },
+  { id: "c4", kind: "change", title: "Seen, and suggested", acked: true, suggested: { note: "A new pattern" }, attention: { level: "designer", reasons: ["its own grey", "Suggested for the next call"] } },
+  { id: "r1", kind: "request", title: "Calmer empty list", status: "feedback", attention: { level: "designer", reasons: ["Options are ready: pick one or ask for changes"] } },
+  { id: "r2", kind: "request", title: "Bigger send button", status: "triage" },
+  { id: "r3", kind: "request", title: "Shipped and worth showing", status: "handed-off", suggested: { note: "Worth showing" }, attention: { level: "designer", reasons: ["Suggested for the next call"] } },
+];
+window.platform = { async request({ path }) {
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { request: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("Needs a designer filters New and Requests, and New opens on All", async (t) => {
+  const browser = chromium();
+  if (!browser) return t.skip("no browser here");
+  let pw;
+  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  Object.assign(process.env, browser.env);
+  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", LIST + "<script>")); });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
+  try {
+    const desk = await chrome.newPage();
+    await desk.goto(`http://127.0.0.1:${server.address().port}/`);
+    const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row", (rs) => rs.map((r) => r.dataset.card)); };
+    assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
+    assert.match(await desk.textContent("#list .filters .on"), /^All$/);
+    await desk.click('[data-filter="newFilter:designer"]');
+    assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
+    assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
+    assert.match(await desk.textContent('[data-card="c4"]'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-filter="reqFilter:designer"]');
+    assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
+    assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /Needs a designer \(2\)/);
+    await desk.reload();
+    await desk.click('[data-tab="new"]');
+    assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
+  } finally {
+    await chrome.close();
+    server.close();
+  }
+});

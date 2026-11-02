@@ -175,12 +175,36 @@ export class Store {
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         automated: Boolean(c.origin?.automated),
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
+        attention: this.attentionOf(c),
       }));
+  }
+
+  // Whether a card waits for a designer, and why (docs/desk.md → Needs a designer). A
+  // change card carries the agent's judgement; a request's comes from where it stands;
+  // a suggestion for the next call waits for a designer on either, whatever its status.
+  // Null: not judged.
+  attentionOf(c) {
+    if (c.kind !== "change" && c.kind !== "request") return null;
+    const suggested = c.call_suggestion ? ["Suggested for the next call"] : [];
+    if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
+      return suggested.length ? { level: "designer", reasons: suggested } : null;
+    const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
+    if (c.kind === "request") {
+      const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
+      const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
+      if (asks) reasons.push("Design Desk is waiting for an answer");
+      else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options or close it");
+      else if (!busy && c.status === "feedback") reasons.push("Options are ready: pick one or ask for changes");
+      else if (!busy && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
+    }
+    reasons.push(...suggested);
+    if (reasons.length) return { level: "designer", reasons };
+    return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
   }
 
   getCard(id) {
     const c = this.card(id);
-    return { ...c, threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    return { ...c, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -517,7 +541,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen or digest");
@@ -556,6 +580,10 @@ export class Store {
       else if (k === "concepts") { if (!Array.isArray(fields.concepts)) throw bad("concepts must be a list"); next.concepts = fields.concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()); }
       else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
+      else if (k === "attention") {
+        if (next.kind !== "change") throw bad("attention is judged on change cards; a request's comes from where it stands");
+        next.attention = fields.attention === null ? null : cleanAttention(fields.attention);
+      }
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
       else if (k === "group") next.group = clean(fields.group, 60, "group");
@@ -898,6 +926,14 @@ function cleanTriage(t) {
   if (!t || !["design", "needs-developer", "product"].includes(t.verdict)) throw bad("triage verdict must be design, needs-developer or product");
   const list = (x, n) => (Array.isArray(x) ? x.slice(0, 12).map((s) => clean(s, 600, n)) : []);
   return { verdict: t.verdict, reasons: list(t.reasons, "reason"), can: list(t.can, "can"), cannot: list(t.cannot, "cannot") };
+}
+
+// The agent's judgement of a change: a designer should look at it, or it is for
+// information only; either way with its reasons in plain words.
+function cleanAttention(a) {
+  if (!a || !["designer", "fyi"].includes(a.level)) throw bad("attention level must be designer or fyi");
+  if (!Array.isArray(a.reasons) || !a.reasons.length) throw bad("attention names at least one reason");
+  return { level: a.level, reasons: a.reasons.slice(0, 5).map((s) => clean(s, 160, "attention reason")) };
 }
 
 // The agent's free-form fields are objects whose links the page renders: only http(s).
