@@ -545,8 +545,9 @@ export class Store {
         if (c && (c.status === "declined" || c.status === "handed-off") && fields.status !== c.status && !(c.status === "handed-off" && fields.status === "declined"))
           throw new DeskError(409, `${c.id} is ${c.status}; only a person reopens it`);
         // Handled is a designer's mark on a change: the agent neither sets nor clears it.
-        // Archiving a handled change stays the agent's (the remedy for a full store).
-        if (next.kind === "change" && ((fields.status === "handled" && c?.status !== "handled") || (c?.status === "handled" && !["handled", "archived"].includes(fields.status))))
+        // Archiving a handled change stays the agent's (the remedy for a full store); the mark
+        // stays with it, so an archived handled change never goes back to new.
+        if (next.kind === "change" && ((fields.status === "handled" && c?.status !== "handled") || (c?.handled && !["handled", "archived"].includes(fields.status))))
           throw new DeskError(409, "only a designer marks a change handled, or not");
         next.status = fields.status;
         if (next.status === "declined") delete next.call_suggestion;

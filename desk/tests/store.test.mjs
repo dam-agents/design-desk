@@ -65,6 +65,8 @@ test("a change card stays short, and a designer marks it handled", () => {
   assert.equal(s.getCard(c.id).status, "handled");
   assert.throws(() => s.upsertCard({ id: c.id, status: "new" }), /only a designer/);
   assert.equal(s.upsertCard({ id: c.id, status: "archived" }).card.status, "archived", "a handled change can still be archived");
+  assert.throws(() => s.upsertCard({ id: c.id, status: "new" }), /only a designer/, "an archived handled change does not go back to new");
+  assert.equal(s.getCard(c.id).status, "archived");
   s.handle(c.id, alice);
   assert.equal(s.listCards({ kind: "change" })[0].handled, s.getCard(c.id).handled.at);
   s.handle(c.id, alice, false);
