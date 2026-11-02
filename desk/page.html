@@ -38,6 +38,7 @@
   nav button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
   nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; line-height: 18px; text-align: center; }
+  nav .count.warn { background: var(--warn); color: var(--bg); }
   .grow { flex: 1; }
   .me { color: var(--muted); font-size: 12px; }
   .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
@@ -215,6 +216,27 @@
   </form>
 </dialog>
 
+<dialog id="product-dialog">
+  <form method="dialog" id="product-form">
+    <h2>Add to Product</h2>
+    <p class="sub" id="pd-hint"></p>
+    <div class="tabs" role="radiogroup" id="kind-choice">
+      <button type="button" data-kind="screen" aria-pressed="true">A screen</button>
+      <button type="button" data-kind="element" aria-pressed="false">A part of a screen</button>
+    </div>
+    <input type="hidden" name="kind" value="screen" />
+    <p class="banner warn" id="pd-off" hidden style="border:0;border-radius:8px;padding:8px 12px"></p>
+    <label><span id="pd-part-label"></span><textarea name="part" maxlength="500" required></textarea></label>
+    <label><span id="pd-where-label"></span><input name="where" maxlength="500" /></label>
+    <label><span id="pd-show-label"></span><textarea name="show" maxlength="2000"></textarea></label>
+    <div class="drop">
+      <span>Screenshot (optional): paste it here with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="pd-file" hidden multiple /></label>. Two at most.</span>
+      <div class="thumbs" id="pd-thumbs"></div>
+    </div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send" id="pd-send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
 <dialog id="shots-dialog">
   <form method="dialog" id="shots-form">
     <h2>Add screenshots</h2>
@@ -258,6 +280,7 @@
     agenda: "Writing a short brief for the next call.",
     catalog: "Drawing every state of this element.",
     "catalog-history": "Drawing how this element looked at its earlier changes in the code. Older versions appear below one by one.",
+    map: "Finding this screen in the product and taking its pictures.",
     screens: "Checking the screenshots that were added and writing their captions.",
     slack: "Posting the options to Slack for votes and comments.",
   };
@@ -307,7 +330,7 @@
 <p>Your role is shown top right; ${esc(S.me?.contact || "the Desk's owner")} changes it.</p>
 <h3>Also here</h3><ul>
 <li><b>Next call</b> — what designers chose to show at the team's design meeting, each with a short brief; Design Desk suggests things, a designer adds them.</li>
-<li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in, with how each looked in earlier versions; and every decision the team made, searchable.</li>
+<li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable. A screen and a part keep how they looked in earlier versions: step back through them, or put one next to now. A designer adds a missing screen or part with <b>+ Add</b>.</li>
 <li><b>Weekly digest</b> — under New: what changed in the product's UX this week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
 <li><b>Slack</b> — tell Design Desk in the team channel when something looks broken; it puts it here and answers in your thread.</li>
 <li><b>Chat</b> — the Desk's owner can do everything here also by talking to Design Desk in its chat.</li></ul>`;
@@ -440,9 +463,11 @@
   const backBar = () => `<div class="crumb"><button class="btn small" data-back>← ${esc(S.tab === "product" && S.productFilter === "decisions" ? "Decisions" : TABS[S.tab] || "Back")}</button></div>`;
   function renderNav() {
     const unseen = S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && !c.acked).length;
-    const asks = S.cards.filter((c) => c.kind === "request" && c.asks && !closed(c)).length;
-    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, asks], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["guide", TABS.guide]];
-    $("#nav").innerHTML = tabs.map(([k, label, n]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
+    // Requests counts the open ones, like Next call its items; it turns amber while one waits for an answer.
+    const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
+    const asks = open.filter((c) => c.asks).length;
+    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["guide", TABS.guide]];
+    $("#nav").innerHTML = tabs.map(([k, label, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`).join("");
   }
 
   function renderBanners() {
@@ -456,7 +481,9 @@
     if (S.tab === "new") return S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && (S.newFilter === "all" || !c.acked));
     if (S.tab === "product" && S.productFilter !== "decisions") {
       const kind = S.productFilter === "elements" ? "element" : "screen";
-      return S.cards.filter((c) => c.kind === kind).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
+      // One Design Desk could not add stays a week, so the person who asked sees why.
+      const gone = (c) => c.status === "dropped" && Date.now() - Date.parse(c.updated) > 7 * 864e5;
+      return S.cards.filter((c) => c.kind === kind && !gone(c)).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
     }
     if (S.tab === "requests") return S.cards.filter((c) => c.kind === "request" && (S.reqFilter === "open" ? !closed(c) : closed(c)));
     return [];
@@ -465,11 +492,15 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function chipsFor(c) {
     const out = [];
+    // A screen or part a designer added, before Design Desk made it.
+    const added = c.status === "building" ? `<span class="chip info">● Being added</span>` : c.status === "dropped" ? `<span class="chip warn">Not added</span>` : "";
     if (c.kind === "digest") out.push(`<span class="chip info">Weekly digest</span>`);
     else if (c.kind === "screen") {
+      if (added) out.push(added);
       if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
       if (c.path) out.push(`<span class="chip"><code>${esc(c.path)}</code></span>`);
     } else if (c.kind === "element") {
+      if (added) out.push(added);
       if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
       if (c.status === "stale") out.push(`<span class="chip warn">out of date</span>`);
       else if (c.state_count) out.push(`<span class="chip">${plural(c.state_count, "situation", "situations")}</span>`);
@@ -496,14 +527,16 @@
     if (S.tab === "call") { renderAgendaList(); return; }
     const cards = visibleCards();
     const f = (key, opts) => `<div class="filters">${opts.map(([k, l]) => `<button class="btn small ${S[key] === k ? "on" : ""}" data-filter="${key}:${k}">${esc(l)}</button>`).join("")}</div>`;
-    const filters = S.tab === "new" ? f("newFilter", [["new", "Not seen yet"], ["all", "All"]]) : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"]])
+    let filters = S.tab === "new" ? f("newFilter", [["new", "Not seen yet"], ["all", "All"]]) : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"]])
       : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"]]) : "";
+    const add = S.tab === "product" && S.productFilter !== "decisions" && can("add") ? `<button class="btn small primary" data-add-product style="margin-left:auto">+ Add</button>` : "";
+    if (add) filters = filters.replace(/<\/div>$/, `${add}</div>`);
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(filters); return; }
     const empty = {
       new: S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : "No changes yet. They appear here soon after they ship.",
       requests: S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
-      product: S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
-        : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.",
+      product: (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
+        : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     list.innerHTML = filters + cards.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">
@@ -683,13 +716,25 @@
       <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}${c.status === "stale" ? `<span class="chip warn">changed since these pictures</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
-      <div class="actions">${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}<button class="btn" data-focus-composer>Ask about this screen</button>${agendaButton(c)}</div>
+      ${renderWanted(c)}
+      ${c.status === "dropped" ? "" : `<div class="actions">${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}<button class="btn" data-focus-composer>Ask about this screen</button>${agendaButton(c)}</div>
       <h3>Screens</h3>${renderLooks(c)}
       ${els.length ? `<h3>Parts on this screen</h3><div class="actions">${els.map((e) => `<button class="anchor" data-card="${esc(e.id)}">${esc(e.title)}</button>`).join("")}</div>` : ""}
-      <h3>Why it is like this</h3><div id="timeline" class="section"><p class="hint">Loading the decisions and changes…</p></div>
+      <h3>Why it is like this</h3><div id="timeline" class="section"><p class="hint">Loading the decisions and changes…</p></div>`}
       ${sections(c)}${renderImpact(c.impact)}
       ${renderThreads(c)}`;
   }
+  // What a person asked for when they added the screen or part, and what became of it.
+  function renderWanted(c) {
+    const w = c.wanted;
+    if (!w) return "";
+    const rows = `<dl class="kv"><dt>Asked for</dt><dd>${txt(w.part)}</dd>${w.where ? `<dt>Where</dt><dd>${esc(w.where)}</dd>` : ""}${w.show ? `<dt>To show</dt><dd>${txt(w.show)}</dd>` : ""}</dl>`;
+    const by = `Added by ${who(c.created_by)} on ${esc(day(c.created))}`;
+    if (c.status === "building") return `<div class="panel"><p>${by}. Design Desk is finding it in the product; this page updates by itself.</p>${rows}</div>`;
+    if (c.status === "dropped") return `<div class="panel"><p><span class="chip warn">Not added</span> Design Desk could not add it; the reason is below.</p>${rows}</div>`;
+    return `<details class="fold"><summary>${by}</summary>${rows}</details>`;
+  }
+
   // Decisions about the screen's concepts and the changes that shaped it, newest first.
   async function loadTimeline(c) {
     const box = $("#timeline");
@@ -722,11 +767,12 @@
       <h2>${txt(c.title)}</h2>
       <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn">out of date: the product changed since it was drawn</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
-      <div class="actions">${can("refresh") ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}</div>
+      ${renderWanted(c)}
+      ${c.status === "dropped" ? "" : `<div class="actions">${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}</div>
       ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:80ch;padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
-      ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<div class="panel hint">Not drawn yet.</div>`}
+      ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<div class="panel hint">Not drawn yet.</div>`}`}
       ${sections(c)}${renderImpact(c.impact)}
       ${src.file ? `<details class="fold"><summary>For developers</summary><p class="sub"><code>${esc(src.file)}</code>${src.export ? ` · <code>${esc(src.export)}</code>` : ""}${src.commit ? ` · ${esc(src.commit)}` : ""}</p></details>` : ""}
       ${renderThreads(c)}`;
@@ -1276,6 +1322,7 @@
     }
     if (ds.look !== undefined) { if (ds.look) { S.look = ds.look; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); } return; }
     if ("lookSide" in ds) { S.lookSide = !S.lookSide; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); return; }
+    if ("addProduct" in ds) { openProductDialog(); return; }
     if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }
     if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
     if (ds.present !== undefined) { await present(Number(ds.present)); return; }
@@ -1410,6 +1457,48 @@
     dlg.returnValue = ""; dlg.showModal();
   }
   $("#new-request").addEventListener("click", () => openRequestDialog(null));
+
+  // ---------- the Add to Product dialog ----------
+  const parts = [];
+  const KINDS = {
+    screen: { hint: "Design Desk finds the screen in the product, takes its pictures in day and night mode, and writes how to get there, what it is made of and why it is like this.",
+      part: ["Which screen? Name it the way people know it.", "e.g. Billing settings"], where: ["How do you get there, or its address? (optional)", "e.g. Settings → Billing, or /settings/billing"],
+      show: ["What should the pictures show? (optional)", "e.g. with one unpaid invoice"] },
+    element: { hint: "Design Desk finds the real part in the product's code and draws it in every situation it can be in: each state, empty and full, errors, long text.",
+      part: ["Which part? Name it and say where you see it.", "e.g. the agent row in the agents list"], where: ["Which screen is it on? (optional)", "e.g. Agents"],
+      show: ["Which situations matter to you? (optional)", "e.g. empty, an error, a very long name"] },
+  };
+  function setKind(kind) {
+    const f = $("#product-form"), k = KINDS[kind];
+    f.kind.value = kind;
+    for (const b of document.querySelectorAll("#kind-choice button")) b.setAttribute("aria-pressed", String(b.dataset.kind === kind));
+    $("#pd-hint").textContent = k.hint;
+    for (const n of ["part", "where", "show"]) { $(`#pd-${n}-label`).textContent = k[n][0]; f[n].placeholder = k[n][1]; }
+    // A screen's pictures come from Design Desk's own copy of the product (docs/map.md).
+    const off = kind === "screen" && !S.me?.screens;
+    $("#pd-off").hidden = !off;
+    $("#pd-off").textContent = off ? `Screens need Design Desk's own copy of the product, which is not turned on yet. Ask ${contact()}, or add a part of a screen instead.` : "";
+    $("#pd-send").disabled = off;
+  }
+  document.addEventListener("click", (e) => { const b = e.target.closest("#kind-choice button"); if (b) setKind(b.dataset.kind); });
+  const addPart = (f) => addPicture(f, parts, "#pd-thumbs", 2);
+  $("#pd-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addPart(f); e.target.value = ""; }));
+  $("#product-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addPart(it.getAsFile()); } }));
+  function openProductDialog() {
+    const dlg = $("#product-dialog");
+    $("#product-form").reset(); parts.length = 0; $("#pd-thumbs").innerHTML = "";
+    setKind(S.productFilter === "elements" || !S.me?.screens ? "element" : "screen");
+    dlg.returnValue = ""; dlg.showModal();
+  }
+  $("#product-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send") return;
+    const f = $("#product-form");
+    const body = { kind: f.kind.value, part: f.part.value, where: f.where.value, show: f.show.value, ...(parts.length ? { images: parts.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
+    const r = await sendOrReopen(e.target, () => api("POST", "/api/product", body));
+    toast(r.existing ? "That screen is already in Product. Here it is." : "Added. Design Desk finds it in the product; this page updates by itself.");
+    S.tab = "product"; S.productFilter = r.card.kind === "element" ? "elements" : "screens";
+    await refreshList(); renderNav(); await openCard(r.card.id);
+  }));
 
   // Day and night: the switch remembers a choice per browser; without one, the system's mode.
   const systemDark = matchMedia("(prefers-color-scheme: dark)");

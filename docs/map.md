@@ -39,6 +39,24 @@ is turned on), and again on request ("rebuild the product map"):
    catalog cards whose component the screen renders.
 4. `design desk upsert` with `kind: screen`; the store updates the card of the same `path`.
 
+## A screen someone added (`map_due`)
+
+A designer pressed **+ Add**: the card (`status: building`) has `wanted` — `part` (the screen
+in their words), `where` (their clicks or an address), `show` (what the pictures should
+have) — and maybe their screenshot.
+
+1. Claim the item. Match `wanted` and the screenshot against the profile's `screens` and
+   `capture.routes`, then the product's routes and navigation.
+2. Two candidates, or none you are sure of → `design desk ask C-<n> <file> --step map` with
+   your best guess, then done with `--outcome asked`; their answer queues it again.
+3. Already mapped (the store refuses a second card of one `path`: `409` names it), or no
+   such screen in the product → `status: dropped` and one section saying which screen it is
+   or why, with its source.
+4. Otherwise **Build it** steps 2–4 for this one screen, `wanted.show` in the recipe's data,
+   `design desk upsert` with the card's `id`, `path`, the instance's pictures (they replace
+   the person's) and `status: current`.
+5. `design desk done I-<n> --session <id> --outcome mapped` (or `dropped`).
+
 ## Keep it current
 
 After the watch installs a merged change on `main`, every screen card the change touched
