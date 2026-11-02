@@ -392,7 +392,7 @@ export class Store {
       .sort((a, b) => a.agenda.at.localeCompare(b.agenda.at))
       .map((c) => ({ id: c.id, kind: c.kind, title: c.title, status: c.status, type: c.request?.type || null, agenda: c.agenda, summary: c.summary || "",
         option: (c.variants || []).find((v) => v.id === c.agenda.variant)?.name || null,
-        thumb: (c.variants || []).find((v) => v.id === c.agenda.variant)?.asset || c.screens?.[0]?.asset || null }));
+        thumb: (c.variants || []).find((v) => v.id === c.agenda.variant)?.asset || c.screens?.[0]?.asset || c.variants?.[0]?.asset || null }));
   }
 
   // ---------- agent actions ----------

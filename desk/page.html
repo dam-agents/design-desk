@@ -523,7 +523,7 @@
 
   // ---------- the next call ----------
   // Cards Design Desk suggests for the call; a designer adds them, or not.
-  const suggested = () => S.cards.filter((c) => c.suggested && !S.agenda.some((a) => a.id === c.id));
+  const suggested = () => S.cards.filter((c) => c.suggested && c.status !== "declined" && !S.agenda.some((a) => a.id === c.id));
   function renderAgendaList() {
     const items = S.agenda, ideas = suggested();
     $("#list").innerHTML = (items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span></div>
