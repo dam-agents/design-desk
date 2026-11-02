@@ -19,16 +19,23 @@ A card of kind `element` on the Desk:
 - `states` — one entry per tile: `name` and `how` it happens, in plain words;
 - `sheet` — the asset id of the state sheet (one HTML file with every tile);
 - `screens` — one thumbnail (the sheet's first screen), for the list;
-- `status` — `building`, `current`, or `stale` (its code changed since it was drawn).
+- `status` — `building`, `current`, `stale` (its code changed since it was drawn), or
+  `dropped` (a designer added it and it could not be drawn).
 
 The profile lists the elements worth having under `catalog.elements`
-([profile.md](profile.md)); a person can also ask for one in chat, Slack or on the Desk.
+([profile.md](profile.md)); a person can also ask for one in chat, Slack or on the Desk
+(**+ Add**).
 
 ## Drawing an element (`catalog_due`, or a request in chat)
 
 1. **Claim** the item (an element card created for the request, kind `catalog`).
 2. **The code.** `bash "$HOME/scripts/checkout.sh" <repo>`; the element's file and export
-   come from the card's `source` or the profile's `catalog.elements`.
+   come from the card's `source` or the profile's `catalog.elements`. A card added with
+   **+ Add** has only `wanted` (`part`, `where`, `show`) and maybe a screenshot: find the
+   component from them. Unsure → `design desk ask C-<n> <file> --step catalog` with your
+   best guess, then done with `--outcome asked`. Already drawn (the store refuses a second card of one `source`: `409` names
+   it) or not in the code → `status: dropped`, one section saying which element or why,
+   then done with `--outcome dropped`. In step 4, `wanted.show` comes first.
 3. **Its dimensions.** `design states <file> --export <Component> --root <clone>` prints the
    props with their values, the fields it reads, the conditions it branches on, the hooks it
    calls, the components it renders, and a `fixture`: a complete, quiet value for every
