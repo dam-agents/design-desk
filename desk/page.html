@@ -136,6 +136,12 @@
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: 6px; border: 1px solid var(--line); }
   .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 14px; } .choices input { width: auto; }
   .guide { max-width: 74ch; } .guide li { margin-bottom: 6px; } .guide ol { padding-left: 20px; }
+  .people { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 6px 0 4px; }
+  .people th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  .people td { padding: 8px 10px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+  .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 6px; }
+  .roles .panel h4 { margin: 0 0 4px; display: flex; gap: 8px; align-items: center; } .roles .panel p { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
+  .roles .panel ul { margin: 0; padding-left: 18px; font-size: 13px; } .roles .panel li { margin-bottom: 3px; }
   .proto { display: grid; gap: 8px; }
   .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; }
@@ -296,6 +302,26 @@
       product: ["This works as designed", "The product does this on purpose; the reason is below. If you think it should change, send it as a suggestion."],
     },
   };
+  // What a role is for, and what it may do: an ability counts when the server says the role may do every action in it.
+  const ROLE_ABOUT = {
+    lead: "The Desk's owner is always a lead. The first lead on the list is who people ask for access or help.",
+    designer: "Shapes the designs: starts options, changes and approves them.",
+    pm: "Brings problems and ideas, and votes on the options.",
+    developer: "Brings problems and bug reports, and votes on the options.",
+    guest: "Follows along. Anyone the Desk is shared with who has no role on the list.",
+  };
+  const ABILITIES = [
+    [["ack", "ask", "comment"], "Read everything, mark changes as seen, ask and comment"],
+    [["vote", "request", "follow-up", "screens"], "Vote on options, send requests and bug reports, add screenshots"],
+    [["explore", "revise", "refresh"], "Start design options and change them in the workspace"],
+    [["approve", "close", "reopen"], "Approve designs, close and reopen requests"],
+    [["queue"], "Choose what the next call presents"],
+    [["change"], "Note changes on a product element"],
+    [["add"], "Add a missing screen or part to Product"],
+    [["build"], "Build live prototypes"],
+    [["figma"], "Work with Figma", "figma"],
+    [["share"], "Share options in Slack", "slack"],
+  ];
   const RESEARCH = { clear: "Clear to go", duplicate: "Already tracked elsewhere", deliberate: "Today's behaviour was a deliberate decision", collision: "Someone is changing this right now", unclear: "Not enough to go on — Design Desk asked you a question below" };
   const GUIDE = () => `<h2>How Design Desk works</h2>
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
@@ -316,11 +342,8 @@
 <li>Design options: usually well under an hour.</li>
 <li>The first live prototype of a request: up to an hour; later updates are faster.</li></ul>
 <p>The page updates by itself; you can close it and come back.</p>
-<h3>Who can do what</h3><ul>
-<li><b>Everyone on the list</b>: read, ask, comment.</li>
-<li><b>PMs and developers</b>: also vote and send requests.</li>
-<li><b>Designers</b>: also start options, change them in the workspace, build live prototypes, approve and close, and choose what the next call presents.</li></ul>
-<p>Your role is shown top right; ${esc(S.me?.contact || "the Desk's owner")} changes it.</p>
+<h3>Who can do what</h3>
+<p>Your role is shown top right. <a href="#" data-tab="people">People</a> lists everyone's role and what each role can do; ${esc(S.me?.contact || "the Desk's owner")} changes them.</p>
 <h3>Also here</h3><ul>
 <li><b>Next call</b> — what designers chose to show at the team's design meeting, each with a short brief; Design Desk suggests things, a designer adds them.</li>
 <li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable. A designer adds a missing screen or part with <b>+ Add</b>.</li>
@@ -451,7 +474,7 @@
   }
 
   // ---------- header and list ----------
-  const TABS = { new: "New", requests: "Requests", call: "Next call", product: "Product", guide: "How it works" };
+  const TABS = { new: "New", requests: "Requests", call: "Next call", product: "Product", people: "People", guide: "How it works" };
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
   const backBar = () => `<div class="crumb"><button class="btn small" data-back>← ${esc(S.tab === "product" && S.productFilter === "decisions" ? "Decisions" : TABS[S.tab] || "Back")}</button></div>`;
   function renderNav() {
@@ -459,7 +482,7 @@
     // Requests counts the open ones, like Next call its items; it turns amber while one waits for an answer.
     const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
     const asks = open.filter((c) => c.asks).length;
-    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["guide", TABS.guide]];
+    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["people", TABS.people], ["guide", TABS.guide]];
     $("#nav").innerHTML = tabs.map(([k, label, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`).join("");
   }
 
@@ -514,8 +537,8 @@
   function renderList() {
     const list = $("#list");
     const main = $("#main");
-    main.classList.toggle("wide", S.tab === "guide");
-    if (S.tab === "guide") { list.innerHTML = ""; return; }
+    main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
+    if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     if (S.tab === "call") { renderAgendaList(); return; }
     const cards = visibleCards();
     const f = (key, opts) => `<div class="filters">${opts.map(([k, l]) => `<button class="btn small ${S[key] === k ? "on" : ""}" data-filter="${key}:${k}">${esc(l)}</button>`).join("")}</div>`;
@@ -535,6 +558,42 @@
       <div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div>
       ${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></button>`).join("");
+  }
+
+  // ---------- people ----------
+  async function loadPeople() {
+    try { S.people = await api("GET", "/api/people"); }
+    catch { S.people = { error: `The list of people can't be loaded right now. Try again in a minute; if it keeps happening, tell ${contact()}.` }; }
+  }
+  function renderPeople() {
+    const P = S.people;
+    if (!P) return `<div class="empty">Loading…</div>`;
+    if (P.error) return `<h2>People and roles</h2><div class="panel">${esc(P.error)}</div>`;
+    const order = Object.keys(ROLE_ABOUT);
+    const people = [...P.people].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.email.localeCompare(b.email));
+    const rows = people.map((x) => `<tr><td>${esc(x.email)}${x.email === S.me?.email ? ` <span class="chip">you</span>` : ""}</td><td>${esc(roleName(x.role))}</td></tr>`).join("");
+    const shown = order.filter((r) => P.roles[r]);
+    const may = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a])).map(([, words]) => words)]));
+    // Each role says only what it adds to the largest roles below it that it covers; a role
+    // that may do just what a later one may says so.
+    const covers = (r, b) => may[b].every((w) => may[r].includes(w));
+    const roles = shown.map((r, i) => {
+      const later = shown.slice(i + 1).filter((b) => covers(r, b));
+      const same = later.find((b) => covers(b, r));
+      const smaller = later.filter((b) => !covers(b, r)), top = Math.max(0, ...smaller.map((b) => may[b].length));
+      const below = smaller.filter((b) => may[b].length === top);
+      const more = same ? [] : may[r].filter((w) => !below.some((b) => may[b].includes(w)));
+      const names = (rs) => rs.map((b) => esc(roleName(b))).join(" or ");
+      const list = same ? `<p>Same as a ${names([same])}.</p>` : below.length ? `<p>Everything a ${names(below)} can, and:</p>` : "";
+      return `<div class="panel"><h4>${esc(roleName(r))}${S.me?.role === r ? ` <span class="chip">your role</span>` : ""}</h4><p>${esc(ROLE_ABOUT[r])}</p>${list}${more.length ? `<ul>${more.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
+    }).join("");
+    return `<h2>People and roles</h2>
+      <p class="lead">Who has which role on this Desk, and what each role can do. ${esc(contact())} adds people and changes roles.</p>
+      <h3>People</h3>
+      ${rows ? `<table class="people"><thead><tr><th>Email</th><th>Role</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Nobody has a role yet.</div>`}
+      <p class="sub">The Desk's owner is always a lead. Anyone else the Desk is shared with is a viewer.</p>
+      <h3>Roles</h3>
+      <div class="roles">${roles}</div>`;
   }
 
   // ---------- decisions ----------
@@ -1103,8 +1162,9 @@
 
   function renderDetail() {
     const d = $("#detail");
-    $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || S.tab === "call");
+    $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || S.tab === "call" || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
+    if (S.tab === "people") { d.innerHTML = `<div class="guide">${renderPeople()}</div>`; return; }
     if (S.tab === "call" && !S.card) { renderAgendaDetail(); return; }
     if (S.tab === "product" && S.productFilter === "decisions") {
       d.innerHTML = S.decision ? renderDecision(S.decision) : `<div class="empty">Every decision the team made about the product, with where it was made. Pick one, or search.</div>`;
@@ -1236,7 +1296,8 @@
     const el = e.target.closest("button, a[data-tab], [data-zoom], [data-ws-note]");
     if (!el) return;
     const ds = el.dataset;
-    if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1"); return; }
+    if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1");
+      if (ds.tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); } return; }
     if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
     if (ds.card) { await openCard(ds.card); return; }

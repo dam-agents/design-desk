@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, abilities, rosterOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -22,6 +22,18 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "queue"), true);
   assert.equal(can("developer", "add"), false);
   assert.equal(can("lead", "add"), true);
+});
+
+test("the roster: the first row of an email counts, an unknown role is a guest's", () => {
+  assert.deepEqual(rosterOf([{ email: " Alice@Example.com ", role: "Designer" }, { email: "alice@example.com", role: "lead" }, { email: "dave@example.com", role: "ops" }, { email: "", role: "pm" }]),
+    [{ email: "alice@example.com", role: "designer" }, { email: "dave@example.com", role: "guest" }]);
+});
+
+test("abilities: every action, as can() answers it", () => {
+  assert.deepEqual(Object.keys(abilities("pm", ["designer"])), ACTIONS);
+  assert.equal(abilities("pm", ["designer"]).build, false);
+  assert.equal(abilities("pm", ["pm"]).build, true);
+  assert.equal(abilities("guest").vote, false);
 });
 
 test("a question goes to the inbox and the answer takes it out", () => {
