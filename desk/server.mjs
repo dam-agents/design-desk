@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES } from "./store.mjs";
+import { Store, DeskError, ROLES, abilities, rosterOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 
 const PORT = Number(process.env.DESK_PORT || 5555);
@@ -55,13 +55,7 @@ function roleOf(caller) {
   return ROLES.includes(role) ? role : "guest";
 }
 
-// The roster as roleOf reads it: the first row of an email counts, an unknown role is a guest's.
-function roster() {
-  const seen = new Set();
-  return cfgTable("Desk people").map((r) => ({ email: (r.email || "").trim().toLowerCase(), role: (r.role || "").toLowerCase() }))
-    .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
-    .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
-}
+const roster = () => rosterOf(cfgTable("Desk people"));
 
 // The roster role of a person met in Slack, by the email the workspace discloses.
 function slackRole(email) {
@@ -99,9 +93,7 @@ const VERBS = { ack: "mark changes as seen", ask: "ask questions", comment: "com
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here" };
 
-// Every action the page asks about, for /api/me (this caller) and /api/people (each role).
-const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share"];
-const canAll = (role, s) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, s.prototypeRoles)]));
+const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
 function isAgent(req) {
   const t = Buffer.from(String(req.headers["x-desk-agent-token"] || "")), want = agentToken();
@@ -140,7 +132,7 @@ async function viewerRoute(req, res, url, who) {
   const s = settings();
   const actor = { email: who.email, sub: who.sub, role: who.deskRole };
   const need = (action) => {
-    if (can(who.deskRole, action, s.prototypeRoles)) return;
+    if (canAll(who.deskRole, s)[action]) return;
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
@@ -221,8 +213,6 @@ async function agentRoute(req, res, url) {
   const p = url.pathname.split("/").filter(Boolean); // ["agent", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "inbox") return send(res, 200, JSON.parse(readFileSync(join(DIR, "inbox.json"), "utf8")));
-  // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
-  if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])) });
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: store.getCard(it.card) }); }

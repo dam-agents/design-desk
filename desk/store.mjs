@@ -34,6 +34,19 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   }
 }
 
+// Every action the page asks about: /api/me for its caller, /api/people for each role.
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share"];
+export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
+
+// The roster as the server reads a role (`## Desk people` rows): the first row of an email
+// counts, and an unknown role is a guest's.
+export function rosterOf(rows) {
+  const seen = new Set();
+  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: String(r.role || "").trim().toLowerCase() }))
+    .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
+    .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
+}
+
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "archived"];
