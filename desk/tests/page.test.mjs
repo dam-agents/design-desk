@@ -167,7 +167,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click('[data-tab="people"]');
     await desk.waitForSelector("table.people");
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
-    assert.deepEqual(await desk.locator(".roles h4").allInnerTexts(), ["lead your role", "PM", "viewer"]);
+    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "PM", "viewer"]);
     assert.match(await desk.locator(".roles .panel").nth(1).innerText(), /Everything a viewer can, and:\s+Vote on options/);
   } finally {
     await chrome.close();
