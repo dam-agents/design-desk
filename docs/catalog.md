@@ -79,7 +79,7 @@ cards' `elements` (a screen's `changes`). A redraw identical byte for byte is no
 version. The store keeps 30; the oldest go.
 
 **Drawing how it looked before** (`catalog_due` entry with `scope: "history"`, from the
-card's *Draw how it looked before*): the earlier versions from the code's history.
+card's *Draw how it looked before*, later *Draw older versions*): the earlier versions from the code's history.
 
 1. Claim; check out the repository as in step 2 above.
 2. The commits that changed it, newest first: `git -C <dir> log --first-parent
