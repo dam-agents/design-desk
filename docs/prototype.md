@@ -32,8 +32,8 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 3. **Change the code.** Implement the option the item's note names (the person picked it
    when they pressed Build), at its latest version with every applied note — in the
    product's own components, styles and copy, following the profile's `PROFILE.md`. An item
-   without a note takes the option with the most `prefer` votes from designers; on a tie ask
-   (`design desk ask C-<n> <file> --step build`) and stop. Touch only the paths `boundary.allow` admits.
+   without a note takes the card's `chosen`, the option a designer picked; without one, ask
+   which option (`design desk ask C-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
    `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
    <design-desk@users.noreply.github.com>`.

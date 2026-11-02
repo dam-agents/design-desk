@@ -111,6 +111,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await rq.button("Send").click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     assert.equal(await rq.open(), false, "Send closes the dialog");
+    assert.equal(await desk.getAttribute("#banners details.intro", "data-intro"), "requests", "a sent request opens Requests with its intro");
     const sent = await posts("/api/requests");
     assert.equal(sent.length, 1);
     assert.equal(JSON.parse(sent[0].body).problem, "Make the send button bigger");
@@ -266,53 +267,86 @@ const cards = [
 ];
 window.platform = { async request({ path }) {
   const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { request: true } }
-    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : {};
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE} : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("Needs a designer filters New and Requests, and New opens on All", async (t) => {
+// The page at the top level, so its browser storage survives a reload.
+async function open(t, bridge, fn) {
   const browser = chromium();
   if (!browser) return t.skip("no browser here");
   let pw;
   try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
   Object.assign(process.env, browser.env);
-  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", LIST + "<script>")); });
+  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", bridge + "<script>")); });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
   try {
     const desk = await chrome.newPage();
     await desk.goto(`http://127.0.0.1:${server.address().port}/`);
-    const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
-    assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
-    assert.match(await desk.textContent("#list .filters .on"), /^All$/);
-    await desk.click('[data-filter="newFilter:designer"]');
-    assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
-    assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
-    assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
-    await desk.click('[data-tab="requests"]');
-    await desk.click('[data-filter="reqFilter:designer"]');
-    assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
-    assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /Needs a designer \(2\)/);
-    await desk.reload();
-    await desk.click('[data-tab="new"]');
-    assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
+    await fn(desk);
   } finally {
     await chrome.close();
     server.close();
   }
-});
+}
 
-// A designer's Desk with an overdue change of two pictures, and a request whose build waits
-// for the answers to the agent's form.
+test("every tab but How it works opens with its intro, which stays folded once folded", (t) => open(t, LIST, async (desk) => {
+  const intro = '#banners details.intro';
+  await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
+  assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
+  assert.match(await desk.textContent(`${intro} li.off`), /Got it[\s\S]*not with your role/, "an action the role may not do says so");
+  for (const tab of ["requests", "call", "product", "people"]) {
+    await desk.click(`[data-tab="${tab}"]`);
+    await desk.waitForSelector(`${intro}[data-intro="${tab}"][open]`);
+  }
+  assert.doesNotMatch(await desk.textContent('#banners [data-intro="people"]'), /not with your role/);
+  await desk.click('[data-tab="guide"]');
+  assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
+  await desk.click('[data-tab="new"]');
+  await desk.click(`${intro} > summary`);
+  await desk.click('[data-tab="requests"]');
+  assert.equal(await desk.locator(`${intro}[open]`).count(), 1, "folding one tab's intro leaves the others open");
+  await desk.reload();
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector(`${intro}[data-intro="new"]`);
+  assert.equal(await desk.locator(`${intro}[open]`).count(), 0, "a folded intro stays folded");
+}));
+
+test("Needs a designer filters New and Requests, and New opens on All", (t) => open(t, LIST, async (desk) => {
+  const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
+  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
+  assert.match(await desk.textContent("#list .filters .on"), /^All$/);
+  await desk.click('[data-filter="newFilter:designer"]');
+  assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
+  assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
+  assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-filter="reqFilter:designer"]');
+  assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
+  assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /Needs a designer \(2\)/);
+  await desk.reload();
+  await desk.click('[data-tab="new"]');
+  assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
+}));
+
+// A designer's Desk with an overdue change of two pictures, one with where it changed, and
+// places that are in Product; and a request whose build waits for the answers to the agent's form.
 const DAY = 864e5;
 const BRIDGE_NEW = `<script>
 window.calls = [];
 const created = new Date(Date.now() - 30 * ${DAY}).toISOString();
-const svg = (c) => ({ contentType: "image/svg+xml", encoding: "utf8", data: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><rect width="4" height="3" fill="' + c + '"/></svg>' });
+const svg = (c, h = 3) => ({ contentType: "image/svg+xml", encoding: "utf8", data: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="' + h + '"><rect width="4" height="' + h + '" fill="' + c + '"/></svg>' });
+// Two before-and-after pairs with the after picture's marks: same size, and a taller after.
+const m = [{ x: 0.25, y: 0, w: 0.5, h: 0.5 }];
+const pairs = { id: "ch4", kind: "change", title: "Two pairs", created, handled: created, status: "handled", source: { repo: "acme/widgets", pr: 12 },
+  screens: [{ asset: "A-4", stage: "before", pair: "Same", marks: m }, { asset: "A-5", stage: "after", pair: "Same", marks: m },
+    { asset: "A-6", stage: "before", pair: "Taller", marks: m }, { asset: "A-7", stage: "after", pair: "Taller", marks: m }] };
 const change = { id: "ch2", kind: "change", title: "See which agents stopped", summary: "A red dot marks a stopped agent.", created, handled: null,
-  source: { repo: "acme/widgets", pr: 11 }, screens: [{ asset: "A-1", caption: "The list" }, { asset: "A-2", caption: "The card" }],
+  source: { repo: "acme/widgets", pr: 11 }, screens: [{ asset: "A-1", caption: "The list", marks: [{ x: 0.25, y: 0, w: 0.5, h: 1 / 3 }] }, { asset: "A-2", caption: "The card" }],
+  impact: { concept: "a stopped agent", places: [{ where: "Agents list", kind: "screen" }, { where: "The agent row", card: "e9", kind: "component" }, { where: "Slack alert", kind: "message" }, { where: "Agents list", kind: "message" }] },
   sections: [{ key: "what", title: "What changed", body: "- A red dot.", source: { label: "PR #11", url: "https://github.com/acme/widgets/pull/11" } },
     { key: "why", title: "Why it is like this", body: "- Owners missed stopped agents.", source: { label: "not documented" } }] };
 const request = { id: "r2", kind: "request", title: "Bigger send button", status: "feedback", created, triage: { verdict: "design", reasons: [] },
@@ -322,8 +356,9 @@ const request = { id: "r2", kind: "request", title: "Bigger send button", status
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", due_days: 21, can: { handle: true, build: true, comment: true, ask: true } }
-    : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { id: "ch3", kind: "change", title: "Handled already", status: "handled", created, handled: created, attention: { level: "designer", reasons: ["a new screen"] } }, { ...request, variants: 1, threads: undefined, asks: true }] } : path === "/api/agenda" ? { agenda: [] }
-    : path === "/api/cards/ch2" ? { card: change } : path === "/api/cards/r2" ? { card: request }
+    : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { id: "ch3", kind: "change", title: "Handled already", status: "handled", created, handled: created, attention: { level: "designer", reasons: ["a new screen"] } }, { ...request, variants: 1, threads: undefined, asks: true }, { id: "s9", kind: "screen", title: "Agents list" }, { ...pairs, screens: 4 }, { id: "e9", kind: "element", title: "Agent row" }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/ch2" ? { card: change } : path === "/api/cards/ch4" ? { card: pairs }
+    : path === "/api/assets/A-4" || path === "/api/assets/A-5" || path === "/api/assets/A-6" ? svg("white") : path === "/api/assets/A-7" ? svg("white", 6) : path === "/api/cards/r2" ? { card: request }
     : path === "/api/assets/A-1" ? svg("red") : path === "/api/assets/A-2" ? svg("blue") : path === "/api/assets/A-3" ? { contentType: "text/html", encoding: "utf8", data: "<p>Calm</p>" } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
@@ -367,6 +402,42 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.press("body", "Escape");
     assert.equal(await desk.locator(".zoom").count(), 0, "Escape closes the gallery");
 
+    // The filters stay on one line in the list's width.
+    assert.equal(new Set(await desk.$$eval("#list .filters .btn", (bs) => bs.map((b) => b.offsetTop))).size, 1, "the filters do not wrap");
+
+    // Where the change is: outlined until the switch is off, and in the gallery too.
+    const mark = '.shot[data-zoom="A-1"] .mark';
+    assert.equal(await desk.isChecked("[data-outline]"), true, "outlines are on at first");
+    assert.equal(await desk.isVisible(mark), true);
+    assert.deepEqual(await desk.$eval(mark, (m) => [m.style.left, m.style.width]), ["25%", "50%"]);
+    assert.equal(await desk.locator('.shot[data-zoom="A-2"] .mark').count(), 0, "a picture without marks has none");
+    await desk.uncheck("[data-outline]");
+    assert.equal(await desk.isVisible(mark), false, "unticked hides every outline");
+    await desk.check("[data-outline]");
+    await desk.click('[data-zoom="A-1"]');
+    await desk.waitForSelector(".zoom .mark", { state: "visible" });
+    await desk.press("body", "Escape");
+
+    // A before picture keeps the after picture's marks only when the two are the same size.
+    await desk.click('[data-card="ch4"]');
+    await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-7"] img')?.naturalHeight);
+    assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
+      [["A-4", 1], ["A-5", 1], ["A-6", 0], ["A-7", 1]], "the shorter before picture loses its frames");
+    assert.equal(await desk.getAttribute('[data-zoom="A-6"]', "data-marks"), null, "and the gallery draws none on it");
+    // Until the sizes are compared, the frames stay hidden, on the card and in the gallery.
+    await desk.$eval('[data-zoom="A-4"]', (f) => { f.dataset.frame = "A-5"; });
+    assert.equal(await desk.isVisible('[data-zoom="A-4"] .mark'), false);
+    await desk.click('[data-zoom="A-4"]');
+    await desk.waitForSelector(".zoom img");
+    assert.equal(await desk.locator(".zoom .mark").count(), 0);
+    await desk.press("body", "Escape");
+    await desk.click('[data-card="ch2"]');
+    await desk.waitForSelector(".impact", { state: "attached" });
+
+    // A place that is a screen or a part in Product opens it: by its card, or a screen or
+    // component place by its name.
+    assert.deepEqual(await desk.$$eval(".impact li", (ls) => ls.map((l) => l.querySelector(".link")?.dataset.card || null)), ["s9", "e9", null, null], "a message named like a screen does not open it");
+
     // The agent's form: one answer and one left to it, then all left to it.
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r2"]');
@@ -390,6 +461,127 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.uncheck("#confirm-form [name=check]");
     await cf("Build it").click();
     assert.equal((await sent("/api/cards/r2/actions", 2)).ask_first, false);
+  } finally {
+    await run.close();
+  }
+});
+
+// A designer's request from Slack with two options and three comments on the first: one done.
+const BRIDGE_NOTES = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const by = { email: "pat@example.com", role: "pm" };
+const note = (id, kind, state, text, more = {}) => ({ id, kind, state, anchor: { variant: "v1", selector: "button", label: "Button “Save”", view: "2", view_name: "Billing" }, messages: [{ by, at, text }], ...more });
+const request = { id: "r5", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  origin: { channel: "slack", reporter: "Carla", url: "https://acme.slack.com/archives/C0123ABCD/p1" },
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }, { id: "v2", name: "One page", asset: "A-1", fidelity: "wireframe" }],
+  threads: [note("t1", "comment", "open", "Save is easy to miss", { messages: [{ by, at, text: "Save is easy to miss" }, { by: { email: "alice@example.com", role: "designer" }, at, text: "Agreed" }] }),
+    note("t2", "concern", "open", "Too many tabs"), note("t3", "comment", "resolved", "Typo in the title")] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", slack_send: false, can: { comment: true, change: true, choose: true, share: true, vote: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 2, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r5" ? { card: request }
+    : path === "/api/cards/r5/work-in" ? { threads: JSON.parse(body).threads.map((id) => ({ id })), inbox: { id: "I-1" } }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div><div data-view="2"><button>Save</button></div></body>' } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("notes in the workspace: open and done, a whole conversation, worked in together; a designer picks the winner; designs go to the Slack thread", async (t) => {
+  const run = await launch(t, BRIDGE_NOTES);
+  if (!run) return;
+  const { desk, posts } = run;
+  const sent = async (path, n) => { await desk.waitForFunction(([p, k]) => calls.filter((c) => c.method === "POST" && c.path === p).length === k, [path, n]); return JSON.parse((await posts(path))[n - 1].body); };
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r5"]');
+    await desk.waitForSelector('[data-act="workspace"]');
+    assert.match(await desk.textContent("#detail"), /a designer picks the winner/);
+    assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
+    assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
+
+    await desk.click('[data-choose="v1"]');
+    assert.deepEqual(await sent("/api/cards/r5/chosen", 1), { variant: "v1" });
+
+    await desk.click('[data-act="slack-send"]');
+    assert.match(await desk.textContent("#cf-body"), /Slack thread this request came from/);
+    await desk.locator("#confirm-dialog .actions button", { hasText: "Send" }).click();
+    assert.deepEqual(await sent("/api/cards/r5/actions", 1), { action: "slack-send", note: JSON.stringify({ variants: "all", note: "" }) });
+
+    await desk.waitForSelector('[data-act="workspace"]');
+    await desk.click('[data-act="workspace"]');
+    await desk.waitForSelector("#ws-side .notes");
+    const shown = () => desk.$$eval("#ws-side [data-ws-note]", (ns) => ns.map((n) => n.dataset.wsNote));
+    assert.deepEqual(await shown(), ["t1", "t2"], "Open lists what is not done");
+    await desk.click('[data-ws-filter="done"]');
+    assert.deepEqual(await shown(), ["t3"]);
+    await desk.click('[data-ws-note="t3"]');
+    await desk.click('#ws-side [data-reopen="t3"]');
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/threads/t3/reopen"));
+    await desk.click('[data-ws-filter="open"]');
+    await desk.click('[data-ws-note="t1"]');
+    assert.match(await desk.textContent('[data-ws-note="t1"]'), /Save is easy to miss[\s\S]*Agreed/, "a picked note shows its whole conversation");
+    await desk.fill('#ws-side [data-reply="t1"]', "Make it primary");
+    await desk.click('#ws-side [data-send-reply="t1"]');
+    assert.deepEqual(await sent("/api/threads/t1/messages", 1), { text: "Make it primary" });
+    await desk.waitForSelector('#ws-side [data-work-in="t1,t2"]');
+    await desk.click('#ws-side [data-work-in="t1,t2"]');
+    assert.deepEqual(await sent("/api/cards/r5/work-in", 1), { threads: ["t1", "t2"] });
+  } finally {
+    await run.close();
+  }
+});
+
+// The review bar a build puts into every design (toolkit/chrome/review-bar.html), in the
+// workspace's frame: it acts in Select mode, and only a click on the design picks.
+const BAR = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "chrome", "review-bar.html"), "utf8");
+const WITH_BAR = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Billing"><button>Save</button></div></body>`;
+const BRIDGE_BAR = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const request = { id: "r6", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }], threads: [] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r6" ? { card: request }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(WITH_BAR).replace(/</g, "\\u003c")} } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks", async (t) => {
+  const run = await launch(t, BRIDGE_BAR);
+  if (!run) return;
+  const { top, desk } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r6"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('#review [data-review-view="2"]');
+    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair"); // Select mode reached the frame
+    // The frame outlines what the pointer is on with a dashed box; nothing else here is dashed.
+    const outlined = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
+
+    await frame.hover('[data-view="1"] button');
+    await frame.waitForFunction(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
+    await frame.hover('#review [data-review-view="2"]');
+    await top.waitForTimeout(300);
+    assert.equal(await outlined(), false, "a hover on the review bar outlines nothing");
+
+    await frame.click('#review [data-review-view="2"]');
+    await top.waitForTimeout(300);
+    assert.match(await frame.getAttribute('[data-view="2"]', "class"), /review-shown/, "the bar switched the view");
+    assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "a click on the review bar picks nothing");
+
+    await frame.click('[data-view="2"] button');
+    await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
+    assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
   } finally {
     await run.close();
   }

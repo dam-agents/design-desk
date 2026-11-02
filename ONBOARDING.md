@@ -161,7 +161,9 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
 6. **Slack** — only when a Slack channel is bound: "Should I announce new cards and request
    steps in the channel?" (`notify`, default `disabled`) and "Should designers be able to
    share design options there for votes and comments?" (`slack_polls`, default `disabled`;
-   `slack_poll_channel` when the agent is bound to more than one channel), "Should people be
+   `slack_poll_channel` when the agent is bound to more than one channel), "Should designers be
+   able to send pictures of the designs to the channel?" (`slack_send`, default `disabled`; a
+   request from Slack gets them in its thread anyway), "Should people be
    able to ask for design changes in a request's thread and get the pictures back there?"
    (`slack_council`, default `disabled`). And "Should the weekly UX digest also go to the
    channel?" (`digest: slack`; default `desk`, only on the Desk).
@@ -213,6 +215,7 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 - max_screen_prs: 2
 - slack_polls: disabled
 - slack_poll_channel:
+- slack_send: disabled
 - digest: desk
 - slack_council: disabled
 - council_sync_min: 30

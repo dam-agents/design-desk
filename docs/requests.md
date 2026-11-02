@@ -100,20 +100,24 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   (the skill says what distinct means), each one self-contained HTML file built into the
   real screen in the product's own styles; `fidelity: wireframe` (`--style wireframe`,
   grayscale boxes) when the question is structure or flow, `mockup` (the product's styles)
-  when it is the look. A `needs-developer` request still gets variants; the parts a
+  when it is the look. An option that spans several screens is one view per screen, each
+  control that leads on wired to its view (the `variants` skill → Flow). A `needs-developer` request still gets variants; the parts a
   developer must add are drawn and labelled "needs a developer" in the variant.
 - **revise** — two kinds of work arrive as `revise`:
   - **Notes on elements** from the design workspace: threads of kind `change`, each anchored
     to one option (`anchor.variant`) and, usually, one element (`anchor.selector`, its text and
-    a plain `label`; `anchor.edit` is a text the person typed in place: `{from, to}`). Apply
+    a plain `label`; `anchor.view`/`view_name` the view it is on; `anchor.edit` is a text the
+    person typed in place: `{from, to}`). A comment a designer pressed **Work it in** on is one
+    too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its
     new asset: the Desk numbers the version and keeps the earlier one. Then answer each note
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
-    what people preferred, drop a direction nobody preferred when there is a clear winner,
-    and add one comment listing what changed per comment.
+    what people preferred, and add one comment listing what changed per comment. Never drop
+    or merge an option on votes: only a designer's pick (the card's `chosen`, **Pick as the
+    winner**) says which option wins, and only a designer removes one.
 
   People wait for notes with the page open, so a note's run is short: change only what the
   notes ask, rebuild only that option, and before closing the item look at the inbox once
