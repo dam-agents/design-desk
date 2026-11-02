@@ -30,9 +30,11 @@ served by the Desk server through the platform's Artifact API relay.
   desk.html`, `interactive: true`, the file's content, private. Write its id to
   `work/CONFIG.md` as `desk_artifact`.
 - A definition update that changes `desk/page.html` republishes it with `update_artifact` on
-  the same id, so the link and the owner's sharing stay. When the update also changes the
-  server (`desk/server.mjs`, `desk/store.mjs`), restart the server first and republish
-  second: a new server must accept the old page, an old server drops what a new page sends.
+  the same id, so the link and the owner's sharing stay. When the update also changes a file
+  the server runs (`desk/serve.sh`, `desk/server.mjs`, `desk/store.mjs`,
+  `toolkit/lib/core.mjs`), restart the server first and republish second: a new server
+  must accept the old page, an old server drops what a new page sends. When unsure whether
+  the server changed, restart it anyway; a restart is safe to repeat.
 - **Where it works.** An interactive page talks to its agent only on its share link (for the
   people on the list, the owner included) or docked in this agent's own chat; opened from
   the Artifacts page elsewhere, it shows but cannot load or save. Tell people to use the link.

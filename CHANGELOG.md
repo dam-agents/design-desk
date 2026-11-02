@@ -14,10 +14,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
    ([docs/desk.md](docs/desk.md) → **Publishing the page**).
 
-Both steps are safe to repeat. Crossing 1.3.0 in the same upgrade, these two replace its
-two steps ([docs/persistence.md](docs/persistence.md) → **Migration**, step 1): the new
-server accepts the old page (a card it adds presents the favourite option), but the old
-server drops the new page's option pick.
+Both steps are safe to repeat. Every republish step of an older crossed block (1.3.0,
+1.2.1 and earlier) runs after this restart, as this one republish
+([docs/persistence.md](docs/persistence.md) → **Migration**, step 1): the new server
+accepts the old page (a card it adds presents the favourite option), but the old server
+drops the new page's option pick.
 
 ## 1.3.0 — 2026-11-02
 

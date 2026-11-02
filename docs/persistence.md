@@ -79,7 +79,10 @@ All equal → report "up to date".
 
 1. Read the `CHANGELOG.md` **Upgrade** blocks of every version in `(from, to]` before you
    run any step. A newer block can replace an older block's steps (a corrected order): run
-   the newer steps in their place. Then apply the blocks oldest first. Steps are idempotent
+   the newer steps in their place. Then apply the blocks oldest first, with one exception:
+   when the crossed blocks restart the Desk server and republish the Desk page, restart the
+   server once before any republish, then republish the page once, whichever blocks name
+   them ([desk.md](desk.md) → **Publishing the page**). Steps are idempotent
    (check before create), so re-running a partial attempt is safe; an operator-only step is
    surfaced, never guessed at.
 2. **Offer every optional feature the crossed versions add.** An **Upgrade** block that
