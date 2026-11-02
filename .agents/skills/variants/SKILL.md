@@ -144,6 +144,10 @@ never on the page.
 
 Rules — `design build` enforces the mechanical ones:
 
+- **Both placeholders stay.** `<!-- design:css -->` in `<head>` and `<!-- design:review-bar -->`
+  at the top of `<body>`. The bar is what carries the view switcher, day and night, the
+  style line, and the script that anchors a picker menu; a page without it still builds but
+  loses all of that, so `design build` refuses it.
 - **Translate JSX to HTML, keep the classes.** Each view is the full frame the shell renders,
   with your change inside it — never a floating card on a blank page. Copy `className` strings
   verbatim; resolve conditionals with the props the screen would really have; follow

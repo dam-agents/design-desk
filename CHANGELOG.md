@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.11.1 — 2026-11-02
+
+**Upgrade:**
+Nothing — `~/bin/design` runs the toolkit from the checkout, so the new build check applies
+once the change is pulled. A page it now refuses is a source missing one of its two
+placeholders (`<!-- design:css -->`, `<!-- design:review-bar -->`), so fix the source, not
+the build.
+
 ## 1.11.0 — 2026-11-02
 
 **Upgrade:**
