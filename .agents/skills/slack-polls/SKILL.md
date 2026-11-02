@@ -56,8 +56,9 @@ The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`.
    choice are on the Design Desk: <Desk link>", the link as in Share → 2. Then one reply per
    option, its pictures attached: "*<name>* — <its one line on when it wins>". The pick is a
    designer's on the Desk; never ask Slack to choose.
-4. `design desk done I-<n> --session <id> --outcome sent`. These posts are not tracked: a reply
-   under one is not relayed, so the message points people to the Desk for comments.
+4. `design desk done I-<n> --session <id> --outcome sent`. The Desk keeps no record of these
+   posts. A reply under them reaches the Desk only in a request thread with a council
+   (`slack-council` → Each round), so the message points people to the Desk for comments.
 
 ## Sync (`polls_due`, `close: false`)
 

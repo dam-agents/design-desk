@@ -455,3 +455,56 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await run.close();
   }
 });
+
+// The review bar a build puts into every design (toolkit/chrome/review-bar.html), in the
+// workspace's frame: it acts in Select mode, and only a click on the design picks.
+const BAR = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "chrome", "review-bar.html"), "utf8");
+const WITH_BAR = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Billing"><button>Save</button></div></body>`;
+const BRIDGE_BAR = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const request = { id: "r6", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }], threads: [] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r6" ? { card: request }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(WITH_BAR).replace(/</g, "\\u003c")} } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks", async (t) => {
+  const run = await launch(t, BRIDGE_BAR);
+  if (!run) return;
+  const { top, desk } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r6"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('#review [data-review-view="2"]');
+    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair"); // Select mode reached the frame
+    // The frame outlines what the pointer is on with a dashed box; nothing else here is dashed.
+    const outlined = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
+
+    await frame.hover('[data-view="1"] button');
+    await frame.waitForFunction(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
+    await frame.hover('#review [data-review-view="2"]');
+    await top.waitForTimeout(300);
+    assert.equal(await outlined(), false, "a hover on the review bar outlines nothing");
+
+    await frame.click('#review [data-review-view="2"]');
+    await top.waitForTimeout(300);
+    assert.match(await frame.getAttribute('[data-view="2"]', "class"), /review-shown/, "the bar switched the view");
+    assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "a click on the review bar picks nothing");
+
+    await frame.click('[data-view="2"] button');
+    await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
+    assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
+  } finally {
+    await run.close();
+  }
+});
