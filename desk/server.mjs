@@ -55,6 +55,14 @@ function roleOf(caller) {
   return ROLES.includes(role) ? role : "guest";
 }
 
+// The roster as roleOf reads it: the first row of an email counts, an unknown role is a guest's.
+function roster() {
+  const seen = new Set();
+  return cfgTable("Desk people").map((r) => ({ email: (r.email || "").trim().toLowerCase(), role: (r.role || "").toLowerCase() }))
+    .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
+    .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
+}
+
 // The roster role of a person met in Slack, by the email the workspace discloses.
 function slackRole(email) {
   if (!email) return "slack";
@@ -90,6 +98,10 @@ function settings() {
 const VERBS = { ack: "mark changes as seen", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here" };
+
+// Every action the page asks about, for /api/me (this caller) and /api/people (each role).
+const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share"];
+const canAll = (role, s) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, s.prototypeRoles)]));
 
 function isAgent(req) {
   const t = Buffer.from(String(req.headers["x-desk-agent-token"] || "")), want = agentToken();
@@ -137,9 +149,10 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share"];
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, handoff: s.handoff });
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, handoff: s.handoff });
   }
+  // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
+  if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])) });
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
@@ -208,6 +221,8 @@ async function agentRoute(req, res, url) {
   const p = url.pathname.split("/").filter(Boolean); // ["agent", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "inbox") return send(res, 200, JSON.parse(readFileSync(join(DIR, "inbox.json"), "utf8")));
+  // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
+  if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])) });
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: store.getCard(it.card) }); }

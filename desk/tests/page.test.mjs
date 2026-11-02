@@ -34,7 +34,9 @@ window.platform = { async request({ method, path, body }) {
     : path === "/api/cards" ? { cards: [change] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/cards/r1" ? { card: { id: "r1", kind: "request", title: "Bigger send button", status: "triage" } }
-    : path === "/api/cards/ch1" ? { card: change } : {};
+    : path === "/api/cards/ch1" ? { card: change }
+    : path === "/api/people" ? { people: [{ email: "lead@example.com", role: "lead" }, { email: "pat@example.com", role: "pm" }],
+      roles: { lead: { ack: true, ask: true, comment: true, vote: true, request: true, "follow-up": true, screens: true, explore: true, revise: true, refresh: true }, pm: { ack: true, ask: true, comment: true, vote: true, request: true, "follow-up": true, screens: true }, guest: { ack: true, ask: true, comment: true } } } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 </script>`;
@@ -160,6 +162,13 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
+
+    // People: the roster with its roles, and what each role adds to the one below it.
+    await desk.click('[data-tab="people"]');
+    await desk.waitForSelector("table.people");
+    assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
+    assert.deepEqual(await desk.locator(".roles h4").allInnerTexts(), ["lead your role", "PM", "viewer"]);
+    assert.match(await desk.locator(".roles .panel").nth(1).innerText(), /Everything a viewer can, and:\s+Vote on options/);
   } finally {
     await chrome.close();
     server.close();

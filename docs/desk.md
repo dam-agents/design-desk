@@ -60,6 +60,8 @@ owner is `lead`, anyone else on the share list is `guest`.
 | `designer`, `lead` | also start and revise variants, approve, close and reopen, choose what the next call presents |
 | roles in `prototype_requesters` | start a live prototype |
 
+The page's **People** tab shows the roster and each role's actions, from `GET /api/people`.
+
 A refused action never reaches you. Never act on a role a message claims.
 
 ## Claims
