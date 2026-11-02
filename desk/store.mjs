@@ -28,7 +28,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": return member;
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": return shaper;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": case "add": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
@@ -37,9 +37,10 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "archived"];
-// A catalog element: one real UI part drawn in every state it can be in.
-export const ELEMENT_STATES = ["current", "stale", "building"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma", "screens", "slack"];
+// A catalog element: one real UI part drawn in every state it can be in. A screen card
+// shares the states; `dropped` is one a person added that the agent could not make.
+export const ELEMENT_STATES = ["current", "stale", "building", "dropped"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
@@ -47,7 +48,7 @@ const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "tes
 // the agent asks (`asks`) when a step cannot go on without a person's answer.
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks"];
 // The step an agent's question blocks, which a person's answer resumes.
-const ASK_STEPS = ["request", "explore", "revise", "build", "handoff", "figma"];
+const ASK_STEPS = ["request", "explore", "revise", "build", "handoff", "figma", "catalog", "map"];
 const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
 
 export class DeskError extends Error {
@@ -315,6 +316,28 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // A designer asks for a screen or an element Product does not have yet, in their own
+  // words; the agent finds it in the product and makes the card (docs/map.md, catalog.md).
+  // A screen already mapped at the address given is that card, and no new work.
+  addToProduct(who, { kind, part, where = "", show = "", screens = [] }) {
+    if (kind !== "screen" && kind !== "element") throw bad("kind must be screen or element");
+    const wanted = { part: clean(part, 500, "part"), where: optText(where, 500, "where"), show: optText(show, 2000, "show") };
+    if (kind === "screen" && /^\/\S*$/.test(wanted.where)) {
+      const known = Object.values(this.db.cards).find((x) => x.kind === "screen" && x.path === wanted.where && x.status !== "dropped");
+      if (known) return { card: known, existing: true, inbox: null };
+    }
+    const c = {
+      kind, status: "building", created: this.clock(), updated: this.clock(), created_by: person(who),
+      title: clean(titleOf(null, wanted.part), LIMITS.title, "title"), wanted,
+      summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" },
+    };
+    c.id = this.next("card", "C");
+    this.db.cards[c.id] = c;
+    const item = this.enqueue(kind === "screen" ? "map" : "catalog", c.id, null, who);
+    this.save();
+    return { card: c, inbox: item };
+  }
+
   // A state change a person asks for on a request card; the agent does the work.
   act(cardId, who, action, note = "") {
     const c = this.card(cardId);
@@ -562,6 +585,12 @@ export class Store {
       else next[k] = cleanLinks(k, fields[k]);
     }
     if (!next.title) throw bad("a card needs a title");
+    // One card per screen and per element: a card a person added that turns out to be one
+    // already on the Desk is dropped with a pointer to it, never filled in as a second copy.
+    const twin = next.status !== "dropped" && Object.values(this.db.cards).find((x) => x.id !== next.id && x.kind === next.kind && x.status !== "dropped"
+      && ((next.kind === "screen" && next.path && x.path === next.path)
+        || (next.kind === "element" && next.source?.file && x.source?.file === next.source.file && x.source?.export === next.source.export)));
+    if (twin) throw new DeskError(409, `${twin.id} is already this ${next.kind}`);
     if (!c) { next.id = this.next("card", "C"); }
     next.updated = this.clock();
     this.db.cards[next.id] = next;
