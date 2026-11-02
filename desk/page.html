@@ -446,8 +446,15 @@
     $("#banners").innerHTML = out.join("");
   }
 
-  // What waits for a designer (docs/desk.md → Needs a designer): a change until you saw it.
-  const forDesigner = (c) => c.attention?.level === "designer" && !(c.kind === "change" && c.acked) && !closed(c);
+  // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
+  // saw it, a request until it is closed, and either while it is suggested for the next call.
+  const designerReasons = (c) => {
+    if (c.attention?.level !== "designer") return [];
+    if (!(c.kind === "change" && c.acked) && !closed(c)) return c.attention.reasons;
+    return c.suggested ? ["Suggested for the next call"] : [];
+  };
+  const forDesigner = (c) => designerReasons(c).length > 0;
+  const attentionLine = (c) => (c.attention ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
   const newCards = (filter) => S.cards.filter((c) => (c.kind === "change" || c.kind === "digest")
     && (filter === "all" || (filter === "designer" ? forDesigner(c) : !c.acked)));
   const requestCards = (filter) => S.cards.filter((c) => c.kind === "request"
@@ -480,14 +487,14 @@
     } else if (c.kind === "change") {
       if (c.in_progress) out.push(`<span class="chip warn">In progress — not shipped yet</span>`);
       if (c.acked) out.push(`<span class="chip ok">✓ Seen</span>`);
-      if (forDesigner(c)) out.push(`<span class="chip warn" title="${esc(c.attention.reasons.join(" · "))}">Needs a designer: ${esc(c.attention.reasons[0])}</span>`);
+      if (forDesigner(c)) out.push(`<span class="chip warn" title="${esc(designerReasons(c).join(" · "))}">Needs a designer: ${esc(designerReasons(c)[0])}</span>`);
       else if (c.attention?.level === "fyi" && !c.acked) out.push(`<span class="chip ok" title="${esc(c.attention.reasons.join(" · "))}">Nothing to decide</span>`);
       if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
       if (c.automated) out.push(`<span class="chip info">🧪 From automated tests</span>`);
       if (c.asks && !closed(c)) out.push(`<span class="chip warn">Waiting for your answer</span>`);
       else out.push(`<span class="chip ${c.busy ? "info" : ""}">${c.busy ? "● " : ""}${esc(STATUS[c.status] || c.status)}</span>`);
-      if (forDesigner(c) && !c.asks) out.push(`<span class="chip warn" title="${esc(c.attention.reasons.join(" · "))}">Needs a designer</span>`);
+      if (forDesigner(c) && !c.asks) out.push(`<span class="chip warn" title="${esc(designerReasons(c).join(" · "))}">Needs a designer</span>`);
       if (c.type === "bug") out.push(`<span class="chip bad">🐛 Broken</span>`);
       else if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
@@ -665,7 +672,7 @@
       <div class="sub">${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
-      ${c.attention ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : ""}
+      ${attentionLine(c)}
       <div class="actions">
         <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Marks it seen for you: it leaves Not seen yet and Needs a designer; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
         <button class="btn" data-focus-composer>Ask a question</button>
@@ -883,6 +890,7 @@
       <div class="sub">${c.origin?.automated ? `<span class="chip info">🧪 From automated tests</span>` : ""}${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.automated ? `<span>found by <b>${esc(c.origin.tool || "an automated test")}</b>${c.origin.check ? ` · ${esc(c.origin.check)} check` : ""}${c.origin.severity ? ` · ${esc(c.origin.severity)} severity` : ""}${c.origin.build ? ` · ${esc(c.origin.build)}` : ""}</span>` : c.origin?.reporter ? `<span>reported by <b>${esc(c.origin.reporter)}</b></span>` : `<span>by ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span>${origin}</div>
       ${renderSteps(c)}
       ${renderStatus(c)}
+      ${attentionLine(c)}
       <div class="section">${r.type === "bug" ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.goal ? `${r.type === "bug" ? "<h4>What should happen</h4>" : ""}${md(r.goal)}` : ""}${r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(c.screens)}
       ${renderVerdict(c)}

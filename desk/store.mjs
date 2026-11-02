@@ -167,11 +167,14 @@ export class Store {
 
   // Whether a card waits for a designer, and why (docs/desk.md → Needs a designer). A
   // change card carries the agent's judgement; a request's comes from where it stands;
-  // a suggestion for the next call waits for a designer on either. Null: not judged.
+  // a suggestion for the next call waits for a designer on either, whatever its status.
+  // Null: not judged.
   attentionOf(c) {
     if (c.kind !== "change" && c.kind !== "request") return null;
+    const suggested = c.call_suggestion ? ["Suggested for the next call"] : [];
+    if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
+      return suggested.length ? { level: "designer", reasons: suggested } : null;
     const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
-    if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined")) return null;
     if (c.kind === "request") {
       const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
@@ -180,14 +183,14 @@ export class Store {
       else if (!busy && c.status === "feedback") reasons.push("Options are ready: pick one or ask for changes");
       else if (!busy && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
-    if (c.call_suggestion) reasons.push("Suggested for the next call");
+    reasons.push(...suggested);
     if (reasons.length) return { level: "designer", reasons };
     return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
   }
 
   getCard(id) {
     const c = this.card(id);
-    return { ...c, threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    return { ...c, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.

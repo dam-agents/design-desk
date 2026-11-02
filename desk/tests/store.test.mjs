@@ -265,4 +265,14 @@ test("needs a designer: the agent judges a change, a request's comes from where 
   assert.deepEqual(att(req.id).reasons, ["Suggested for the next call"], "a suggestion waits for a designer even while Design Desk works");
   s.act(req.id, alice, "close");
   assert.equal(att(req.id), null, "a closed request waits for nobody");
+
+  // A suggestion keeps a handed-off request in the filter, and every read agrees.
+  const { card: shipped } = s.createRequest(alice, { problem: "The header is too tall." });
+  s.upsertCard({ id: shipped.id, status: "handed-off" });
+  assert.equal(att(shipped.id), null);
+  s.suggestForCall(shipped.id, "Worth showing");
+  assert.deepEqual(att(shipped.id), { level: "designer", reasons: ["Suggested for the next call"] });
+  assert.deepEqual(s.getCard(shipped.id).attention, att(shipped.id), "the card read and the list read agree");
+  s.suggestForCall(change.id, "A new pattern");
+  assert.deepEqual(s.getCard(change.id).attention, { level: "designer", reasons: ["Suggested for the next call"] }, "a suggestion outranks the agent's fyi");
 });

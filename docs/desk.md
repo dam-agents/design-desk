@@ -131,7 +131,9 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are ready, or its live prototype is ready to approve.
 - **A suggestion for the next call** puts either kind on it until a designer adds it or says
-  **Not now**.
+  **Not now**, even once the card was seen or the request closed.
+- Every read of a card (the list, the card, `design desk item`) returns the derived
+  `attention`; what you write on a change is only your judgement.
 
 ## Writing on the Desk
 
