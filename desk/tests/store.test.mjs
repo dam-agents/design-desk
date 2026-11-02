@@ -43,9 +43,11 @@ test("a lead asks for a new person: one item with no card, the roster and open a
   assert.throws(() => s.askForPerson(lead, { email: "carol@example.com", role: "lead" }, roster), /role must be one of/);
   assert.throws(() => s.askForPerson(lead, { email: "a|b@example.com", role: "pm" }, roster), /not an email/);
   // The agent claims it without a card and answers it with its outcome.
+  assert.equal(item.by.owner, undefined, "a roster lead is not the owner");
+  assert.equal(s.askForPerson({ email: "own@example.com", role: "lead" }, { email: "dee@example.com", role: "developer" }, roster, { owner: true }).inbox.by.owner, true);
   assert.equal(s.claim(item.id, "run-1").card, null);
   s.done(item.id, "run-1", "added");
-  assert.deepEqual(s.peopleAsks().map((a) => [a.email, a.state, a.outcome, a.by]), [["alex@example.com", "done", "added", "lee@example.com"]]);
+  assert.deepEqual(s.peopleAsks().map((a) => [a.email, a.state, a.outcome, a.by]), [["dee@example.com", "open", null, "own@example.com"], ["alex@example.com", "done", "added", "lee@example.com"]]);
 });
 
 test("abilities: every action, as can() answers it", () => {

@@ -1761,7 +1761,7 @@
   // ---------- the Add a person dialog ----------
   function openPersonDialog() {
     $("#person-form").reset();
-    $("#pe-roles").innerHTML = ["designer", "pm", "developer"].map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> ${esc(roleName(r))} <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
+    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> ${esc(roleName(r))} <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
     const dlg = $("#person-dialog"); dlg.returnValue = ""; dlg.showModal();
   }
   $("#person-dialog").addEventListener("close", guard(async (e) => {

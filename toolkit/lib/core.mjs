@@ -57,6 +57,27 @@ export function cfgTable(heading) {
   return rows;
 }
 
+// work/CONFIG.md with one more `| email | role |` row in `## Desk people`: after its
+// last row, or a new table at the end. A cell that could break the table, or an email
+// already on it, is refused (docs/desk.md → People).
+export function withRosterRow(text, email, role) {
+  for (const v of [email, role]) if (!/^[^\s|`<>]+$/.test(String(v || ""))) throw new Error(`"${v}" cannot go in the table`);
+  const lines = text.split("\n");
+  const start = lines.findIndex((l) => l.trim() === "## Desk people");
+  const row = `| ${email} | ${role} |`;
+  if (start < 0) return `${text.replace(/\n*$/, "\n")}\n## Desk people\n\n| email | role |\n| --- | --- |\n${row}\n`;
+  let end = lines.length, last = -1;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^#{1,2} /.test(lines[i])) { end = i; break; }
+    if (lines[i].trim().startsWith("|")) last = i;
+  }
+  const taken = lines.slice(start + 1, end).some((l) => l.trim().startsWith("|") && (l.split("|")[1] || "").trim().replace(/^[`"']|[`"']$/g, "").toLowerCase() === email.toLowerCase());
+  if (taken) throw new Error(`${email} is already on the list`);
+  if (last < 0) lines.splice(start + 1, 0, "", "| email | role |", "| --- | --- |", row);
+  else lines.splice(last + 1, 0, row);
+  return lines.join("\n");
+}
+
 // The browser every screenshot, PDF and video uses. Order: $CHROMIUM, the image's
 // Playwright Chromium, the one install-toolkit.sh unpacked into DATA, one on PATH.
 export function chromium() {

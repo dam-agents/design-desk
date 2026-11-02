@@ -1,9 +1,10 @@
 // design desk <command> — the agent's side of the Desk. Every write goes through the
 // Desk server (its store has one writer), authenticated by work/desk/.agent-token.
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { WORK, fail } from "../lib/core.mjs";
+import { WORK, fail, cfgTable, withRosterRow } from "../lib/core.mjs";
+import { ADDABLE_ROLES } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
@@ -12,6 +13,8 @@ const USAGE = `usage: design desk <command>
   claim <I-n> --session <id> [--takeover]  claim an item for this run (or DESK_SESSION)
   done <I-n> --session <id> [--outcome <text>]
                                            mark a claimed item done, with the same id
+  person <I-n> --session <id>              work a lead's ask to add a person: re-check it, add the
+                                           row to ## Desk people, and mark the item done
   cards [--kind change|request]            list cards
   card <C-n>                               one card with its threads
   upsert <card.json|->                     create or update a card (agent fields only)
@@ -99,6 +102,45 @@ export async function call(method, path, body) {
 
 const out = (o) => console.log(JSON.stringify(o, null, 1));
 
+// A lead's ask to add a person (docs/desk.md → People), checked again now: the asker is
+// the owner or still a lead, the role one a lead may give, the email not on the list yet.
+async function person(id, session) {
+  const { item } = await call("GET", `/agent/items/${id}`);
+  if (item.kind !== "person" || !item.person) fail(`${id} is not an ask to add a person`);
+  const { email, role } = item.person;
+  const asker = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === String(item.by?.email || "").toLowerCase());
+  let why = !item.by?.owner && (asker?.role || "").toLowerCase() !== "lead" ? `${item.by?.email || "the person who asked"} is no longer a lead.`
+    : !ADDABLE_ROLES.includes(role) ? `a lead cannot give the role ${role}.` : "";
+  if (!why) {
+    try { addRosterRow(email, role); } catch (e) { why = `${e.message}.`; }
+  }
+  const outcome = why ? `not added: ${why}` : "added";
+  await call("POST", `/agent/items/${id}/done`, { session, outcome });
+  return { item: id, email, role, outcome };
+}
+
+// One writer of work/CONFIG.md at a time (a ping session and an inbox run may meet):
+// a mkdir lock, the file read again under it, and a whole-file rename.
+function addRosterRow(email, role) {
+  const path = join(WORK, "CONFIG.md"), lock = join(WORK, ".CONFIG.lock");
+  for (let waited = 0; ; waited += 1) {
+    try { mkdirSync(lock); break; } catch (e) {
+      if (e.code !== "EEXIST") throw e;
+      let age = 0; try { age = (Date.now() - statSync(lock).mtimeMs) / 1000; } catch { continue; }
+      if (age > 60) { try { rmdirSync(lock); } catch {} continue; }
+      if (waited >= 120) throw new Error("work/CONFIG.md stayed locked for two minutes");
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+    }
+  }
+  try {
+    let text = "";
+    try { text = readFileSync(path, "utf8"); } catch (e) { if (e.code !== "ENOENT") throw e; }
+    const tmp = `${path}.tmp-${process.pid}`;
+    writeFileSync(tmp, withRosterRow(text, email, role));
+    renameSync(tmp, path);
+  } finally { try { rmdirSync(lock); } catch {} }
+}
+
 export async function main(_cmd, argv) {
   const [sub, ...rest] = argv;
   const { pos, f } = flags(rest);
@@ -115,6 +157,10 @@ export async function main(_cmd, argv) {
     case "done":
       if (!session) fail("pass --session <the id you claimed with> (docs/desk.md → Claims)");
       return out(await call("POST", `/agent/items/${pos[0]}/done`, { session, outcome: f.outcome || "done" }));
+    case "person": {
+      if (!session) fail("pass --session <the id you claimed with> (docs/desk.md → Claims)");
+      return out(await person(pos[0], session));
+    }
     case "cards": return out(await call("GET", `/agent/cards${f.kind ? `?kind=${encodeURIComponent(f.kind)}` : ""}`));
     case "card": return out(await call("GET", `/agent/cards/${pos[0]}`));
     case "upsert": {

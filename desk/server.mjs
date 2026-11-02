@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES, abilities, rosterOf } from "./store.mjs";
+import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 
 const PORT = Number(process.env.DESK_PORT || 5555);
@@ -148,7 +148,7 @@ async function viewerRoute(req, res, url, who) {
     return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, screens: s.screens, handoff: s.handoff, due_days: s.dueDays });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
-  if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks() });
+  if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
@@ -191,7 +191,7 @@ async function viewerRoute(req, res, url, who) {
     return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma }), s, who));
   }
   // A lead asks for a new person on the list; the agent writes the row (docs/desk.md → People).
-  if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role, note: b.note }, roster()), s, who)); }
+  if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role, note: b.note }, roster(), { owner: who.role === "owner" }), s, who)); }
   if (m === "POST" && p[1] === "product") {
     need("add");
     if (b.kind === "screen" && !s.screens) throw new DeskError(400, `Screens need Design Desk's own copy of the product, which is not turned on yet. Ask ${s.contact}.`);

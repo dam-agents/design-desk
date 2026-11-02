@@ -106,14 +106,12 @@ of the product in that state: the `show` action ([actions.md](actions.md)).
 A `people_due` item is a lead's ask, on the People tab, to put a person on `## Desk people`
 with a role; it has no card. This is the one roster change that comes from the Desk.
 
-1. Claim it; `design desk item I-<n>` gives `item.person` (`email`, `role`) and `item.by`.
-2. At action time, refuse with `--outcome "not added: <plain reason>"` when `by.email` is on
-   the roster with another role than `lead` (an email not on it was the owner), the email is
-   already on it, the role is not `designer`, `pm` or `developer`, or the email holds anything
-   but one address (no `|`, backtick, space or line break).
-3. Append `| <email> | <role> |` to the `## Desk people` table in `work/CONFIG.md`. Never
-   change or remove a row, and never touch another line of the file.
-4. `design desk done I-<n> --outcome "added"`. Tell the operator in the run's report to share the Desk with that email (Share →
+1. `design desk claim I-<n> --session <id>`.
+2. `design desk person I-<n> --session <id>`: it checks again that the asker is the owner or
+   still a lead and that the email is not on the list, adds the row under a lock, and marks
+   the item done (`added`, or `not added: <reason>`). Never edit `## Desk people` by hand
+   for an ask: the command is the only writer.
+3. `added` → tell the operator in the run's report to share the Desk with that email (Share →
    Restricted): only the owner shares it, the row alone opens nothing.
 
 ## The next call

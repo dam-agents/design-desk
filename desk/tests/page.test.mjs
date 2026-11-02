@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, req } from "../../toolkit/lib/core.mjs";
-import { ROLES, abilities } from "../store.mjs";
+import { ROLES, ADDABLE_ROLES, abilities } from "../store.mjs";
 
 const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "page.html"), "utf8");
 
@@ -28,7 +28,7 @@ test("nothing on the page submits a form", () => {
 // an answer.
 // /api/people as the server builds it: every role, with the default prototype_requesters.
 const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "lead" }, { email: "pat@example.com", role: "pm" }],
-  roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "lead"])])) });
+  roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "lead"])])), addable: ADDABLE_ROLES });
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45", author: "dana" } };
