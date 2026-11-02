@@ -40,7 +40,7 @@ const requests = [
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
-  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true } }
+  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true } }
     : path === "/api/cards" ? { cards: [change, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
@@ -235,11 +235,24 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "PM", "developer", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Same as a designer\./, "a role with a later one's rights says so");
+    assert.match(await panel(0), /Everything a designer can, and:\s+Ask Design Desk to add people to the list/, "only a lead adds people");
     assert.match(await panel(1), /Everything a PM or developer can, and:\s+Start design options[\s\S]*Build live prototypes/, "tied roles below are named together");
     assert.match(await panel(2), /Same as a developer\./);
     assert.match(await panel(3), /Everything a viewer can, and:\s+Vote on options/);
     assert.doesNotMatch(await panel(4), /Everything|Same as/, "the smallest role lists its own");
+
+    // A lead asks Design Desk to add a person with a role; the roles to pick leave out lead.
+    const pe = dialog("person-dialog");
+    await desk.click("[data-add-person]");
+    assert.equal(await pe.open(), true);
+    assert.deepEqual(await desk.locator("#pe-roles input").evaluateAll((xs) => xs.map((x) => x.value)), ["designer", "pm", "developer"]);
+    await pe.button("Ask Design Desk").click();
+    assert.equal(await pe.open(), true, "an Ask without an email stays open");
+    await desk.fill("#person-form [name=email]", "alex@example.com");
+    await desk.check('#pe-roles input[value="pm"]');
+    await pe.button("Ask Design Desk").click();
+    await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/people").length >= 2);
+    assert.deepEqual((await posts("/api/people")).map((c) => JSON.parse(c.body)), [{ email: "alex@example.com", role: "pm", note: "" }]);
   } finally {
     await run.close();
   }

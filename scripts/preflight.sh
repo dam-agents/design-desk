@@ -340,7 +340,7 @@ inbox_mode() {
   if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ]; then
     log "Desk inbox empty"; printf '%s due=0\n' "$NOW_ISO" >> "$WORK/INBOX.log"; quiet_out
   fi
-  while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind) on \(.card)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")
+  while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind)\(if .card then " on \(.card)" else "" end)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): prototype of \(.card) expires \(.expires) — extend or let it go"' <<<"$expiring")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack vote on \(.card) — \(if .close then "close it" else "sync it" end)"' <<<"$polls")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack thread on \(.card) — \(if .close then "close it (\(.why))" else "read it" end)"' <<<"$councils")
@@ -362,6 +362,7 @@ inbox_mode() {
       figma_due: pick(["figma"]),
       screens_due: pick(["screens"]),
       slack_due: pick(["slack"]),
+      people_due: pick(["person"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,

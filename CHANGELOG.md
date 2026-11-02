@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.12.0 — 2026-11-02
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A lead can now ask on the People
+tab for a new person on `## Desk people`; inbox runs work it as `people_due`
+([docs/desk.md](docs/desk.md) → **People**). Nothing to configure.
+
 ## 1.11.0 — 2026-11-02
 
 **Upgrade:**

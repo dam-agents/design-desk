@@ -13,7 +13,8 @@ cat > "$WORK_DIR/desk/inbox.json" <<JSON
  {"id":"I-1","kind":"question","card":"C-1","thread":"T-1","created":"$new"},
  {"id":"I-2","kind":"request","card":"C-2","thread":null,"created":"$new"},
  {"id":"I-3","kind":"build","card":"C-2","thread":null,"created":"$new"},
- {"id":"I-6","kind":"map","card":"C-5","thread":null,"created":"$new"}],
+ {"id":"I-6","kind":"map","card":"C-5","thread":null,"created":"$new"},
+ {"id":"I-7","kind":"person","card":null,"thread":null,"created":"$new","person":{"email":"alex@example.com","role":"pm"}}],
  "claimed":[
  {"id":"I-4","kind":"explore","card":"C-3","thread":null,"created":"$old","claimed_by":"s1","claimed_at":"$old"},
  {"id":"I-5","kind":"handoff","card":"C-4","thread":null,"created":"$new","claimed_by":"s2","claimed_at":"$new"}]}
@@ -27,6 +28,7 @@ assert "question sorted" '[.questions_due[].id] == ["I-1"]' "$out"
 assert "request sorted" '[.requests_due[].id] == ["I-2"]' "$out"
 assert "build sorted" '[.prototypes_due[].id] == ["I-3"]' "$out"
 assert "a screen someone added sorted" '[.map_due[].id] == ["I-6"]' "$out"
+assert "a person a lead asked for sorted, with no card" '[.people_due[] | select(.card == null) | .person.email] == ["alex@example.com"]' "$out"
 assert "stale claim taken over" '[.variants_due[] | select(.takeover) | .id] == ["I-4"]' "$out"
 assert "fresh claim left alone" '[.handoffs_due[].id] == []' "$out"
 assert "expiring prototype" '[.expiring_due[].card] == ["C-2"]' "$out"
@@ -38,7 +40,7 @@ plan="$(bash "$ROOT/scripts/dispatch.sh" plan "$wl")"
 assert "three units (I-4 explore, I-3 build, I-6 map), I-2 stays" '[.[].id] == ["I-4", "I-3", "I-6"]' "$plan"
 assert "a unit names its file, not the item text" '.[0].task | test("worklist is already computed") and test("I-4")' "$plan"
 u="$(printf '%s' "$plan" | jq -r '.[0].worklist')"
-assert "the unit holds its one item and no quick ones" '(.variants_due | length == 1) and (.questions_due == null) and (.dispatched.id == "I-4")' "$(cat "$u")"
+assert "the unit holds its one item and no quick ones" '(.variants_due | length == 1) and (.questions_due == null) and (.people_due == null) and (.dispatched.id == "I-4")' "$(cat "$u")"
 rest="$(bash "$ROOT/scripts/dispatch.sh" rest "$wl" I-4 I-3)"
 assert "the rest keeps the first and the quick ones" '(.prototypes_due | length == 0) and (.requests_due | length == 1) and (.questions_due | length == 1)' "$(cat "$(printf '%s' "$rest" | jq -r .worklist)")"
 printf -- '- dispatch: disabled\n' > "$WORK_DIR/CONFIG.md"

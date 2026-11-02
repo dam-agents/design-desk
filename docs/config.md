@@ -45,4 +45,5 @@ worklist's `config`. A missing key takes its default.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
 - `## Desk people` table, `| email | role |`: `lead`, `designer`, `pm` or `developer`;
-  anyone else on the share list is a `guest`; the owner is always `lead`.
+  anyone else on the share list is a `guest`; the owner is always `lead`. A lead may ask
+  on the Desk for a new row ([desk.md](desk.md) → People).
