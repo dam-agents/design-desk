@@ -356,6 +356,7 @@ inbox_mode() {
       prototypes_due: pick(["build"]),
       handoffs_due: pick(["handoff"]),
       catalog_due: pick(["catalog"]),
+      map_due: pick(["map"]),
       agenda_due: pick(["agenda"]),
       teardowns_due: pick(["teardown"]),
       figma_due: pick(["figma"]),
@@ -371,6 +372,7 @@ inbox_mode() {
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
+        + (if (.map_due | length) > 0 then ["docs/map.md", "docs/screens.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)
         + (if (.screens_due | length) > 0 then ["docs/screens.md"] else [] end)
         + (if (.slack_due + .polls_due | length) > 0 then [".agents/skills/slack-polls/SKILL.md"] else [] end)
