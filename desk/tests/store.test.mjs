@@ -273,8 +273,11 @@ test("earlier looks drawn from the code's history go in by date; the same commit
   s.addLook(el.id, { at: "2026-01-01T00:00:00Z", commit: "c1", sheet: sheet("<p>1</p>"), states: ["Empty"] });
   const again = sheet("<p>3 again</p>");
   s.addLook(el.id, { at: "2026-03-01T00:00:00Z", commit: "c3", sheet: again, links: [link] });
+  // An offset date (git log %cI) is stored in UTC and placed by its instant, not its text.
+  s.addLook(el.id, { at: "2026-03-01T01:00:00+05:00", commit: "c2", sheet: sheet("<p>2</p>") });
   const h = s.getCard(el.id).history;
-  assert.deepEqual(h.map((x) => x.commit), ["c3", "c1"]);
+  assert.deepEqual(h.map((x) => x.commit), ["c3", "c2", "c1"]);
+  assert.equal(h[1].at, "2026-02-28T20:00:00Z");
   assert.equal(h[0].sheet, again);
   assert.deepEqual(h[0].links, [link]);
   assert.equal(h[0].later, true);

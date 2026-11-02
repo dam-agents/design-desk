@@ -579,8 +579,8 @@ export class Store {
     return Object.values(this.db.cards)
       .filter((x) => x.kind === "change" && !(x.source?.pr && !x.source?.merged_at) && ((x.elements || []).includes(card.id) || (card.changes || []).includes(x.id)))
       .map((x) => ({ id: x.id, at: x.source?.merged_at || x.created }))
-      .filter((x) => x.at > from && x.at <= to)
-      .sort((a, b) => a.at.localeCompare(b.at))
+      .filter((x) => instant(x.at) > instant(from) && instant(x.at) <= instant(to))
+      .sort((a, b) => instant(a.at) - instant(b.at))
       .map((x) => x.id);
   }
 
@@ -591,9 +591,10 @@ export class Store {
     const c = this.card(cardId);
     if (c.kind !== "element" && c.kind !== "screen") throw bad("only an element or a screen has earlier looks");
     if (typeof look !== "object" || !look) throw bad("a look must be an object");
-    const at = clean(String(look.at || ""), 40, "at");
-    if (Number.isNaN(Date.parse(at))) throw bad("at must be a date");
-    if (at >= (c.drawn || c.updated)) throw bad("a look newer than the current drawing is the drawing: upsert it");
+    const t = Date.parse(clean(String(look.at || ""), 40, "at"));
+    if (Number.isNaN(t)) throw bad("at must be a date");
+    if (t >= instant(c.drawn || c.updated)) throw bad("a look newer than the current drawing is the drawing: upsert it");
+    const at = new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z");
     const ref = (id, name) => { if (!own(this.db.assets, id)) throw bad(`${name}: no asset ${id}`); return id; };
     const pictures = c.kind === "element"
       ? { sheet: ref(look.sheet, "sheet"), thumb: look.thumb == null ? null : ref(look.thumb, "thumb"), states: look.states == null ? [] : cleanStates(look.states.map((x) => (typeof x === "string" ? { name: x } : x))).map((x) => x.name) }
@@ -814,8 +815,10 @@ function cleanRefs(list, assets, name) {
   });
 }
 
+// Dates are compared as instants: an agent's date can carry an offset (`git log %cI`).
+const instant = (iso) => Date.parse(iso) || 0;
 // Earlier looks, newest first; past the limit the oldest go.
-const byDate = (looks) => looks.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, LIMITS.looks);
+const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).slice(0, LIMITS.looks);
 
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.

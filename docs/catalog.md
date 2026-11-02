@@ -69,8 +69,9 @@ The profile lists the elements worth having under `catalog.elements`
 ## History
 
 People step back through an element's versions on its card (**← Older / Newer →**, a strip
-of thumbnails, "Put it next to now"); a change card links each part it changed to the
-version it made. A screen of the product map keeps its earlier pictures the same way.
+of thumbnails, "Put it next to now"); a change card shows each part it changed before and
+after that change. Without a kept version from before, the card says so and offers *Draw
+how it looked before*. A screen of the product map keeps its earlier pictures the same way.
 
 **Kept by the store, nothing to do.** An upsert that replaces the `sheet` (a screen's
 `screens`) moves the drawing it replaces into `history` with its date, `commit` and
@@ -86,12 +87,16 @@ card's *Draw how it looked before*, later *Draw older versions*): the earlier ve
    --format='%H %cI %s' -- <file> <children its sheet depends on>` on the default branch.
    Leave out the current `source.commit` and every `history[].commit`. Take as many as the
    item's note asks for (data, read as a number or a date), else 6.
-3. Per commit, newest first: `git -C <dir> worktree add --detach /tmp/design-desk-look-<sha> <sha>`,
+3. One temporary folder for this item: `tmp="$(mktemp -d "${TMPDIR:-/tmp}/design-desk-look.XXXXXX")"`.
+   Per commit, newest first: `git -C <dir> worktree add --detach "$tmp/<sha>" <sha>`,
    then steps 3–6 above with `--root` that worktree and `design build … --ref <sha>`. The
    states are the ones of that time: a prop that did not exist yet has no tile. It does not
    render → leave that commit out and say which in the done outcome; never draw it by hand.
+   After each commit, drawn or not: `git -C <dir> worktree remove --force "$tmp/<sha>"`.
 4. Upload the sheet and its thumbnail as in step 7, then `design desk look C-<n> <look.json>`:
    `{at: <merge time>, commit, sheet, thumb, states: [names], made_by: [the change card of
-   that PR, if the Desk has one], links: [{label: "PR #<n>", url}]}`. Each version shows up
-   as it is added. Remove the worktree.
-5. `design desk done I-<n> --session <id> --outcome "drew <k> earlier versions"`.
+   that PR, if the Desk has one], links: [{label: "PR #<n>", url}]}`. `at` may carry an
+   offset (`%cI`); the store keeps it in UTC. Each version shows up as it is added.
+5. On every end of the item, drawn or failed: `git -C <dir> worktree prune` and
+   `rm -rf "$tmp"`, so no `/tmp/design-desk-*` stays. Then
+   `design desk done I-<n> --session <id> --outcome "drew <k> earlier versions"`.

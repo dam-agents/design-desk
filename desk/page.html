@@ -330,7 +330,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "new", newFilter: "new", reqFilter: "open", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: 0, lookSide: false, lookWith: 0, agenda: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "new", newFilter: "new", reqFilter: "open", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -701,7 +701,7 @@
     const items = [
       ...[...seen.values()].map((d) => ({ at: d.at, html: `<b>Decided:</b> ${txt(d.text)}${d.why ? ` <span class="hint" style="display:inline">— ${txt(d.why)}</span>` : ""}${srcLink(d.source)}` })),
       ...(c.changes || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((x) => ({ at: x.source?.merged_at || x.created, html: `<b>Changed:</b> <button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>` })),
-    ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    ].sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
     box.innerHTML = items.length ? `<ul>${items.map((x) => `<li><span class="hint" style="display:inline">${esc(day(x.at))}</span> ${x.html}</li>`).join("")}</ul>` : `<p class="hint">No recorded decisions or changes yet.</p>`;
   }
 
@@ -739,32 +739,56 @@
     const now = c.kind === "element" ? { sheet: c.sheet, thumb: c.screens?.[0]?.asset || null } : { screens: c.screens || [] };
     return [{ ...now, at: c.drawn || null, commit: c.source?.commit || null, made_by: c.made_by || [], links: [], now: true }, ...(c.history || [])];
   }
+  // A look is held by what it is, not by its place: a new look shifts the places.
+  const lookKey = (l) => (l.now ? "now" : `${l.at}|${l.sheet || l.screens?.[0]?.asset || ""}`);
   const lookName = (i) => (i === 0 ? "Now" : `${plural(i, "version", "versions")} ago`);
   const lookThumb = (c, l) => (c.kind === "element" ? l.thumb : l.screens?.[0]?.asset) || null;
   function lookPictures(c, l, label) {
     if (c.kind !== "element") return shots(l.screens) || `<p class="hint">No pictures yet.</p>`;
     return `<iframe class="frame" data-sheet="${esc(l.sheet)}" sandbox="allow-scripts" title="${esc(c.title)}${label ? ` — ${esc(label)}` : ""}" style="height:80vh"></iframe>`;
   }
+  // From a change to a part it changed: the version before that change next to the one it
+  // made. Without a kept version from before, the card says so (and keeps checking).
+  function showBeforeAfter(c, changeId) {
+    const looks = looksOf(c), k = looks.findIndex((l) => (l.made_by || []).includes(changeId));
+    if (k >= 0 && k + 1 < looks.length) { S.look = lookKey(looks[k + 1]); S.lookWith = lookKey(looks[k]); S.lookSide = true; S.lookMiss = null; return; }
+    S.lookMiss = changeId; S.look = k >= 0 ? lookKey(looks[k]) : "now"; S.lookWith = "now"; S.lookSide = false;
+  }
+  function lookNotes(c) {
+    const notes = [];
+    if (S.lookGone) notes.push("The version you were looking at is no longer kept on the Desk: it was drawn again, or it was the oldest of 30. This is the drawing now.");
+    if (S.lookMiss) {
+      const ch = S.cards.find((x) => x.id === S.lookMiss);
+      const draw = working(c).includes("catalog-history") ? " Design Desk is drawing the earlier versions now; they appear here as they are drawn."
+        : can("history") && c.kind === "element" && c.sheet ? ` <button class="btn small" data-act="history">Draw how it looked before</button>`
+        : " A designer can ask Design Desk to draw how it looked before.";
+      notes.push(`The Desk keeps no version from before ${ch ? `“${esc(ch.title)}”` : "that change"}, so it cannot show before and after.${draw}`);
+    }
+    return notes.map((x) => `<p class="hint" style="max-width:80ch">${x}</p>`).join("");
+  }
   function renderLooks(c) {
+    if (S.lookMiss) showBeforeAfter(c, S.lookMiss);
     const looks = looksOf(c), n = looks.length;
-    const i = Math.min(S.look, n - 1), l = looks[i];
-    if (n === 1) return lookPictures(c, l);
+    let i = looks.findIndex((x) => lookKey(x) === S.look);
+    if (i < 0) { i = 0; S.look = "now"; S.lookSide = false; S.lookGone = true; }
+    const l = looks[i];
+    if (n === 1) return lookNotes(c) + lookPictures(c, l);
     const made = (l.made_by || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean);
     const why = made.length || (l.links || []).length
       ? `<b>What made it look like this:</b> ${made.map((x) => `<button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>`).join(" ")}${(l.links || []).map((x) => ` <a href="${safeUrl(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.label)} ↗</a>`).join("")}`
       : i === n - 1 ? "The earliest version on the Desk." : "No shipped change is recorded on the Desk for this version.";
     const when = l.at ? `${l.later ? "The code on " : "Drawn "}${day(l.at)}` : "";
     // Side by side: next to now, or, from a change, next to the version that change made.
-    const side = S.lookSide && i > 0, w = Math.min(S.lookWith, i - 1);
+    const side = S.lookSide && i > 0, found = looks.findIndex((x) => lookKey(x) === S.lookWith), w = found >= 0 && found < i ? found : 0;
     const strip = looks.map((x, k) => ({ x, k })).reverse().map(({ x, k }) => {
       const t = lookThumb(c, x);
-      return `<button data-look="${k}" aria-current="${k === i}" title="${esc(lookName(k))}${x.at ? ` · ${esc(day(x.at))}` : ""}">${t ? `<img alt="" data-asset="${esc(t)}" />` : `<span class="none"></span>`}<b>${esc(lookName(k))}</b><span>${esc(day(x.at))}</span></button>`;
+      return `<button data-look="${esc(lookKey(x))}" aria-current="${k === i}" title="${esc(lookName(k))}${x.at ? ` · ${esc(day(x.at))}` : ""}">${t ? `<img alt="" data-asset="${esc(t)}" />` : `<span class="none"></span>`}<b>${esc(lookName(k))}</b><span>${esc(day(x.at))}</span></button>`;
     }).join("");
-    return `<div class="vbar" role="group" aria-label="Versions">
-        <button class="btn small" data-look="${i + 1}" ${i + 1 >= n ? "disabled" : ""} aria-label="Older version">← Older</button>
+    return `${lookNotes(c)}<div class="vbar" role="group" aria-label="Versions">
+        <button class="btn small" data-look="${i + 1 < n ? esc(lookKey(looks[i + 1])) : ""}" ${i + 1 >= n ? "disabled" : ""} aria-label="Older version">← Older</button>
         <b>${esc(lookName(i))}</b><span class="hint" style="margin:0">Version ${n - i} of ${n}${when ? ` · ${esc(when)}` : ""}</span>
-        <button class="btn small" data-look="${i - 1}" ${i === 0 ? "disabled" : ""} aria-label="Newer version">Newer →</button>
-        ${i > 0 ? `<button class="btn small" data-look-side aria-pressed="${side}">${side ? "Show it alone" : "Put it next to now"}</button><button class="btn small" data-look="0">Back to now</button>` : ""}
+        <button class="btn small" data-look="${i > 0 ? esc(lookKey(looks[i - 1])) : ""}" ${i === 0 ? "disabled" : ""} aria-label="Newer version">Newer →</button>
+        ${i > 0 ? `<button class="btn small" data-look-side aria-pressed="${side}">${side ? "Show it alone" : "Put it next to now"}</button><button class="btn small" data-look="now">Back to now</button>` : ""}
       </div>
       <div class="looks">${strip}</div>
       <p class="hint" style="max-width:80ch;margin-bottom:10px">${why}${l.note ? ` <span>${txt(l.note)}</span>` : ""}</p>
@@ -1134,7 +1158,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.look = 0; S.lookSide = false; S.lookWith = 0; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null }; }
+    if (before?.id !== card.id) { S.variant = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -1247,15 +1271,11 @@
     if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
     if (ds.card) {
       await openCard(ds.card);
-      // From a change to a part it changed: the version that change made.
-      if (ds.madeBy) {
-        const looks = looksOf(S.card), k = looks.findIndex((l) => (l.made_by || []).includes(ds.madeBy));
-        if (k >= 0 && k + 1 < looks.length) { S.look = k + 1; S.lookWith = k; S.lookSide = true; renderDetail(); }
-      }
+      if (ds.madeBy) { showBeforeAfter(S.card, ds.madeBy); renderDetail(); }
       return;
     }
-    if (ds.look !== undefined) { S.look = Math.max(0, Number(ds.look)); S.lookWith = 0; renderDetail(); return; }
-    if ("lookSide" in ds) { S.lookSide = !S.lookSide; S.lookWith = 0; renderDetail(); return; }
+    if (ds.look !== undefined) { if (ds.look) { S.look = ds.look; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); } return; }
+    if ("lookSide" in ds) { S.lookSide = !S.lookSide; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); return; }
     if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }
     if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
     if (ds.present !== undefined) { await present(Number(ds.present)); return; }
@@ -1328,8 +1348,8 @@
     }
     if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; renderWorkspace(); renderDetail(); return; }
     if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && (S.card?.history || []).length && !S.ws.open && !document.querySelector("dialog[open]") && !e.target.closest("input, textarea, select, [contenteditable]")) {
-      const k = S.look + (e.key === "ArrowLeft" ? 1 : -1);
-      if (k >= 0 && k <= S.card.history.length) { e.preventDefault(); S.look = k; S.lookWith = 0; renderDetail(); }
+      const looks = looksOf(S.card), k = looks.findIndex((l) => lookKey(l) === S.look) + (e.key === "ArrowLeft" ? 1 : -1);
+      if (k >= 0 && k < looks.length) { e.preventDefault(); S.look = lookKey(looks[k]); S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); }
       return;
     }
     // Enter in a dialog's field would submit its form (docs/desk.md → Where it works): it presses the dialog's own button.
