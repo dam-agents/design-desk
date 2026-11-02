@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, ROLES, abilities, rosterOf } from "./store.mjs";
+import { Store, DeskError, can, ROLES, abilities, rosterOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 
 const PORT = Number(process.env.DESK_PORT || 5555);
@@ -132,7 +132,7 @@ async function viewerRoute(req, res, url, who) {
   const s = settings();
   const actor = { email: who.email, sub: who.sub, role: who.deskRole };
   const need = (action) => {
-    if (canAll(who.deskRole, s)[action]) return;
+    if (can(who.deskRole, action, s.prototypeRoles)) return;
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
