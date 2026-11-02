@@ -715,7 +715,7 @@
   function renderIntro() {
     const it = INTRO()[S.tab];
     if (!it) return "";
-    const open = store.get(`desk-intro-${S.tab}`) !== "closed";
+    const open = !introHidden();
     const li = ([words, act]) => act && !can(act) ? `<li class="off">${words}<span class="chip">not with your role</span></li>` : `<li>${words}</li>`;
     return `<details class="intro" data-intro="${S.tab}"${open ? " open" : ""}>
       <summary><span class="i">i</span><span><b>${esc(TABS[S.tab])}</b> — ${esc(it.about)}</span><span class="tog"></span></summary>
@@ -723,8 +723,17 @@
         <div><h5>What you can do</h5><ul>${it.can.map(li).join("")}</ul></div>
         ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div></details>`;
   }
-  // A folded intro stays folded for this person, tab by tab.
-  document.addEventListener("toggle", (e) => { const d = e.target; if (d.matches?.("details.intro")) store.set(`desk-intro-${d.dataset.intro}`, d.open ? "open" : "closed"); }, true);
+  // Folding one intro folds them all, and it stays folded for this person after a reload:
+  // the Desk server keeps the choice (the frame's browser storage may not last), this
+  // browser's storage stands in while the server has none.
+  const introHidden = () => (S.me?.prefs?.intro || store.get("desk-intro")) === "hidden";
+  document.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (!d.matches?.("details.intro") || !d.open === introHidden()) return;
+    const intro = d.open ? "shown" : "hidden";
+    store.set("desk-intro", intro);
+    if (S.me) { S.me.prefs = { ...S.me.prefs, intro }; api("POST", "/api/me/prefs", { intro }).catch(() => {}); }
+  }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the next call.
