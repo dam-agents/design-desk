@@ -7,6 +7,11 @@
 #   ledger.sh skip  <repo> <pr> <reason>   nothing a person would notice changed: skipped
 #   ledger.sh fail  <repo> <pr> <reason>   it failed; the pre-flight retries it up to 3 times
 #   ledger.sh show  <repo> <pr>            its last row, as JSON
+#   ledger.sh --issues <command> <repo> <issue> …   the same for work/ISSUES.tsv, the
+#                                          issues of the Desk's Issues page (docs/issues.md):
+#                                          done = it changes the screens and has its card,
+#                                          skip = it does not; the third column is the
+#                                          issue's updated_at the pre-flight saw
 #
 # The table is append-only: a pull request's state is its LAST row, so a write never
 # rewrites a line another session is reading. Several sessions write it at once
@@ -19,6 +24,11 @@ WORK="${WORK_DIR:-${HOME:-/home/agent}/work}"
 LEDGER="$WORK/CHANGES.tsv"
 HEAD=$'repo\tpr\tmerged_at\tstatus\tcard\tupdated\tattempts\tnote'
 LOCK="$WORK/.CHANGES.lock"
+WHAT=change
+if [ "${1:-}" = --issues ]; then
+  shift; WHAT=issue
+  LEDGER="$WORK/ISSUES.tsv"; HEAD=$'repo\tissue\tissue_updated\tstatus\tcard\tupdated\tattempts\tnote'; LOCK="$WORK/.ISSUES.lock"
+fi
 NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 LOG_JOB="${LOG_JOB:-ledger}"
 . "$(dirname "$0")/log.sh" 2>/dev/null || logev() { :; }
@@ -75,8 +85,8 @@ case "$cmd" in
     printf '%s\t%s\t%s\tskipped\t\t%s\t%s\t%s\n' "$repo" "$pr" "$merged" "$NOW" "$attempts" "$(clean "${arg:-no visible change}")" >> "$LEDGER";;
   fail)
     printf '%s\t%s\t%s\tfailed\t%s\t%s\t%s\t%s\n' "$repo" "$pr" "$merged" "$card" "$NOW" "$((attempts + 1))" "$(clean "${arg:-failed}")" >> "$LEDGER"
-    logev warn change_failed "$repo#$pr: $(clean "${arg:-failed}")";;
+    logev warn "${WHAT}_failed" "$repo#$pr: $(clean "${arg:-failed}")";;
   *) die "unknown command $cmd";;
 esac
-logev info "change_$cmd" "$repo#$pr"
+logev info "${WHAT}_$cmd" "$repo#$pr"
 out --arg c "$cmd" --arg r "$repo" --argjson p "$pr" '{outcome:"ok", action:$c, repo:$r, pr:$p}'

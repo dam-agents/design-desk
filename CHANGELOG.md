@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.12.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**). The page gains the **Issues** tab.
+2. Create the schedule `design-desk-issues-daily` over MCP exactly as
+   [ONBOARDING.md](ONBOARDING.md) Step 5b defines it, unless `list_schedules` has it.
+3. New keys `issue_news` (`disabled`), `issue_sprint` (`milestone`), `max_issue_drawings`
+   (`5`), [docs/config.md](docs/config.md): offer the operator the Issues page — the planned
+   issues that change the screens, each with what the UI will need, a picture of now and a
+   sketch ([docs/issues.md](docs/issues.md)); `issue_news: enabled` turns it on.
+4. Re-run `bash "$HOME/scripts/verify-onboarding.sh" --config`.
+
 ## 1.11.1 — 2026-11-02
 
 **Upgrade:**

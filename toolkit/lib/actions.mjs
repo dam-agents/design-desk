@@ -11,6 +11,8 @@ export const ACTIONS = {
   show: { skill: "show-me", does: "answer \"show me how it looks\" with a picture of the product in that state" },
   map: { doc: "docs/map.md", does: "the product map: every main screen, how to get there, why it is like it is" },
   digest: { doc: "docs/digest.md", does: "the weekly digest of the product's UX and the themes in people's feedback" },
+  "issue-news": { doc: "docs/issues.md", does: "the Issues page: what each planned issue will need on the screens" },
+  sketch: { skill: "variants", fallback: "options", doc: "docs/issues.md", does: "an issue's screen as it looks now and one sketch of how it could look" },
   research: { doc: "docs/requests.md", does: "issues, pull requests, history and earlier decisions behind a request" },
   triage: { doc: "docs/boundary.md", does: "what can be done as a design change, what needs a developer or a decision" },
   impact: { skill: "impact", does: "where else the same thing shows up and what a change touches, from earlier decisions" },

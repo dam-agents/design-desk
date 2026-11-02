@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days figma figma_file screens max_screen_prs slack_polls slack_poll_channel digest slack_council council_sync_min"
+KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days figma figma_file screens max_screen_prs slack_polls slack_poll_channel digest slack_council council_sync_min issue_news issue_sprint max_issue_drawings"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -133,6 +133,7 @@ else
   enum slack_polls enabled disabled
   enum slack_council enabled disabled
   enum digest desk slack disabled
+  enum issue_news enabled disabled
   ff="$(cfg figma_file)"; [ -z "$ff" ] || printf '%s' "$ff" | grep -qE '^https://([a-z0-9-]+\.)?figma\.com/' || fail config_figma_file "figma_file is '$ff'" "a link to a Figma file, or empty"
   if grep -qx '## Skills' "$CONFIG"; then
     shdr="$(sed -n '/^## Skills$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
@@ -149,7 +150,7 @@ else
     (''|none|off|disabled) ;;
     (*) printf '%s' "$wr" | grep -qE '^([a-z0-9.-]+/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || fail config_work_repo "work_repo is '$wr'" "[host/]owner/name of a private repository, or none";;
   esac
-  for k in max_changes_per_run max_prototypes prototype_expiry_days max_screen_prs council_sync_min; do v="$(cfg "$k")"; case "$v" in ''|*[!0-9]*) [ -z "$v" ] || fail "config_$k" "$k is not a whole number" "a number, e.g. 2";; esac; done
+  for k in max_changes_per_run max_prototypes prototype_expiry_days max_screen_prs council_sync_min max_issue_drawings; do v="$(cfg "$k")"; case "$v" in ''|*[!0-9]*) [ -z "$v" ] || fail "config_$k" "$k is not a whole number" "a number, e.g. 2";; esac; done
   w="$(cfg watch_since)"; [ -z "$w" ] || printf '%s' "$w" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' || fail config_watch_since "watch_since is '$w'" "an ISO UTC time like 2026-11-02T09:00:00Z"
   for r in $(cfg repos | tr ',' ' '); do
     [ "$r" = none ] && continue
@@ -192,12 +193,12 @@ if [ "$LIVE" = 1 ]; then
      && WORK_DIR="$t/work" design shot "$t/v.html" "$t/shots" --width 600 >/dev/null 2>&1 && [ -s "$t/shots/1-light.png" ]; then ok render "built and screenshotted a wireframe page"
   else fail render "a build or screenshot failed" "design doctor, apply its fix: lines, then re-run"; fi
   rm -rf "$t"
-  for m in watch inbox; do
+  for m in watch inbox issues; do
     out="$(bash "$SCRIPT_DIR/preflight.sh" "$m" 2>/dev/null)"
     if printf '%s' "$out" | jq -e 'has("nothing_to_do") and (.error == null)' >/dev/null 2>&1; then ok "preflight_$m" "valid worklist"
-    else fail "preflight_$m" "preflight.sh $m: $(printf '%s' "$out" | jq -r '.error // "no JSON"' 2>/dev/null | cut -c1-160)" "read the error; docs/$([ "$m" = watch ] && echo watch || echo desk).md"; fi
+    else fail "preflight_$m" "preflight.sh $m: $(printf '%s' "$out" | jq -r '.error // "no JSON"' 2>/dev/null | cut -c1-160)" "read the error; docs/$(case "$m" in watch) echo watch;; issues) echo issues;; *) echo desk;; esac).md"; fi
   done
-  for m in watch inbox monitor; do
+  for m in watch inbox issues monitor; do
     t0=$(date +%s); bash "$SCRIPT_DIR/precheck.sh" "$m" >/dev/null 2>&1; rc=$?; dt=$(( $(date +%s) - t0 ))
     if { [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ]; } && [ "$dt" -lt 90 ]; then ok "precheck_$m" "exit $rc in ${dt}s"
     else fail "precheck_$m" "exit $rc in ${dt}s — a broken Precheck fails open and every tick wakes the model" "run bash scripts/precheck.sh $m and read its output"; fi

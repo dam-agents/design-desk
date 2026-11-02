@@ -320,6 +320,7 @@
     map: "Finding this screen in the product and taking its pictures.",
     screens: "Checking the screenshots that were added and writing their captions.",
     slack: "Posting the options to Slack for votes and comments.",
+    draw: "Taking a picture of how it looks now and sketching how it could look.",
   };
   const HANDOFF_TO = {
     "coding-agent": "the coding agent, which builds it into the product",
@@ -358,6 +359,7 @@
     [["handle"], "Mark changes handled"],
     [["add"], "Add a missing screen or part to Product"],
     [["history"], "Draw how a screen or part looked before"],
+    [["draw"], "Draw an issue: how it looks now and a sketch of how it could look"],
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
     [["share"], "Share options in Slack", "slack"],
@@ -368,6 +370,7 @@
 <ol>
 <li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships. Each one says where else the same thing shows up and what the change touches, and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
 <li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
+<li><b>Issues</b> — what the team plans that will change the screens: the current sprint, issues someone has taken, and the backlog. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches the sprint's and the assigned ones on its own; press <b>Draw it</b> on any other, or <b>Design this</b> to start a request.</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision, each with why.</p>
@@ -413,7 +416,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "new", newFilter: "all", reqFilter: "open", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "new", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -498,6 +501,11 @@
       [kind, src, author, run] = ["pr", out(s.url, num("PR", s.pr)), s.author, "watch"];
       event = s.pr && !s.merged_at ? "PR opened" : s.merged_at ? `shipped ${esc(day(s.merged_at))}` : "";
     } else if (c.kind === "digest") [kind, src, run, event] = ["digest", "Design Desk", "digest", esc(c.period || "")];
+    else if (c.kind === "issue") {
+      const s = c.source || {};
+      [kind, src, author] = ["issue", out(s.url, num("Issue", s.issue)), s.author];
+      event = (s.assignees || []).length ? `assigned to ${esc(s.assignees.join(", "))}` : "";
+    }
     else if (o.automated) {
       [kind, src, author] = ["test", "Automated test", o.tool || ""];
       event = out(o.url, esc([o.check && `${o.check} check`, o.build && `build ${o.build}`, o.ref].filter(Boolean).join(" · ") || "a test finding"));
@@ -561,7 +569,7 @@
   }
 
   // ---------- header and list ----------
-  const TABS = { new: "New", requests: "Requests", call: "Next call", product: "Product", people: "People", guide: "How it works" };
+  const TABS = { new: "New", requests: "Requests", issues: "Issues", call: "Next call", product: "Product", people: "People", guide: "How it works" };
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
   const backBar = () => `<div class="crumb"><button class="btn small" data-back>← ${esc(S.tab === "product" && S.productFilter === "decisions" ? "Decisions" : TABS[S.tab] || "Back")}</button></div>`;
   function renderNav() {
@@ -569,7 +577,7 @@
     // Requests counts the open ones, like Next call its items; it turns amber while one waits for an answer.
     const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
     const asks = open.filter((c) => c.asks).length;
-    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["people", TABS.people], ["guide", TABS.guide]];
+    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"], ["issues", TABS.issues, issueCards("sprint").length], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["people", TABS.people], ["guide", TABS.guide]];
     $("#nav").innerHTML = tabs.map(([k, label, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`).join("");
   }
 
@@ -594,7 +602,11 @@
   const requestCards = (filter) => S.cards.filter((c) => c.kind === "request"
     && (filter === "designer" ? forDesigner(c) : filter === "open" ? !closed(c) : closed(c)));
   // The list filter a person picked last is kept in their browser.
-  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "closed", "designer"] };
+  // Issues of the current sprint first, then someone's, then the backlog; the newest first in each.
+  const BUCKET = { sprint: "This sprint", assigned: "Assigned", backlog: "Backlog" };
+  const issueCards = (filter) => S.cards.filter((c) => c.kind === "issue" && c.status !== "archived" && (filter === "all" || c.bucket === filter))
+    .sort((a, b) => Object.keys(BUCKET).indexOf(a.bucket) - Object.keys(BUCKET).indexOf(b.bucket) || (b.source?.updated || b.updated).localeCompare(a.source?.updated || a.updated));
+  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "closed", "designer"], issueFilter: ["sprint", "assigned", "backlog", "all"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
 
   function visibleCards() {
@@ -606,6 +618,7 @@
       return S.cards.filter((c) => c.kind === kind && !gone(c)).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
     }
     if (S.tab === "requests") return requestCards(S.reqFilter);
+    if (S.tab === "issues") return issueCards(S.issueFilter);
     return [];
   }
 
@@ -621,6 +634,13 @@
     // A screen or part a designer added, before Design Desk made it.
     const added = c.status === "building" ? `<span class="chip info">● Being added</span>` : c.status === "dropped" ? `<span class="chip warn">Not added</span>` : "";
     if (c.kind === "digest") out.push(`<span class="chip info">Weekly digest</span>`);
+    else if (c.kind === "issue") {
+      const s = c.source || {};
+      out.push(`<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(c.bucket === "sprint" && s.milestone ? `Sprint ${s.milestone}` : BUCKET[c.bucket] || "Backlog")}</span>`);
+      if (c.busy) out.push(`<span class="chip info">● Drawing</span>`);
+      else if (c.sketches) out.push(`<span class="chip ok">Sketch ready</span>`);
+      if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
+    }
     else if (c.kind === "screen") {
       if (added) out.push(added);
       if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
@@ -659,6 +679,7 @@
     const designer = (n) => `Needs a designer${n ? ` (${n})` : ""}`;
     let filters = S.tab === "new" ? f("newFilter", [["all", "All"], ["new", "Not seen yet"], ["open", "Not handled"], ["designer", designer(newCards("designer").length)]])
       : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"], ["designer", designer(requestCards("designer").length)]])
+      : S.tab === "issues" ? f("issueFilter", Object.entries({ ...BUCKET, all: "All" }).map(([k, l]) => [k, `${l}${k === "all" ? "" : ` (${issueCards(k).length})`}`]))
       : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"]]) : "";
     const add = S.tab === "product" && S.productFilter !== "decisions" && can("add") ? `<button class="btn small primary" data-add-product style="margin-left:auto">+ Add</button>` : "";
     if (add) filters = filters.replace(/<\/div>$/, `${add}</div>`);
@@ -666,16 +687,18 @@
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
       new: S.newFilter === "designer" ? waiting : S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : S.newFilter === "open" ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
+      issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
+        : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       requests: S.reqFilter === "designer" ? waiting : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     // New and Requests say where each came from; screens and elements are Design Desk's own map.
-    const sourced = S.tab === "new" || S.tab === "requests";
+    const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div></button>
-      ${sourced ? origin(c) : ""}${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
+      ${sourced ? origin(c) : ""}${c.kind === "issue" && c.needs?.length ? `<div class="s"><b>UI:</b> ${esc(c.needs.join(" · "))}</div>` : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
 
@@ -908,6 +931,31 @@
       ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
       ${renderImpact(c.impact)}
       ${src.url ? `<p class="hint"><a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">See it on GitHub ↗</a></p>` : ""}
+      ${renderThreads(c)}`;
+  }
+
+  // ---------- an issue the team plans (docs/issues.md) ----------
+  function renderIssue(c) {
+    const src = c.source || {};
+    const busy = working(c).includes("draw");
+    const now = c.screens || [], sketch = c.sketches || [];
+    const open = c.status !== "archived";
+    return `${backBar()}
+      <h2>${txt(c.title)}</h2>
+      <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Backlog")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
+      ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
+      ${open ? `<div class="actions">
+        ${can("draw") && !busy && !sketch.length ? `<button class="btn primary" data-act="draw">Draw it</button>` : ""}
+        ${can("follow-up") ? `<button class="btn" data-adjust>Design this</button>` : ""}
+        <button class="btn" data-focus-composer>Ask a question</button>
+        ${agendaButton(c)}
+      </div>` : ""}
+      ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
+      <h3>How it could look</h3>${sketch.length ? `${shots(sketch)}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
+        : `<p class="hint">${busy ? "Being sketched." : c.bucket === "backlog" ? "Not sketched yet: Design Desk sketches the issues of the sprint and the assigned ones on its own." : "Design Desk sketches it in its next daily check."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>`}
+      ${c.draw?.note ? `<p class="hint">${txt(c.draw.note)}</p>` : ""}
       ${renderThreads(c)}`;
   }
 
@@ -1406,7 +1454,7 @@
       return;
     }
     const keep = $("#composer-text")?.value || "";
-    d.innerHTML = { change: renderChange, element: renderElement, screen: renderScreen, digest: renderDigest }[S.card.kind]?.(S.card) ?? renderRequest(S.card);
+    d.innerHTML = { change: renderChange, element: renderElement, screen: renderScreen, digest: renderDigest, issue: renderIssue }[S.card.kind]?.(S.card) ?? renderRequest(S.card);
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
     if (S.card.kind === "screen") loadTimeline(S.card);
@@ -1475,6 +1523,10 @@
     }
     if (name === "history") {
       res = await ask({ title: "Draw how it looked before", body: "Design Desk goes back through the product's code and draws this element as it looked after each earlier change to it, newest first. Each version appears here as it is drawn; this can take a while.", ok: "Draw it", note: "How far back? (optional, e.g. the last 5 changes, or since March)", send: (a) => post(a.note || "") });
+      if (!res) return;
+    }
+    if (name === "draw") {
+      res = await ask({ title: "Draw this issue", body: "Design Desk takes a picture of how this part of the product looks now and sketches one way it could look, in the product's own style. It takes a few minutes; the pictures appear here.", ok: "Draw it", note: "Anything the sketch should show or try? (optional)", send: (a) => post(a.note || "") });
       if (!res) return;
     }
     if (name === "close") {
@@ -1685,11 +1737,15 @@
     setType("idea");
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !S.me?.figma;
-    $("#rq-title").textContent = from ? "Adjust this change" : "New request";
-    $("#rq-hint").textContent = from
+    const issue = from?.kind === "issue";
+    $("#rq-title").textContent = issue ? "Design this issue" : from ? "Adjust this change" : "New request";
+    $("#rq-hint").textContent = issue
+      ? "Design Desk checks what can be done as a design change, draws two or three options for this issue, and the team picks one."
+      : from
       ? "Tell Design Desk what should look different. It draws options; once a designer approves one, the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
-    if (from) $("#rq-problem-label").textContent = `What should look different in “${from.title}”?`;
+    if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : `What should look different in “${from.title}”?`;
+    if (issue) f.problem.value = (from.needs || []).join("\n");
     f.from.value = from ? from.id : "";
     dlg.returnValue = ""; dlg.showModal();
   }

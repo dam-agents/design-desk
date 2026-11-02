@@ -6,11 +6,16 @@ args="$*"
 case "$args" in
   *search/issues*)
     case "$args" in
-      *"is:issue"*) cat "$STUB_DIR/issues.json" 2>/dev/null || echo '{"incomplete_results":false,"items":[]}';;
+      *"is:issue"*label:*) cat "$STUB_DIR/issues.json" 2>/dev/null || echo '{"incomplete_results":false,"items":[]}';;
+      *"is:issue"*) cat "$STUB_DIR/open-issues.json" 2>/dev/null || echo '{"incomplete_results":false,"items":[]}';;
       *"is:open"*) cat "$STUB_DIR/open.json" 2>/dev/null || echo '{"incomplete_results":false,"items":[]}';;
       *) cat "$STUB_DIR/search.json";;
     esac;;
   *"api user"*) echo '{"login":"design-bot"}' | { if [[ "$args" == *"--jq"* ]]; then echo design-bot; else cat; fi; };;
+  *milestones*) cat "$STUB_DIR/milestones.json" 2>/dev/null || echo '[]';;
+  *repos/*/issues/*)
+    n="$(printf '%s' "$args" | sed -E 's#.*issues/([0-9]+).*#\1#')"
+    cat "$STUB_DIR/issue-$n.state" 2>/dev/null || echo open;;
   *pulls/*/files*)
     n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+)/files.*#\1#')"
     f="$STUB_DIR/files-$n.txt"; [ -f "$f" ] && cat "$f";;

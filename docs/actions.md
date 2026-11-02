@@ -19,6 +19,8 @@ its `SKILL.md` is; read it before doing the action.
 | `show` | "show me how it looks": a picture of the product in that state | a Desk question; Slack; chat | `show-me` |
 | `map` | the product map: screens, how to get there, why each is like it is | the first screens instance; after each merged change; + Add on the Desk | [map.md](map.md) |
 | `digest` | the weekly digest and the themes in people's feedback | the weekly digest schedule | [digest.md](digest.md) |
+| `issue-news` | the Issues page: what each planned issue will need on the screens | the daily issues schedule | [issues.md](issues.md) |
+| `sketch` | an issue's screen as it looks now and a sketch of how it could look | the daily issues schedule; Draw it | `variants`, [issues.md](issues.md) |
 | `research` | issues, pull requests, history, earlier decisions | every new request; chat | [requests.md](requests.md) → Research |
 | `triage` | what can be done as a design change | every new request; chat "can we…?" | [boundary.md](boundary.md), [requests.md](requests.md) → Triage |
 | `impact` | where else the same thing shows up, what a change touches | every change card and request; chat "what would this affect?" | `impact` |

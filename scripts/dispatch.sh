@@ -8,8 +8,9 @@
 #
 # Which items fan out: every change of a watch worklist after the first; in an inbox
 # worklist every expensive item (a request to triage, variants, a prototype, a
-# handoff, a catalog drawing, a screen for the map, Figma work) after the first expensive one. Questions, teardowns and expiring
-# prototypes are quick and stay in the run.
+# handoff, a catalog drawing, a screen for the map, Figma work, an issue to draw) after the first expensive one; in an
+# issues worklist every issue to draw after the first. Questions, teardowns, expiring
+# prototypes and issues only to read are quick and stay in the run.
 # A unit's task text carries the item id and the unit's path and nothing from the
 # item: it becomes the new session's prompt. Titles come from ids alone.
 # `dispatch: disabled` in the worklist's config keeps everything in the run.
@@ -22,7 +23,8 @@ mode="$(jq -r .mode "$wl")"
 
 case "$mode" in
   watch) ARRAYS='["changes_due","issues_due"]'; SECTION='Watch run'; VERB='Explain'; NOUN='PR';;
-  inbox) ARRAYS='["requests_due","variants_due","prototypes_due","handoffs_due","catalog_due","map_due","figma_due","slack_due"]'; SECTION='Inbox run'; VERB='Work'; NOUN='Desk item';;
+  inbox) ARRAYS='["requests_due","variants_due","prototypes_due","handoffs_due","catalog_due","map_due","figma_due","slack_due","drawings_due"]'; SECTION='Inbox run'; VERB='Work'; NOUN='Desk item';;
+  issues) ARRAYS='["drawings_due"]'; SECTION='Issues run'; VERB='Draw'; NOUN='issue';;
   *) echo '{"outcome":"error","error":"this mode does not fan out"}'; exit 1;;
 esac
 
@@ -34,12 +36,12 @@ if [ "$cmd" = plan ]; then
     arr="$(jq -r .array <<<"$e")"; id="$(jq -r .item.id <<<"$e")"
     safe="$(printf '%s' "$id" | tr -c 'A-Za-z0-9-' '-' | sed 's/-\{2,\}/-/g; s/-$//' | cut -c1-48)"
     unit="$TMP/design-desk-worklist-$mode-unit-$safe-$(date -u +%Y%m%dT%H%M%SZ)-$$.json"
-    if [ "$mode" = watch ]; then label="$(jq -r '"#\(.item.pr // .item.issue)"' <<<"$e")"; else label="$id"; fi
+    case "$mode" in watch|issues) label="$(jq -r '"#\(.item.pr // .item.issue)"' <<<"$e")";; *) label="$id";; esac
     ( umask 077
       jq --arg a "$arr" --argjson item "$(jq -c .item <<<"$e")" --arg by "${LOG_RUN:-session}" --arg title "$VERB $NOUN $label" --argjson arrays "$ARRAYS" '
         . as $w | reduce ($arrays[]) as $k ($w; .[$k] = [])
         | .[$a] = [$item] | .dispatched = {id: $item.id, by: $by} | .title = $title
-        | del(.questions_due, .teardowns_due, .expiring_due, .screens_due, .polls_due, .councils_due)' "$wl" > "$unit" )
+        | del(.questions_due, .teardowns_due, .expiring_due, .screens_due, .polls_due, .councils_due, .issue_news_due)' "$wl" > "$unit" )
     jq -cn --arg id "$id" --arg name "design-desk-unit-$mode-$safe" --arg unit "$unit" --arg section "$SECTION" \
       --arg title "$VERB $NOUN $label" --arg model "$model" '
       {id: $id, name: $name, worklist: $unit, sessionTitle: $title,
@@ -57,8 +59,10 @@ if [ "$cmd" = rest ]; then
       reduce ($arrays[]) as $k (.; .[$k] = [ (.[$k] // [])[] | select(.id as $i | $ids | index($i) | not) ])' "$wl" > "$out" )
   if [ "$mode" = watch ]; then
     title="$(jq -r '(.changes_due + (.issues_due // []))[] | "#\(.pr // .issue)"' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Explain $title"
+  elif [ "$mode" = issues ]; then
+    title="$(jq -r '((.drawings_due // []) + (.issue_news_due // []))[] | "#\(.issue)"' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Read issues $title"
   else
-    title="$(jq -r '[.requests_due, .variants_due, .prototypes_due, .handoffs_due, .catalog_due, .map_due, .figma_due, .slack_due, .questions_due, .screens_due, .polls_due, .councils_due, .teardowns_due] | map(. // []) | add | .[].id' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Work Desk items ${title:-(quick ones)}"
+    title="$(jq -r '[.requests_due, .variants_due, .prototypes_due, .handoffs_due, .catalog_due, .map_due, .figma_due, .slack_due, .drawings_due, .questions_due, .screens_due, .polls_due, .councils_due, .teardowns_due] | map(. // []) | add | .[].id' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Work Desk items ${title:-(quick ones)}"
   fi
   jq -n --arg w "$out" --arg t "$title" '{worklist: $w, title: $t}'
   exit 0
