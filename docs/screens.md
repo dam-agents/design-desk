@@ -80,7 +80,9 @@ minutes, then takes the pull request's own pictures instead.
    captioned with what it outlines ("2 areas changed: the heading and the button"). Its
    `marks` (`[{x, y, w, h}]`, fractions of the after picture) go on the "after" picture, and
    on "before" only when `same_size` is true: the page outlines them under **Outline what
-   changed**, and draws none on a "before" picture whose size differs from its "after".
+   changed**, and draws none on a "before" picture whose size differs from its "after". At
+   most 20 marks, the first from the top: when `partial` is true, the caption says only part
+   of the changed areas is outlined.
    `changed_pct` 0: say the screen looks the same and keep only "after".
 4. Every picture of a pair carries the same `pair` (the shot's name). The screen's card on
    the product map gets the "after" pictures and the change in its `changes` ([map.md](map.md)).

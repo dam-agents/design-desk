@@ -2,9 +2,10 @@
 // The after picture with every changed region outlined, for a change card's "What changed".
 // Compares the two in the browser, 12-pixel cells: a cell whose pixels differ by more than the
 // threshold (0–255, per channel) is changed; neighbouring changed cells merge into one box.
-// Prints {changed_pct, boxes: [{x, y, w, h}], marks, same_size, out}: `marks` are the boxes as
-// fractions of the after picture (0–1), what a Desk picture's `marks` takes; they fit the
-// before picture too only when `same_size` (the two have the same width and height).
+// Prints {changed_pct, boxes: [{x, y, w, h}], marks, partial, same_size, out}: `boxes` are the
+// first 50 from the top, `marks` the first 20 of them as fractions of the after picture (0–1),
+// what a Desk picture's `marks` takes; `partial` is true when `marks` leaves boxes out. They fit
+// the before picture too only when `same_size` (the two have the same width and height).
 import { readFileSync, writeFileSync } from "node:fs";
 import { extname } from "node:path";
 import { fail, launch } from "../lib/core.mjs";
@@ -65,5 +66,5 @@ export async function main(_cmd, argv) {
   writeFileSync(out, Buffer.from(result.image.split(",")[1], "base64"));
   const boxes = result.boxes.slice(0, 50), r = (v) => Math.round(v * 10000) / 10000;
   const marks = boxes.slice(0, 20).map((b) => ({ x: r(b.x / result.w), y: r(b.y / result.h), w: r(Math.min(b.w, result.w - b.x) / result.w), h: r(Math.min(b.h, result.h - b.y) / result.h) }));
-  console.log(JSON.stringify({ changed_pct: result.changed_pct, boxes, marks, same_size: result.same_size, out }));
+  console.log(JSON.stringify({ changed_pct: result.changed_pct, boxes, marks, partial: result.boxes.length > marks.length, same_size: result.same_size, out }));
 }

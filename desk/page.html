@@ -108,7 +108,7 @@
   .shot .pic img, .zoom .canvas img { min-height: 0; max-height: none; height: auto; object-fit: initial; }
   .canvas { position: relative; line-height: 0; }
   .mark { position: absolute; display: none; border: 3px solid #e8a400; border-radius: 4px; background: rgba(232, 164, 0, .12); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); margin: -4px; padding: 4px; box-sizing: content-box; pointer-events: none; }
-  body.outline .mark { display: block; }
+  body.outline .mark { display: block; } body.outline figure[data-frame] .mark { display: none; }
   .outline-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); margin: -4px 0 10px; cursor: pointer; }
   .outline-toggle input { margin: 0; padding: 0; width: auto; accent-color: #e8a400; }
   .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
@@ -818,7 +818,8 @@
   const fromOf = (s) => s.source === "person" ? `added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "";
   const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
   // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
-  // carries the "after" one's marks); they are drawn only once the two prove the same size.
+  // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
+  // the two prove the same size.
   const figure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
   // The agent's questions as a form: each has its options and "Leave it to Design Desk",
   // which is picked until a person chooses; one button leaves all of them.
@@ -1590,7 +1591,7 @@
     if (ds.zoom) {
       const list = [];
       for (const f of el.closest("#present, #workspace, #main, body").querySelectorAll("[data-zoom]"))
-        if (!list.some((x) => x.id === f.dataset.zoom)) list.push({ id: f.dataset.zoom, caption: f.querySelector("img")?.alt || "", marks: f.dataset.marks ? JSON.parse(f.dataset.marks) : null });
+        if (!list.some((x) => x.id === f.dataset.zoom)) list.push({ id: f.dataset.zoom, caption: f.querySelector("img")?.alt || "", marks: f.dataset.marks && !f.dataset.frame ? JSON.parse(f.dataset.marks) : null });
       await gallery(list, Math.max(0, list.findIndex((x) => x.id === ds.zoom)));
       return;
     }

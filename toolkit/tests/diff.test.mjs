@@ -32,6 +32,7 @@ test("marks are the changed boxes as fractions of the after picture, kept inside
   if (!r) return;
   assert.deepEqual(r.boxes, [{ x: 12, y: 0, w: 24, h: 24 }, { x: 96, y: 36, w: 12, h: 24 }]);
   assert.deepEqual(r.marks, [{ x: 0.12, y: 0, w: 0.24, h: 0.4 }, { x: 0.96, y: 0.6, w: 0.04, h: 0.4 }], "the box at the edge ends at the edge");
+  assert.equal(r.partial, false);
   assert.equal(r.same_size, true);
 });
 
@@ -41,5 +42,6 @@ test("at most 20 marks, and a before picture of another size is said", async (t)
   if (!r) return;
   assert.equal(r.boxes.length, 25);
   assert.equal(r.marks.length, 20);
+  assert.equal(r.partial, true, "a picture with more changed areas than marks says so");
   assert.equal(r.same_size, false, "the marks do not fit the before picture");
 });

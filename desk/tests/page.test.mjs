@@ -389,6 +389,13 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
       [["A-4", 1], ["A-5", 1], ["A-6", 0], ["A-7", 1]], "the shorter before picture loses its frames");
     assert.equal(await desk.getAttribute('[data-zoom="A-6"]', "data-marks"), null, "and the gallery draws none on it");
+    // Until the sizes are compared, the frames stay hidden, on the card and in the gallery.
+    await desk.$eval('[data-zoom="A-4"]', (f) => { f.dataset.frame = "A-5"; });
+    assert.equal(await desk.isVisible('[data-zoom="A-4"] .mark'), false);
+    await desk.click('[data-zoom="A-4"]');
+    await desk.waitForSelector(".zoom img");
+    assert.equal(await desk.locator(".zoom .mark").count(), 0);
+    await desk.press("body", "Escape");
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector(".impact", { state: "attached" });
 

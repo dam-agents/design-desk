@@ -993,7 +993,8 @@ function cleanRefs(list, assets, name) {
 // `design diff`'s `marks`; the page outlines them when a person asks.
 function cleanMarks(list) {
   const f = (v) => Math.min(1, Math.max(0, Math.round(Number(v) * 10000) / 10000));
-  return list.slice(0, 20).map((m) => {
+  if (list.length > 20) throw bad("marks: at most 20 (design diff's `marks`)");
+  return list.map((m) => {
     if (!m || typeof m !== "object" || ![m.x, m.y, m.w, m.h].every((v) => Number.isFinite(Number(v)))) throw bad("marks: each is {x, y, w, h} between 0 and 1");
     const x = f(m.x), y = f(m.y);
     return { x, y, w: f(Math.min(m.w, 1 - x)), h: f(Math.min(m.h, 1 - y)) };
