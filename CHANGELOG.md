@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.4.0 — 2026-11-02
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**), then restart the Desk server
+(`rc-service --user design-desk-server restart`). Elements and screens start keeping their
+earlier looks from their next redraw; older ones come only from *Draw how it looked before*
+([docs/catalog.md](docs/catalog.md) → History). No scheduled work is added.
+
 ## 1.3.0 — 2026-11-02
 
 **Upgrade:**

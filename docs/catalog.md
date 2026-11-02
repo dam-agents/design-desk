@@ -20,6 +20,7 @@ A card of kind `element` on the Desk:
 - `sheet` — the asset id of the state sheet (one HTML file with every tile);
 - `screens` — one thumbnail (the sheet's first screen), for the list;
 - `status` — `building`, `current`, or `stale` (its code changed since it was drawn).
+- `history` — its earlier looks, newest first, kept by the store ([History](#history)).
 
 The profile lists the elements worth having under `catalog.elements`
 ([profile.md](profile.md)); a person can also ask for one in chat, Slack or on the Desk.
@@ -64,3 +65,33 @@ The profile lists the elements worth having under `catalog.elements`
 - A designer can press **Update the drawing** on an element.
 - "Build the catalog" in chat: create one element card per entry of `catalog.elements`
   (`status: building`) and enqueue a `catalog` item for each; the inbox runs fan them out.
+
+## History
+
+People step back through an element's versions on its card (**← Older / Newer →**, a strip
+of thumbnails, "Put it next to now"); a change card links each part it changed to the
+version it made. A screen of the product map keeps its earlier pictures the same way.
+
+**Kept by the store, nothing to do.** An upsert that replaces the `sheet` (a screen's
+`screens`) moves the drawing it replaces into `history` with its date, `commit` and
+`made_by`: the shipped change cards that made it look like that, found by the change
+cards' `elements` (a screen's `changes`). A redraw identical byte for byte is no new
+version. The store keeps 30; the oldest go.
+
+**Drawing how it looked before** (`catalog_due` entry with `scope: "history"`, from the
+card's *Draw how it looked before*): the earlier versions from the code's history.
+
+1. Claim; check out the repository as in step 2 above.
+2. The commits that changed it, newest first: `git -C <dir> log --first-parent
+   --format='%H %cI %s' -- <file> <children its sheet depends on>` on the default branch.
+   Leave out the current `source.commit` and every `history[].commit`. Take as many as the
+   item's note asks for (data, read as a number or a date), else 6.
+3. Per commit, newest first: `git -C <dir> worktree add --detach /tmp/design-desk-look-<sha> <sha>`,
+   then steps 3–6 above with `--root` that worktree and `design build … --ref <sha>`. The
+   states are the ones of that time: a prop that did not exist yet has no tile. It does not
+   render → leave that commit out and say which in the done outcome; never draw it by hand.
+4. Upload the sheet and its thumbnail as in step 7, then `design desk look C-<n> <look.json>`:
+   `{at: <merge time>, commit, sheet, thumb, states: [names], made_by: [the change card of
+   that PR, if the Desk has one], links: [{label: "PR #<n>", url}]}`. Each version shows up
+   as it is added. Remove the worktree.
+5. `design desk done I-<n> --session <id> --outcome "drew <k> earlier versions"`.
