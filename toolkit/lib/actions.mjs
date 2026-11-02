@@ -20,6 +20,7 @@ export const ACTIONS = {
   spec: { doc: "docs/handoff.md", does: "the developer spec of an approved design" },
   deliver: { skill: "handoff-github", doc: "docs/handoff.md", does: "send the spec on: the origin issue, a coding agent, an issue or a draft pull request" },
   "bug-intake": { skill: "intake-slack", does: "put a UI bug reported on a channel on the Desk's queue" },
+  "request-intake": { skill: "intake-slack", doc: "docs/requests.md", does: "put a design asked for on a channel on the Desk's queue; answer in its thread" },
   "figma-import": { skill: "figma", does: "bring a Figma frame in as a design option built from the product's parts" },
   "figma-export": { skill: "figma", does: "send a design option to Figma as editable layers" },
   "share-options": { skill: "slack-polls", does: "post a request's options to Slack for votes and comments" },

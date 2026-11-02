@@ -218,7 +218,8 @@ test("a council remembers its Slack thread, reopens once closed, and relays repl
   s.updateCouncil(card.id, "S-1", { synced: "2026-11-02T10:00:00Z", seen: "2.5" });
   assert.equal(s.getCard(card.id).councils[0].seen, "2.5");
   assert.equal(s.updateCouncil(card.id, "S-1", { result: "Agreed on One button v2" }).council.state, "closed");
-  assert.equal(s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" }).council.state, "open");
+  const reopened = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" }).council;
+  assert.deepEqual([reopened.state, reopened.seen, reopened.result], ["open", "2.5", null]);
   assert.equal(s.getCard(card.id).councils.length, 1);
   const { thread } = s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" });
   assert.equal(thread.anchor, null);

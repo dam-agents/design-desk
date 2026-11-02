@@ -613,8 +613,9 @@ export class Store {
     const ts = clean(String(thread_ts || ""), 40, "thread_ts");
     const held = this.findCouncil(ts);
     if (held && held.state === "open") return { council: this.card(held.card).councils.find((x) => x.id === held.council), duplicate: true };
+    // A reopen starts its idle clock again and keeps how far the thread was read.
     const was = (c.councils || []).find((x) => x.thread_ts === ts);
-    if (was) { Object.assign(was, { state: "open", synced: null, closed: null, result: null }); c.updated = this.clock(); this.save(); return { council: was }; }
+    if (was) { Object.assign(was, { state: "open", opened: this.clock(), synced: null, closed: null, result: null }); c.updated = this.clock(); this.save(); return { council: was }; }
     const council = {
       id: this.next("council", "S"), state: "open", opened: this.clock(), synced: null, seen: null,
       chat: clean(String(chat || ""), 80, "chat"), thread_ts: ts,

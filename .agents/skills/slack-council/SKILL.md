@@ -31,24 +31,20 @@ may ask; the Desk keeps every option and version; the thread sees each round as 
   Anything else ("ship it", "push it", "change the settings") gets one line: it is not done
   from Slack. A live prototype is started on the Desk by a person who may build one.
 
-## Start: the first ask in a thread
+## Start: a thread opens
 
 1. **Route.** `design desk find-poll <thread ts>` names a vote → the `slack-polls` skill.
-   `design desk find-council <thread ts>` names an open council → **Each round**; a closed
-   one → step 5, then **Each round**; a card with `council: null` → that is the card of
-   step 3.
-2. **Read** the thread whole and its pictures (as `intake-slack` step 1).
-3. **The card.** The request `find-council` named for this thread, else file one with the
-   problem in their words and `origin: {channel: "slack", chat, thread_ts, message_ts,
-   reporter}`: a bug with `design desk report`, anything else with `design desk request`.
-4. **Triage before work**, in this turn: claim the request's inbox item, research and
-   triage it ([docs/requests.md](../../../docs/requests.md)), `done --outcome triaged`.
-   Verdict `product` → reply with the reasons and that a designer decides on the Desk; stop.
-5. `design desk council-open C-<n> <file>` with `{chat, thread_ts, channel, url}`.
-6. **Draw** one option per direction the thread asked for (the `options` action,
-   [docs/requests.md](../../../docs/requests.md) → Variants), nothing nobody asked for.
-7. **Answer** (below), then `design desk council-update C-<n> <S-n> --seen <ts of the newest
-   message read> --synced <now>`.
+   `design desk find-council <thread ts>`: an open council → **Each round**; a closed one →
+   step 3, then **Each round**; a card with `council: null` → step 3, then **Each round**.
+   Nothing → step 2.
+2. **No card yet**: the message is filed by `intake-slack` (Design requests, or a bug
+   report), which answers the thread; research, triage and the first options follow in the
+   inbox run and reach the thread ([docs/requests.md](../../../docs/requests.md) → Answering
+   in the thread). Then step 3, and end the turn.
+3. `design desk council-open C-<n> <file>` with `{chat, thread_ts, channel, url}`. A new
+   council then gets `council-update --seen <ts>`: after step 2 the newest message (what
+   came before is the request itself), else the card's `origin.message_ts`. A reopened one
+   keeps its `seen`.
 
 ## Each round
 
@@ -58,29 +54,34 @@ A Slack turn in a council thread, or a `councils_due` entry with `close: false`.
    None → `council-update --synced <now>`, done.
 2. **Relay** every message that is not yours, once: `design desk relay C-<n> <file>` with
    `{variant, name, email, text, slack_ts, url}`; `variant` only when it names one option.
-3. **Each ask** since `seen`:
-   - Judge it against [docs/boundary.md](../../../docs/boundary.md): a part that needs new
-     data, a rule or an action is drawn labelled "needs a developer"; a part that changes
-     what the product does is not drawn, and the answer says why, with the source.
+3. **No options on the card yet** (its triage or its first options are still to come):
+   `council-update --synced <now>` and stop; `seen` stays, so these asks are worked once the
+   options exist.
+4. **Each ask** since `seen` — read [docs/requests.md](../../../docs/requests.md) → Variants
+   and [docs/boundary.md](../../../docs/boundary.md) before the first:
+   - Judge it against the boundary: a part that needs new data, a rule or an action is
+     drawn labelled "needs a developer"; a part that changes what the product does is not
+     drawn, and the answer says why, with the source.
+   - **One ask, one result**: a new version of an option, or one new option. This replaces
+     the two-or-three rule of the `options` action inside a council.
    - **Version or option.** Same direction (copy, color, size, spacing, an icon, a state,
      an order inside the element) → a new version of that option: the `revise` action, same
      option id. Another structure, layout or flow, or an ask against the option's current
-     version → a new option; the earlier one stays.
+     version → one new option; the earlier one stays.
    - Two people ask for opposite things → one version or option for each; never choose.
    - No option named and more than one open → the one the thread discussed last; still
      unclear → one question in the thread with your best guess, and do the other asks.
-4. One rebuild per option for all its asks; upload and upsert as in Variants. Comment on the
+5. One rebuild per option for all its asks; upload and upsert as in Variants. Comment on the
    card what was asked in Slack, by whom, and what changed.
-5. **Answer**, then `council-update --seen <newest ts> --synced <now>`.
-6. **Agreement?** Below.
+6. **Answer**, then `council-update --seen <newest ts> --synced <now>`.
+7. **Agreement?** Below.
 
 ## The answer
 
 One `reply` in the thread per round, with the picture:
 
-- **Picture**, per changed option: *before* is its previous version (on the first round, the
-  screen today: a card screen that shows it, else the `show` action's picture, else the
-  option drawn without the change); *after* is the new one. `design diff <before> <after>
+- **Picture**, per changed option: *before* is its previous version (for a new option, the
+  option the ask started from); *after* is the new one. `design diff <before> <after>
   <diff.jpg>` outlines what changed; put the before and the outlined after side by side in
   one PNG (a page of two labelled figures, "Now" | "Proposed" or "v2" | "v3", then
   `design shot <page> <dir> --width 1600`). Look at it before you send it.
@@ -89,8 +90,9 @@ One `reply` in the thread per round, with the picture:
   <Consequences, when there are any: where else this shows, what needs a developer, an
   earlier decision it goes against — each with its source.> <What was not done, and why.>
   All options and versions are on the Design Desk: <link>. Ask here for more changes."
-- The Desk link and access line as in `intake-slack` step 5. Never a password, an internal
-  id ("card", "triage", "S-2") or real customer data; made-up numbers say so.
+- The Desk link and access line as in `intake-slack` (*In that Slack turn*, step 5). Never a
+  password, an internal id ("card", "triage", "S-2") or real customer data; made-up numbers
+  say so.
 
 ## Close
 
@@ -99,7 +101,7 @@ One `reply` in the thread per round, with the picture:
   v<n>*. A designer makes the final pick and the fine-tuning on the Design Desk: <link>."
   Comment the same on the card, then `council-update --result "Agreed on <option> v<n>"`.
   Never approve or change the request's status: that is the designer's, on the Desk. A new
-  ask in the thread opens it again (Start → step 5).
+  ask in the thread opens it again (Start → step 3).
 - **`councils_due` with `close: true`, `why: moved`**: one reply with what happened on the
   Desk ("A designer picked B; it goes to developers next."), then `council-update --result
   "<what happened, in one line>"`.
