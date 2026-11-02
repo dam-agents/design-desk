@@ -36,6 +36,19 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   }
 }
 
+// Every action the page asks about: /api/me for its caller, /api/people for each role.
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add"];
+export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
+
+// The roster as the server reads a role (`## Desk people` rows): the first row of an email
+// counts, and an unknown role is a guest's.
+export function rosterOf(rows) {
+  const seen = new Set();
+  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: String(r.role || "").trim().toLowerCase() }))
+    .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
+    .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
+}
+
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "archived"];
@@ -83,7 +96,7 @@ function clean(s, max, name) {
 const optText = (s, max, name) => (s === undefined || s === null || s === "" ? "" : clean(s, max, name));
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
 }
 
 export class Store {
@@ -164,12 +177,36 @@ export class Store {
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         automated: Boolean(c.origin?.automated),
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
+        attention: this.attentionOf(c),
       }));
+  }
+
+  // Whether a card waits for a designer, and why (docs/desk.md → Needs a designer). A
+  // change card carries the agent's judgement; a request's comes from where it stands;
+  // a suggestion for the next call waits for a designer on either, whatever its status.
+  // Null: not judged.
+  attentionOf(c) {
+    if (c.kind !== "change" && c.kind !== "request") return null;
+    const suggested = c.call_suggestion ? ["Suggested for the next call"] : [];
+    if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
+      return suggested.length ? { level: "designer", reasons: suggested } : null;
+    const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
+    if (c.kind === "request") {
+      const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
+      const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
+      if (asks) reasons.push("Design Desk is waiting for an answer");
+      else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options or close it");
+      else if (!busy && c.status === "feedback") reasons.push("Options are ready: pick one or ask for changes");
+      else if (!busy && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
+    }
+    reasons.push(...suggested);
+    if (reasons.length) return { level: "designer", reasons };
+    return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
   }
 
   getCard(id) {
     const c = this.card(id);
-    return { ...c, threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    return { ...c, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -508,7 +545,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen or digest");
@@ -547,6 +584,10 @@ export class Store {
       else if (k === "concepts") { if (!Array.isArray(fields.concepts)) throw bad("concepts must be a list"); next.concepts = fields.concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()); }
       else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
+      else if (k === "attention") {
+        if (next.kind !== "change") throw bad("attention is judged on change cards; a request's comes from where it stands");
+        next.attention = fields.attention === null ? null : cleanAttention(fields.attention);
+      }
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
       else if (k === "group") next.group = clean(fields.group, 60, "group");
@@ -676,6 +717,51 @@ export class Store {
     return { poll };
   }
 
+  // ---------- councils in Slack ----------
+
+  // People discuss a request in a Slack thread and ask for changes there; the agent answers
+  // each ask with a new option or version. The council remembers the thread, how far the
+  // agent has read it (`seen`, a Slack ts) and when it last looked.
+  openCouncil(cardId, { chat, thread_ts, url = null, channel = null }) {
+    const c = this.card(cardId);
+    const ts = clean(String(thread_ts || ""), 40, "thread_ts");
+    const held = this.findCouncil(ts);
+    if (held && held.state === "open") return { council: this.card(held.card).councils.find((x) => x.id === held.council), duplicate: true };
+    // A reopen starts its idle clock again and keeps how far the thread was read.
+    const was = (c.councils || []).find((x) => x.thread_ts === ts);
+    if (was) { Object.assign(was, { state: "open", opened: this.clock(), synced: null, closed: null, result: null }); c.updated = this.clock(); this.save(); return { council: was }; }
+    const council = {
+      id: this.next("council", "S"), state: "open", opened: this.clock(), synced: null, seen: null,
+      chat: clean(String(chat || ""), 80, "chat"), thread_ts: ts,
+      channel: optText(channel, 80, "channel"), url: /^https:\/\//.test(String(url || "")) ? String(url).slice(0, 300) : null,
+    };
+    c.councils = [...(c.councils || []), council];
+    c.updated = this.clock();
+    this.save();
+    return { council };
+  }
+
+  updateCouncil(cardId, councilId, { synced = null, seen = null, result = null } = {}) {
+    const c = this.card(cardId);
+    const council = (c.councils || []).find((x) => x.id === councilId);
+    if (!council) throw missing(`no council ${councilId} on ${cardId}`);
+    if (synced) council.synced = clean(String(synced), 40, "synced");
+    if (seen) council.seen = clean(String(seen), 40, "seen");
+    if (result !== null) { council.state = "closed"; council.closed = this.clock(); council.result = clean(String(result), 600, "result"); }
+    c.updated = this.clock();
+    this.save();
+    return { council };
+  }
+
+  // The council of a Slack thread; without one, the request the thread filed (a bug
+  // report, say), so a first ask there lands on that card instead of a second one.
+  findCouncil(ts) {
+    for (const c of Object.values(this.db.cards)) for (const x of c.councils || [])
+      if (x.thread_ts === ts) return { card: c.id, council: x.id, state: x.state };
+    const c = Object.values(this.db.cards).find((x) => x.kind === "request" && x.origin?.thread_ts === ts);
+    return c ? { card: c.id, council: null, state: null } : null;
+  }
+
   // The reactions on one option's post, as they are now. A person's own vote on the Desk
   // wins over their reaction; a reaction taken back takes the vote away.
   slackVotes(cardId, variant, voters) {
@@ -696,14 +782,15 @@ export class Store {
     return { votes: c.votes[variant] };
   }
 
-  // A reply someone wrote under an option in Slack becomes a comment on that option, once.
-  relayComment(cardId, { variant, name, email = null, role = null, text, slack_ts, url = null }) {
+  // A reply someone wrote in Slack becomes a comment once: on the option it was under, or
+  // on the whole request when it came from a council thread.
+  relayComment(cardId, { variant = null, name, email = null, role = null, text, slack_ts, url = null }) {
     const c = this.card(cardId);
-    if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
+    if (variant && !(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
     const ts = clean(String(slack_ts || ""), 40, "slack_ts");
     const seen = (c.threads || []).map((t) => this.db.threads[t]).find((t) => t?.slack_ts === ts);
     if (seen) return { thread: seen, duplicate: true };
-    const { thread } = this.openThread(cardId, { via: "slack", name, email, role: role || "slack" }, { kind: "comment", text, anchor: { variant, label: "the whole option" } });
+    const { thread } = this.openThread(cardId, { via: "slack", name, email, role: role || "slack" }, { kind: "comment", text, anchor: variant ? { variant, label: "the whole option" } : null });
     thread.slack_ts = ts;
     if (/^https:\/\//.test(String(url || ""))) thread.slack_url = String(url).slice(0, 300);
     this.save();
@@ -917,6 +1004,14 @@ function cleanTriage(t) {
   if (!t || !["design", "needs-developer", "product"].includes(t.verdict)) throw bad("triage verdict must be design, needs-developer or product");
   const list = (x, n) => (Array.isArray(x) ? x.slice(0, 12).map((s) => clean(s, 600, n)) : []);
   return { verdict: t.verdict, reasons: list(t.reasons, "reason"), can: list(t.can, "can"), cannot: list(t.cannot, "cannot") };
+}
+
+// The agent's judgement of a change: a designer should look at it, or it is for
+// information only; either way with its reasons in plain words.
+function cleanAttention(a) {
+  if (!a || !["designer", "fyi"].includes(a.level)) throw bad("attention level must be designer or fyi");
+  if (!Array.isArray(a.reasons) || !a.reasons.length) throw bad("attention names at least one reason");
+  return { level: a.level, reasons: a.reasons.slice(0, 5).map((s) => clean(s, 160, "attention reason")) };
 }
 
 // The agent's free-form fields are objects whose links the page renders: only http(s).

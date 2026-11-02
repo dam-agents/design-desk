@@ -7,14 +7,52 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.9.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server first: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Elements and screens start keeping their earlier looks from their next redraw; older ones
+come only from *Draw how it looked before* ([docs/catalog.md](docs/catalog.md) → History). No scheduled work is added.
+
+## 1.8.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+New and Requests get a **Needs a designer** filter, and New opens on **All**. Change cards
+written before this version have no `attention`, so they stay out of that filter.
+
+## 1.7.0 — 2026-11-02
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Add `- slack_council: disabled` and
+`- council_sync_min: 30` to `work/CONFIG.md` when missing, then re-run
+`bash "$HOME/scripts/verify-onboarding.sh" --config`. Offer the operator `slack_council:
+enabled` (needs a bound Slack channel): anyone in a request's Slack thread asks for design
+changes and gets each new option or version back there as a before/after picture
+([`slack-council`](.agents/skills/slack-council/SKILL.md)). While a thread is open, one inbox
+run every `council_sync_min` minutes reads it.
+
+## 1.6.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
 ## 1.5.0 — 2026-11-02
 
 **Upgrade:**
-Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
-the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**). Elements and screens start keeping their
-earlier looks from their next redraw; older ones come only from *Draw how it looked before*
-([docs/catalog.md](docs/catalog.md) → History). No scheduled work is added.
+Nothing — docs and the bundled skills are read from the checkout. A design asked for in Slack
+now becomes a request on the Desk, and its options go back to the thread (the
+`request-intake` action).
 
 ## 1.4.0 — 2026-11-02
 
