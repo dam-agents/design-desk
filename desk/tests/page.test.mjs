@@ -40,7 +40,8 @@ const requests = [
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
-  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true } }
+  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true },
+      skills: [{ name: "copy", does: "Write the words", on: true }, { name: "brand", does: "Use a saved brand", on: false }] }
     : path === "/api/cards" ? { cards: [change, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
@@ -102,6 +103,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await rq.button("Send").click();
     assert.equal(await rq.open(), true, "an empty request stays open");
     await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
+    assert.equal(await desk.isVisible("#rq-skills"), true, "an idea offers the skills");
+    await desk.click("#request-dialog #type-choice button[data-type=bug]");
+    assert.equal(await desk.isVisible("#rq-skills"), false, "a bug offers no skills");
+    assert.equal(await desk.isVisible("#rq-vision"), false, "a bug asks for no picture of how it should look");
+    await desk.click("#request-dialog #type-choice button[data-type=idea]");
     await rq.button("Send").click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     assert.equal(await rq.open(), false, "Send closes the dialog");
@@ -109,6 +115,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     const sent = await posts("/api/requests");
     assert.equal(sent.length, 1);
     assert.equal(JSON.parse(sent[0].body).problem, "Make the send button bigger");
+    assert.deepEqual(JSON.parse(sent[0].body).skills, { copy: true, brand: false }, "each switch is sent as it was set");
     await desk.click("#new-request");
     await rq.close();
     await settled("/api/requests", 1, "a close after a Send sends nothing");

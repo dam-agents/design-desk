@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.15.0 — 2026-11-02
+## 1.16.0 — 2026-11-02
 
 **Upgrade:**
 1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
@@ -20,6 +20,15 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    issues that change the screens, each with what the UI will need, a picture of now and a
    sketch ([docs/issues.md](docs/issues.md)); `issue_news: enabled` turns it on.
 4. Re-run `bash "$HOME/scripts/verify-onboarding.sh" --config`.
+
+## 1.15.0 — 2026-11-02
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). New request now asks how the person
+pictures it and offers switches for installed skills; new key `request_skills`
+([docs/config.md](docs/config.md)), never asked: nothing to add.
 
 ## 1.14.1 — 2026-11-02
 
