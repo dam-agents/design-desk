@@ -176,7 +176,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    this agent, then set `figma: enabled`; ask for a file the exports should go to
    (`figma_file`, may stay empty). No → `figma: disabled`.
 
-Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboarding.sh"
+Write the file in exactly this shape with `design config write` (a restored file included;
+[docs/config.md](docs/config.md) → Writing the file), then `bash "$HOME/scripts/verify-onboarding.sh"
 --config` and apply what it reports:
 
 ```markdown
@@ -236,11 +237,11 @@ Write the file in exactly this shape, then `bash "$HOME/scripts/verify-onboardin
 2. **Features.** Ask the owner to turn on **Interactive artifacts** and **Environments**
    (Settings → tap the version five times → Experimental features). Check Environments by
    calling `list_environments`: the tool missing means the feature is off. Tick `features`
-   when both are on; without Environments, set `max_prototypes: 0` and say the Desk works
+   when both are on; without Environments, set `max_prototypes: 0` (`design config write`) and say the Desk works
    without live prototypes.
 3. **Publish the page** ([docs/desk.md](docs/desk.md) → Publishing the page) when
-   `desk_artifact` is empty: `create_artifact` with `interactive: true`, private; write
-   the id to `desk_artifact`.
+   `desk_artifact` is empty: `create_artifact` with `interactive: true`, private; set
+   `desk_artifact` to the id with `design config write`.
 4. **Share.** Ask the owner to open the Desk in the app and share it: Share → Restricted →
    the emails of Step 3.2. Only the owner can; tick `share` when they confirm. Then give
    them the share link to bookmark: the Desk loads its data there and in this agent's chat,

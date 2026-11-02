@@ -363,7 +363,7 @@ inbox_mode() {
       figma_due: pick(["figma"]),
       screens_due: pick(["screens"]),
       slack_due: pick(["slack"]),
-      people_due: pick(["person"]),
+      people_due: [ pick(["person"])[] | select(.person != null) ],
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,

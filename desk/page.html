@@ -667,8 +667,9 @@
         ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
       steps: ["Pick Screens, Elements or Decisions.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
     people: { about: "who is on this Desk, and what each role can do",
-      see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked."],
-      can: [[`To get another role, or to add someone, ask ${esc(contact())}.`]] },
+      see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked.", "Asks to add someone, and where each one stands."],
+      can: [["<b>+ Add a person</b>: Design Desk puts them on the list as a designer, PM or developer.", "people"],
+        [`To get another role, or to make someone a lead, ask ${esc(contact())}.`]] },
   });
   function renderIntro() {
     const it = INTRO()[S.tab];

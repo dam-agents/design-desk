@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync, existsSync } from "node:fs";
+import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { withRosterRow } from "../lib/core.mjs";
@@ -65,4 +66,33 @@ test("design config write: only over the file as it was read, and always under t
   writeIfUnchanged(work, now.replace("display_name: Desk", "display_name: Studio"), configSha(now));
   assert.match(readFileSync(join(work, "CONFIG.md"), "utf8"), /display_name: Studio[\s\S]*alex@example\.com/);
   assert.equal(existsSync(join(work, ".CONFIG.lock")), false);
+});
+
+// Two writers that meet one dead holder's lock (the review's reproduction): both changes land.
+test("the lock: a dead holder's file goes, and two waiters never both take it", async () => {
+  const core = new URL("../lib/core.mjs", import.meta.url).href;
+  for (let round = 0; round < 5; round++) {
+    const work = mkdtempSync(join(tmpdir(), "config-race-"));
+    writeFileSync(join(work, "CONFIG.md"), CONFIG);
+    mkdirSync(join(work, ".CONFIG.lock"));
+    writeFileSync(join(work, ".CONFIG.lock", "999999999-dead"), "");
+    const writer = (email) => new Promise((ok, no) => {
+      const p = spawn(process.execPath, ["--input-type=module", "-e", `import { writeConfig, withRosterRow } from ${JSON.stringify(core)};
+        writeConfig(${JSON.stringify(work)}, (t) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30); return withRosterRow(t, ${JSON.stringify(email)}, "pm"); });`], { stdio: "inherit" });
+      p.on("exit", (code) => (code === 0 ? ok() : no(new Error(`writer exited ${code}`))));
+    });
+    await Promise.all([writer("a@example.com"), writer("b@example.com")]);
+    const text = readFileSync(join(work, "CONFIG.md"), "utf8");
+    assert.match(text, /a@example\.com/); assert.match(text, /b@example\.com/);
+    assert.equal(existsSync(join(work, ".CONFIG.lock")), false);
+  }
+});
+
+test("the lock: a live holder's lock is waited for, never taken", async () => {
+  const { lockDir } = await import("../lib/core.mjs");
+  const lock = join(mkdtempSync(join(tmpdir(), "config-live-")), ".CONFIG.lock");
+  mkdirSync(lock); writeFileSync(join(lock, `${process.pid}-live`), "");
+  utimesSync(lock, new Date(0), new Date(0));
+  assert.throws(() => lockDir(lock, { timeoutMs: 300 }), /stayed locked/);
+  assert.equal(existsSync(join(lock, `${process.pid}-live`)), true);
 });

@@ -308,7 +308,7 @@ test("every tab but How it works opens with its intro, which stays folded once f
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"][open]`);
   }
-  assert.doesNotMatch(await desk.textContent('#banners [data-intro="people"]'), /not with your role/);
+  assert.match(await desk.textContent('#banners [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   await desk.click('[data-tab="new"]');

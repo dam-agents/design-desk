@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { WORK, fail, configSha, writeConfig } from "../lib/core.mjs";
 
 const USAGE = `usage: design config <command>
-  sha                                   the fingerprint of work/CONFIG.md as it is now
+  sha                                   the fingerprint of work/CONFIG.md as it is now (missing: of
+                                        an empty file, so a first write creates it)
   write <file> --from <sha>             replace work/CONFIG.md with <file>, under the lock, only
                                         when it still has that fingerprint; exit 3 when it changed
 `;
@@ -23,7 +24,9 @@ export function writeIfUnchanged(work, next, from) {
 export async function main(_cmd, argv) {
   const [sub, file, flag, from] = argv;
   if (sub === "sha") {
-    try { return console.log(configSha(readFileSync(join(WORK, "CONFIG.md"), "utf8"))); } catch (e) { fail(`cannot read work/CONFIG.md (${e.code || e.message})`); }
+    let text = "";
+    try { text = readFileSync(join(WORK, "CONFIG.md"), "utf8"); } catch (e) { if (e.code !== "ENOENT") fail(`cannot read work/CONFIG.md (${e.code || e.message})`); }
+    return console.log(configSha(text));
   }
   if (sub === "write" && file && flag === "--from" && /^[0-9a-f]{64}$/.test(from || "")) {
     let next; try { next = readFileSync(file, "utf8"); } catch (e) { fail(`cannot read ${file} (${e.code || e.message})`); }

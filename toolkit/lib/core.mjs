@@ -1,6 +1,6 @@
 // Shared paths and helpers for the Design Desk toolkit. Every bin/ script imports this.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, mkdirSync, renameSync, rmdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
@@ -65,27 +65,52 @@ export function tableIn(text, heading) {
 }
 
 // Every writer of work/CONFIG.md goes through here (docs/config.md → Writing the file):
-// a mkdir lock (one older than 60 s is a dead writer's), the file read again under it,
-// `change(text)` applied to what is there now, and the whole file replaced by a rename.
+// the lock, the file read again under it (missing: empty), `change(text)` applied to what
+// is there now, and the whole file replaced by a rename.
 export const configSha = (text) => createHash("sha256").update(text).digest("hex");
 export function writeConfig(work, change) {
-  const path = join(work, "CONFIG.md"), lock = join(work, ".CONFIG.lock");
-  for (let waited = 0; ; waited += 1) {
-    try { mkdirSync(lock); break; } catch (e) {
-      if (e.code !== "EEXIST") throw e;
-      let age = 0; try { age = (Date.now() - statSync(lock).mtimeMs) / 1000; } catch { continue; }
-      if (age > 60) { try { rmdirSync(lock); } catch {} continue; }
-      if (waited >= 120) throw new Error("work/CONFIG.md stayed locked for two minutes");
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
-    }
-  }
+  const path = join(work, "CONFIG.md");
+  const release = lockDir(join(work, ".CONFIG.lock"));
   try {
-    const next = change(readFileSync(path, "utf8"));
+    let text = "";
+    try { text = readFileSync(path, "utf8"); } catch (e) { if (e.code !== "ENOENT") throw e; }
+    const next = change(text);
     const tmp = `${path}.tmp-${process.pid}`;
     writeFileSync(tmp, next);
     renameSync(tmp, path);
     return next;
-  } finally { try { rmdirSync(lock); } catch {} }
+  } finally { release(); }
+}
+
+// A lock that a dead holder never keeps and two waiters never both take. The lock is a
+// directory holding one file named after its holder (`<pid>-<random>`); a writer that made
+// the directory holds it once its own file is the only one there. A waiter removes a dead
+// holder's file by that unique name, so a new holder's file is never touched, and then the
+// directory only when it is empty (rmdir refuses one with a file in it). A holder whose
+// directory vanished before its file went in, or that finds another file, starts over.
+const alive = (name) => { try { process.kill(Number.parseInt(name, 10), 0); return true; } catch (e) { return e.code === "EPERM"; } };
+const nap = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+export function lockDir(lock, { timeoutMs = 120000 } = {}) {
+  const me = `${process.pid}-${createHash("sha256").update(`${Math.random()}${Date.now()}`).digest("hex").slice(0, 12)}`;
+  const files = () => { try { return readdirSync(lock); } catch { return null; } };
+  for (const until = Date.now() + timeoutMs; ;) {
+    let made = true;
+    try { mkdirSync(lock); } catch (e) { if (e.code !== "EEXIST") throw e; made = false; }
+    if (made) {
+      try { writeFileSync(join(lock, me), "", { flag: "wx" }); } catch (e) { if (e.code === "ENOENT") continue; throw e; }
+      const held = files();
+      if (held?.length === 1 && held[0] === me) return () => { try { unlinkSync(join(lock, me)); } catch {} try { rmdirSync(lock); } catch {} };
+      try { unlinkSync(join(lock, me)); } catch {}
+    } else {
+      const held = files() || [];
+      for (const f of held) if (!alive(f)) try { unlinkSync(join(lock, f)); } catch {}
+      // Empty: a dead holder's, or one a writer made a moment ago; only an old one goes.
+      let age = 0; try { age = Date.now() - statSync(lock).mtimeMs; } catch {}
+      if (held.every((f) => !alive(f)) && (held.length > 0 || age > 5000)) try { rmdirSync(lock); } catch {}
+    }
+    if (Date.now() > until) throw new Error("work/CONFIG.md stayed locked for two minutes");
+    nap(50 + Math.floor(Math.random() * 200));
+  }
 }
 
 // work/CONFIG.md with one more `| email | role |` row in `## Desk people`: after its

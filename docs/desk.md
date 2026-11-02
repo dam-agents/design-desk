@@ -27,8 +27,8 @@ served by the Desk server through the platform's Artifact API relay.
 
 - The page is `desk/page.html`, published as **one** artifact:
   `mcp__platform-outbound__create_artifact` with `title` = `display_name`, `file_name:
-  desk.html`, `interactive: true`, the file's content, private. Write its id to
-  `work/CONFIG.md` as `desk_artifact`.
+  desk.html`, `interactive: true`, the file's content, private. Set `desk_artifact`
+  to its id with `design config write` ([config.md](config.md) → Writing the file).
 - A definition update that changes `desk/page.html` republishes it with `update_artifact` on
   the same id, so the link and the owner's sharing stay. When the update also changes a file
   the server runs (`desk/serve.sh`, `desk/server.mjs`, `desk/store.mjs`,

@@ -14,7 +14,8 @@ cat > "$WORK_DIR/desk/inbox.json" <<JSON
  {"id":"I-2","kind":"request","card":"C-2","thread":null,"created":"$new"},
  {"id":"I-3","kind":"build","card":"C-2","thread":null,"created":"$new"},
  {"id":"I-6","kind":"map","card":"C-5","thread":null,"created":"$new"},
- {"id":"I-7","kind":"person","card":null,"thread":null,"created":"$new","person":{"email":"alex@example.com","role":"pm"}}],
+ {"id":"I-7","kind":"person","card":null,"thread":null,"created":"$new","person":{"email":"alex@example.com","role":"pm"}},
+ {"id":"I-8","kind":"person","card":null,"thread":null,"created":"$new"}],
  "claimed":[
  {"id":"I-4","kind":"explore","card":"C-3","thread":null,"created":"$old","claimed_by":"s1","claimed_at":"$old"},
  {"id":"I-5","kind":"handoff","card":"C-4","thread":null,"created":"$new","claimed_by":"s2","claimed_at":"$new"}]}
@@ -29,7 +30,7 @@ assert "slack_send reaches the worklist config, off by default" '.config.slack_s
 assert "request sorted" '[.requests_due[].id] == ["I-2"]' "$out"
 assert "build sorted" '[.prototypes_due[].id] == ["I-3"]' "$out"
 assert "a screen someone added sorted" '[.map_due[].id] == ["I-6"]' "$out"
-assert "a person a lead asked for sorted, with no card" '[.people_due[] | select(.card == null) | .person.email] == ["alex@example.com"]' "$out"
+assert "a person a lead asked for sorted, with no card; one without its payload is not due" '[.people_due[] | select(.card == null) | .person.email] == ["alex@example.com"]' "$out"
 assert "stale claim taken over" '[.variants_due[] | select(.takeover) | .id] == ["I-4"]' "$out"
 assert "fresh claim left alone" '[.handoffs_due[].id] == []' "$out"
 assert "expiring prototype" '[.expiring_due[].card] == ["C-2"]' "$out"
