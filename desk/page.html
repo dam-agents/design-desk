@@ -127,6 +127,12 @@
   .asks fieldset.q { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; display: grid; gap: 4px; }
   .asks legend { font-weight: 600; padding: 0; }
   .asks fieldset.q label { display: flex; gap: 8px; align-items: baseline; } .asks fieldset.q input[type=radio] { width: auto; }
+  fieldset.skills { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; } fieldset.skills legend { font-size: 12.5px; color: var(--muted); padding: 0; margin-bottom: 4px; }
+  label.switch { display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--ink); cursor: pointer; } label.switch small { display: block; color: var(--muted); font-size: 12px; }
+  label.switch input { appearance: none; -webkit-appearance: none; flex: none; width: 34px; height: 20px; padding: 0; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; }
+  label.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+  label.switch input:checked { background: var(--accent); } label.switch input:checked::after { transform: translateX(14px); }
+  label.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -241,7 +247,9 @@
     </div>
     <input type="hidden" name="type" value="idea" />
     <label><span id="rq-problem-label">What would you change, and for whom?</span><textarea name="problem" maxlength="4000" required></textarea></label>
+    <label id="rq-vision"><span>How do you picture it? (optional)</span><textarea name="vision" maxlength="4000" placeholder="e.g. calmer, like the cards in Settings; the main button on the right; less text"></textarea></label>
     <label><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
+    <fieldset class="skills" id="rq-skills" hidden><legend>What Design Desk uses for the options</legend><div id="rq-skill-list"></div></fieldset>
     <label id="rq-figma" hidden><span>Figma link (optional)</span><input name="figma" maxlength="500" placeholder="https://www.figma.com/design/…" /></label>
     <div class="drop" id="rq-drop">
       <span>Screenshot (optional): paste it here with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="rq-file" hidden multiple /></label>. Two at most.</span>
@@ -447,6 +455,15 @@
       .replace(/(?<![\w&/#])(?:(PR|pull request|issue)\s+)?#(\d+)\b/gi, (m, kind, n) => base ? a(`${base}/${/^p/i.test(kind || "") ? "pull" : "issues"}/${n}`, m) : m)).join("");
   }
   const txt = (s, c) => refs(esc(s), c);
+
+  // The skills the person switched for a request's options, in the words New request showed.
+  function skillLine(skills) {
+    const e = Object.entries(skills || {});
+    if (!e.length) return "";
+    const say = (n) => esc((S.me?.skills || []).find((k) => k.name === n)?.does || n);
+    const on = e.filter(([, v]) => v).map(([n]) => say(n)), off = e.filter(([, v]) => !v).map(([n]) => say(n));
+    return `<p class="hint">${on.length ? `Uses: ${on.join(" · ")}` : ""}${on.length && off.length ? "<br>" : ""}${off.length ? `Not for this one: ${off.join(" · ")}` : ""}</p>`;
+  }
 
   // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
   function md(src, c = S.card) {
@@ -1200,7 +1217,7 @@
       ${renderSteps(c)}
       ${renderStatus(c)}
       ${attentionLine(c)}
-      <div class="section">${r.type === "bug" ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.goal ? `${r.type === "bug" ? "<h4>What should happen</h4>" : ""}${md(r.goal)}` : ""}${r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
+      <div class="section">${r.type === "bug" ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.goal ? `${r.type === "bug" ? "<h4>What should happen</h4>" : ""}${md(r.goal)}` : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(c.screens)}
       ${renderVerdict(c)}
       ${renderResearch(c.research)}
@@ -1649,6 +1666,9 @@
     f.type.value = type;
     for (const b of document.querySelectorAll("#type-choice button")) b.setAttribute("aria-pressed", String(b.dataset.type === type));
     $("#rq-problem-label").textContent = type === "bug" ? "What's wrong, and where? What did you expect instead?" : "What would you change, and for whom?";
+    // A bug is fixed, not designed: no picture of how it should look, no skills to choose.
+    $("#rq-vision").hidden = type === "bug";
+    $("#rq-skills").hidden = type === "bug" || !(S.me?.skills || []).length;
   }
   document.addEventListener("click", (e) => { const b = e.target.closest("#type-choice button"); if (b) setType(b.dataset.type); });
 
@@ -1682,6 +1702,7 @@
   function openRequestDialog(from) {
     const dlg = $("#request-dialog"), f = $("#request-form");
     f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
+    $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
     setType("idea");
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !S.me?.figma;
@@ -1755,7 +1776,10 @@
   $("#request-dialog").addEventListener("close", guard(async (e) => {
     if (e.target.returnValue !== "send") return;
     const f = $("#request-form");
+    const design = f.type.value !== "bug";
+    const skills = design ? Object.fromEntries([...document.querySelectorAll("#rq-skill-list input[data-skill]")].map((i) => [i.dataset.skill, i.checked])) : {};
     const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
+      ...(design && f.vision.value.trim() ? { vision: f.vision.value } : {}), ...(Object.keys(skills).length ? { skills } : {}),
       ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
     toast("Sent. Design Desk first checks what can be done; this page updates by itself.");

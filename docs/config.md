@@ -40,6 +40,9 @@ worklist's `config`. A missing key takes its default.
   a Figma file link that exports go to (empty: a new file per request).
 - `## Skills` table, `| action | skill |`: another installed skill for an action
   ([actions.md](actions.md)); it wins over the product profile's choice.
+- `request_skills` (`copy, impact, brand, walkthrough, figma`), never asked — the installed
+  skills a person switches on or off for one request in New request; one not installed is
+  not offered, `figma` only with `figma` enabled ([requests.md](requests.md) → Variants).
 - `change_due_days` (`21`), never asked — days a change card may wait for a designer to
   mark it handled before the Desk shows it red as overdue; `0`/`off` disables.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`

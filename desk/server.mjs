@@ -14,6 +14,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
 import { Store, DeskError, can, ROLES, abilities, rosterOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
+import { findSkill } from "../toolkit/lib/actions.mjs";
 
 const PORT = Number(process.env.DESK_PORT || 5555);
 const DIR = process.env.DESK_DIR || join(WORK, "desk");
@@ -56,6 +57,38 @@ function roleOf(caller) {
 }
 
 const roster = () => rosterOf(cfgTable("Desk people"));
+
+// The skills a person switches on or off in New request: `request_skills` in
+// work/CONFIG.md, the installed ones only. A bundled skill says what it adds in plain
+// words and whether it is on unless switched off; another one, the first sentence of its
+// description, off unless switched on.
+const SKILL_WORDS = {
+  copy: ["Write the words: labels, empty states, errors", true],
+  impact: ["Show where else the same thing appears", true],
+  brand: ["Use a saved brand: its colours, fonts and logo", false],
+  walkthrough: ["Add a clickable step-by-step tour of the options", false],
+  figma: ["Also send the options to Figma as layers", false],
+};
+function requestSkills(figma) {
+  const names = (cfg("request_skills", "copy, impact, brand, walkthrough, figma") || "").split(",").map((n) => n.trim()).filter((n) => /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(n));
+  const out = [];
+  for (const name of [...new Set(names)].slice(0, 20)) {
+    if (name === "figma" && !figma) continue;
+    const path = findSkill(name);
+    if (!path) continue;
+    let [does, on] = SKILL_WORDS[name] || ["", false];
+    if (!does) {
+      try {
+        const head = readFileSync(path, "utf8").split(/\n---/)[0];
+        const d = (head.match(/(?:^|\n)description:\s*(?:>-?|\|-?)?\s*([\s\S]*?)(?=\n\S[\w-]*:|$)/)?.[1] || "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
+        const first = d.match(/^.*?[.!?](?=\s|$)/)?.[0] || d;
+        does = first.length > 140 ? `${first.slice(0, 137).replace(/\s+\S*$/, "")}…` : first;
+      } catch (e) { log("warn", "request_skills", `${name}: its description could not be read (${e.message}); the page shows its name`); }
+    }
+    out.push({ name, does, on });
+  }
+  return out;
+}
 
 // The roster role of a person met in Slack, by the email the workspace discloses.
 function slackRole(email) {
@@ -145,7 +178,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, screens: s.screens, handoff: s.handoff, due_days: s.dueDays });
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, screens: s.screens, handoff: s.handoff, due_days: s.dueDays, skills: requestSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])) });
@@ -184,11 +217,16 @@ async function viewerRoute(req, res, url, who) {
     // proposals are the agent's (from an issue, from a shipped change).
     const { title, problem, goal, screen, steps, from, figma } = b;
     const type = from ? "adjustment" : b.type === "bug" ? "bug" : "idea";
+    // A bug is fixed, not designed: no picture of it and no skills. Only the offered skills count.
+    const offered = new Set(requestSkills(s.figma).map((k) => k.name));
+    const vision = type === "bug" ? "" : b.vision;
+    const skills = type === "bug" || !b.skills || typeof b.skills !== "object" ? null
+      : Object.fromEntries(Object.entries(b.skills).filter(([k, on]) => offered.has(k) && typeof on === "boolean"));
     // Pictures a person pasted: two at most, images only, stored before the card names them.
     const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
     const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "" }));
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma }), s, who));
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills }), s, who));
   }
   if (m === "POST" && p[1] === "product") {
     need("add");

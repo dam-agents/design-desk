@@ -102,6 +102,17 @@ function clean(s, max, name) {
 }
 const optText = (s, max, name) => (s === undefined || s === null || s === "" ? "" : clean(s, max, name));
 
+// The skills a person switched on or off for one request, by skill name: {copy: true}.
+const SKILL_NAME = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
+function cleanSkills(v) {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "object" || Array.isArray(v)) throw bad("skills must be {name: on}");
+  const e = Object.entries(v);
+  if (e.length > 20) throw bad("skills names 20 skills at most");
+  for (const [k, on] of e) if (!SKILL_NAME.test(k) || typeof on !== "boolean") throw bad("skills must be {name: on}");
+  return e.length ? Object.fromEntries(e) : null;
+}
+
 export function emptyDb() {
   return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
 }
@@ -350,7 +361,7 @@ export class Store {
   // Types: an idea for the design; a UI bug; a feature (a larger piece, usually an
   // issue); an adjustment of UI a developer built (a pull request or a change card);
   // a proposal the agent made for a new feature.
-  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "" }) {
+  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null }) {
     if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
     const request = {
@@ -358,6 +369,8 @@ export class Store {
       screen: optText(screen, 500, "screen"), steps: optText(steps, LIMITS.text, "steps"),
       from: from ? this.card(String(from)).id : null,
       figma: figma ? String(figma) : null,
+      // How the person pictures it, and the skills they switched for its options (docs/requests.md).
+      vision: optText(vision, LIMITS.text, "vision"), skills: cleanSkills(skills),
     };
     const c = {
       kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),

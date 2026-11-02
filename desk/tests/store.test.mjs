@@ -113,6 +113,16 @@ test("a request that needs a developer gets no live prototype", () => {
   assert.throws(() => s.act(card.id, alice, "approve"), /already working on this/);
 });
 
+test("a request keeps how the person pictures it and the skills they switched", () => {
+  const s = fresh();
+  const r = s.createRequest(alice, { problem: "The list is busy.", vision: "Calmer, like Settings.", skills: { copy: true, brand: false } }).card;
+  assert.equal(r.request.vision, "Calmer, like Settings.");
+  assert.deepEqual(r.request.skills, { copy: true, brand: false });
+  assert.equal(s.createRequest(alice, { problem: "x" }).card.request.skills, null);
+  assert.throws(() => s.createRequest(alice, { problem: "x", skills: { copy: "yes" } }), /skills must be/);
+  assert.throws(() => s.createRequest(alice, { problem: "x", skills: { "../x": true } }), /skills must be/);
+});
+
 test("input limits and asset size are enforced", () => {
   const s = fresh();
   assert.throws(() => s.createRequest(alice, { title: "x".repeat(201), problem: "y" }), /longer than 200/);

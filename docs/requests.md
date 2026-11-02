@@ -48,7 +48,8 @@ The person deciding sees it on the card, and every later step builds on it.
 8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
    else the same thing shows up, what a change touches, and the earlier decisions about it,
    written as `impact` on the card. A deliberate behaviour you found becomes a decision
-   (`design desk decision`), with its source, unless the Desk already has it.
+   (`design desk decision`), with its source, unless the Desk already has it. A request
+   that switched `impact` off (`request.skills`, Variants below) skips this step.
 
 Variants, the prototype and the spec all take the research into account: they respect a
 deliberate decision unless the team chose to reverse it, avoid a pull request in flight or
@@ -89,6 +90,11 @@ Variants are quick, static and on **sample data**: the place to compare directio
 anyone builds. Make them with the skill `design skill options --repo <repo>` names (the
 bundled `variants`, or the product's own), and revise them with the `revise` action's.
 
+- **What the person chose** in New request: `request.vision` is how they picture it, so one
+  option follows it as closely as the boundary allows and the others are real alternatives;
+  `request.skills` (`{name: on}`) — a skill switched on is used for this request's options
+  (read its `SKILL.md`), one switched off is not, even where it would run by default; a
+  skill not listed follows the usual rules. Say on the card when a choice could not be kept.
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
   `status: variants`, make two or three genuinely distinct approaches
   (the skill says what distinct means), each one self-contained HTML file built into the
