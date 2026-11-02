@@ -39,9 +39,15 @@ const USAGE = `usage: design desk <command>
                                            mark a poll synced, or close it with its result
   slack-votes <C-n> <votes.json|->         one option's reactions as they are now: {variant,
                                            voters: [{email, slack_id, name, vote}]}
-  relay <C-n> <comment.json|->             a reply under an option in Slack, as a comment, once:
-                                           {variant, name, email, text, slack_ts, url}
+  relay <C-n> <comment.json|->             a reply in Slack, as a comment, once: {variant (none for
+                                           a council thread), name, email, text, slack_ts, url}
   find-poll <ts>                           which card, poll and option a Slack message belongs to
+  council-open <C-n> <council.json|->      record a Slack thread whose asks change the request's options:
+                                           {chat, thread_ts, url, channel}; reopens a closed one
+  council-update <C-n> <S-n> [--synced <iso>] [--seen <ts>] [--result <text>]
+                                           mark a council read up to a Slack ts, or close it with its result
+  find-council <thread ts>                 which card and council a Slack thread belongs to; with no
+                                           council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
   enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
 `;
@@ -148,6 +154,9 @@ export async function main(_cmd, argv) {
     case "slack-votes": return out(await call("POST", `/agent/cards/${pos[0]}/slack-votes`, JSON.parse(readArg(pos[1]))));
     case "relay": return out(await call("POST", `/agent/cards/${pos[0]}/relay`, JSON.parse(readArg(pos[1]))));
     case "find-poll": return out(await call("GET", `/agent/polls?ts=${encodeURIComponent(pos[0] || "")}`));
+    case "council-open": return out(await call("POST", `/agent/cards/${pos[0]}/councils`, JSON.parse(readArg(pos[1]))));
+    case "council-update": return out(await call("POST", `/agent/cards/${pos[0]}/councils/${pos[1]}`, { synced: typeof f.synced === "string" ? f.synced : null, seen: typeof f.seen === "string" ? f.seen : null, result: typeof f.result === "string" ? f.result : null }));
+    case "find-council": return out(await call("GET", `/agent/councils?ts=${encodeURIComponent(pos[0] || "")}`));
     case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
