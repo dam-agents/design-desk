@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.3.1 — 2026-11-02
+
+**Upgrade:**
+Crossing 1.3.0 in the same upgrade: do its two steps in this order instead — restart the
+Desk server (`rc-service --user design-desk-server restart`), then republish the Desk page
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The new server accepts the old
+page (a card it adds presents the favourite option); the old server drops the new page's
+option pick. Already on 1.3.0: nothing.
+
 ## 1.3.0 — 2026-11-02
 
 **Upgrade:**
