@@ -12,6 +12,8 @@ export const LIMITS = {
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
   assetBytes: 720 * 1024,
   claimTtlMin: 120,
+  // Earlier looks of one element or screen kept on its card; the oldest go first.
+  looks: 30,
   // The whole store is one file rewritten on every change; past this people's writes
   // are refused until the operator archives old cards.
   dbBytes: 50 * 1024 * 1024,
@@ -28,14 +30,14 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": return member;
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": case "add": return shaper;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
 }
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share", "add"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // The roster as the server reads a role (`## Desk people` rows): the first row of an email
@@ -146,7 +148,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.scope ? { scope: i.scope } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -169,7 +171,7 @@ export class Store {
         acked: viewer ? Boolean(c.acks?.[viewer]) : false,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
-        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length,
+        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
@@ -211,7 +213,7 @@ export class Store {
   waitingFor(cardId) {
     return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done")
       .sort((a, b) => a.created.localeCompare(b.created))
-      .map((i) => ({ kind: i.kind, state: i.state, created: i.created }));
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}) }));
   }
 
   getAsset(id) {
@@ -355,9 +357,11 @@ export class Store {
   act(cardId, who, action, note = "") {
     const c = this.card(cardId);
     if (c.kind === "element") {
-      if (action !== "refresh") throw bad("a catalog element can only be redrawn");
+      // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
+      if (action !== "refresh" && action !== "history") throw bad("a catalog element can only be redrawn or have its history drawn");
       if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad(BUSY);
       const item = this.enqueue("catalog", cardId, null, who, optText(note, 1000, "note"));
+      if (action === "history") item.scope = "history";
       this.save();
       return { card: c, inbox: item };
     }
@@ -605,10 +609,79 @@ export class Store {
         || (next.kind === "element" && next.source?.file && x.source?.file === next.source.file && x.source?.export === next.source.export)));
     if (twin) throw new DeskError(409, `${twin.id} is already this ${next.kind}`);
     if (!c) { next.id = this.next("card", "C"); }
+    this.keepLook(c, next);
     next.updated = this.clock();
     this.db.cards[next.id] = next;
     this.save();
     return { card: next };
+  }
+
+  // ---------- how an element or a screen looked before ----------
+
+  // A redraw that replaces an element's sheet or a screen's pictures keeps the look it
+  // replaces, so people can step back through its versions. Every look knows the shipped
+  // changes that made it (`made_by`); a redraw that looks the same byte for byte is no
+  // new version.
+  keepLook(c, next) {
+    if (next.kind !== "element" && next.kind !== "screen") return;
+    const pictures = (x) => (x.kind === "element" ? (x.sheet ? [x.sheet] : []) : (x.screens || []).map((s) => s.asset));
+    const before = c ? pictures(c) : [], now = pictures(next);
+    if (!now.length || (now.length === before.length && now.every((id, i) => this.sameAsset(id, before[i])))) return;
+    next.drawn = this.clock();
+    if (!before.length) { next.made_by = []; return; }
+    const at = c.drawn || c.updated;
+    next.made_by = this.changesBetween(next, at, next.drawn);
+    const look = c.kind === "element"
+      ? { sheet: c.sheet, thumb: c.screens?.[0]?.asset || null, states: (c.states || []).map((x) => x.name) }
+      : { screens: c.screens };
+    next.history = byDate([{ ...look, at, commit: c.source?.commit || null, made_by: c.made_by || [], links: [], note: "" }, ...(c.history || [])]);
+  }
+
+  sameAsset(a, b) {
+    if (a === b) return true;
+    const x = own(this.db.assets, a), y = own(this.db.assets, b);
+    if (!x || !y || x.bytes !== y.bytes) return false;
+    try { return readFileSync(join(this.assetDir, x.file)).equals(readFileSync(join(this.assetDir, y.file))); } catch { return false; }
+  }
+
+  // The shipped changes that touched an element or a screen in a span of time, oldest first.
+  changesBetween(card, from, to) {
+    return Object.values(this.db.cards)
+      .filter((x) => x.kind === "change" && !(x.source?.pr && !x.source?.merged_at) && ((x.elements || []).includes(card.id) || (card.changes || []).includes(x.id)))
+      .map((x) => ({ id: x.id, at: x.source?.merged_at || x.created }))
+      .filter((x) => instant(x.at) > instant(from) && instant(x.at) <= instant(to))
+      .sort((a, b) => instant(a.at) - instant(b.at))
+      .map((x) => x.id);
+  }
+
+  // An earlier look the agent drew later from the code's history (an element at the merge
+  // of an older change), put in its place by date; the same commit drawn again replaces
+  // its look. `made_by` and `links` name the change that made it look like this.
+  addLook(cardId, look) {
+    const c = this.card(cardId);
+    if (c.kind !== "element" && c.kind !== "screen") throw bad("only an element or a screen has earlier looks");
+    if (typeof look !== "object" || !look) throw bad("a look must be an object");
+    const t = Date.parse(clean(String(look.at || ""), 40, "at"));
+    if (Number.isNaN(t)) throw bad("at must be a date");
+    if (t >= instant(c.drawn || c.updated)) throw bad("a look newer than the current drawing is the drawing: upsert it");
+    const at = new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const ref = (id, name) => { if (!own(this.db.assets, id)) throw bad(`${name}: no asset ${id}`); return id; };
+    const pictures = c.kind === "element"
+      ? { sheet: ref(look.sheet, "sheet"), thumb: look.thumb == null ? null : ref(look.thumb, "thumb"), states: look.states == null ? [] : cleanStates(look.states.map((x) => (typeof x === "string" ? { name: x } : x))).map((x) => x.name) }
+      : { screens: cleanRefs(look.screens, this.db.assets, "screens") };
+    if (c.kind === "screen" && !pictures.screens.length) throw bad("a screen's look needs its pictures");
+    if (look.made_by != null && !Array.isArray(look.made_by)) throw bad("made_by must be a list");
+    const made = (look.made_by || []).slice(0, 20).map((id) => this.card(String(id))).filter((x) => x.kind === "change").map((x) => x.id);
+    const links = Array.isArray(look.links) ? look.links.slice(0, 10).map((l) => {
+      if (!/^https?:\/\//i.test(String(l?.url || ""))) throw bad("links must be http(s)");
+      return { label: clean(String(l.label || ""), 120, "link label"), url: String(l.url).slice(0, 500) };
+    }) : [];
+    const commit = optText(look.commit, 64, "commit") || null;
+    const entry = { ...pictures, at, commit, made_by: made, links, note: optText(look.note, 300, "note"), drawn: this.clock(), later: true };
+    c.history = byDate([entry, ...(c.history || []).filter((x) => !commit || x.commit !== commit)]);
+    c.updated = this.clock();
+    this.save();
+    return { card: c, look: entry };
   }
 
   // ---------- votes in Slack ----------
@@ -857,6 +930,11 @@ function cleanRefs(list, assets, name) {
     };
   });
 }
+
+// Dates are compared as instants: an agent's date can carry an offset (`git log %cI`).
+const instant = (iso) => Date.parse(iso) || 0;
+// Earlier looks, newest first; past the limit the oldest go.
+const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).slice(0, LIMITS.looks);
 
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.

@@ -18,6 +18,9 @@ const USAGE = `usage: design desk <command>
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
   agenda <C-n> [--note <text>]             suggest a card for the next call; a designer adds it
+  look <C-n> <look.json|->                 add an earlier look of an element or a screen, drawn from the
+                                           code's history: {at, commit, sheet, thumb, states, made_by,
+                                           links: [{label, url}], note} (a screen: screens instead of sheet)
   report <bug.json|->                      put a UI bug someone reported on the queue as a request
                                            of type bug: {title, problem, goal, steps, screen,
                                            screens: [{asset, caption}], origin: {channel, chat,
@@ -123,6 +126,11 @@ export async function main(_cmd, argv) {
       return out(await call("POST", "/agent/requests", doc));
     }
     case "agenda": return out(await call("POST", `/agent/cards/${pos[0]}/agenda`, { note: typeof f.note === "string" ? f.note : "" }));
+    case "look": {
+      if (!pos[0] || !pos[1]) fail("usage: design desk look <C-n> <look.json|->");
+      let doc; try { doc = JSON.parse(readArg(pos[1])); } catch (e) { fail(`not JSON: ${e.message}`); }
+      return out(await call("POST", `/agent/cards/${pos[0]}/looks`, doc));
+    }
     case "report": {
       if (!pos[0]) fail("usage: design desk report <bug.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }

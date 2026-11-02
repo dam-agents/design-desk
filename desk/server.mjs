@@ -239,6 +239,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
   // The agent suggests a card for the next call; a designer puts it on (docs/desk.md → The next call).
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.suggestForCall(p[2], b.note));
+  // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
+  if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
   if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve) }));
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));
