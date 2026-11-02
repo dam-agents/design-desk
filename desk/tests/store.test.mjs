@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, abilities, rosterOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -22,6 +22,18 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "queue"), true);
   assert.equal(can("developer", "add"), false);
   assert.equal(can("lead", "add"), true);
+});
+
+test("the roster: the first row of an email counts, an unknown role is a guest's", () => {
+  assert.deepEqual(rosterOf([{ email: " Alice@Example.com ", role: "Designer" }, { email: "alice@example.com", role: "lead" }, { email: "dave@example.com", role: "ops" }, { email: "", role: "pm" }]),
+    [{ email: "alice@example.com", role: "designer" }, { email: "dave@example.com", role: "guest" }]);
+});
+
+test("abilities: every action, as can() answers it", () => {
+  assert.deepEqual(Object.keys(abilities("pm", ["designer"])), ACTIONS);
+  assert.equal(abilities("pm", ["designer"]).build, false);
+  assert.equal(abilities("pm", ["pm"]).build, true);
+  assert.equal(abilities("guest").vote, false);
 });
 
 test("a question goes to the inbox and the answer takes it out", () => {
@@ -261,6 +273,28 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.updatePoll(card.id, poll.id, { result: "One button: 1 👍" }).poll.state, "closed");
 });
 
+test("a council remembers its Slack thread, reopens once closed, and relays replies to the whole request", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  s.upsertCard({ id: card.id, origin: { channel: "slack", chat: "C0123", thread_ts: "2.0", message_ts: "2.0", reporter: "Jana" } });
+  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: null, state: null });
+  const { council } = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" });
+  assert.equal(council.id, "S-1");
+  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: "S-1", state: "open" });
+  const other = s.createRequest(alice, { problem: "Another." }).card;
+  assert.equal(s.openCouncil(other.id, { chat: "C0123", thread_ts: "2.0" }).duplicate, true);
+  s.updateCouncil(card.id, "S-1", { synced: "2026-11-02T10:00:00Z", seen: "2.5" });
+  assert.equal(s.getCard(card.id).councils[0].seen, "2.5");
+  assert.equal(s.updateCouncil(card.id, "S-1", { result: "Agreed on One button v2" }).council.state, "closed");
+  const reopened = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" }).council;
+  assert.deepEqual([reopened.state, reopened.seen, reopened.result], ["open", "2.5", null]);
+  assert.equal(s.getCard(card.id).councils.length, 1);
+  const { thread } = s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" });
+  assert.equal(thread.anchor, null);
+  assert.equal(s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" }).duplicate, true);
+  assert.throws(() => s.relayComment(card.id, { variant: "v9", name: "Jana", text: "x", slack_ts: "2.7" }), /no option/);
+});
+
 test("the next call: the agent suggests, a designer adds it with the option to present", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
@@ -295,6 +329,44 @@ test("the next call: a designer's Not now holds, a closed request takes no sugge
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "closing a request drops its suggestion");
   s.suggestForCall(other.id, "Again");
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "a closed request takes no suggestion");
+});
+
+test("needs a designer: the agent judges a change, a request's comes from where it stands", () => {
+  const s = fresh();
+  const att = (id) => s.listCards().find((c) => c.id === id).attention;
+  const { card: change } = s.upsertCard({ kind: "change", title: "A new settings page", source: { repo: "acme/widgets", pr: 9 } });
+  assert.equal(att(change.id), null, "a change nobody judged is not in the filter");
+  assert.throws(() => s.upsertCard({ id: change.id, attention: { level: "urgent", reasons: ["x"] } }), (e) => e.status === 400);
+  assert.throws(() => s.upsertCard({ id: change.id, attention: { level: "designer", reasons: [] } }), (e) => e.status === 400, "a judgement says why");
+  s.upsertCard({ id: change.id, attention: { level: "designer", reasons: ["a new screen"] } });
+  assert.deepEqual(att(change.id), { level: "designer", reasons: ["a new screen"] });
+  s.upsertCard({ id: change.id, attention: { level: "fyi", reasons: ["follows the list pattern"] } });
+  assert.equal(att(change.id).level, "fyi");
+
+  const { card: req, inbox: triage } = s.createRequest(alice, { problem: "The empty list shouts." });
+  assert.throws(() => s.upsertCard({ id: req.id, attention: { level: "designer", reasons: ["x"] } }), (e) => e.status === 400, "a request's is never written");
+  assert.equal(att(req.id), null, "not checked yet: Design Desk's turn");
+  s.claim(triage.id, "s1");
+  s.upsertCard({ id: req.id, triage: { verdict: "design", reasons: ["Only the look."] } });
+  assert.equal(att(req.id), null, "still Design Desk's turn until its triage is done");
+  s.done(triage.id, "s1", "triaged");
+  assert.deepEqual(att(req.id).reasons, ["Checked: draw options or close it"]);
+  s.act(req.id, alice, "explore");
+  assert.equal(att(req.id), null, "while Design Desk draws, it waits for nobody");
+  s.suggestForCall(req.id, "A decision is due");
+  assert.deepEqual(att(req.id).reasons, ["Suggested for the next call"], "a suggestion waits for a designer even while Design Desk works");
+  s.act(req.id, alice, "close");
+  assert.equal(att(req.id), null, "a closed request waits for nobody");
+
+  // A suggestion keeps a handed-off request in the filter, and every read agrees.
+  const { card: shipped } = s.createRequest(alice, { problem: "The header is too tall." });
+  s.upsertCard({ id: shipped.id, status: "handed-off" });
+  assert.equal(att(shipped.id), null);
+  s.suggestForCall(shipped.id, "Worth showing");
+  assert.deepEqual(att(shipped.id), { level: "designer", reasons: ["Suggested for the next call"] });
+  assert.deepEqual(s.getCard(shipped.id).attention, att(shipped.id), "the card read and the list read agree");
+  s.suggestForCall(change.id, "A new pattern");
+  assert.deepEqual(s.getCard(change.id).attention, { level: "designer", reasons: ["Suggested for the next call"] }, "a suggestion outranks the agent's fyi");
 });
 
 test("a screen or part a designer adds goes to the agent, and never becomes a second copy", () => {

@@ -31,8 +31,10 @@ How it is built and why: [`ARCHITECTURE.md`](ARCHITECTURE.md).
    Everyone, you included, uses the Desk through that share link (or in the agent's chat).
 
 Bind a **Slack** channel to ask questions, send requests and report UI bugs from there too:
-write what is wrong (a screenshot helps) and the bug joins the Desk's queue; the agent answers
-in your thread with the card and, after it looked, what can be done.
+write what is wrong (a screenshot helps) and the bug joins the Desk's queue; ask for a design
+and it becomes a request there too. The agent answers in your thread with the card, what can
+be done and, for a design, the options. With `slack_council: enabled`, anyone in that thread
+can then ask for changes and gets each new version back there as a before/after picture.
 
 ## The product profile
 

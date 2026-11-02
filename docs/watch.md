@@ -65,6 +65,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
      the PR records ("per week because the limit resets weekly") becomes a decision
      (`design desk decision`) with the PR as its source.
+   - `attention` — whether a designer should look at it, and why ([desk.md](desk.md) →
+     Needs a designer).
 8. **Publish.** Upload each screen: `design desk asset <file> --kind screen --name <name>`
    (prints the asset id); write the card JSON to a file and `design desk upsert <file>` with
    `kind: change`, the fields above and `screens: [{asset, caption}]`. The store finds an
@@ -97,6 +99,7 @@ and go on with the next change; the pre-flight retries it up to three times.
 - Nothing a designer would not act on: no restated summary, no filler, every bullet one line.
 - Every section has a source or says it has none; no invented reason.
 - Every screen was looked at, shows the change, and has a caption.
+- `attention` says whether a designer should look at it, with its reasons.
 - No internal identifiers beyond the PR link: no file paths in `what` and `why` (a path may
   appear only in `limits` when it names where a developer would work).
 - The ledger row is `carded`, `skipped` or `failed`; `/tmp/design-desk-<pr>` is removed.
