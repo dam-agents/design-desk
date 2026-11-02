@@ -21,6 +21,8 @@ export async function main(_cmd, argv) {
   if (!src || !out) fail("usage: design build <src.html> <out.html> [--style repo:<owner/name>|brand|carbon] [--ref <ref>]");
   let html = readFileSync(src, "utf8");
   const style = resolveStyle(opt.style, opt.ref);
+  // Read before the placeholder is filled: the check below is on the source, not on the bar.
+  const hasReviewBar = html.includes("<!-- design:review-bar -->");
 
   html = html.replace("<!-- design:review-bar -->", readFileSync(join(TOOLKIT, "chrome/review-bar.html"), "utf8"));
   html = html.replace("<!-- design:tour -->", readFileSync(join(TOOLKIT, "chrome/tour.html"), "utf8"));
@@ -48,6 +50,7 @@ export async function main(_cmd, argv) {
   const left = html.match(/<ui-[\w-]+/);
   if (left) fail(`unhandled tag ${left[0]}`);
   if (!html.includes("<!-- design:css -->")) fail("missing <!-- design:css --> in <head>");
+  if (!hasReviewBar) fail("missing <!-- design:review-bar --> at the top of <body> — every page the build makes carries the review bar");
 
   const css = compileCss(style, html);
   const fonts = fontCss(style);

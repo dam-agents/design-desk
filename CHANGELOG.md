@@ -16,6 +16,14 @@ the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 tab for a new person on `## Desk people`; inbox runs work it as `people_due`
 ([docs/desk.md](docs/desk.md) → **People**). Nothing to configure.
 
+## 1.11.1 — 2026-11-02
+
+**Upgrade:**
+Nothing — `~/bin/design` runs the toolkit from the checkout, so the new build check applies
+once the change is pulled. A page it now refuses is a source missing one of its two
+placeholders (`<!-- design:css -->`, `<!-- design:review-bar -->`), so fix the source, not
+the build.
+
 ## 1.11.0 — 2026-11-02
 
 **Upgrade:**

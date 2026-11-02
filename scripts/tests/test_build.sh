@@ -37,4 +37,18 @@ expect_fail block '<style>p{color:red}</style>' 'a <style> block'
 expect_fail amp '<p class="[&amp;_svg]:size-4">x</p>' 'write "&" literally'
 expect_fail script '<script>if (</script>' 'does not parse'
 expect_fail comp '<ui-component src="x.tsx"/>' 'needs --style repo'
+# Both placeholders the build fills are required: a page without them is a page whose bar
+# and styles silently went missing.
+bare() { cat > "$T/$1.src.html" <<H
+<!doctype html><html lang="en" data-review-title="t"><head><meta charset="utf-8"><title>t</title>$3</head>
+<body>$2</body></html>
+H
+}
+expect_fail_bare() { # name, body markup, head markup, message fragment
+  bare "$1" "$2" "$3"
+  if out="$($D build "$T/$1.src.html" "$T/$1.html" --style carbon 2>&1)"; then echo "  $1: built, should have failed"; fail=1
+  else printf '%s' "$out" | grep -q -- "$4" || { echo "  $1: wrong message: $out"; fail=1; }; fi
+}
+expect_fail_bare bar '<div class="p-4">x</div>' '<!-- design:css -->' 'missing <!-- design:review-bar -->'
+expect_fail_bare css '<div class="p-4">x</div><!-- design:review-bar -->' '' 'missing <!-- design:css -->'
 exit $fail
