@@ -259,43 +259,70 @@ const cards = [
 ];
 window.platform = { async request({ path }) {
   const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { request: true } }
-    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : {};
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE} : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("Needs a designer filters New and Requests, and New opens on All", async (t) => {
+// The page at the top level, so its browser storage survives a reload.
+async function open(t, bridge, fn) {
   const browser = chromium();
   if (!browser) return t.skip("no browser here");
   let pw;
   try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
   Object.assign(process.env, browser.env);
-  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", LIST + "<script>")); });
+  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", bridge + "<script>")); });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
   try {
     const desk = await chrome.newPage();
     await desk.goto(`http://127.0.0.1:${server.address().port}/`);
-    const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
-    assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
-    assert.match(await desk.textContent("#list .filters .on"), /^All$/);
-    await desk.click('[data-filter="newFilter:designer"]');
-    assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
-    assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
-    assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
-    await desk.click('[data-tab="requests"]');
-    await desk.click('[data-filter="reqFilter:designer"]');
-    assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
-    assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /Needs a designer \(2\)/);
-    await desk.reload();
-    await desk.click('[data-tab="new"]');
-    assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
+    await fn(desk);
   } finally {
     await chrome.close();
     server.close();
   }
-});
+}
+
+test("every tab but How it works opens with its intro, which stays folded once folded", (t) => open(t, LIST, async (desk) => {
+  const intro = '#banners details.intro';
+  await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
+  assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
+  assert.match(await desk.textContent(`${intro} li.off`), /Got it[\s\S]*not with your role/, "an action the role may not do says so");
+  for (const tab of ["requests", "call", "product", "people"]) {
+    await desk.click(`[data-tab="${tab}"]`);
+    await desk.waitForSelector(`${intro}[data-intro="${tab}"][open]`);
+  }
+  assert.doesNotMatch(await desk.textContent('#banners [data-intro="people"]'), /not with your role/);
+  await desk.click('[data-tab="guide"]');
+  assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
+  await desk.click('[data-tab="new"]');
+  await desk.click(`${intro} > summary`);
+  await desk.click('[data-tab="requests"]');
+  assert.equal(await desk.locator(`${intro}[open]`).count(), 1, "folding one tab's intro leaves the others open");
+  await desk.reload();
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector(`${intro}[data-intro="new"]`);
+  assert.equal(await desk.locator(`${intro}[open]`).count(), 0, "a folded intro stays folded");
+}));
+
+test("Needs a designer filters New and Requests, and New opens on All", (t) => open(t, LIST, async (desk) => {
+  const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
+  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
+  assert.match(await desk.textContent("#list .filters .on"), /^All$/);
+  await desk.click('[data-filter="newFilter:designer"]');
+  assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
+  assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
+  assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-filter="reqFilter:designer"]');
+  assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
+  assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /Needs a designer \(2\)/);
+  await desk.reload();
+  await desk.click('[data-tab="new"]');
+  assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
+}));
 
 // A designer's Desk with an overdue change of two pictures, and a request whose build waits
 // for the answers to the agent's form.

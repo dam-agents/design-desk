@@ -31,7 +31,7 @@
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
   button { font: inherit; color: inherit; }
   a { color: var(--accent); }
-  .app { display: grid; grid-template-rows: auto auto 1fr; height: 100%; }
+  .app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .01em; }
   nav { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -44,6 +44,18 @@
   .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
   .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
   .banner.warn { background: var(--warn-soft); }
+  /* A tab's intro: what it shows, what you can do, the steps; folded per person. */
+  .intro { border-bottom: 1px solid var(--line); background: var(--panel); font-size: 13px; }
+  .intro > summary { list-style: none; cursor: pointer; display: flex; gap: 8px; align-items: baseline; padding: 8px 20px; color: var(--muted); }
+  .intro > summary::-webkit-details-marker { display: none; }
+  .intro > summary b { color: var(--ink); }
+  .intro > summary .i { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--info-soft); color: var(--accent); font-weight: 700; font-size: 11px; flex: none; align-self: center; }
+  .intro > summary .tog { margin-left: auto; color: var(--accent); white-space: nowrap; }
+  .intro > summary .tog::after { content: "Show ▸"; } .intro[open] > summary .tog::after { content: "Hide ▾"; }
+  .intro .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 4px 28px; padding: 0 20px 12px 46px; max-width: 1200px; }
+  .intro h5 { margin: 4px 0 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .intro ul, .intro ol { margin: 0; padding-left: 18px; } .intro li { margin-bottom: 3px; }
+  .intro li.off { color: var(--muted); } .intro li .chip { font-size: 10.5px; padding: 0 6px; margin-left: 4px; }
   .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
   .btn:hover { background: var(--soft); }
   .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
@@ -207,6 +219,7 @@
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; }
     main.has-detail .list { display: none; } main:not(.has-detail) .detail { display: none; }
+    .intro > summary { padding: 8px 16px; } .intro .cols { padding: 0 16px 12px; max-height: 40vh; overflow: auto; }
     .detail { padding: 16px; } .crumb { top: -16px; margin: -16px -16px 12px; padding: 8px 16px; } .two { grid-template-columns: 1fr; }
     .ws-body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; } .ws-side { border-left: 0; border-top: 1px solid var(--line); }
   }
@@ -577,8 +590,68 @@
     const out = [];
     if (S.offline) out.push(`<div class="banner warn">Can't reach Design Desk right now. Retrying…</div>`);
     if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, PM or developer.</div>`);
-    $("#banners").innerHTML = out.join("");
+    $("#banners").innerHTML = out.join("") + renderIntro();
   }
+
+  // Each tab opens with a short intro for first use; How it works is all intro. An action
+  // names what the server must allow (`can`), so a role that may not do it sees so.
+  const INTRO = () => ({
+    new: { about: "what changed in the product's screens, and what a designer should look at",
+      see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
+        "On each row: where it came from and who made it, how long it has been open (red when overdue), and whether it needs a designer.",
+        "The weekly digest: the week's UX changes, the decisions taken and the themes in feedback."],
+      can: [["Filter by <b>All</b>, <b>Not seen yet</b>, <b>Not handled</b> or <b>Needs a designer</b>."],
+        ["Press <b>Got it</b> once you have read a change.", "ack"],
+        ["<b>Ask a question</b> about a change; the answer appears below it.", "ask"],
+        ["<b>Add screenshots</b> when a change has none.", "screens"],
+        ["<b>Adjust the design</b>: start a request from a change.", "follow-up"],
+        ["<b>Mark handled</b> once a designer has dealt with it.", "handle"]],
+      steps: ["Pick a change on the left.", "Read what changed and why; click a picture to see it large.", "Press Got it, or ask what is unclear.", "A designer marks it handled or adjusts the design."] },
+    requests: { about: "design requests, from an idea to a live prototype and a developer spec",
+      see: ["Every request and where it stands: Checking, Options ready, Live — try it, Sent to developers.",
+        "On each request: what can be done as a design change, what needs a developer or a decision, and why.",
+        "Amber count in the menu: a request waits for someone's answer."],
+      can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
+        ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
+        ["<b>Open the design workspace</b>: click a part of an option and say what should change.", "revise"],
+        ["<b>Build a live prototype</b> of the option you choose.", "build"],
+        ["<b>Approve</b> a design, or close a request.", "approve"],
+        ["Filter by <b>Open</b>, <b>Closed</b> or <b>Needs a designer</b>."]],
+      steps: ["Describe the problem in New request.", "Design Desk checks what can be done and draws two or three options.", "The team votes and comments; a designer refines one.", "Try it as a live prototype, approve it, and it goes to the developers."] },
+    call: { about: "what the team shows at its next design meeting",
+      see: ["What designers put on the call, in order, each with a short brief and the decision asked.",
+        "Suggested by Design Desk: things worth showing that are not on the call yet."],
+      can: [["<b>▶ Present</b>: one item at a time, full screen."],
+        ["<b>Add to the next call</b> from any change or request, or say <b>Not now</b> to a suggestion.", "queue"],
+        ["<b>Call is over — clear the list</b> after the meeting.", "close"]],
+      steps: ["Before the call, a designer adds items and picks the option to present.", "Design Desk writes a brief for each one.", "In the call, press Present and step through.", "Afterwards, clear the list; decisions go into the items' comments."] },
+    product: { about: "a map of the product: its screens, its parts and the team's decisions",
+      see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
+        "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in.",
+        "<b>Decisions</b>: everything the team decided, searchable.",
+        "Earlier looks of a screen or part: step back through them, or put one next to now."],
+      can: [["Switch between <b>Screens</b>, <b>Elements</b> and <b>Decisions</b>."],
+        ["<b>Ask about this screen</b>: why it works the way it does.", "ask"],
+        ["<b>+ Add</b> a screen or part that is missing.", "add"],
+        ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
+      steps: ["Pick Screens, Elements or Decisions.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
+    people: { about: "who is on this Desk, and what each role can do",
+      see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked."],
+      can: [[`To get another role, or to add someone, ask ${esc(contact())}.`]] },
+  });
+  function renderIntro() {
+    const it = INTRO()[S.tab];
+    if (!it) return "";
+    const open = store.get(`desk-intro-${S.tab}`) !== "closed";
+    const li = ([words, act]) => act && !can(act) ? `<li class="off">${words}<span class="chip">not with your role</span></li>` : `<li>${words}</li>`;
+    return `<details class="intro" data-intro="${S.tab}"${open ? " open" : ""}>
+      <summary><span class="i">i</span><span><b>${esc(TABS[S.tab])}</b> — ${esc(it.about)}</span><span class="tog"></span></summary>
+      <div class="cols"><div><h5>What you see here</h5><ul>${it.see.map((s) => `<li>${s}</li>`).join("")}</ul></div>
+        <div><h5>What you can do</h5><ul>${it.can.map(li).join("")}</ul></div>
+        ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div></details>`;
+  }
+  // A folded intro stays folded for this person, tab by tab.
+  document.addEventListener("toggle", (e) => { const d = e.target; if (d.matches?.("details.intro")) store.set(`desk-intro-${d.dataset.intro}`, d.open ? "open" : "closed"); }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the next call.
@@ -1531,7 +1604,7 @@
     const el = e.target.closest("button, a[data-tab], [data-zoom], [data-ws-note]");
     if (!el) return;
     const ds = el.dataset;
-    if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1");
+    if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1");
       if (ds.tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); } return; }
     if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
@@ -1793,7 +1866,7 @@
     // First visit, or an empty Desk: start with how it works.
     if (!store.get("desk-guide-seen") || !S.cards.length) { S.tab = "guide"; store.set("desk-guide-seen", "1"); }
     else if (!visibleCards().length && S.cards.some((c) => c.kind === "request" && !closed(c))) S.tab = "requests";
-    renderNav(); renderList(); renderDetail();
+    renderNav(); renderBanners(); renderList(); renderDetail();
     setInterval(() => { poll().catch(() => {}); }, 4000);
   }
   start().catch((e) => { $("#detail").innerHTML = `<div class="panel">${esc(e instanceof Said ? e.message : `Design Desk can't be reached right now. Try again in a minute; if it keeps happening, tell the Desk's owner.`)}</div>`; });
