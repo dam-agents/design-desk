@@ -40,7 +40,8 @@ const requests = [
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
-  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true } }
+  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true },
+      skills: [{ name: "copy", does: "Write the words", on: true }, { name: "brand", does: "Use a saved brand", on: false }] }
     : path === "/api/cards" ? { cards: [change, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
@@ -102,6 +103,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await rq.button("Send").click();
     assert.equal(await rq.open(), true, "an empty request stays open");
     await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
+    assert.equal(await desk.isVisible("#rq-skills"), true, "an idea offers the skills");
+    await desk.click("#request-dialog #type-choice button[data-type=bug]");
+    assert.equal(await desk.isVisible("#rq-skills"), false, "a bug offers no skills");
+    assert.equal(await desk.isVisible("#rq-vision"), false, "a bug asks for no picture of how it should look");
+    await desk.click("#request-dialog #type-choice button[data-type=idea]");
     await rq.button("Send").click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     assert.equal(await rq.open(), false, "Send closes the dialog");
@@ -109,6 +115,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     const sent = await posts("/api/requests");
     assert.equal(sent.length, 1);
     assert.equal(JSON.parse(sent[0].body).problem, "Make the send button bigger");
+    assert.deepEqual(JSON.parse(sent[0].body).skills, { copy: true, brand: false }, "each switch is sent as it was set");
     await desk.click("#new-request");
     await rq.close();
     await settled("/api/requests", 1, "a close after a Send sends nothing");
@@ -237,8 +244,8 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "PM", "developer", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
     assert.match(await panel(0), /Everything a designer can, and:\s+Ask Design Desk to add people to the list/, "only a lead adds people");
-    assert.match(await panel(1), /Everything a PM or developer can, and:\s+Start design options[\s\S]*Build live prototypes/, "tied roles below are named together");
-    assert.match(await panel(2), /Same as a developer\./);
+    assert.match(await panel(1), /Everything a PM can, and:\s+Start design options[\s\S]*Build live prototypes/, "a role names the largest one below it");
+    assert.match(await panel(2), /Everything a developer can, and:\s+Draw an issue/, "a PM also has issues drawn");
     assert.match(await panel(3), /Everything a viewer can, and:\s+Vote on options/);
     assert.doesNotMatch(await panel(4), /Everything|Same as/, "the smallest role lists its own");
 
@@ -394,6 +401,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.equal(await desk.getAttribute(".sec-head .chip a", "href"), "https://github.com/acme/widgets/pull/11", "a section links its source");
     assert.equal(await desk.locator("details.sec").count(), 1, "the explaining section is folded, what changed is not");
     assert.match(await desk.textContent("details.sec summary"), /Why it is like this[\s\S]*Source: not documented/);
+    assert.deepEqual(await desk.$$eval(".detail .secs", (ss) => ss.map((s) => [...s.children].map((c) => c.textContent.match(/What changed|Why it is like this/)?.[0]))),
+      [["What changed", "Why it is like this"]], "one grid holds the card's sections, so they stand side by side on a wide window");
     await desk.click('[data-handle="1"]');
     assert.deepEqual(await sent("/api/cards/ch2/handled", 1), { handled: true });
 
@@ -448,6 +457,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r2"]');
     await desk.waitForSelector("#form-t1");
+    assert.equal(await desk.locator(".detail .secs").count(), 0, "a card without sections has no section grid");
     await desk.check('#form-t1 input[name="q-t1-0"][value="Nothing"]');
     await desk.fill('#form-t1 fieldset[data-q="0"] [data-q-note]', "Keep it calm.");
     await desk.click('[data-send-form="t1"]');
@@ -470,6 +480,55 @@ test("a change shows its age and gets handled, pictures step through, the form a
   } finally {
     await run.close();
   }
+});
+
+// The Issues tab: the sprint's issues first, what the UI will need in each row, and an
+// issue's Draw it and Design this.
+test("the Issues tab lists the planned issues; Draw it and Design this act once", async (t) => {
+  const issues = `const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", needs: ["A spend column in the agents list"], sketches: 0,
+    source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41", author: "alice", milestone: "Sprint 12", assignees: ["bob"] }, waiting: [], threads: [] };
+  const later = { id: "is2", kind: "issue", status: "open", title: "A calmer empty Home", bucket: "backlog", needs: ["An empty state on Home"], sketches: 0, source: { repo: "acme/widgets", issue: 40, author: "erin" } };
+  const gone = { id: "is3", kind: "issue", status: "archived", title: "Closed", bucket: "sprint", source: { repo: "acme/widgets", issue: 39 } };`;
+  const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
+    .replace("cards: [change, digest, ...requests]", "cards: [change, digest, ...requests, issue, later, gone]")
+    .replace("can: { request: true,", "can: { draw: true, \"follow-up\": true, request: true,")
+    .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/ch1"');
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk, posts, settled } = run;
+  try {
+    await desk.waitForSelector('[data-tab="issues"] .count');
+    assert.equal(await desk.textContent('[data-tab="issues"] .count'), "1", "the tab counts the open issues of the sprint");
+    await desk.click('[data-tab="issues"]');
+    assert.equal(await desk.locator(".row.item").count(), 1, "This sprint is the first view; a closed issue is not listed");
+    const row = '.row.item:has([data-card="is1"])';
+    assert.match(await desk.textContent(`${row} .prov`), /Issue #41.*by alice.*assigned to bob/);
+    assert.match(await desk.textContent(`${row} .s`), /UI: A spend column in the agents list/);
+    assert.match(await desk.textContent(`${row} .meta`), /Sprint 12/);
+    await desk.click('[data-filter="issueFilter:backlog"]');
+    assert.deepEqual(await desk.locator(".row.item [data-card]").evaluateAll((xs) => xs.map((x) => x.dataset.card)), ["is2"]);
+    await desk.click('[data-filter="issueFilter:sprint"]');
+    await desk.click('[data-card="is1"]');
+    await desk.waitForSelector("text=What the UI will need");
+    assert.match(await desk.textContent("#detail"), /No picture yet[\s\S]*Design Desk sketches it in its next daily check/);
+
+    const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
+    await desk.click('[data-act="draw"]');
+    await cf("Cancel").click();
+    await settled("/api/cards/is1/actions", 0, "Cancel draws nothing");
+    await desk.click('[data-act="draw"]');
+    await desk.fill("#confirm-form [name=note]", "try a chart");
+    await cf("Draw it").click();
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/is1/actions"));
+    assert.deepEqual(JSON.parse((await posts("/api/cards/is1/actions"))[0].body), { action: "draw", note: "try a chart" });
+
+    await desk.click("[data-adjust]");
+    assert.equal(await desk.textContent("#rq-title"), "Design this issue");
+    assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "A spend column in the agents list", "the needs start the request");
+    await desk.locator("#request-dialog .actions button", { hasText: "Send" }).click();
+    await desk.waitForFunction(() => calls.some((c) => c.path === "/api/requests"));
+    assert.equal(JSON.parse((await posts("/api/requests"))[0].body).from, "is1", "the request comes from the issue");
+  } finally { await run.close(); }
 });
 
 // A designer's request from Slack with two options and three comments on the first: one done.

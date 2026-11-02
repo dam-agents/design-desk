@@ -35,6 +35,10 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
 - `screens` (`disabled`) — `enabled`: the agent keeps its own install of the product for
   screenshots and for people to try ([screens.md](screens.md)); `max_screen_prs` (`2`) — open pull
   requests with an install of their own.
+- `issue_news` (`disabled`) — `enabled`: the Desk's Issues page, the open issues that change
+  the screens, read once a day ([issues.md](issues.md)); `issue_sprint` (`milestone`: the open
+  milestone due next | a milestone's title | `none`) — the current sprint;
+  `max_issue_drawings` (`5`) — issues of the sprint or someone's drawn a day.
 - `digest` (`desk`) — where the weekly UX digest goes: `desk` | `slack` (the Desk and the
   bound channel) | `disabled`.
 - `slack_polls` (`disabled`) — `enabled`: designers share options in Slack for 👍 / ⚠️ votes
@@ -49,6 +53,9 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   a Figma file link that exports go to (empty: a new file per request).
 - `## Skills` table, `| action | skill |`: another installed skill for an action
   ([actions.md](actions.md)); it wins over the product profile's choice.
+- `request_skills` (`copy, impact, brand, walkthrough, figma`), never asked — the installed
+  skills a person switches on or off for one request in New request; one not installed is
+  not offered, `figma` only with `figma` enabled ([requests.md](requests.md) → Variants).
 - `change_due_days` (`21`), never asked — days a change card may wait for a designer to
   mark it handled before the Desk shows it red as overdue; `0`/`off` disables.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`

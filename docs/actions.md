@@ -19,9 +19,11 @@ its `SKILL.md` is; read it before doing the action.
 | `show` | "show me how it looks": a picture of the product in that state | a Desk question; Slack; chat | `show-me` |
 | `map` | the product map: screens, how to get there, why each is like it is | the first screens instance; after each merged change; + Add on the Desk | [map.md](map.md) |
 | `digest` | the weekly digest and the themes in people's feedback | the weekly digest schedule | [digest.md](digest.md) |
+| `issue-news` | the Issues page: what each planned issue will need on the screens | the daily issues schedule | [issues.md](issues.md) |
+| `sketch` | an issue's screen as it looks now and a sketch of how it could look | the daily issues schedule; Draw it | `variants`, [issues.md](issues.md) |
 | `research` | issues, pull requests, history, earlier decisions | every new request; chat | [requests.md](requests.md) → Research |
 | `triage` | what can be done as a design change | every new request; chat "can we…?" | [boundary.md](boundary.md), [requests.md](requests.md) → Triage |
-| `impact` | where else the same thing shows up, what a change touches | every change card and request; chat "what would this affect?" | `impact` |
+| `impact` | where else the same thing shows up, what a change touches | every change card; every request, unless its New request switched `impact` off; chat "what would this affect?" | `impact` |
 | `options` | two or three design options | Draw design options; chat "show me options for…" | `variants` |
 | `revise` | apply notes on elements as a new version | notes in the design workspace; Redraw; chat "make the button secondary in option 1" | `variants` |
 | `prototype` | a live prototype in an Environment | Build a live prototype; chat | [prototype.md](prototype.md) |
@@ -30,14 +32,14 @@ its `SKILL.md` is; read it before doing the action.
 | `bug-intake` | put a reported UI bug on the queue | a Slack message | `intake-slack` |
 | `request-intake` | put a design asked for in Slack on the queue; the options go back to its thread | a Slack message | `intake-slack` |
 | `figma-import` | a Figma frame as an option rebuilt from the product's parts | Import from Figma; a Figma link in a request or chat | `figma` |
-| `figma-export` | an option or a prototype into Figma as layers | Send to Figma; chat | `figma` |
+| `figma-export` | an option or a prototype into Figma as layers | Send to Figma; a request's `figma` switch in New request; chat | `figma` |
 | `share-options` | post the options to Slack, one message each, for 👍 / ⚠️ votes and replies | Share in Slack; chat | `slack-polls` |
 | `send-designs` | post pictures of the options to Slack: the request's own thread, else the channel | Send designs to Slack (`slack_due`, `scope: send`) | `slack-polls` |
 | `poll-sync` | bring Slack votes and replies to the Desk; close the vote with its result | every 30 minutes while a vote is open | `slack-polls` |
 | `council` | each ask in a request's Slack thread as a new option or version, answered there before/after | an ask in a Slack thread; `councils_due` | `slack-council` |
 | `catalog` | a real element drawn in every state; its earlier versions | onboarding; Update the drawing; Draw how it looked before; + Add on the Desk; the watch | [catalog.md](catalog.md) |
 | `brief` | what the next call decides about an item | Add to the next call | [desk.md](desk.md) → The next call |
-| `deck`, `walkthrough`, `video`, `brand`, `copy` | the Designer kit's deliverables | chat; Slack | `slides`, `walkthrough`, `demo-video`, `brand`, `copy` |
+| `deck`, `walkthrough`, `video`, `brand`, `copy` | the Designer kit's deliverables | chat, Slack; `walkthrough`, `brand`, `copy` also from a request's switch in New request (`copy` on unless switched off) | `slides`, `walkthrough`, `demo-video`, `brand`, `copy` |
 
 ## Another skill for an action
 

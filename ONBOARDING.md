@@ -154,6 +154,11 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    developer's UI or fixes a UI bug, how does the coding agent get it — a comment on the pull
    request, or a new issue? Does it answer to a handle?" (`implementer`, `implementer_mention`.)
    Both post on the product repository as the agent's account; say so.
+   "Should the Desk list the planned issues that change the screens — the current sprint,
+   assigned ones and the backlog — with what the UI will need and a sketch?" (`issue_news`,
+   default `disabled`; [docs/issues.md](docs/issues.md)). Yes → "Is the sprint a milestone?"
+   (`issue_sprint`: `milestone`, the open one due next; a title; or `none`) and
+   `max_issue_drawings` (default 5 a day; each drawing is a longer run).
 5. **Handoff** (`handoff`) — "When a design is approved, should the spec stay on the Desk,
    or should I also file a GitHub issue, or open a draft pull request?" Default `desk`.
    `issue` and `draft-pr` post on the product repository as the agent's account; say so.
@@ -220,6 +225,9 @@ Write the file in exactly this shape with `design config write` (a restored file
 - digest: desk
 - slack_council: disabled
 - council_sync_min: 30
+- issue_news: disabled
+- issue_sprint: milestone
+- max_issue_drawings: 5
 
 ## Desk people
 
@@ -321,6 +329,17 @@ Never use an in-process cron.
 > slack, and back up work/ with `bash "$HOME/scripts/work-backup.sh" persist` when
 > GITHUB_REPO_WORK or work_repo is set.
 
+**`design-desk-issues-daily`** — cron `20 5 * * *`, `sessionMode: fresh`, precheck
+`bash "$HOME/scripts/precheck.sh" issues`, sessionTitle `Read the planned issues`. Task:
+
+> Issues run. The precheck already ran the pre-flight and found work: read the worklist
+> JSON at the path its output names, and never run preflight.sh again this run. If the
+> prompt carries no worklist path, run `bash "$HOME/scripts/preflight.sh" issues`
+> yourself. Then follow CLAUDE.md → "Issues run": read exactly the worklist's read_set,
+> dispatch every drawing after the first, keep one Desk card per issue that changes the
+> screens, and back up work/ at the end with `bash "$HOME/scripts/work-backup.sh"
+> persist` when GITHUB_REPO_WORK or work_repo is set.
+
 **`design-desk-audit-weekly`** — cron `0 7 * * 5`, `sessionMode: fresh`, no precheck,
 sessionTitle `Audit design-desk`. Task:
 
@@ -346,7 +365,7 @@ Then tick the last checklist item and call `mark_onboarding_complete` — only n
 Give the operator a short **summary**:
 
 1. The final `work/CONFIG.md` (verbatim).
-2. What runs: the four schedules with their cadence and model; the Desk link; whether live
+2. What runs: every schedule of Step 5b with its cadence and model; the Desk link; whether live
    prototypes and handoff issues are on.
 3. Day-to-day:
    - New UI changes appear on the Desk within the hour, under **What's new**.

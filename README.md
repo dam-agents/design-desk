@@ -13,6 +13,7 @@ demo videos and copy.
 | Developers, PMs | Votes and comments pinned to elements of a variant, before anyone builds. |
 | The whole team | A **live prototype**: the real product with only its look changed, on its own instance with demo data. |
 | Developers | A spec of the approved design: screens, states, copy, the exact change, and what is left for them. |
+| Designers, PMs | With `issue_news: enabled`, the planned issues that change the screens — this sprint's, assigned ones, the backlog — each with what the UI will need, how it looks now and a sketch. |
 
 It never changes what a product does. A prototype may change layout, styles, copy and icons;
 a guard reads every prototype's diff and refuses anything that touches data, rules,
@@ -89,6 +90,7 @@ chat. The list, with defaults: [`docs/config.md`](docs/config.md).
 | Watch | hourly | merged PRs that touch the UI → Desk cards |
 | Inbox | every 10 minutes, and at once when someone acts on the Desk | questions, requests, variants, prototypes, specs |
 | Monitor | every 15 minutes | the agent's own health, from local files; silent when healthy |
+| Issues | daily, with `issue_news: enabled` | open issues that change the screens → the Desk's Issues page, the sprint's and assigned ones drawn |
 | Digest | Thursdays | the week's UX digest and the themes in people's feedback, on the Desk and optionally in Slack |
 | Audit | Fridays | a weekly self-check, reported in the chat |
 

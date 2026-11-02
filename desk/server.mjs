@@ -14,6 +14,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
 import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
+import { requestSkills } from "../toolkit/lib/actions.mjs";
 
 const PORT = Number(process.env.DESK_PORT || 5555);
 const DIR = process.env.DESK_DIR || join(WORK, "desk");
@@ -57,6 +58,10 @@ function roleOf(caller) {
 
 const roster = () => rosterOf(cfgTable("Desk people"));
 
+// The skills New request offers, from `request_skills` (toolkit/lib/actions.mjs).
+const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact, brand, walkthrough, figma"),
+  { figma, warn: (m) => log("warn", "request_skills", m) });
+
 // The roster role of a person met in Slack, by the email the workspace discloses.
 function slackRole(email) {
   if (!email) return "slack";
@@ -97,7 +102,8 @@ function settings() {
 // The words a person reads when their role lacks an action.
 const VERBS = { ack: "mark changes as seen", handle: "mark changes as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
-  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product", people: "add people to the Desk" };
+  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
+  draw: "draw issues", people: "add people to the Desk" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -147,7 +153,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays });
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays, skills: offerSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });
@@ -188,12 +194,18 @@ async function viewerRoute(req, res, url, who) {
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
     const { title, problem, goal, screen, steps, from, figma } = b;
-    const type = from ? "adjustment" : b.type === "bug" ? "bug" : "idea";
+    // From an issue on the Issues page it designs that feature; from a change it adjusts it.
+    const type = from ? (store.card(String(from)).kind === "issue" ? "feature" : "adjustment") : b.type === "bug" ? "bug" : "idea";
+    // A bug is fixed, not designed: no picture of it and no skills. Only the offered skills count.
+    const offered = new Set(offerSkills(s.figma).map((k) => k.name));
+    const vision = type === "bug" ? "" : b.vision;
+    const skills = type === "bug" || !b.skills || typeof b.skills !== "object" ? null
+      : Object.fromEntries(Object.entries(b.skills).filter(([k, on]) => offered.has(k) && typeof on === "boolean"));
     // Pictures a person pasted: two at most, images only, stored before the card names them.
     const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
     const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "" }));
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma }), s, who));
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills }), s, who));
   }
   // A lead asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }

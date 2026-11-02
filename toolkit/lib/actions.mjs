@@ -1,8 +1,8 @@
 // The actions Design Desk can take, each done by one skill. A product's design profile
 // (`skills`) or work/CONFIG.md (`## Skills`) names another installed skill for an action;
 // the bundled one is the fallback. docs/actions.md is the contract.
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { join, resolve as absolute } from "node:path";
 import { HOME, TOOLKIT } from "./core.mjs";
 
 export const ACTIONS = {
@@ -11,6 +11,8 @@ export const ACTIONS = {
   show: { skill: "show-me", does: "answer \"show me how it looks\" with a picture of the product in that state" },
   map: { doc: "docs/map.md", does: "the product map: every main screen, how to get there, why it is like it is" },
   digest: { doc: "docs/digest.md", does: "the weekly digest of the product's UX and the themes in people's feedback" },
+  "issue-news": { doc: "docs/issues.md", does: "the Issues page: what each planned issue will need on the screens" },
+  sketch: { skill: "variants", fallback: "options", doc: "docs/issues.md", does: "an issue's screen as it looks now and one sketch of how it could look" },
   research: { doc: "docs/requests.md", does: "issues, pull requests, history and earlier decisions behind a request" },
   triage: { doc: "docs/boundary.md", does: "what can be done as a design change, what needs a developer or a decision" },
   impact: { skill: "impact", does: "where else the same thing shows up and what a change touches, from earlier decisions" },
@@ -79,4 +81,40 @@ export function resolve(action, { config = {}, profile = {} } = {}) {
   }
   // Core actions without a bundled skill are procedures in the definition's docs.
   return { action, skill: null, source: "default", path: null, doc: a.doc || null, does: a.does, notes };
+}
+
+// The skills a person switches on or off for one request in New request (`request_skills`,
+// a comma list): the installed ones only, `figma` only with Figma on. A bundled skill says
+// what it adds in plain words and whether it starts on; any other one, a product's own of
+// the same name included, shows the first sentence of its description and starts off.
+// Real paths on both sides: on the platform ~/.claude/skills is a link to ~/.agents/skills.
+const real = (p) => { try { return realpathSync(p); } catch { return absolute(p); } };
+const BUNDLED = real(join(TOOLKIT, "..", ".agents/skills"));
+export const SWITCHES = {
+  copy: ["Write the words: labels, empty states, errors", true],
+  impact: ["Show where else the same thing appears", true],
+  brand: ["Use a saved brand: its colours, fonts and logo", false],
+  walkthrough: ["Add a clickable step-by-step tour of the options", false],
+  figma: ["Also send the options to Figma as layers", false],
+};
+export function requestSkills(list, { figma = false, paths = skillPaths(), warn = () => {} } = {}) {
+  const names = String(list || "").split(",").map((n) => n.trim()).filter((n) => /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(n));
+  const out = [];
+  for (const name of [...new Set(names)].slice(0, 20)) {
+    if (name === "figma" && !figma) continue;
+    const path = findSkill(name, paths);
+    if (!path) continue;
+    const bundled = BUNDLED === real(join(path, "..", ".."));
+    let [does, on] = bundled && SWITCHES[name] || ["", false];
+    if (!does) {
+      try {
+        const head = readFileSync(path, "utf8").split(/\n---/)[0];
+        const d = (head.match(/(?:^|\n)description:\s*(?:>-?|\|-?)?\s*([\s\S]*?)(?=\n\S[\w-]*:|$)/)?.[1] || "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
+        const first = d.match(/^.*?[.!?](?=\s|$)/)?.[0] || d;
+        does = first.length > 140 ? `${first.slice(0, 137).replace(/\s+\S*$/, "")}…` : first;
+      } catch (e) { warn(`${name}: its description could not be read (${e.message}); the page shows its name`); }
+    }
+    out.push({ name, does, on });
+  }
+  return out;
 }

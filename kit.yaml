@@ -21,9 +21,10 @@ description: >-
   prototype — the real product with only its look changed, checked by a design-only
   guard, running on its own Environment with demo data — and then a developer spec.
   Also makes everything the Designer kit did: decks, mockups, walkthroughs, charts,
-  demo videos and copy. Runs an hourly watch, a Desk inbox every 10 minutes, a health
-  monitor and a weekly self-audit; the Desk is one interactive artifact the owner
-  shares with the team.
+  demo videos and copy. Optionally lists the planned issues that change the screens,
+  each with what the UI will need, how it looks now and a sketch. Runs an hourly watch,
+  a Desk inbox every 10 minutes, a daily issues check, a health monitor and a weekly
+  self-audit; the Desk is one interactive artifact the owner shares with the team.
 category: productivity
 icon: paint-brush
 avatar: spark
@@ -142,6 +143,19 @@ schedules:
       "$HOME/scripts/preflight.sh" digest` yourself. Then follow CLAUDE.md → "Digest run":
       read docs/digest.md, write the week's digest card with the themes in people's
       feedback, post it to Slack when digest is slack, and back up work/ with `bash
+      "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or work_repo is set.
+  - name: design-desk-issues-daily
+    cron: "20 5 * * *"
+    description: Lists the planned issues that change the screens, with what the UI will need and a sketch.
+    sessionMode: fresh
+    precheck: 'bash "$HOME/scripts/precheck.sh" issues'
+    task: >-
+      Issues run. The precheck already ran the pre-flight and found work: read the
+      worklist JSON at the path its output names, and never run preflight.sh again this
+      run. If the prompt carries no worklist path, run `bash "$HOME/scripts/preflight.sh"
+      issues` yourself. Then follow CLAUDE.md → "Issues run": read exactly the worklist's
+      read_set, dispatch every drawing after the first, keep one Desk card per issue that
+      changes the screens, and back up work/ at the end with `bash
       "$HOME/scripts/work-backup.sh" persist` when GITHUB_REPO_WORK or work_repo is set.
   - name: design-desk-audit-weekly
     cron: "0 7 * * 5"
