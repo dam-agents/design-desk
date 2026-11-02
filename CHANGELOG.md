@@ -10,11 +10,14 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.3.1 — 2026-11-02
 
 **Upgrade:**
-Crossing 1.3.0 in the same upgrade: do its two steps in this order instead — restart the
-Desk server (`rc-service --user design-desk-server restart`), then republish the Desk page
-([docs/desk.md](docs/desk.md) → **Publishing the page**). The new server accepts the old
-page (a card it adds presents the favourite option); the old server drops the new page's
-option pick. Already on 1.3.0: nothing.
+1. Restart the Desk server: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Both steps are safe to repeat. Crossing 1.3.0 in the same upgrade, these two replace its
+two steps ([docs/persistence.md](docs/persistence.md) → **Migration**, step 1): the new
+server accepts the old page (a card it adds presents the favourite option), but the old
+server drops the new page's option pick.
 
 ## 1.3.0 — 2026-11-02
 
