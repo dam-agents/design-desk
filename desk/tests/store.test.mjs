@@ -238,3 +238,31 @@ test("the next call: a designer's Not now holds, a closed request takes no sugge
   s.suggestForCall(other.id, "Again");
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "a closed request takes no suggestion");
 });
+
+test("needs a designer: the agent judges a change, a request's comes from where it stands", () => {
+  const s = fresh();
+  const att = (id) => s.listCards().find((c) => c.id === id).attention;
+  const { card: change } = s.upsertCard({ kind: "change", title: "A new settings page", source: { repo: "acme/widgets", pr: 9 } });
+  assert.equal(att(change.id), null, "a change nobody judged is not in the filter");
+  assert.throws(() => s.upsertCard({ id: change.id, attention: { level: "urgent", reasons: ["x"] } }), (e) => e.status === 400);
+  assert.throws(() => s.upsertCard({ id: change.id, attention: { level: "designer", reasons: [] } }), (e) => e.status === 400, "a judgement says why");
+  s.upsertCard({ id: change.id, attention: { level: "designer", reasons: ["a new screen"] } });
+  assert.deepEqual(att(change.id), { level: "designer", reasons: ["a new screen"] });
+  s.upsertCard({ id: change.id, attention: { level: "fyi", reasons: ["follows the list pattern"] } });
+  assert.equal(att(change.id).level, "fyi");
+
+  const { card: req, inbox: triage } = s.createRequest(alice, { problem: "The empty list shouts." });
+  assert.throws(() => s.upsertCard({ id: req.id, attention: { level: "designer", reasons: ["x"] } }), (e) => e.status === 400, "a request's is never written");
+  assert.equal(att(req.id), null, "not checked yet: Design Desk's turn");
+  s.claim(triage.id, "s1");
+  s.upsertCard({ id: req.id, triage: { verdict: "design", reasons: ["Only the look."] } });
+  assert.equal(att(req.id), null, "still Design Desk's turn until its triage is done");
+  s.done(triage.id, "s1", "triaged");
+  assert.deepEqual(att(req.id).reasons, ["Checked: draw options or close it"]);
+  s.act(req.id, alice, "explore");
+  assert.equal(att(req.id), null, "while Design Desk draws, it waits for nobody");
+  s.suggestForCall(req.id, "A decision is due");
+  assert.deepEqual(att(req.id).reasons, ["Suggested for the next call"], "a suggestion waits for a designer even while Design Desk works");
+  s.act(req.id, alice, "close");
+  assert.equal(att(req.id), null, "a closed request waits for nobody");
+});

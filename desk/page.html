@@ -277,10 +277,11 @@
   const GUIDE = () => `<h2>How Design Desk works</h2>
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
 <ol>
-<li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships. Each one says where else the same thing shows up and what the change touches.</li>
+<li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships. Each one says where else the same thing shows up and what the change touches, and whether a designer should look at it.</li>
 <li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
+<p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision, each with why.</p>
 <h3>Changing a design</h3>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
@@ -323,7 +324,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "new", newFilter: "new", reqFilter: "open", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, agenda: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "new", newFilter: "all", reqFilter: "open", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, agenda: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -445,13 +446,23 @@
     $("#banners").innerHTML = out.join("");
   }
 
+  // What waits for a designer (docs/desk.md → Needs a designer): a change until you saw it.
+  const forDesigner = (c) => c.attention?.level === "designer" && !(c.kind === "change" && c.acked) && !closed(c);
+  const newCards = (filter) => S.cards.filter((c) => (c.kind === "change" || c.kind === "digest")
+    && (filter === "all" || (filter === "designer" ? forDesigner(c) : !c.acked)));
+  const requestCards = (filter) => S.cards.filter((c) => c.kind === "request"
+    && (filter === "designer" ? forDesigner(c) : filter === "open" ? !closed(c) : closed(c)));
+  // The list filter a person picked last is kept in their browser.
+  const FILTERS = { newFilter: ["all", "new", "designer"], reqFilter: ["open", "closed", "designer"] };
+  for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
+
   function visibleCards() {
-    if (S.tab === "new") return S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && (S.newFilter === "all" || !c.acked));
+    if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "product" && S.productFilter !== "decisions") {
       const kind = S.productFilter === "elements" ? "element" : "screen";
       return S.cards.filter((c) => c.kind === kind).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
     }
-    if (S.tab === "requests") return S.cards.filter((c) => c.kind === "request" && (S.reqFilter === "open" ? !closed(c) : closed(c)));
+    if (S.tab === "requests") return requestCards(S.reqFilter);
     return [];
   }
 
@@ -469,11 +480,14 @@
     } else if (c.kind === "change") {
       if (c.in_progress) out.push(`<span class="chip warn">In progress — not shipped yet</span>`);
       if (c.acked) out.push(`<span class="chip ok">✓ Seen</span>`);
+      if (forDesigner(c)) out.push(`<span class="chip warn" title="${esc(c.attention.reasons.join(" · "))}">Needs a designer: ${esc(c.attention.reasons[0])}</span>`);
+      else if (c.attention?.level === "fyi" && !c.acked) out.push(`<span class="chip ok" title="${esc(c.attention.reasons.join(" · "))}">Nothing to decide</span>`);
       if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
       if (c.automated) out.push(`<span class="chip info">🧪 From automated tests</span>`);
       if (c.asks && !closed(c)) out.push(`<span class="chip warn">Waiting for your answer</span>`);
       else out.push(`<span class="chip ${c.busy ? "info" : ""}">${c.busy ? "● " : ""}${esc(STATUS[c.status] || c.status)}</span>`);
+      if (forDesigner(c) && !c.asks) out.push(`<span class="chip warn" title="${esc(c.attention.reasons.join(" · "))}">Needs a designer</span>`);
       if (c.type === "bug") out.push(`<span class="chip bad">🐛 Broken</span>`);
       else if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
@@ -488,12 +502,15 @@
     if (S.tab === "call") { renderAgendaList(); return; }
     const cards = visibleCards();
     const f = (key, opts) => `<div class="filters">${opts.map(([k, l]) => `<button class="btn small ${S[key] === k ? "on" : ""}" data-filter="${key}:${k}">${esc(l)}</button>`).join("")}</div>`;
-    const filters = S.tab === "new" ? f("newFilter", [["new", "Not seen yet"], ["all", "All"]]) : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"]])
+    const designer = (n) => `Needs a designer${n ? ` (${n})` : ""}`;
+    const filters = S.tab === "new" ? f("newFilter", [["all", "All"], ["new", "Not seen yet"], ["designer", designer(newCards("designer").length)]])
+      : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"], ["designer", designer(requestCards("designer").length)]])
       : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"]]) : "";
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(filters); return; }
+    const waiting = "Nothing waits for a designer right now.";
     const empty = {
-      new: S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : "No changes yet. They appear here soon after they ship.",
-      requests: S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
+      new: S.newFilter === "designer" ? waiting : S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : "No changes yet. They appear here soon after they ship.",
+      requests: S.reqFilter === "designer" ? waiting : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.",
     }[S.tab];
@@ -648,8 +665,9 @@
       <div class="sub">${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${c.attention ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : ""}
       <div class="actions">
-        <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Hides it from your list of new changes; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
+        <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Marks it seen for you: it leaves Not seen yet and Needs a designer; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
         <button class="btn" data-focus-composer>Ask a question</button>
         ${can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : ""}
         ${agendaButton(c)}
@@ -1191,7 +1209,7 @@
     if (!el) return;
     const ds = el.dataset;
     if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1"); return; }
-    if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
+    if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
     if (ds.card) { await openCard(ds.card); return; }
     if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }

@@ -115,6 +115,24 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
   writes them, or you write what they told you in chat, attributed), and each one is recorded
   with `design desk decision`, the card as its source.
 
+## Needs a designer
+
+New and Requests have a **Needs a designer** filter next to their others (New opens on
+**All**, Requests on **Open**): only the cards that wait for a designer's decision, each with
+its reasons. One designer cannot read every change; this keeps the rest a click away.
+
+- **A change card**: you judge it when you write the card ([watch.md](watch.md) step 7), as
+  `attention: {level, reasons}` — `designer` for a new screen or a new address, a look that
+  breaks the product's patterns or its catalog elements, a missing state (empty, loading,
+  error), or a screen with an open request or a theme in feedback; else `fyi`. One to five
+  reasons, each a short phrase in the product's words ("a new screen", "its own grey instead of
+  the product's"). It leaves the filter once the person saw it.
+- **A request**: the store derives it from where the request stands, never from you:
+  Design Desk asked a question, it was checked and nobody drew options or closed it, its
+  options are ready, or its live prototype is ready to approve.
+- **A suggestion for the next call** puts either kind on it until a designer adds it or says
+  **Not now**.
+
 ## Writing on the Desk
 
 - Everything on the Desk is for people who do not read code: the product's own words, no
