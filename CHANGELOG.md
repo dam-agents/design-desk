@@ -10,10 +10,27 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.4.0 — 2026-11-02
 
 **Upgrade:**
+1. Restart the Desk server: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Until the restart, the new People tab says it cannot load the list.
+
+## 1.3.2 — 2026-11-02
+
+**Upgrade:**
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**), then restart the Desk server
-(`rc-service --user design-desk-server restart`). Until the restart, the new People tab says
-it cannot load the list.
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Until then, the Requests tab counts only the requests that wait for an answer.
+
+## 1.3.1 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Both steps are safe to repeat. They cover the Desk server restart and the page republish
+of every crossed block ([docs/persistence.md](docs/persistence.md) → **Migration**, step 1).
 
 ## 1.3.0 — 2026-11-02
 
