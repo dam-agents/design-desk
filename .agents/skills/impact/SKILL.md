@@ -5,8 +5,8 @@ description: >-
   the same component, but every place people meet the same data or idea: other screens, the
   command line, Slack or email messages, documents — and what a change to it touches,
   grounded in earlier decisions. Writes the "Where else this shows up, and what it touches"
-  section of a Desk card, or answers in chat. Use for every change card and every request
-  before its options, and when someone asks "where else is this?" or "what would this
+  section of a Desk card, or answers in chat. Use for every change card, for every request
+  ahead of its options unless the request switched impact off, and when someone asks "where else is this?" or "what would this
   affect?".
 ---
 

@@ -23,6 +23,26 @@ test("an action takes the operator's skill, then the product's, then the bundled
   assert.equal(resolve("prototype").skill, null);
 });
 
+test("New request offers installed skills only, figma with Figma on, bundled words and defaults", async () => {
+  const extra = mkdtempSync(join(tmpdir(), "dd-switch-"));
+  for (const [dir, front] of [["acme-proto", "name: acme-proto\ndescription: >-\n  Draw options in the Acme kit. Use it for any request."], ["copy", "name: copy\ndescription: \"A product's own copy skill.\""]]) {
+    mkdirSync(join(extra, dir));
+    writeFileSync(join(extra, dir, "SKILL.md"), `---\n${front}\n---\n`);
+  }
+  const { requestSkills } = await import("../lib/actions.mjs");
+  const list = "copy, impact, brand, figma, not-here, acme-proto, ../x";
+  const offer = (o) => Object.fromEntries(requestSkills(list, o).map((k) => [k.name, k]));
+  const bundledOnly = offer({ paths: [bundled] });
+  assert.deepEqual(Object.keys(bundledOnly), ["copy", "impact", "brand"], "not installed, figma off and a bad name are not offered");
+  assert.equal(bundledOnly.copy.on, true, "a default-on skill");
+  assert.equal(bundledOnly.brand.on, false, "a default-off skill");
+  assert.equal(bundledOnly.impact.does, "Show where else the same thing appears");
+  assert.ok(offer({ paths: [bundled], figma: true }).figma, "figma with Figma on");
+  const mixed = offer({ paths: [extra, bundled] });
+  assert.deepEqual(mixed["acme-proto"], { name: "acme-proto", does: "Draw options in the Acme kit.", on: false }, "an unknown skill: its first sentence, off");
+  assert.deepEqual(mixed.copy, { name: "copy", does: "A product's own copy skill.", on: false }, "a product's skill under a bundled name takes no bundled words");
+});
+
 test("a profile check names an empty allow list, a missing screen and an unknown action", () => {
   const root = mkdtempSync(join(tmpdir(), "dd-profile-"));
   const dir = join(root, ".design-desk", "acme");
