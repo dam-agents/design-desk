@@ -16,6 +16,13 @@ the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 pictures it and offers switches for installed skills; new key `request_skills`
 ([docs/config.md](docs/config.md)), never asked: nothing to add.
 
+## 1.14.1 — 2026-11-02
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Until then, the page keeps its
+narrow text and list columns on a wide window.
+
 ## 1.14.0 — 2026-11-02
 
 **Upgrade:**

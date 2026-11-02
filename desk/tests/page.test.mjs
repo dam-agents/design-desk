@@ -388,6 +388,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.equal(await desk.getAttribute(".sec-head .chip a", "href"), "https://github.com/acme/widgets/pull/11", "a section links its source");
     assert.equal(await desk.locator("details.sec").count(), 1, "the explaining section is folded, what changed is not");
     assert.match(await desk.textContent("details.sec summary"), /Why it is like this[\s\S]*Source: not documented/);
+    assert.deepEqual(await desk.$$eval(".detail .secs", (ss) => ss.map((s) => [...s.children].map((c) => c.textContent.match(/What changed|Why it is like this/)?.[0]))),
+      [["What changed", "Why it is like this"]], "one grid holds the card's sections, so they stand side by side on a wide window");
     await desk.click('[data-handle="1"]');
     assert.deepEqual(await sent("/api/cards/ch2/handled", 1), { handled: true });
 
@@ -442,6 +444,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r2"]');
     await desk.waitForSelector("#form-t1");
+    assert.equal(await desk.locator(".detail .secs").count(), 0, "a card without sections has no section grid");
     await desk.check('#form-t1 input[name="q-t1-0"][value="Nothing"]');
     await desk.fill('#form-t1 fieldset[data-q="0"] [data-q-note]', "Keep it calm.");
     await desk.click('[data-send-form="t1"]');

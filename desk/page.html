@@ -15,7 +15,12 @@
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
     --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* The page grows with the window: text runs wider, the list and pictures get room. */
+    --measure: 80ch; --pad-x: 32px; --list-w: 380px; --side-w: 380px; --shot-w: 260px; --shot-h: 260px;
   }
+  @media (min-width: 1280px) { :root { --measure: 96ch; --pad-x: 40px; --list-w: 420px; --side-w: 420px; --shot-w: 300px; --shot-h: 320px; } }
+  @media (min-width: 1600px) { :root { --measure: 112ch; --pad-x: 48px; --list-w: 460px; --side-w: 460px; --shot-w: 340px; --shot-h: 380px; } }
+  @media (min-width: 2200px) { :root { --measure: 128ch; --pad-x: 64px; --list-w: 520px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
@@ -63,10 +68,10 @@
   .btn.small { padding: 3px 9px; font-size: 12px; }
   .btn[disabled] { opacity: .45; cursor: not-allowed; }
   .btn.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  main { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; min-height: 0; }
+  main { display: grid; grid-template-columns: minmax(280px, var(--list-w)) 1fr; min-height: 0; }
   main.wide { grid-template-columns: 1fr; } main.wide .list { display: none; }
   .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; }
-  .detail { overflow: auto; padding: 24px 32px 64px; }
+  .detail { overflow: auto; padding: 24px var(--pad-x) 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
   .row:hover { background: var(--soft); }
   .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
@@ -100,23 +105,25 @@
   .filters::-webkit-scrollbar { display: none; } .filters .btn { flex: none; white-space: nowrap; padding: 3px 8px; }
   h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
-  .lead { font-size: 16px; margin: 10px 0 18px; max-width: 72ch; }
+  .lead { font-size: 16px; margin: 10px 0 18px; max-width: var(--measure); }
   .sub { color: var(--muted); font-size: 12.5px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 0; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; align-items: center; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
-  .section { margin: 0 0 14px; max-width: 76ch; }
+  .section { margin: 0 0 14px; max-width: var(--measure); }
+  /* Sections stand side by side once each still gets a comfortable line. */
+  .secs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 64ch), 1fr)); gap: 0 32px; align-items: start; }
   .section h4 { margin: 0 0 4px; font-size: 14.5px; }
   details.sec > summary { cursor: pointer; list-style: none; } details.sec > summary::-webkit-details-marker { display: none; }
   details.sec > summary h4::before { content: "▸ "; color: var(--muted); } details.sec[open] > summary h4::before { content: "▾ "; }
   .sec-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; } .sec-head .chip a, .sec-head .chip .anchor { font-size: inherit; padding: 0; background: none; }
   .md p { margin: 0 0 8px; } .md ul { margin: 0 0 8px; padding-left: 20px; } .md code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
-  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--shot-w)), 1fr)); gap: 12px; }
   .shot { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); cursor: zoom-in; }
-  .shot img { display: block; width: 100%; min-height: 120px; background: var(--soft); object-fit: cover; object-position: top; max-height: 260px; }
+  .shot img { display: block; width: 100%; min-height: 120px; background: var(--soft); object-fit: cover; object-position: top; max-height: var(--shot-h); }
   .shot figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); }
   /* Where the change is on a picture: boxes the agent measured, shown while "Outline what changed" is on. */
-  .shot .pic { max-height: 260px; overflow: hidden; background: var(--soft); }
+  .shot .pic { max-height: var(--shot-h); overflow: hidden; background: var(--soft); }
   .shot .pic img, .zoom .canvas img { min-height: 0; max-height: none; height: auto; object-fit: initial; }
   .canvas { position: relative; line-height: 0; }
   .mark { position: absolute; display: none; border: 3px solid #e8a400; border-radius: 4px; background: rgba(232, 164, 0, .12); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); margin: -4px; padding: 4px; box-sizing: content-box; pointer-events: none; }
@@ -129,7 +136,7 @@
   .zoom figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
   .zoom figure img { max-height: calc(100vh - 110px); }
   .zoom .canvas img { max-height: calc(100vh - 110px); max-width: 100%; }
-  .zoom figcaption { color: #fff; font-size: 13px; text-align: center; max-width: 80ch; }
+  .zoom figcaption { color: #fff; font-size: 13px; text-align: center; max-width: var(--measure); }
   .zoom .gal { top: 50%; transform: translateY(-50%); font-size: 22px; line-height: 1; padding: 10px 14px; }
   .zoom .gal.prev { left: 12px; right: auto; }
   .steps { display: flex; gap: 0; margin: 14px 0 6px; flex-wrap: wrap; }
@@ -138,7 +145,7 @@
   .step .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); font-size: 11px; }
   .step.done { color: var(--ink); } .step.done .n { background: var(--ok-soft); color: var(--ok); }
   .step.now { color: var(--ink); font-weight: 600; } .step.now .n { background: var(--ink); color: var(--panel); }
-  .status { display: grid; gap: 10px; margin: 12px 0 8px; max-width: 80ch; }
+  .status { display: grid; gap: 10px; margin: 12px 0 8px; max-width: var(--measure); }
   .working { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--radius); background: var(--info-soft); }
   .spin { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex: none; animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .25; } }
@@ -160,7 +167,7 @@
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
   details.more .menu { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 220px; display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   details.more .menu .btn { border: 0; justify-content: flex-start; width: 100%; }
-  .verdict { border-radius: var(--radius); padding: 14px 16px; margin: 6px 0 4px; max-width: 80ch; }
+  .verdict { border-radius: var(--radius); padding: 14px 16px; margin: 6px 0 4px; max-width: var(--measure); }
   .verdict.design { background: var(--ok-soft); } .verdict.needs-developer { background: var(--warn-soft); } .verdict.product { background: var(--info-soft); }
   .verdict b { display: block; margin-bottom: 4px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
@@ -178,7 +185,7 @@
   .looks span { display: block; font-size: 11.5px; padding: 4px 8px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .looks b { display: block; font-size: 12px; padding: 4px 8px 0; }
   .tally { display: flex; gap: 6px; flex-wrap: wrap; }
-  .threads { display: grid; gap: 10px; max-width: 80ch; }
+  .threads { display: grid; gap: 10px; max-width: var(--measure); }
   .thread { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
   .thread .head { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
   .anchor { font-size: 12px; background: var(--soft); padding: 1px 8px; border-radius: 999px; cursor: pointer; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; }
@@ -188,7 +195,7 @@
   .reply { display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
   textarea, input, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
   textarea { min-height: 64px; resize: vertical; }
-  .composer { display: grid; gap: 8px; max-width: 80ch; margin-top: 10px; }
+  .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
   .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; z-index: 90; max-width: calc(100% - 32px); }
@@ -199,7 +206,7 @@
   .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: 12.5px; color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: 6px; border: 1px solid var(--line); }
   .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 14px; } .choices input { width: auto; }
-  .guide { max-width: 74ch; } .guide li { margin-bottom: 6px; } .guide ol { padding-left: 20px; }
+  .guide { max-width: var(--measure); } .guide li { margin-bottom: 6px; } .guide ol { padding-left: 20px; }
   .people { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 6px 0 4px; }
   .people th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
   .people td { padding: 8px 10px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
@@ -212,14 +219,14 @@
   .impact ul { margin: 4px 0 10px; padding-left: 20px; } .impact li { margin-bottom: 4px; }
   .impact .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; text-align: left; } .impact .link:hover { text-decoration: underline; }
   /* The browser's Back leaves the Desk (docs/desk.md → Where it works): every view keeps a way back on screen. */
-  .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px -32px 14px; padding: 10px 32px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px calc(-1 * var(--pad-x)) 14px; padding: 10px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
   .pbar { position: sticky; top: -28px; z-index: 5; margin: -28px -48px 0; padding: 12px 48px; background: var(--bg); border-bottom: 1px solid var(--line); }
   /* the design workspace */
   #workspace { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: grid; grid-template-rows: auto 1fr; }
   #workspace[hidden] { display: none; }
   .ws-top { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   .ws-top .title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ws-body { display: grid; grid-template-columns: 1fr 380px; min-height: 0; }
+  .ws-body { display: grid; grid-template-columns: 1fr var(--side-w); min-height: 0; }
   .ws-stage { padding: 12px; display: grid; grid-template-rows: auto 1fr; gap: 8px; min-height: 0; }
   .ws-stage .frame { height: 100%; }
   .ws-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; }
@@ -877,7 +884,7 @@
     ov.dataset.index = String(n);
     ov.innerHTML = `<div class="sub pbar" style="justify-content:space-between"><button class="btn small" data-exit-present>✕ Exit</button><span>${n + 1} / ${items.length} · Next call</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button></span></div>
       <h2 style="font-size:28px;margin-top:12px">${txt(card.title, card)}</h2>${card.summary ? `<p class="lead">${txt(card.summary, card)}</p>` : ""}
-      <div class="panel" style="max-width:90ch"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>
+      <div class="panel" style="max-width:calc(var(--measure) + 10ch)"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>
       ${fav && (card.variants || []).length > 1 ? `<p class="sub" style="margin-top:12px">Presenting <b>${esc(fav.name)}</b> · options: ${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
       ${visual ? `<iframe class="frame" id="present-frame" sandbox="allow-scripts" style="height:60vh;margin-top:16px"></iframe>` : ""}`;
     if (visual) {
@@ -954,7 +961,7 @@
     const i = c.instance, list = c.shotlist || [];
     if (!i && !list.length) return "";
     const link = (path) => i?.url ? `${i.url.replace(/\/$/, "")}${path || ""}` : "";
-    return `<div class="panel" style="max-width:80ch;margin-top:12px">
+    return `<div class="panel" style="max-width:var(--measure);margin-top:12px">
       ${i ? `<b>Try it yourself</b><p class="hint">Design Desk runs its own copy of the product${i.ref ? ` at ${esc(i.ref)}` : ""}${i.commit ? ` (${esc(i.commit.slice(0, 7))})` : ""}, with made-up data. Sign in with the demo account below, not your own.</p>
         <div class="actions"><a class="btn primary" href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer">Open the product ↗</a>${can("screens") ? `<button class="btn" data-add-shots>Add screenshots</button>` : ""}</div>
         ${i.login ? `<dl class="kv"><dt>Demo account</dt><dd><code>${esc(i.login.user || "")}</code>${i.login.password ? ` / <code>${esc(i.login.password)}</code>` : ""}${i.login.hint ? ` <span class="sub">${esc(i.login.hint)}</span>` : ""}</dd></dl>` : ""}` : ""}
@@ -964,11 +971,11 @@
   // Every section says what it is and where it comes from; the ones that explain or give
   // context are folded, so the card shows what changed and what is open first.
   const FOLDED = new Set(["why", "limits", "good-to-know", "context"]);
-  const sections = (c) => (c.sections || []).map((s) => {
+  const sections = (c) => (c.sections || []).length ? `<div class="secs">${c.sections.map((s) => {
     const head = `<h4>${esc(s.title)}</h4>${s.source?.label ? `<span class="chip" title="Where this comes from">Source:${s.source.url || s.source.card ? srcLink(s.source) : ` ${esc(s.source.label)}`}</span>` : ""}`;
     return FOLDED.has(s.key) ? `<details class="section sec"><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
       : `<div class="section"><div class="sec-head">${head}</div>${md(s.body)}</div>`;
-  }).join("");
+  }).join("")}</div>` : "";
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
 
   // A place that is a screen or a part in Product opens it there: the one the agent named, else,
@@ -1029,7 +1036,7 @@
         ${can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : ""}
         ${agendaButton(c)}
       </div>
-      ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : `<p class="hint">No screenshots yet.${can("screens") && !c.instance ? " Have one? Add it." : ""}</p>`}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
       ${renderInstance(c)}
@@ -1103,8 +1110,8 @@
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${renderWanted(c)}
       ${c.status === "dropped" ? "" : `<div class="actions">${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}</div>
-      ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
-      ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:80ch;padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
+      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
       ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<div class="panel hint">Not drawn yet.</div>`}`}
       ${sections(c)}${renderImpact(c.impact)}
@@ -1144,7 +1151,7 @@
         : " A designer can ask Design Desk to draw how it looked before.";
       notes.push(`The Desk keeps no version from before ${ch ? `“${esc(ch.title)}”` : "that change"}, so it cannot show before and after.${draw}`);
     }
-    return notes.map((x) => `<p class="hint" style="max-width:80ch">${x}</p>`).join("");
+    return notes.map((x) => `<p class="hint" style="max-width:var(--measure)">${x}</p>`).join("");
   }
   function renderLooks(c) {
     if (S.lookMiss) showBeforeAfter(c, S.lookMiss);
@@ -1171,7 +1178,7 @@
         ${i > 0 ? `<button class="btn small" data-look-side aria-pressed="${side}">${side ? "Show it alone" : "Put it next to now"}</button><button class="btn small" data-look="now">Back to now</button>` : ""}
       </div>
       <div class="looks">${strip}</div>
-      <p class="hint" style="max-width:80ch;margin-bottom:10px">${why}${l.note ? ` <span>${txt(l.note)}</span>` : ""}</p>
+      <p class="hint" style="max-width:var(--measure);margin-bottom:10px">${why}${l.note ? ` <span>${txt(l.note)}</span>` : ""}</p>
       ${side ? `<div class="two"><div><h4 style="margin:0 0 6px">${esc(lookName(i))}${l.at ? ` · ${esc(day(l.at))}` : ""}</h4>${lookPictures(c, l, lookName(i))}</div><div><h4 style="margin:0 0 6px">${esc(lookName(w))}${w && looks[w].at ? ` · ${esc(day(looks[w].at))}` : ""}</h4>${lookPictures(c, looks[w], lookName(w))}</div></div>` : lookPictures(c, l, lookName(i))}`;
   }
 
@@ -1276,8 +1283,8 @@
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
       <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}</button>`).join("")}</div>
-      ${v.rationale ? `<p class="hint" style="max-width:76ch"><b>When this one wins:</b> ${esc(v.rationale)}</p>` : ""}
-      ${c.chosen ? `<p class="hint" style="max-width:76ch"><span class="chip ok">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : vs.length > 1 ? `<p class="hint" style="max-width:76ch">Votes and comments help; a designer picks the winner.</p>` : ""}
+      ${v.rationale ? `<p class="hint" style="max-width:var(--measure)"><b>When this one wins:</b> ${esc(v.rationale)}</p>` : ""}
+      ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : vs.length > 1 ? `<p class="hint" style="max-width:var(--measure)">Votes and comments help; a designer picks the winner.</p>` : ""}
       <div class="vbar">
         ${can("vote") ? `<button class="btn small ${mine === "prefer" ? "on" : ""}" data-vote="prefer">👍 I like this one</button><button class="btn small ${mine === "concern" ? "on" : ""}" data-vote="concern">⚠ I have a concern</button>` : ""}
         <button class="btn small" data-act="workspace">Open in the design workspace</button>
