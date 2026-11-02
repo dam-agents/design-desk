@@ -575,3 +575,56 @@ test("a screen or part a designer adds goes to the agent, and never becomes a se
   assert.throws(() => s.upsertCard({ id: sc.card.id, path: "/invoices" }), (e) => e.status === 409);
   assert.equal(s.upsertCard({ id: el.card.id, status: "dropped", sections: [{ title: "Already here", body: "It is the Agent row." }] }).card.status, "dropped");
 });
+
+test("an issue card: found again by its issue, short needs, pictures of now and a sketch", () => {
+  const s = fresh();
+  const source = { repo: "acme/widgets", issue: 30, url: "https://github.com/acme/widgets/issues/30", milestone: "Sprint 12" };
+  const a = s.upsertCard({ kind: "issue", title: "See what each agent spends", bucket: "sprint", needs: ["A spend column in the agents list"], source }).card;
+  assert.equal(a.status, "open");
+  const b = s.upsertCard({ kind: "issue", title: "See what each agent spends this week", bucket: "assigned", source }).card;
+  assert.equal(a.id, b.id, "one card per issue");
+  assert.deepEqual(b.needs, ["A spend column in the agents list"], "needs stay when not rewritten");
+  assert.throws(() => s.upsertCard({ kind: "issue", title: "x".repeat(91), source }), /longer than 90/);
+  assert.throws(() => s.upsertCard({ id: a.id, needs: [] }), /1 to 3/);
+  assert.throws(() => s.upsertCard({ id: a.id, needs: ["a", "b", "c", "d"] }), /at most 3/);
+  assert.throws(() => s.upsertCard({ id: a.id, needs: ["n".repeat(201)] }), /longer than 200/);
+  assert.throws(() => s.upsertCard({ id: a.id, bucket: "later" }), /bucket must be/);
+  assert.throws(() => s.upsertCard({ id: a.id, status: "handled" }), /status must be one of open, archived/);
+  const change = s.upsertCard({ kind: "change", title: "One", source: { repo: "acme/widgets", pr: 9 } }).card;
+  assert.throws(() => s.upsertCard({ id: change.id, needs: ["x"] }), /belongs to an issue/);
+  const shot = s.addAsset({ kind: "screen", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset;
+  assert.throws(() => s.upsertCard({ id: a.id, sketches: [shot.id, shot.id, shot.id] }), /at most 2 sketches/);
+  const drawn = s.upsertCard({ id: a.id, screens: [{ asset: shot.id, caption: "Agents list today", source: "instance" }], sketches: [{ asset: shot.id, caption: "A spend column" }], style: "acme/widgets@abc1234" }).card;
+  assert.equal(drawn.sketches[0].caption, "A spend column");
+  const row = s.listCards({ kind: "issue" })[0];
+  assert.deepEqual([row.bucket, row.needs.length, row.sketches], ["assigned", 1, 1]);
+});
+
+test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
+  const s = fresh();
+  const pm = { email: "pat@example.com", role: "pm" };
+  assert.equal(can("pm", "draw"), true);
+  assert.equal(can("developer", "draw"), false);
+  assert.equal(can("guest", "draw"), false);
+  const c = s.upsertCard({ kind: "issue", title: "A calmer empty Home", bucket: "backlog", needs: ["An empty state on Home"], source: { repo: "acme/widgets", issue: 31 } }).card;
+  const { inbox: item } = s.act(c.id, pm, "draw", "try a checklist");
+  assert.equal(item.kind, "draw");
+  assert.throws(() => s.act(c.id, pm, "draw"), /already working/);
+  assert.throws(() => s.act(c.id, pm, "explore"), /can only be drawn/);
+  assert.deepEqual(s.getCard(c.id).waiting.map((w) => w.kind), ["draw"]);
+  s.upsertCard({ id: c.id, status: "archived" });
+  const d = s.upsertCard({ kind: "issue", title: "Closed one", bucket: "backlog", source: { repo: "acme/widgets", issue: 32 }, status: "archived" }).card;
+  assert.throws(() => s.act(d.id, pm, "draw"), /closed/);
+});
+
+test("an issue's drawing record is a whole-number failure count and a short note", () => {
+  const s = fresh();
+  const c = s.upsertCard({ kind: "issue", title: "One", bucket: "sprint", source: { repo: "acme/widgets", issue: 50 } }).card;
+  assert.deepEqual(s.upsertCard({ id: c.id, draw: { failures: 1, note: "The instance did not start." } }).card.draw, { failures: 1, note: "The instance did not start." });
+  assert.throws(() => s.upsertCard({ id: c.id, draw: { failures: "1" } }), /whole number/);
+  assert.throws(() => s.upsertCard({ id: c.id, draw: { failures: 1.5 } }), /whole number/);
+  assert.throws(() => s.upsertCard({ id: c.id, draw: { note: "n".repeat(301) } }), /longer than 300/);
+  assert.throws(() => s.upsertCard({ id: c.id, draw: [] }), /must be an object/);
+  const change = s.upsertCard({ kind: "change", title: "Two", source: { repo: "acme/widgets", pr: 9 } }).card;
+  assert.throws(() => s.upsertCard({ id: change.id, draw: { failures: 0 } }), /belongs to an issue/);
+});

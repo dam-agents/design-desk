@@ -18,6 +18,9 @@
 #            file the Desk server rewrites on every change) → questions_due,
 #            requests_due, variants_due, prototypes_due, handoffs_due, teardowns_due,
 #            expiring_due (docs/desk.md).
+#   issues — the open issues of the watched repositories, for the Desk's Issues page
+#            (docs/issues.md): new or changed ones to read, the sprint's and assigned
+#            ones to draw, closed ones to archive → issue_news_due, drawings_due.
 #   digest — the week in the Desk's store, and 30 days of feedback for its themes
 #            (docs/digest.md); nothing in a quiet week or once the week's digest exists.
 #   audit  — deterministic health checks (docs/audit.md).
@@ -74,6 +77,7 @@ config_json() {
     --arg screens "$(cfg screens)" --arg max_screen_prs "$(cfg max_screen_prs)" \
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
     --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
+    --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg max_issue_drawings "$(cfg max_issue_drawings)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -110,7 +114,10 @@ config_json() {
       slack_poll_channel: $slack_poll_channel,
       digest: ($digest | if . == "" then "desk" else . end),
       slack_council: ($slack_council | if . == "" then "disabled" else . end),
-      council_sync_min: ($council_sync_min | tonumber? // 30)}'
+      council_sync_min: ($council_sync_min | tonumber? // 30),
+      issue_news: ($issue_news | if . == "" then "disabled" else . end),
+      issue_sprint: ($issue_sprint | if . == "" then "milestone" else . end),
+      max_issue_drawings: ($max_issue_drawings | tonumber? // 5)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -169,6 +176,23 @@ ensure_ledger() {
   [ -f "$LEDGER" ] || { mkdir -p "$WORK"; printf '%s\n' "$LEDGER_HEAD" > "$LEDGER"; }
 }
 
+# search <repo> <query> → every item, in pages of 100, up to 5 pages (500) a pass. The
+# caller's `hostargs` names a GitHub Enterprise host. Runs in a command substitution: a
+# failure returns, and the caller fails the pass.
+search() {
+  local q="$2" out='{"items":[]}' page=1 got
+  while [ "$page" -le 5 ]; do
+    got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="$q" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" || return 1
+    jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || return 1
+    [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$1: the search reported incomplete results — the rest come next run"
+    out="$(jq -c --argjson more "$(jq -c .items <<<"$got")" '.items += $more' <<<"$out")"
+    [ "$(jq '.items | length' <<<"$got")" -eq 100 ] || break
+    page=$((page + 1))
+  done
+  [ "$page" -gt 5 ] && log "$1: more than 500 results for \"$q\" — the oldest wait for later passes"
+  printf '%s' "$out"
+}
+
 # ============================================================ WATCH MODE ====
 watch_mode() {
   local CONF REPOS SINCE MAXN repo since_day items rows ere paths
@@ -188,21 +212,6 @@ watch_mode() {
   local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
   local stale_s=$((3 * 3600))
   local OPEN_PRS LABEL; OPEN_PRS="$(jq -r '.watch_open_prs' <<<"$CONF")"; LABEL="$(jq -r '.issue_label' <<<"$CONF")"
-  # search <repo> <query> → every item, in pages of 100, up to 5 pages (500) a pass.
-  search() {
-    local q="$2" out='{"items":[]}' page=1 got
-    while [ "$page" -le 5 ]; do
-      # Runs in a command substitution: a failure returns, and the caller fails the pass.
-      got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="$q" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" || return 1
-      jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || return 1
-      [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$1: the search reported incomplete results — the rest come next run"
-      out="$(jq -c --argjson more "$(jq -c .items <<<"$got")" '.items += $more' <<<"$out")"
-      [ "$(jq '.items | length' <<<"$got")" -eq 100 ] || break
-      page=$((page + 1))
-    done
-    [ "$page" -gt 5 ] && log "$1: more than 500 results for \"$q\" — the oldest wait for later passes"
-    printf '%s' "$out"
-  }
   # The ledger's last row for (repo, number) decides: kind of work, or a reason to skip.
   decide() {  # <repo> <number> <state: merged|open|issue> → prints kind or nothing
     local row status updated attempts
@@ -285,6 +294,116 @@ watch_mode() {
       changes_due:$due, issues_due:$issues, config:$config, logs:$logs}'
 }
 
+# ============================================================ ISSUES MODE ===
+# The open issues of each watched repository, for the Desk's Issues page (docs/issues.md).
+# The agent judges whether an issue changes the screens; this pass only says which issues
+# are new or changed since that judgement (work/ISSUES.tsv: the columns of CHANGES.tsv,
+# the issue's updated_at in the third), which judged ones to draw, which moved between the
+# sprint, someone's and the backlog, and which closed — each closed one verified by its
+# own lookup, never by its absence from the list. The decisions over hundreds of issues
+# are one jq program per repository: a process per issue would outrun the gate's budget.
+issues_mode() {
+  local CONF REPOS SPRINT_CFG MAXD DB="$DESK_DIR/db.json" ILEDGER="$WORK/ISSUES.tsv"
+  CONF="$(config_json)"
+  [ "$(jq -r .issue_news <<<"$CONF")" = enabled ] || { log "the Issues page is off (issue_news)"; quiet_out; }
+  REPOS="$(jq -r '.repos' <<<"$CONF")"
+  [ "$REPOS" = none ] && { log "no watched repositories (repos: none)"; quiet_out; }
+  SPRINT_CFG="$(jq -r .issue_sprint <<<"$CONF")"; MAXD="$(jq -r .max_issue_drawings <<<"$CONF")"
+  # Reading is cheap and drawing is not: a backlog is read over several passes.
+  local MAXJ="${ISSUES_MAX_JUDGE:-40}" MAXC="${ISSUES_MAX_CLOSE_CHECKS:-15}"
+  [ -f "$ILEDGER" ] || { mkdir -p "$WORK"; printf 'repo\tissue\tissue_updated\tstatus\tcard\tupdated\tattempts\tnote\n' > "$ILEDGER"; }
+  # The issue cards on the Desk, and the ones a person asked to draw that wait for it.
+  local cards='[]' drawing='[]'
+  if [ -f "$DB" ]; then
+    cards="$(jq -c '[.cards[] | select(.kind == "issue" and .status != "archived")
+      | {id, repo: .source.repo, issue: (.source.issue | tostring), bucket, sketches: ((.sketches // []) | length), failures: (.draw.failures // 0)}]' "$DB" 2>/dev/null)" \
+      || fail_out "cannot read the Desk store at $DB"
+    drawing="$(jq -c '[.inbox[]? | select(.kind == "draw" and .state != "done") | .card]' "$DB" 2>/dev/null || echo '[]')"
+  fi
+  local news='[]' draw='[]' nmove=0 nclose=0 deferred=0 sprints='{}' repo
+  for repo in $(printf '%s' "$REPOS" | tr ',' ' '); do
+    local slug sprint="" found pass; slug="$(repo_slug "$repo")"
+    local hostargs=(); case "$repo" in */*/*) hostargs=(--hostname "${repo%%/*}");; esac
+    # The current sprint: the open milestone due next (today counts), or the one named.
+    case "$SPRINT_CFG" in
+      none) ;;
+      milestone)
+        found="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/milestones?state=open&sort=due_on&direction=asc&per_page=50" 2>/dev/null)" \
+          && jq -e 'type == "array"' >/dev/null 2>&1 <<<"$found" || fail_out "could not list the milestones of $repo — is the GitHub connection granted?"
+        sprint="$(jq -r --arg today "${NOW_ISO%%T*}" '[.[] | select(.due_on != null and .due_on[0:10] >= $today)][0].title // ""' <<<"$found")";;
+      *) sprint="$SPRINT_CFG";;
+    esac
+    sprints="$(jq -c --arg r "$repo" --arg s "$sprint" '. + {($r): (if $s == "" then null else $s end)}' <<<"$sprints")"
+    log "$repo: current sprint ${sprint:-none}"
+    found="$(search "$repo" "repo:$slug is:issue is:open")" || fail_out "could not list the open issues of $repo"
+    # Per issue, the ledger's last row decides: read it (first, changed, takeover, retry) or
+    # not; a read one follows the plan (move) and gets its pictures once (draw). The sprint
+    # first, then someone's, then the backlog; the most recently updated first in each.
+    pass="$(jq -c --arg repo "$repo" --arg sprint "$sprint" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
+      --rawfile ledger "$ILEDGER" --argjson cards "$cards" --argjson drawing "$drawing" \
+      --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" '
+      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+      def bucket: if $sprint != "" and .milestone.title == $sprint then "sprint" elif ((.assignees // []) | length) > 0 then "assigned" else "backlog" end;
+      ($ledger | split("\n") | .[1:] | map(select(length > 0) | split("\t") | select(.[0] == $repo))
+        | reduce .[] as $r ({}; .[$r[1]] = {iupd: $r[2], status: $r[3], card: $r[4], ts: $r[5], attempts: (($r[6] | tonumber?) // 0)})) as $L
+      | ($cards | map(select(.repo == $repo)) | INDEX(.issue)) as $C
+      | [ .items[] | select(.pull_request == null) | . + {b: bucket} ]
+      | sort_by([({sprint: 0, assigned: 1, backlog: 2}[.b]), (0 - ((.updated_at // "") | epoch))])
+      | reduce .[] as $i ({news: [], draw: [], rows: [], logs: [], seen: [], nj: 0, nd: 0, deferred: 0};
+          ($i.number | tostring) as $n | ($L[$n] // {}) as $row | $C[$n] as $card
+          | ($row.status // "") as $st
+          | (if $st == "" then "first"
+             elif ($st == "carded" or $st == "skipped") then (if $row.iupd != $i.updated_at then "changed" else null end)
+             elif ($st == "due" or $st == "in_progress") then (if ($nowe - ($row.ts | epoch)) >= 10800 then "takeover" else "held" end)
+             elif $st == "failed" then (if $row.attempts < 3 then "retry" else "gave-up" end)
+             else null end) as $kind
+          | (($i.b == "sprint" or $i.b == "assigned") and (($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
+             and ($card == null or ($drawing | index($card.id)) == null)) as $wants
+          | ($card.id // (if ($row.card // "") == "" then null else $row.card end)) as $cid
+          | {id: "\($repo)#\($n)", repo: $repo, issue: $i.number, card: $cid, title: ($i.title | gsub("[\t\n]"; " ")), url: $i.html_url,
+             author: $i.user.login, updated: $i.updated_at, bucket: $i.b, milestone: ($i.milestone.title // null),
+             assignees: [($i.assignees // [])[].login], labels: [($i.labels // [])[].name]} as $e
+          | .seen += [$n]
+          | if $kind == "held" then .logs += ["\($e.id): \($st) since \($row.ts) — left to its session"]
+            elif $kind == "gave-up" then .logs += ["\($e.id): failed \($row.attempts) times — left for the audit"]
+            elif $kind != null then
+              (if $wants and .nd < $maxd then .draw += [$e + {need: "draw", judge: true, kind: $kind}] | .nd += 1 | .logs += ["\($e.id): \($i.b), \($kind) — to read and draw"]
+               elif .nj < $maxj then .news += [$e + {need: "judge", judge: true, kind: $kind}] | .nj += 1 | .logs += ["\($e.id): \($i.b), \($kind) — to read"]
+               else .deferred += 1 end)
+              | if (.draw + .news | map(.id) | index($e.id)) != null
+                then .rows += [[$repo, $n, $i.updated_at, "due", ($cid // ""), $now, ($row.attempts // 0 | tostring), $i.b] | join("\t")] else . end
+            elif $st == "carded" and $card != null then
+              (if $card.bucket != $i.b then .news += [$e + {need: "move", judge: false, kind: null}] | .logs += ["\($e.id): moved to \($i.b)"] else . end)
+              | (if $wants then (if .nd < $maxd then .draw += [$e + {need: "draw", judge: false, kind: null}] | .nd += 1 | .logs += ["\($e.id): \($i.b) — to draw"] else .deferred += 1 end) else . end)
+            else . end)' <<<"$found")" || fail_out "cannot decide the issues of $repo"
+    jq -r '.rows[]' <<<"$pass" >> "$ILEDGER"
+    while IFS= read -r l; do [ -n "$l" ] && log "$l"; done < <(jq -r '.logs[]' <<<"$pass")
+    news="$(jq -c --argjson p "$pass" '. + $p.news' <<<"$news")"; draw="$(jq -c --argjson p "$pass" '. + $p.draw' <<<"$draw")"
+    nmove=$((nmove + $(jq '[.news[] | select(.need == "move")] | length' <<<"$pass"))); deferred=$((deferred + $(jq .deferred <<<"$pass")))
+    # A card whose issue the list no longer shows: closed only when its own lookup says so.
+    local checks=0 cid cnum state
+    while IFS=$'\t' read -r cid cnum; do
+      [ -n "$cid" ] || continue
+      [ "$checks" -lt "$MAXC" ] || { log "$repo: more cards to check for closed issues — next pass"; break; }
+      checks=$((checks + 1))
+      state="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/issues/$cnum" --jq .state 2>/dev/null)" || { log "$repo#$cnum: could not read its state — next pass"; continue; }
+      [ "$state" = closed ] || continue
+      news="$(jq -c --arg id "$repo#$cnum" --arg repo "$repo" --argjson n "$cnum" --arg card "$cid" '. + [{id:$id, repo:$repo, issue:$n, need:"close", judge:false, card:$card}]' <<<"$news")"
+      nclose=$((nclose + 1)); log "$repo#$cnum: closed — archive its card"
+    done < <(jq -r --arg r "$repo" --argjson seen "$(jq -c .seen <<<"$pass")" '.[] | select(.repo == $r and (.issue as $i | $seen | index($i) | not)) | [.id, .issue] | @tsv' <<<"$cards")
+  done
+  local njudge ndraw; njudge="$(jq '[.[] | select(.need == "judge")] | length' <<<"$news")"; ndraw="$(jq length <<<"$draw")"
+  [ "$deferred" -gt 0 ] && log "$deferred more issues wait for the next pass (at most $MAXJ to read and $MAXD to draw a pass)"
+  printf '%s read=%s draw=%s move=%s close=%s deferred=%s\n' "$NOW_ISO" "$njudge" "$ndraw" "$nmove" "$nclose" "$deferred" >> "$WORK/ISSUES.log"
+  [ "$(jq length <<<"$news")" -gt 0 ] || [ "$ndraw" -gt 0 ] || quiet_out
+  logev info preflight "issues: $njudge to read, $ndraw to draw, $nmove moved, $nclose closed"
+  jq -n --argjson news "$news" --argjson draw "$draw" --argjson sprints "$sprints" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    --arg title "$(jq -r '.[] | "#\(.issue)"' <<<"$(jq -c --argjson a "$draw" '$a + .' <<<"$news")" | title_for Read issues)" \
+    '{mode:"issues", nothing_to_do:false, title:$title, sprint:$sprints,
+      read_set: (["docs/issues.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end)),
+      issue_news_due:$news, drawings_due:$draw, config:$config, logs:$logs}'
+}
+
 # ============================================================ INBOX MODE ====
 inbox_mode() {
   local INBOX="$DESK_DIR/inbox.json" DB="$DESK_DIR/db.json" CONF ttl_s
@@ -363,6 +482,7 @@ inbox_mode() {
       figma_due: pick(["figma"]),
       screens_due: pick(["screens"]),
       slack_due: pick(["slack"]),
+      drawings_due: pick(["draw"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
@@ -376,6 +496,7 @@ inbox_mode() {
         + (if (.map_due | length) > 0 then ["docs/map.md", "docs/screens.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)
         + (if (.screens_due | length) > 0 then ["docs/screens.md"] else [] end)
+        + (if (.drawings_due | length) > 0 then ["docs/issues.md", "docs/screens.md"] else [] end)
         + (if (.slack_due + .polls_due | length) > 0 then [".agents/skills/slack-polls/SKILL.md"] else [] end)
         + (if (.councils_due | length) > 0 then [".agents/skills/slack-council/SKILL.md"] else [] end)
         + (if (.variants_due | length) > 0 then ["docs/actions.md"] else [] end) | unique)'
@@ -435,6 +556,15 @@ HTML
     if [ -z "$last" ]; then check watch_cadence warn "WATCH.log has no line — the watch schedule never ran its pass"
     elif [ $((NOW_EPOCH - $(iso2epoch "$last"))) -gt $((6 * 3600)) ]; then check watch_cadence warn "the last watch pass was at $last"
     else check watch_cadence ok "last pass $last"; fi
+  fi
+  # The Issues page is read daily; an issue that failed three times waits for a person.
+  if [ "$(jq -r .issue_news <<<"$CONF")" = enabled ]; then
+    last="$(tail -1 "$WORK/ISSUES.log" 2>/dev/null | cut -d' ' -f1)"
+    if [ -z "$last" ]; then check issues_cadence warn "ISSUES.log has no line — the issues schedule never ran its pass (docs/issues.md)"
+    elif [ $((NOW_EPOCH - $(iso2epoch "$last"))) -gt $((30 * 3600)) ]; then check issues_cadence warn "the last issues pass was at $last"
+    else check issues_cadence ok "last pass $last"; fi
+    local ifailed; ifailed="$(awk -F'\t' 'NR>1 {s[$1"#"$2]=$4; a[$1"#"$2]=$7} END {for (k in s) if (s[k]=="failed" && a[k]>=3) print k}' "$WORK/ISSUES.tsv" 2>/dev/null | sort | head -5 | paste -sd' ' -)"
+    [ -z "$ifailed" ] || check issues_failed warn "issues that failed three times: $ifailed"
   fi
   local errs; errs="$(find "$WORK/logs" -name 'events-*.jsonl' -mtime -7 -exec cat {} + 2>/dev/null | jq -c 'select(.level == "error")' 2>/dev/null | wc -l | tr -d ' ')"
   [ "${errs:-0}" -eq 0 ] && check errors ok "no error events in 7 days" || check errors warn "$errs error events in 7 days — see failures"
@@ -535,6 +665,7 @@ case "$MODE" in
   watch) watch_mode ;;
   inbox) inbox_mode ;;
   digest) digest_mode ;;
+  issues) issues_mode ;;
   audit) audit_mode ;;
   *) fail_out "unknown mode: $MODE" ;;
 esac

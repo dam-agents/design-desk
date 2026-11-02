@@ -12,7 +12,7 @@ const USAGE = `usage: design desk <command>
   claim <I-n> --session <id> [--takeover]  claim an item for this run (or DESK_SESSION)
   done <I-n> --session <id> [--outcome <text>]
                                            mark a claimed item done, with the same id
-  cards [--kind change|request]            list cards
+  cards [--kind change|request|issue]      list cards
   card <C-n>                               one card with its threads
   upsert <card.json|->                     create or update a card (agent fields only)
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):

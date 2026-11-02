@@ -102,7 +102,8 @@ function settings() {
 // The words a person reads when their role lacks an action.
 const VERBS = { ack: "mark changes as seen", handle: "mark changes as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
-  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product" };
+  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
+  draw: "draw issues" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -193,7 +194,8 @@ async function viewerRoute(req, res, url, who) {
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
     const { title, problem, goal, screen, steps, from, figma } = b;
-    const type = from ? "adjustment" : b.type === "bug" ? "bug" : "idea";
+    // From an issue on the Issues page it designs that feature; from a change it adjusts it.
+    const type = from ? (store.card(String(from)).kind === "issue" ? "feature" : "adjustment") : b.type === "bug" ? "bug" : "idea";
     // A bug is fixed, not designed: no picture of it and no skills. Only the offered skills count.
     const offered = new Set(offerSkills(s.figma).map((k) => k.name));
     const vision = type === "bug" ? "" : b.vision;

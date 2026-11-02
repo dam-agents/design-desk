@@ -63,6 +63,7 @@ flowchart LR
   The run keeps the first PR and dispatches the rest; each session reads the PR, its linked issue, its decision block and the architecture pages it touches, captures the screens, and writes one card.
 - **Inbox run** (`scripts/preflight.sh inbox`, every 10 min, Precheck over a local file only): questions to answer, requests to triage, variants to make or revise, prototypes to build or update, specs to write, Environments to tear down.
   A viewer's ping starts the same work at once; the claim in the store keeps the two from doing it twice.
+- **Issues run** (`scripts/preflight.sh issues`, daily, Precheck, off by default): the open issues of the watched repositories, judged once each and again when they change; the sprint's and assigned ones get a picture of how it looks now and a sketch ([docs/issues.md](docs/issues.md)).
 - **Monitor** (every 15 min) and **weekly audit**, as every agent made with the creator.
 - **On request**: everything the `designer` kit did, from the chat or a Slack DM.
 
@@ -85,6 +86,7 @@ Everything lives under `work/`, a plain directory backed up to a private reposit
 | `work/desk/db.json`, `work/desk/assets/` | the Desk store: cards, threads, votes, screens, variants, specs, patches (one writer: the server) |
 | `work/desk/inbox.json` | the work the Desk is waiting for, rewritten by the server on every change |
 | `work/CHANGES.tsv` | one row per merged PR seen, written by `scripts/ledger.sh` under a lock |
+| `work/ISSUES.tsv` | one row per issue read for the Issues page, written the same way (`ledger.sh --issues`) |
 | `work/output/` | deliverables and their sources |
 | `work/logs/`, `work/*.log`, `work/MONITOR.json`, `work/audit/` | logs, the monitor ledger, audit history |
 

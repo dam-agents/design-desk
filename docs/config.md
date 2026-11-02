@@ -29,6 +29,10 @@ worklist's `config`. A missing key takes its default.
 - `screens` (`disabled`) — `enabled`: the agent keeps its own install of the product for
   screenshots and for people to try ([screens.md](screens.md)); `max_screen_prs` (`2`) — open pull
   requests with an install of their own.
+- `issue_news` (`disabled`) — `enabled`: the Desk's Issues page, the open issues that change
+  the screens, read once a day ([issues.md](issues.md)); `issue_sprint` (`milestone`: the open
+  milestone due next | a milestone's title | `none`) — the current sprint;
+  `max_issue_drawings` (`5`) — issues of the sprint or someone's drawn a day.
 - `digest` (`desk`) — where the weekly UX digest goes: `desk` | `slack` (the Desk and the
   bound channel) | `disabled`.
 - `slack_polls` (`disabled`) — `enabled`: designers share options in Slack for 👍 / ⚠️ votes
