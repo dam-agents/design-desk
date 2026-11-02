@@ -2,6 +2,9 @@
      design:review-bar marker sits; it is the only hand-written styling in a prototype,
      and it keeps out of the app's classes on purpose.
      Views: each view root carries data-view="1".."n" and data-view-name="…".
+     Flow: a control whose data-goto-view is a view's number opens it when clicked ("back":
+     the previous one). "Clickable" outlines everything a person can click; a click on a spot
+     that does nothing flashes them, as a prototype tool does.
      Title: <html data-review-title="#123 · Issue title">.
      Empty state: populated content in [data-populated], the empty one in [data-empty-view].
      Menus: trigger data-menu-trigger="id" (+ data-menu-side="top", data-menu-align="start");
@@ -21,11 +24,15 @@
   html.review-empty [data-populated]{display:none !important;}
   html:not(.review-empty) [data-empty-view]{display:none !important;}
   #review .seg[hidden]{display:none;}
+  #review #review-back[hidden]{display:none;}
+  html.review-hot :is(a[href],button,[role="button"],[data-goto-view],[data-menu-trigger],input,select,textarea,summary,label[for],[onclick]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;background-color:rgba(15,98,254,.08) !important;}
 </style>
 <div id="review">
   <b id="review-title"></b>
+  <span class="seg" id="review-back" hidden><button data-review-back>← Back</button></span>
   <span class="seg" id="review-views"></span>
   <span class="seg" data-group="empty"><button data-empty="0" aria-pressed="true">Populated</button><button data-empty="1" aria-pressed="false">Empty state</button></span>
+  <span class="seg" data-group="hot"><button data-hot aria-pressed="false" title="Outline everything you can click">Clickable</button></span>
   <span class="seg" data-group="theme"><button data-theme="light" aria-pressed="true">Light</button><button data-theme="dark" aria-pressed="false">Dark</button></span>
   <span class="style" id="review-style"></span>
 </div>
@@ -41,7 +48,19 @@
       const seg = document.querySelector('#review [data-group="empty"]');
       if (seg) seg.hidden = !v.querySelector("[data-populated]");
     };
-    const show = (n) => { document.querySelectorAll("[data-view]").forEach((v) => v.classList.toggle("review-shown", v.dataset.view === n)); syncEmpty(); };
+    const shown = () => document.querySelector("[data-view].review-shown")?.dataset.view;
+    const trail = [];
+    const show = (n) => {
+      if (!document.querySelector(`[data-view="${CSS.escape(String(n))}"]`)) return;
+      document.querySelectorAll("[data-view]").forEach((v) => v.classList.toggle("review-shown", v.dataset.view === n));
+      document.querySelectorAll("#review [data-review-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.reviewView === n));
+      const back = document.getElementById("review-back"); if (back) back.hidden = !trail.length;
+      syncEmpty();
+    };
+    // A control wired to another view walks the flow; Back retraces it.
+    const go = (n) => { const from = shown(); if (n === "back") { if (trail.length) show(trail.pop()); } else if (n !== from) { if (from) trail.push(from); show(n); } scrollTo(0, 0); };
+    const HOT = 'a[href],button,[role="button"],[data-goto-view],[data-menu-trigger],input,select,textarea,summary,label[for],[onclick]';
+    let flash = null;
     addEventListener("DOMContentLoaded", () => {
       const seg = document.getElementById("review-views");
       document.querySelectorAll("[data-view]").forEach((v, i) => {
@@ -52,8 +71,10 @@
       });
       if (!seg.children.length) seg.remove();
       document.querySelectorAll("#review button").forEach((b) => b.addEventListener("click", () => {
+        if (b.dataset.reviewBack !== undefined) { go("back"); return; }
+        if (b.dataset.hot !== undefined) { const on = !de.classList.contains("review-hot"); de.classList.toggle("review-hot", on); b.setAttribute("aria-pressed", on); return; }
         press(b);
-        if (b.dataset.reviewView) { show(b.dataset.reviewView); scrollTo(0, 0); }
+        if (b.dataset.reviewView) { trail.length = 0; show(b.dataset.reviewView); scrollTo(0, 0); }
         if (b.dataset.empty) de.classList.toggle("review-empty", b.dataset.empty === "1");
         if (b.dataset.theme) de.classList.toggle("dark", b.dataset.theme === "dark");
       }));
@@ -80,7 +101,13 @@
         });
       });
     });
-    addEventListener("click", (e) => { if (!e.target.closest("[data-menu-open]")) closeMenus(); });
+    addEventListener("click", (e) => {
+      if (!e.target.closest("[data-menu-open]")) closeMenus();
+      if (e.target.closest("#review")) return;
+      const to = e.target.closest("[data-goto-view]");
+      if (to) { e.preventDefault(); go(to.dataset.gotoView); return; }
+      if (!e.target.closest(HOT) && !de.classList.contains("review-hot")) { de.classList.add("review-hot"); clearTimeout(flash); flash = setTimeout(() => { if (document.querySelector("#review [data-hot]")?.getAttribute("aria-pressed") !== "true") de.classList.remove("review-hot"); }, 700); }
+    });
     addEventListener("scroll", closeMenus, true);
     addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
   })();
