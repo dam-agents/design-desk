@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.13.0 — 2026-11-02
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A picture now keeps `marks` (from
+`design diff`'s new `marks`, [docs/screens.md](docs/screens.md)) and an impact place its
+`card`; older cards stay as they are and show no outline.
+
 ## 1.12.0 — 2026-11-02
 
 **Upgrade:**

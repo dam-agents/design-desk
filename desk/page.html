@@ -96,7 +96,8 @@
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
   .empty { color: var(--muted); padding: 24px 12px; text-align: center; max-width: 60ch; margin: 0 auto; }
-  .filters { display: flex; gap: 6px; margin: 0 0 10px; flex-wrap: wrap; }
+  .filters { display: flex; gap: 4px; margin: 0 0 10px; overflow-x: auto; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; } .filters .btn { flex: none; white-space: nowrap; padding: 3px 8px; }
   h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
   .lead { font-size: 16px; margin: 10px 0 18px; max-width: 72ch; }
@@ -114,11 +115,20 @@
   .shot { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); cursor: zoom-in; }
   .shot img { display: block; width: 100%; min-height: 120px; background: var(--soft); object-fit: cover; object-position: top; max-height: 260px; }
   .shot figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); }
+  /* Where the change is on a picture: boxes the agent measured, shown while "Outline what changed" is on. */
+  .shot .pic { max-height: 260px; overflow: hidden; background: var(--soft); }
+  .shot .pic img, .zoom .canvas img { min-height: 0; max-height: none; height: auto; object-fit: initial; }
+  .canvas { position: relative; line-height: 0; }
+  .mark { position: absolute; display: none; border: 3px solid #e8a400; border-radius: 4px; background: rgba(232, 164, 0, .12); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); margin: -4px; padding: 4px; box-sizing: content-box; pointer-events: none; }
+  body.outline .mark { display: block; } body.outline figure[data-frame] .mark { display: none; }
+  .outline-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); margin: -4px 0 10px; cursor: pointer; }
+  .outline-toggle input { margin: 0; padding: 0; width: auto; accent-color: #e8a400; }
   .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
   .zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; background: #fff; }
   .zoom .btn { position: absolute; top: 12px; right: 12px; }
   .zoom figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
   .zoom figure img { max-height: calc(100vh - 110px); }
+  .zoom .canvas img { max-height: calc(100vh - 110px); max-width: 100%; }
   .zoom figcaption { color: #fff; font-size: 13px; text-align: center; max-width: 80ch; }
   .zoom .gal { top: 50%; transform: translateY(-50%); font-size: 22px; line-height: 1; padding: 10px 14px; }
   .zoom .gal.prev { left: 12px; right: auto; }
@@ -194,6 +204,7 @@
   .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; }
   .impact ul { margin: 4px 0 10px; padding-left: 20px; } .impact li { margin-bottom: 4px; }
+  .impact .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; text-align: left; } .impact .link:hover { text-decoration: underline; }
   /* The browser's Back leaves the Desk (docs/desk.md → Where it works): every view keeps a way back on screen. */
   .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px -32px 14px; padding: 10px 32px; background: var(--bg); border-bottom: 1px solid var(--line); }
   .pbar { position: sticky; top: -28px; z-index: 5; margin: -28px -48px 0; padding: 12px 48px; background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -379,7 +390,7 @@
   const GUIDE = () => `<h2>How Design Desk works</h2>
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
 <ol>
-<li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships. Each one says where else the same thing shows up and what the change touches, and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
+<li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches (a screen or a part in Product opens from there), and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
 <li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
@@ -669,6 +680,7 @@
   // The list filter a person picked last is kept in their browser.
   const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "closed", "designer"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
+  S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
 
   function visibleCards() {
     if (S.tab === "new") return newCards(S.newFilter);
@@ -869,7 +881,7 @@
     z.list = list; z.index = i;
     const many = list.length > 1, cap = list[i].caption;
     z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button>${many ? `<button class="btn gal prev" data-gal="-1" aria-label="Previous picture">‹</button><button class="btn gal next" data-gal="1" aria-label="Next picture">›</button>` : ""}
-      <figure><img alt="${esc(cap)}" src="${dataUrl(a)}" />${many || cap ? `<figcaption>${many ? `${i + 1} / ${list.length}` : ""}${many && cap ? " · " : ""}${esc(cap)}</figcaption>` : ""}</figure>`;
+      <figure>${list[i].marks?.length ? `<div class="canvas"><img alt="${esc(cap)}" src="${dataUrl(a)}" />${marksOf(list[i].marks)}</div>` : `<img alt="${esc(cap)}" src="${dataUrl(a)}" />`}${many || cap ? `<figcaption>${many ? `${i + 1} / ${list.length}` : ""}${many && cap ? " · " : ""}${esc(cap)}</figcaption>` : ""}</figure>`;
   }
   const dataUrl = (a) => a.encoding === "base64" ? `data:${a.contentType};base64,${a.data}` : `data:${a.contentType};charset=utf-8,${encodeURIComponent(a.data)}`;
   const decode = (a) => (a.encoding === "base64" ? new TextDecoder().decode(Uint8Array.from(atob(a.data), (ch) => ch.charCodeAt(0))) : a.data);
@@ -877,7 +889,11 @@
   // ---------- shared pieces of a page ----------
   const FROM = { pr: "from the pull request", instance: "from Design Desk's copy of the product", prototype: "from the live prototype", rebuild: "drawn from the code, not a real screen", test: "from an automated test" };
   const fromOf = (s) => s.source === "person" ? `added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "";
-  const figure = (s, label) => `<figure class="shot" data-zoom="${esc(s.asset)}"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
+  const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
+  // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
+  // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
+  // the two prove the same size.
+  const figure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
   // The agent's questions as a form: each has its options and "Leave it to Design Desk",
   // which is picked until a person chooses; one button leaves all of them.
   function askForm(th) {
@@ -889,6 +905,9 @@
       <div class="actions"><button class="btn small primary" data-send-form="${esc(th.id)}">Send answers</button><button class="btn small" data-skip-form="${esc(th.id)}">Leave it all to Design Desk</button></div></div>`;
   }
 
+  // A picture that knows where the change is outlines it; one switch, remembered, shows or hides every outline.
+  const outlineToggle = (list) => list.some((x) => x.marks?.length) ? `<label class="outline-toggle"><input type="checkbox" data-outline ${S.outline ? "checked" : ""} /> Outline what changed</label>` : "";
+  const showOutline = (on) => { S.outline = on; store.set("desk-outline", on ? "1" : "0"); document.body.classList.toggle("outline", on); for (const b of document.querySelectorAll("[data-outline]")) b.checked = on; };
   // Before and after of one screen sit side by side, with the differences drawn on the third.
   function shots(list) {
     list = list || [];
@@ -896,10 +915,12 @@
     const pairs = [...new Set(list.filter((x) => x.stage).map((x) => x.pair))];
     const rows = pairs.map((pair) => {
       const of = (stage) => list.find((x) => x.pair === pair && x.stage === stage);
-      return `<h4 style="margin:12px 0 6px">${esc(pair)}</h4><div class="shots">${[["before", "Before"], ["after", "After"], ["diff", "What changed"]].map(([st, l]) => of(st) ? figure(of(st), l) : "").join("")}</div>`;
+      // Marks are measured on the "after" picture: a "before" one with no "after" gets none.
+      const before = of("before") && !of("after") ? { ...of("before"), marks: [] } : of("before");
+      return `<h4 style="margin:12px 0 6px">${esc(pair)}</h4><div class="shots">${[["before", "Before", before], ["after", "After", of("after")], ["diff", "What changed", of("diff")]].map(([st, l, s]) => s ? figure(s, l, st === "before" ? of("after")?.asset : null) : "").join("")}</div>`;
     }).join("");
     const single = list.filter((x) => !x.stage);
-    return rows + (single.length ? `<div class="shots" style="margin-top:${rows ? 12 : 0}px">${single.map((x) => figure(x)).join("")}</div>` : "");
+    return outlineToggle(list) + rows + (single.length ? `<div class="shots" style="margin-top:${rows ? 12 : 0}px">${single.map((x) => figure(x)).join("")}</div>` : "");
   }
 
   // The agent's own install of the product: where people try a change and take pictures.
@@ -924,12 +945,21 @@
   }).join("");
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
 
+  // A place that is a screen or a part in Product opens it there: the one the agent named, else,
+  // for a screen or a component place, the one whose name matches.
+  const norm = (t) => String(t || "").trim().toLowerCase();
+  function productLink(p) {
+    const names = [p.screen, p.where, p.where.split("→")[0]].map(norm).filter(Boolean);
+    const named = ["screen", "component"].includes(p.kind) ? S.cards.find((x) => ["screen", "element"].includes(x.kind) && names.includes(norm(x.title))) : undefined;
+    const to = S.cards.find((x) => x.id === p.card) || named;
+    return to ? `<button class="link" data-card="${esc(to.id)}" title="Open ${esc(to.title)} in Product">${esc(p.where)} →</button>` : `<b>${esc(p.where)}</b>`;
+  }
   // Where else the same thing shows up, what a change touches, what was decided before.
   function renderImpact(im) {
     if (!im) return "";
     const li = (xs, f) => xs?.length ? `<ul>${xs.map(f).join("")}</ul>` : "";
     return `<details class="fold"><summary><b>Where else this shows up, and what it touches</b></summary><div class="impact section">
-      <p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li><b>${esc(p.where)}</b>${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}
+      <p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li>${productLink(p)}${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}
       ${im.affects?.length ? `<p><b>What a change here touches</b></p>${li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${txt(a.why)}` : ""}${srcLink(a.source)}</li>`)}` : ""}
       ${im.decisions?.length ? `<p><b>Earlier decisions about it</b></p>${li(im.decisions, (d) => `<li>${txt(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`)}` : ""}</div></details>`;
   }
@@ -1455,11 +1485,25 @@
       if (img.src) continue;
       try { img.src = dataUrl(await asset(img.dataset.asset)); } catch {}
     }
+    await checkFrames();
     const spec = $("#spec-body");
     if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     if (vf && v) { try { vf.srcdoc = decode(await asset(v.asset)); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
+  }
+
+  // A picture that carries another picture's marks keeps them only when both have the same
+  // width and height (docs/screens.md → Before and after); otherwise its frames would sit on
+  // what did not change, so they go, from the card and from the gallery.
+  async function checkFrames() {
+    for (const f of document.querySelectorAll("figure[data-frame]")) {
+      const own = f.querySelector("img"), other = document.querySelector(`figure[data-zoom="${CSS.escape(f.dataset.frame)}"] img`);
+      const size = async (img) => { try { await img.decode(); return `${img.naturalWidth}x${img.naturalHeight}`; } catch { return null; } };
+      const [a, b] = await Promise.all([size(own), other ? size(other) : null]);
+      if (!a || a !== b) { for (const m of f.querySelectorAll(".mark")) m.remove(); delete f.dataset.marks; }
+      delete f.dataset.frame;
+    }
   }
 
   function renderDetail() {
@@ -1620,7 +1664,7 @@
     if (ds.zoom) {
       const list = [];
       for (const f of el.closest("#present, #workspace, #main, body").querySelectorAll("[data-zoom]"))
-        if (!list.some((x) => x.id === f.dataset.zoom)) list.push({ id: f.dataset.zoom, caption: f.querySelector("img")?.alt || "" });
+        if (!list.some((x) => x.id === f.dataset.zoom)) list.push({ id: f.dataset.zoom, caption: f.querySelector("img")?.alt || "", marks: f.dataset.marks && !f.dataset.frame ? JSON.parse(f.dataset.marks) : null });
       await gallery(list, Math.max(0, list.findIndex((x) => x.id === ds.zoom)));
       return;
     }
@@ -1690,6 +1734,7 @@
   });
 
   document.addEventListener("change", (e) => {
+    if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
     if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsVariant(S.card)?.version || 1) ? null : n; renderWorkspace(); }
   });
 
