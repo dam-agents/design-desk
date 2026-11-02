@@ -609,10 +609,13 @@ export class Store {
     return { council };
   }
 
+  // The council of a Slack thread; without one, the request the thread filed (a bug
+  // report, say), so a first ask there lands on that card instead of a second one.
   findCouncil(ts) {
     for (const c of Object.values(this.db.cards)) for (const x of c.councils || [])
       if (x.thread_ts === ts) return { card: c.id, council: x.id, state: x.state };
-    return null;
+    const c = Object.values(this.db.cards).find((x) => x.kind === "request" && x.origin?.thread_ts === ts);
+    return c ? { card: c.id, council: null, state: null } : null;
   }
 
   // The reactions on one option's post, as they are now. A person's own vote on the Desk

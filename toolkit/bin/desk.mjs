@@ -46,7 +46,8 @@ const USAGE = `usage: design desk <command>
                                            {chat, thread_ts, url, channel}; reopens a closed one
   council-update <C-n> <S-n> [--synced <iso>] [--seen <ts>] [--result <text>]
                                            mark a council read up to a Slack ts, or close it with its result
-  find-council <thread ts>                 which card and council a Slack thread belongs to
+  find-council <thread ts>                 which card and council a Slack thread belongs to; with no
+                                           council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
   enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
 `;

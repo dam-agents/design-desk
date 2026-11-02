@@ -35,12 +35,12 @@ may ask; the Desk keeps every option and version; the thread sees each round as 
 
 1. **Route.** `design desk find-poll <thread ts>` names a vote → the `slack-polls` skill.
    `design desk find-council <thread ts>` names an open council → **Each round**; a closed
-   one → step 5, then **Each round**.
+   one → step 5, then **Each round**; a card with `council: null` → that is the card of
+   step 3.
 2. **Read** the thread whole and its pictures (as `intake-slack` step 1).
-3. **The card.** An open request whose `origin.thread_ts` is this thread
-   (`design desk cards --kind request`), else file one with the problem in their words and
-   `origin: {channel: "slack", chat, thread_ts, message_ts, reporter}`: a bug with
-   `design desk report`, anything else with `design desk request`.
+3. **The card.** The request `find-council` named for this thread, else file one with the
+   problem in their words and `origin: {channel: "slack", chat, thread_ts, message_ts,
+   reporter}`: a bug with `design desk report`, anything else with `design desk request`.
 4. **Triage before work**, in this turn: claim the request's inbox item, research and
    triage it ([docs/requests.md](../../../docs/requests.md)), `done --outcome triaged`.
    Verdict `product` → reply with the reasons and that a designer decides on the Desk; stop.
@@ -100,7 +100,9 @@ One `reply` in the thread per round, with the picture:
   Comment the same on the card, then `council-update --result "Agreed on <option> v<n>"`.
   Never approve or change the request's status: that is the designer's, on the Desk. A new
   ask in the thread opens it again (Start → step 5).
-- **`councils_due` with `close: true`**: `why: moved` → one reply with what happened on the
-  Desk ("A designer picked B; it goes to developers next."); `why: idle` → one reply: "I'm no
-  longer watching this thread; mention me to go on." Then `council-update --result "<why, in
-  one line>"`.
+- **`councils_due` with `close: true`, `why: moved`**: one reply with what happened on the
+  Desk ("A designer picked B; it goes to developers next."), then `council-update --result
+  "<what happened, in one line>"`.
+- **`why: idle`**: read the messages after `seen` first. New messages → **Each round**; the
+  council stays open. None → one reply: "I'm no longer watching this thread; mention me to
+  go on.", then `council-update --result "No messages for three days"`.

@@ -322,8 +322,9 @@ inbox_mode() {
         | {id: .id, card: $c.id, close: $close, closes: .closes} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   # An open council (a Slack thread whose asks change a request's options) is read every
-  # council_sync_min minutes for asks nobody tagged the agent in; it closes once its request
-  # moved past the options, or after three days without a message in the thread.
+  # council_sync_min minutes for asks nobody tagged the agent in; it is due to close once its
+  # request moved past the options, or three days after the last message the agent read (the
+  # agent reads the thread once more and closes it only when nothing new came).
   local councils="[]"
   if [ -f "$DB" ] && [ "$(jq -r .slack_council <<<"$CONF")" = enabled ]; then
     councils="$(jq -c --argjson now "$NOW_EPOCH" --argjson every "$(jq '.council_sync_min * 60' <<<"$CONF")" '

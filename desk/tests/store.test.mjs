@@ -206,6 +206,8 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
 test("a council remembers its Slack thread, reopens once closed, and relays replies to the whole request", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  s.upsertCard({ id: card.id, origin: { channel: "slack", chat: "C0123", thread_ts: "2.0", message_ts: "2.0", reporter: "Jana" } });
+  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: null, state: null });
   const { council } = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" });
   assert.equal(council.id, "S-1");
   assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: "S-1", state: "open" });
