@@ -82,6 +82,7 @@
   .shot figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); }
   .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
   .zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; background: #fff; }
+  .zoom .btn { position: absolute; top: 12px; right: 12px; }
   .steps { display: flex; gap: 0; margin: 14px 0 6px; flex-wrap: wrap; }
   .step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; padding: 4px 10px 4px 0; }
   .step::after { content: "›"; margin-left: 8px; opacity: .5; } .step:last-child::after { content: ""; }
@@ -138,7 +139,9 @@
   .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; }
   .impact ul { margin: 4px 0 10px; padding-left: 20px; } .impact li { margin-bottom: 4px; }
-  .back { display: none; }
+  /* The browser's Back leaves the Desk (docs/desk.md → Where it works): every view keeps a way back on screen. */
+  .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px -32px 14px; padding: 10px 32px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .pbar { position: sticky; top: -28px; z-index: 5; margin: -28px -48px 0; padding: 12px 48px; background: var(--bg); border-bottom: 1px solid var(--line); }
   /* the design workspace */
   #workspace { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: grid; grid-template-rows: auto 1fr; }
   #workspace[hidden] { display: none; }
@@ -161,7 +164,7 @@
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; }
     main.has-detail .list { display: none; } main:not(.has-detail) .detail { display: none; }
-    .detail { padding: 16px; } .back { display: inline-flex; margin-bottom: 10px; } .two { grid-template-columns: 1fr; }
+    .detail { padding: 16px; } .crumb { top: -16px; margin: -16px -16px 12px; padding: 8px 16px; } .two { grid-template-columns: 1fr; }
     .ws-body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; } .ws-side { border-left: 0; border-top: 1px solid var(--line); }
   }
 </style>
@@ -292,11 +295,11 @@
 <p>The page updates by itself; you can close it and come back.</p>
 <h3>Who can do what</h3><ul>
 <li><b>Everyone on the list</b>: read, ask, comment.</li>
-<li><b>PMs and developers</b>: also vote, send requests and add things to the next call.</li>
-<li><b>Designers</b>: also start options, change them in the workspace, build live prototypes, approve and close.</li></ul>
+<li><b>PMs and developers</b>: also vote and send requests.</li>
+<li><b>Designers</b>: also start options, change them in the workspace, build live prototypes, approve and close, and choose what the next call presents.</li></ul>
 <p>Your role is shown top right; ${esc(S.me?.contact || "the Desk's owner")} changes it.</p>
 <h3>Also here</h3><ul>
-<li><b>Next call</b> — things to decide at the team's design meeting, each with a short brief.</li>
+<li><b>Next call</b> — what designers chose to show at the team's design meeting, each with a short brief; Design Desk suggests things, a designer adds them.</li>
 <li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable.</li>
 <li><b>Weekly digest</b> — under New: what changed in the product's UX this week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
 <li><b>Slack</b> — tell Design Desk in the team channel when something looks broken; it puts it here and answers in your thread.</li>
@@ -338,8 +341,25 @@
   const sendOrReopen = async (dlg, send) => { try { return await send(); } catch (e) { dlg.returnValue = ""; dlg.showModal(); throw e; } };
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
+  // Issue and pull request numbers link to their source (docs/desk.md → Writing on the Desk):
+  // #12 and PR #12 in the card's repository, owner/name#12 in that one. Only text outside
+  // tags, links and code changes.
+  const repoUrl = (r) => /^[\w.-]+(\/[\w.-]+){1,2}$/.test(String(r || "")) ? `https://${r.split("/").length === 3 ? "" : "github.com/"}${r}` : "";
+  function repoOf(c) {
+    const u = String(c?.source?.url || c?.origin?.url || "").match(/^(https?:\/\/[^/]+\/[\w.-]+\/[\w.-]+)\/(pull|issues)\/\d+/);
+    return u ? u[1] : repoUrl(c?.source?.repo || c?.origin?.repo || S.me?.repo);
+  }
+  function refs(html, c = S.card) {
+    const base = repoOf(c), host = base ? base.split("/").slice(0, 3).join("/") : "https://github.com";
+    const a = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    return html.split(/(<a\b[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>|<[^>]*>)/).map((part, i) => i % 2 ? part : part
+      .replace(/(?<![\w./-])([\w.-]+\/[\w.-]+)#(\d+)\b/g, (m, r, n) => a(`${host}/${r}/issues/${n}`, m))
+      .replace(/(?<![\w&/#])(?:(PR|pull request|issue)\s+)?#(\d+)\b/gi, (m, kind, n) => base ? a(`${base}/${/^p/i.test(kind || "") ? "pull" : "issues"}/${n}`, m) : m)).join("");
+  }
+  const txt = (s, c) => refs(esc(s), c);
+
   // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
-  function md(src) {
+  function md(src, c = S.card) {
     const inline = (s) => esc(s)
       .replace(/`([^`]+)`/g, "<code>$1</code>")
       .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
@@ -355,7 +375,7 @@
       else if (line.trim()) out.push(`<p>${inline(line)}</p>`);
     }
     if (list) out.push(`<ul>${list.join("")}</ul>`);
-    return `<div class="md">${out.join("")}</div>`;
+    return `<div class="md">${refs(out.join(""), c)}</div>`;
   }
 
   const roleName = (r) => ROLE[r] || r;
@@ -408,10 +428,13 @@
   }
 
   // ---------- header and list ----------
+  const TABS = { new: "New", requests: "Requests", call: "Next call", product: "Product", guide: "How it works" };
+  // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
+  const backBar = () => `<div class="crumb"><button class="btn small" data-back>← ${esc(S.tab === "product" && S.productFilter === "decisions" ? "Decisions" : TABS[S.tab] || "Back")}</button></div>`;
   function renderNav() {
     const unseen = S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && !c.acked).length;
     const asks = S.cards.filter((c) => c.kind === "request" && c.asks && !closed(c)).length;
-    const tabs = [["new", "New", unseen], ["requests", "Requests", asks], ["call", "Next call", S.agenda.length], ["product", "Product"], ["guide", "How it works"]];
+    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, asks], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["guide", TABS.guide]];
     $("#nav").innerHTML = tabs.map(([k, label, n]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
   }
 
@@ -492,24 +515,30 @@
     try { S.decisions = (await api("GET", `/api/decisions?q=${encodeURIComponent(S.decisionQuery)}`)).decisions || []; } catch { S.decisions = []; }
   }
   function renderDecision(d) {
-    return `<button class="btn small back" data-back>← Back</button><h2>${esc(d.text)}</h2>
+    return `${backBar()}<h2>${txt(d.text)}</h2>
       <div class="sub"><span>${esc(day(d.at))}</span>${d.concepts.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
       ${d.source ? `<h3>Where it was decided</h3><p>${srcLink(d.source) || "—"}</p>` : ""}`;
   }
 
   // ---------- the next call ----------
+  // Cards Design Desk suggests for the call; a designer adds them, or not.
+  const suggested = () => S.cards.filter((c) => c.suggested && c.status !== "declined" && !S.agenda.some((a) => a.id === c.id));
   function renderAgendaList() {
-    const items = S.agenda;
-    $("#list").innerHTML = items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span></div>
-      <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta"><span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span></div></button>`).join("")
-      : `<div class="empty">The next call is the team's regular design meeting. To put something on it, open it and choose Add to the next call.</div>`;
+    const items = S.agenda, ideas = suggested();
+    $("#list").innerHTML = (items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span></div>
+      <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta"><span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span>${a.option ? `<span class="chip info">presenting ${esc(a.option)}</span>` : ""}</div></button>`).join("")
+      : `<div class="empty">The next call is the team's regular design meeting. A designer puts things on it: open one and choose Add to the next call.</div>`)
+      + (ideas.length ? `<h3 style="margin:18px 12px 8px">Suggested by Design Desk</h3>${ideas.map((c) => `<button class="row" data-card="${esc(c.id)}"><div class="t"><span>${esc(c.title)}</span></div>
+      ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip warn">💡 not on the call yet</span></div></button>`).join("")}` : "");
   }
   function renderAgendaDetail() {
-    const items = S.agenda;
-    $("#detail").innerHTML = `<h2>Next call</h2><p class="hint">What the team decides at its next design meeting. Present it from here.</p>
+    const items = S.agenda, ideas = suggested();
+    $("#detail").innerHTML = `<h2>Next call</h2><p class="hint">What designers chose to show at the team's next design meeting. Present it from here.</p>
       <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length ? `<button class="btn" data-act="clear-call">Call is over — clear the list</button>` : ""}</div>
-      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.")}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}`;
+      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}
+      ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the call until a designer adds it: open it and choose Add to the next call, or Not now.</p>
+        <ul>${ideas.map((c) => `<li><button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>${c.suggested.note ? ` <span class="sub" style="display:inline">${esc(c.suggested.note)}</span>` : ""}</li>`).join("")}</ul>` : ""}`;
   }
 
   // Presenting: one item at a time, full screen; arrows or the buttons move.
@@ -520,13 +549,14 @@
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(items[n].id)}`);
     let ov = $("#present");
     if (!ov) { ov = document.createElement("div"); ov.id = "present"; ov.style.cssText = "position:fixed;inset:0;z-index:75;background:var(--bg);overflow:auto;padding:28px 48px"; document.body.append(ov); }
-    const fav = favourite(card) || card.variants?.[0];
+    // The option the designer picked when adding it; an older entry without one shows the favourite.
+    const fav = (card.variants || []).find((v) => v.id === card.agenda?.variant) || favourite(card) || card.variants?.[0];
     const visual = card.kind === "element" && card.sheet ? card.sheet : fav?.asset || card.screens?.[0]?.asset || null;
     ov.dataset.index = String(n);
-    ov.innerHTML = `<div class="sub" style="justify-content:space-between"><span>${n + 1} / ${items.length} · Next call</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button> <button class="btn small" data-exit-present>Exit</button></span></div>
-      <h2 style="font-size:28px;margin-top:12px">${esc(card.title)}</h2>${card.summary ? `<p class="lead">${esc(card.summary)}</p>` : ""}
-      <div class="panel" style="max-width:90ch"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.")}</div>
-      ${fav && (card.variants || []).length > 1 ? `<p class="sub" style="margin-top:12px">Showing the favourite: <b>${esc(fav.name)}</b> · options: ${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
+    ov.innerHTML = `<div class="sub pbar" style="justify-content:space-between"><button class="btn small" data-exit-present>✕ Exit</button><span>${n + 1} / ${items.length} · Next call</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button></span></div>
+      <h2 style="font-size:28px;margin-top:12px">${txt(card.title, card)}</h2>${card.summary ? `<p class="lead">${txt(card.summary, card)}</p>` : ""}
+      <div class="panel" style="max-width:90ch"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>
+      ${fav && (card.variants || []).length > 1 ? `<p class="sub" style="margin-top:12px">Presenting <b>${esc(fav.name)}</b> · options: ${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
       ${visual ? `<iframe class="frame" id="present-frame" sandbox="allow-scripts" style="height:60vh;margin-top:16px"></iframe>` : ""}`;
     if (visual) {
       const a = await asset(visual);
@@ -582,9 +612,9 @@
     if (!im) return "";
     const li = (xs, f) => xs?.length ? `<ul>${xs.map(f).join("")}</ul>` : "";
     return `<h3>Where else this shows up, and what it touches</h3><div class="impact section">
-      <p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li><b>${esc(p.where)}</b>${p.how ? ` — ${esc(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}
-      ${im.affects?.length ? `<p><b>What a change here touches</b></p>${li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${esc(a.why)}` : ""}${srcLink(a.source)}</li>`)}` : ""}
-      ${im.decisions?.length ? `<p><b>Earlier decisions about it</b></p>${li(im.decisions, (d) => `<li>${esc(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`)}` : ""}</div>`;
+      <p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li><b>${esc(p.where)}</b>${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}
+      ${im.affects?.length ? `<p><b>What a change here touches</b></p>${li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${txt(a.why)}` : ""}${srcLink(a.source)}</li>`)}` : ""}
+      ${im.decisions?.length ? `<p><b>Earlier decisions about it</b></p>${li(im.decisions, (d) => `<li>${txt(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`)}` : ""}</div>`;
   }
 
   function renderThreads(c, { skipAsks = false } = {}) {
@@ -613,11 +643,11 @@
     const src = c.source || {};
     const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
     const inProgress = src.pr && !src.merged_at;
-    return `<button class="btn small back" data-back>← Back</button>
-      <h2>${esc(c.title)}</h2>
-      <div class="sub">${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}</div>
+    return `${backBar()}
+      <h2>${txt(c.title)}</h2>
+      <div class="sub">${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
-      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+      ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       <div class="actions">
         <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Hides it from your list of new changes; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
         <button class="btn" data-focus-composer>Ask a question</button>
@@ -639,10 +669,10 @@
     const els = (c.elements || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean);
     const changes = (c.changes || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean);
     const open = c.instance?.url && c.path ? `${c.instance.url.replace(/\/$/, "")}${c.path}` : null;
-    return `<button class="btn small back" data-back>← Back</button>
-      <h2>${esc(c.title)}</h2>
+    return `${backBar()}
+      <h2>${txt(c.title)}</h2>
       <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}${c.status === "stale" ? `<span class="chip warn">changed since these pictures</span>` : ""}</div>
-      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+      ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       <div class="actions">${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}<button class="btn" data-focus-composer>Ask about this screen</button>${agendaButton(c)}</div>
       <h3>Screens</h3>${shots(c.screens) || `<p class="hint">No pictures yet.</p>`}
@@ -660,7 +690,7 @@
       try { for (const d of (await api("GET", `/api/decisions?concept=${encodeURIComponent(concept)}`)).decisions || []) seen.set(d.id, d); } catch {}
     }
     const items = [
-      ...[...seen.values()].map((d) => ({ at: d.at, html: `<b>Decided:</b> ${esc(d.text)}${d.why ? ` <span class="hint" style="display:inline">— ${esc(d.why)}</span>` : ""}${srcLink(d.source)}` })),
+      ...[...seen.values()].map((d) => ({ at: d.at, html: `<b>Decided:</b> ${txt(d.text)}${d.why ? ` <span class="hint" style="display:inline">— ${txt(d.why)}</span>` : ""}${srcLink(d.source)}` })),
       ...(c.changes || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((x) => ({ at: x.source?.merged_at || x.created, html: `<b>Changed:</b> <button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>` })),
     ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
     box.innerHTML = items.length ? `<ul>${items.map((x) => `<li><span class="hint" style="display:inline">${esc(day(x.at))}</span> ${x.html}</li>`).join("")}</ul>` : `<p class="hint">No recorded decisions or changes yet.</p>`;
@@ -668,9 +698,9 @@
 
   function renderDigest(c) {
     const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
-    return `<button class="btn small back" data-back>← Back</button>
-      <h2>${esc(c.title)}</h2><div class="sub"><span class="chip info">Weekly digest</span>${c.period ? `<span>${esc(c.period)}</span>` : ""}</div>
-      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+    return `${backBar()}
+      <h2>${txt(c.title)}</h2><div class="sub"><span class="chip info">Weekly digest</span>${c.period ? `<span>${esc(c.period)}</span>` : ""}</div>
+      ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       <div class="actions"><button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""}>${seen ? "✓ Seen" : "Got it"}</button>${agendaButton(c)}</div>
       ${shots(c.screens)}${sections(c)}
       ${renderThreads(c)}`;
@@ -679,10 +709,10 @@
   // ---------- a catalog element ----------
   function renderElement(c) {
     const src = c.source || {};
-    return `<button class="btn small back" data-back>← Back</button>
-      <h2>${esc(c.title)}</h2>
+    return `${backBar()}
+      <h2>${txt(c.title)}</h2>
       <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn">out of date: the product changed since it was drawn</span>` : ""}</div>
-      ${c.summary ? `<p class="lead">${esc(c.summary)}</p>` : ""}
+      ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       <div class="actions">${can("refresh") ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${agendaButton(c)}</div>
       ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:80ch;padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
@@ -703,12 +733,17 @@
     return `<div class="steps">${steps.map(([, l], n) => `<span class="step ${n < i ? "done" : n === i ? "now" : ""}"><span class="n">${n < i ? "✓" : n + 1}</span>${esc(l)}</span>`).join("")}</div>`;
   }
 
+  // Only a designer puts a card on the next call, with the option to present; Design Desk
+  // only suggests one (docs/desk.md → The next call).
   function agendaButton(c) {
     if (c.agenda?.status === "queued") {
       const mine = c.agenda.by?.email && c.agenda.by.email === S.me?.email;
-      return `<span class="chip info">📅 On the next call</span>${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the call</button>` : ""}`;
+      const shown = c.agenda.variant ? optionName(c, c.agenda.variant) : "";
+      return `<span class="chip info">📅 On the next call${shown ? ` · presenting ${esc(shown)}` : ""}</span>${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the call</button>` : ""}`;
     }
-    return can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>` : "";
+    const add = can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>` : "";
+    if (!c.call_suggestion) return add;
+    return `<span class="chip warn" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the next call${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
   }
 
   // What happens next, whose turn it is, and the one button that moves it on.
@@ -747,12 +782,12 @@
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
     const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
     const nx = nextFor(c);
-    const more = closed(c) ? "" : `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${c.agenda?.status === "queued" ? "" : can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>` : ""}${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}</div></details>`;
+    const more = closed(c) ? "" : `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${c.agenda?.status === "queued" || c.call_suggestion ? "" : can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>` : ""}${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}</div></details>`;
     return `<div class="status">
       ${asks.map((th) => `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
-      ${nx.text || nx.buttons ? `<div class="next">${nx.text ? `<b>${esc(nx.text)}</b>` : ""}${nx.sub ? `<span class="hint">${esc(nx.sub)}</span>` : ""}<div class="actions">${nx.buttons}${c.agenda?.status === "queued" ? agendaButton(c) : ""}${more}</div></div>` : ""}
+      ${nx.text || nx.buttons ? `<div class="next">${nx.text ? `<b>${esc(nx.text)}</b>` : ""}${nx.sub ? `<span class="hint">${esc(nx.sub)}</span>` : ""}<div class="actions">${nx.buttons}${c.agenda?.status === "queued" || c.call_suggestion ? agendaButton(c) : ""}${more}</div></div>` : ""}
     </div>`;
   }
 
@@ -760,7 +795,7 @@
     const tr = c.triage;
     if (!tr) return "";
     const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
-    const list = (xs) => xs?.length ? `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+    const list = (xs) => xs?.length ? `<ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : "";
     return `<h3>What can be done</h3><div class="verdict ${esc(tr.verdict)}"><b>${esc(title)}</b>${esc(text)}${list(tr.reasons)}
       ${(tr.can?.length || tr.cannot?.length) ? `<div class="two"><div><b>As a design change</b>${list(tr.can)}</div><div><b>Needs a developer or a decision, and why</b>${list(tr.cannot)}</div></div>` : ""}</div>`;
   }
@@ -824,9 +859,9 @@
 
   function renderRequest(c) {
     const r = c.request || {};
-    const origin = c.origin?.channel === "github" && c.origin.url ? `<a href="${safeUrl(c.origin.url)}" target="_blank" rel="noopener noreferrer">${esc(c.origin.kind === "pr" ? "From a developer's change" : "From a GitHub issue")} ↗</a>` : "";
-    return `<button class="btn small back" data-back>← Back</button>
-      <h2>${esc(c.title)}</h2>
+    const origin = c.origin?.channel === "github" && c.origin.url ? `<a href="${safeUrl(c.origin.url)}" target="_blank" rel="noopener noreferrer">${esc(c.origin.kind === "pr" ? "From a developer's change" : "From a GitHub issue")}${c.origin.number ? ` #${esc(c.origin.number)}` : ""} ↗</a>` : "";
+    return `${backBar()}
+      <h2>${txt(c.title)}</h2>
       <div class="sub">${c.origin?.automated ? `<span class="chip info">🧪 From automated tests</span>` : ""}${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.automated ? `<span>found by <b>${esc(c.origin.tool || "an automated test")}</b>${c.origin.check ? ` · ${esc(c.origin.check)} check` : ""}${c.origin.severity ? ` · ${esc(c.origin.severity)} severity` : ""}${c.origin.build ? ` · ${esc(c.origin.build)}` : ""}</span>` : c.origin?.reporter ? `<span>reported by <b>${esc(c.origin.reporter)}</b></span>` : `<span>by ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span>${origin}</div>
       ${renderSteps(c)}
       ${renderStatus(c)}
@@ -1072,12 +1107,15 @@
     const c = S.card;
     if (name === "workspace") { S.ws.open = true; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); return; }
     if (name === "queue") {
-      const r = await ask({ title: "Add to the next call", body: "The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.", ok: "Add to the call", note: "What should the team decide? (optional)",
-        send: (a) => api("POST", `/api/cards/${c.id}/agenda`, { note: a.note }) });
+      const opts = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
+      const r = await ask({ title: "Add to the next call", body: `The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.${opts.length ? " Pick the design option to present." : ""}`, ok: "Add to the call",
+        choices: opts.length ? opts : null, pick: (favourite(c) || c.variants?.[0])?.id || null, note: "What should the team decide? (optional)",
+        send: (a) => api("POST", `/api/cards/${c.id}/agenda`, { note: a.note, ...(a.choice ? { variant: a.choice } : {}) }) });
       if (!r) return;
       toast("Added to the next call. Design Desk will write a short brief.");
       await refreshList(); await openCard(c.id); return;
     }
+    if (name === "not-now") { await api("DELETE", `/api/cards/${c.id}/suggestion`); await refreshList(); await openCard(c.id); return; }
     if (name === "unqueue") { await api("DELETE", `/api/cards/${c.id}/agenda`); await refreshList(); await openCard(c.id); return; }
     if (name === "clear-call") {
       const r = await ask({ title: "Is the call over?", body: "This clears the next-call list for everyone. Each item is marked as shown today.", ok: "Clear the list", send: () => api("POST", "/api/calls", {}) });
@@ -1157,7 +1195,7 @@
     if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
     if (ds.card) { await openCard(ds.card); return; }
     if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }
-    if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
+    if (ds.zoom) { const a = await asset(ds.zoom); const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><img alt="" src="${dataUrl(a)}" />`; z.onclick = () => z.remove(); document.body.append(z); return; }
     if (ds.present !== undefined) { await present(Number(ds.present)); return; }
     if ("exitPresent" in ds) { $("#present")?.remove(); return; }
     if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
@@ -1219,6 +1257,7 @@
   });
 
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && $(".zoom")) { $(".zoom").remove(); return; }
     const ov = $("#present");
     if (ov && ["ArrowRight", "ArrowLeft", "Escape"].includes(e.key)) {
       if (e.key === "Escape") { ov.remove(); return; }

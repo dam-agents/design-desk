@@ -26,7 +26,7 @@ test("nothing on the page submits a form", () => {
 // with one request and one shipped change.
 const BRIDGE = `<script>
 window.calls = [];
-const change = { id: "ch1", kind: "change", title: "A new header" };
+const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
@@ -153,6 +153,13 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await withPicture();
     await sh.close();
     await settled(screens, 2, "a close after an Add sends nothing");
+
+    // An open item keeps its way back on screen (the browser's Back leaves the Desk), and
+    // an issue or pull request number links to it.
+    assert.ok(await desk.isVisible(".crumb [data-back]"), "an open item shows its way back");
+    assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
+    await desk.click(".crumb [data-back]");
+    assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
   } finally {
     await chrome.close();
     server.close();

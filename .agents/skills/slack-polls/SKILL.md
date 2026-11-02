@@ -64,9 +64,9 @@ On its date, or when the request moved on (approved, closed):
    A clear winner: the option with the most 👍 from designers, then from everyone.
 3. Post it (`send_channel_message`, or `reply` into the opening message's thread where the
    platform allows it): "🗳️ *<request title>* — the vote is closed. <result>. <What happens
-   next: "A designer takes B on" / "The team decides on the next call">."
+   next: "A designer takes B on" / "Design Desk suggests it for the next call; a designer decides">."
 4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. A tie or a strong
-   concern goes on the next call (`design desk agenda C-<n> --note "Slack vote: <result>"`).
+   concern is suggested for the next call (`design desk agenda C-<n> --note "Slack vote: <result>"`).
 
 ## In a Slack turn
 

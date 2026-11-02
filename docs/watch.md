@@ -77,8 +77,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
     not a fix, not a tweak — and fewer than `max_proposals_per_week` proposals were made in
     the last seven days, file a request of type `proposal` from the card (`request.from`),
     research it from what you just read, and enqueue `explore`: the inbox run makes two or
-    three design proposals the team can pick from, adjust and comment on. Put it on the next
-    call (`design desk agenda C-<n> --note "Design Desk proposes"`).
+    three design proposals the team can pick from, adjust and comment on. Suggest it for the
+    next call (`design desk agenda C-<n> --note "Design Desk proposes"`).
 12. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title and the Desk link (`shareUrl` of `desk_artifact`), never card text
     beyond the title. Send, then log `logev info notified …`.
