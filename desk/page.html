@@ -38,6 +38,7 @@
   nav button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
   nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; line-height: 18px; text-align: center; }
+  nav .count.warn { background: var(--warn); color: var(--bg); }
   .grow { flex: 1; }
   .me { color: var(--muted); font-size: 12px; }
   .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
@@ -449,9 +450,11 @@
   const backBar = () => `<div class="crumb"><button class="btn small" data-back>← ${esc(S.tab === "product" && S.productFilter === "decisions" ? "Decisions" : TABS[S.tab] || "Back")}</button></div>`;
   function renderNav() {
     const unseen = S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && !c.acked).length;
-    const asks = S.cards.filter((c) => c.kind === "request" && c.asks && !closed(c)).length;
-    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, asks], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["guide", TABS.guide]];
-    $("#nav").innerHTML = tabs.map(([k, label, n]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count">${n}</span>` : ""}</button>`).join("");
+    // Requests counts the open ones, like Next call its items; it turns amber while one waits for an answer.
+    const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
+    const asks = open.filter((c) => c.asks).length;
+    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["guide", TABS.guide]];
+    $("#nav").innerHTML = tabs.map(([k, label, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`).join("");
   }
 
   function renderBanners() {

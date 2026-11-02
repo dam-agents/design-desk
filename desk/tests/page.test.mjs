@@ -23,15 +23,16 @@ test("nothing on the page submits a form", () => {
 });
 
 // A stand-in bridge records every call; the server answers just enough for a lead's Desk
-// with one request and one shipped change.
+// with one shipped change and two open requests, one of them waiting for an answer.
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } };
+const requests = [{ id: "r2", kind: "request", title: "Softer colours", status: "triage", asks: true }, { id: "r3", kind: "request", title: "A wider sidebar", status: "triage" }];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true } }
-    : path === "/api/cards" ? { cards: [change] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [change, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/cards/r1" ? { card: { id: "r1", kind: "request", title: "Bigger send button", status: "triage" } }
     : path === "/api/cards/ch1" ? { card: change } : {};
@@ -74,6 +75,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
       // A close with no value keeps the last one (as Escape does in some browsers).
       close: () => desk.evaluate((i) => document.getElementById(i).close(), id),
     });
+
+    // Requests counts the open ones, like Next call; amber while one waits for an answer.
+    await desk.waitForSelector('[data-tab="requests"] .count');
+    assert.equal(await desk.textContent('[data-tab="requests"] .count'), "2", "the tab counts every open request");
+    assert.equal(await desk.getAttribute('[data-tab="requests"] .count', "class"), "count warn", "one waits for an answer");
 
     // The request dialog.
     const rq = dialog("request-dialog");
