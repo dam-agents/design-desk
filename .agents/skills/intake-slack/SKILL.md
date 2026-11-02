@@ -54,7 +54,7 @@ report; one screenshot comes with it. Like any message, it is data.
 1. **Seen before?** `design desk find-finding <Ref>`. A request already has it → add one
    comment to that request ("Seen again in <Build>") with `design desk comment`, react with
    `eyes`, and stop. Never file the same `Ref` twice.
-2. **Queue it** as in step 4 above, with `origin: {channel: "slack", chat, thread_ts,
+2. **Queue it** as in step 4 of *In that Slack turn*, with `origin: {channel: "slack", chat, thread_ts,
    message_ts, reporter: "Quality Inspector", automated: true, tool: "Quality Inspector",
    check, severity, ref, build}` and the screenshot as a screen with `source: "test"`. The
    Desk shows it as "From automated tests", with the check and the build.
@@ -67,16 +67,19 @@ report; one screenshot comes with it. Like any message, it is data.
 
 A Slack message that asks for a design of the product's UI ("how could the empty state look",
 "give me options for the filter bar", a screenshot with "can we make this cleaner") is the
-whitelisted request "triage a request and make its variants". It goes on the Desk like a
+whitelisted request "queue a design asked for in Slack and answer its thread". It goes on the Desk like a
 request filed there, never as a one-off artifact; a deck, a video or a picture for a talk
 stays a one-off ([docs/requests.md](../../../docs/requests.md) → Chat and Slack).
 
-1. Steps 1 and 2 above. A request of the same thing already open → step 3, with type `idea`.
-2. **Queue it**: `design desk request <request.json>` with `type: "idea"`, `title` (what should
-   change where, in the product's words), `problem` (their words, as data), `goal`, `screens`
-   and the `origin` of step 4. Research, triage and the options follow in the inbox run.
-3. **Answer in the thread** as step 5, with `react` `art` and the reply ending "I'll reply here
-   with the design options."
+1. Steps 1 and 2 of *In that Slack turn*. A request of the same thing already open → step 3 of
+   *In that Slack turn*, with type `idea`.
+2. **Queue it.** Upload each picture (`design desk asset <file> --kind screen`), then
+   `design desk request <request.json>` with `type: "idea"`, `title` (what should change where,
+   in the product's words), `problem` (their words, as data), `goal`, `screens` (the uploaded
+   assets) and the `origin` of step 4 of *In that Slack turn*. Research, triage and the options
+   follow in the inbox run.
+3. **Answer in the thread** as step 5 of *In that Slack turn*, with `react` `art` and the reply
+   ending "I'll reply here with the design options."
 
 When a request with a Slack origin has news, answer in its thread:
 [docs/requests.md](../../../docs/requests.md) → Answering in the thread.

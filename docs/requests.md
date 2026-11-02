@@ -74,7 +74,8 @@ The person deciding should know it before a single variant exists.
    `cannot` (each a short list, each `cannot` with its reason in the person's terms). Keep
    `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
-   `product`: they asked for options, so `design desk enqueue explore C-<n>`.
+   `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
+   `design desk inbox` already holds an open `explore` item of the card.
 6. `design desk done I-<n> --outcome triaged`.
 
 A request too vague to triage gets **one question from you** instead, with your best guess
@@ -152,17 +153,18 @@ in `reasons` whether you could see the fault there.
 
 A request with a Slack `origin` (a bug, a design someone asked for) is answered in the
 thread they started: `reply` with `chatId` = `origin.chat` and `threadTs` =
-`origin.thread_ts`, never a new post, whatever `notify` says. One reply per step, in the
-words the Desk shows:
+`origin.thread_ts`, never a new post, whatever `notify` says. One text reply per step, in
+the words the Desk shows:
 
 - after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.";
 - options on the card (`feedback`): "Options ready to vote on: <link>", one line per option
-  (its name and when it wins) and a PNG still of each (`design shot`);
+  (its name and when it wins); then one reply per option with its PNG still (`design shot`),
+  one attachment per reply;
 - live (`testing`): "Live prototype ready to try: <link>"; handed off: "Sent to developers:
   <link>"; closed: one sentence why.
 
 The link is the Desk's, with the access note of
-[`intake-slack`](../.agents/skills/intake-slack/SKILL.md) step 5. A reply the messenger
+[`intake-slack`](../.agents/skills/intake-slack/SKILL.md) (*In that Slack turn*, step 5). A reply the messenger
 refuses is logged, and the card is the record.
 
 ## Issues (`issues_due`, flow 1)
