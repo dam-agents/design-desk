@@ -24,6 +24,7 @@ JSON
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "work due" '.nothing_to_do == false' "$out"
 assert "question sorted" '[.questions_due[].id] == ["I-1"]' "$out"
+assert "slack_send reaches the worklist config, off by default" '.config.slack_send == "disabled"' "$out"
 assert "request sorted" '[.requests_due[].id] == ["I-2"]' "$out"
 assert "build sorted" '[.prototypes_due[].id] == ["I-3"]' "$out"
 assert "a screen someone added sorted" '[.map_due[].id] == ["I-6"]' "$out"

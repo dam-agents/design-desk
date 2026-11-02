@@ -234,6 +234,9 @@
   .note .h { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
   .note .n { font-weight: 700; color: var(--ink); }
   .note .a { font-size: 12.5px; background: var(--soft); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+  .note .m { font-size: 12.5px; margin-top: 6px; } .note .m .who { font-size: 11.5px; color: var(--muted); }
+  .note .reply { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; } .note .reply input { flex: 1 1 140px; min-width: 0; }
+  .note.done { opacity: .72; }
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; }
     main.has-detail .list { display: none; } main:not(.has-detail) .detail { display: none; }
@@ -351,6 +354,7 @@
     map: "Finding this screen in the product and taking its pictures.",
     screens: "Checking the screenshots that were added and writing their captions.",
     slack: "Posting the options to Slack for votes and comments.",
+    "slack-send": "Taking pictures of the designs and sending them to Slack.",
   };
   const HANDOFF_TO = {
     "coding-agent": "the coding agent, which builds it into the product",
@@ -407,6 +411,8 @@
 <h3>Changing a design</h3>
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
+<p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and <b>Clickable</b> in its top bar outlines everything you can click. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. Votes and comments help, but a designer picks the winning option with <b>Pick as the winner</b>. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -547,13 +553,16 @@
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
-  const working = (c) => [...new Set((c.waiting || []).map((w) => (w.scope === "history" ? "catalog-history" : w.kind)).filter((k) => k !== "question"))];
+  const working = (c) => [...new Set((c.waiting || []).map((w) => (w.scope === "history" ? "catalog-history" : w.scope === "send" ? "slack-send" : w.kind)).filter((k) => k !== "question"))];
   const optionName = (c, id) => (c.variants || []).find((v) => v.id === id)?.name || "an option";
 
   // The option designers like most; none on a tie, the only one when there is one.
+  // The winner a designer picked; else the one designers' votes clearly prefer (a hint only).
   function favourite(c) {
     const vs = c.variants || [];
     if (vs.length === 1) return vs[0];
+    const chosen = vs.find((v) => v.id === c.chosen?.variant);
+    if (chosen) return chosen;
     const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
     const s = [...vs].sort((a, b) => score(b) - score(a));
     return s.length && score(s[0]) > 0 && score(s[0]) > score(s[1] || { id: "" }) ? s[0] : null;
@@ -976,13 +985,13 @@
     const label = { question: ["Question", "info"], comment: ["Comment", ""], concern: ["Concern", "warn"], change: ["Change", "info"], asks: ["Design Desk asks", "warn"] };
     const rows = threads.map((th) => {
       const [name, tone] = label[th.kind] || [th.kind, ""];
-      const anchor = th.anchor?.variant ? `<button class="anchor" data-goto="${esc(th.id)}">◎ ${esc(th.anchor.label || th.anchor.text || "an element")} in ${esc(optionName(c, th.anchor.variant))}</button>` : "";
+      const anchor = th.anchor?.variant ? `<button class="anchor" data-goto="${esc(th.id)}">◎ ${esc(th.anchor.label || th.anchor.text || "an element")} in ${esc(optionName(c, th.anchor.variant))}${th.anchor.view_name ? ` · ${esc(th.anchor.view_name)}` : ""}</button>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok">done</span>` : th.state === "answered" ? `<span class="chip">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}">${esc(name)}</span>${anchor}${state}</div>
         ${th.messages.map((m) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${md(m.text)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
-        ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button></div>` : ""}
+        ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`}
       </article>`;
     }).join("");
     return `<h3>Questions and comments</h3><div class="threads">${rows}</div>
@@ -1256,13 +1265,16 @@
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
-      <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}</button>`).join("")}</div>
+      <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}</button>`).join("")}</div>
       ${v.rationale ? `<p class="hint" style="max-width:var(--measure)"><b>When this one wins:</b> ${esc(v.rationale)}</p>` : ""}
+      ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : vs.length > 1 ? `<p class="hint" style="max-width:var(--measure)">Votes and comments help; a designer picks the winner.</p>` : ""}
       <div class="vbar">
         ${can("vote") ? `<button class="btn small ${mine === "prefer" ? "on" : ""}" data-vote="prefer">👍 I like this one</button><button class="btn small ${mine === "concern" ? "on" : ""}" data-vote="concern">⚠ I have a concern</button>` : ""}
         <button class="btn small" data-act="workspace">Open in the design workspace</button>
+        ${vs.length > 1 && can("choose") ? (c.chosen?.variant === v.id ? `<button class="btn small on" data-choose="">★ The winner — undo</button>` : `<button class="btn small" data-choose="${esc(v.id)}">★ Pick as the winner</button>`) : ""}
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
-        ${S.me?.slack && can("share") && !(c.polls || []).some((x) => x.state === "open") && !working(c).includes("slack") ? `<button class="btn small" data-act="slack-share">Share in Slack</button>` : ""}
+        ${S.me?.slack && can("share") && !(c.polls || []).some((x) => x.state === "open") && !working(c).some((k) => k.startsWith("slack")) ? `<button class="btn small" data-act="slack-share">Share in Slack</button>` : ""}
+        ${(S.me?.slack_send || c.origin?.channel === "slack") && can("share") && !working(c).some((k) => k.startsWith("slack")) ? `<button class="btn small" data-act="slack-send">Send designs to Slack</button>` : ""}
         ${tallyFor(c, v.id)}
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
@@ -1336,18 +1348,22 @@
     const textOf = (el) => (el.innerText || el.getAttribute("aria-label") || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ").slice(0, 120);
     const labelOf = (el) => { const t = textOf(el); return kind(el) + (t ? " “" + (t.length > 40 ? t.slice(0, 39) + "…" : t) + "”" : ""); };
     const find = (sel) => { try { return sel ? document.querySelector(sel) : null; } catch { return null; } };
+    const viewOf = (el) => { const v = el.closest("[data-view]"); return v ? { view: v.dataset.view, view_name: v.dataset.viewName || "View " + v.dataset.view } : {}; };
+    // A note on another view of the design opens that view first, through the review bar.
+    const reveal = (el) => { const v = el?.closest("[data-view]"); if (v && !v.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(v.dataset.view) + '"]')?.click(); };
     const box = (el, color, label, solid) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; d.appendChild(b); } layer.appendChild(d); };
     const draw = () => { layer.textContent = ""; for (const p of pins) { const el = find(p.selector); if (el) box(el, p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", "#" + p.n, false); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
     addEventListener("scroll", draw, true); addEventListener("resize", draw); setInterval(draw, 700);
-    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-select") { selected = find(d.selector); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
-    addEventListener("mouseover", (e) => { if (mode === "off" || editing) return; hover = e.target; draw(); }, true);
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    addEventListener("mouseover", (e) => { if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
-      if (mode === "off") return;
+      // The review bar always acts (views, Clickable, theme), and so do its clicks for a note.
+      if (mode === "off" || !e.isTrusted || e.target.closest("#review")) return;
       if (editing && editing.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
       const el = e.target; selected = el; hover = null; draw();
-      parent.postMessage({ type: "desk-picked", selector: css(el), tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el) }, "*");
+      parent.postMessage({ type: "desk-picked", selector: css(el), tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), ...viewOf(el) }, "*");
       if (mode === "edit") startEdit(el);
     }, true);
     function startEdit(el) {
@@ -1355,7 +1371,7 @@
       const before = el.innerText; editing = el;
       el.contentEditable = "plaintext-only"; if (el.contentEditable !== "plaintext-only") el.contentEditable = "true";
       el.focus(); getSelection().selectAllChildren(el);
-      const finish = (keep) => { el.contentEditable = "false"; el.removeEventListener("keydown", key); el.removeEventListener("blur", blur); editing = null; const after = el.innerText; if (!keep) { el.innerText = before; return; } if (after.trim() !== before.trim()) parent.postMessage({ type: "desk-edited", selector: css(el), tag: el.tagName.toLowerCase(), label: labelOf(el), from: before.trim().slice(0, 300), to: after.trim().slice(0, 300) }, "*"); };
+      const finish = (keep) => { el.contentEditable = "false"; el.removeEventListener("keydown", key); el.removeEventListener("blur", blur); editing = null; const after = el.innerText; if (!keep) { el.innerText = before; return; } if (after.trim() !== before.trim()) parent.postMessage({ type: "desk-edited", selector: css(el), tag: el.tagName.toLowerCase(), label: labelOf(el), ...viewOf(el), from: before.trim().slice(0, 300), to: after.trim().slice(0, 300) }, "*"); };
       const key = (k) => { if (k.key === "Enter" && !k.shiftKey) { k.preventDefault(); finish(true); } if (k.key === "Escape") { k.preventDefault(); finish(false); } };
       const blur = () => finish(true);
       el.addEventListener("keydown", key); el.addEventListener("blur", blur);
@@ -1368,6 +1384,8 @@
   function notesOf(c) {
     return (c.threads || []).filter((th) => th.anchor?.variant).map((th, i) => ({ ...th, n: i + 1 }));
   }
+  // A comment on an option a designer can hand to Design Desk to change the design.
+  const workable = (c, th) => can("change") && c.kind === "request" && th.kind !== "change" && th.kind !== "asks" && th.state !== "resolved" && (c.variants || []).some((v) => v.id === th.anchor?.variant) && !["declined", "handed-off"].includes(c.status);
   function noteState(c, th) {
     if (th.state === "resolved") return ["done", "Done"];
     const last = th.messages[th.messages.length - 1];
@@ -1422,27 +1440,46 @@
     const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
     const shaper = can("change");
     const sel = S.ws.selected;
-    const notes = notesOf(c).filter((n) => n.anchor.variant === v.id);
     const busy = working(c).filter((k) => ["revise", "figma", "explore"].includes(k));
     side.innerHTML = `<div class="sel ${sel ? "" : "none"}">
         <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
-        <b>${esc(sel ? sel.label : "Nothing selected")}</b>
+        <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
         ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
       </div>
       ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
       ${old ? "" : `<div class="composer" style="margin:0">
         <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
-        <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${sel ? `<button class="btn small" data-ws-clear>Clear selection</button>` : ""}</div>
+        <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button>` : ""}${sel ? `<button class="btn small" data-ws-clear>Clear selection</button>` : ""}</div>
         ${shaper ? `<p class="hint">Design Desk changes the design and the new version appears here by itself. Notes sent in a row are done together.</p>` : ""}
       </div>`}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
-      <div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}</h3>
-        ${notes.length ? `<ol class="notes">${notes.map((th) => { const [st, label] = noteState(c, th); const last = th.messages[th.messages.length - 1]; return `<li class="note" data-ws-note="${esc(th.id)}" aria-current="${Boolean(sel?.selector) && sel.selector === th.anchor.selector}">
-          <div class="h"><span class="n">#${th.n}</span><span>${esc(th.anchor.label || th.anchor.text || "the whole option")}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${esc(label)}</span></div>
-          <div>${esc(th.messages[0].text)}</div>${last?.by?.agent ? `<div class="a">${esc(last.text)}</div>` : ""}</li>`; }).join("")}</ol>` : `<p class="hint">No notes yet.</p>`}
-      </div>`;
+      ${renderWsNotes(c, v, sel)}`;
     const nt = $("#ws-text");
     if (nt) { nt.value = keep; if (focused) { nt.focus(); if (caret) nt.setSelectionRange(caret[0], caret[1]); } }
+  }
+
+  // Notes on this option: open first, each with its whole conversation once picked, a reply,
+  // Done or Reopen, and Work it in for a comment a designer hands to Design Desk.
+  function renderWsNotes(c, v, sel) {
+    const all = notesOf(c).filter((n) => n.anchor.variant === v.id);
+    const f = S.ws.filter || "open";
+    const notes = all.filter((n) => f === "all" || (f === "done") === (n.state === "resolved"));
+    const count = (k) => all.filter((n) => k === "all" || (k === "done") === (n.state === "resolved")).length;
+    const workIn = all.filter((n) => workable(c, n));
+    const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}</div>`;
+    return `<div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}</h3>
+      <div class="tabs" style="margin:0 0 8px">${[["open", "Open"], ["done", "Done"], ["all", "All"]].map(([k, l]) => `<button data-ws-filter="${k}" aria-pressed="${f === k}">${l} ${count(k)}</button>`).join("")}</div>
+      ${workIn.length > 1 ? `<div class="actions" style="margin:0 0 8px"><button class="btn small" data-work-in="${esc(workIn.map((n) => n.id).join(","))}">Work in all ${workIn.length} open comments</button></div>` : ""}
+      ${notes.length ? `<ol class="notes">${notes.map((th) => {
+        const [st, label] = noteState(c, th); const last = th.messages[th.messages.length - 1];
+        const open = th.id === S.ws.note || (Boolean(sel?.selector) && sel.selector === th.anchor.selector);
+        const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
+        return `<li class="note ${st === "done" ? "done" : ""}" data-ws-note="${esc(th.id)}" aria-current="${open}">
+          <div class="h"><span class="n">#${th.n}</span><span>${esc(where)}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${esc(label)}</span></div>
+          ${open ? th.messages.map(msg).join("") : `<div>${esc(th.messages[0].text)}</div>${th.messages.length > 1 ? `<div class="a">${last?.by?.agent ? "" : `${who(last.by)}: `}${esc(last.text)}</div>` : ""}${th.messages.length > 2 ? `<div class="hint">${th.messages.length - 1} replies</div>` : ""}`}
+          ${open ? (th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}">Done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`) : ""}</li>`; }).join("")}</ol>`
+        : `<p class="hint">${all.length ? (f === "open" ? "Nothing open. Everything here is done." : "None here.") : "No notes yet."}</p>`}
+    </div>`;
   }
 
   async function loadWsFrame(c, v, assetId) {
@@ -1469,9 +1506,9 @@
     const frame = $("#ws-frame");
     if (!frame || e.source !== frame.contentWindow) return;
     const d = e.data || {};
-    const pickOf = (text) => ({ selector: String(d.selector || "").slice(0, 500), text: String(text || "").slice(0, 120), tag: String(d.tag || "").slice(0, 40), label: String(d.label || "").slice(0, 120) });
+    const pickOf = (text) => ({ selector: String(d.selector || "").slice(0, 500), text: String(text || "").slice(0, 120), tag: String(d.tag || "").slice(0, 40), label: String(d.label || "").slice(0, 120), ...(d.view ? { view: String(d.view).slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) } : {}) });
     // In Edit text the frame keeps the focus: the person is typing into the design.
-    if (d.type === "desk-picked") { S.ws.selected = pickOf(d.text); S.ws.edit = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
+    if (d.type === "desk-picked") { S.ws.selected = pickOf(d.text); S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
     if (d.type === "desk-edited") {
       S.ws.selected = pickOf(d.to); S.ws.edit = { from: String(d.from || ""), to: String(d.to || "") };
       renderWorkspace();
@@ -1483,7 +1520,7 @@
   // What the workspace shows; a refresh that changes none of it leaves it alone.
   function wsFingerprint(c) {
     const v = (c.variants || []).find((x) => x.id === S.variant);
-    return JSON.stringify([v?.asset, v?.version, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.state, n.messages.length])]);
+    return JSON.stringify([v?.asset, v?.version, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
   }
 
   // ---------- rendering the detail ----------
@@ -1545,7 +1582,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null }; }
+    if (before?.id !== card.id) { S.variant = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -1612,6 +1649,13 @@
         send: (a) => post(JSON.stringify({ closes: a.choice, note: a.note })) });
       if (!res) return;
     }
+    if (name === "slack-send") {
+      const thread = c.origin?.channel === "slack";
+      res = await ask({ title: "Send designs to Slack", body: `Design Desk takes a picture of each design and posts them ${thread ? "in the Slack thread this request came from" : "to the team's Slack channel"}, with a link back here. Comments and the pick stay here on the Desk.`,
+        ok: "Send", choices: [{ id: "all", name: "All options" }, ...options.map((o) => ({ id: o.id, name: o.name }))], pick: "all", note: "A line for Slack (optional)",
+        send: (a) => post(JSON.stringify({ variants: a.choice || "all", note: a.note || "" })) });
+      if (!res) return;
+    }
     if (name === "figma-export") {
       const v = (c.variants || []).find((x) => x.id === S.variant);
       res = await ask({ title: "Send to Figma", body: `Design Desk puts **${v?.name || "this option"}** into Figma as editable layers and links it here.`, ok: "Send", send: () => post(v?.id || "") });
@@ -1639,12 +1683,12 @@
     await openCard(S.card.id);
   }
 
-  async function wsSend() {
+  async function wsSend(only) {
     const c = S.card, v = wsVariant(c);
     const text = $("#ws-text")?.value.trim(); if (!text || !v) return;
     const sel = S.ws.selected;
-    const anchor = { variant: v.id, ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label } : { label: "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}) };
-    const kind = can("change") ? "change" : "comment";
+    const anchor = { variant: v.id, ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}) };
+    const kind = can("change") && only !== "comment" ? "change" : "comment";
     await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
     $("#ws-text").value = ""; S.ws.edit = null;
     toast(kind === "change" ? "Sent. Design Desk is changing it; the design updates here by itself." : "Comment added.");
@@ -1684,7 +1728,8 @@
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { await post(ds.post); return; }
     if (ds.sendReply) {
-      const input = document.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
+      // The workspace and the card both show a note's reply box: the one next to this button.
+      const input = el.parentElement.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
       const r = await api("POST", `/api/threads/${ds.sendReply}/messages`, { text });
       if (r.inbox) toast("Sent. Design Desk is on it.");
       await refreshList(); await openCard(S.card.id); return;
@@ -1698,6 +1743,13 @@
       await refreshList(); await openCard(S.card.id); return;
     }
     if (ds.resolve) { await api("POST", `/api/threads/${ds.resolve}/resolve`); await openCard(S.card.id); return; }
+    if (ds.reopen) { const r = await api("POST", `/api/threads/${ds.reopen}/reopen`); if (r.inbox) toast("Reopened. Design Desk is on it."); await openCard(S.card.id); return; }
+    if (ds.workIn) {
+      const r = await api("POST", `/api/cards/${S.card.id}/work-in`, { threads: ds.workIn.split(",") });
+      toast(r.threads.length > 1 ? `Sent. Design Desk works in ${r.threads.length} comments; the design updates here by itself.` : "Sent. Design Desk works it in; the design updates here by itself.");
+      await openCard(S.card.id); return;
+    }
+    if (ds.choose !== undefined) { await api("POST", `/api/cards/${S.card.id}/chosen`, { variant: ds.choose || null }); toast(ds.choose ? "Picked as the winner." : "No winner picked."); await refreshList(); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
     if (ds.vote) {
       const mine = S.card.votes?.[S.variant]?.[myKey()]?.vote;
@@ -1711,7 +1763,7 @@
       const th = (S.card.threads || []).find((x) => x.id === ds.goto);
       if (!th?.anchor?.variant) return;
       S.variant = th.anchor.variant; S.ws.open = true; S.ws.version = null;
-      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element" } : null;
+      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       renderWorkspace(); return;
     }
     if (ds.act) { await act(ds.act); return; }
@@ -1719,12 +1771,15 @@
     if ("wsClose" in ds) { S.ws.open = false; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
     if (ds.wsVariant) { S.variant = ds.wsVariant; S.ws.selected = null; S.ws.edit = null; S.ws.version = null; renderWorkspace(); return; }
     if (ds.wsMode) { S.ws.mode = ds.wsMode; renderWorkspace(); frameSay({ type: "desk-mode", mode: ds.wsMode }); return; }
-    if ("wsSend" in ds) { await wsSend(); return; }
+    if ("wsSend" in ds) { await wsSend(ds.wsSend); return; }
+    if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }
     if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
     if (ds.wsNote) {
+      if (e.target.closest("input")) return;
       const th = (S.card.threads || []).find((x) => x.id === ds.wsNote);
       if (!th?.anchor) return;
-      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element" } : null;
+      S.ws.note = th.id;
+      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       S.ws.edit = null;
       renderWorkspace();
       frameSay({ type: "desk-select", selector: th.anchor.selector || null });

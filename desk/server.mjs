@@ -81,6 +81,8 @@ function settings() {
     // A screen card needs the agent's own copy of the product for its pictures (docs/map.md).
     screens: cfg("screens", "disabled") === "enabled",
     slack: cfg("slack_polls", "disabled") === "enabled",
+    // Pictures of the options posted to the Slack channel; a request from Slack goes to its thread anyway.
+    slackSend: cfg("slack_send", "disabled") === "enabled",
     // Days a change may wait to be handled before the page shows it overdue; 0 or off: never.
     dueDays: ((v) => (v === "off" ? 0 : /^\d+$/.test(v) ? Number(v) : 21))(cfg("change_due_days", "21")),
     // Where an approved design goes, by request type, so the page can say it before approving.
@@ -95,7 +97,7 @@ function settings() {
 // The words a person reads when their role lacks an action.
 const VERBS = { ack: "mark changes as seen", handle: "mark changes as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
-  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product" };
+  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -145,7 +147,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, screens: s.screens, handoff: s.handoff, due_days: s.dueDays });
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])) });
@@ -159,7 +161,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && ["messages", "answers"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || (p[1] === "cards" && ["actions", "screens"].includes(p[3]))) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && ["messages", "answers"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || (p[1] === "cards" && ["actions", "screens", "work-in"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note, typeof b.variant === "string" ? b.variant : null), s, who)); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "suggestion") return send(res, 200, store.dismissSuggestion(p[2], actor));
@@ -175,6 +177,9 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need("comment"); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "answers") { need("comment"); return send(res, 200, withPing(store.answerForm(p[2], actor, b.answers), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "resolve") { need("comment"); return send(res, 200, store.resolve(p[2], actor)); }
+  if (m === "POST" && p[1] === "threads" && p[3] === "reopen") { need("comment"); return send(res, 200, withPing(store.reopenThread(p[2], actor), s, who)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "chosen") { need("choose"); return send(res, 200, store.choose(p[2], actor, b.variant === null ? null : String(b.variant || ""))); }
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }
   if (m === "POST" && p[1] === "requests") {
     need(b.from ? "follow-up" : "request");
@@ -209,9 +214,10 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
-    need(action.startsWith("figma-") ? "figma" : action === "slack-share" ? "share" : action);
+    need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
+    if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
     return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true }), s, who));
   }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
