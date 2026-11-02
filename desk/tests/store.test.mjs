@@ -279,6 +279,18 @@ test("screenshots a person adds wake the agent once and keep who added them", ()
   assert.equal(s.getCard(card.id).screens[0].by.email, bob.email);
 });
 
+test("a picture keeps where the change is, and a place links only a screen or a part", () => {
+  const s = fresh();
+  const shot = s.addAsset({ kind: "screen", name: "x", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
+  const screen = s.upsertCard({ kind: "screen", title: "Agents list" }).card;
+  const { card } = s.upsertCard({ kind: "change", title: "Spend in the list", source: { repo: "acme/widgets", pr: 9 },
+    screens: [{ asset: shot, stage: "after", pair: "list", marks: [{ x: 0.9, y: 0.1, w: 0.5, h: 0.2 }, { x: 0.1, y: 0.1, w: 0, h: 0.1 }] }],
+    impact: { concept: "spend", places: [{ where: "Agents list", card: screen.id }, { where: "Alert", card: "C-404" }, { where: "Toolbar", card: "toString" }] } });
+  assert.deepEqual(card.screens[0].marks, [{ x: 0.9, y: 0.1, w: 0.1, h: 0.2 }], "a box is kept inside the picture, an empty one goes");
+  assert.deepEqual(card.impact.places.map((p) => p.card), [screen.id, null, null]);
+  assert.throws(() => s.upsertCard({ id: card.id, screens: [{ asset: shot, marks: [{ x: "left" }] }] }), DeskError);
+});
+
 test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relayed once", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });

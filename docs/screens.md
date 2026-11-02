@@ -77,7 +77,9 @@ minutes, then takes the pull request's own pictures instead.
    pull request's own "before" picture, when it has one, takes its place (`source: "pr"`).
 2. **After.** `screens.sh sync <repo> --at <merge>`, the same recipe → `stage: "after"`.
 3. **What changed.** Per pair: `design diff <before> <after> <diff.jpg>` → `stage: "diff"`,
-   captioned with what it outlines ("2 areas changed: the heading and the button").
+   captioned with what it outlines ("2 areas changed: the heading and the button"). Its
+   `marks` go on the pair's "before" and "after" pictures too (`marks: [{x, y, w, h}]`,
+   fractions of the picture): the page outlines them under **Outline what changed**.
    `changed_pct` 0: say the screen looks the same and keep only "after".
 4. Every picture of a pair carries the same `pair` (the shot's name). The screen's card on
    the product map gets the "after" pictures and the change in its `changes` ([map.md](map.md)).

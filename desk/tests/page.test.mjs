@@ -297,15 +297,16 @@ test("Needs a designer filters New and Requests, and New opens on All", async (t
   }
 });
 
-// A designer's Desk with an overdue change of two pictures, and a request whose build waits
-// for the answers to the agent's form.
+// A designer's Desk with an overdue change of two pictures, one with where it changed, and
+// places that are in Product; and a request whose build waits for the answers to the agent's form.
 const DAY = 864e5;
 const BRIDGE_NEW = `<script>
 window.calls = [];
 const created = new Date(Date.now() - 30 * ${DAY}).toISOString();
 const svg = (c) => ({ contentType: "image/svg+xml", encoding: "utf8", data: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><rect width="4" height="3" fill="' + c + '"/></svg>' });
 const change = { id: "ch2", kind: "change", title: "See which agents stopped", summary: "A red dot marks a stopped agent.", created, handled: null,
-  source: { repo: "acme/widgets", pr: 11 }, screens: [{ asset: "A-1", caption: "The list" }, { asset: "A-2", caption: "The card" }],
+  source: { repo: "acme/widgets", pr: 11 }, screens: [{ asset: "A-1", caption: "The list", marks: [{ x: 0.25, y: 0, w: 0.5, h: 1 / 3 }] }, { asset: "A-2", caption: "The card" }],
+  impact: { concept: "a stopped agent", places: [{ where: "Agents list", kind: "screen" }, { where: "The agent row", card: "e9", kind: "component" }, { where: "Slack alert", kind: "message" }] },
   sections: [{ key: "what", title: "What changed", body: "- A red dot.", source: { label: "PR #11", url: "https://github.com/acme/widgets/pull/11" } },
     { key: "why", title: "Why it is like this", body: "- Owners missed stopped agents.", source: { label: "not documented" } }] };
 const request = { id: "r2", kind: "request", title: "Bigger send button", status: "feedback", created, triage: { verdict: "design", reasons: [] },
@@ -315,7 +316,7 @@ const request = { id: "r2", kind: "request", title: "Bigger send button", status
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", due_days: 21, can: { handle: true, build: true, comment: true, ask: true } }
-    : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { id: "ch3", kind: "change", title: "Handled already", status: "handled", created, handled: created, attention: { level: "designer", reasons: ["a new screen"] } }, { ...request, variants: 1, threads: undefined, asks: true }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { id: "ch3", kind: "change", title: "Handled already", status: "handled", created, handled: created, attention: { level: "designer", reasons: ["a new screen"] } }, { ...request, variants: 1, threads: undefined, asks: true }, { id: "s9", kind: "screen", title: "Agents list" }, { id: "e9", kind: "element", title: "Agent row" }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/ch2" ? { card: change } : path === "/api/cards/r2" ? { card: request }
     : path === "/api/assets/A-1" ? svg("red") : path === "/api/assets/A-2" ? svg("blue") : path === "/api/assets/A-3" ? { contentType: "text/html", encoding: "utf8", data: "<p>Calm</p>" } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
@@ -359,6 +360,25 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.waitForFunction(() => document.querySelector(".zoom figcaption").textContent === "1 / 2 · The list");
     await desk.press("body", "Escape");
     assert.equal(await desk.locator(".zoom").count(), 0, "Escape closes the gallery");
+
+    // The filters stay on one line in the list's width.
+    assert.equal(new Set(await desk.$$eval("#list .filters .btn", (bs) => bs.map((b) => b.offsetTop))).size, 1, "the filters do not wrap");
+
+    // Where the change is: outlined until the switch is off, and in the gallery too.
+    const mark = '.shot[data-zoom="A-1"] .mark';
+    assert.equal(await desk.isChecked("[data-outline]"), true, "outlines are on at first");
+    assert.equal(await desk.isVisible(mark), true);
+    assert.deepEqual(await desk.$eval(mark, (m) => [m.style.left, m.style.width]), ["25%", "50%"]);
+    assert.equal(await desk.locator('.shot[data-zoom="A-2"] .mark').count(), 0, "a picture without marks has none");
+    await desk.uncheck("[data-outline]");
+    assert.equal(await desk.isVisible(mark), false, "unticked hides every outline");
+    await desk.check("[data-outline]");
+    await desk.click('[data-zoom="A-1"]');
+    await desk.waitForSelector(".zoom .mark", { state: "visible" });
+    await desk.press("body", "Escape");
+
+    // A place that is a screen or a part in Product opens it: by its card, or by its name.
+    assert.deepEqual(await desk.$$eval(".impact li", (ls) => ls.map((l) => l.querySelector(".link")?.dataset.card || null)), ["s9", "e9", null]);
 
     // The agent's form: one answer and one left to it, then all left to it.
     await desk.click('[data-tab="requests"]');
