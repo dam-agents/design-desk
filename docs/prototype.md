@@ -18,6 +18,14 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    requests count; a closed one's prototype waits for its expiry teardown.
    `create_environment` missing from your tools → comment that the owner must turn on
    Environments, tell the operator, stop.
+   **Ask first** — an item with `ask_first` (the designer ticked it when pressing Build):
+   list the design decisions the option and its comments leave open (a missing state, copy,
+   a small screen…). None → build. Some → one form, `design desk ask C-<n> <file> --step build
+   --form` with `{text, questions: [{text, why, options, suggested}]}`: at most 6 questions
+   that change what gets built, 2–4 concrete options each, `suggested` your pick; the page
+   adds "Leave it to Design Desk". `done --outcome asked` and stop; the answer re-queues the
+   build with the same option. Then a question left to you takes `suggested`, and the
+   build's comment on the card names what you chose.
 2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree C-<n> <repo>` → a checkout of the
    default branch on `design-desk/c<n>-<slug>`, printed as JSON with its path and base.
    An existing worktree of the card is reused (an update).

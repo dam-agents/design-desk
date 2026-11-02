@@ -12,6 +12,8 @@ export const LIMITS = {
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
   assetBytes: 720 * 1024,
   claimTtlMin: 120,
+  // A change card is read in passing: a short title, a one-sentence summary, a few short sections.
+  change: { title: 90, summary: 180, sections: 5, section: 400 },
   // The whole store is one file rewritten on every change; past this people's writes
   // are refused until the operator archives old cards.
   dbBytes: 50 * 1024 * 1024,
@@ -28,7 +30,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": return member;
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": return shaper;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": case "handle": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
@@ -36,7 +38,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
 
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
-export const CHANGE_STATES = ["new", "archived"];
+export const CHANGE_STATES = ["new", "handled", "archived"];
 // A catalog element: one real UI part drawn in every state it can be in.
 export const ELEMENT_STATES = ["current", "stale", "building"];
 const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma", "screens", "slack"];
@@ -152,7 +154,7 @@ export class Store {
         created: c.created, updated: c.updated, source: c.source || null,
         screens: (c.screens || []).length, variants: (c.variants || []).length,
         open_threads: (c.threads || []).filter((t) => this.db.threads[t]?.state !== "resolved").length,
-        acked: viewer ? Boolean(c.acks?.[viewer]) : false,
+        acked: viewer ? Boolean(c.acks?.[viewer]) : false, handled: c.handled?.at || null,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length,
@@ -194,7 +196,18 @@ export class Store {
     return { acked: true };
   }
 
-  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null } = {}) {
+  // A designer marks a change handled: design has nothing more to do with it. Until then
+  // the page counts the days it waits (config `change_due_days`).
+  handle(cardId, who, on = true) {
+    const c = this.card(cardId);
+    if (c.kind !== "change") throw bad("only a change is marked handled");
+    if (on) { c.status = "handled"; c.handled = { by: person(who), at: this.clock() }; }
+    else { c.status = "new"; delete c.handled; }
+    this.save();
+    return { card: c };
+  }
+
+  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null } = {}) {
     const c = this.card(cardId);
     if (!THREAD_KINDS.includes(kind)) throw bad(`kind must be one of ${THREAD_KINDS.join(", ")}`);
     if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
@@ -207,7 +220,8 @@ export class Store {
       id, card: cardId, kind, state: "open", anchor: anchor ? cleanAnchor(anchor) : null,
       needs_agent: kind === "question" || kind === "change", created: this.clock(),
       messages: [{ by: person(who), at: this.clock(), text: body }],
-      ...(kind === "asks" ? { step } : {}),
+      // The agent's questions can come as a form; the answer resumes the step with its note.
+      ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
     };
     this.db.threads[id] = t;
     c.threads = [...(c.threads || []), id];
@@ -234,11 +248,28 @@ export class Store {
     }
     // A person's answer to the agent's question resumes the step it blocked; a follow-up
     // on a change note goes back to the agent with the other notes.
-    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who); }
+    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); }
     if (t.kind === "change" && !who?.agent) { t.state = "open"; t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
     this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t, inbox: item };
+  }
+
+  // A person answers the agent's form: per question one of its options, or null to leave
+  // it to Design Desk, and an optional note. The answers become the reply's text too.
+  answerForm(threadId, who, answers) {
+    const t = this.thread(threadId);
+    if (t.kind !== "asks" || !t.questions) throw bad("this conversation has no questions to fill in");
+    if (t.state !== "open") throw bad("These questions are already answered.");
+    if (!Array.isArray(answers) || answers.length !== t.questions.length) throw bad("answer every question, or leave it to Design Desk");
+    t.answers = t.questions.map((q, i) => {
+      const a = answers[i] || {};
+      const choice = a.choice == null || a.choice === "" ? null : String(a.choice);
+      if (choice !== null && !q.options.includes(choice)) throw bad(`"${choice}" is not an option of question ${i + 1}`);
+      return { choice, note: optText(a.note, 500, "note") };
+    });
+    const text = t.questions.map((q, i) => { const a = t.answers[i]; return `**${q.text}**\n${a.choice ?? "Leave it to Design Desk"}${a.note ? ` — ${a.note}` : ""}`; }).join("\n\n");
+    return this.reply(threadId, who, text);
   }
 
   resolve(threadId, who) {
@@ -292,7 +323,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "") {
+  act(cardId, who, action, note = "", { askFirst = false } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
       if (action !== "refresh") throw bad("a catalog element can only be redrawn");
@@ -326,6 +357,8 @@ export class Store {
     if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
+    // The designer wants questions before the build when something is unclear.
+    if (action === "build" && askFirst) item.ask_first = true;
     this.save();
     return { card: c, inbox: item };
   }
@@ -496,19 +529,23 @@ export class Store {
     // Everything is checked on a copy; the store changes only when all of it holds.
     const next = c ? structuredClone(c) : { kind: fields.kind, status: { change: "new", request: "triage", element: "building", screen: "current", digest: "new" }[fields.kind], created: this.clock(), created_by: { agent: true },
       sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" } };
+    const brief = next.kind === "change" ? LIMITS.change : null;
     for (const k of AGENT_FIELDS) {
       if (fields[k] === undefined) continue;
-      if (k === "title") next.title = clean(fields.title, LIMITS.title, "title");
-      else if (k === "summary") next.summary = clean(fields.summary, 600, "summary");
+      if (k === "title") next.title = clean(fields.title, brief?.title ?? LIMITS.title, "title");
+      else if (k === "summary") next.summary = clean(fields.summary, brief?.summary ?? 600, "summary");
       else if (k === "status") {
         const ok = { change: CHANGE_STATES, request: REQUEST_STATES, element: ELEMENT_STATES, screen: ELEMENT_STATES, digest: CHANGE_STATES }[next.kind];
         if (!ok.includes(fields.status)) throw bad(`status must be one of ${ok.join(", ")}`);
         // A person closed it while a session worked: the session's late write must not reopen it.
         if (c && (c.status === "declined" || c.status === "handed-off") && fields.status !== c.status && !(c.status === "handed-off" && fields.status === "declined"))
           throw new DeskError(409, `${c.id} is ${c.status}; only a person reopens it`);
+        // Handled is a designer's mark on a change: the agent neither sets nor clears it.
+        if (next.kind === "change" && (fields.status === "handled" || c?.status === "handled") && fields.status !== c?.status)
+          throw new DeskError(409, "only a designer marks a change handled, or not");
         next.status = fields.status;
         if (next.status === "declined") delete next.call_suggestion;
-      } else if (k === "sections") next.sections = cleanSections(fields.sections);
+      } else if (k === "sections") next.sections = cleanSections(fields.sections, brief, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
       else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards);
@@ -719,13 +756,20 @@ function cleanAnchor(a) {
   };
 }
 
-function cleanSections(list) {
+// A change card's section names where it comes from ("the issue #12", "not documented —
+// ask the author"), so a reader sees the source of every paragraph.
+function cleanSections(list, brief = null, cards = {}) {
   if (!Array.isArray(list)) throw bad("sections must be a list");
-  return list.slice(0, 20).map((s) => ({
-    key: String(s.key || "").replace(/[^a-z0-9-]/g, "").slice(0, 40) || "note",
-    title: clean(s.title, LIMITS.title, "section title"),
-    body: clean(s.body, LIMITS.text * 2, "section body"),
-  }));
+  if (brief && list.length > brief.sections) throw bad(`a change card has at most ${brief.sections} sections`);
+  return list.slice(0, 20).map((s) => {
+    if (brief && !s.source?.label) throw bad(`section "${s.title}" needs source.label: where it comes from, or that it is not documented`);
+    return {
+      key: String(s.key || "").replace(/[^a-z0-9-]/g, "").slice(0, 40) || "note",
+      title: clean(s.title, LIMITS.title, "section title"),
+      body: clean(s.body, brief?.section ?? LIMITS.text * 2, "section body"),
+      ...(s.source ? { source: cleanSource(s.source, cards) } : {}),
+    };
+  });
 }
 
 function cleanRefs(list, assets, name) {
@@ -753,6 +797,21 @@ function versioned(variants, before, at) {
     return { ...v, version: (old.version || 1) + 1, drawn: at, figma_url: v.figma_url || null,
       history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
   });
+}
+
+// The agent's form: a few questions, each with its options; the page adds "Leave it to Design Desk".
+function cleanQuestions(list) {
+  if (!Array.isArray(list) || !list.length || list.length > 6) throw bad("questions is a list of 1 to 6");
+  return list.map((q) => {
+    const options = Array.isArray(q.options) ? q.options.slice(0, 5).map((o) => clean(String(o), 120, "option")) : [];
+    return { text: clean(q.text, 300, "question"), why: optText(q.why, 300, "why"), options,
+      suggested: options.includes(q.suggested) ? q.suggested : null };
+  });
+}
+
+function lastNote(inbox, card, kind) {
+  const xs = Object.values(inbox).filter((i) => i.card === card && i.kind === kind).sort((a, b) => a.created.localeCompare(b.created));
+  return xs.length ? xs[xs.length - 1].note || "" : "";
 }
 
 function cleanSource(o, cards) {

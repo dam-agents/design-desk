@@ -27,8 +27,9 @@ const USAGE = `usage: design desk <command>
   answer <T-n> <text-file|-> [--resolve]   answer a question thread
   comment <C-n> <text-file|->              add a comment thread as the agent
   ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
-                                           their answer re-queues the step (request explore revise
-                                           build handoff figma)
+      [--form]                             their answer re-queues the step (request explore revise
+                                           build handoff figma); --form: the file is JSON {text,
+                                           questions: [{text, why, options, suggested}]}, a form
   decision <decision.json|->               record a decision: {concepts, text, why, source: {label,
                                            url, card}, at}
   decisions [--concept <c>] [--q <words>]  earlier decisions, newest first
@@ -54,7 +55,7 @@ function readArg(p) {
   try { return p === "-" ? readFileSync(0, "utf8") : readFileSync(p, "utf8"); } catch (e) { fail(`cannot read ${p}: ${e.code || e.message}`); }
 }
 
-const BOOLEAN = new Set(["resolve", "takeover"]);
+const BOOLEAN = new Set(["resolve", "takeover", "form"]);
 function flags(argv) {
   const pos = [], f = {};
   for (let i = 0; i < argv.length; i++) {
@@ -135,7 +136,10 @@ export async function main(_cmd, argv) {
     }
     case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve) }));
     case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]) }));
-    case "ask": return out(await call("POST", `/agent/cards/${pos[0]}/ask`, { text: readArg(pos[1]), step: typeof f.step === "string" ? f.step : "" }));
+    case "ask": {
+      const body = f.form ? JSON.parse(readArg(pos[1])) : { text: readArg(pos[1]) };
+      return out(await call("POST", `/agent/cards/${pos[0]}/ask`, { text: body.text, questions: body.questions || null, step: typeof f.step === "string" ? f.step : "" }));
+    }
     case "decision": return out(await call("POST", "/agent/decisions", JSON.parse(readArg(pos[0]))));
     case "fetch": {
       const a = await call("GET", `/agent/assets/${pos[0]}`);

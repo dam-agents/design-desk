@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.4.0 — 2026-11-02
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**), then restart the Desk server
+(`rc-service --user design-desk-server restart`). A change card's text is now capped and
+every section needs `source.label` ([docs/watch.md](docs/watch.md) step 7); older cards stay
+as they are. New key `change_due_days` (`21`, [docs/config.md](docs/config.md)): nothing to add.
+
 ## 1.3.0 — 2026-11-02
 
 **Upgrade:**
