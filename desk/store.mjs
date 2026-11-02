@@ -810,9 +810,9 @@ function cleanQuestions(list) {
   return list.map((q) => {
     const options = Array.isArray(q.options) ? q.options.map((o) => clean(String(o), 120, "option")) : [];
     if (options.length < 2 || options.length > 4) throw bad("each question has 2 to 4 options");
-    if (q.suggested != null && q.suggested !== "" && !options.includes(String(q.suggested))) throw bad("suggested must be one of the question's options");
-    return { text: clean(q.text, 300, "question"), why: optText(q.why, 300, "why"), options,
-      suggested: options.includes(String(q.suggested)) ? String(q.suggested) : null };
+    const suggested = q.suggested == null || q.suggested === "" ? null : String(q.suggested);
+    if (suggested !== null && !options.includes(suggested)) throw bad("suggested must be one of the question's options");
+    return { text: clean(q.text, 300, "question"), why: optText(q.why, 300, "why"), options, suggested };
   });
 }
 
