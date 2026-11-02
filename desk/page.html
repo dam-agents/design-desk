@@ -867,12 +867,13 @@
   }).join("");
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
 
-  // A place that is a screen or a part in Product opens it there: the one the agent named, else
-  // the one whose name matches.
+  // A place that is a screen or a part in Product opens it there: the one the agent named, else,
+  // for a screen or a component place, the one whose name matches.
   const norm = (t) => String(t || "").trim().toLowerCase();
   function productLink(p) {
     const names = [p.screen, p.where, p.where.split("→")[0]].map(norm).filter(Boolean);
-    const to = S.cards.find((x) => x.id === p.card) || S.cards.find((x) => ["screen", "element"].includes(x.kind) && names.includes(norm(x.title)));
+    const named = ["screen", "component"].includes(p.kind) ? S.cards.find((x) => ["screen", "element"].includes(x.kind) && names.includes(norm(x.title))) : undefined;
+    const to = S.cards.find((x) => x.id === p.card) || named;
     return to ? `<button class="link" data-card="${esc(to.id)}" title="Open ${esc(to.title)} in Product">${esc(p.where)} →</button>` : `<b>${esc(p.where)}</b>`;
   }
   // Where else the same thing shows up, what a change touches, what was decided before.
