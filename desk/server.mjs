@@ -191,7 +191,7 @@ async function viewerRoute(req, res, url, who) {
     return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma }), s, who));
   }
   // A lead asks for a new person on the list; the agent writes the row (docs/desk.md → People).
-  if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role, note: b.note }, roster(), { owner: who.role === "owner" }), s, who)); }
+  if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }
   if (m === "POST" && p[1] === "product") {
     need("add");
     if (b.kind === "screen" && !s.screens) throw new DeskError(400, `Screens need Design Desk's own copy of the product, which is not turned on yet. Ask ${s.contact}.`);
@@ -264,6 +264,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "cards" && p[3] === "relay") return send(res, 201, store.relayComment(p[2], { ...b, role: slackRole(b.email) }));
   if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover) }));
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
+  // An ask to add a person carries its payload; only a lead's ask on the page makes one.
+  if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from a lead on the People tab");
   if (m === "POST" && p[1] === "enqueue") return send(res, 201, (() => { store.card(String(b.card)); const it = store.enqueue(String(b.kind), String(b.card), null, { agent: true }, typeof b.note === "string" ? b.note.slice(0, 1000) : ""); store.save(); return { item: it }; })());
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
 }

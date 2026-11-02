@@ -108,9 +108,10 @@ with a role; it has no card. This is the one roster change that comes from the D
 
 1. `design desk claim I-<n> --session <id>`.
 2. `design desk person I-<n> --session <id>`: it checks again that the asker is the owner or
-   still a lead and that the email is not on the list, adds the row under a lock, and marks
-   the item done (`added`, or `not added: <reason>`). Never edit `## Desk people` by hand
-   for an ask: the command is the only writer.
+   still a lead and that the email is not on the list, adds the row under the config lock, and
+   marks the item done (`added`, or `not added: <reason>`); a row already there with that role
+   is `added`. A non-zero exit (the file unreadable, the write failed) leaves the item claimed
+   for the next run: report it. Never edit `## Desk people` by hand for an ask.
 3. `added` → tell the operator in the run's report to share the Desk with that email (Share →
    Restricted): only the owner shares it, the row alone opens nothing.
 

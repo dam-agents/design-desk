@@ -403,14 +403,14 @@ export class Store {
 
   // A lead asks Design Desk to put a person on the Desk's list with a role; the agent
   // writes the row (docs/desk.md → People). `roster` is the list the server reads now.
-  askForPerson(who, { email, role, note = "" }, roster = [], { owner = false } = {}) {
+  askForPerson(who, { email, role }, roster = [], { owner = false } = {}) {
     const e = clean(String(email ?? ""), 254, "email").toLowerCase();
     if (!EMAIL.test(e)) throw bad("That is not an email address.");
     if (!ADDABLE_ROLES.includes(role)) throw bad(`role must be one of ${ADDABLE_ROLES.join(", ")}`);
     const on = roster.find((r) => r.email === e);
     if (on) throw bad(`${e} is already on the list.`);
     if (Object.values(this.db.inbox).some((i) => i.kind === "person" && i.state !== "done" && i.person?.email === e)) throw bad(BUSY);
-    const it = this.enqueue("person", null, null, who, optText(note, 500, "note"));
+    const it = this.enqueue("person", null, null, who);
     it.person = { email: e, role };
     // The owner is a lead whatever the roster says; the agent's re-check needs to know.
     if (owner) it.by.owner = true;
@@ -421,7 +421,7 @@ export class Store {
   // The People tab's asks: every one still waiting, and the answered ones of the last two weeks.
   peopleAsks() {
     const since = Date.parse(this.clock()) - 14 * 86400 * 1000;
-    return Object.values(this.db.inbox).filter((i) => i.kind === "person" && (i.state !== "done" || Date.parse(i.done_at) >= since))
+    return Object.values(this.db.inbox).filter((i) => i.kind === "person" && i.person && (i.state !== "done" || Date.parse(i.done_at) >= since))
       .sort((a, b) => b.created.localeCompare(a.created) || Number(b.id.slice(2)) - Number(a.id.slice(2))).slice(0, 20)
       .map((i) => ({ id: i.id, email: i.person.email, role: i.person.role, by: i.by?.email || null, created: i.created, state: i.state, outcome: i.outcome || null, done_at: i.done_at || null }));
   }

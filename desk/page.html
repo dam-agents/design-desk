@@ -291,7 +291,6 @@
     <p class="sub">Design Desk puts them on the list with the role you pick. The Desk's owner still shares the Desk with them in the app, so they can open it.</p>
     <label><span>Their email — the one they sign in with</span><input name="email" type="email" maxlength="254" required placeholder="e.g. alex@example.com" /></label>
     <div id="pe-roles" class="choices"></div>
-    <label><span>Anything Design Desk should know? (optional)</span><textarea name="note" maxlength="500"></textarea></label>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Ask Design Desk</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
@@ -1767,7 +1766,7 @@
   $("#person-dialog").addEventListener("close", guard(async (e) => {
     if (e.target.returnValue !== "send") return;
     const f = $("#person-form");
-    const body = { email: f.email.value.trim(), role: f.querySelector("input[name=role]:checked")?.value, note: f.note.value.trim() };
+    const body = { email: f.email.value.trim(), role: f.querySelector("input[name=role]:checked")?.value };
     await sendOrReopen(e.target, () => api("POST", "/api/people", body));
     toast("Sent. Design Desk adds them to the list; this page updates by itself.");
     await loadPeople(); if (S.tab === "people") renderDetail();

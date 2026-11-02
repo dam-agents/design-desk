@@ -3,8 +3,8 @@
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
 import { mkdirSync, readFileSync, renameSync, rmdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { WORK, fail, cfgTable, withRosterRow } from "../lib/core.mjs";
-import { ADDABLE_ROLES } from "../../desk/store.mjs";
+import { WORK, fail, tableIn, withRosterRow } from "../lib/core.mjs";
+import { ADDABLE_ROLES, rosterOf } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
@@ -102,27 +102,44 @@ export async function call(method, path, body) {
 
 const out = (o) => console.log(JSON.stringify(o, null, 1));
 
-// A lead's ask to add a person (docs/desk.md → People), checked again now: the asker is
-// the owner or still a lead, the role one a lead may give, the email not on the list yet.
+// A lead's ask to add a person (docs/desk.md → People), decided on work/CONFIG.md as it
+// is now: the row already there with that role is `added` (a run that wrote it and died
+// before done); otherwise the asker is the owner or still a lead, and the role one a lead
+// may give. `{ write: true }` when the row is still to be added.
+export function personVerdict(item, text) {
+  const { email, role } = item.person;
+  const roster = rosterOf(tableIn(text, "Desk people"));
+  const on = roster.find((r) => r.email === email);
+  if (on) return { outcome: on.role === role ? "added" : `not added: ${email} is already on the list.` };
+  const asker = roster.find((r) => r.email === String(item.by?.email || "").toLowerCase());
+  if (!item.by?.owner && asker?.role !== "lead") return { outcome: `not added: ${item.by?.email || "the person who asked"} is no longer a lead.` };
+  if (!ADDABLE_ROLES.includes(role)) return { outcome: `not added: a lead cannot give the role ${role}.` };
+  return { write: true };
+}
+
+// A file that cannot be read, or a row that cannot be written, ends the command with an
+// error and leaves the item claimed: the next run takes it over and tries again.
 async function person(id, session) {
   const { item } = await call("GET", `/agent/items/${id}`);
   if (item.kind !== "person" || !item.person) fail(`${id} is not an ask to add a person`);
   const { email, role } = item.person;
-  const asker = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === String(item.by?.email || "").toLowerCase());
-  let why = !item.by?.owner && (asker?.role || "").toLowerCase() !== "lead" ? `${item.by?.email || "the person who asked"} is no longer a lead.`
-    : !ADDABLE_ROLES.includes(role) ? `a lead cannot give the role ${role}.` : "";
-  if (!why) {
-    try { addRosterRow(email, role); } catch (e) { why = `${e.message}.`; }
+  const read = () => { try { return readFileSync(join(WORK, "CONFIG.md"), "utf8"); } catch (e) { fail(`cannot read work/CONFIG.md (${e.code || e.message}); ${id} stays claimed for the next run`); } };
+  let verdict = personVerdict(item, read());
+  if (verdict.write) {
+    try { addRosterRow(WORK, email, role); verdict = { outcome: "added" }; }
+    catch (e) {
+      verdict = personVerdict(item, read());
+      if (verdict.write) fail(`cannot add the row: ${e.message}; ${id} stays claimed for the next run`);
+    }
   }
-  const outcome = why ? `not added: ${why}` : "added";
-  await call("POST", `/agent/items/${id}/done`, { session, outcome });
-  return { item: id, email, role, outcome };
+  await call("POST", `/agent/items/${id}/done`, { session, outcome: verdict.outcome });
+  return { item: id, email, role, outcome: verdict.outcome };
 }
 
-// One writer of work/CONFIG.md at a time (a ping session and an inbox run may meet):
-// a mkdir lock, the file read again under it, and a whole-file rename.
-function addRosterRow(email, role) {
-  const path = join(WORK, "CONFIG.md"), lock = join(WORK, ".CONFIG.lock");
+// One writer of work/CONFIG.md at a time: every writer holds work/.CONFIG.lock
+// (docs/config.md). The file is read again under it and replaced whole by a rename.
+export function addRosterRow(work, email, role) {
+  const path = join(work, "CONFIG.md"), lock = join(work, ".CONFIG.lock");
   for (let waited = 0; ; waited += 1) {
     try { mkdirSync(lock); break; } catch (e) {
       if (e.code !== "EEXIST") throw e;
@@ -133,8 +150,7 @@ function addRosterRow(email, role) {
     }
   }
   try {
-    let text = "";
-    try { text = readFileSync(path, "utf8"); } catch (e) { if (e.code !== "ENOENT") throw e; }
+    const text = readFileSync(path, "utf8");
     const tmp = `${path}.tmp-${process.pid}`;
     writeFileSync(tmp, withRosterRow(text, email, role));
     renameSync(tmp, path);

@@ -40,6 +40,12 @@ export function cfg(key, fallback = "") {
 export function cfgTable(heading) {
   let text = "";
   try { text = readFileSync(join(WORK, "CONFIG.md"), "utf8"); } catch { return []; }
+  return tableIn(text, heading);
+}
+
+// The same rows, from CONFIG.md text already read (a reader that must tell a missing
+// file from an empty table reads the file itself).
+export function tableIn(text, heading) {
   const lines = text.split("\n");
   const start = lines.findIndex((l) => l.trim() === `## ${heading}`);
   if (start < 0) return [];

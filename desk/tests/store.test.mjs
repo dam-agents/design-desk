@@ -35,7 +35,7 @@ test("a lead asks for a new person: one item with no card, the roster and open a
   const s = fresh();
   const lead = { email: "lee@example.com", role: "lead" };
   const roster = [{ email: "alice@example.com", role: "designer" }];
-  const { inbox: item } = s.askForPerson(lead, { email: " Alex@Example.com ", role: "pm", note: "New PM for billing" }, roster);
+  const { inbox: item } = s.askForPerson(lead, { email: " Alex@Example.com ", role: "pm" }, roster);
   assert.equal(item.card, null);
   assert.deepEqual(inbox(s).open.map((i) => [i.kind, i.person]), [["person", { email: "alex@example.com", role: "pm" }]]);
   assert.throws(() => s.askForPerson(lead, { email: "alex@example.com", role: "designer" }, roster), /already working/);
@@ -47,6 +47,8 @@ test("a lead asks for a new person: one item with no card, the roster and open a
   assert.equal(s.askForPerson({ email: "own@example.com", role: "lead" }, { email: "dee@example.com", role: "developer" }, roster, { owner: true }).inbox.by.owner, true);
   assert.equal(s.claim(item.id, "run-1").card, null);
   s.done(item.id, "run-1", "added");
+  // An item without its payload (an older store, a hand-made one) never breaks the list.
+  s.enqueue("person", null, null, lead);
   assert.deepEqual(s.peopleAsks().map((a) => [a.email, a.state, a.outcome, a.by]), [["dee@example.com", "open", null, "own@example.com"], ["alex@example.com", "done", "added", "lee@example.com"]]);
 });
 

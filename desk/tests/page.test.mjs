@@ -252,7 +252,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.check('#pe-roles input[value="pm"]');
     await pe.button("Ask Design Desk").click();
     await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/people").length >= 2);
-    assert.deepEqual((await posts("/api/people")).map((c) => JSON.parse(c.body)), [{ email: "alex@example.com", role: "pm", note: "" }]);
+    assert.deepEqual((await posts("/api/people")).map((c) => JSON.parse(c.body)), [{ email: "alex@example.com", role: "pm" }]);
   } finally {
     await run.close();
   }

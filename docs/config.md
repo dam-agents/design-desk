@@ -3,7 +3,10 @@
 Every key of `work/CONFIG.md`, with its default in parentheses. The parsing contract and the
 missing-file rule are in [CLAUDE.md](../CLAUDE.md) → **Runtime configuration**. Every run
 loads `work/CONFIG.md` at run start; a gated run also gets the values resolved in its
-worklist's `config`. A missing key takes its default.
+worklist's `config`. A missing key takes its default. A writer of a file that exists holds
+`work/.CONFIG.lock` while it writes: `mkdir` it (wait while it exists, remove one older than
+60 s), write, `rmdir` it — `design desk person` does this, and so does an edit in the direct
+session.
 
 - `display_name` (`Design Desk`) — the Desk's title.
 - `repos` — comma-separated `[host/]owner/name` the watch reads (default `none`: no watch);
