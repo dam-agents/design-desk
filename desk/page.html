@@ -272,6 +272,7 @@
     figma: "Working with Figma.",
     agenda: "Writing a short brief for the next call.",
     catalog: "Drawing every state of this element.",
+    map: "Finding this screen in the product and taking its pictures.",
     screens: "Checking the screenshots that were added and writing their captions.",
     slack: "Posting the options to Slack for votes and comments.",
   };
@@ -481,15 +482,15 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function chipsFor(c) {
     const out = [];
+    // A screen or part a designer added, before Design Desk made it.
+    const added = c.status === "building" ? `<span class="chip info">● Being added</span>` : c.status === "dropped" ? `<span class="chip warn">Not added</span>` : "";
     if (c.kind === "digest") out.push(`<span class="chip info">Weekly digest</span>`);
-    else if (c.kind === "screen" || c.kind === "element") {
-      if (c.status === "building") out.push(`<span class="chip info">● Being added</span>`);
-      if (c.status === "dropped") out.push(`<span class="chip warn">Not added</span>`);
-    }
-    if (c.kind === "screen") {
+    else if (c.kind === "screen") {
+      if (added) out.push(added);
       if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
       if (c.path) out.push(`<span class="chip"><code>${esc(c.path)}</code></span>`);
     } else if (c.kind === "element") {
+      if (added) out.push(added);
       if (c.group) out.push(`<span class="chip">${esc(c.group)}</span>`);
       if (c.status === "stale") out.push(`<span class="chip warn">out of date</span>`);
       else if (c.state_count) out.push(`<span class="chip">${plural(c.state_count, "situation", "situations")}</span>`);

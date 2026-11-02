@@ -8,7 +8,7 @@
 #
 # Which items fan out: every change of a watch worklist after the first; in an inbox
 # worklist every expensive item (a request to triage, variants, a prototype, a
-# handoff, a catalog drawing, Figma work) after the first expensive one. Questions, teardowns and expiring
+# handoff, a catalog drawing, a screen for the map, Figma work) after the first expensive one. Questions, teardowns and expiring
 # prototypes are quick and stay in the run.
 # A unit's task text carries the item id and the unit's path and nothing from the
 # item: it becomes the new session's prompt. Titles come from ids alone.

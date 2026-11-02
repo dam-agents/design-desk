@@ -33,7 +33,7 @@ The profile lists the elements worth having under `catalog.elements`
    come from the card's `source` or the profile's `catalog.elements`. A card added with
    **+ Add** has only `wanted` (`part`, `where`, `show`) and maybe a screenshot: find the
    component from them. Unsure → `design desk ask C-<n> <file> --step catalog` with your
-   best guess. Already drawn (the store refuses a second card of one `source`: `409` names
+   best guess, then done with `--outcome asked`. Already drawn (the store refuses a second card of one `source`: `409` names
    it) or not in the code → `status: dropped`, one section saying which element or why,
    then done with `--outcome dropped`. In step 4, `wanted.show` comes first.
 3. **Its dimensions.** `design states <file> --export <Component> --root <clone>` prints the

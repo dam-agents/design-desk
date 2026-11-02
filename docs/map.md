@@ -46,7 +46,7 @@ have) — and maybe their screenshot.
 1. Claim the item. Match `wanted` and the screenshot against the profile's `screens` and
    `capture.routes`, then the product's routes and navigation.
 2. Two candidates, or none you are sure of → `design desk ask C-<n> <file> --step map` with
-   your best guess; their answer queues it again.
+   your best guess, then done with `--outcome asked`; their answer queues it again.
 3. Already mapped (the store refuses a second card of one `path`: `409` names it), or no
    such screen in the product → `status: dropped` and one section saying which screen it is
    or why, with its source.

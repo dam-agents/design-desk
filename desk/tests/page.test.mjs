@@ -31,7 +31,7 @@ window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true } }
-    : path === "/api/cards" ? { cards: [change] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [change, { id: "d1", kind: "digest", title: "This week", status: "new" }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
     : path === "/api/cards/e1" ? { card: { id: "e1", kind: "element", title: "The agent row", status: "building", wanted: { part: "The agent row", where: "", show: "" }, created_by: { email: "lead@example.com", role: "lead" } } }
@@ -133,6 +133,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // The screenshot dialog, on a shipped change.
     const sh = dialog("shots-dialog"), screens = "/api/cards/ch1/screens";
     await desk.click('[data-tab="new"]');
+    assert.equal((await desk.textContent('[data-card="d1"] .meta')).trim(), "Weekly digest", "a digest row shows no status word");
     await desk.click('[data-card="ch1"]');
     const withPicture = async () => {
       await desk.click("[data-add-shots]");
