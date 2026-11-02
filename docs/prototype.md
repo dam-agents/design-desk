@@ -18,7 +18,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    requests count; a closed one's prototype waits for its expiry teardown.
    `create_environment` missing from your tools → comment that the owner must turn on
    Environments, tell the operator, stop.
-   **Ask first** — an item with `ask_first` (the designer ticked it when pressing Build):
+   **Ask first** — an item with `ask_first` (the designer left "Ask me first" ticked when pressing Build):
    list the design decisions the option and its comments leave open (a missing state, copy,
    a small screen…). None → build. Some → one form, `design desk ask C-<n> <file> --step build
    --form` with `{text, questions: [{text, why, options, suggested}]}`: at most 6 questions

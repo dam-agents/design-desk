@@ -201,8 +201,10 @@ test("before a build the agent asks a form; the answer resumes the build with it
   s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] } });
   const { inbox: build } = s.act(card.id, alice, "build", "v2", { askFirst: true });
   assert.equal(build.ask_first, true);
+  assert.equal(inbox(s).open.find((i) => i.id === build.id).ask_first, true, "the inbox file carries it too");
   s.claim(build.id, "run-2"); s.done(build.id, "run-2", "asked");
   assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things.", step: "build", questions: [] }), /1 to 6/);
+  assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "One.", step: "build", questions: [{ text: "Empty list?", options: ["A hint"] }] }), /2 to 4 options/);
   const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things.", step: "build",
     questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Save", "Done"] }] });
   assert.throws(() => s.answerForm(thread.id, alice, [{ choice: "Maybe" }, {}]), /not an option/);

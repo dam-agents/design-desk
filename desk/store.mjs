@@ -134,7 +134,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.ask_first ? { ask_first: true } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -803,7 +803,8 @@ function versioned(variants, before, at) {
 function cleanQuestions(list) {
   if (!Array.isArray(list) || !list.length || list.length > 6) throw bad("questions is a list of 1 to 6");
   return list.map((q) => {
-    const options = Array.isArray(q.options) ? q.options.slice(0, 5).map((o) => clean(String(o), 120, "option")) : [];
+    const options = Array.isArray(q.options) ? q.options.map((o) => clean(String(o), 120, "option")) : [];
+    if (options.length < 2 || options.length > 4) throw bad("each question has 2 to 4 options");
     return { text: clean(q.text, 300, "question"), why: optText(q.why, 300, "why"), options,
       suggested: options.includes(q.suggested) ? q.suggested : null };
   });
