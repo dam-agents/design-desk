@@ -18,6 +18,9 @@ const USAGE = `usage: design desk <command>
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
   agenda <C-n> [--note <text>]             suggest a card for the next call; a designer adds it
+  look <C-n> <look.json|->                 add an earlier look of an element or a screen, drawn from the
+                                           code's history: {at, commit, sheet, thumb, states, made_by,
+                                           links: [{label, url}], note} (a screen: screens instead of sheet)
   report <bug.json|->                      put a UI bug someone reported on the queue as a request
                                            of type bug: {title, problem, goal, steps, screen,
                                            screens: [{asset, caption}], origin: {channel, chat,
@@ -28,7 +31,7 @@ const USAGE = `usage: design desk <command>
   comment <C-n> <text-file|->              add a comment thread as the agent
   ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
                                            their answer re-queues the step (request explore revise
-                                           build handoff figma)
+                                           build handoff figma catalog map)
   decision <decision.json|->               record a decision: {concepts, text, why, source: {label,
                                            url, card}, at}
   decisions [--concept <c>] [--q <words>]  earlier decisions, newest first
@@ -39,9 +42,15 @@ const USAGE = `usage: design desk <command>
                                            mark a poll synced, or close it with its result
   slack-votes <C-n> <votes.json|->         one option's reactions as they are now: {variant,
                                            voters: [{email, slack_id, name, vote}]}
-  relay <C-n> <comment.json|->             a reply under an option in Slack, as a comment, once:
-                                           {variant, name, email, text, slack_ts, url}
+  relay <C-n> <comment.json|->             a reply in Slack, as a comment, once: {variant (none for
+                                           a council thread), name, email, text, slack_ts, url}
   find-poll <ts>                           which card, poll and option a Slack message belongs to
+  council-open <C-n> <council.json|->      record a Slack thread whose asks change the request's options:
+                                           {chat, thread_ts, url, channel}; reopens a closed one
+  council-update <C-n> <S-n> [--synced <iso>] [--seen <ts>] [--result <text>]
+                                           mark a council read up to a Slack ts, or close it with its result
+  find-council <thread ts>                 which card and council a Slack thread belongs to; with no
+                                           council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
   enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
 `;
@@ -117,6 +126,11 @@ export async function main(_cmd, argv) {
       return out(await call("POST", "/agent/requests", doc));
     }
     case "agenda": return out(await call("POST", `/agent/cards/${pos[0]}/agenda`, { note: typeof f.note === "string" ? f.note : "" }));
+    case "look": {
+      if (!pos[0] || !pos[1]) fail("usage: design desk look <C-n> <look.json|->");
+      let doc; try { doc = JSON.parse(readArg(pos[1])); } catch (e) { fail(`not JSON: ${e.message}`); }
+      return out(await call("POST", `/agent/cards/${pos[0]}/looks`, doc));
+    }
     case "report": {
       if (!pos[0]) fail("usage: design desk report <bug.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }
@@ -148,6 +162,9 @@ export async function main(_cmd, argv) {
     case "slack-votes": return out(await call("POST", `/agent/cards/${pos[0]}/slack-votes`, JSON.parse(readArg(pos[1]))));
     case "relay": return out(await call("POST", `/agent/cards/${pos[0]}/relay`, JSON.parse(readArg(pos[1]))));
     case "find-poll": return out(await call("GET", `/agent/polls?ts=${encodeURIComponent(pos[0] || "")}`));
+    case "council-open": return out(await call("POST", `/agent/cards/${pos[0]}/councils`, JSON.parse(readArg(pos[1]))));
+    case "council-update": return out(await call("POST", `/agent/cards/${pos[0]}/councils/${pos[1]}`, { synced: typeof f.synced === "string" ? f.synced : null, seen: typeof f.seen === "string" ? f.seen : null, result: typeof f.result === "string" ? f.result : null }));
+    case "find-council": return out(await call("GET", `/agent/councils?ts=${encodeURIComponent(pos[0] || "")}`));
     case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));

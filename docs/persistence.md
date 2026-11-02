@@ -77,9 +77,14 @@ All equal → report "up to date".
 
 **Migration** (`from` = adopted, `to` = checked-out):
 
-1. Apply the `CHANGELOG.md` **Upgrade** blocks of every version in `(from, to]`, oldest
-   first. Steps are idempotent (check before create), so re-running a partial attempt is
-   safe; an operator-only step is surfaced, never guessed at.
+1. Read the `CHANGELOG.md` **Upgrade** blocks of every version in `(from, to]` before you
+   run any step. A newer block can replace an older block's steps (a corrected order): run
+   the newer steps in their place. Then apply the blocks oldest first, with one exception:
+   when the crossed blocks restart the Desk server and republish the Desk page, restart the
+   server once before any republish, then republish the page once, whichever blocks name
+   them ([desk.md](desk.md) → **Publishing the page**). Steps are idempotent
+   (check before create), so re-running a partial attempt is safe; an operator-only step is
+   surfaced, never guessed at.
 2. **Offer every optional feature the crossed versions add.** An **Upgrade** block that
    introduces an off-by-default feature names the `work/CONFIG.md` key that enables it
    and its one-line effect (self-modification.md §12); upgrading never adopts it by

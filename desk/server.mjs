@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES } from "./store.mjs";
+import { Store, DeskError, can, ROLES, abilities, rosterOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 
 const PORT = Number(process.env.DESK_PORT || 5555);
@@ -55,6 +55,8 @@ function roleOf(caller) {
   return ROLES.includes(role) ? role : "guest";
 }
 
+const roster = () => rosterOf(cfgTable("Desk people"));
+
 // The roster role of a person met in Slack, by the email the workspace discloses.
 function slackRole(email) {
   if (!email) return "slack";
@@ -76,6 +78,8 @@ function settings() {
     // Who people ask for access or help: the first lead on the roster, else the owner.
     contact: lead?.email || "the Desk's owner",
     figma: cfg("figma", "disabled") !== "disabled",
+    // A screen card needs the agent's own copy of the product for its pictures (docs/map.md).
+    screens: cfg("screens", "disabled") === "enabled",
     slack: cfg("slack_polls", "disabled") === "enabled",
     // Where an approved design goes, by request type, so the page can say it before approving.
     handoff: {
@@ -89,7 +93,9 @@ function settings() {
 // The words a person reads when their role lacks an action.
 const VERBS = { ack: "mark changes as seen", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
-  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here" };
+  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product" };
+
+const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
 function isAgent(req) {
   const t = Buffer.from(String(req.headers["x-desk-agent-token"] || "")), want = agentToken();
@@ -137,9 +143,10 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    const actions = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share"];
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: Object.fromEntries(actions.map((a) => [a, can(who.deskRole, a, s.prototypeRoles)])), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, handoff: s.handoff });
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, screens: s.screens, handoff: s.handoff });
   }
+  // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
+  if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])) });
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
@@ -150,7 +157,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && p[3] === "messages") || p[1] === "requests" || (p[1] === "cards" && ["actions", "screens"].includes(p[3]))) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && p[3] === "messages") || p[1] === "requests" || p[1] === "product" || (p[1] === "cards" && ["actions", "screens"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note, typeof b.variant === "string" ? b.variant : null), s, who)); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "suggestion") return send(res, 200, store.dismissSuggestion(p[2], actor));
@@ -178,6 +185,15 @@ async function viewerRoute(req, res, url, who) {
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
     const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "" }));
     return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma }), s, who));
+  }
+  if (m === "POST" && p[1] === "product") {
+    need("add");
+    if (b.kind === "screen" && !s.screens) throw new DeskError(400, `Screens need Design Desk's own copy of the product, which is not turned on yet. Ask ${s.contact}.`);
+    const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
+    for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
+    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "", source: "person" }));
+    const { kind, part, where, show } = b;
+    return send(res, 201, withPing(store.addToProduct(actor, { kind, part, where, show, screens }), s, who));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "screens") {
     need("screens");
@@ -215,6 +231,7 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "decisions") return send(res, 200, { decisions: store.listDecisions({ concept: url.searchParams.get("concept") || "", q: url.searchParams.get("q") || "" }) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
   if (m === "GET" && p[1] === "polls") return send(res, 200, { poll: store.findPoll(String(url.searchParams.get("ts") || "")) });
+  if (m === "GET" && p[1] === "councils") return send(res, 200, { council: store.findCouncil(String(url.searchParams.get("ts") || "")) });
   if (m === "GET" && p[1] === "findings") return send(res, 200, { finding: store.findFinding(String(url.searchParams.get("ref") || "")) });
   const b = m === "GET" ? {} : await body(req);
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
@@ -222,6 +239,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
   // The agent suggests a card for the next call; a designer puts it on (docs/desk.md → The next call).
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.suggestForCall(p[2], b.note));
+  // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
+  if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
   if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve) }));
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));
@@ -229,6 +248,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "decisions") return send(res, 201, store.addDecision(b));
   if (m === "POST" && p[1] === "cards" && p[3] === "polls" && !p[4]) return send(res, 201, store.openPoll(p[2], b));
   if (m === "POST" && p[1] === "cards" && p[3] === "polls" && p[4]) return send(res, 200, store.updatePoll(p[2], p[4], b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "councils" && !p[4]) return send(res, 201, store.openCouncil(p[2], b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "councils" && p[4]) return send(res, 200, store.updateCouncil(p[2], p[4], b));
   // A Slack voter's role is the roster's for their email, never one the agent names.
   if (m === "POST" && p[1] === "cards" && p[3] === "slack-votes") {
     const voters = (Array.isArray(b.voters) ? b.voters : []).map((v) => ({ ...v, key: v.email ? String(v.email).toLowerCase() : `slack:${v.slack_id || v.key}`, role: slackRole(v.email) }));

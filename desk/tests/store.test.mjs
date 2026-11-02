@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, abilities, rosterOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -20,6 +20,20 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "approve"), true);
   assert.equal(can("developer", "queue"), false);
   assert.equal(can("designer", "queue"), true);
+  assert.equal(can("developer", "add"), false);
+  assert.equal(can("lead", "add"), true);
+});
+
+test("the roster: the first row of an email counts, an unknown role is a guest's", () => {
+  assert.deepEqual(rosterOf([{ email: " Alice@Example.com ", role: "Designer" }, { email: "alice@example.com", role: "lead" }, { email: "dave@example.com", role: "ops" }, { email: "", role: "pm" }]),
+    [{ email: "alice@example.com", role: "designer" }, { email: "dave@example.com", role: "guest" }]);
+});
+
+test("abilities: every action, as can() answers it", () => {
+  assert.deepEqual(Object.keys(abilities("pm", ["designer"])), ACTIONS);
+  assert.equal(abilities("pm", ["designer"]).build, false);
+  assert.equal(abilities("pm", ["pm"]).build, true);
+  assert.equal(abilities("guest").vote, false);
 });
 
 test("a question goes to the inbox and the answer takes it out", () => {
@@ -221,6 +235,28 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.updatePoll(card.id, poll.id, { result: "One button: 1 👍" }).poll.state, "closed");
 });
 
+test("a council remembers its Slack thread, reopens once closed, and relays replies to the whole request", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  s.upsertCard({ id: card.id, origin: { channel: "slack", chat: "C0123", thread_ts: "2.0", message_ts: "2.0", reporter: "Jana" } });
+  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: null, state: null });
+  const { council } = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" });
+  assert.equal(council.id, "S-1");
+  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: "S-1", state: "open" });
+  const other = s.createRequest(alice, { problem: "Another." }).card;
+  assert.equal(s.openCouncil(other.id, { chat: "C0123", thread_ts: "2.0" }).duplicate, true);
+  s.updateCouncil(card.id, "S-1", { synced: "2026-11-02T10:00:00Z", seen: "2.5" });
+  assert.equal(s.getCard(card.id).councils[0].seen, "2.5");
+  assert.equal(s.updateCouncil(card.id, "S-1", { result: "Agreed on One button v2" }).council.state, "closed");
+  const reopened = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" }).council;
+  assert.deepEqual([reopened.state, reopened.seen, reopened.result], ["open", "2.5", null]);
+  assert.equal(s.getCard(card.id).councils.length, 1);
+  const { thread } = s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" });
+  assert.equal(thread.anchor, null);
+  assert.equal(s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" }).duplicate, true);
+  assert.throws(() => s.relayComment(card.id, { variant: "v9", name: "Jana", text: "x", slack_ts: "2.7" }), /no option/);
+});
+
 test("the next call: the agent suggests, a designer adds it with the option to present", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
@@ -255,4 +291,136 @@ test("the next call: a designer's Not now holds, a closed request takes no sugge
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "closing a request drops its suggestion");
   s.suggestForCall(other.id, "Again");
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "a closed request takes no suggestion");
+});
+
+test("an element's redraw keeps its earlier look with the change that made the new one", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(Date.UTC(2026, 9, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const sheet = (html) => s.addAsset({ kind: "report", name: "sheet", contentType: "text/html", data: html, encoding: "utf8" }).asset.id;
+  const source = { file: "src/AgentRow.tsx", export: "AgentRow" };
+  const a1 = sheet("<p>one</p>");
+  const el = s.upsertCard({ kind: "element", title: "Agent row", source: { ...source, commit: "aaa" }, sheet: a1, status: "current", states: [{ name: "Running" }] }).card;
+  assert.deepEqual(el.history || [], []);
+  // The same picture again is no new version.
+  const same = sheet("<p>one</p>");
+  s.upsertCard({ id: el.id, sheet: same });
+  assert.deepEqual(s.getCard(el.id).history || [], []);
+  const ch = s.upsertCard({ kind: "change", title: "Spend in the row", source: { repo: "acme/widgets", pr: 7, merged_at: new Date(Date.UTC(2026, 9, 1) + (t + 0.5) * 3600e3).toISOString() }, elements: [el.id] }).card;
+  const open = s.upsertCard({ kind: "change", title: "Not shipped", source: { repo: "acme/widgets", pr: 8 }, elements: [el.id] }).card;
+  const a2 = sheet("<p>two</p>");
+  const now = s.upsertCard({ id: el.id, sheet: a2, source: { ...source, commit: "bbb" } }).card;
+  assert.equal(now.history.length, 1);
+  assert.equal(now.history[0].sheet, same);
+  assert.equal(now.history[0].commit, "aaa");
+  assert.deepEqual(now.history[0].states, ["Running"]);
+  assert.deepEqual(now.made_by, [ch.id]);
+  assert.ok(!now.made_by.includes(open.id));
+  assert.equal(s.listCards({ kind: "element" })[0].looks, 1);
+});
+
+test("earlier looks drawn from the code's history go in by date; the same commit replaces", () => {
+  const s = fresh();
+  const sheet = (html) => s.addAsset({ kind: "report", name: "sheet", contentType: "text/html", data: html, encoding: "utf8" }).asset.id;
+  const el = s.upsertCard({ kind: "element", title: "Picker", source: { file: "src/Picker.tsx", export: "Picker" }, sheet: sheet("<p>now</p>") }).card;
+  const link = { label: "PR #3", url: "https://github.com/acme/widgets/pull/3" };
+  s.addLook(el.id, { at: "2026-03-01T00:00:00Z", commit: "c3", sheet: sheet("<p>3</p>"), links: [link] });
+  s.addLook(el.id, { at: "2026-01-01T00:00:00Z", commit: "c1", sheet: sheet("<p>1</p>"), states: ["Empty"] });
+  const again = sheet("<p>3 again</p>");
+  s.addLook(el.id, { at: "2026-03-01T00:00:00Z", commit: "c3", sheet: again, links: [link] });
+  // An offset date (git log %cI) is stored in UTC and placed by its instant, not its text.
+  s.addLook(el.id, { at: "2026-03-01T01:00:00+05:00", commit: "c2", sheet: sheet("<p>2</p>") });
+  const h = s.getCard(el.id).history;
+  assert.deepEqual(h.map((x) => x.commit), ["c3", "c2", "c1"]);
+  assert.equal(h[1].at, "2026-02-28T20:00:00Z");
+  assert.equal(h[0].sheet, again);
+  assert.deepEqual(h[0].links, [link]);
+  assert.equal(h[0].later, true);
+  assert.throws(() => s.addLook(el.id, { at: "2999-01-01T00:00:00Z", sheet: again }), /newer than the current drawing/);
+  assert.throws(() => s.addLook(el.id, { at: "2026-02-01T00:00:00Z", sheet: "A-999" }), /no asset/);
+  assert.throws(() => s.addLook(el.id, { at: "2026-02-01T00:00:00Z", sheet: again, links: [{ label: "x", url: "javascript:alert(1)" }] }), /http/);
+  const change = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 9 } }).card;
+  assert.throws(() => s.addLook(change.id, { at: "2026-02-01T00:00:00Z", sheet: again }), /element or a screen/);
+});
+
+test("a screen keeps its earlier pictures; a designer asks for an element's history", () => {
+  const s = fresh();
+  const png = () => s.addAsset({ kind: "screen", name: "shot", contentType: "image/png", data: Buffer.from(String(Math.random())).toString("base64") }).asset.id;
+  const first = png();
+  const sc = s.upsertCard({ kind: "screen", title: "Agents list", path: "/agents", screens: [{ asset: first, caption: "light" }] }).card;
+  const ch = s.upsertCard({ kind: "change", title: "Bigger rows", source: { repo: "acme/widgets", pr: 4, merged_at: "2999-01-01T00:00:00Z" } }).card;
+  const next = s.upsertCard({ kind: "screen", path: "/agents", title: "Agents list", screens: [{ asset: png(), caption: "light" }], changes: [ch.id] }).card;
+  assert.equal(next.id, sc.id);
+  assert.equal(next.history[0].screens[0].asset, first);
+  const el = s.upsertCard({ kind: "element", title: "Agent row", source: { file: "src/AgentRow.tsx", export: "AgentRow" } }).card;
+  assert.throws(() => s.act(el.id, alice, "approve"), /redrawn or have its history drawn/);
+  const { inbox: item } = s.act(el.id, alice, "history", "the last 3 changes");
+  assert.equal(item.kind, "catalog");
+  assert.equal(inbox(s).open.find((i) => i.id === item.id).scope, "history");
+  assert.equal(s.getCard(el.id).waiting[0].scope, "history");
+  assert.throws(() => s.act(el.id, alice, "refresh"), /already working/);
+  assert.equal(can("developer", "history"), false);
+  assert.equal(can("designer", "history"), true);
+});
+
+test("needs a designer: the agent judges a change, a request's comes from where it stands", () => {
+  const s = fresh();
+  const att = (id) => s.listCards().find((c) => c.id === id).attention;
+  const { card: change } = s.upsertCard({ kind: "change", title: "A new settings page", source: { repo: "acme/widgets", pr: 9 } });
+  assert.equal(att(change.id), null, "a change nobody judged is not in the filter");
+  assert.throws(() => s.upsertCard({ id: change.id, attention: { level: "urgent", reasons: ["x"] } }), (e) => e.status === 400);
+  assert.throws(() => s.upsertCard({ id: change.id, attention: { level: "designer", reasons: [] } }), (e) => e.status === 400, "a judgement says why");
+  s.upsertCard({ id: change.id, attention: { level: "designer", reasons: ["a new screen"] } });
+  assert.deepEqual(att(change.id), { level: "designer", reasons: ["a new screen"] });
+  s.upsertCard({ id: change.id, attention: { level: "fyi", reasons: ["follows the list pattern"] } });
+  assert.equal(att(change.id).level, "fyi");
+
+  const { card: req, inbox: triage } = s.createRequest(alice, { problem: "The empty list shouts." });
+  assert.throws(() => s.upsertCard({ id: req.id, attention: { level: "designer", reasons: ["x"] } }), (e) => e.status === 400, "a request's is never written");
+  assert.equal(att(req.id), null, "not checked yet: Design Desk's turn");
+  s.claim(triage.id, "s1");
+  s.upsertCard({ id: req.id, triage: { verdict: "design", reasons: ["Only the look."] } });
+  assert.equal(att(req.id), null, "still Design Desk's turn until its triage is done");
+  s.done(triage.id, "s1", "triaged");
+  assert.deepEqual(att(req.id).reasons, ["Checked: draw options or close it"]);
+  s.act(req.id, alice, "explore");
+  assert.equal(att(req.id), null, "while Design Desk draws, it waits for nobody");
+  s.suggestForCall(req.id, "A decision is due");
+  assert.deepEqual(att(req.id).reasons, ["Suggested for the next call"], "a suggestion waits for a designer even while Design Desk works");
+  s.act(req.id, alice, "close");
+  assert.equal(att(req.id), null, "a closed request waits for nobody");
+
+  // A suggestion keeps a handed-off request in the filter, and every read agrees.
+  const { card: shipped } = s.createRequest(alice, { problem: "The header is too tall." });
+  s.upsertCard({ id: shipped.id, status: "handed-off" });
+  assert.equal(att(shipped.id), null);
+  s.suggestForCall(shipped.id, "Worth showing");
+  assert.deepEqual(att(shipped.id), { level: "designer", reasons: ["Suggested for the next call"] });
+  assert.deepEqual(s.getCard(shipped.id).attention, att(shipped.id), "the card read and the list read agree");
+  s.suggestForCall(change.id, "A new pattern");
+  assert.deepEqual(s.getCard(change.id).attention, { level: "designer", reasons: ["Suggested for the next call"] }, "a suggestion outranks the agent's fyi");
+});
+
+test("a screen or part a designer adds goes to the agent, and never becomes a second copy", () => {
+  const s = fresh();
+  const shot = s.addAsset({ kind: "screen", name: "x", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
+  const el = s.addToProduct(alice, { kind: "element", part: "The agent row in the agents list. With a long name.", show: "empty, an error", screens: [{ asset: shot, source: "person" }] });
+  assert.equal(el.inbox.kind, "catalog");
+  assert.deepEqual([el.card.status, el.card.title, el.card.wanted.show, el.card.created_by.email], ["building", "The agent row in the agents list.", "empty, an error", alice.email]);
+  const sc = s.addToProduct(alice, { kind: "screen", part: "Billing settings", where: "/settings/billing" });
+  assert.equal(sc.inbox.kind, "map");
+  assert.throws(() => s.addToProduct(alice, { kind: "change", part: "x" }), /screen or element/);
+  assert.throws(() => s.addToProduct(alice, { kind: "screen", part: "  " }), /part is empty/);
+  // The agent's question resumes the step; the card is filled in by its id.
+  const { thread } = s.openThread(sc.card.id, { agent: true }, { kind: "asks", text: "The billing page or the invoices?", step: "map" });
+  assert.equal(s.reply(thread.id, alice, "The billing page.").inbox.kind, "map");
+  s.upsertCard({ id: sc.card.id, path: "/settings/billing", status: "current" });
+  // The same address again is that card, with no new work.
+  const again = s.addToProduct(bob, { kind: "screen", part: "Billing", where: "/settings/billing" });
+  assert.deepEqual([again.existing, again.card.id, again.inbox], [true, sc.card.id, null]);
+  // An element already drawn: the added card cannot take its source; it is dropped instead.
+  s.upsertCard({ kind: "element", title: "Agent row", source: { file: "web/agent-row.tsx", export: "AgentRow" }, status: "current" });
+  assert.throws(() => s.upsertCard({ id: el.card.id, source: { file: "web/agent-row.tsx", export: "AgentRow" } }), (e) => e.status === 409);
+  s.upsertCard({ kind: "screen", title: "Invoices", path: "/invoices" });
+  assert.throws(() => s.upsertCard({ id: sc.card.id, path: "/invoices" }), (e) => e.status === 409);
+  assert.equal(s.upsertCard({ id: el.card.id, status: "dropped", sections: [{ title: "Already here", body: "It is the Agent row." }] }).card.status, "dropped");
 });

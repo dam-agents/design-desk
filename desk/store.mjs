@@ -12,6 +12,8 @@ export const LIMITS = {
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
   assetBytes: 720 * 1024,
   claimTtlMin: 120,
+  // Earlier looks of one element or screen kept on its card; the oldest go first.
+  looks: 30,
   // The whole store is one file rewritten on every change; past this people's writes
   // are refused until the operator archives old cards.
   dbBytes: 50 * 1024 * 1024,
@@ -28,7 +30,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": return member;
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": return shaper;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
@@ -36,12 +38,27 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
 
 // Where a request the agent files came from (docs/desk.md → Where a card came from).
 export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
+
+// Every action the page asks about: /api/me for its caller, /api/people for each role.
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add"];
+export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
+
+// The roster as the server reads a role (`## Desk people` rows): the first row of an email
+// counts, and an unknown role is a guest's.
+export function rosterOf(rows) {
+  const seen = new Set();
+  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: String(r.role || "").trim().toLowerCase() }))
+    .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
+    .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
+}
+
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
 export const REQUEST_STATES = ["triage", "variants", "feedback", "prototype", "testing", "spec", "handed-off", "declined"];
 export const CHANGE_STATES = ["new", "archived"];
-// A catalog element: one real UI part drawn in every state it can be in.
-export const ELEMENT_STATES = ["current", "stale", "building"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "agenda", "figma", "screens", "slack"];
+// A catalog element: one real UI part drawn in every state it can be in. A screen card
+// shares the states; `dropped` is one a person added that the agent could not make.
+export const ELEMENT_STATES = ["current", "stale", "building", "dropped"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
@@ -49,7 +66,7 @@ const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "tes
 // the agent asks (`asks`) when a step cannot go on without a person's answer.
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks"];
 // The step an agent's question blocks, which a person's answer resumes.
-const ASK_STEPS = ["request", "explore", "revise", "build", "handoff", "figma"];
+const ASK_STEPS = ["request", "explore", "revise", "build", "handoff", "figma", "catalog", "map"];
 const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
 
 export class DeskError extends Error {
@@ -82,7 +99,7 @@ function clean(s, max, name) {
 const optText = (s, max, name) => (s === undefined || s === null || s === "" ? "" : clean(s, max, name));
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
 }
 
 export class Store {
@@ -134,7 +151,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.scope ? { scope: i.scope } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -157,7 +174,7 @@ export class Store {
         acked: viewer ? Boolean(c.acks?.[viewer]) : false,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
-        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length,
+        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
@@ -165,19 +182,43 @@ export class Store {
         // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
         origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
+        attention: this.attentionOf(c),
       }));
+  }
+
+  // Whether a card waits for a designer, and why (docs/desk.md → Needs a designer). A
+  // change card carries the agent's judgement; a request's comes from where it stands;
+  // a suggestion for the next call waits for a designer on either, whatever its status.
+  // Null: not judged.
+  attentionOf(c) {
+    if (c.kind !== "change" && c.kind !== "request") return null;
+    const suggested = c.call_suggestion ? ["Suggested for the next call"] : [];
+    if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
+      return suggested.length ? { level: "designer", reasons: suggested } : null;
+    const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
+    if (c.kind === "request") {
+      const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
+      const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
+      if (asks) reasons.push("Design Desk is waiting for an answer");
+      else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options or close it");
+      else if (!busy && c.status === "feedback") reasons.push("Options are ready: pick one or ask for changes");
+      else if (!busy && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
+    }
+    reasons.push(...suggested);
+    if (reasons.length) return { level: "designer", reasons };
+    return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
   }
 
   getCard(id) {
     const c = this.card(id);
-    return { ...c, threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    return { ...c, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
   waitingFor(cardId) {
     return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done")
       .sort((a, b) => a.created.localeCompare(b.created))
-      .map((i) => ({ kind: i.kind, state: i.state, created: i.created }));
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}) }));
   }
 
   getAsset(id) {
@@ -295,13 +336,37 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // A designer asks for a screen or an element Product does not have yet, in their own
+  // words; the agent finds it in the product and makes the card (docs/map.md, catalog.md).
+  // A screen already mapped at the address given is that card, and no new work.
+  addToProduct(who, { kind, part, where = "", show = "", screens = [] }) {
+    if (kind !== "screen" && kind !== "element") throw bad("kind must be screen or element");
+    const wanted = { part: clean(part, 500, "part"), where: optText(where, 500, "where"), show: optText(show, 2000, "show") };
+    if (kind === "screen" && /^\/\S*$/.test(wanted.where)) {
+      const known = Object.values(this.db.cards).find((x) => x.kind === "screen" && x.path === wanted.where && x.status !== "dropped");
+      if (known) return { card: known, existing: true, inbox: null };
+    }
+    const c = {
+      kind, status: "building", created: this.clock(), updated: this.clock(), created_by: person(who),
+      title: clean(titleOf(null, wanted.part), LIMITS.title, "title"), wanted,
+      summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" },
+    };
+    c.id = this.next("card", "C");
+    this.db.cards[c.id] = c;
+    const item = this.enqueue(kind === "screen" ? "map" : "catalog", c.id, null, who);
+    this.save();
+    return { card: c, inbox: item };
+  }
+
   // A state change a person asks for on a request card; the agent does the work.
   act(cardId, who, action, note = "") {
     const c = this.card(cardId);
     if (c.kind === "element") {
-      if (action !== "refresh") throw bad("a catalog element can only be redrawn");
+      // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
+      if (action !== "refresh" && action !== "history") throw bad("a catalog element can only be redrawn or have its history drawn");
       if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad(BUSY);
       const item = this.enqueue("catalog", cardId, null, who, optText(note, 1000, "note"));
+      if (action === "history") item.scope = "history";
       this.save();
       return { card: c, inbox: item };
     }
@@ -485,7 +550,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen or digest");
@@ -524,6 +589,10 @@ export class Store {
       else if (k === "concepts") { if (!Array.isArray(fields.concepts)) throw bad("concepts must be a list"); next.concepts = fields.concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()); }
       else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
+      else if (k === "attention") {
+        if (next.kind !== "change") throw bad("attention is judged on change cards; a request's comes from where it stands");
+        next.attention = fields.attention === null ? null : cleanAttention(fields.attention);
+      }
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
       else if (k === "group") next.group = clean(fields.group, 60, "group");
@@ -538,11 +607,86 @@ export class Store {
       else next[k] = cleanLinks(k, fields[k]);
     }
     if (!next.title) throw bad("a card needs a title");
+    // One card per screen and per element: a card a person added that turns out to be one
+    // already on the Desk is dropped with a pointer to it, never filled in as a second copy.
+    const twin = next.status !== "dropped" && Object.values(this.db.cards).find((x) => x.id !== next.id && x.kind === next.kind && x.status !== "dropped"
+      && ((next.kind === "screen" && next.path && x.path === next.path)
+        || (next.kind === "element" && next.source?.file && x.source?.file === next.source.file && x.source?.export === next.source.export)));
+    if (twin) throw new DeskError(409, `${twin.id} is already this ${next.kind}`);
     if (!c) { next.id = this.next("card", "C"); }
+    this.keepLook(c, next);
     next.updated = this.clock();
     this.db.cards[next.id] = next;
     this.save();
     return { card: next };
+  }
+
+  // ---------- how an element or a screen looked before ----------
+
+  // A redraw that replaces an element's sheet or a screen's pictures keeps the look it
+  // replaces, so people can step back through its versions. Every look knows the shipped
+  // changes that made it (`made_by`); a redraw that looks the same byte for byte is no
+  // new version.
+  keepLook(c, next) {
+    if (next.kind !== "element" && next.kind !== "screen") return;
+    const pictures = (x) => (x.kind === "element" ? (x.sheet ? [x.sheet] : []) : (x.screens || []).map((s) => s.asset));
+    const before = c ? pictures(c) : [], now = pictures(next);
+    if (!now.length || (now.length === before.length && now.every((id, i) => this.sameAsset(id, before[i])))) return;
+    next.drawn = this.clock();
+    if (!before.length) { next.made_by = []; return; }
+    const at = c.drawn || c.updated;
+    next.made_by = this.changesBetween(next, at, next.drawn);
+    const look = c.kind === "element"
+      ? { sheet: c.sheet, thumb: c.screens?.[0]?.asset || null, states: (c.states || []).map((x) => x.name) }
+      : { screens: c.screens };
+    next.history = byDate([{ ...look, at, commit: c.source?.commit || null, made_by: c.made_by || [], links: [], note: "" }, ...(c.history || [])]);
+  }
+
+  sameAsset(a, b) {
+    if (a === b) return true;
+    const x = own(this.db.assets, a), y = own(this.db.assets, b);
+    if (!x || !y || x.bytes !== y.bytes) return false;
+    try { return readFileSync(join(this.assetDir, x.file)).equals(readFileSync(join(this.assetDir, y.file))); } catch { return false; }
+  }
+
+  // The shipped changes that touched an element or a screen in a span of time, oldest first.
+  changesBetween(card, from, to) {
+    return Object.values(this.db.cards)
+      .filter((x) => x.kind === "change" && !(x.source?.pr && !x.source?.merged_at) && ((x.elements || []).includes(card.id) || (card.changes || []).includes(x.id)))
+      .map((x) => ({ id: x.id, at: x.source?.merged_at || x.created }))
+      .filter((x) => instant(x.at) > instant(from) && instant(x.at) <= instant(to))
+      .sort((a, b) => instant(a.at) - instant(b.at))
+      .map((x) => x.id);
+  }
+
+  // An earlier look the agent drew later from the code's history (an element at the merge
+  // of an older change), put in its place by date; the same commit drawn again replaces
+  // its look. `made_by` and `links` name the change that made it look like this.
+  addLook(cardId, look) {
+    const c = this.card(cardId);
+    if (c.kind !== "element" && c.kind !== "screen") throw bad("only an element or a screen has earlier looks");
+    if (typeof look !== "object" || !look) throw bad("a look must be an object");
+    const t = Date.parse(clean(String(look.at || ""), 40, "at"));
+    if (Number.isNaN(t)) throw bad("at must be a date");
+    if (t >= instant(c.drawn || c.updated)) throw bad("a look newer than the current drawing is the drawing: upsert it");
+    const at = new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const ref = (id, name) => { if (!own(this.db.assets, id)) throw bad(`${name}: no asset ${id}`); return id; };
+    const pictures = c.kind === "element"
+      ? { sheet: ref(look.sheet, "sheet"), thumb: look.thumb == null ? null : ref(look.thumb, "thumb"), states: look.states == null ? [] : cleanStates(look.states.map((x) => (typeof x === "string" ? { name: x } : x))).map((x) => x.name) }
+      : { screens: cleanRefs(look.screens, this.db.assets, "screens") };
+    if (c.kind === "screen" && !pictures.screens.length) throw bad("a screen's look needs its pictures");
+    if (look.made_by != null && !Array.isArray(look.made_by)) throw bad("made_by must be a list");
+    const made = (look.made_by || []).slice(0, 20).map((id) => this.card(String(id))).filter((x) => x.kind === "change").map((x) => x.id);
+    const links = Array.isArray(look.links) ? look.links.slice(0, 10).map((l) => {
+      if (!/^https?:\/\//i.test(String(l?.url || ""))) throw bad("links must be http(s)");
+      return { label: clean(String(l.label || ""), 120, "link label"), url: String(l.url).slice(0, 500) };
+    }) : [];
+    const commit = optText(look.commit, 64, "commit") || null;
+    const entry = { ...pictures, at, commit, made_by: made, links, note: optText(look.note, 300, "note"), drawn: this.clock(), later: true };
+    c.history = byDate([entry, ...(c.history || []).filter((x) => !commit || x.commit !== commit)]);
+    c.updated = this.clock();
+    this.save();
+    return { card: c, look: entry };
   }
 
   // ---------- votes in Slack ----------
@@ -578,6 +722,51 @@ export class Store {
     return { poll };
   }
 
+  // ---------- councils in Slack ----------
+
+  // People discuss a request in a Slack thread and ask for changes there; the agent answers
+  // each ask with a new option or version. The council remembers the thread, how far the
+  // agent has read it (`seen`, a Slack ts) and when it last looked.
+  openCouncil(cardId, { chat, thread_ts, url = null, channel = null }) {
+    const c = this.card(cardId);
+    const ts = clean(String(thread_ts || ""), 40, "thread_ts");
+    const held = this.findCouncil(ts);
+    if (held && held.state === "open") return { council: this.card(held.card).councils.find((x) => x.id === held.council), duplicate: true };
+    // A reopen starts its idle clock again and keeps how far the thread was read.
+    const was = (c.councils || []).find((x) => x.thread_ts === ts);
+    if (was) { Object.assign(was, { state: "open", opened: this.clock(), synced: null, closed: null, result: null }); c.updated = this.clock(); this.save(); return { council: was }; }
+    const council = {
+      id: this.next("council", "S"), state: "open", opened: this.clock(), synced: null, seen: null,
+      chat: clean(String(chat || ""), 80, "chat"), thread_ts: ts,
+      channel: optText(channel, 80, "channel"), url: /^https:\/\//.test(String(url || "")) ? String(url).slice(0, 300) : null,
+    };
+    c.councils = [...(c.councils || []), council];
+    c.updated = this.clock();
+    this.save();
+    return { council };
+  }
+
+  updateCouncil(cardId, councilId, { synced = null, seen = null, result = null } = {}) {
+    const c = this.card(cardId);
+    const council = (c.councils || []).find((x) => x.id === councilId);
+    if (!council) throw missing(`no council ${councilId} on ${cardId}`);
+    if (synced) council.synced = clean(String(synced), 40, "synced");
+    if (seen) council.seen = clean(String(seen), 40, "seen");
+    if (result !== null) { council.state = "closed"; council.closed = this.clock(); council.result = clean(String(result), 600, "result"); }
+    c.updated = this.clock();
+    this.save();
+    return { council };
+  }
+
+  // The council of a Slack thread; without one, the request the thread filed (a bug
+  // report, say), so a first ask there lands on that card instead of a second one.
+  findCouncil(ts) {
+    for (const c of Object.values(this.db.cards)) for (const x of c.councils || [])
+      if (x.thread_ts === ts) return { card: c.id, council: x.id, state: x.state };
+    const c = Object.values(this.db.cards).find((x) => x.kind === "request" && x.origin?.thread_ts === ts);
+    return c ? { card: c.id, council: null, state: null } : null;
+  }
+
   // The reactions on one option's post, as they are now. A person's own vote on the Desk
   // wins over their reaction; a reaction taken back takes the vote away.
   slackVotes(cardId, variant, voters) {
@@ -598,14 +787,15 @@ export class Store {
     return { votes: c.votes[variant] };
   }
 
-  // A reply someone wrote under an option in Slack becomes a comment on that option, once.
-  relayComment(cardId, { variant, name, email = null, role = null, text, slack_ts, url = null }) {
+  // A reply someone wrote in Slack becomes a comment once: on the option it was under, or
+  // on the whole request when it came from a council thread.
+  relayComment(cardId, { variant = null, name, email = null, role = null, text, slack_ts, url = null }) {
     const c = this.card(cardId);
-    if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
+    if (variant && !(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
     const ts = clean(String(slack_ts || ""), 40, "slack_ts");
     const seen = (c.threads || []).map((t) => this.db.threads[t]).find((t) => t?.slack_ts === ts);
     if (seen) return { thread: seen, duplicate: true };
-    const { thread } = this.openThread(cardId, { via: "slack", name, email, role: role || "slack" }, { kind: "comment", text, anchor: { variant, label: "the whole option" } });
+    const { thread } = this.openThread(cardId, { via: "slack", name, email, role: role || "slack" }, { kind: "comment", text, anchor: variant ? { variant, label: "the whole option" } : null });
     thread.slack_ts = ts;
     if (/^https:\/\//.test(String(url || ""))) thread.slack_url = String(url).slice(0, 300);
     this.save();
@@ -746,6 +936,11 @@ function cleanRefs(list, assets, name) {
   });
 }
 
+// Dates are compared as instants: an agent's date can carry an offset (`git log %cI`).
+const instant = (iso) => Date.parse(iso) || 0;
+// Earlier looks, newest first; past the limit the oldest go.
+const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).slice(0, LIMITS.looks);
+
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.
 function versioned(variants, before, at) {
@@ -814,6 +1009,14 @@ function cleanTriage(t) {
   if (!t || !["design", "needs-developer", "product"].includes(t.verdict)) throw bad("triage verdict must be design, needs-developer or product");
   const list = (x, n) => (Array.isArray(x) ? x.slice(0, 12).map((s) => clean(s, 600, n)) : []);
   return { verdict: t.verdict, reasons: list(t.reasons, "reason"), can: list(t.can, "can"), cannot: list(t.cannot, "cannot") };
+}
+
+// The agent's judgement of a change: a designer should look at it, or it is for
+// information only; either way with its reasons in plain words.
+function cleanAttention(a) {
+  if (!a || !["designer", "fyi"].includes(a.level)) throw bad("attention level must be designer or fyi");
+  if (!Array.isArray(a.reasons) || !a.reasons.length) throw bad("attention names at least one reason");
+  return { level: a.level, reasons: a.reasons.slice(0, 5).map((s) => clean(s, 160, "attention reason")) };
 }
 
 // The agent's free-form fields are objects whose links the page renders: only http(s).

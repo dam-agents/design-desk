@@ -12,7 +12,8 @@ cat > "$WORK_DIR/desk/inbox.json" <<JSON
 {"updated":"$new","open":[
  {"id":"I-1","kind":"question","card":"C-1","thread":"T-1","created":"$new"},
  {"id":"I-2","kind":"request","card":"C-2","thread":null,"created":"$new"},
- {"id":"I-3","kind":"build","card":"C-2","thread":null,"created":"$new"}],
+ {"id":"I-3","kind":"build","card":"C-2","thread":null,"created":"$new"},
+ {"id":"I-6","kind":"map","card":"C-5","thread":null,"created":"$new"}],
  "claimed":[
  {"id":"I-4","kind":"explore","card":"C-3","thread":null,"created":"$old","claimed_by":"s1","claimed_at":"$old"},
  {"id":"I-5","kind":"handoff","card":"C-4","thread":null,"created":"$new","claimed_by":"s2","claimed_at":"$new"}]}
@@ -25,15 +26,16 @@ assert "work due" '.nothing_to_do == false' "$out"
 assert "question sorted" '[.questions_due[].id] == ["I-1"]' "$out"
 assert "request sorted" '[.requests_due[].id] == ["I-2"]' "$out"
 assert "build sorted" '[.prototypes_due[].id] == ["I-3"]' "$out"
+assert "a screen someone added sorted" '[.map_due[].id] == ["I-6"]' "$out"
 assert "stale claim taken over" '[.variants_due[] | select(.takeover) | .id] == ["I-4"]' "$out"
 assert "fresh claim left alone" '[.handoffs_due[].id] == []' "$out"
 assert "expiring prototype" '[.expiring_due[].card] == ["C-2"]' "$out"
-assert "read_set covers the arrays" '(.read_set | index("docs/prototype.md")) and (.read_set | index("docs/requests.md")) and (.read_set | index(".agents/skills/explain/SKILL.md"))' "$out"
+assert "read_set covers the arrays" '(.read_set | index("docs/prototype.md")) and (.read_set | index("docs/requests.md")) and (.read_set | index(".agents/skills/explain/SKILL.md")) and (.read_set | index("docs/map.md"))' "$out"
 
 # Fan-out: the first expensive item stays, the others get units.
 wl="$TMPDIR/wl.json"; printf '%s' "$out" > "$wl"
 plan="$(bash "$ROOT/scripts/dispatch.sh" plan "$wl")"
-assert "two units (I-4 explore, I-3 build), I-2 stays" '[.[].id] == ["I-4", "I-3"]' "$plan"
+assert "three units (I-4 explore, I-3 build, I-6 map), I-2 stays" '[.[].id] == ["I-4", "I-3", "I-6"]' "$plan"
 assert "a unit names its file, not the item text" '.[0].task | test("worklist is already computed") and test("I-4")' "$plan"
 u="$(printf '%s' "$plan" | jq -r '.[0].worklist')"
 assert "the unit holds its one item and no quick ones" '(.variants_due | length == 1) and (.questions_due == null) and (.dispatched.id == "I-4")' "$(cat "$u")"
@@ -57,6 +59,26 @@ JSON
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "polls due: never synced, and the one whose request moved on" '[.polls_due[] | [.id, .close]] == [["P-2", false], ["P-3", true]]' "$out"
 assert "the slack-polls skill is read" '.read_set | index(".agents/skills/slack-polls/SKILL.md")' "$out"
+
+# An open council is read every council_sync_min minutes while slack_council is on; it
+# closes once its request moved on, or three days after the thread's last message.
+old_ts="$(( $(date -u +%s) - 4 * 86400 )).000100"; new_ts="$(date -u +%s).000100"
+cat > "$WORK_DIR/desk/db.json" <<JSON
+{"version":1,"cards":{
+ "C-7":{"id":"C-7","kind":"request","status":"feedback","councils":[
+  {"id":"S-1","state":"open","opened":"$old","synced":"$recent","seen":"$new_ts"},
+  {"id":"S-2","state":"open","opened":"$old","synced":null,"seen":"$new_ts"},
+  {"id":"S-3","state":"open","opened":"2026-01-01T00:00:00Z","synced":"$recent","seen":"$old_ts"},
+  {"id":"S-4","state":"closed","opened":"$old","synced":null}]},
+ "C-8":{"id":"C-8","kind":"request","status":"handed-off","councils":[{"id":"S-5","state":"open","opened":"$old","synced":"$recent","seen":"$new_ts"}]}}}
+JSON
+assert "councils wait while slack_council is off" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+printf -- '- slack_council: enabled\n' > "$WORK_DIR/CONFIG.md"
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "councils due: never read, idle, and moved on" '[.councils_due[] | [.id, .close, .why]] == [["S-2", false, null], ["S-3", true, "idle"], ["S-5", true, "moved"]]' "$out"
+assert "the slack-council skill is read" '.read_set | index(".agents/skills/slack-council/SKILL.md")' "$out"
+printf -- '- slack_council: enabled\n- council_sync_min: 1\n' > "$WORK_DIR/CONFIG.md"
+assert "a shorter interval reads the recent one too" '[.councils_due[].id] | index("S-1")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"
 assert "a broken inbox file is an error" '.error | test("not an inbox")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"

@@ -73,6 +73,7 @@ config_json() {
     --arg figma "$(cfg figma)" --arg figma_file "$(cfg figma_file)" \
     --arg screens "$(cfg screens)" --arg max_screen_prs "$(cfg max_screen_prs)" \
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg digest "$(cfg digest)" \
+    --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -106,7 +107,9 @@ config_json() {
       max_screen_prs: ($max_screen_prs | tonumber? // 2),
       slack_polls: ($slack_polls | if . == "" then "disabled" else . end),
       slack_poll_channel: $slack_poll_channel,
-      digest: ($digest | if . == "" then "desk" else . end)}'
+      digest: ($digest | if . == "" then "desk" else . end),
+      slack_council: ($slack_council | if . == "" then "disabled" else . end),
+      council_sync_min: ($council_sync_min | tonumber? // 30)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -318,17 +321,33 @@ inbox_mode() {
         | select($close or .synced == null or ($now - (.synced | epoch)) >= 1800)
         | {id: .id, card: $c.id, close: $close, closes: .closes} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
+  # An open council (a Slack thread whose asks change a request's options) is read every
+  # council_sync_min minutes for asks nobody tagged the agent in; it is due to close once its
+  # request moved past the options, or three days after the last message the agent read (the
+  # agent reads the thread once more and closes it only when nothing new came).
+  local councils="[]"
+  if [ -f "$DB" ] && [ "$(jq -r .slack_council <<<"$CONF")" = enabled ]; then
+    councils="$(jq -c --argjson now "$NOW_EPOCH" --argjson every "$(jq '.council_sync_min * 60' <<<"$CONF")" '
+      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+      [ .cards[] | . as $c | (.councils // [])[] | select(.state == "open")
+        | ([(.opened | epoch), ((.seen // "0") | tonumber? // 0 | floor)] | max) as $last
+        | (if ($c.status | IN("triage", "variants", "feedback", "prototype", "testing")) | not then "moved"
+           elif ($now - $last) >= 259200 then "idle" else null end) as $why
+        | select($why != null or .synced == null or ($now - (.synced | epoch)) >= $every)
+        | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
+  fi
   local n; n="$(jq 'length' <<<"$items")"
-  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ]; then
+  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ]; then
     log "Desk inbox empty"; printf '%s due=0\n' "$NOW_ISO" >> "$WORK/INBOX.log"; quiet_out
   fi
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind) on \(.card)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): prototype of \(.card) expires \(.expires) — extend or let it go"' <<<"$expiring")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack vote on \(.card) — \(if .close then "close it" else "sync it" end)"' <<<"$polls")
+  while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack thread on \(.card) — \(if .close then "close it (\(.why))" else "read it" end)"' <<<"$councils")
   printf '%s due=%s expiring=%s\n' "$NOW_ISO" "$n" "$(jq 'length' <<<"$expiring")" >> "$WORK/INBOX.log"
   logev info preflight "inbox: $n items due"
-  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; else printf 'Sync Slack votes'; fi; })" '
+  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson councils "$councils" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; elif [ "$(jq 'length' <<<"$polls")" -gt 0 ]; then printf 'Sync Slack votes'; else printf 'Read Slack threads'; fi; })" '
     def pick(k): [ $items[] | select(.kind as $x | k | index($x)) ];
     { mode:"inbox", nothing_to_do:false, title:$title,
       questions_due: pick(["question"]),
@@ -337,12 +356,14 @@ inbox_mode() {
       prototypes_due: pick(["build"]),
       handoffs_due: pick(["handoff"]),
       catalog_due: pick(["catalog"]),
+      map_due: pick(["map"]),
       agenda_due: pick(["agenda"]),
       teardowns_due: pick(["teardown"]),
       figma_due: pick(["figma"]),
       screens_due: pick(["screens"]),
       slack_due: pick(["slack"]),
       polls_due: $polls,
+      councils_due: $councils,
       expiring_due: $expiring,
       config:$config, logs:$logs }
     | .read_set = (["docs/desk.md"]
@@ -351,9 +372,11 @@ inbox_mode() {
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
+        + (if (.map_due | length) > 0 then ["docs/map.md", "docs/screens.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)
         + (if (.screens_due | length) > 0 then ["docs/screens.md"] else [] end)
         + (if (.slack_due + .polls_due | length) > 0 then [".agents/skills/slack-polls/SKILL.md"] else [] end)
+        + (if (.councils_due | length) > 0 then [".agents/skills/slack-council/SKILL.md"] else [] end)
         + (if (.variants_due | length) > 0 then ["docs/actions.md"] else [] end) | unique)'
 }
 
