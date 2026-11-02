@@ -5,17 +5,20 @@ description: >-
   per option with its picture, votes as 👍 / ⚠️ reactions, comments as thread replies, all
   brought back to the Desk; the result is posted when the vote closes. Use when a designer
   presses Share in Slack (`slack_due`), when an open vote is due to sync or close
-  (`polls_due`), or when someone asks in chat to "send the options to Slack".
+  (`polls_due`), when a designer presses Send designs to Slack (`slack_due` with `scope:
+  send`: pictures only, no vote), or when someone asks in chat to "send the options to Slack".
 ---
 
 # Votes in Slack
 
 The `share-options`, `send-designs` and `poll-sync` actions ([docs/actions.md](../../../docs/actions.md)).
-Only with `slack_polls: enabled` and a Slack channel bound to this agent. The channel is
-`slack_poll_channel` when set, else the one `describe_channel` reports (two or more and none
-set → ask the operator once, and stop).
+Each procedure has its own gate: **Share**, **Sync** and **Close** need `slack_polls: enabled`;
+**Send** needs a request from Slack (its thread) or `slack_send: enabled` (the channel). Every
+one needs a Slack channel bound to this agent. The channel is `slack_poll_channel` when set,
+else the one `describe_channel` reports (two or more and none set → ask the operator once, and
+stop).
 
-## Share (`slack_due`)
+## Share (`slack_due`, no `scope`; `slack_polls: enabled`)
 
 The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`.
 
@@ -53,8 +56,8 @@ The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`.
    choice are on the Design Desk: <Desk link>", the link as in Share → 2. Then one reply per
    option, its pictures attached: "*<name>* — <its one line on when it wins>". The pick is a
    designer's on the Desk; never ask Slack to choose.
-4. `design desk done I-<n> --session <id> --outcome sent`. Replies to these posts are relayed
-   like a vote's (Sync → 3) when you read the thread.
+4. `design desk done I-<n> --session <id> --outcome sent`. These posts are not tracked: a reply
+   under one is not relayed, so the message points people to the Desk for comments.
 
 ## Sync (`polls_due`, `close: false`)
 

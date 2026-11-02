@@ -110,7 +110,8 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
   suggestion shows on the card and in the tab until a designer adds it or says **Not now**;
   after **Not now** the store keeps the card from being suggested again. Without an option
-  picked (an older page), the favourite is presented.
+  picked (an older page), the designer's pick (`chosen`) is presented, else the option
+  designers' votes clearly prefer.
 - **The brief** (`agenda_due`): for every card on the call, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.

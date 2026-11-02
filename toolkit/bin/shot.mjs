@@ -32,6 +32,8 @@ export async function main(_cmd, argv) {
   const steps = await pg.locator("#tour-steps button").count();
   const snap = async (name) => {
     await pg.waitForTimeout(350);
+    // The review bar's dead-click flash outlines every control; a picture never shows it.
+    await pg.evaluate(() => document.documentElement.classList.remove("review-hot"));
     // Apps scroll inside a pane, not the page: grow the window to the tallest scroll area.
     const tall = await pg.evaluate(() => Math.max(innerHeight, ...[...document.querySelectorAll("*")]
       .filter((e) => e.offsetParent !== null && /(auto|scroll)/.test(getComputedStyle(e).overflowY))
