@@ -57,11 +57,28 @@
   .detail { overflow: auto; padding: 24px 32px 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
   .row:hover { background: var(--soft); }
-  .row[aria-current="true"] { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
+  .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
   .row .t { font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
   .row .t .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; transform: translateY(-1px); }
   .row .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .row .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  /* A card row: its button covers the row, so the source line can hold links of its own. */
+  .row.item { position: relative; }
+  .row.item > .open { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+  .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
+  .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
+  .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 12px; color: var(--muted); }
+  .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; }
+  .row .prov a, .row .prov button { pointer-events: auto; }
+  .prov .src { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font-weight: 500; white-space: nowrap; }
+  .prov .src a { color: inherit; }
+  .prov svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .prov .auto { display: inline-flex; align-items: flex-start; gap: 4px; min-width: 0; } .prov .auto svg { margin-top: 3px; }
+  .prov .auto svg { color: var(--accent); }
+  .prov b { color: var(--ink); font-weight: 600; }
+  .prov a { color: var(--accent); text-decoration: none; } .prov a:hover { text-decoration: underline; }
+  .prov .anchor { font-size: 12px; max-width: 32ch; }
+  .sub + .prov { margin-top: 8px; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
@@ -339,6 +356,7 @@
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision, each with why.</p>
+<p>Each row in New and Requests shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
 <h3>Changing a design</h3>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
@@ -437,6 +455,48 @@
   const who = (by) => by?.agent ? "<b>Design Desk</b>"
     : by?.via === "slack" ? `<b>${esc(by.name || by.email || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
     : `<b>${esc(by?.email && by.email === S.me?.email ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
+  // Where a card came from and who started it (docs/desk.md → Where a card came from): the
+  // source with its link, the author, and for what a run filed on its own, the event it acted on.
+  const ICON = {
+    slack: '<path d="M6 2 4.5 14M11.5 2 10 14M2.5 5.5h11.5M2 10.5h11.5"/>',
+    issue: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/>',
+    pr: '<circle cx="4" cy="3.5" r="1.6"/><circle cx="4" cy="12.5" r="1.6"/><circle cx="12" cy="12.5" r="1.6"/><path d="M4 5.1v5.8M12 10.9V6.5a2 2 0 0 0-2-2H7.5M9 3 7.5 4.5 9 6"/>',
+    desk: '<circle cx="8" cy="5.5" r="2.6"/><path d="M2.8 14.2c.4-2.8 2.6-4.3 5.2-4.3s4.8 1.5 5.2 4.3"/>',
+    agent: '<path d="M8 1.8 9.5 6.5 14.2 8 9.5 9.5 8 14.2 6.5 9.5 1.8 8 6.5 6.5z"/>',
+    test: '<path d="M6 1.8h4M6.6 1.8v4.4L2.7 12.9a1 1 0 0 0 .9 1.4h8.8a1 1 0 0 0 .9-1.4L9.4 6.2V1.8M4.6 10h6.8"/>',
+    digest: '<rect x="2.2" y="3" width="11.6" height="11" rx="1.5"/><path d="M2.2 6.5h11.6M5.5 1.8v2.4M10.5 1.8v2.4"/>',
+    auto: '<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/>',
+  };
+  // The runs that file on their own (store.mjs ORIGIN_JOBS), in the team's words.
+  const JOB = { watch: "hourly check", digest: "weekly digest" };
+  const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
+  function origin(c) {
+    const o = c.origin || {}, by = c.by || c.created_by || {}, from = c.from || c.request?.from || null;
+    const out = (url, text) => url ? `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${text}&nbsp;↗</a>` : text;
+    const num = (kind, n) => `${kind}${n ? ` #${esc(n)}` : ""}`;
+    let kind, src, author = "", run = o.job || "", event = o.event ? out(o.event.url, esc(o.event.label || "what it came from")) : "";
+    // The person behind it is the reporter, whatever the channel (docs/desk.md → Where a card came from).
+    if (c.kind === "change") {
+      const s = c.source || {};
+      [kind, src, author, run] = ["pr", out(s.url, num("PR", s.pr)), s.author, "watch"];
+      event = s.pr && !s.merged_at ? "PR opened" : s.merged_at ? `shipped ${esc(day(s.merged_at))}` : "";
+    } else if (c.kind === "digest") [kind, src, run, event] = ["digest", "Design Desk", "digest", esc(c.period || "")];
+    else if (o.automated) {
+      [kind, src, author] = ["test", "Automated test", o.tool || ""];
+      event = out(o.url, esc([o.check && `${o.check} check`, o.build && `build ${o.build}`, o.ref].filter(Boolean).join(" · ") || "a test finding"));
+    } else if (o.channel === "slack") [kind, src, author] = ["slack", out(o.url, "Slack"), o.reporter];
+    else if (o.channel === "github") [kind, src, author] = [o.kind === "pr" ? "pr" : "issue", out(o.url, num(o.kind === "pr" ? "PR" : "Issue", o.number)), o.reporter];
+    else if (o.channel === "chat") [kind, src, author] = ["desk", "Chat with Design Desk", o.reporter];
+    else if (by.agent) [kind, src, author] = ["agent", "Design Desk", o.reporter];
+    else [kind, src, author] = ["desk", "Desk", by.email && by.email === S.me?.email ? "you" : by.email || "someone"];
+    // Filed with no person asking: by one of Design Desk's runs, or from an automated test.
+    const what = [run && esc(JOB[run] || run), event].filter(Boolean).join(" · ");
+    const auto = run || o.automated ? `<span class="auto" title="Filed on its own, not by a person">${icon("auto")}<span>Automatic${what ? ` · ${what}` : ""}</span></span>` : event;
+    // The card it came out of: the change a proposal or a touch-up started from.
+    const parent = S.cards.find((x) => x.id === (o.event?.card || from));
+    return `<div class="prov"><span class="src">${icon(kind)}${src}</span>${author ? `<span>by <b>${esc(author)}</b></span>` : ""}${auto}${
+      parent ? `<span>from <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(parent.title)}</button></span>` : ""}</div>`;
+  }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
   const working = (c) => [...new Set((c.waiting || []).map((w) => (w.scope === "history" ? "catalog-history" : w.kind)).filter((k) => k !== "question"))];
@@ -554,7 +614,6 @@
       else if (c.attention?.level === "fyi" && !c.acked) out.push(`<span class="chip ok" title="${esc(c.attention.reasons.join(" · "))}">Nothing to decide</span>`);
       if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
-      if (c.automated) out.push(`<span class="chip info">🧪 From automated tests</span>`);
       if (c.asks && !closed(c)) out.push(`<span class="chip warn">Waiting for your answer</span>`);
       else out.push(`<span class="chip ${c.busy ? "info" : ""}">${c.busy ? "● " : ""}${esc(STATUS[c.status] || c.status)}</span>`);
       if (forDesigner(c) && !c.asks) out.push(`<span class="chip warn" title="${esc(designerReasons(c).join(" · "))}">Needs a designer</span>`);
@@ -587,10 +646,12 @@
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
-    list.innerHTML = filters + cards.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">
-      <div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div>
-      ${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
-      <div class="meta">${chipsFor(c)}</div></button>`).join("");
+    // New and Requests say where each came from; screens and elements are Design Desk's own map.
+    const sourced = S.tab === "new" || S.tab === "requests";
+    list.innerHTML = filters + cards.map((c) => `<div class="row item">
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div></button>
+      ${sourced ? origin(c) : ""}${c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
+      <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
 
   // ---------- people ----------
@@ -1073,10 +1134,10 @@
 
   function renderRequest(c) {
     const r = c.request || {};
-    const origin = c.origin?.channel === "github" && c.origin.url ? `<a href="${safeUrl(c.origin.url)}" target="_blank" rel="noopener noreferrer">${esc(c.origin.kind === "pr" ? "From a developer's change" : "From a GitHub issue")}${c.origin.number ? ` #${esc(c.origin.number)}` : ""} ↗</a>` : "";
     return `${backBar()}
       <h2>${txt(c.title)}</h2>
-      <div class="sub">${c.origin?.automated ? `<span class="chip info">🧪 From automated tests</span>` : ""}${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.automated ? `<span>found by <b>${esc(c.origin.tool || "an automated test")}</b>${c.origin.check ? ` · ${esc(c.origin.check)} check` : ""}${c.origin.severity ? ` · ${esc(c.origin.severity)} severity` : ""}${c.origin.build ? ` · ${esc(c.origin.build)}` : ""}</span>` : c.origin?.reporter ? `<span>reported by <b>${esc(c.origin.reporter)}</b></span>` : `<span>by ${who(c.created_by)}</span>`}<span>${esc(when(c.created))}</span>${origin}</div>
+      <div class="sub">${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip">${esc(c.origin.severity)} severity</span>` : ""}<span>${esc(when(c.created))}</span></div>
+      ${origin(c)}
       ${renderSteps(c)}
       ${renderStatus(c)}
       ${attentionLine(c)}

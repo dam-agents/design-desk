@@ -152,6 +152,32 @@ test("a bug from Slack lands on the queue with where to answer", () => {
   assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /type must be one of/);
 });
 
+test("every request says where it came from, and what a run filed it on", () => {
+  const s = fresh();
+  const change = s.upsertCard({ kind: "change", title: "Pinned reports", source: { repo: "acme/widgets", pr: 12, url: "https://github.com/acme/widgets/pull/12", author: "dana", merged_at: "2026-11-01T10:00:00Z" } }).card;
+  const idea = s.createRequest(alice, { problem: "The send button is small." }).card;
+  const proposal = s.createRequest({ agent: true }, { type: "proposal", problem: "Group the pins.", from: change.id,
+    origin: { channel: "agent", job: "watch", event: { label: "PR #12 shipped", url: "https://github.com/acme/widgets/pull/12", card: change.id } } }).card;
+  const issue = s.createRequest({ agent: true }, { type: "feature", problem: "Export as PDF.",
+    origin: { channel: "github", kind: "issue", number: 97, url: "https://github.com/acme/widgets/issues/97", reporter: "frank", job: "watch", event: { label: "labelled design", url: "javascript:alert(1)", card: "C-999" } } }).card;
+  assert.deepEqual(proposal.origin.event, { label: "PR #12 shipped", url: "https://github.com/acme/widgets/pull/12", card: change.id });
+  assert.deepEqual(issue.origin.event, { label: "labelled design", url: null, card: null }, "an event links only over http(s), to a card the Desk has");
+  const rows = Object.fromEntries(s.listCards({ kind: "request" }).map((c) => [c.id, c]));
+  assert.deepEqual([rows[idea.id].by, rows[idea.id].origin, rows[idea.id].from], [{ email: alice.email, role: "designer" }, null, null]);
+  assert.deepEqual([rows[proposal.id].by, rows[proposal.id].from, rows[proposal.id].origin.job], [{ agent: true }, change.id, "watch"]);
+  assert.equal(rows[issue.id].origin.reporter, "frank");
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", job: "Watch run" } }), /origin.job/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "telegram", reporter: "Gita" } }), /origin.channel must be one of slack, github, chat, agent/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", job: "audit" } }), /origin.job must be one of watch, digest/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", event: "PR #12 shipped" } }), /origin.event must be an object/);
+  // The operator asks in the direct session (docs/requests.md → Chat and Slack): a person's
+  // channel names the person, so the row has its author.
+  const chat = s.createRequest({ agent: true }, { problem: "Prototype the calmer header.", origin: { channel: "chat", reporter: "Gita" } }).card;
+  assert.equal(s.listCards({ kind: "request" }).find((c) => c.id === chat.id).origin.reporter, "Gita");
+  for (const channel of ["slack", "github", "chat"])
+    assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel } }), new RegExp(`origin.reporter is required for the ${channel} channel`));
+});
+
 test("change notes on elements wake the agent once; its redraw keeps the earlier version", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts. It has three buttons." });

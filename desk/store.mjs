@@ -36,6 +36,11 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   }
 }
 
+// Where a request the agent files came from (docs/desk.md → Where a card came from).
+export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
+// The scheduled runs that file requests on their own (`origin.job`).
+export const ORIGIN_JOBS = ["watch", "digest"];
+
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
 export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
@@ -176,6 +181,8 @@ export class Store {
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         automated: Boolean(c.origin?.automated),
+        // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
+        origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
         attention: this.attentionOf(c),
       }));
@@ -321,7 +328,7 @@ export class Store {
       kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),
       title: clean(titleOf(title, problem), LIMITS.title, "title"), request,
       summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {},
-      triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin) : null,
+      triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin, this.db.cards) : null,
     };
     const id = this.next("card", "C");
     c.id = id;
@@ -593,7 +600,7 @@ export class Store {
       else if (k === "group") next.group = clean(fields.group, 60, "group");
       else if (k === "elements") { if (!Array.isArray(fields.elements)) throw bad("elements must be a list"); next.elements = fields.elements.slice(0, 30).map((id) => this.card(String(id)).id); }
       else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets);
-      else if (k === "origin") next.origin = cleanOrigin(fields.origin);
+      else if (k === "origin") next.origin = cleanOrigin(fields.origin, this.db.cards);
       else if (k === "brief") {
         // The agent's brief for the call: what is on the table and what to decide.
         if (!next.agenda) throw bad("a brief belongs to a card on the agenda");
@@ -1027,16 +1034,23 @@ function cleanLinks(key, value) {
   return copy;
 }
 
-// Where a reported bug came from, so the agent can answer the reporter in their thread.
-function cleanOrigin(o) {
+// Where a request came from: the reporter's thread the agent answers in, the issue, and,
+// when a scheduled run filed it, that run (`job`) and the event it acted on (`event`).
+function cleanOrigin(o, cards) {
   if (typeof o !== "object") throw bad("origin must be an object");
   const str = (v, n) => (v === undefined || v === null || v === "" ? null : String(v).slice(0, n));
-  if (!/^[a-z][a-z0-9-]{1,30}$/.test(String(o.channel || ""))) throw bad("origin.channel is a short name: slack, telegram, github, desk…");
+  if (!ORIGIN_CHANNELS.includes(o.channel)) throw bad(`origin.channel must be one of ${ORIGIN_CHANNELS.join(", ")}`);
   const url = str(o.url, 500);
   if (url && !/^https?:\/\//i.test(url)) throw bad("origin.url must be http(s)");
+  // A person's channel names the person: the Desk shows them as the author.
+  if (o.channel !== "agent" && !str(o.reporter, 120)) throw bad(`origin.reporter is required for the ${o.channel} channel: the person's name or login`);
+  if (o.job && !ORIGIN_JOBS.includes(o.job)) throw bad(`origin.job must be one of ${ORIGIN_JOBS.join(", ")}`);
+  if (o.event != null && (typeof o.event !== "object" || Array.isArray(o.event))) throw bad("origin.event must be an object: {label, url, card}");
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40),
+    ...(o.job ? { job: String(o.job) } : {}),
+    ...(o.event ? { event: cleanSource(o.event, cards) } : {}),
     // A finding an automated test posted (Quality Inspector), not a person's report.
     ...(o.automated ? { automated: true, tool: str(o.tool, 80), check: str(o.check, 40), severity: ["high", "medium", "low"].includes(o.severity) ? o.severity : null, ref: str(o.ref, 80), build: str(o.build, 80) } : {}) };
 }

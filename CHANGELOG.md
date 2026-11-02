@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.10.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server first: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Every row in New and Requests shows where it came from and who started it. Requests filed
+before keep what their `origin` already says.
+
 ## 1.9.0 — 2026-11-02
 
 **Upgrade:**
