@@ -28,8 +28,9 @@ const USAGE = `usage: design desk <command>
   comment <C-n> <text-file|->              add a comment thread as the agent
   ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
       [--form]                             their answer re-queues the step (request explore revise
-                                           build handoff figma); --form: the file is JSON {text,
-                                           questions: [{text, why, options, suggested}]}, a form
+                                           build handoff figma catalog map); --form: the file is
+                                           JSON {text, questions: [{text, why, options, suggested}]},
+                                           a form
   decision <decision.json|->               record a decision: {concepts, text, why, source: {label,
                                            url, card}, at}
   decisions [--concept <c>] [--q <words>]  earlier decisions, newest first

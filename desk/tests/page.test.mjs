@@ -23,17 +23,21 @@ test("nothing on the page submits a form", () => {
 });
 
 // A stand-in bridge records every call; the server answers just enough for a lead's Desk
-// with one shipped change and two open requests, one of them waiting for an answer.
+// with one shipped change, a weekly digest and two open requests, one of them waiting for
+// an answer.
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } };
+const digest = { id: "d1", kind: "digest", title: "This week", status: "new" };
 const requests = [{ id: "r2", kind: "request", title: "Softer colours", status: "triage", asks: true }, { id: "r3", kind: "request", title: "A wider sidebar", status: "triage" }];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
-  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true } }
-    : path === "/api/cards" ? { cards: [change, ...requests] } : path === "/api/agenda" ? { agenda: [] }
+  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true } }
+    : path === "/api/cards" ? { cards: [change, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
+    : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
+    : path === "/api/cards/e1" ? { card: { id: "e1", kind: "element", title: "The agent row", status: "building", wanted: { part: "The agent row", where: "", show: "" }, created_by: { email: "lead@example.com", role: "lead" } } }
     : path === "/api/cards/r1" ? { card: { id: "r1", kind: "request", title: "Bigger send button", status: "triage" } }
     : path === "/api/cards/ch1" ? { card: change } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
@@ -146,6 +150,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // The screenshot dialog, on a shipped change.
     const sh = dialog("shots-dialog"), screens = "/api/cards/ch1/screens";
     await desk.click('[data-tab="new"]');
+    assert.equal((await desk.textContent('[data-card="d1"] .meta')).trim(), "Weekly digest", "a digest row shows no status word");
     await desk.click('[data-card="ch1"]');
     const withPicture = async () => {
       await desk.click("[data-add-shots]");
@@ -175,6 +180,35 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
+
+    // The Add to Product dialog: a screen needs Design Desk's own copy, which is off here.
+    const pd = dialog("product-dialog"), product = "/api/product";
+    await desk.click('[data-tab="product"]');
+    await desk.click("[data-add-product]");
+    assert.equal(await pd.open(), true);
+    assert.equal(await desk.inputValue("#product-form [name=kind]"), "element", "without the copy, a part is the default");
+    await desk.click('#kind-choice [data-kind="screen"]');
+    assert.equal(await pd.button("Add").isDisabled(), true, "a screen can't be added without the copy");
+    await desk.click('#kind-choice [data-kind="element"]');
+    await pd.button("Add").click();
+    assert.equal(await pd.open(), true, "an empty Add stays open");
+    await pd.button("Cancel").click();
+    await settled(product, 0, "Cancel adds nothing");
+    await desk.click("[data-add-product]");
+    await desk.fill("#product-dialog textarea[name=part]", "The agent row");
+    await desk.evaluate(() => { window.failNext = true; });
+    await pd.button("Add").click();
+    await desk.waitForSelector("#product-dialog[open] .toast", { state: "attached" });
+    assert.equal(await desk.inputValue("#product-dialog textarea[name=part]"), "The agent row", "a failed Add keeps the text");
+    await pd.button("Add").click();
+    await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/e1"));
+    assert.equal(await pd.open(), false, "a second Add goes through");
+    const asked = await posts(product);
+    assert.equal(asked.length, 2);
+    assert.deepEqual([JSON.parse(asked[1].body).kind, JSON.parse(asked[1].body).part], ["element", "The agent row"]);
+    await desk.click("[data-add-product]");
+    await pd.close();
+    await settled(product, 2, "a close after an Add adds nothing");
   } finally {
     await run.close();
   }

@@ -20,6 +20,8 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "approve"), true);
   assert.equal(can("developer", "queue"), false);
   assert.equal(can("designer", "queue"), true);
+  assert.equal(can("developer", "add"), false);
+  assert.equal(can("lead", "add"), true);
 });
 
 test("a question goes to the inbox and the answer takes it out", () => {
@@ -293,4 +295,29 @@ test("the next call: a designer's Not now holds, a closed request takes no sugge
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "closing a request drops its suggestion");
   s.suggestForCall(other.id, "Again");
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "a closed request takes no suggestion");
+});
+
+test("a screen or part a designer adds goes to the agent, and never becomes a second copy", () => {
+  const s = fresh();
+  const shot = s.addAsset({ kind: "screen", name: "x", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
+  const el = s.addToProduct(alice, { kind: "element", part: "The agent row in the agents list. With a long name.", show: "empty, an error", screens: [{ asset: shot, source: "person" }] });
+  assert.equal(el.inbox.kind, "catalog");
+  assert.deepEqual([el.card.status, el.card.title, el.card.wanted.show, el.card.created_by.email], ["building", "The agent row in the agents list.", "empty, an error", alice.email]);
+  const sc = s.addToProduct(alice, { kind: "screen", part: "Billing settings", where: "/settings/billing" });
+  assert.equal(sc.inbox.kind, "map");
+  assert.throws(() => s.addToProduct(alice, { kind: "change", part: "x" }), /screen or element/);
+  assert.throws(() => s.addToProduct(alice, { kind: "screen", part: "  " }), /part is empty/);
+  // The agent's question resumes the step; the card is filled in by its id.
+  const { thread } = s.openThread(sc.card.id, { agent: true }, { kind: "asks", text: "The billing page or the invoices?", step: "map" });
+  assert.equal(s.reply(thread.id, alice, "The billing page.").inbox.kind, "map");
+  s.upsertCard({ id: sc.card.id, path: "/settings/billing", status: "current" });
+  // The same address again is that card, with no new work.
+  const again = s.addToProduct(bob, { kind: "screen", part: "Billing", where: "/settings/billing" });
+  assert.deepEqual([again.existing, again.card.id, again.inbox], [true, sc.card.id, null]);
+  // An element already drawn: the added card cannot take its source; it is dropped instead.
+  s.upsertCard({ kind: "element", title: "Agent row", source: { file: "web/agent-row.tsx", export: "AgentRow" }, status: "current" });
+  assert.throws(() => s.upsertCard({ id: el.card.id, source: { file: "web/agent-row.tsx", export: "AgentRow" } }), (e) => e.status === 409);
+  s.upsertCard({ kind: "screen", title: "Invoices", path: "/invoices" });
+  assert.throws(() => s.upsertCard({ id: sc.card.id, path: "/invoices" }), (e) => e.status === 409);
+  assert.equal(s.upsertCard({ id: el.card.id, status: "dropped", sections: [{ title: "Already here", body: "It is the Agent row." }] }).card.status, "dropped");
 });
