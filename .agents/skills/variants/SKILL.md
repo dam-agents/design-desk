@@ -168,6 +168,12 @@ Rules — `design build` enforces the mechanical ones:
   The review bar portals, places and closes it.
 - **Component state attributes** (`data-state="checked"`, `data-highlighted`, `aria-selected`) set
   in markup, so the component's own classes style the state you show.
+- **Flow:** a design that spans several screens, steps or states (a list and its detail, a
+  wizard, a dialog that opens) is one view per screen, and every control that leads on carries
+  `data-goto-view="<n>"` (`"back"` to return), so a person clicks through it as in the product.
+  Everything that looks clickable does something — goes to a view, opens a menu or toggles
+  state — or is not drawn as a control. The review bar's **Clickable** outlines what can be
+  clicked; `design build` refuses a `data-goto-view` with no view of that number.
 - **Light interactions only:** a small inline `<script>` toggling a class or `hidden` is fine.
 - **Empty states:** populated content in `data-populated`, the real empty state in
   `data-empty-view`. The review bar shows the toggle on views that have one.
@@ -192,6 +198,7 @@ Self-check:
 - the product's `PROFILE.md` read, and its rules kept;
 - built into the real screen (or, without a repo, a complete plausible one), not a floating card;
 - approaches distinct and each simple; no rationale text on the page;
+- a flow walks from its first view to its last by clicking, and nothing that looks clickable is dead;
 - classes and copy from the source; no hand-written CSS;
 - empty state where something can be empty; light and dark both work.
 

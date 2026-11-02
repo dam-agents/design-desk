@@ -64,7 +64,7 @@ owner is `lead`, anyone else on the share list is `guest`.
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment |
 | `developer`, `pm` | also vote, file a request, start a follow-up from a change, add screenshots |
-| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack |
+| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack, pick the winning option |
 | `pm`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
 | roles in `prototype_requesters` | start a live prototype |
 
@@ -114,7 +114,8 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
   suggestion shows on the card and in the tab until a designer adds it or says **Not now**;
   after **Not now** the store keeps the card from being suggested again. Without an option
-  picked (an older page), the favourite is presented.
+  picked (an older page), the designer's pick (`chosen`) is presented, else the option
+  designers' votes clearly prefer.
 - **The brief** (`agenda_due`): for every card on the call, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
@@ -170,6 +171,11 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.
+- **Comments on options** are pinned to an element and its view; people reply, mark them
+  done or reopen them, and a designer presses **Work it in** (one, or every open one) to turn
+  comments into change notes for you (`revise`, [requests.md](requests.md)). **The winner** is
+  a designer's pick (**Pick as the winner**, the card's `chosen`); votes, Slack and you only
+  advise, and nothing you write sets it.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person

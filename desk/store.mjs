@@ -36,7 +36,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     case "vote": case "request": case "follow-up": case "screens": return member;
     // Pictures of an issue: how it looks now and a sketch of how it could look (docs/issues.md).
     case "draw": return shaper || role === "pm";
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": case "handle": return shaper;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": case "handle": case "choose": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
@@ -48,7 +48,7 @@ export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
 export const ORIGIN_JOBS = ["watch", "digest"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "draw"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // The roster as the server reads a role (`## Desk people` rows): the first row of an email
@@ -214,7 +214,7 @@ export class Store {
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
       if (asks) reasons.push("Design Desk is waiting for an answer");
       else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options or close it");
-      else if (!busy && c.status === "feedback") reasons.push("Options are ready: pick one or ask for changes");
+      else if (!busy && c.status === "feedback") reasons.push(c.chosen ? "A designer picked an option: approve it or build it live" : "Options are ready: pick one or ask for changes");
       else if (!busy && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
     reasons.push(...suggested);
@@ -340,6 +340,60 @@ export class Store {
     return { thread: t };
   }
 
+  // A conversation marked done opens again; a change note goes back to the agent.
+  reopenThread(threadId, who) {
+    const t = this.thread(threadId);
+    if (t.state !== "resolved") throw bad("This conversation is still open.");
+    delete t.resolved;
+    t.state = "open";
+    let item = null;
+    if (t.kind === "change") { t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
+    this.card(t.card).updated = this.clock();
+    this.save();
+    return { thread: t, inbox: item };
+  }
+
+  // A designer has the agent work comments on the options into the design: each becomes a
+  // change note (its first kind kept as `was`) and one revise does them together.
+  workIn(cardId, who, threadIds) {
+    const c = this.card(cardId);
+    if (c.kind !== "request") throw bad("only a design request's options take changes");
+    if ((c.status === "declined" || c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
+    if (!Array.isArray(threadIds) || !threadIds.length) throw bad("Pick the comments to work in.");
+    const ts = [...new Set(threadIds.map(String))].slice(0, LIMITS.threadsPerCard).map((id) => {
+      const t = own(this.db.threads, id);
+      if (!t || t.card !== cardId) throw missing(`no conversation ${id} on this request`);
+      if (t.kind === "asks") throw bad("Design Desk's own questions are answered, not worked in.");
+      if (!(c.variants || []).some((v) => v.id === t.anchor?.variant)) throw bad("Only a comment on one of the design options can be worked in.");
+      return t;
+    });
+    for (const t of ts) {
+      if (t.kind !== "change") { t.was = t.kind; t.kind = "change"; }
+      delete t.resolved;
+      t.state = "open"; t.needs_agent = true;
+      t.work_in = { by: person(who), at: this.clock() };
+    }
+    c.updated = this.clock();
+    const item = this.pendingOrNew("revise", cardId, who);
+    this.save();
+    return { threads: ts, inbox: item };
+  }
+
+  // Only a designer or the lead picks the winning option; votes and the agent only advise.
+  choose(cardId, who, variant) {
+    const c = this.card(cardId);
+    if (who?.agent) throw forbidden("only a designer picks the winning option");
+    if (c.kind !== "request") throw bad("only a design request has options to pick from");
+    if (variant === null) { delete c.chosen; }
+    else {
+      if (!(c.variants || []).some((v) => v.id === variant)) throw bad("Pick one of the design options.");
+      c.chosen = { variant, by: person(who), at: this.clock() };
+    }
+    c.updated = this.clock();
+    this.save();
+    return { card: c };
+  }
+
   vote(cardId, who, { variant, vote, note = "" }) {
     const c = this.card(cardId);
     if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no variant ${variant}`);
@@ -427,9 +481,9 @@ export class Store {
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
     if (closed && action !== "reopen") throw bad("This request is closed. Press Reopen first.");
-    const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack" };
+    const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
-    if (action === "slack-share" && !(c.variants || []).length) throw bad("There are no design options to share yet.");
+    if (action.startsWith("slack-") && !(c.variants || []).length) throw bad("There are no design options to share yet.");
     if (action === "slack-share" && (c.polls || []).some((x) => x.state === "open")) throw bad("These options are already being voted on in Slack.");
     if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");
     if (action === "reopen") {
@@ -451,6 +505,8 @@ export class Store {
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
     if (action === "build" && askFirst) item.ask_first = true;
+    // Pictures of the options posted to Slack, not a vote (the slack-polls skill → Send).
+    if (action === "slack-send") item.scope = "send";
     this.save();
     return { card: c, inbox: item };
   }
@@ -643,7 +699,11 @@ export class Store {
         if (next.status === "declined") delete next.call_suggestion;
       } else if (k === "sections") next.sections = cleanSections(fields.sections, next.kind === "change" ? brief : null, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
-      else if (k === "variants") next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
+      else if (k === "variants") {
+        next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
+        // A designer's pick of an option the redraw no longer has is no pick.
+        if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
+      }
       else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards);
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
       else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
@@ -962,6 +1022,8 @@ export class Store {
 function favouriteOf(c) {
   const vs = c.variants || [];
   if (vs.length === 1) return vs[0];
+  const chosen = vs.find((v) => v.id === c.chosen?.variant);
+  if (chosen) return chosen;
   const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
   const s = [...vs].sort((a, b) => score(b) - score(a));
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
@@ -983,6 +1045,9 @@ function cleanAnchor(a) {
     text: typeof a.text === "string" ? a.text.slice(0, 300) : null,
     tag: typeof a.tag === "string" ? a.tag.slice(0, 40) : null,
     label: typeof a.label === "string" ? a.label.slice(0, 120) : null,
+    // The view of a multi-view design the element is in (`data-view`, its name).
+    view: typeof a.view === "string" ? a.view.slice(0, 40) : null,
+    view_name: typeof a.view_name === "string" ? a.view_name.slice(0, 120) : null,
     edit: a.edit && typeof a.edit === "object" ? { from: String(a.edit.from || "").slice(0, 300), to: String(a.edit.to || "").slice(0, 300) } : null,
   };
 }

@@ -5,7 +5,8 @@
 //   <ui-icon>, <ui-pictogram>, <ui-component>   → static SVG / HTML (lib/icons.mjs, lib/components.mjs)
 //   every class="" through tailwind-merge when the style uses it, as the app's cn() does
 // Checks, failing the build: inline <script>s parse; no <style> blocks or style="" beyond
-// a component's own size or position; no `&amp;` inside a class; no unhandled <ui-*> tag.
+// a component's own size or position; no `&amp;` inside a class; no unhandled <ui-*> tag;
+// every data-goto-view names a view the page has.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { TOOLKIT, fail, req, slugOf } from "../lib/core.mjs";
@@ -50,6 +51,8 @@ export async function main(_cmd, argv) {
   const left = html.match(/<ui-[\w-]+/);
   if (left) fail(`unhandled tag ${left[0]}`);
   if (!html.includes("<!-- design:css -->")) fail("missing <!-- design:css --> in <head>");
+  const dangling = danglingGotos(html);
+  if (dangling.length) fail(`data-goto-view names no view: ${dangling.slice(0, 3).join(", ")} — give the target a data-view, or use "back"`);
   if (!hasReviewBar) fail("missing <!-- design:review-bar --> at the top of <body> — every page the build makes carries the review bar");
 
   const css = compileCss(style, html);
@@ -58,4 +61,10 @@ export async function main(_cmd, argv) {
   html = html.replace("<!-- design:css -->", () => `<!-- ${style.label} -->\n<style>${fonts}\n${css}\n${style.componentCss || ""}</style>`);
   writeFileSync(out, html);
   console.log(JSON.stringify({ built: resolve(out), style: style.label, kb: Math.round(html.length / 1024), ...(style.commit ? { commit: style.commit } : {}) }));
+}
+
+// The views a click leads to that the page does not have ("back" retraces the flow).
+export function danglingGotos(html) {
+  const views = new Set([...html.matchAll(/\sdata-view="([^"]*)"/g)].map((m) => m[1]));
+  return [...new Set([...html.matchAll(/\sdata-goto-view="([^"]*)"/g)].map((m) => m[1]))].filter((v) => v !== "back" && !views.has(v));
 }
