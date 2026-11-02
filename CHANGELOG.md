@@ -7,12 +7,36 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.4.0 — 2026-11-02
+## 1.5.0 — 2026-11-02
 
 **Upgrade:**
 Nothing — docs and the bundled skills are read from the checkout. A design asked for in Slack
 now becomes a request on the Desk, and its options go back to the thread (the
 `request-intake` action).
+
+## 1.4.0 — 2026-11-02
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Designers now add a screen or a
+part with **+ Add** in Product; a screen needs `screens: enabled`.
+
+## 1.3.2 — 2026-11-02
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Until then, the Requests tab counts only the requests that wait for an answer.
+
+## 1.3.1 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Both steps are safe to repeat. They cover the Desk server restart and the page republish
+of every crossed block ([docs/persistence.md](docs/persistence.md) → **Migration**, step 1).
 
 ## 1.3.0 — 2026-11-02
 
