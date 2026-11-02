@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.12.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+2. Add `- slack_send: disabled` to `work/CONFIG.md` when missing, then re-run
+   `bash "$HOME/scripts/verify-onboarding.sh"`. Off by default: `enabled` lets designers post
+   pictures of a request's options to the Slack channel (**Send designs to Slack**); offer it
+   to the operator when a channel is bound, never enable it yourself.
+
 ## 1.11.1 — 2026-11-02
 
 **Upgrade:**

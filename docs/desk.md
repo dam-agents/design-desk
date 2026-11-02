@@ -61,7 +61,7 @@ owner is `lead`, anyone else on the share list is `guest`.
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment |
 | `developer`, `pm` | also vote, file a request, start a follow-up from a change, add screenshots |
-| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack |
+| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack, pick the winning option |
 | roles in `prototype_requesters` | start a live prototype |
 
 The page's **People** tab shows the roster and each role's actions, from `GET /api/people`;
@@ -166,6 +166,11 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.
+- **Comments on options** are pinned to an element and its view; people reply, mark them
+  done or reopen them, and a designer presses **Work it in** (one, or every open one) to turn
+  comments into change notes for you (`revise`, [requests.md](requests.md)). **The winner** is
+  a designer's pick (**Pick as the winner**, the card's `chosen`); votes, Slack and you only
+  advise, and nothing you write sets it.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person

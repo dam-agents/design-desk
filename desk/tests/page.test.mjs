@@ -387,3 +387,71 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await run.close();
   }
 });
+
+// A designer's request from Slack with two options and three comments on the first: one done.
+const BRIDGE_NOTES = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const by = { email: "pat@example.com", role: "pm" };
+const note = (id, kind, state, text, more = {}) => ({ id, kind, state, anchor: { variant: "v1", selector: "button", label: "Button “Save”", view: "2", view_name: "Billing" }, messages: [{ by, at, text }], ...more });
+const request = { id: "r5", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  origin: { channel: "slack", reporter: "Carla", url: "https://acme.slack.com/archives/C0123ABCD/p1" },
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }, { id: "v2", name: "One page", asset: "A-1", fidelity: "wireframe" }],
+  threads: [note("t1", "comment", "open", "Save is easy to miss", { messages: [{ by, at, text: "Save is easy to miss" }, { by: { email: "alice@example.com", role: "designer" }, at, text: "Agreed" }] }),
+    note("t2", "concern", "open", "Too many tabs"), note("t3", "comment", "resolved", "Typo in the title")] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", slack_send: false, can: { comment: true, change: true, choose: true, share: true, vote: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 2, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r5" ? { card: request }
+    : path === "/api/cards/r5/work-in" ? { threads: JSON.parse(body).threads.map((id) => ({ id })), inbox: { id: "I-1" } }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div><div data-view="2"><button>Save</button></div></body>' } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("notes in the workspace: open and done, a whole conversation, worked in together; a designer picks the winner; designs go to the Slack thread", async (t) => {
+  const run = await launch(t, BRIDGE_NOTES);
+  if (!run) return;
+  const { desk, posts } = run;
+  const sent = async (path, n) => { await desk.waitForFunction(([p, k]) => calls.filter((c) => c.method === "POST" && c.path === p).length === k, [path, n]); return JSON.parse((await posts(path))[n - 1].body); };
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r5"]');
+    await desk.waitForSelector('[data-act="workspace"]');
+    assert.match(await desk.textContent("#detail"), /a designer picks the winner/);
+    assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
+    assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
+
+    await desk.click('[data-choose="v1"]');
+    assert.deepEqual(await sent("/api/cards/r5/chosen", 1), { variant: "v1" });
+
+    await desk.click('[data-act="slack-send"]');
+    assert.match(await desk.textContent("#cf-body"), /Slack thread this request came from/);
+    await desk.locator("#confirm-dialog .actions button", { hasText: "Send" }).click();
+    assert.deepEqual(await sent("/api/cards/r5/actions", 1), { action: "slack-send", note: JSON.stringify({ variants: "all", note: "" }) });
+
+    await desk.waitForSelector('[data-act="workspace"]');
+    await desk.click('[data-act="workspace"]');
+    await desk.waitForSelector("#ws-side .notes");
+    const shown = () => desk.$$eval("#ws-side [data-ws-note]", (ns) => ns.map((n) => n.dataset.wsNote));
+    assert.deepEqual(await shown(), ["t1", "t2"], "Open lists what is not done");
+    await desk.click('[data-ws-filter="done"]');
+    assert.deepEqual(await shown(), ["t3"]);
+    await desk.click('[data-ws-note="t3"]');
+    await desk.click('#ws-side [data-reopen="t3"]');
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/threads/t3/reopen"));
+    await desk.click('[data-ws-filter="open"]');
+    await desk.click('[data-ws-note="t1"]');
+    assert.match(await desk.textContent('[data-ws-note="t1"]'), /Save is easy to miss[\s\S]*Agreed/, "a picked note shows its whole conversation");
+    await desk.fill('#ws-side [data-reply="t1"]', "Make it primary");
+    await desk.click('#ws-side [data-send-reply="t1"]');
+    assert.deepEqual(await sent("/api/threads/t1/messages", 1), { text: "Make it primary" });
+    await desk.waitForSelector('#ws-side [data-work-in="t1,t2"]');
+    await desk.click('#ws-side [data-work-in="t1,t2"]');
+    assert.deepEqual(await sent("/api/cards/r5/work-in", 1), { threads: ["t1", "t2"] });
+  } finally {
+    await run.close();
+  }
+});

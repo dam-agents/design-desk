@@ -10,7 +10,7 @@ description: >-
 
 # Votes in Slack
 
-The `share-options` and `poll-sync` actions ([docs/actions.md](../../../docs/actions.md)).
+The `share-options`, `send-designs` and `poll-sync` actions ([docs/actions.md](../../../docs/actions.md)).
 Only with `slack_polls: enabled` and a Slack channel bound to this agent. The channel is
 `slack_poll_channel` when set, else the one `describe_channel` reports (two or more and none
 set → ask the operator once, and stop).
@@ -38,6 +38,24 @@ The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`.
    [{variant, ts}], closes, channel}` — `root_ts` is the opening message's `ts`, each post's
    `ts` the option's. Then `design desk done I-<n> --session <id> --outcome shared`.
 
+## Send (`slack_due` with `scope: send`)
+
+**Send designs to Slack**: pictures, no vote. Works without `slack_polls`. The item's note is
+`{"variants": "all" | "<option id>", "note": "<a line for Slack>"}`.
+
+1. Claim the item; read the card. Where: a request with a Slack `origin` → `reply` in its
+   thread (`chatId` = `origin.chat`, `threadTs` = `origin.thread_ts`); else, only with
+   `slack_send: enabled`, the channel above. Neither → done with `--outcome "no Slack place"`
+   and one comment on the card saying so.
+2. Per option asked for, its latest version: `design desk fetch`, then `design shot … --width
+   1280`; a design with several views gets one picture per view (`1-light.png`, `2-light.png`…).
+3. One message: "🎨 *<request title>* — <n> design options. <the note> Comments and the
+   choice are on the Design Desk: <Desk link>", the link as in Share → 2. Then one reply per
+   option, its pictures attached: "*<name>* — <its one line on when it wins>". The pick is a
+   designer's on the Desk; never ask Slack to choose.
+4. `design desk done I-<n> --session <id> --outcome sent`. Replies to these posts are relayed
+   like a vote's (Sync → 3) when you read the thread.
+
 ## Sync (`polls_due`, `close: false`)
 
 Every 30 minutes while a vote is open, in the inbox run:
@@ -60,13 +78,13 @@ Every 30 minutes while a vote is open, in the inbox run:
 On its date, or when the request moved on (approved, closed):
 
 1. Sync once more (above).
-2. The result per option, all votes counted (the Desk's and Slack's): "B: 7 👍, 1 ⚠️".
-   A clear winner: the option with the most 👍 from designers, then from everyone.
+2. The result per option, all votes counted (the Desk's and Slack's): "B: 7 👍, 1 ⚠️". The
+   vote advises; the winner is the one a designer picks on the Desk (the card's `chosen`).
 3. Post it (`send_channel_message`, or `reply` into the opening message's thread where the
-   platform allows it): "🗳️ *<request title>* — the vote is closed. <result>. <What happens
-   next: "A designer takes B on" / "Design Desk suggests it for the next call; a designer decides">."
-4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. A tie or a strong
-   concern is suggested for the next call (`design desk agenda C-<n> --note "Slack vote: <result>"`).
+   platform allows it): "🗳️ *<request title>* — the vote is closed. <result>. A designer picks
+   the winner on the Design Desk."
+4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. Without a designer's
+   pick yet, suggest it for the next call (`design desk agenda C-<n> --note "Slack vote: <result>"`).
 
 ## In a Slack turn
 
