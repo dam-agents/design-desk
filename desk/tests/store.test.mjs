@@ -64,6 +64,8 @@ test("a change card stays short, and a designer marks it handled", () => {
   s.handle(c.id, alice);
   assert.equal(s.getCard(c.id).status, "handled");
   assert.throws(() => s.upsertCard({ id: c.id, status: "new" }), /only a designer/);
+  assert.equal(s.upsertCard({ id: c.id, status: "archived" }).card.status, "archived", "a handled change can still be archived");
+  s.handle(c.id, alice);
   assert.equal(s.listCards({ kind: "change" })[0].handled, s.getCard(c.id).handled.at);
   s.handle(c.id, alice, false);
   assert.equal(s.getCard(c.id).status, "new");
@@ -205,6 +207,7 @@ test("before a build the agent asks a form; the answer resumes the build with it
   s.claim(build.id, "run-2"); s.done(build.id, "run-2", "asked");
   assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things.", step: "build", questions: [] }), /1 to 6/);
   assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "One.", step: "build", questions: [{ text: "Empty list?", options: ["A hint"] }] }), /2 to 4 options/);
+  assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "asks", text: "One.", step: "build", questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "a hint" }] }), /suggested must be one/);
   const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Two things.", step: "build",
     questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Save", "Done"] }] });
   assert.throws(() => s.answerForm(thread.id, alice, [{ choice: "Maybe" }, {}]), /not an option/);
@@ -213,6 +216,11 @@ test("before a build the agent asks a form; the answer resumes the build with it
   assert.equal(again.note, "v2", "the answer keeps the option the designer picked");
   assert.match(s.thread(thread.id).messages[1].text, /Nothing — Keep it calm\.[\s\S]*Leave it to Design Desk/);
   assert.throws(() => s.answerForm(thread.id, alice, [{}, {}]), /already answered/);
+  assert.deepEqual(s.thread(thread.id).answers[0], { choice: "Nothing", note: "Keep it calm." });
+  const long = "q".repeat(300), opts = ["o".repeat(120), "p".repeat(120)];
+  const { thread: big } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Six.", step: "build", questions: Array(6).fill({ text: long, options: opts }) });
+  s.answerForm(big.id, alice, Array(6).fill({ choice: opts[0], note: "n".repeat(500) }));
+  assert.equal(s.thread(big.id).state, "answered", "six full answers fit in the reply");
 });
 
 test("screenshots a person adds wake the agent once and keep who added them", () => {

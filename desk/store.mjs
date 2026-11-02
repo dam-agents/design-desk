@@ -233,10 +233,10 @@ export class Store {
     return { thread: t, inbox: item };
   }
 
-  reply(threadId, who, text) {
+  reply(threadId, who, text, max = LIMITS.text) {
     const t = this.thread(threadId);
     if (t.messages.length >= LIMITS.messagesPerThread) throw bad("This conversation is full. Start a new one below.");
-    const body = clean(text, LIMITS.text, "text");
+    const body = clean(text, max, "text");
     t.messages.push({ by: person(who), at: this.clock(), text: body });
     let item = null;
     // A follow-up to a question goes back to the agent; a comment stays between people.
@@ -262,14 +262,18 @@ export class Store {
     if (t.kind !== "asks" || !t.questions) throw bad("this conversation has no questions to fill in");
     if (t.state !== "open") throw bad("These questions are already answered.");
     if (!Array.isArray(answers) || answers.length !== t.questions.length) throw bad("answer every question, or leave it to Design Desk");
-    t.answers = t.questions.map((q, i) => {
+    const given = t.questions.map((q, i) => {
       const a = answers[i] || {};
       const choice = a.choice == null || a.choice === "" ? null : String(a.choice);
       if (choice !== null && !q.options.includes(choice)) throw bad(`"${choice}" is not an option of question ${i + 1}`);
       return { choice, note: optText(a.note, 500, "note") };
     });
-    const text = t.questions.map((q, i) => { const a = t.answers[i]; return `**${q.text}**\n${a.choice ?? "Leave it to Design Desk"}${a.note ? ` — ${a.note}` : ""}`; }).join("\n\n");
-    return this.reply(threadId, who, text);
+    // Six full questions with notes stay under twice the text limit; the reply takes that.
+    const text = t.questions.map((q, i) => { const a = given[i]; return `**${q.text}**\n${a.choice ?? "Leave it to Design Desk"}${a.note ? ` — ${a.note}` : ""}`; }).join("\n\n");
+    const out = this.reply(threadId, who, text, LIMITS.text * 2);
+    t.answers = given;
+    this.save();
+    return out;
   }
 
   resolve(threadId, who) {
@@ -541,7 +545,8 @@ export class Store {
         if (c && (c.status === "declined" || c.status === "handed-off") && fields.status !== c.status && !(c.status === "handed-off" && fields.status === "declined"))
           throw new DeskError(409, `${c.id} is ${c.status}; only a person reopens it`);
         // Handled is a designer's mark on a change: the agent neither sets nor clears it.
-        if (next.kind === "change" && (fields.status === "handled" || c?.status === "handled") && fields.status !== c?.status)
+        // Archiving a handled change stays the agent's (the remedy for a full store).
+        if (next.kind === "change" && ((fields.status === "handled" && c?.status !== "handled") || (c?.status === "handled" && !["handled", "archived"].includes(fields.status))))
           throw new DeskError(409, "only a designer marks a change handled, or not");
         next.status = fields.status;
         if (next.status === "declined") delete next.call_suggestion;
@@ -805,8 +810,9 @@ function cleanQuestions(list) {
   return list.map((q) => {
     const options = Array.isArray(q.options) ? q.options.map((o) => clean(String(o), 120, "option")) : [];
     if (options.length < 2 || options.length > 4) throw bad("each question has 2 to 4 options");
+    if (q.suggested != null && q.suggested !== "" && !options.includes(String(q.suggested))) throw bad("suggested must be one of the question's options");
     return { text: clean(q.text, 300, "question"), why: optText(q.why, 300, "why"), options,
-      suggested: options.includes(q.suggested) ? q.suggested : null };
+      suggested: options.includes(String(q.suggested)) ? String(q.suggested) : null };
   });
 }
 
