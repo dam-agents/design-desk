@@ -83,9 +83,11 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
 11. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —
     not a fix, not a tweak — and fewer than `max_proposals_per_week` proposals were made in
     the last seven days, file a request of type `proposal` from the card (`request.from`),
-    research it from what you just read, and enqueue `explore`: the inbox run makes two or
-    three design proposals the team can pick from, adjust and comment on. Suggest it for the
-    next call (`design desk agenda C-<n> --note "Design Desk proposes"`).
+    with `origin: {channel: "agent", job: "watch", event: {label, url, card}}` ([desk.md](desk.md)
+    → Where a card came from): `label` "PR #<n> shipped" once `source.merged_at` is set,
+    else "PR #<n> opened"; research it from what you just read, and enqueue `explore`: the
+    inbox run makes two or three design proposals the team can pick from, adjust and comment
+    on. Suggest it for the next call (`design desk agenda C-<n> --note "Design Desk proposes"`).
 12. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title and the Desk link (`shareUrl` of `desk_artifact`), never card text
     beyond the title. Send, then log `logev info notified …`.

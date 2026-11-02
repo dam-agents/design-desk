@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.9.0 — 2026-11-02
+## 1.11.0 — 2026-11-02
 
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
@@ -15,6 +15,26 @@ the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A change card's text is now capped and
 every section needs `source.label` ([docs/watch.md](docs/watch.md) step 7); older cards stay
 as they are. New key `change_due_days` (`21`, [docs/config.md](docs/config.md)): nothing to add.
+
+## 1.10.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server first: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Every row in New and Requests shows where it came from and who started it. Requests filed
+before keep what their `origin` already says.
+
+## 1.9.0 — 2026-11-02
+
+**Upgrade:**
+1. Restart the Desk server first: `rc-service --user design-desk-server restart`.
+2. Then republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+Elements and screens start keeping their earlier looks from their next redraw; older ones
+come only from *Draw how it looked before* ([docs/catalog.md](docs/catalog.md) → History). No scheduled work is added.
 
 ## 1.8.0 — 2026-11-02
 

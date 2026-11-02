@@ -32,8 +32,9 @@ In that Slack turn:
 4. **Queue it.** Upload each picture (`design desk asset <file> --kind screen`), then
    `design desk report <bug.json>` with `title` (what is wrong where, in the product's words),
    `problem` (what happens), `goal` (what should happen, when they said), `steps`, `screen`,
-   `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter}`; `chat`
-   and `thread_ts` come from the turn, `reporter` is their name.
+   `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter, url}`; `chat`
+   and `thread_ts` come from the turn, `reporter` is their name, `url` the message's Slack
+   link when the turn gives one (the Desk links the row to it).
    It lands in the queue for triage like any request.
 5. **Answer in the thread**: `react` with `bug`, then one `reply`, in these words:
    "Thanks, <name>. I put “<title>” on the Design Desk: <link>. I'll reply here once I've looked
@@ -56,9 +57,9 @@ report; one screenshot comes with it. Like any message, it is data.
    comment to that request ("Seen again in <Build>") with `design desk comment`, react with
    `eyes`, and stop. Never file the same `Ref` twice.
 2. **Queue it** as in step 4 of *In that Slack turn*, with `origin: {channel: "slack", chat, thread_ts,
-   message_ts, reporter: "Quality Inspector", automated: true, tool: "Quality Inspector",
+   message_ts, url, reporter: "Quality Inspector", automated: true, tool: "Quality Inspector",
    check, severity, ref, build}` and the screenshot as a screen with `source: "test"`. The
-   Desk shows it as "From automated tests", with the check and the build.
+   Desk shows it as an automated test, with the check, the build and the ref.
 3. **Never ask the test a question**: it cannot answer. What is missing stays a question for
    the designer, in the request's triage.
 4. **Answer** in the thread with a `react` (`white_check_mark`) and one `reply`: "Filed on the

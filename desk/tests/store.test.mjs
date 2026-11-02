@@ -181,6 +181,32 @@ test("a bug from Slack lands on the queue with where to answer", () => {
   assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /type must be one of/);
 });
 
+test("every request says where it came from, and what a run filed it on", () => {
+  const s = fresh();
+  const change = s.upsertCard({ kind: "change", title: "Pinned reports", source: { repo: "acme/widgets", pr: 12, url: "https://github.com/acme/widgets/pull/12", author: "dana", merged_at: "2026-11-01T10:00:00Z" } }).card;
+  const idea = s.createRequest(alice, { problem: "The send button is small." }).card;
+  const proposal = s.createRequest({ agent: true }, { type: "proposal", problem: "Group the pins.", from: change.id,
+    origin: { channel: "agent", job: "watch", event: { label: "PR #12 shipped", url: "https://github.com/acme/widgets/pull/12", card: change.id } } }).card;
+  const issue = s.createRequest({ agent: true }, { type: "feature", problem: "Export as PDF.",
+    origin: { channel: "github", kind: "issue", number: 97, url: "https://github.com/acme/widgets/issues/97", reporter: "frank", job: "watch", event: { label: "labelled design", url: "javascript:alert(1)", card: "C-999" } } }).card;
+  assert.deepEqual(proposal.origin.event, { label: "PR #12 shipped", url: "https://github.com/acme/widgets/pull/12", card: change.id });
+  assert.deepEqual(issue.origin.event, { label: "labelled design", url: null, card: null }, "an event links only over http(s), to a card the Desk has");
+  const rows = Object.fromEntries(s.listCards({ kind: "request" }).map((c) => [c.id, c]));
+  assert.deepEqual([rows[idea.id].by, rows[idea.id].origin, rows[idea.id].from], [{ email: alice.email, role: "designer" }, null, null]);
+  assert.deepEqual([rows[proposal.id].by, rows[proposal.id].from, rows[proposal.id].origin.job], [{ agent: true }, change.id, "watch"]);
+  assert.equal(rows[issue.id].origin.reporter, "frank");
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", job: "Watch run" } }), /origin.job/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "telegram", reporter: "Gita" } }), /origin.channel must be one of slack, github, chat, agent/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", job: "audit" } }), /origin.job must be one of watch, digest/);
+  assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel: "agent", event: "PR #12 shipped" } }), /origin.event must be an object/);
+  // The operator asks in the direct session (docs/requests.md → Chat and Slack): a person's
+  // channel names the person, so the row has its author.
+  const chat = s.createRequest({ agent: true }, { problem: "Prototype the calmer header.", origin: { channel: "chat", reporter: "Gita" } }).card;
+  assert.equal(s.listCards({ kind: "request" }).find((c) => c.id === chat.id).origin.reporter, "Gita");
+  for (const channel of ["slack", "github", "chat"])
+    assert.throws(() => s.createRequest({ agent: true }, { problem: "x", origin: { channel } }), new RegExp(`origin.reporter is required for the ${channel} channel`));
+});
+
 test("change notes on elements wake the agent once; its redraw keeps the earlier version", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts. It has three buttons." });
@@ -329,6 +355,75 @@ test("the next call: a designer's Not now holds, a closed request takes no sugge
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "closing a request drops its suggestion");
   s.suggestForCall(other.id, "Again");
   assert.equal(s.getCard(other.id).call_suggestion, undefined, "a closed request takes no suggestion");
+});
+
+test("an element's redraw keeps its earlier look with the change that made the new one", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(Date.UTC(2026, 9, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const sheet = (html) => s.addAsset({ kind: "report", name: "sheet", contentType: "text/html", data: html, encoding: "utf8" }).asset.id;
+  const source = { file: "src/AgentRow.tsx", export: "AgentRow" };
+  const a1 = sheet("<p>one</p>");
+  const el = s.upsertCard({ kind: "element", title: "Agent row", source: { ...source, commit: "aaa" }, sheet: a1, status: "current", states: [{ name: "Running" }] }).card;
+  assert.deepEqual(el.history || [], []);
+  // The same picture again is no new version.
+  const same = sheet("<p>one</p>");
+  s.upsertCard({ id: el.id, sheet: same });
+  assert.deepEqual(s.getCard(el.id).history || [], []);
+  const ch = s.upsertCard({ kind: "change", title: "Spend in the row", source: { repo: "acme/widgets", pr: 7, merged_at: new Date(Date.UTC(2026, 9, 1) + (t + 0.5) * 3600e3).toISOString() }, elements: [el.id] }).card;
+  const open = s.upsertCard({ kind: "change", title: "Not shipped", source: { repo: "acme/widgets", pr: 8 }, elements: [el.id] }).card;
+  const a2 = sheet("<p>two</p>");
+  const now = s.upsertCard({ id: el.id, sheet: a2, source: { ...source, commit: "bbb" } }).card;
+  assert.equal(now.history.length, 1);
+  assert.equal(now.history[0].sheet, same);
+  assert.equal(now.history[0].commit, "aaa");
+  assert.deepEqual(now.history[0].states, ["Running"]);
+  assert.deepEqual(now.made_by, [ch.id]);
+  assert.ok(!now.made_by.includes(open.id));
+  assert.equal(s.listCards({ kind: "element" })[0].looks, 1);
+});
+
+test("earlier looks drawn from the code's history go in by date; the same commit replaces", () => {
+  const s = fresh();
+  const sheet = (html) => s.addAsset({ kind: "report", name: "sheet", contentType: "text/html", data: html, encoding: "utf8" }).asset.id;
+  const el = s.upsertCard({ kind: "element", title: "Picker", source: { file: "src/Picker.tsx", export: "Picker" }, sheet: sheet("<p>now</p>") }).card;
+  const link = { label: "PR #3", url: "https://github.com/acme/widgets/pull/3" };
+  s.addLook(el.id, { at: "2026-03-01T00:00:00Z", commit: "c3", sheet: sheet("<p>3</p>"), links: [link] });
+  s.addLook(el.id, { at: "2026-01-01T00:00:00Z", commit: "c1", sheet: sheet("<p>1</p>"), states: ["Empty"] });
+  const again = sheet("<p>3 again</p>");
+  s.addLook(el.id, { at: "2026-03-01T00:00:00Z", commit: "c3", sheet: again, links: [link] });
+  // An offset date (git log %cI) is stored in UTC and placed by its instant, not its text.
+  s.addLook(el.id, { at: "2026-03-01T01:00:00+05:00", commit: "c2", sheet: sheet("<p>2</p>") });
+  const h = s.getCard(el.id).history;
+  assert.deepEqual(h.map((x) => x.commit), ["c3", "c2", "c1"]);
+  assert.equal(h[1].at, "2026-02-28T20:00:00Z");
+  assert.equal(h[0].sheet, again);
+  assert.deepEqual(h[0].links, [link]);
+  assert.equal(h[0].later, true);
+  assert.throws(() => s.addLook(el.id, { at: "2999-01-01T00:00:00Z", sheet: again }), /newer than the current drawing/);
+  assert.throws(() => s.addLook(el.id, { at: "2026-02-01T00:00:00Z", sheet: "A-999" }), /no asset/);
+  assert.throws(() => s.addLook(el.id, { at: "2026-02-01T00:00:00Z", sheet: again, links: [{ label: "x", url: "javascript:alert(1)" }] }), /http/);
+  const change = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 9 } }).card;
+  assert.throws(() => s.addLook(change.id, { at: "2026-02-01T00:00:00Z", sheet: again }), /element or a screen/);
+});
+
+test("a screen keeps its earlier pictures; a designer asks for an element's history", () => {
+  const s = fresh();
+  const png = () => s.addAsset({ kind: "screen", name: "shot", contentType: "image/png", data: Buffer.from(String(Math.random())).toString("base64") }).asset.id;
+  const first = png();
+  const sc = s.upsertCard({ kind: "screen", title: "Agents list", path: "/agents", screens: [{ asset: first, caption: "light" }] }).card;
+  const ch = s.upsertCard({ kind: "change", title: "Bigger rows", source: { repo: "acme/widgets", pr: 4, merged_at: "2999-01-01T00:00:00Z" } }).card;
+  const next = s.upsertCard({ kind: "screen", path: "/agents", title: "Agents list", screens: [{ asset: png(), caption: "light" }], changes: [ch.id] }).card;
+  assert.equal(next.id, sc.id);
+  assert.equal(next.history[0].screens[0].asset, first);
+  const el = s.upsertCard({ kind: "element", title: "Agent row", source: { file: "src/AgentRow.tsx", export: "AgentRow" } }).card;
+  assert.throws(() => s.act(el.id, alice, "approve"), /redrawn or have its history drawn/);
+  const { inbox: item } = s.act(el.id, alice, "history", "the last 3 changes");
+  assert.equal(item.kind, "catalog");
+  assert.equal(inbox(s).open.find((i) => i.id === item.id).scope, "history");
+  assert.equal(s.getCard(el.id).waiting[0].scope, "history");
+  assert.throws(() => s.act(el.id, alice, "refresh"), /already working/);
+  assert.equal(can("developer", "history"), false);
+  assert.equal(can("designer", "history"), true);
 });
 
 test("needs a designer: the agent judges a change, a request's comes from where it stands", () => {

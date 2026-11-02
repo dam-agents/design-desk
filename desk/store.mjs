@@ -14,6 +14,8 @@ export const LIMITS = {
   claimTtlMin: 120,
   // A change card is read in passing: a short title, a one-sentence summary, a few short sections.
   change: { title: 90, summary: 180, sections: 5, section: 400 },
+  // Earlier looks of one element or screen kept on its card; the oldest go first.
+  looks: 30,
   // The whole store is one file rewritten on every change; past this people's writes
   // are refused until the operator archives old cards.
   dbBytes: 50 * 1024 * 1024,
@@ -30,14 +32,19 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": return member;
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "change": case "figma": case "share": case "add": case "handle": return shaper;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": case "handle": return shaper;
     case "build": return prototypeRoles.includes(role);
     default: return false;
   }
 }
 
+// Where a request the agent files came from (docs/desk.md → Where a card came from).
+export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
+// The scheduled runs that file requests on their own (`origin.job`).
+export const ORIGIN_JOBS = ["watch", "digest"];
+
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "queue", "change", "figma", "screens", "share", "add", "handle"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // The roster as the server reads a role (`## Desk people` rows): the first row of an email
@@ -148,7 +155,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.ask_first ? { ask_first: true } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -171,11 +178,13 @@ export class Store {
         acked: viewer ? Boolean(c.acks?.[viewer]) : false, handled: c.handled?.at || null,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
-        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length,
+        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         automated: Boolean(c.origin?.automated),
+        // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
+        origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
         attention: this.attentionOf(c),
       }));
@@ -213,7 +222,7 @@ export class Store {
   waitingFor(cardId) {
     return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done")
       .sort((a, b) => a.created.localeCompare(b.created))
-      .map((i) => ({ kind: i.kind, state: i.state, created: i.created }));
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}) }));
   }
 
   getAsset(id) {
@@ -354,7 +363,7 @@ export class Store {
       kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),
       title: clean(titleOf(title, problem), LIMITS.title, "title"), request,
       summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {},
-      triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin) : null,
+      triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin, this.db.cards) : null,
     };
     const id = this.next("card", "C");
     c.id = id;
@@ -390,9 +399,11 @@ export class Store {
   act(cardId, who, action, note = "", { askFirst = false } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
-      if (action !== "refresh") throw bad("a catalog element can only be redrawn");
+      // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
+      if (action !== "refresh" && action !== "history") throw bad("a catalog element can only be redrawn or have its history drawn");
       if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad(BUSY);
       const item = this.enqueue("catalog", cardId, null, who, optText(note, 1000, "note"));
+      if (action === "history") item.scope = "history";
       this.save();
       return { card: c, inbox: item };
     }
@@ -632,7 +643,7 @@ export class Store {
       else if (k === "group") next.group = clean(fields.group, 60, "group");
       else if (k === "elements") { if (!Array.isArray(fields.elements)) throw bad("elements must be a list"); next.elements = fields.elements.slice(0, 30).map((id) => this.card(String(id)).id); }
       else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets);
-      else if (k === "origin") next.origin = cleanOrigin(fields.origin);
+      else if (k === "origin") next.origin = cleanOrigin(fields.origin, this.db.cards);
       else if (k === "brief") {
         // The agent's brief for the call: what is on the table and what to decide.
         if (!next.agenda) throw bad("a brief belongs to a card on the agenda");
@@ -648,10 +659,79 @@ export class Store {
         || (next.kind === "element" && next.source?.file && x.source?.file === next.source.file && x.source?.export === next.source.export)));
     if (twin) throw new DeskError(409, `${twin.id} is already this ${next.kind}`);
     if (!c) { next.id = this.next("card", "C"); }
+    this.keepLook(c, next);
     next.updated = this.clock();
     this.db.cards[next.id] = next;
     this.save();
     return { card: next };
+  }
+
+  // ---------- how an element or a screen looked before ----------
+
+  // A redraw that replaces an element's sheet or a screen's pictures keeps the look it
+  // replaces, so people can step back through its versions. Every look knows the shipped
+  // changes that made it (`made_by`); a redraw that looks the same byte for byte is no
+  // new version.
+  keepLook(c, next) {
+    if (next.kind !== "element" && next.kind !== "screen") return;
+    const pictures = (x) => (x.kind === "element" ? (x.sheet ? [x.sheet] : []) : (x.screens || []).map((s) => s.asset));
+    const before = c ? pictures(c) : [], now = pictures(next);
+    if (!now.length || (now.length === before.length && now.every((id, i) => this.sameAsset(id, before[i])))) return;
+    next.drawn = this.clock();
+    if (!before.length) { next.made_by = []; return; }
+    const at = c.drawn || c.updated;
+    next.made_by = this.changesBetween(next, at, next.drawn);
+    const look = c.kind === "element"
+      ? { sheet: c.sheet, thumb: c.screens?.[0]?.asset || null, states: (c.states || []).map((x) => x.name) }
+      : { screens: c.screens };
+    next.history = byDate([{ ...look, at, commit: c.source?.commit || null, made_by: c.made_by || [], links: [], note: "" }, ...(c.history || [])]);
+  }
+
+  sameAsset(a, b) {
+    if (a === b) return true;
+    const x = own(this.db.assets, a), y = own(this.db.assets, b);
+    if (!x || !y || x.bytes !== y.bytes) return false;
+    try { return readFileSync(join(this.assetDir, x.file)).equals(readFileSync(join(this.assetDir, y.file))); } catch { return false; }
+  }
+
+  // The shipped changes that touched an element or a screen in a span of time, oldest first.
+  changesBetween(card, from, to) {
+    return Object.values(this.db.cards)
+      .filter((x) => x.kind === "change" && !(x.source?.pr && !x.source?.merged_at) && ((x.elements || []).includes(card.id) || (card.changes || []).includes(x.id)))
+      .map((x) => ({ id: x.id, at: x.source?.merged_at || x.created }))
+      .filter((x) => instant(x.at) > instant(from) && instant(x.at) <= instant(to))
+      .sort((a, b) => instant(a.at) - instant(b.at))
+      .map((x) => x.id);
+  }
+
+  // An earlier look the agent drew later from the code's history (an element at the merge
+  // of an older change), put in its place by date; the same commit drawn again replaces
+  // its look. `made_by` and `links` name the change that made it look like this.
+  addLook(cardId, look) {
+    const c = this.card(cardId);
+    if (c.kind !== "element" && c.kind !== "screen") throw bad("only an element or a screen has earlier looks");
+    if (typeof look !== "object" || !look) throw bad("a look must be an object");
+    const t = Date.parse(clean(String(look.at || ""), 40, "at"));
+    if (Number.isNaN(t)) throw bad("at must be a date");
+    if (t >= instant(c.drawn || c.updated)) throw bad("a look newer than the current drawing is the drawing: upsert it");
+    const at = new Date(t).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const ref = (id, name) => { if (!own(this.db.assets, id)) throw bad(`${name}: no asset ${id}`); return id; };
+    const pictures = c.kind === "element"
+      ? { sheet: ref(look.sheet, "sheet"), thumb: look.thumb == null ? null : ref(look.thumb, "thumb"), states: look.states == null ? [] : cleanStates(look.states.map((x) => (typeof x === "string" ? { name: x } : x))).map((x) => x.name) }
+      : { screens: cleanRefs(look.screens, this.db.assets, "screens") };
+    if (c.kind === "screen" && !pictures.screens.length) throw bad("a screen's look needs its pictures");
+    if (look.made_by != null && !Array.isArray(look.made_by)) throw bad("made_by must be a list");
+    const made = (look.made_by || []).slice(0, 20).map((id) => this.card(String(id))).filter((x) => x.kind === "change").map((x) => x.id);
+    const links = Array.isArray(look.links) ? look.links.slice(0, 10).map((l) => {
+      if (!/^https?:\/\//i.test(String(l?.url || ""))) throw bad("links must be http(s)");
+      return { label: clean(String(l.label || ""), 120, "link label"), url: String(l.url).slice(0, 500) };
+    }) : [];
+    const commit = optText(look.commit, 64, "commit") || null;
+    const entry = { ...pictures, at, commit, made_by: made, links, note: optText(look.note, 300, "note"), drawn: this.clock(), later: true };
+    c.history = byDate([entry, ...(c.history || []).filter((x) => !commit || x.commit !== commit)]);
+    c.updated = this.clock();
+    this.save();
+    return { card: c, look: entry };
   }
 
   // ---------- votes in Slack ----------
@@ -908,6 +988,11 @@ function cleanRefs(list, assets, name) {
   });
 }
 
+// Dates are compared as instants: an agent's date can carry an offset (`git log %cI`).
+const instant = (iso) => Date.parse(iso) || 0;
+// Earlier looks, newest first; past the limit the oldest go.
+const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).slice(0, LIMITS.looks);
+
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.
 function versioned(variants, before, at) {
@@ -1016,16 +1101,23 @@ function cleanLinks(key, value) {
   return copy;
 }
 
-// Where a reported bug came from, so the agent can answer the reporter in their thread.
-function cleanOrigin(o) {
+// Where a request came from: the reporter's thread the agent answers in, the issue, and,
+// when a scheduled run filed it, that run (`job`) and the event it acted on (`event`).
+function cleanOrigin(o, cards) {
   if (typeof o !== "object") throw bad("origin must be an object");
   const str = (v, n) => (v === undefined || v === null || v === "" ? null : String(v).slice(0, n));
-  if (!/^[a-z][a-z0-9-]{1,30}$/.test(String(o.channel || ""))) throw bad("origin.channel is a short name: slack, telegram, github, desk…");
+  if (!ORIGIN_CHANNELS.includes(o.channel)) throw bad(`origin.channel must be one of ${ORIGIN_CHANNELS.join(", ")}`);
   const url = str(o.url, 500);
   if (url && !/^https?:\/\//i.test(url)) throw bad("origin.url must be http(s)");
+  // A person's channel names the person: the Desk shows them as the author.
+  if (o.channel !== "agent" && !str(o.reporter, 120)) throw bad(`origin.reporter is required for the ${o.channel} channel: the person's name or login`);
+  if (o.job && !ORIGIN_JOBS.includes(o.job)) throw bad(`origin.job must be one of ${ORIGIN_JOBS.join(", ")}`);
+  if (o.event != null && (typeof o.event !== "object" || Array.isArray(o.event))) throw bad("origin.event must be an object: {label, url, card}");
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40),
+    ...(o.job ? { job: String(o.job) } : {}),
+    ...(o.event ? { event: cleanSource(o.event, cards) } : {}),
     // A finding an automated test posted (Quality Inspector), not a person's report.
     ...(o.automated ? { automated: true, tool: str(o.tool, 80), check: str(o.check, 40), severity: ["high", "medium", "low"].includes(o.severity) ? o.severity : null, ref: str(o.ref, 80), build: str(o.build, 80) } : {}) };
 }

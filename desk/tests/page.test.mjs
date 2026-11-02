@@ -31,9 +31,12 @@ const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "lea
   roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "lead"])])) });
 const BRIDGE = `<script>
 window.calls = [];
-const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } };
+const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45", author: "dana" } };
 const digest = { id: "d1", kind: "digest", title: "This week", status: "new" };
-const requests = [{ id: "r2", kind: "request", title: "Softer colours", status: "triage", asks: true }, { id: "r3", kind: "request", title: "A wider sidebar", status: "triage" }];
+const requests = [
+  { id: "r2", kind: "request", title: "Softer colours", status: "triage", asks: true, by: { agent: true }, origin: { channel: "slack", reporter: "Carla", url: "https://acme.slack.com/archives/C0123ABCD/p1" } },
+  { id: "r3", kind: "request", title: "A wider sidebar", status: "triage", by: { agent: true }, origin: { channel: "chat", reporter: "Gita" } },
+];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
@@ -155,7 +158,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // The screenshot dialog, on a shipped change.
     const sh = dialog("shots-dialog"), screens = "/api/cards/ch1/screens";
     await desk.click('[data-tab="new"]');
-    assert.equal((await desk.textContent('[data-card="d1"] .meta')).trim(), "Weekly digest", "a digest row shows no status word");
+    assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest row shows no status word");
     await desk.click('[data-card="ch1"]');
     const withPicture = async () => {
       await desk.click("[data-add-shots]");
@@ -185,6 +188,17 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
+
+    // Every row in New and Requests says where it came from and who started it; its
+    // links go to the source, the rest of the row opens the item.
+    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /PR #45.*by dana.*Automatic/);
+    await desk.click('[data-tab="requests"]');
+    const prov = '.row.item:has([data-card="r2"]) .prov';
+    assert.match(await desk.textContent(prov), /Slack.*by Carla/);
+    assert.match(await desk.textContent('.row.item:has([data-card="r3"]) .prov'), /Chat with Design Desk.*by Gita/, "the reporter is the author whatever the channel");
+    assert.equal(await desk.getAttribute(`${prov} a`, "href"), "https://acme.slack.com/archives/C0123ABCD/p1", "the source links to the thread");
+    await desk.click('.row.item:has([data-card="r2"]) .meta', { force: true });
+    await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r2"));
 
     // The Add to Product dialog: a screen needs Design Desk's own copy, which is off here.
     const pd = dialog("product-dialog"), product = "/api/product";
@@ -227,8 +241,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.match(await panel(3), /Everything a viewer can, and:\s+Vote on options/);
     assert.doesNotMatch(await panel(4), /Everything|Same as/, "the smallest role lists its own");
   } finally {
-    await chrome.close();
-    server.close();
+    await run.close();
   }
 });
 
@@ -264,13 +277,13 @@ test("Needs a designer filters New and Requests, and New opens on All", async (t
   try {
     const desk = await chrome.newPage();
     await desk.goto(`http://127.0.0.1:${server.address().port}/`);
-    const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row", (rs) => rs.map((r) => r.dataset.card)); };
+    const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
     assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
     assert.match(await desk.textContent("#list .filters .on"), /^All$/);
     await desk.click('[data-filter="newFilter:designer"]');
     assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
     assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
-    assert.match(await desk.textContent('[data-card="c4"]'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
+    assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-filter="reqFilter:designer"]');
     assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
@@ -279,7 +292,8 @@ test("Needs a designer filters New and Requests, and New opens on All", async (t
     await desk.click('[data-tab="new"]');
     assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
   } finally {
-    await run.close();
+    await chrome.close();
+    server.close();
   }
 });
 
@@ -301,7 +315,7 @@ const request = { id: "r2", kind: "request", title: "Bigger send button", status
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", due_days: 21, can: { handle: true, build: true, comment: true, ask: true } }
-    : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { ...request, variants: 1, threads: undefined, asks: true }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { id: "ch3", kind: "change", title: "Handled already", status: "handled", created, handled: created, attention: { level: "designer", reasons: ["a new screen"] } }, { ...request, variants: 1, threads: undefined, asks: true }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/ch2" ? { card: change } : path === "/api/cards/r2" ? { card: request }
     : path === "/api/assets/A-1" ? svg("red") : path === "/api/assets/A-2" ? svg("blue") : path === "/api/assets/A-3" ? { contentType: "text/html", encoding: "utf8", data: "<p>Calm</p>" } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
@@ -317,8 +331,16 @@ test("a change shows its age and gets handled, pictures step through, the form a
     // An overdue change, its sources and its folded explanation.
     await desk.click('[data-tab="new"]');
     await desk.waitForSelector('[data-card="ch2"]');
-    assert.match(await desk.getAttribute('[data-card="ch2"]', "class"), /overdue/, "a change past due_days is marked in the list");
-    assert.match(await desk.textContent('[data-card="ch2"] .meta'), /Overdue · 30 days open/);
+    const row = '.row.item:has([data-card="ch2"])';
+    assert.match(await desk.getAttribute(row, "class"), /overdue/, "a change past due_days is marked in the list");
+    assert.match(await desk.textContent(`${row} .meta`), /Overdue · 30 days open/);
+    assert.doesNotMatch(await desk.getAttribute('.row.item:has([data-card="ch3"])', "class"), /overdue/, "a handled change is not overdue");
+    const rows = () => desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card));
+    await desk.click('[data-filter="newFilter:open"]');
+    assert.deepEqual(await rows(), ["ch2"], "Not handled lists only the changes nobody marked handled");
+    await desk.click('[data-filter="newFilter:designer"]');
+    assert.deepEqual(await rows(), [], "a handled change leaves Needs a designer");
+    await desk.click('[data-filter="newFilter:all"]');
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector("[data-handle]");
     assert.equal(await desk.getAttribute(".sec-head .chip a", "href"), "https://github.com/acme/widgets/pull/11", "a section links its source");
