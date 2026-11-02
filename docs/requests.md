@@ -13,7 +13,7 @@ and feedback before any live prototype ([prototype.md](prototype.md)) and the ha
 | 3. Reported | a UI bug, or something that looks wrong to someone (Desk or Slack) | `bug` | as flow 2 |
 
 Ideas filed on the Desk (`idea`) and the agent's own proposals for new features
-(`proposal`, [watch.md](watch.md) step 10) end per `handoff`.
+(`proposal`, [watch.md](watch.md) step 11) end per `handoff`.
 
 ## Research (`requests_due`, before triage)
 
@@ -155,7 +155,8 @@ post; a reply the messenger refuses is logged, and the card is the record.
 A watch worklist's `issues_due` lists open issues labelled `issue_label`. Per issue:
 `ledger.sh claim <repo> <number>`, read it with its comments, then file a request of type
 `feature`: write the JSON with the issue's title and problem in plain words and
-`origin: {channel: "github", kind: "issue", repo, number, url}`, and run
+`origin: {channel: "github", kind: "issue", repo, number, url, reporter: <author login>,
+job: "watch", event: {label: "labelled <issue_label>"}}`, and run
 `design desk request <file>`; then `ledger.sh done <repo> <number> <card>`. Its
 research and triage follow in the inbox run. Never comment on the issue at intake; the
 write-back comes with the approved design ([handoff.md](handoff.md)).

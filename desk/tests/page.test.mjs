@@ -26,12 +26,13 @@ test("nothing on the page submits a form", () => {
 // with one request and one shipped change.
 const BRIDGE = `<script>
 window.calls = [];
-const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } };
+const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45", author: "dana" } };
+const bug = { id: "r2", kind: "request", title: "Totals overflow", status: "triage", type: "bug", by: { agent: true }, origin: { channel: "slack", reporter: "Carla", url: "https://acme.slack.com/archives/C0123ABCD/p1" } };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true } }
-    : path === "/api/cards" ? { cards: [change] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [change, bug] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/cards/r1" ? { card: { id: "r1", kind: "request", title: "Bigger send button", status: "triage" } }
     : path === "/api/cards/ch1" ? { card: change } : {};
@@ -160,6 +161,16 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
+
+    // Every row in New and Requests says where it came from and who started it; its
+    // links go to the source, the rest of the row opens the item.
+    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /PR #45.*by dana.*Automatic/);
+    await desk.click('[data-tab="requests"]');
+    const prov = '.row.item:has([data-card="r2"]) .prov';
+    assert.match(await desk.textContent(prov), /Slack.*by Carla/);
+    assert.equal(await desk.getAttribute(`${prov} a`, "href"), "https://acme.slack.com/archives/C0123ABCD/p1", "the source links to the thread");
+    await desk.click('.row.item:has([data-card="r2"]) .meta', { force: true });
+    await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r2"));
   } finally {
     await chrome.close();
     server.close();
