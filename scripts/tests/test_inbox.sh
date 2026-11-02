@@ -57,6 +57,26 @@ JSON
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "polls due: never synced, and the one whose request moved on" '[.polls_due[] | [.id, .close]] == [["P-2", false], ["P-3", true]]' "$out"
 assert "the slack-polls skill is read" '.read_set | index(".agents/skills/slack-polls/SKILL.md")' "$out"
+
+# An open council is read every council_sync_min minutes while slack_council is on; it
+# closes once its request moved on, or three days after the thread's last message.
+old_ts="$(( $(date -u +%s) - 4 * 86400 )).000100"; new_ts="$(date -u +%s).000100"
+cat > "$WORK_DIR/desk/db.json" <<JSON
+{"version":1,"cards":{
+ "C-7":{"id":"C-7","kind":"request","status":"feedback","councils":[
+  {"id":"S-1","state":"open","opened":"$old","synced":"$recent","seen":"$new_ts"},
+  {"id":"S-2","state":"open","opened":"$old","synced":null,"seen":"$new_ts"},
+  {"id":"S-3","state":"open","opened":"2026-01-01T00:00:00Z","synced":"$recent","seen":"$old_ts"},
+  {"id":"S-4","state":"closed","opened":"$old","synced":null}]},
+ "C-8":{"id":"C-8","kind":"request","status":"handed-off","councils":[{"id":"S-5","state":"open","opened":"$old","synced":"$recent","seen":"$new_ts"}]}}}
+JSON
+assert "councils wait while slack_council is off" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+printf -- '- slack_council: enabled\n' > "$WORK_DIR/CONFIG.md"
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "councils due: never read, idle, and moved on" '[.councils_due[] | [.id, .close, .why]] == [["S-2", false, null], ["S-3", true, "idle"], ["S-5", true, "moved"]]' "$out"
+assert "the slack-council skill is read" '.read_set | index(".agents/skills/slack-council/SKILL.md")' "$out"
+printf -- '- slack_council: enabled\n- council_sync_min: 1\n' > "$WORK_DIR/CONFIG.md"
+assert "a shorter interval reads the recent one too" '[.councils_due[].id] | index("S-1")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"
 assert "a broken inbox file is an error" '.error | test("not an inbox")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"

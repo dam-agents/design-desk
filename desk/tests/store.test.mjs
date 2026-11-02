@@ -203,6 +203,25 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.updatePoll(card.id, poll.id, { result: "One button: 1 👍" }).poll.state, "closed");
 });
 
+test("a council remembers its Slack thread, reopens once closed, and relays replies to the whole request", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  const { council } = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" });
+  assert.equal(council.id, "S-1");
+  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: "S-1", state: "open" });
+  const other = s.createRequest(alice, { problem: "Another." }).card;
+  assert.equal(s.openCouncil(other.id, { chat: "C0123", thread_ts: "2.0" }).duplicate, true);
+  s.updateCouncil(card.id, "S-1", { synced: "2026-11-02T10:00:00Z", seen: "2.5" });
+  assert.equal(s.getCard(card.id).councils[0].seen, "2.5");
+  assert.equal(s.updateCouncil(card.id, "S-1", { result: "Agreed on One button v2" }).council.state, "closed");
+  assert.equal(s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" }).council.state, "open");
+  assert.equal(s.getCard(card.id).councils.length, 1);
+  const { thread } = s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" });
+  assert.equal(thread.anchor, null);
+  assert.equal(s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" }).duplicate, true);
+  assert.throws(() => s.relayComment(card.id, { variant: "v9", name: "Jana", text: "x", slack_ts: "2.7" }), /no option/);
+});
+
 test("the next call: the agent suggests, a designer adds it with the option to present", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });

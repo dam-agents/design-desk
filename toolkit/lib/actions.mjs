@@ -24,6 +24,7 @@ export const ACTIONS = {
   "figma-export": { skill: "figma", does: "send a design option to Figma as editable layers" },
   "share-options": { skill: "slack-polls", does: "post a request's options to Slack for votes and comments" },
   "poll-sync": { skill: "slack-polls", does: "bring Slack votes and replies to the Desk; close a vote with its result" },
+  council: { skill: "slack-council", does: "turn each ask in a request's Slack thread into a new option or version, answered there before/after" },
   catalog: { doc: "docs/catalog.md", does: "draw a real UI element in every state" },
   brief: { doc: "docs/desk.md", does: "the brief of an item on the next call" },
   deck: { skill: "slides", does: "a slide deck and its PDF" },

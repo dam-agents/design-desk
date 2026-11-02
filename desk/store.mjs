@@ -80,7 +80,7 @@ function clean(s, max, name) {
 const optText = (s, max, name) => (s === undefined || s === null || s === "" ? "" : clean(s, max, name));
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
 }
 
 export class Store {
@@ -574,6 +574,47 @@ export class Store {
     return { poll };
   }
 
+  // ---------- councils in Slack ----------
+
+  // People discuss a request in a Slack thread and ask for changes there; the agent answers
+  // each ask with a new option or version. The council remembers the thread, how far the
+  // agent has read it (`seen`, a Slack ts) and when it last looked.
+  openCouncil(cardId, { chat, thread_ts, url = null, channel = null }) {
+    const c = this.card(cardId);
+    const ts = clean(String(thread_ts || ""), 40, "thread_ts");
+    const held = this.findCouncil(ts);
+    if (held && held.state === "open") return { council: this.card(held.card).councils.find((x) => x.id === held.council), duplicate: true };
+    const was = (c.councils || []).find((x) => x.thread_ts === ts);
+    if (was) { Object.assign(was, { state: "open", synced: null, closed: null, result: null }); c.updated = this.clock(); this.save(); return { council: was }; }
+    const council = {
+      id: this.next("council", "S"), state: "open", opened: this.clock(), synced: null, seen: null,
+      chat: clean(String(chat || ""), 80, "chat"), thread_ts: ts,
+      channel: optText(channel, 80, "channel"), url: /^https:\/\//.test(String(url || "")) ? String(url).slice(0, 300) : null,
+    };
+    c.councils = [...(c.councils || []), council];
+    c.updated = this.clock();
+    this.save();
+    return { council };
+  }
+
+  updateCouncil(cardId, councilId, { synced = null, seen = null, result = null } = {}) {
+    const c = this.card(cardId);
+    const council = (c.councils || []).find((x) => x.id === councilId);
+    if (!council) throw missing(`no council ${councilId} on ${cardId}`);
+    if (synced) council.synced = clean(String(synced), 40, "synced");
+    if (seen) council.seen = clean(String(seen), 40, "seen");
+    if (result !== null) { council.state = "closed"; council.closed = this.clock(); council.result = clean(String(result), 600, "result"); }
+    c.updated = this.clock();
+    this.save();
+    return { council };
+  }
+
+  findCouncil(ts) {
+    for (const c of Object.values(this.db.cards)) for (const x of c.councils || [])
+      if (x.thread_ts === ts) return { card: c.id, council: x.id, state: x.state };
+    return null;
+  }
+
   // The reactions on one option's post, as they are now. A person's own vote on the Desk
   // wins over their reaction; a reaction taken back takes the vote away.
   slackVotes(cardId, variant, voters) {
@@ -594,14 +635,15 @@ export class Store {
     return { votes: c.votes[variant] };
   }
 
-  // A reply someone wrote under an option in Slack becomes a comment on that option, once.
-  relayComment(cardId, { variant, name, email = null, role = null, text, slack_ts, url = null }) {
+  // A reply someone wrote in Slack becomes a comment once: on the option it was under, or
+  // on the whole request when it came from a council thread.
+  relayComment(cardId, { variant = null, name, email = null, role = null, text, slack_ts, url = null }) {
     const c = this.card(cardId);
-    if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
+    if (variant && !(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
     const ts = clean(String(slack_ts || ""), 40, "slack_ts");
     const seen = (c.threads || []).map((t) => this.db.threads[t]).find((t) => t?.slack_ts === ts);
     if (seen) return { thread: seen, duplicate: true };
-    const { thread } = this.openThread(cardId, { via: "slack", name, email, role: role || "slack" }, { kind: "comment", text, anchor: { variant, label: "the whole option" } });
+    const { thread } = this.openThread(cardId, { via: "slack", name, email, role: role || "slack" }, { kind: "comment", text, anchor: variant ? { variant, label: "the whole option" } : null });
     thread.slack_ts = ts;
     if (/^https:\/\//.test(String(url || ""))) thread.slack_url = String(url).slice(0, 300);
     this.save();

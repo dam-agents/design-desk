@@ -215,6 +215,7 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "decisions") return send(res, 200, { decisions: store.listDecisions({ concept: url.searchParams.get("concept") || "", q: url.searchParams.get("q") || "" }) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
   if (m === "GET" && p[1] === "polls") return send(res, 200, { poll: store.findPoll(String(url.searchParams.get("ts") || "")) });
+  if (m === "GET" && p[1] === "councils") return send(res, 200, { council: store.findCouncil(String(url.searchParams.get("ts") || "")) });
   if (m === "GET" && p[1] === "findings") return send(res, 200, { finding: store.findFinding(String(url.searchParams.get("ref") || "")) });
   const b = m === "GET" ? {} : await body(req);
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
@@ -229,6 +230,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "decisions") return send(res, 201, store.addDecision(b));
   if (m === "POST" && p[1] === "cards" && p[3] === "polls" && !p[4]) return send(res, 201, store.openPoll(p[2], b));
   if (m === "POST" && p[1] === "cards" && p[3] === "polls" && p[4]) return send(res, 200, store.updatePoll(p[2], p[4], b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "councils" && !p[4]) return send(res, 201, store.openCouncil(p[2], b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "councils" && p[4]) return send(res, 200, store.updateCouncil(p[2], p[4], b));
   // A Slack voter's role is the roster's for their email, never one the agent names.
   if (m === "POST" && p[1] === "cards" && p[3] === "slack-votes") {
     const voters = (Array.isArray(b.voters) ? b.voters : []).map((v) => ({ ...v, key: v.email ? String(v.email).toLowerCase() : `slack:${v.slack_id || v.key}`, role: slackRole(v.email) }));

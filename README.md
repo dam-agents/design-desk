@@ -32,7 +32,9 @@ How it is built and why: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 Bind a **Slack** channel to ask questions, send requests and report UI bugs from there too:
 write what is wrong (a screenshot helps) and the bug joins the Desk's queue; the agent answers
-in your thread with the card and, after it looked, what can be done.
+in your thread with the card and, after it looked, what can be done. With `slack_council:
+enabled`, anyone in a request's thread can ask for design changes and gets each new version back
+there as a before/after picture.
 
 ## The product profile
 

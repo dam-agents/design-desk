@@ -184,6 +184,7 @@ Designer kit made. Pick the skill, build, look, deliver:
 | A chart, dashboard or stat tiles | the harness's `dataviz` skill, in the style's colors |
 | "Why does X work like this?" | the `explain` skill, sources as in [desk.md](desk.md) → Questions |
 | "This is broken / looks wrong" | [UI bugs](#ui-bugs) → From a channel |
+| "Make it…", "how would it look if…" in a request's thread (`slack_council: enabled`) | `slack-council` |
 
 - **Ask only what blocks the work**, once, with a suggested answer (which repo, which
   screen, who the deck is for); otherwise take the smallest reasonable reading and say what

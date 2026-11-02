@@ -32,6 +32,7 @@ its `SKILL.md` is; read it before doing the action.
 | `figma-export` | an option or a prototype into Figma as layers | Send to Figma; chat | `figma` |
 | `share-options` | post the options to Slack, one message each, for 👍 / ⚠️ votes and replies | Share in Slack; chat | `slack-polls` |
 | `poll-sync` | bring Slack votes and replies to the Desk; close the vote with its result | every 30 minutes while a vote is open | `slack-polls` |
+| `council` | each ask in a request's Slack thread as a new option or version, answered there before/after | an ask in a Slack thread; `councils_due` | `slack-council` |
 | `catalog` | a real element drawn in every state | onboarding; Update the drawing; the watch | [catalog.md](catalog.md) |
 | `brief` | what the next call decides about an item | Add to the next call | [desk.md](desk.md) → The next call |
 | `deck`, `walkthrough`, `video`, `brand`, `copy` | the Designer kit's deliverables | chat; Slack | `slides`, `walkthrough`, `demo-video`, `brand`, `copy` |

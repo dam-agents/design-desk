@@ -7,6 +7,19 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.4.0 — 2026-11-02
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Add `- slack_council: disabled` and
+`- council_sync_min: 30` to `work/CONFIG.md` when missing, then re-run
+`bash "$HOME/scripts/verify-onboarding.sh" --config`. Offer the operator `slack_council:
+enabled` (needs a bound Slack channel): anyone in a request's Slack thread asks for design
+changes and gets each new option or version back there as a before/after picture
+([`slack-council`](.agents/skills/slack-council/SKILL.md)). While a thread is open, one inbox
+run every `council_sync_min` minutes reads it.
+
 ## 1.3.0 — 2026-11-02
 
 **Upgrade:**

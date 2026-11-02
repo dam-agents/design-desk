@@ -831,7 +831,7 @@
         ${S.me?.slack && can("share") && !(c.polls || []).some((x) => x.state === "open") && !working(c).includes("slack") ? `<button class="btn small" data-act="slack-share">Share in Slack</button>` : ""}
         ${tallyFor(c, v.id)}
       </div>
-      ${renderPolls(c)}
+      ${renderPolls(c)}${renderCouncils(c)}
       <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`;
   }
 
@@ -843,6 +843,16 @@
     return polls.slice(-2).map((p) => p.state === "open"
       ? `<p class="hint">💬 Voting in Slack until ${esc(when(p.closes))}${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack so far` : ""}. Reactions and replies there come to this page.${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
       : `<p class="hint">💬 Slack vote closed ${esc(day(p.closed))}${p.result ? `: ${esc(p.result)}` : ""}${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`).join("");
+  }
+
+  // A Slack thread that asks for changes: each ask there comes back here as a new version.
+  function renderCouncils(c) {
+    const x = (c.councils || []).at(-1);
+    if (!x) return "";
+    const link = x.url ? ` <a href="${safeUrl(x.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : "";
+    return x.state === "open"
+      ? `<p class="hint">💬 Discussed in Slack: what people ask for in the thread comes here as new versions, and their replies as comments. The final pick is made here.${link}</p>`
+      : `<p class="hint">💬 Slack discussion ended ${esc(day(x.closed))}${x.result ? `: ${esc(x.result)}` : ""}.${link}</p>`;
   }
 
   function renderPrototype(c) {
