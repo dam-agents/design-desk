@@ -21,7 +21,7 @@ Domain conditions:
 | Alert | Condition | Clears when |
 | --- | --- | --- |
 | `desk_down` | the Desk server did not answer `127.0.0.1:5555/health` on two ticks in a row | it answers again |
-| `inbox_stuck` | an inbox item has waited open for more than 2 h (the inbox schedule or the pings are not working) | no open item is older than 2 h |
+| `inbox_stuck` | an inbox item has waited open for more than 2 h (the inbox schedule or the pings are not working), or its `created` time cannot be read | no open item is older than 2 h or undated; an inbox file the monitor cannot read is logged and clears nothing |
 
 **The ledger** — `work/MONITOR.json`: an `alerts_due` entry is claimed when emitted and
 due again 30 min later until `monitor.sh ack <id>…` records it as sent, so a session that
@@ -47,7 +47,8 @@ condition that clears leaves the ledger, so its return alerts again.
    - `backup_failing` — the sample error; [persistence.md](persistence.md).
    - `desk_down` — the Desk page cannot load or save anything; the server's log is
      `~/.local/state/rc/design-desk-server.log`; [desk.md](desk.md) → Server.
-   - `inbox_stuck` — the items and how long they wait; check the inbox schedule.
+   - `inbox_stuck` — the items and how long they wait, or that an item's `created`
+     time cannot be read; check the inbox schedule.
 3. **After the send**, `bash "$HOME/scripts/monitor.sh" ack <every id of alerts_due>`.
    A failed send is logged and not acknowledged: the next tick after the claim retries.
 4. Back up `work/` (`scripts/work-backup.sh persist`).

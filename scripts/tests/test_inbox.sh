@@ -64,6 +64,20 @@ out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "polls due: never synced, and the one whose request moved on" '[.polls_due[] | [.id, .close]] == [["P-2", false], ["P-3", true]]' "$out"
 assert "the slack-polls skill is read" '.read_set | index(".agents/skills/slack-polls/SKILL.md")' "$out"
 
+# A closing time is a time in whatever offset it is written (a vote was closed a minute
+# after it opened because a "+01:00" value read as the epoch), and a closing time nobody
+# can read never closes a vote at all.
+cat > "$WORK_DIR/desk/db.json" <<JSON
+{"version":1,"cards":{
+ "C-8":{"id":"C-8","kind":"request","status":"feedback","polls":[
+   {"id":"P-4","state":"open","closes":"2099-01-01T01:00:00+01:00","synced":null},
+   {"id":"P-5","state":"open","closes":"not a date","synced":null},
+   {"id":"P-6","state":"open","closes":"2001-01-01T01:00:00+01:00","synced":null}]}}}
+JSON
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "an offset closing time is read, an unreadable one never closes" \
+  '[.polls_due[] | [.id, .close]] == [["P-4", false], ["P-5", false], ["P-6", true]]' "$out"
+
 # An open council is read every council_sync_min minutes while slack_council is on; it
 # closes once its request moved on, or three days after the thread's last message.
 old_ts="$(( $(date -u +%s) - 4 * 86400 )).000100"; new_ts="$(date -u +%s).000100"
@@ -83,6 +97,37 @@ assert "councils due: never read, idle, and moved on" '[.councils_due[] | [.id, 
 assert "the slack-council skill is read" '.read_set | index(".agents/skills/slack-council/SKILL.md")' "$out"
 printf -- '- slack_council: enabled\n- council_sync_min: 1\n' > "$WORK_DIR/CONFIG.md"
 assert "a shorter interval reads the recent one too" '[.councils_due[].id] | index("S-1")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+
+# A time nobody can read (scripts/lib/time.sh) never closes, expires or idles anything, and
+# a claim or a sync time nobody can read is stale; a time written with an offset is read.
+# One such value must not stop the whole pass (jq cannot subtract null).
+recent_off="$(date -u -d '55 minutes' +%Y-%m-%dT%H:%M:%S+01:00 2>/dev/null || date -u -v+55M +%Y-%m-%dT%H:%M:%S+01:00)"
+soon_off="$(date -u -d '3 hours' +%Y-%m-%dT%H:%M:%S+01:00 2>/dev/null || date -u -v+3H +%Y-%m-%dT%H:%M:%S+01:00)"
+printf -- '- slack_council: enabled\n' > "$WORK_DIR/CONFIG.md"
+cat > "$WORK_DIR/desk/inbox.json" <<JSON
+{"updated":"$new","open":[],"claimed":[
+ {"id":"I-9","kind":"explore","card":"C-10","thread":null,"created":"$new","claimed_by":"s3","claimed_at":"not a date"},
+ {"id":"I-10","kind":"explore","card":"C-10","thread":null,"created":"$new","claimed_by":"s4","claimed_at":"$recent_off"},
+ {"id":"I-11","kind":"explore","card":"C-10","thread":null,"created":"$new","claimed_by":"s5","claimed_at":"2001-01-01T01:00:00+01:00"}]}
+JSON
+cat > "$WORK_DIR/desk/db.json" <<JSON
+{"version":1,"cards":{
+ "C-10":{"id":"C-10","kind":"request","status":"testing","prototype":{"state":"live","env":"r10","expires":"$soon_off"},
+  "polls":[
+   {"id":"P-7","state":"open","closes":"2099-01-01T01:00:00+01:00","synced":"not a date"},
+   {"id":"P-8","state":"open","closes":"2099-01-01T01:00:00+01:00","synced":"$recent_off"}],
+  "councils":[
+   {"id":"S-6","state":"open","opened":"not a date","synced":"$recent_off"},
+   {"id":"S-7","state":"open","opened":"2001-01-01T01:00:00+01:00","synced":"$recent_off"},
+   {"id":"S-8","state":"open","opened":"$recent_off","synced":"not a date"}]},
+ "C-11":{"id":"C-11","kind":"request","status":"testing","prototype":{"state":"live","env":"r11","expires":"not a date"}},
+ "C-12":{"id":"C-12","kind":"request","status":"declined","prototype":{"state":"live","env":"r12","expires":"not a date"}}}}
+JSON
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "a claim nobody can date is taken over, a fresh offset one is not" '[.variants_due[] | [.id, .takeover]] == [["I-9", true], ["I-11", true]]' "$out"
+assert "an expiry nobody can read is never due, open or closed" '[.expiring_due[].card] == ["C-10"]' "$out"
+assert "a sync time nobody can read is due, a fresh offset one is not" '[.polls_due[] | [.id, .close]] == [["P-7", false]]' "$out"
+assert "an opening time nobody can read never idles a council" '[.councils_due[] | [.id, .close, .why]] == [["S-7", true, "idle"], ["S-8", false, null]]' "$out"
 rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"
 assert "a broken inbox file is an error" '.error | test("not an inbox")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"

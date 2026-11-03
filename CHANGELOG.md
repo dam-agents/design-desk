@@ -17,6 +17,12 @@ now **Changes**, and Next call is the **Presentation** filter on Requests, where
 marked presented ([docs/desk.md](docs/desk.md) → **The presentation**). Older `#call/C-12`
 links still open there. No state changes.
 
+## 1.22.1 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`): it stops counting a
+bot's reaction as a vote. Scripts and skills are read per run; nothing else changes.
+
 ## 1.22.0 — 2026-11-03
 
 **Upgrade:**
