@@ -496,7 +496,7 @@ inbox_mode() {
     { mode:"inbox", nothing_to_do:false, title:$title,
       questions_due: pick(["question"]),
       requests_due: pick(["request", "follow-up"]),
-      variants_due: pick(["explore", "revise"]),
+      variants_due: pick(["explore", "revise", "states"]),
       prototypes_due: pick(["build"]),
       handoffs_due: pick(["handoff"]),
       catalog_due: pick(["catalog"]),

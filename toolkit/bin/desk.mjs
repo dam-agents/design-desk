@@ -33,7 +33,7 @@ const USAGE = `usage: design desk <command>
   answer <T-n> <text-file|-> [--resolve]   answer a question thread
   comment <C-n> <text-file|->              add a comment thread as the agent
   ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
-      [--form]                             their answer re-queues the step (request explore revise
+      [--form]                             their answer re-queues the step (request explore revise states
                                            build handoff figma catalog map); --form: the file is
                                            JSON {text, questions: [{text, why, options, suggested}]},
                                            a form

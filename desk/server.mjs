@@ -241,11 +241,13 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
-    need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action);
+    // Drawing every state of a part is changing the option: a designer's.
+    need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action === "states" ? "revise" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
-    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true }), s, who));
+    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true,
+      variant: typeof b.variant === "string" ? b.variant : null, version: Number.isInteger(b.version) ? b.version : null, part: b.part && typeof b.part === "object" ? b.part : null }), s, who));
   }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
 }

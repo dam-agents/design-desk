@@ -18,7 +18,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    requests count; a closed one's prototype waits for its expiry teardown.
    `create_environment` missing from your tools → comment that the owner must turn on
    Environments, tell the operator, stop.
-   **Ask first** — an item with `ask_first` (the designer left "Ask me first" ticked when pressing Build):
+   **Ask first** — an item with `ask_first` (the designer left "Ask me first" ticked in the final check before Build it live):
    list the design decisions the option and its comments leave open (a missing state, copy,
    a small screen…). None → build. Some → one form, `design desk ask C-<n> <file> --step build
    --form` with `{text, questions: [{text, why, options, suggested}]}`: at most 6 questions
@@ -29,10 +29,14 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree C-<n> <repo>` → a checkout of the
    default branch on `design-desk/c<n>-<slug>`, printed as JSON with its path and base.
    An existing worktree of the card is reused (an update).
-3. **Change the code.** Implement the option the item's note names (the person picked it
-   when they pressed Build), at its latest version with every applied note — in the
-   product's own components, styles and copy, following the profile's `PROFILE.md`. An item
-   without a note takes the card's `chosen`, the option a designer picked; without one, ask
+3. **Change the code.** Implement what the person checked before pressing **Build it live**:
+   the card's `live_pick` — the option (`variant`, also the item's `variant` and note), at the
+   `version` they looked at, and every one of its `states` at the version listed (each state
+   the code can show: hover, disabled, loading, an error…) — in the product's own components,
+   styles and copy, following the profile's `PROFILE.md`. The store refuses a build of a
+   version older than the latest, so `live_pick` is the latest when the item is created; build
+   from its exact files (`live_pick.asset`, `states[].asset`, `design desk fetch`), not a newer
+   version that arrived since. An item without a note takes the card's `chosen`, the option a designer picked; without one, ask
    which option (`design desk ask C-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
    `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
@@ -49,7 +53,8 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    (an install takes many minutes), then poll `proto.sh run C-<n> status` until it says
    `running` or `failed`. The profile's `bin/env up` installs the worktree into the
    Environment over the Environment Link (`ssh env-c<n>`) and seeds the demo data.
-7. **Publish.** `list_environments` gives the endpoint address of `engine.open_endpoint`;
+7. **Publish.** The card already says what goes live (`live_pick`); say it once more in the
+   build's comment ("<option>, version <n>, with <k> states"). `list_environments` gives the endpoint address of `engine.open_endpoint`;
    `proto.sh run C-<n> credentials` gives the demo sign-in. Set `prototype: {state: "live",
    url, login: {user, password, hint}, env: "c<n>", expires, …}` and `status: testing`.
    Capture two or three screens of the changed screen: `proto.sh run C-<n> tunnel` prints

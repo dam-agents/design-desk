@@ -662,16 +662,19 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-skip-form="t1"]');
     assert.deepEqual(await sent("/api/threads/t1/answers", 2), { answers: [{ choice: null, note: "" }, { choice: null, note: "" }] });
 
-    // Build asks first unless the designer unticks it.
-    const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
+    // Build opens the final check of the only option: it builds exactly the version it
+    // shows, and asks first unless the designer unticks it.
     await desk.click('[data-act="build"]');
-    assert.equal(await desk.isChecked("#confirm-form [name=check]"), true, "Ask me first is ticked");
-    await cf("Build it").click();
-    assert.deepEqual(await sent("/api/cards/r2/actions", 1), { action: "build", note: "v1", ask_first: true });
+    await desk.waitForSelector("[data-ws-build]");
+    assert.match(await desk.textContent("#ws-top"), /Final check: Calm goes live[\s\S]*version 1/);
+    assert.equal(await desk.isChecked("#ws-ask-first"), true, "Ask me first is ticked");
+    await desk.click("[data-ws-build]");
+    assert.deepEqual(await sent("/api/cards/r2/actions", 1), { action: "build", note: "v1", variant: "v1", version: 1, ask_first: true });
     await desk.waitForSelector('[data-act="build"]');
+    assert.equal(await desk.isVisible("#workspace"), false, "the check closes once it is sent");
     await desk.click('[data-act="build"]');
-    await desk.uncheck("#confirm-form [name=check]");
-    await cf("Build it").click();
+    await desk.uncheck("#ws-ask-first");
+    await desk.click("[data-ws-build]");
     assert.equal((await sent("/api/cards/r2/actions", 2)).ask_first, false);
   } finally {
     await run.close();

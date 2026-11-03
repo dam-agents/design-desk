@@ -156,6 +156,9 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   notes ask, rebuild only that option, and before closing the item look at the inbox once
   more (`design desk inbox`): a `revise` for the same card that arrived meanwhile is claimed
   and done in the same run.
+- **Notes on a state** carry `anchor.state` too (Every state of a part, below): apply them to
+  that state's own file and upload it under the same state id; the option's other states and
+  its own file stay as they are.
 - **User stories**: with an `issue_brief`, each option says how it meets every story:
   `stories: [{story, met, how, parts}]` — `met` is `yes`, `partly` or `no`; `how` one or two
   plain sentences; `parts` the elements that do it (`{selector, label, view}`, at most 6: a
@@ -169,6 +172,38 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   is split or its images shrunk.
 - A variant shows no real person, no real customer data, and no invented number presented
   as fact.
+
+## Every state of a part (`variants_due`: `states`)
+
+A designer selects a part of an option in the workspace (a button, a list, a form) and presses
+**Draw every state**, or names the part. The item names the option (`variant`), the part they
+selected (`part`: `{selector, text, label, view, view_name}`; none when they only named it) and
+their words (`note`). Make it with the `states` action's skill (`design skill states --repo <repo>`).
+
+1. Claim; read the option's latest file (`design desk fetch`) and its source under
+   `work/output/`. Find the part in it; a part you cannot find → `design desk ask C-<n> <file>
+   --step states` with your best guess, done `--outcome asked`.
+2. **Which states.** Read the product's component the part is drawn from (`design states <file>
+   --export <Component> --root <clone>`, [catalog.md](catalog.md) → Its dimensions) and choose
+   as the catalog does: one state per value that changes what a person sees — hovered,
+   focused, pressed, disabled, loading, empty, an error, a long text, a missing picture, a
+   count of 0 and of many — and what the note asks first. Not the cross product; 24 at most.
+   A state the product cannot be in today is drawn only when the request adds it, labelled
+   "new".
+3. **Draw** each state as its own self-contained HTML file: the option's whole page with only
+   the part in that state, built like the option (`design build`, the same style), so a person
+   compares states one by one. A state that needs a developer (new data, a new rule) is drawn
+   and labelled "needs a developer", as in the options.
+4. Look at every state's shot (`design shot`), upload each (`--kind variant`), then one `design
+   desk upsert` with every option and, on this one, `states: [{id, name, how, part, asset}]`:
+   `id` short and stable (`hover`, `error`), `name` the state in plain words, `how` when it
+   happens in one sentence, `part` the part in the product's words (states of several parts
+   are grouped by it). Keep the option's earlier states of other parts in the list; leaving
+   `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
+   version; the Desk keeps the earlier one.
+5. A later `revise` of the option that changes the part redraws its states in the same run, so
+   what goes live and its states agree.
+6. `design desk done I-<n> --session <id> --outcome "drew <k> states of <part>"`.
 
 ## UI bugs
 

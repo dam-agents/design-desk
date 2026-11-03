@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.26.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A designer can now have one part
+of an option drawn in every state (**Draw every state**, inbox kind `states`, action `states`,
+[docs/requests.md](docs/requests.md) → **Every state of a part**); Build a live prototype opens a
+final check and records what goes live on the card (`live_pick`, [docs/prototype.md](docs/prototype.md)
+→ Build). Older cards have neither and need nothing. The inbox pre-flight lists `states`
+items under `variants_due`.
+
 ## 1.25.1 — 2026-11-03
 
 **Upgrade:**
