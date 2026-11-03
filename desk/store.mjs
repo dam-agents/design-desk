@@ -574,6 +574,7 @@ export class Store {
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
+    else if (action === "approve") delete c.overruled;
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
@@ -1093,6 +1094,11 @@ export class Store {
     if (d.status === "active") throw bad(`${d.id} is in force`);
     d.status = "active";
     delete d.revoked;
+    // What replaced it no longer does: both are in force again.
+    for (const o of Object.values(this.db.decisions)) if ((o.replaces || []).includes(d.id)) {
+      o.replaces = o.replaces.filter((x) => x !== d.id);
+      if (!o.replaces.length) delete o.replaces;
+    }
     d.history = [...(d.history || []), { what: "restored", by: { email: who.email || null, role: who.role || null }, at: this.clock() }].slice(-20);
     this.save();
     return { decision: d };

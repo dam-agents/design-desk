@@ -112,7 +112,8 @@ and `D-12` in text link to it as to a card (Links to an item).
   confirmation (the store keeps `overruled`). Never reshape a design silently to dodge one.
 - **Revoking**: a designer or lead revokes one on its page with a reason (and what replaces
   it), or restores it. A new decision that reverses an earlier one names it in `replaces`; the
-  store revokes it as "Replaced by D-<n>". A person revoking one in Slack, the call or chat:
+  store revokes it as "Replaced by D-<n>". A designer or lead on the roster revoking one in
+  Slack, the call or chat (anyone else: answer that a designer revokes it on the Desk):
   `design desk decision-revoke D-<n> <file>` with `{reason, by, origin, replaced_by}`. Design
   Desk never revokes on its own judgement: what goes against a decision records the conflict
   and asks in the card's thread whether `D-<n>` still holds.

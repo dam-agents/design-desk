@@ -331,7 +331,7 @@ test("a person's answer to the agent's question resumes the blocked step", () =>
   const { inbox: item } = s.reply(thread.id, alice, "The agents list.");
   assert.equal(item.kind, "request");
   assert.equal(s.listDecisions().length, 0);
-  s.addDecision({ concepts: ["Spend"], text: "Spend is per week.", source: { card: card.id } });
+  s.addDecision({ concepts: ["Spend"], text: "Spend is per week.", author: { email: alice.email }, origin: { kind: "desk", card: card.id } });
   assert.equal(s.listDecisions({ concept: "spend" }).length, 1);
 });
 
@@ -709,6 +709,8 @@ test("decisions: conflicts warn, wait for a designer and gate approval; revoking
   assert.equal(s.getCard(c.id).conflicts[0].status, "revoked");
   assert.throws(() => s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "x" }] }), /no longer in force/);
   assert.throws(() => s.revokeDecision(d.id, alice, { reason: "again" }), /already revoked/);
+  for (const i of Object.values(s.db.inbox).filter((x) => x.kind === "handoff")) { s.claim(i.id, "run-1"); s.done(i.id, "run-1"); }
+  assert.deepEqual(s.act(c.id, alice, "approve", "", { overrule: false }).card.overruled, undefined, "an approve with no conflict in force clears the earlier overrule");
   s.restoreDecision(d.id, alice);
   assert.deepEqual([s.db.decisions[d.id].status, s.db.decisions[d.id].history.map((h) => h.what)], ["active", ["revoked", "restored"]]);
 });
@@ -721,6 +723,9 @@ test("decisions: a new one replaces an earlier one; the agent revokes in a perso
   assert.deepEqual([s.db.decisions[a.id].status, s.db.decisions[a.id].revoked.replaced_by], ["revoked", b.id]);
   assert.deepEqual(s.getDecision(a.id).refs.map((r) => [r.id, r.how]), [[b.id, "replaces"]]);
   assert.throws(() => s.addDecision({ concepts: ["limits"], text: "x", author: { name: "C" }, origin: pr, replaces: [a.id] }), /no longer in force/);
+  s.restoreDecision(a.id, alice);
+  assert.deepEqual([s.db.decisions[a.id].status, s.db.decisions[b.id].replaces], ["active", undefined], "a restored decision is no longer one another replaces");
+  s.revokeDecision(a.id, alice, { reason: "Replaced after all", replaced_by: b.id });
   assert.throws(() => s.revokeDecision(b.id, { agent: true }, { reason: "Dropped", by: { name: "Carla" } }), /names its origin/);
   s.revokeDecision(b.id, { agent: true }, { reason: "Dropped in the call", by: { name: "Carla" }, origin: { kind: "chat" } });
   assert.deepEqual([s.db.decisions[b.id].revoked.by.name, s.listDecisions({ state: "revoked" }).length], ["Carla", 2]);
