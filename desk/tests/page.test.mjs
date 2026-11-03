@@ -357,8 +357,7 @@ test("Needs a designer filters Changes and Requests, and Changes opens on All", 
   assert.match(await desk.textContent("#list .filters .on"), /^All$/);
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
-  assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
-  assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the presentation/, "a seen change shows only its suggestion");
+  assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-filter="reqFilter:designer"]');
   assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
@@ -366,6 +365,50 @@ test("Needs a designer filters Changes and Requests, and Changes opens on All", 
   await desk.reload();
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
+}));
+
+// A request's presentation actions sit under More, and stay there once the request is closed
+// (docs/desk.md → The presentation): Add, Not now and Take off each send their call.
+const CALL = `<script>
+window.calls = [];
+const cards = [
+  { id: "C-4", kind: "request", title: "Shipped, on the call", status: "handed-off", agenda: { status: "queued", by: { email: "d@example.com" } } },
+  { id: "C-5", kind: "request", title: "Shipped, suggested", status: "handed-off", call_suggestion: { note: "Worth showing" } },
+];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { queue: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a closed request keeps Add to presentation, Not now and Take off under More", (t) => open(t, CALL, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  const more = async (id) => {
+    if (!desk.url().endsWith(`#${id}`)) await desk.goto(`${base}#${id}`);
+    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n, id);
+    await desk.waitForSelector("#detail details.more", { state: "attached" });
+    await desk.evaluate(() => { document.querySelector("#detail details.more").open = true; });
+  };
+  const sent = (method, path) => desk.waitForFunction(([m, p]) => calls.some((c) => c.method === m && c.path === p), [method, path]);
+
+  await more("C-5");
+  assert.doesNotMatch(await desk.textContent("#detail"), /suggests it for the presentation/, "no suggestion strip on the card");
+  await desk.click('#detail [data-act="not-now"]');
+  await sent("DELETE", "/api/cards/C-5/suggestion");
+  await more("C-5");
+  await desk.click('#detail [data-act="queue"]');
+  await desk.click("#cf-ok");
+  await sent("POST", "/api/cards/C-5/agenda");
+
+  await more("C-4");
+  assert.match(await desk.textContent("#detail .sub"), /On the presentation/);
+  assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 0, "a queued request offers no second Add");
+  await desk.click('#detail [data-act="unqueue"]');
+  await sent("DELETE", "/api/cards/C-4/agenda");
 }));
 
 // Every item has a number by its title; a link with it, or Go to, opens the item in its tab
@@ -468,7 +511,8 @@ test("the presentation: mark an item presented, in the list and while presenting
   assert.deepEqual(await sent("/api/cards/C-2/presented"), [{ presented: true }]);
 
   await desk.click('#list [data-card="C-4"]');
-  await desk.waitForSelector('#detail [data-unpresent="C-4"]');
+  await desk.waitForSelector('#detail [data-unpresent="C-4"]', { state: "attached" });
+  await desk.evaluate(() => { document.querySelector("#detail details.more").open = true; });
   await desk.click('#detail [data-unpresent="C-4"]');
   await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/C-4/presented"));
   assert.deepEqual(await sent("/api/cards/C-4/presented"), [{ presented: false }], "Undo sends presented: false");

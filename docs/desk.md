@@ -156,10 +156,10 @@ the **Presentation** filter on Requests. (The store and the CLI keep its older n
   for a request with options, its final version. The agent never adds one: it
   **suggests** its proposals, research verdicts that need a decision, prototypes ready for
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
-  suggestion shows on the card and under the presentation until a designer adds it or says
-  **Not now**; after **Not now** the store keeps the card from being suggested again. Without
-  a version picked (an older page), the designer's pick (`chosen`) is presented, else the
-  option designers' votes clearly prefer.
+  suggestion shows on the card (a request's under **More**) and under the presentation until a
+  designer adds it or says **Not now**; after **Not now** the store keeps the card from being
+  suggested again. Without a version picked (an older page), the designer's pick (`chosen`) is
+  presented, else the option designers' votes clearly prefer.
 - **The brief** (`agenda_due`): for every card on the presentation, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
@@ -178,8 +178,7 @@ the **Presentation** filter on Requests. (The store and the CLI keep its older n
 ## Needs a designer
 
 Changes and Requests have a **Needs a designer** filter next to their others (Changes opens on
-**All**, Requests on **Open**): only the cards that wait for a designer's decision, each with
-its reasons. One designer cannot read every change; this keeps the rest a click away.
+**All**, Requests on **Open**): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
 
 - **A change card**: you judge it when you write the card ([watch.md](watch.md) step 7), as
   `attention: {level, reasons}` — `designer` for a new screen or a new address, a look that
