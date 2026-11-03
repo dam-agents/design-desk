@@ -67,11 +67,15 @@ export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk"
 export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "people"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
+// A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
+// hyphens (`Lead developer` → `lead-developer`). scripts/verify-onboarding.sh reads it the same way.
+export const readRole = (r) => String(r || "").trim().toLowerCase().replace(/\s+/g, "-");
+
 // The roster as the server reads a role (`## Desk people` rows): the first row of an email
 // counts, and an unknown role is a guest's.
 export function rosterOf(rows) {
   const seen = new Set();
-  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: String(r.role || "").trim().toLowerCase().replace(/\s+/g, "-") }))
+  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: readRole(r.role) }))
     .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
     .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
 }
@@ -1583,7 +1587,8 @@ function cleanOrigin(o, cards) {
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40),
     // The reporter's email where the channel discloses it (Slack): who counts as a request's author.
-    ...(o.email != null ? { email: cleanEmail(o.email) } : {}),
+    // An empty email is no email: the channel disclosed none.
+    ...(o.email != null && String(o.email).trim() ? { email: cleanEmail(o.email) } : {}),
     ...(o.job ? { job: String(o.job) } : {}),
     ...(o.event ? { event: cleanSource(o.event, cards) } : {}),
     // A finding an automated test posted (Quality Inspector), not a person's report.

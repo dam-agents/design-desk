@@ -102,6 +102,14 @@ test("a small change: only a lead developer marks it, any developer but its auth
   assert.equal((await size("lou@example.com", false)).status, 400, "approved: the size stays");
 });
 
+test("prototype_requesters reads a role as the roster does: `Lead developer` is lead-developer", async (t) => {
+  const d = await desk(t, "- prototype_requesters: designer, Lead developer\n\n");
+  const build = async (email) => (await d.viewer(email, "/api/me")).body.can.build;
+  assert.equal(await build("lou@example.com"), true, "a lead developer builds");
+  assert.equal(await build("alice@example.com"), true);
+  assert.equal(await build("bob@example.com"), false, "a developer is not listed");
+});
+
 test("a person's folded intros are kept for them alone, guests included", async (t) => {
   const d = await desk(t);
   assert.deepEqual((await d.viewer("alice@example.com", "/api/me")).body.prefs, {});

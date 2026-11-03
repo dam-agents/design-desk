@@ -1028,7 +1028,7 @@ test("a small change: the lead developer marks it, a developer but its author ap
   assert.match(await card("bob", "C-2"), /not bob@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "its author does not approve it");
 
-  await card("dana", "C-4");
+  assert.match(await card("dana", "C-4"), /A designer approves it/, "the hint names a designer");
   assert.equal(await count('[data-act="approve"]'), 0, "a small change against a decision in force is a designer's");
   assert.match(await card("dana", "C-5"), /not dana@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "the reporter of a request filed for them does not approve it");

@@ -20,7 +20,8 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
-- `prototype_requesters` (`designer, lead`), `max_prototypes` (`2`; `0` = none),
+- `prototype_requesters` (`designer, lead`; roles read as in `## Desk people`, so `lead developer`
+  is `lead-developer`), `max_prototypes` (`2`; `0` = none),
   `prototype_expiry_days` (`7`), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
   proposals; `issue_writeback` (`enabled`) — a feature's design goes back into its issue;

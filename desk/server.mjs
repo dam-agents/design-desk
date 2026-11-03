@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf } from "./store.mjs";
+import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -52,7 +52,7 @@ function roleOf(caller) {
   if (caller.role === "owner") return "lead";
   if (!caller.email) return "guest";
   const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === caller.email);
-  const role = (row?.role || "").trim().toLowerCase().replace(/\s+/g, "-");
+  const role = readRole(row?.role);
   return ROLES.includes(role) ? role : "guest";
 }
 
@@ -66,7 +66,7 @@ const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact
 function slackRole(email) {
   if (!email) return "slack";
   const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === String(email).toLowerCase());
-  const role = (row?.role || "").trim().toLowerCase().replace(/\s+/g, "-");
+  const role = readRole(row?.role);
   return ROLES.includes(role) && role !== "guest" ? role : "slack";
 }
 
@@ -75,7 +75,8 @@ function settings() {
   const lead = cfgTable("Desk people").find((r) => (r.role || "").toLowerCase() === "lead");
   const ideas = cfg("handoff", "desk");
   return {
-    prototypeRoles: list(cfg("prototype_requesters"), ["designer", "lead"]),
+    // Read as the roster reads a role, so `lead developer` here is the roster's `lead-developer`.
+    prototypeRoles: list(cfg("prototype_requesters"), ["designer", "lead"]).map(readRole),
     ping: cfg("desk_ping", "enabled") !== "disabled",
     name: cfg("display_name", "Design Desk"),
     // The repository a bare #12 on the page links into, when its card names none.
