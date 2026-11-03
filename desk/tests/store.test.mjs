@@ -370,7 +370,7 @@ test("a person's answer to the agent's question resumes the blocked step", () =>
   const { inbox: item } = s.reply(thread.id, alice, "The agents list.");
   assert.equal(item.kind, "request");
   assert.equal(s.listDecisions().length, 0);
-  s.addDecision({ concepts: ["Spend"], text: "Spend is per week.", source: { card: card.id } });
+  s.addDecision({ concepts: ["Spend"], text: "Spend is per week.", author: { email: alice.email }, origin: { kind: "desk", card: card.id } });
   assert.equal(s.listDecisions({ concept: "spend" }).length, 1);
 });
 
@@ -442,6 +442,11 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"].via, "slack");
   s.slackVotes(card.id, "v1", []);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"], undefined);
+  // The agent's own legend 👍/⚠️ comes back among the reactions; it is a bot's, not a vote.
+  s.slackVotes(card.id, "v1", [{ key: "slack:UBOT", vote: "prefer", is_bot: true, name: "Design Desk" },
+    { key: "slack:U2", vote: "concern", name: "Petr" }]);
+  assert.equal(s.getCard(card.id).votes.v1["slack:UBOT"], undefined, "a bot's reaction is never a vote");
+  assert.equal(s.getCard(card.id).votes.v1["slack:U2"].vote, "concern");
   s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" });
   assert.equal(s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" }).duplicate, true);
   assert.equal(s.getCard(card.id).threads.filter((t) => t.slack_ts === "1.2")[0].messages[0].by.via, "slack");
@@ -689,4 +694,83 @@ test("an issue's drawing record is a whole-number failure count and a short note
   assert.throws(() => s.upsertCard({ id: c.id, draw: [] }), /must be an object/);
   const change = s.upsertCard({ kind: "change", title: "Two", source: { repo: "acme/widgets", pr: 9 } }).card;
   assert.throws(() => s.upsertCard({ id: change.id, draw: { failures: 0 } }), /belongs to an issue/);
+});
+
+test("decisions: a number, who decided and where with a link; a store from before upgrades", () => {
+  const s = fresh();
+  const c = s.createRequest(alice, { title: "Prices", problem: "Show prices" }).card;
+  const t = s.openThread(c.id, bob, { kind: "comment", text: "We always show prices with tax." }).thread;
+  assert.throws(() => s.addDecision({ concepts: ["prices"], text: "Prices show tax", origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }), /who decided/);
+  assert.throws(() => s.addDecision({ concepts: ["prices"], text: "Prices show tax", author: {}, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }), /name, login or email/);
+  assert.throws(() => s.addDecision({ concepts: ["prices"], text: "Prices show tax", author: { login: "dana" }, origin: { kind: "pr" } }), /needs a link/);
+  assert.throws(() => s.addDecision({ concepts: ["prices"], text: "Prices show tax", author: { login: "dana" }, origin: { kind: "fax", url: "https://x.example" } }), /origin.kind/);
+  const d = s.addDecision({ concepts: ["Prices"], text: "Prices show tax", author: { email: bob.email }, origin: { kind: "desk", card: c.id, thread: t.id, message: 0 } }).decision;
+  assert.equal(d.id, "D-1");
+  assert.equal(d.status, "active");
+  assert.equal(s.db.threads[t.id].messages[0].decision, "D-1", "the comment shows its number");
+  assert.equal(s.addDecision({ concepts: ["chat"], text: "Dark mode first", author: { name: "Op" }, origin: { kind: "chat" } }).decision.id, "D-2");
+  // A record written before decisions named their author and origin.
+  s.db.decisions["D-0"] = { id: "D-0", concepts: ["x"], text: "Old", why: "", source: { label: "PR #1", url: "https://x.example/1", card: null }, at: "2026-01-01T00:00:00Z", recorded: "2026-01-01T00:00:00Z" };
+  s.save();
+  const again = new Store(s.dir);
+  assert.deepEqual([again.db.decisions["D-0"].status, again.db.decisions["D-0"].origin.kind, again.db.decisions["D-0"].author, again.db.decisions["D-0"].source], ["active", "other", null, undefined]);
+  assert.deepEqual(again.listDecisions({ q: "d-1" }).map((x) => x.id), ["D-1"]);
+});
+
+test("decisions: a designer asks to record a person's comment, once", () => {
+  const s = fresh();
+  const c = s.createRequest(alice, { title: "Prices", problem: "Show prices" }).card;
+  const t = s.openThread(c.id, bob, { kind: "comment", text: "We always show prices with tax." }).thread;
+  s.answer(t.id, "Noted.");
+  assert.equal(can("designer", "decide"), true);
+  assert.equal(can("pm", "decide"), false);
+  assert.throws(() => s.proposeDecision(t.id, alice, { message: 1 }), /does not decide/);
+  assert.throws(() => s.proposeDecision(t.id, alice, { message: 5 }), /pick a message/);
+  const { inbox: item } = s.proposeDecision(t.id, alice, { message: 0, note: "Prices always include tax" });
+  assert.deepEqual([item.kind, item.thread, item.message, item.note], ["decision", t.id, 0, "Prices always include tax"]);
+  assert.throws(() => s.proposeDecision(t.id, alice, { message: 0 }), /already working/);
+  assert.ok(inbox(s).open.some((i) => i.kind === "decision"));
+});
+
+test("decisions: conflicts warn, wait for a designer and gate approval; revoking clears them", () => {
+  const s = fresh();
+  const d = s.addDecision({ concepts: ["prices"], text: "Prices show tax", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
+  const c = s.createRequest(alice, { title: "Prices", problem: "Show prices" }).card;
+  assert.throws(() => s.upsertCard({ id: c.id, conflicts: [{ decision: "D-9", why: "x" }] }), /no decision D-9/);
+  assert.throws(() => s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "x", variant: "v9" }] }), /no option v9/);
+  s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "It drops the tax." }], decisions: [d.id] });
+  assert.equal(s.listCards().find((x) => x.id === c.id).conflicts, 1);
+  assert.deepEqual(s.attentionOf(s.card(c.id)).reasons, [`Goes against ${d.id}`]);
+  assert.equal(s.getCard(c.id).conflicts[0].text, "Prices show tax");
+  assert.deepEqual(s.getDecision(d.id).refs.map((r) => [r.id, r.how]), [[c.id, "conflicts"]]);
+  s.db.cards[c.id].status = "feedback";
+  assert.throws(() => s.act(c.id, alice, "approve"), (e) => e instanceof DeskError && e.status === 409 && /goes against D-1/.test(e.message));
+  assert.deepEqual(s.act(c.id, alice, "approve", "", { overrule: true }).card.overruled.decisions, [d.id]);
+  assert.throws(() => s.revokeDecision(d.id, alice, { reason: "" }), /reason is empty/);
+  s.revokeDecision(d.id, alice, { reason: "We show net prices now." });
+  assert.deepEqual([s.db.decisions[d.id].status, s.db.decisions[d.id].revoked.by.email], ["revoked", alice.email]);
+  assert.equal(s.listCards().find((x) => x.id === c.id).conflicts, 0);
+  assert.equal(s.getCard(c.id).conflicts[0].status, "revoked");
+  assert.throws(() => s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "x" }] }), /no longer in force/);
+  assert.throws(() => s.revokeDecision(d.id, alice, { reason: "again" }), /already revoked/);
+  for (const i of Object.values(s.db.inbox).filter((x) => x.kind === "handoff")) { s.claim(i.id, "run-1"); s.done(i.id, "run-1"); }
+  assert.deepEqual(s.act(c.id, alice, "approve", "", { overrule: false }).card.overruled, undefined, "an approve with no conflict in force clears the earlier overrule");
+  s.restoreDecision(d.id, alice);
+  assert.deepEqual([s.db.decisions[d.id].status, s.db.decisions[d.id].history.map((h) => h.what)], ["active", ["revoked", "restored"]]);
+});
+
+test("decisions: a new one replaces an earlier one; the agent revokes in a person's name", () => {
+  const s = fresh();
+  const pr = { kind: "pr", url: "https://github.com/acme/widgets/pull/4" };
+  const a = s.addDecision({ concepts: ["limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: pr }).decision;
+  const b = s.addDecision({ concepts: ["limits"], text: "Limits reset daily", author: { name: "Carla" }, origin: { kind: "slack", url: "https://acme.slack.com/archives/C0123ABCD/p1" }, replaces: [a.id] }).decision;
+  assert.deepEqual([s.db.decisions[a.id].status, s.db.decisions[a.id].revoked.replaced_by], ["revoked", b.id]);
+  assert.deepEqual(s.getDecision(a.id).refs.map((r) => [r.id, r.how]), [[b.id, "replaces"]]);
+  assert.throws(() => s.addDecision({ concepts: ["limits"], text: "x", author: { name: "C" }, origin: pr, replaces: [a.id] }), /no longer in force/);
+  s.restoreDecision(a.id, alice);
+  assert.deepEqual([s.db.decisions[a.id].status, s.db.decisions[b.id].replaces], ["active", undefined], "a restored decision is no longer one another replaces");
+  s.revokeDecision(a.id, alice, { reason: "Replaced after all", replaced_by: b.id });
+  assert.throws(() => s.revokeDecision(b.id, { agent: true }, { reason: "Dropped", by: { name: "Carla" } }), /names its origin/);
+  s.revokeDecision(b.id, { agent: true }, { reason: "Dropped in the call", by: { name: "Carla" }, origin: { kind: "chat" } });
+  assert.deepEqual([s.db.decisions[b.id].revoked.by.name, s.listDecisions({ state: "revoked" }).length], ["Carla", 2]);
 });

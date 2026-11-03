@@ -38,6 +38,7 @@ LOG_JOB=monitor
 if ! . "$SCRIPT_DIR/log.sh" >/dev/null 2>&1; then logev() { :; }; fi
 LOG_DIR="${LOG_DIR:-$WORK/logs}"
 . "$SCRIPT_DIR/lib/config.sh" || { echo "cannot source lib/config.sh" >&2; exit 1; }
+. "$SCRIPT_DIR/lib/time.sh" || { echo "cannot source lib/time.sh" >&2; exit 1; }
 
 LOGS=()
 log() { LOGS+=("$1"); logev info monitor "$1"; }
@@ -58,16 +59,17 @@ int_key() { # <key> <default>
 }
 
 # the retained events newer than <epoch>, one JSON object per line, torn lines skipped;
-# the daily files back to that epoch, plus one for the UTC day boundary
+# the daily files back to that epoch, plus one for the UTC day boundary. An event whose
+# ts nobody can read is skipped too, so every reader of these events gets a readable ts.
 events_since() { # <epoch>
   local f days=$(( (NOW_EPOCH - $1) / 86400 + 2 ))
   for f in $(find "$LOG_DIR" -maxdepth 1 -name 'events-*.jsonl' -mtime "-$days" 2>/dev/null | sort); do
     cat "$f" 2>/dev/null
   done | jq -cR 'fromjson? // empty' 2>/dev/null \
        | jq -c --argjson since "$1" \
-           'select(((.ts | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601?) // 0) >= $since)' 2>/dev/null
+           "$EPOCH_JQ"'select((.ts | epoch) as $at | $at != null and $at >= $since)' 2>/dev/null
 }
-EP='def ep: (sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601?) // 0;'
+EP="$EPOCH_JQ"
 
 # ---------------------------------------------------------------- ledger ----
 # {"alerts": {"<id>": {"kind", "first", "claimed", "sent"}}}; one writer at a time
@@ -194,10 +196,16 @@ else
   if [ "$n" -ge 2 ]; then cand "$(jq -nc --argjson n "$n" '{id: "desk", kind: "desk_down", ticks: $n}')"; fi
 fi
 # Work people left on the Desk that nobody picked up: the inbox schedule or the pings
-# are not working.
+# are not working. An item whose created time nobody can read is reported with them.
+# No inbox file yet is no item, as for the inbox pass; a file that is not an inbox
+# document is logged and keeps any inbox_stuck row: a read failure clears nothing.
 INBOX_FILE="${DESK_DIR:-$WORK/desk}/inbox.json"
-STUCK="$(jq -c --argjson now "$NOW_EPOCH" "$EP"'[.open[]? | select(($now - (.created | ep)) > 7200) | .id]' "$INBOX_FILE" 2>/dev/null || echo '[]')"
-if [ "$(printf '%s' "$STUCK" | jq 'length')" -gt 0 ]; then
+if [ ! -f "$INBOX_FILE" ]; then
+  CLEARED="$CLEARED inbox_stuck"
+elif ! STUCK="$(jq -c --argjson now "$NOW_EPOCH" "$EP"'.open | if type == "array" then . else error("no open list") end
+    | [.[] | select((.created | ep) as $at | $at == null or ($now - $at) > 7200) | .id]' "$INBOX_FILE" 2>/dev/null)"; then
+  log "Desk inbox unreadable ($INBOX_FILE) — inbox_stuck kept as it is"
+elif [ "$(printf '%s' "$STUCK" | jq 'length')" -gt 0 ]; then
   cand "$(jq -nc --argjson ids "$STUCK" '{id: "inbox:\($ids[0])", kind: "inbox_stuck", items: $ids}')"
 else
   CLEARED="$CLEARED inbox_stuck"
@@ -206,7 +214,8 @@ fi
 # ------------------------------------------ claim against the ledger ----
 # a candidate is due when its row has no `sent` and no claim younger than
 # CLAIM_TTL_S; a sent one is suppressed; rows of cleared kinds, and rows older than
-# STATE_KEEP_S that no candidate names, leave
+# STATE_KEEP_S that no candidate names, leave. A claim time nobody can read is no claim,
+# and a row whose time nobody can read is old.
 DUE='[]'; SUPPRESSED=0
 claim() {
   local cands new
@@ -217,9 +226,10 @@ claim() {
     | (.alerts | with_entries(select(
          ([.key] | inside([$c[].id]))
          or (((.value.kind as $k | $cl | index($k)) == null)
-             and ($nowe - ((.value.sent // .value.claimed // .value.first // $now) | ep)) < $keep)))) as $a
+             and (((.value.sent // .value.claimed // .value.first // $now) | ep) as $at
+                  | $at != null and ($nowe - $at) < $keep))))) as $a
     | { due: [ $c[] | select($a[.id].sent == null
-                             and (($a[.id].claimed == null) or ($nowe - ($a[.id].claimed | ep)) >= $ttl)) ],
+                             and (($a[.id].claimed | ep) as $at | $at == null or ($nowe - $at) >= $ttl)) ],
         suppressed: ([ $c[] | select($a[.id].sent != null) ] | length) } as $r
     | { due: $r.due, suppressed: $r.suppressed,
         state: {alerts: (reduce $r.due[] as $d ($a;

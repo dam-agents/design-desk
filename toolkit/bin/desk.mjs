@@ -37,16 +37,24 @@ const USAGE = `usage: design desk <command>
                                            build handoff figma catalog map); --form: the file is
                                            JSON {text, questions: [{text, why, options, suggested}]},
                                            a form
-  decision <decision.json|->               record a decision: {concepts, text, why, source: {label,
-                                           url, card}, at}
-  decisions [--concept <c>] [--q <words>]  earlier decisions, newest first
+  decision <decision.json|->               record a decision (docs/desk.md → Decisions): {concepts, text,
+                                           why, author: {name, login, email}, origin: {kind, label, url,
+                                           card, thread, message}, at, replaces: [D-n], conflicts:
+                                           [{decision, why}]}
+  decision-show <D-n>                      one decision with what cites it or goes against it
+  decision-revoke <D-n> <revoke.json|->    revoke a decision as a person did: {reason, by: {name, login,
+                                           email}, origin: {kind, label, url, card}, replaced_by}
+  decisions [--concept <c>] [--q <words>] [--state active|revoked]
+                                           earlier decisions, newest first
   fetch <A-n> <file>                       save an asset (an option's page, a screen) to a file
   poll-open <C-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
                                            [{variant, ts}], closes, url, channel}
   poll-update <C-n> <P-n> [--synced <iso>] [--result <text>]
                                            mark a poll synced, or close it with its result
   slack-votes <C-n> <votes.json|->         one option's reactions as they are now: {variant,
-                                           voters: [{email, slack_id, name, vote}]}
+                                           voters: [{email, slack_id, name, vote, is_bot}]};
+                                           a voter with is_bot: true (the agent's own legend
+                                           👍/⚠️) is ignored
   relay <C-n> <comment.json|->             a reply in Slack, as a comment, once: {variant (none for
                                            a council thread), name, email, text, slack_ts, url}
   find-poll <ts>                           which card, poll and option a Slack message belongs to
@@ -200,6 +208,8 @@ export async function main(_cmd, argv) {
       return out(await call("POST", `/agent/cards/${pos[0]}/ask`, { text: body.text, questions: body.questions || null, step: typeof f.step === "string" ? f.step : "" }));
     }
     case "decision": return out(await call("POST", "/agent/decisions", JSON.parse(readArg(pos[0]))));
+    case "decision-show": return out(await call("GET", `/agent/decisions/${encodeURIComponent(pos[0] || "")}`));
+    case "decision-revoke": return out(await call("POST", `/agent/decisions/${encodeURIComponent(pos[0] || "")}/revoke`, JSON.parse(readArg(pos[1]))));
     case "fetch": {
       const a = await call("GET", `/agent/assets/${pos[0]}`);
       if (!pos[1]) fail("usage: design desk fetch <A-n> <file>");
@@ -215,7 +225,7 @@ export async function main(_cmd, argv) {
     case "council-update": return out(await call("POST", `/agent/cards/${pos[0]}/councils/${pos[1]}`, { synced: typeof f.synced === "string" ? f.synced : null, seen: typeof f.seen === "string" ? f.seen : null, result: typeof f.result === "string" ? f.result : null }));
     case "find-council": return out(await call("GET", `/agent/councils?ts=${encodeURIComponent(pos[0] || "")}`));
     case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
-    case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`));
+    case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}&state=${encodeURIComponent(typeof f.state === "string" ? f.state : "")}`));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
     default: process.stdout.write(USAGE); process.exit(sub ? 2 : 0);
   }

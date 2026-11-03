@@ -17,6 +17,21 @@ options to draw and whether to ask questions first (the bundled `grill-me` skill
 `grill`); a request from an issue shows its user stories ([docs/requests.md](docs/requests.md)).
 Older requests have neither and need nothing.
 
+## 1.23.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Recorded decisions upgrade
+themselves (in force, their source as `origin`, author not recorded); new ones name who
+decided and where ([docs/desk.md](docs/desk.md) → **Decisions**).
+
+## 1.22.1 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`): it stops counting a
+bot's reaction as a vote. Scripts and skills are read per run; nothing else changes.
+
 ## 1.22.0 — 2026-11-03
 
 **Upgrade:**

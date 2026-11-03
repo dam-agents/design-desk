@@ -68,9 +68,12 @@ Every 30 minutes while a vote is open, in the inbox run:
    ⚠️ (`warning`) is `concern`; any other emoji is ignored. `describe_channel_users` turns the
    ids into people (name, and email where the workspace discloses it).
 2. `design desk slack-votes C-<n> <votes.json>` per option with `{variant, voters: [{email,
-   slack_id, name, vote}]}`: the reactions as they are now. The server gives a voter the
-   role the Desk's member list gives their email, else "in Slack"; a person's own vote on the
-   Desk wins over their reaction.
+   slack_id, name, vote, is_bot}]}`: the reactions as they are now, and `is_bot` from
+   `describe_channel_users`. The 👍 and ⚠️ the agent itself put on each post as the legend
+   (Share step 4) come back among the reactions — they are a bot's, so they are marked and
+   the Desk drops them; a bot never votes. The server gives a voter the role the Desk's
+   member list gives their email, else "in Slack"; a person's own vote on the Desk wins
+   over their reaction.
 3. Replies under an option's post (`read_thread` where the platform offers the thread, and
    every reply that tags you in it, which reaches you as a Slack turn): each one becomes a
    comment on that option, once — `design desk relay C-<n> <comment.json>` with `{variant,

@@ -38,7 +38,9 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     case "vote": case "request": case "follow-up": case "screens": return member;
     // Pictures of an issue: how it looks now and a sketch of how it could look (docs/issues.md).
     case "draw": return shaper || role === "pm";
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": case "handle": case "choose": return shaper;
+    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": case "handle": case "choose":
+    // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
+    case "decide": return shaper;
     case "build": return prototypeRoles.includes(role);
     case "people": return role === "lead";
     default: return false;
@@ -49,9 +51,12 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
 export const ORIGIN_CHANNELS = ["slack", "github", "chat", "agent"];
 // The scheduled runs that file requests on their own (`origin.job`).
 export const ORIGIN_JOBS = ["watch", "digest"];
+// Where a decision was made (docs/desk.md → Decisions); `other` is only a record from before
+// decisions named their origin.
+export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk", "call", "approval", "chat"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "people"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "people"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // The roster as the server reads a role (`## Desk people` rows): the first row of an email
@@ -79,7 +84,7 @@ export const ISSUE_STATES = ["open", "archived"];
 // Where an issue stands in the team's plan: the current sprint, the next one, someone's, or
 // labelled for design (docs/issues.md).
 export const ISSUE_BUCKETS = ["sprint", "next", "assigned", "label"];
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
@@ -156,6 +161,7 @@ export class Store {
     this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8")) : emptyDb();
     for (const k of Object.keys(emptyDb())) if (this.db[k] === undefined) this.db[k] = emptyDb()[k];
     this.db.seq = { ...emptyDb().seq, ...this.db.seq };
+    for (const d of Object.values(this.db.decisions)) upgradeDecision(d);
     this.mtime = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
   }
 
@@ -199,6 +205,9 @@ export class Store {
   card(id) { const c = own(this.db.cards, id); if (!c) throw missing(`no card ${id}`); return c; }
   thread(id) { const t = own(this.db.threads, id); if (!t) throw missing(`no thread ${id}`); return t; }
   item(id) { const i = own(this.db.inbox, id); if (!i) throw missing(`no inbox item ${id}`); return i; }
+  decision(id) { const d = own(this.db.decisions, id); if (!d) throw missing(`no decision ${id}`); return d; }
+  // A card's warnings: the decisions it goes against that are still in force.
+  activeConflicts(c) { return (c.conflicts || []).filter((x) => own(this.db.decisions, x.decision)?.status === "active"); }
 
   // ---------- reads ----------
 
@@ -223,7 +232,7 @@ export class Store {
         origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
-        attention: this.attentionOf(c),
+        attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
       }));
   }
 
@@ -237,6 +246,8 @@ export class Store {
     if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
       return suggested.length ? { level: "designer", reasons: suggested } : null;
     const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
+    const against = this.activeConflicts(c).map((x) => x.decision);
+    if (against.length) reasons.push(`Goes against ${[...new Set(against)].join(", ")}`);
     if (c.kind === "request") {
       const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
@@ -252,7 +263,12 @@ export class Store {
 
   getCard(id) {
     const c = this.card(id);
-    return { ...c, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    // A conflict carries the decision's words and where it stands, so the page warns without another read.
+    const conflicts = (c.conflicts || []).map((x) => { const d = own(this.db.decisions, x.decision); return { ...x, text: d?.text || "", status: d?.status || "revoked", replaced_by: d?.revoked?.replaced_by || null }; });
+    // Each decision the card cites, with its words and whether it is still in force.
+    const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean)]
+      .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -529,7 +545,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
@@ -559,6 +575,7 @@ export class Store {
     if (action === "reopen") {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
       c.status = "triage";
+      delete c.overruled;
       c.updated = this.clock();
       const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
       this.save();
@@ -569,6 +586,9 @@ export class Store {
       throw forbidden(c.triage ? "This request gets no live prototype because part of it needs a developer or a decision. The developer spec covers it." : "Design Desk is still checking this request. You can build a live prototype once it says what can be done.");
     if (action === "approve" && !["testing", "feedback", "prototype"].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
+    // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
+    const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
+    if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
     // Draw design options says how many; the request keeps it for its later redraws.
@@ -577,6 +597,8 @@ export class Store {
       if (n < 1) throw bad("Pick how many options to draw: one to five.");
       c.request = { ...c.request, options: n };
     }
+    if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
+    else if (action === "approve") delete c.overruled;
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
@@ -738,7 +760,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -780,7 +802,7 @@ export class Store {
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
       }
-      else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards);
+      else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions);
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
       else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
       else if (k === "path") next.path = clean(String(fields.path), 300, "path");
@@ -793,6 +815,9 @@ export class Store {
         if (next.kind !== "request") throw bad(`${k} belongs to a request`);
         next[k] = fields[k] === null ? null : k === "grill" ? cleanGrill(fields.grill) : cleanIssueBrief(fields.issue_brief);
       }
+      // The decisions a card follows, and those it goes against (docs/desk.md → Decisions).
+      else if (k === "decisions") { if (!Array.isArray(fields.decisions)) throw bad("decisions must be a list of D-n"); next.decisions = [...new Set(fields.decisions.slice(0, 20).map((id) => this.decision(String(id)).id))]; }
+      else if (k === "conflicts") next.conflicts = cleanConflicts(fields.conflicts, this.db.decisions, next.variants);
       else if (["bucket", "needs", "sketches", "style", "draw"].includes(k)) {
         if (next.kind !== "issue") throw bad(`${k} belongs to an issue`);
         if (k === "bucket") { if (!ISSUE_BUCKETS.includes(fields.bucket)) throw bad(`bucket must be one of ${ISSUE_BUCKETS.join(", ")}`); next.bucket = fields.bucket; }
@@ -992,6 +1017,9 @@ export class Store {
     for (const [k, x] of Object.entries(box)) if (x.via === "slack") delete box[k];
     for (const v of voters.slice(0, 500)) {
       if (!["prefer", "concern"].includes(v.vote)) continue;
+      // The agent's own 👍 and ⚠️ are the legend it puts on each post so a vote is one
+      // click (slack-polls → Share 4), not votes: a bot's reaction never counts.
+      if (v.is_bot === true) continue;
       const key = clean(String(v.key || ""), 200, "voter key");
       if (box[key]) continue;
       box[key] = { vote: v.vote, role: optText(v.role, 20, "role") || "slack", name: optText(v.name, 120, "name") || null, via: "slack", at: this.clock(), note: "" };
@@ -1046,28 +1074,105 @@ export class Store {
 
   // ---------- decisions ----------
 
-  // What the team decided and why, kept so a later change can say what it touches. The
-  // agent records them (an approved design, a call's outcome, a deliberate behaviour it
-  // found) and reads them back by concept.
-  addDecision({ concepts, text, why = "", source = null, at = null }) {
+  // What the team decided, who decided it and where, kept so a later change can say what it
+  // follows or goes against (docs/desk.md → Decisions). The agent records them; a person
+  // asks for one from a comment, revokes one or restores it.
+  addDecision({ concepts, text, why = "", author, origin, at = null, replaces = [], conflicts = [] }) {
     if (!Array.isArray(concepts) || !concepts.length) throw bad("a decision names at least one concept");
+    if (!Array.isArray(replaces)) throw bad("replaces must be a list of D-n");
     const d = {
       concepts: concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()),
       text: clean(text, 600, "decision"), why: optText(why, 1500, "why"),
-      source: source ? cleanSource(source, this.db.cards) : null,
-      at: optText(at, 40, "at") || this.clock(), recorded: this.clock(),
+      author: cleanAuthor(author), origin: cleanDecisionOrigin(origin, this.db.cards, this.db.threads),
+      at: optText(at, 40, "at") || this.clock(), recorded: this.clock(), status: "active",
     };
+    const old = [...new Set(replaces.slice(0, 10).map((id) => this.decision(String(id))))];
+    for (const o of old) if (o.status !== "active") throw bad(`replaces: ${o.id} is no longer in force`);
+    const against = cleanConflicts(conflicts, this.db.decisions);
+    if (against.some((x) => old.some((o) => o.id === x.decision))) throw bad("a decision replaces an earlier one or goes against it, not both");
     d.id = this.next("decision", "D");
+    if (old.length) d.replaces = old.map((o) => o.id);
+    if (against.length) d.conflicts = against;
+    for (const o of old) this.markRevoked(o, { by: d.author, reason: `Replaced by ${d.id}`, replaced_by: d.id, origin: d.origin });
+    // The comment it was decided in shows its number.
+    const m = d.origin.thread && d.origin.message != null ? own(this.db.threads, d.origin.thread)?.messages[d.origin.message] : null;
+    if (m) m.decision = d.id;
     this.db.decisions[d.id] = d;
     this.save();
     return { decision: d };
   }
 
-  listDecisions({ concept = "", q = "" } = {}) {
-    const c = String(concept || "").toLowerCase(), w = String(q || "").toLowerCase();
+  // A person on the page revokes in their own name; the agent names the person and where they said it.
+  revokeDecision(id, who, { reason, replaced_by = null, by = null, origin = null } = {}) {
+    const d = this.decision(id);
+    if (d.status !== "active") throw bad(`${d.id} is already revoked`);
+    const rep = replaced_by ? this.decision(String(replaced_by)) : null;
+    if (rep && (rep.id === d.id || rep.status !== "active")) throw bad("replaced_by names another decision in force");
+    const r = who?.agent ? { by: cleanAuthor(by), origin: cleanDecisionOrigin(origin, this.db.cards, this.db.threads) } : { by: { email: who.email || null, role: who.role || null } };
+    this.markRevoked(d, { ...r, reason: clean(reason, 600, "reason"), replaced_by: rep?.id || null });
+    this.save();
+    return { decision: d };
+  }
+
+  markRevoked(d, { by, reason, replaced_by = null, origin = null }) {
+    d.status = "revoked";
+    d.revoked = { by, at: this.clock(), reason, replaced_by, ...(origin ? { origin } : {}) };
+    d.history = [...(d.history || []), { what: "revoked", ...d.revoked }].slice(-20);
+  }
+
+  restoreDecision(id, who) {
+    const d = this.decision(id);
+    if (d.status === "active") throw bad(`${d.id} is in force`);
+    d.status = "active";
+    delete d.revoked;
+    // What replaced it no longer does: both are in force again.
+    for (const o of Object.values(this.db.decisions)) if ((o.replaces || []).includes(d.id)) {
+      o.replaces = o.replaces.filter((x) => x !== d.id);
+      if (!o.replaces.length) delete o.replaces;
+    }
+    d.history = [...(d.history || []), { what: "restored", by: { email: who.email || null, role: who.role || null }, at: this.clock() }].slice(-20);
+    this.save();
+    return { decision: d };
+  }
+
+  // A designer asks Design Desk to record what a person said in a comment as a decision.
+  proposeDecision(threadId, who, { message, note = "" } = {}) {
+    const t = this.thread(threadId);
+    const i = Number(message);
+    if (!Number.isInteger(i) || !t.messages[i]) throw bad("pick a message of this conversation");
+    if (t.messages[i].by?.agent) throw bad("Design Desk does not decide: record what a person said");
+    if (t.messages[i].decision) throw bad(`This is already ${t.messages[i].decision}.`);
+    if (Object.values(this.db.inbox).some((x) => x.kind === "decision" && x.thread === threadId && x.message === i && x.state !== "done")) throw bad(BUSY);
+    const item = this.enqueue("decision", t.card, threadId, who, optText(note, 600, "note"));
+    item.message = i;
+    this.save();
+    return { inbox: item };
+  }
+
+  listDecisions({ concept = "", q = "", state = "" } = {}) {
+    const c = String(concept || "").toLowerCase(), w = String(q || "").toLowerCase().trim();
     return Object.values(this.db.decisions)
-      .filter((d) => (!c || d.concepts.some((x) => x.includes(c) || c.includes(x))) && (!w || `${d.text} ${d.why}`.toLowerCase().includes(w)))
+      .filter((d) => (!state || d.status === state)
+        && (!c || d.concepts.some((x) => x.includes(c) || c.includes(x)))
+        && (!w || d.id.toLowerCase() === w || `${d.text} ${d.why}`.toLowerCase().includes(w)))
       .sort((a, b) => b.at.localeCompare(a.at));
+  }
+
+  // One decision with everything that names it: cards that follow it or go against it, and
+  // decisions that replace it or go against it.
+  getDecision(id) {
+    const d = this.decision(id), refs = [];
+    for (const c of Object.values(this.db.cards)) {
+      const how = (c.conflicts || []).some((x) => x.decision === d.id) ? "conflicts"
+        : (c.decisions || []).includes(d.id) || (c.impact?.decisions || []).some((x) => x.id === d.id) ? "cites" : null;
+      if (how) refs.push({ id: c.id, kind: c.kind, title: c.title, status: c.status, how });
+    }
+    for (const o of Object.values(this.db.decisions)) {
+      const how = (o.replaces || []).includes(d.id) ? "replaces" : (o.conflicts || []).some((x) => x.decision === d.id) ? "conflicts" : null;
+      if (how) refs.push({ id: o.id, kind: "decision", title: o.text, status: o.status, how });
+    }
+    const against = (d.conflicts || []).map((x) => { const o = own(this.db.decisions, x.decision); return { ...x, text: o?.text || "", status: o?.status || "revoked" }; });
+    return { decision: { ...d, conflicts: against }, refs };
   }
 
   addAsset({ card = null, kind, name, contentType, data, encoding = "base64" }) {
@@ -1221,16 +1326,65 @@ function cleanSource(o, cards) {
   };
 }
 
+// A decision recorded before it named its author and origin: in force, its source as its origin.
+function upgradeDecision(d) {
+  if (!d.status) d.status = "active";
+  if (d.origin === undefined) { d.origin = d.source ? { kind: "other", ...d.source } : null; delete d.source; }
+  if (d.author === undefined) d.author = null;
+}
+
+// Who decided: a person's name, login or email; never Design Desk.
+function cleanAuthor(a) {
+  if (!a || typeof a !== "object" || Array.isArray(a)) throw bad("a decision names who decided it: author {name, login, email}");
+  const x = { name: optText(a.name, 120, "author name") || null, login: optText(a.login, 80, "author login") || null, email: optText(a.email, 200, "author email") || null };
+  if (!x.name && !x.login && !x.email) throw bad("author names the person: name, login or email");
+  return x;
+}
+
+// Where it was decided, with a link: a web address, or the card (and comment) on the Desk.
+function cleanDecisionOrigin(o, cards, threads) {
+  if (!o || typeof o !== "object" || Array.isArray(o)) throw bad(`a decision names its origin: {kind, label, url, card} (kind: ${DECISION_ORIGINS.join(", ")})`);
+  if (!DECISION_ORIGINS.includes(o.kind)) throw bad(`origin.kind must be one of ${DECISION_ORIGINS.join(", ")}`);
+  const url = o.url == null || o.url === "" ? null : String(o.url);
+  if (url && !/^https?:\/\//i.test(url)) throw bad("origin.url must be http(s)");
+  const card = o.card == null || o.card === "" ? null : String(o.card);
+  if (card && !own(cards, card)) throw bad(`origin: no card ${card}`);
+  const thread = o.thread == null || o.thread === "" ? null : String(o.thread);
+  if (thread && own(threads, thread)?.card !== card) throw bad(`origin: ${thread} is not a conversation on ${card || "a card"}`);
+  const message = o.message == null ? null : Number(o.message);
+  if (message !== null && (!thread || !Number.isInteger(message) || !own(threads, thread).messages[message])) throw bad("origin.message is a message of origin.thread");
+  if (!url && !card && o.kind !== "chat") throw bad("origin needs a link: url, or the card it was decided on");
+  return { kind: o.kind, label: optText(o.label, 200, "origin label"), url: url ? url.slice(0, 500) : null, card, thread, message };
+}
+
+// The decisions a card or a decision goes against, each with why; only those in force.
+function cleanConflicts(list, decisions, variants = null) {
+  if (!Array.isArray(list)) throw bad("conflicts must be a list");
+  if (list.length > 10) throw bad("conflicts: at most 10");
+  return list.map((x) => {
+    const d = own(decisions, String(x?.decision || ""));
+    if (!d) throw bad(`conflicts: no decision ${x?.decision}`);
+    if (d.status !== "active") throw bad(`conflicts: ${d.id} is no longer in force`);
+    const variant = x.variant == null || x.variant === "" ? null : String(x.variant);
+    if (variant && !(variants || []).some((v) => v.id === variant)) throw bad(`conflicts: no option ${variant}`);
+    return { decision: d.id, why: clean(x.why, 400, "conflict why"), ...(variant ? { variant } : {}) };
+  });
+}
+
 // Where else the same thing shows up, what a change to it touches, and the earlier
 // decisions that bound it — written by the agent, read by people.
-function cleanImpact(o, cards) {
+function cleanImpact(o, cards, decisions = {}) {
   if (typeof o !== "object" || !o) throw bad("impact must be an object");
   const list = (xs, max, f) => (Array.isArray(xs) ? xs.slice(0, max).map(f) : []);
   return {
     concept: clean(o.concept, 120, "impact concept"),
     places: list(o.places, 30, (x) => ({ where: clean(x.where, 160, "place"), how: optText(x.how, 400, "how"), screen: optText(x.screen, 120, "screen"), card: ["screen", "element"].includes(own(cards, x.card)?.kind) ? x.card : null, kind: ["screen", "component", "message", "email", "document", "other"].includes(x.kind) ? x.kind : "screen" })),
     affects: list(o.affects, 20, (x) => ({ what: clean(x.what, 200, "affected"), why: optText(x.why, 600, "why"), source: x.source ? cleanSource(x.source, cards) : null })),
-    decisions: list(o.decisions, 20, (x) => ({ text: clean(x.text, 600, "decision"), when: optText(x.when, 40, "when"), source: x.source ? cleanSource(x.source, cards) : null })),
+    // A decision on the Desk is cited by its number; one found elsewhere, by its words and source.
+    decisions: list(o.decisions, 20, (x) => {
+      if (x.id != null && !own(decisions, String(x.id))) throw bad(`impact: no decision ${x.id}`);
+      return { ...(x.id != null ? { id: String(x.id) } : {}), text: x.id != null ? optText(x.text, 600, "decision") : clean(x.text, 600, "decision"), when: optText(x.when, 40, "when"), source: x.source ? cleanSource(x.source, cards) : null };
+    }),
   };
 }
 

@@ -45,6 +45,7 @@ log() { LOGS+=("$1"); }
 # drift apart. A missing lib is fatal: parsing config by hand is how they drift.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/lib/config.sh" || { echo "cannot source lib/config.sh" >&2; exit 1; }
+. "$SCRIPT_DIR/lib/time.sh" || { echo "cannot source lib/time.sh" >&2; exit 1; }
 . "$SCRIPT_DIR/lib/toolpath.sh" 2>/dev/null && toolpath_init jq gh >/dev/null 2>&1 || true
 LOG_JOB="$MODE"
 . "$SCRIPT_DIR/log.sh" 2>/dev/null || logev() { :; }
@@ -352,10 +353,11 @@ issues_mode() {
     # Per issue, the ledger's last row decides: read it (first, changed, returned, takeover,
     # retry) or not; a read one follows the plan (move, leave) and gets its pictures once
     # (draw). In bucket order, the most recently updated first in each.
+    # A date nobody can read (scripts/lib/time.sh) sorts as the oldest, and a claim row whose
+    # time nobody can read is taken over: it cannot show that its session is alive.
     pass="$(jq -c --arg repo "$repo" --arg sprint "$sprint" --arg next "$next" --arg label "$LABEL" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
       --rawfile ledger "$ILEDGER" --argjson cards "$cards" --argjson drawing "$drawing" \
-      --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+      --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" "$EPOCH_JQ"'
       def plan: if $sprint != "" and .milestone.title == $sprint then "sprint" elif $next != "" and .milestone.title == $next then "next" else null end;
       (.items | map(select(.url != null) | {key: .url, value: plan}) | from_entries) as $P
       | def bucket: (plan // $P[.parent_issue_url // ""]
@@ -365,13 +367,13 @@ issues_mode() {
         | reduce .[] as $r ({}; .[$r[1]] = {iupd: $r[2], status: $r[3], card: $r[4], ts: $r[5], attempts: (($r[6] | tonumber?) // 0)})) as $L
       | ($cards | map(select(.repo == $repo)) | INDEX(.issue)) as $C
       | [ .items[] | select(.pull_request == null) | . + {b: bucket} ]
-      | sort_by([({sprint: 0, next: 1, assigned: 2, label: 3, out: 4}[.b]), (0 - ((.updated_at // "") | epoch))])
+      | sort_by([({sprint: 0, next: 1, assigned: 2, label: 3, out: 4}[.b]), ((.updated_at | epoch) as $at | if $at == null then 0 else 0 - $at end)])
       | reduce .[] as $i ({news: [], draw: [], rows: [], logs: [], seen: [], nj: 0, nd: 0, deferred: 0};
           ($i.number | tostring) as $n | ($L[$n] // {}) as $row | $C[$n] as $card
           | ($row.status // "") as $st
           | (if $st == "" then "first"
              elif ($st == "carded" or $st == "skipped") then (if $row.iupd != $i.updated_at then "changed" elif $st == "carded" and $card == null then "returned" else null end)
-             elif ($st == "due" or $st == "in_progress") then (if ($nowe - ($row.ts | epoch)) >= 10800 then "takeover" else "held" end)
+             elif ($st == "due" or $st == "in_progress") then (($row.ts | epoch) as $at | if $at == null or ($nowe - $at) >= 10800 then "takeover" else "held" end)
              elif $st == "failed" then (if $row.attempts < 3 then "retry" else "gave-up" end)
              else null end) as $kind
           | ((($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
@@ -430,48 +432,52 @@ inbox_mode() {
   jq -e '.open | type == "array"' "$INBOX" >/dev/null 2>&1 || fail_out "$INBOX is not an inbox document — the Desk server writes it; see docs/desk.md → Server"
   # The server owns the claim TTL and writes it into the inbox.
   ttl_s=$(( $(jq -r '.claim_ttl_min // 120' "$INBOX") * 60 ))
-  # Open items, plus claimed ones whose claim is past its TTL (the session died).
+  # Open items, plus claimed ones whose claim is past its TTL (the session died) or whose
+  # claim time nobody can read (scripts/lib/time.sh: such a claim cannot show it is alive).
   local items
-  items="$(jq -c --argjson now "$NOW_EPOCH" --argjson ttl "$ttl_s" '
-    def epoch: (sub("Z$"; "") + "Z") | fromdateiso8601? // 0;
+  items="$(jq -c --argjson now "$NOW_EPOCH" --argjson ttl "$ttl_s" "$EPOCH_JQ"'
     [ (.open[] | . + {takeover:false}),
-      (.claimed[] | select(($now - (.claimed_at | epoch)) >= $ttl) | . + {takeover:true}) ]' "$INBOX")"
+      (.claimed[] | select((.claimed_at | epoch) as $at | $at == null or ($now - $at) >= $ttl) | . + {takeover:true}) ]' "$INBOX")"
   # A live prototype whose expiry is within a day (and not yet decided for that date),
-  # or whose request is closed and whose expiry passed, is due once.
+  # or whose request is closed and whose expiry passed, is due once. An expiry nobody can
+  # read is never due: it must not extend or tear down a prototype.
   local expiring="[]"
   if [ -f "$DB" ]; then
-    expiring="$(jq -c --argjson now "$NOW_EPOCH" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+    expiring="$(jq -c --argjson now "$NOW_EPOCH" "$EPOCH_JQ"'
       [ .cards[] | select(.kind == "request" and (.prototype.state == "live" or .prototype.state == "building") and .prototype.expires != null)
         | (.status == "declined" or .status == "handed-off") as $closed
-        | ((.prototype.expires | epoch) - $now) as $left
+        | (.prototype.expires | epoch) as $at | select($at != null)
+        | ($at - $now) as $left
         | select(if $closed then $left <= 0 else ($left < 86400 and .prototype.expiry_checked != .prototype.expires) end)
         | {id: ("E-" + .id), card: .id, env: .prototype.env, expires: .prototype.expires, closed: $closed} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   # An open Slack vote is synced every 30 minutes, and closed on its date or once its
-  # request has moved past the options (approved, handed off, closed).
+  # request has moved past the options (approved, handed off, closed). A closing time nobody
+  # can read never closes a vote; a sync time nobody can read is due, like none (the sync
+  # writes a fresh one).
   local polls="[]"
   if [ -f "$DB" ]; then
-    polls="$(jq -c --argjson now "$NOW_EPOCH" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+    polls="$(jq -c --argjson now "$NOW_EPOCH" "$EPOCH_JQ"'
       [ .cards[] | . as $c | (.polls // [])[] | select(.state == "open")
-        | (((.closes | epoch) <= $now) or (($c.status | IN("variants", "feedback", "prototype", "testing")) | not)) as $close
-        | select($close or .synced == null or ($now - (.synced | epoch)) >= 1800)
+        | (((.closes | epoch) as $at | $at != null and $at <= $now)
+           or (($c.status | IN("variants", "feedback", "prototype", "testing")) | not)) as $close
+        | select($close or ((.synced | epoch) as $at | $at == null or ($now - $at) >= 1800))
         | {id: .id, card: $c.id, close: $close, closes: .closes} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   # An open council (a Slack thread whose asks change a request's options) is read every
   # council_sync_min minutes for asks nobody tagged the agent in; it is due to close once its
   # request moved past the options, or three days after the last message the agent read (the
-  # agent reads the thread once more and closes it only when nothing new came).
+  # agent reads the thread once more and closes it only when nothing new came). An opening
+  # time nobody can read is no last message, so it never makes a council idle; a sync time
+  # nobody can read is due, like none.
   local councils="[]"
   if [ -f "$DB" ] && [ "$(jq -r .slack_council <<<"$CONF")" = enabled ]; then
-    councils="$(jq -c --argjson now "$NOW_EPOCH" --argjson every "$(jq '.council_sync_min * 60' <<<"$CONF")" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+    councils="$(jq -c --argjson now "$NOW_EPOCH" --argjson every "$(jq '.council_sync_min * 60' <<<"$CONF")" "$EPOCH_JQ"'
       [ .cards[] | . as $c | (.councils // [])[] | select(.state == "open")
-        | ([(.opened | epoch), ((.seen // "0") | tonumber? // 0 | floor)] | max) as $last
+        | ([(.opened | epoch), ((.seen // "0") | tonumber? // 0 | floor)] | map(select(. != null and . > 0)) | max) as $last
         | (if ($c.status | IN("triage", "variants", "feedback", "prototype", "testing")) | not then "moved"
-           elif ($now - $last) >= 259200 then "idle" else null end) as $why
-        | select($why != null or .synced == null or ($now - (.synced | epoch)) >= $every)
+           elif $last != null and ($now - $last) >= 259200 then "idle" else null end) as $why
+        | select($why != null or ((.synced | epoch) as $at | $at == null or ($now - $at) >= $every))
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   local n; n="$(jq 'length' <<<"$items")"
@@ -502,6 +508,7 @@ inbox_mode() {
       slack_due: pick(["slack"]),
       drawings_due: pick(["draw"]),
       people_due: [ pick(["person"])[] | select(.person != null) ],
+      decisions_due: pick(["decision"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
@@ -654,11 +661,10 @@ digest_mode() {
   [ -f "$DB" ] || { log "no Desk store yet"; quiet_out; }
   period="$(date -u +%G-W%V)"
   local out
-  out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" '
-    def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
-    def within($s): ((. // "") | epoch) >= ($now - $s);
+  out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" "$EPOCH_JQ"'
+    def within($s): epoch as $at | $at != null and $at >= ($now - $s);
     (30 * 86400) as $month | ($now / 86400 | floor | . * 86400) as $end | ($end - 7 * 86400) as $start
-    | def inweek: ((. // "") | epoch) as $e | $e >= $start and $e < $end;
+    | def inweek: epoch as $e | $e != null and $e >= $start and $e < $end;
     def day($e): ($e | strftime("%d %b %Y") | ltrimstr("0"));
     # Named by its days: "29 Oct – 4 Nov 2026", the year once when both days share it.
     [day($start), day($end - 86400)] as [$from, $to]
@@ -672,17 +678,18 @@ digest_mode() {
       handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | inweek)) | {id, title} ],
       waiting: [ $cards[] | select(.agenda.status == "queued") | {id, title, note: .agenda.note} ],
       polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | inweek)) | {card: $c.id, title: $c.title, state, closes, result} ],
-      decisions: [ (.decisions // {})[] | select(.recorded | inweek) | {id, text, concepts} ],
+      decisions: [ (.decisions // {})[] | select(.recorded | inweek) | {id, text, concepts, author, conflicts} ],
+      revoked: [ (.decisions // {})[] | select(.revoked.at | inweek) | {id, text, reason: .revoked.reason, replaced_by: .revoked.replaced_by} ],
       feedback: ([ ($cards[] | select(.kind == "request" and .request.type == "bug" and (.created | within($month)))
                    | {card: .id, kind: (if .origin.automated then "test finding" else "bug" end), text: ((.title + ": " + (.request.problem // ""))[0:240])}),
                  (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.created | within($month)) and (.messages[0].by.agent != true))
                    | {card, kind, text: (.messages[0].text[0:240])}) ] | .[0:150])
     }' "$DB" 2>/dev/null)" || fail_out "cannot read the Desk store at $DB"
   if [ "$(jq -r .done <<<"$out")" = true ]; then log "the digest of $period is written"; quiet_out; fi
-  if [ "$(jq '(.changes + .requests_new + .handed_off + .decisions + .feedback) | length' <<<"$out")" -eq 0 ]; then
+  if [ "$(jq '(.changes + .requests_new + .handed_off + .decisions + .revoked + .feedback) | length' <<<"$out")" -eq 0 ]; then
     log "a quiet week: nothing to digest for $period"; quiet_out
   fi
-  log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.feedback|length) pieces of feedback"' <<<"$out")"
+  log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.revoked|length) revoked, \(.feedback|length) pieces of feedback"' <<<"$out")"
   jq -n --argjson d "$out" --arg period "$period" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md"], config:$config, logs:$logs} | del(.done)'
 }
