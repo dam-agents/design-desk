@@ -306,7 +306,7 @@ async function agentRoute(req, res, url) {
     return send(res, 200, store.slackVotes(p[2], String(b.variant || ""), voters));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "relay") return send(res, 201, store.relayComment(p[2], { ...b, role: slackRole(b.email) }));
-  if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover) }));
+  if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover), heartbeat: Boolean(b.heartbeat) }));
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   // An ask to add a person carries its payload; only a lead's ask on the page makes one.
   if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from a lead on the People tab");
