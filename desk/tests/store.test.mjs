@@ -189,10 +189,14 @@ test("deciding straight away: a designer or lead developer approves without opti
 
   const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
   assert.throws(() => s.act(card.id, lee, "approve"), /still checking/, "not before it is checked");
-  assert.throws(() => s.decideAndClose(card.id, lee, { text: "No." }), /still checking/, "nor decided");
+  assert.throws(() => s.act(card.id, lee, "approve"), /Approve it once/, "the refusal names the approval");
+  assert.throws(() => s.decideAndClose(card.id, lee, { text: "No." }), /Decide it once/, "nor decided");
   assert.throws(() => s.decideAndClose(card.id, { agent: true }, { text: "No." }), (e) => e.status === 403 && e.message === "Design Desk does not decide: a person does");
   s.claim(item.id, "s1"); s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Only the look."] } }); s.done(item.id, "s1", "triaged");
   assert.throws(() => s.act(card.id, dana, "approve"), /nothing to approve yet/, "a developer waits for options, small change or not");
+  const drawing = s.act(card.id, alice, "explore").inbox;
+  assert.throws(() => s.act(card.id, lee, "approve"), /still drawing the options/, "no approval while the options are drawn");
+  s.claim(drawing.id, "s2"); s.done(drawing.id, "s2", "drawn");
   const ok = s.act(card.id, lee, "approve", "Use the grey header.");
   assert.equal(ok.inbox.kind, "handoff");
   assert.equal(ok.inbox.note, "Use the grey header.");

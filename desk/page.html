@@ -1500,7 +1500,7 @@
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
     // A designer or a lead developer may skip the options, the vote and the prototype.
-    const skip = can("skip") ? b("approve", "Send to developers now…") + b("decide", "Decide and close…") : "";
+    const skip = (can("skip") && canApprove(c) ? b("approve", "Send to developers now…") : "") + (can("skip") ? b("decide", "Decide and close…") : "");
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) + skip } : { text: none || "Next: a designer or developer starts the design options.", buttons: skip };
     if (c.status === "spec") return { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {

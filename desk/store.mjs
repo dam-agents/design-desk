@@ -609,7 +609,10 @@ export class Store {
     // A designer or a lead developer approves once it is checked, without a vote or a live
     // prototype; a small change's developer, once there are options (docs/desk.md → Deciding straight away).
     const direct = who?.agent || can(who?.role, "skip");
-    if (action === "approve") mustBeChecked(c);
+    if (action === "approve") mustBeChecked(c, "Approve");
+    // Before options are on the card, an approval does not race the drawing of them.
+    if (action === "approve" && ["triage", "variants"].includes(c.status) && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise"].includes(i.kind)))
+      throw bad("Design Desk is still drawing the options. Approve once they are here.");
     if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
     if (action === "approve" && !direct && !can(who?.role, "approve")) {
@@ -670,7 +673,7 @@ export class Store {
     if (c.kind !== "request") throw bad("only a design request is decided here");
     if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
     if (c.approved || c.status === "spec") throw bad("This request is already approved.");
-    mustBeChecked(c);
+    mustBeChecked(c, "Decide");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "decision" && !i.thread)) throw bad(BUSY);
     const said = clean(text, 600, "decision");
     c.status = "declined"; delete c.call_suggestion;
@@ -1319,8 +1322,8 @@ function favouriteOf(c) {
 // Every way past the vote and the prototype waits for Design Desk's check (docs/desk.md →
 // Deciding straight away).
 // Past Checking, a request was checked.
-function mustBeChecked(c) {
-  if (c.status === "triage" && !c.triage) throw bad("Design Desk is still checking this request. Decide it once it says what can be done.");
+function mustBeChecked(c, verb) {
+  if (c.status === "triage" && !c.triage) throw bad(`Design Desk is still checking this request. ${verb} it once it says what can be done.`);
 }
 
 // Whether a person filed the request: its author never approves it as a small change. A

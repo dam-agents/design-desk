@@ -1087,6 +1087,9 @@ const triage = { verdict: "design", reasons: [] }, variants = [{ id: "v1", name:
 const cards = [
   { id: "C-1", kind: "request", title: "Checked", status: "triage", triage, created_by: bob },
   { id: "C-2", kind: "request", title: "Live", status: "testing", prototype: { state: "live", url: "https://example.com/p" }, triage, variants, built: { variant: "v2", by: lou, at: "2026-11-03T10:00:00Z" }, created_by: bob },
+  { id: "C-3", kind: "request", title: "Failed", status: "prototype", prototype: { state: "failed" }, triage, variants, created_by: bob },
+  { id: "C-4", kind: "request", title: "Expired", status: "testing", prototype: { state: "expired" }, triage, variants, created_by: bob },
+  { id: "C-5", kind: "request", title: "Against", status: "triage", triage, created_by: bob, conflicts: [{ decision: "D-1", why: "x", text: "Rows stay roomy", status: "active" }] },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
@@ -1122,6 +1125,15 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-2/actions"));
   assert.equal(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-2/actions").body)).note, "v2");
+
+  for (const id of ["C-3", "C-4"]) {
+    await card(id);
+    assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").count(), 0, `${id}: no live prototype, the options stay open`);
+    assert.equal(await desk.locator('#detail .next [data-act="decide"]').count(), 1, `${id}: decide and close on a switched-off prototype`);
+  }
+  await card("C-5");
+  assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a lead developer does not send it");
+  assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1);
 }));
 
 test("the Desk opens on Requests, a first visit too", (t) => open(t, SKIP.replace(`try { localStorage.setItem("desk-guide-seen", "1"); } catch {}`, `try { localStorage.clear(); } catch {}`), async (desk) => {
