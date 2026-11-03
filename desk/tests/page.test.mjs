@@ -678,7 +678,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
 test("the Issues tab lists the planned issues; Draw it and Design this act once", async (t) => {
   const issues = `const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", needs: ["A spend column in the agents list"], sketches: 0,
     source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41", author: "alice", milestone: "Sprint 12", assignees: ["bob"] }, waiting: [], threads: [] };
-  const later = { id: "is2", kind: "issue", status: "open", title: "A calmer empty Home", bucket: "backlog", needs: ["An empty state on Home"], sketches: 0, source: { repo: "acme/widgets", issue: 40, author: "erin" } };
+  const later = { id: "is2", kind: "issue", status: "open", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], sketches: 0, source: { repo: "acme/widgets", issue: 40, author: "erin" } };
   const gone = { id: "is3", kind: "issue", status: "archived", title: "Closed", bucket: "sprint", source: { repo: "acme/widgets", issue: 39 } };`;
   const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
     .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, later, gone]")
@@ -696,12 +696,12 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     assert.match(await desk.textContent(`${row} .prov`), /Issue #41.*by alice.*assigned to bob/);
     assert.match(await desk.textContent(`${row} .s`), /UI: A spend column in the agents list/);
     assert.match(await desk.textContent(`${row} .meta`), /Sprint 12/);
-    await desk.click('[data-filter="issueFilter:backlog"]');
+    await desk.click('[data-filter="issueFilter:label"]');
     assert.deepEqual(await desk.locator(".row.item [data-card]").evaluateAll((xs) => xs.map((x) => x.dataset.card)), ["is2"]);
     await desk.click('[data-filter="issueFilter:sprint"]');
     await desk.click('[data-card="is1"]');
     await desk.waitForSelector("text=What the UI will need");
-    assert.match(await desk.textContent("#detail"), /No picture yet[\s\S]*Design Desk sketches it in its next daily check/);
+    assert.match(await desk.textContent("#detail"), /No picture yet[\s\S]*Design Desk sketches it in one of its next daily checks/);
 
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
     await desk.click('[data-act="draw"]');

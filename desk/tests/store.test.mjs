@@ -663,14 +663,14 @@ test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   assert.equal(can("pm", "draw"), true);
   assert.equal(can("developer", "draw"), false);
   assert.equal(can("guest", "draw"), false);
-  const c = s.upsertCard({ kind: "issue", title: "A calmer empty Home", bucket: "backlog", needs: ["An empty state on Home"], source: { repo: "acme/widgets", issue: 31 } }).card;
+  const c = s.upsertCard({ kind: "issue", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], source: { repo: "acme/widgets", issue: 31 } }).card;
   const { inbox: item } = s.act(c.id, pm, "draw", "try a checklist");
   assert.equal(item.kind, "draw");
   assert.throws(() => s.act(c.id, pm, "draw"), /already working/);
   assert.throws(() => s.act(c.id, pm, "explore"), /can only be drawn/);
   assert.deepEqual(s.getCard(c.id).waiting.map((w) => w.kind), ["draw"]);
   s.upsertCard({ id: c.id, status: "archived" });
-  const d = s.upsertCard({ kind: "issue", title: "Closed one", bucket: "backlog", source: { repo: "acme/widgets", issue: 32 }, status: "archived" }).card;
+  const d = s.upsertCard({ kind: "issue", title: "Closed one", bucket: "next", source: { repo: "acme/widgets", issue: 32 }, status: "archived" }).card;
   assert.throws(() => s.act(d.id, pm, "draw"), /closed/);
 });
 

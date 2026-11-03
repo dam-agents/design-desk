@@ -39,8 +39,10 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   requests with an install of their own.
 - `issue_news` (`disabled`) — `enabled`: the Desk's Issues page, the open issues that change
   the screens, read once a day ([issues.md](issues.md)); `issue_sprint` (`milestone`: the open
-  milestone due next | a milestone's title | `none`) — the current sprint;
-  `max_issue_drawings` (`5`) — issues of the sprint or someone's drawn a day.
+  milestone due next | a milestone's title | `none`) — the current sprint; `issue_next_sprint`
+  (`milestone`: the open milestone due after it | a title | `none`) — the next sprint;
+  `issue_news_label` (`none`) — a label whose open issues are listed too;
+  `max_issue_drawings` (`5`) — issues drawn a day.
 - `digest` (`desk`) — where the weekly UX digest goes: `desk` | `slack` (the Desk and the
   bound channel) | `disabled`.
 - `slack_polls` (`disabled`) — `enabled`: designers share options in Slack for 👍 / ⚠️ votes

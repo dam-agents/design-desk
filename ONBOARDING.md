@@ -154,10 +154,12 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    developer's UI or fixes a UI bug, how does the coding agent get it — a comment on the pull
    request, or a new issue? Does it answer to a handle?" (`implementer`, `implementer_mention`.)
    Both post on the product repository as the agent's account; say so.
-   "Should the Desk list the planned issues that change the screens — the current sprint,
-   assigned ones and the backlog — with what the UI will need and a sketch?" (`issue_news`,
-   default `disabled`; [docs/issues.md](docs/issues.md)). Yes → "Is the sprint a milestone?"
-   (`issue_sprint`: `milestone`, the open one due next; a title; or `none`) and
+   "Should the Desk list the planned issues that change the screens — the current and the
+   next sprint, assigned ones and a label's — with what the UI will need and a sketch?"
+   (`issue_news`, default `disabled`; [docs/issues.md](docs/issues.md)). Yes → "Is the sprint
+   a milestone?" (`issue_sprint`: `milestone`, the open one due next; a title; or `none`;
+   `issue_next_sprint` likewise, the one after it), "Which label marks an issue to list
+   too?" (`issue_news_label`, default `none`) and
    `max_issue_drawings` (default 5 a day; each drawing is a longer run).
 5. **Handoff** (`handoff`) — "When a design is approved, should the spec stay on the Desk,
    or should I also file a GitHub issue, or open a draft pull request?" Default `desk`.
@@ -228,6 +230,8 @@ Write the file in exactly this shape with `design config write` (a restored file
 - council_sync_min: 30
 - issue_news: disabled
 - issue_sprint: milestone
+- issue_next_sprint: milestone
+- issue_news_label: none
 - max_issue_drawings: 5
 
 ## Desk people

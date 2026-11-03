@@ -74,8 +74,9 @@ export const CHANGE_STATES = ["new", "handled", "archived"];
 export const ELEMENT_STATES = ["current", "stale", "building", "dropped"];
 // An issue on the Issues page: listed while it is open, archived once it is closed or no UI.
 export const ISSUE_STATES = ["open", "archived"];
-// Where an issue stands in the team's plan: the current sprint, someone's, or the backlog.
-export const ISSUE_BUCKETS = ["sprint", "assigned", "backlog"];
+// Where an issue stands in the team's plan: the current sprint, the next one, someone's, or
+// labelled for design (docs/issues.md).
+export const ISSUE_BUCKETS = ["sprint", "next", "assigned", "label"];
 // Undo takes back an item marked presented until the end of that day, UTC: the store
 // writes the deadline, `undo_until`, and the page shows Undo only before it
 // (docs/desk.md → The presentation).
