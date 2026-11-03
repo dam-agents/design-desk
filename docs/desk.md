@@ -203,11 +203,12 @@ never do one item twice.
 - Every claim and done names the run: `--session <run id>`, the worklist file's name (a
   ping session: `ping-I-<n>`). An `export` does not survive from one command to the next.
 - `design desk claim I-<n> --session <id>` before working an item. A claim is a 15-minute
-  lease: while the work runs, renew it with `--heartbeat` before the lease runs out (for a
-  long build or screenshot command, run it before and after; between draft, build, shot and
-  upload, renew at each step). Exit 3 (`409`) → another session holds it: skip it. A
-  worklist entry with `takeover: true` → add `--takeover`; a claim whose heartbeat stopped
-  is due again on the next inbox tick.
+  lease: while the work runs, renew it with `--heartbeat` at each step (draft, build, shot,
+  upload) and right before and after any one command that can run long. Exit 3 (`409`) on
+  the claim → another session holds it: skip it. Exit 3 on a heartbeat → the lease ran out
+  and another session took the item over: stop, post nothing more for it, and end the entry
+  as skipped. A worklist entry with `takeover: true` → add `--takeover`; a claim whose
+  heartbeat stopped is due again on the next inbox tick.
 - `design desk done I-<n> --session <id> --outcome "<one line>"` when its work is on the
   card. An answer (`design desk answer`) closes the question items it could have read; a
   follow-up that arrived meanwhile stays open for the next run.
