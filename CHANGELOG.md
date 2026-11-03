@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.20.0 — 2026-11-03
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the Desk page ([docs/desk.md](docs/desk.md) → **Publishing the page**). The Issues page
+   lists the current sprint (with its epics' issues), the next sprint, assigned and labelled
+   issues; the backlog is gone, and the next issues run archives the cards of issues in no
+   bucket ([docs/issues.md](docs/issues.md)).
+2. New keys `issue_next_sprint` (`milestone`) and `issue_news_label` (`none`: off — offer it
+   to the operator) ([docs/config.md](docs/config.md)). Re-run
+   `bash "$HOME/scripts/verify-onboarding.sh" --config`.
+
 ## 1.19.0 — 2026-11-03
 
 **Upgrade:**

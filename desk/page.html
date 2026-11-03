@@ -430,7 +430,7 @@
 <ol>
 <li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches (a screen or a part in Product opens from there), and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
 <li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
-<li><b>Issues</b> — what the team plans that will change the screens: the current sprint, issues someone has taken, and the backlog. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches the sprint's and the assigned ones on its own; press <b>Draw it</b> on any other, or <b>Design this</b> to start a request.</li>
+<li><b>Issues</b> — what the team plans that will change the screens: the current sprint (with the issues of its epics), the next sprint, issues someone has taken, and the ones labelled for design. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches them on its own, the sprint's first; press <b>Draw it</b> on any other, or <b>Design this</b> to start a request.</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision, each with why.</p>
@@ -701,10 +701,10 @@
         ["Filter by <b>Open</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
       steps: ["Describe the problem in New request.", "Design Desk checks what can be done and draws two or three options.", "The team votes and comments; a designer refines one.", "Try it as a live prototype, approve it, and it goes to the developers."] },
     issues: { about: "what the team plans that will change the screens",
-      see: ["The open issues that change the screens: the current sprint's first, then the ones someone has taken, then the backlog.",
+      see: ["The open issues that change the screens: the current sprint's (with its epics' issues) first, then the next sprint's, the ones someone has taken and the ones labelled for design.",
         "On each issue: what the UI will need, a picture of how it looks now and a sketch of how it could look.",
-        "Design Desk reads the issues once a day and sketches the sprint's and the assigned ones on its own."],
-      can: [["Filter by <b>This sprint</b>, <b>Assigned</b>, <b>Backlog</b> or <b>All</b>."],
+        "Design Desk reads the issues once a day and sketches them on its own, the sprint's first."],
+      can: [["Filter by <b>This sprint</b>, <b>Next sprint</b>, <b>Assigned</b>, <b>For design</b> or <b>All</b>."],
         ["<b>Draw it</b>: have an issue without pictures drawn now.", "draw"],
         ["<b>Design this</b>: start a design request from an issue.", "follow-up"],
         ["<b>Ask a question</b> about an issue; the answer appears below it.", "ask"], LINK],
@@ -768,11 +768,11 @@
   const requestCards = (filter) => S.cards.filter((c) => c.kind === "request"
     && (filter === "designer" ? forDesigner(c) : filter === "open" ? !closed(c) : closed(c)));
   // The list filter a person picked last is kept in their browser.
-  // Issues of the current sprint first, then someone's, then the backlog; the newest first in each.
-  const BUCKET = { sprint: "This sprint", assigned: "Assigned", backlog: "Backlog" };
+  // Issues of the current sprint first, then the next sprint's, someone's and the labelled; the newest first in each.
+  const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
   const issueCards = (filter) => S.cards.filter((c) => c.kind === "issue" && c.status !== "archived" && (filter === "all" || c.bucket === filter))
     .sort((a, b) => Object.keys(BUCKET).indexOf(a.bucket) - Object.keys(BUCKET).indexOf(b.bucket) || (b.source?.updated || b.updated).localeCompare(a.source?.updated || a.updated));
-  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "closed", "designer"], issueFilter: ["sprint", "assigned", "backlog", "all"] };
+  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
 
@@ -803,7 +803,7 @@
     if (c.kind === "digest") out.push(`<span class="chip info">Weekly digest</span>`);
     else if (c.kind === "issue") {
       const s = c.source || {};
-      out.push(`<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(c.bucket === "sprint" && s.milestone ? `Sprint ${s.milestone}` : BUCKET[c.bucket] || "Backlog")}</span>`);
+      out.push(`<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(c.bucket === "sprint" && s.milestone ? `Sprint ${s.milestone}` : BUCKET[c.bucket] || "Issue")}</span>`);
       if (c.busy) out.push(`<span class="chip info">● Drawing</span>`);
       else if (c.sketches) out.push(`<span class="chip ok">Sketch ready</span>`);
       if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
@@ -1135,7 +1135,7 @@
     const open = c.status !== "archived";
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
-      <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Backlog")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
+      <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
       ${open ? `<div class="actions">
@@ -1147,7 +1147,7 @@
       ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
       <h3>How it could look</h3>${sketch.length ? `${shots(sketch)}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
-        : `<p class="hint">${busy ? "Being sketched." : c.bucket === "backlog" ? "Not sketched yet: Design Desk sketches the issues of the sprint and the assigned ones on its own." : "Design Desk sketches it in its next daily check."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>`}
+        : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>`}
       ${c.draw?.note ? `<p class="hint">${txt(c.draw.note)}</p>` : ""}
       ${renderThreads(c)}`;
   }
