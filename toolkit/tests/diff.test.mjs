@@ -1,4 +1,5 @@
-// node --test toolkit/tests/diff.test.mjs — design diff outlines what changed and gives the Desk its marks.
+// node --test toolkit/tests/diff.test.mjs — design diff outlines what changed and gives the Desk its marks;
+// design compare pictures one place of two versions of an option.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -44,4 +45,23 @@ test("at most 20 marks, and a before picture of another size is said", async (t)
   assert.equal(r.marks.length, 20);
   assert.equal(r.partial, true, "a picture with more changed areas than marks says so");
   assert.equal(r.same_size, false, "the marks do not fit the before picture");
+});
+
+// Two versions of an option: the button the comment is pinned to changes colour on view 2.
+const option = (colour) => `<!doctype html><html><body style="margin:0;font:16px sans-serif">
+  <div id="review"><button data-review-view="1">1</button><button data-review-view="2">2</button></div>
+  <section data-view="1" style="height:400px">Overview</section>
+  <section data-view="2" style="display:none;padding:300px 40px 600px"><button id="save" style="width:120px;height:40px;border:0;background:${colour}">Save</button></section>
+  <script>for (const b of document.querySelectorAll("[data-review-view]")) b.onclick = () => document.querySelectorAll("[data-view]").forEach((v) => { v.style.display = v.dataset.view === b.dataset.reviewView ? "block" : "none"; });</script></body></html>`;
+
+test("compare crops both versions to one box around the element and marks the change", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "dd-compare-"));
+  writeFileSync(join(dir, "a.html"), option("#ddd")); writeFileSync(join(dir, "b.html"), option("#0f62fe"));
+  let r;
+  try { r = JSON.parse((await promisify(execFile)(process.execPath, [design, "compare", join(dir, "a.html"), join(dir, "b.html"), join(dir, "out"), "--view", "2", "--selector", "#save", "--label", "Save", "--pad", "40"], { timeout: 60000 })).stdout); }
+  catch (e) { if (/Chromium|browser/i.test(String(e.stderr))) return t.skip("no browser here"); throw e; }
+  assert.deepEqual(r.found, { before: true, after: true });
+  assert.deepEqual(r.shots.map((s) => [s.stage, s.pair, s.file.endsWith(`${s.stage}.jpg`)]), [["before", "Save", true], ["after", "Save", true]]);
+  assert.ok(r.shots[1].marks.length && r.shots[0].marks, "the same box on both pictures, so both carry the marks");
+  assert.ok(r.changed_pct > 0 && r.changed_pct < 20, `only the button changed (${r.changed_pct}%)`);
 });

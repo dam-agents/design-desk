@@ -67,7 +67,10 @@ for the operator only when the operator is debugging it; otherwise delete it.
 
 A `build` item on a card whose prototype is `live` is an update: the same worktree, the new
 change, the guard again, then `proto.sh run C-<n> update` (the profile rebuilds only what
-changed — for a UI change, the UI) instead of `up`.
+changed — for a UI change, the UI) instead of `up`. Then capture the same screens as step 7 and
+answer the item's note with one comment showing what the update did: per screen its shot
+from before the update (`stage: before`) and the new one (`stage: after`), the after one's
+`marks` from `design diff` (`design desk comment C-<n> <file> --shots <shots.json>`).
 
 ## Expiry (`expiring_due`)
 

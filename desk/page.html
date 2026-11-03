@@ -286,6 +286,8 @@
   .note .m { font-size: 12.5px; margin-top: 6px; } .note .m .who { font-size: 11.5px; color: var(--muted); }
   .note .reply { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; } .note .reply input { flex: 1 1 140px; min-width: 0; }
   .note.done { opacity: .72; }
+  .changed { margin-top: 8px; } .changed h4 { font-size: 12.5px; }
+  .note .changed .shots { grid-template-columns: 1fr 1fr; gap: 6px; } .note .changed .shot img { min-height: 60px; }
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; }
     main.has-detail .list { display: none; } main:not(.has-detail) .detail { display: none; }
@@ -1198,6 +1200,9 @@
     return outlineToggle(list) + rows + (single.length ? `<div class="shots" style="margin-top:${rows ? 12 : 0}px">${single.map((x) => figure(x)).join("")}</div>` : "");
   }
 
+  // What a worked-in comment did: Design Desk's answer carries the same place before and after.
+  const changed = (m) => m.shots?.length ? `<div class="changed">${shots(m.shots)}</div>` : "";
+
   // The agent's own install of the product: where people try a change and take pictures.
   function renderInstance(c) {
     const i = c.instance, list = c.shotlist || [];
@@ -1248,7 +1253,7 @@
       const state = th.state === "resolved" ? `<span class="chip ok">done</span>` : th.state === "answered" ? `<span class="chip">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}">${esc(name)}</span>${anchor}${state}</div>
-        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}</div>`).join("")}
+        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
         ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`}
       </article>`;
@@ -1856,6 +1861,7 @@
       </div>`}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
       ${renderWsNotes(c, v, sel)}`;
+    loadPictures(side);
     const nt = $("#ws-text");
     if (nt) { nt.value = keep; if (focused) { nt.focus(); if (caret) nt.setSelectionRange(caret[0], caret[1]); } }
   }
@@ -1868,7 +1874,7 @@
     const notes = all.filter((n) => f === "all" || (f === "done") === (n.state === "resolved"));
     const count = (k) => all.filter((n) => k === "all" || (k === "done") === (n.state === "resolved")).length;
     const workIn = all.filter((n) => workable(c, n));
-    const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}</div>`;
+    const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}${changed(m)}</div>`;
     return `<div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}</h3>
       <div class="tabs" style="margin:0 0 8px">${[["open", "Open"], ["done", "Done"], ["all", "All"]].map(([k, l]) => `<button data-ws-filter="${k}" aria-pressed="${f === k}">${l} ${count(k)}</button>`).join("")}</div>
       ${workIn.length > 1 ? `<div class="actions" style="margin:0 0 8px"><button class="btn small" data-work-in="${esc(workIn.map((n) => n.id).join(","))}">Work in all ${workIn.length} open comments</button></div>` : ""}
@@ -1929,12 +1935,15 @@
   }
 
   // ---------- rendering the detail ----------
-  async function loadImages() {
-    for (const img of document.querySelectorAll("img[data-asset]")) {
+  async function loadPictures(root) {
+    for (const img of root.querySelectorAll("img[data-asset]")) {
       if (img.src) continue;
       try { img.src = dataUrl(await asset(img.dataset.asset)); } catch {}
     }
     await checkFrames();
+  }
+  async function loadImages() {
+    await loadPictures(document);
     const spec = $("#spec-body");
     if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);

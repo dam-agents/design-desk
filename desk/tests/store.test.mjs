@@ -376,6 +376,31 @@ test("comments on options: replies, done and reopen, and a designer has them wor
   assert.equal(s.reopenThread(two.id, alice).inbox.id, item.id);
 });
 
+test("a worked-in change is answered with the place before and after", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { problem: "Save is easy to miss." });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Tabs", asset: a }] });
+  const { thread } = s.openThread(card.id, alice, { kind: "change", text: "Make Save primary", anchor: { variant: "v1", selector: "button", label: "Save" } });
+  const pic = () => s.addAsset({ kind: "image", name: "p.jpg", contentType: "image/jpeg", data: Buffer.from("jpg").toString("base64") }).asset.id;
+  const [before, after] = [pic(), pic()];
+  const marks = [{ x: 0.1, y: 0.2, w: 0.3, h: 0.1 }];
+  assert.throws(() => s.answer(thread.id, "Done.", { shots: [{ asset: after, stage: "after", pair: "Save" }] }), /needs a before and an after/);
+  assert.throws(() => s.answer(thread.id, "Done.", { shots: [{ asset: before }, { asset: after, stage: "after" }] }), /needs a before and an after/);
+  assert.throws(() => s.answer(thread.id, "Done.", { shots: [{ asset: "A-999", stage: "before" }, { asset: after, stage: "after" }] }), /no asset/);
+  assert.throws(() => s.openThread(card.id, alice, { kind: "comment", text: "Look", shots: [{ asset: before, stage: "before" }, { asset: after, stage: "after" }] }), /only Design Desk/);
+  assert.equal(s.getCard(card.id).threads[0].messages.length, 1, "a refused answer leaves the thread as it was");
+  s.answer(thread.id, "Save is the primary button now.", { resolve: true, shots: [{ asset: before, stage: "before", pair: "Save", marks }, { asset: after, stage: "after", pair: "Save", marks }] });
+  const t = s.getCard(card.id).threads[0];
+  assert.equal(t.state, "resolved");
+  assert.deepEqual(t.messages[1].shots.map((x) => [x.asset, x.stage, x.pair, x.marks]), [[before, "before", "Save", marks], [after, "after", "Save", marks]]);
+  // An answer without pictures carries none; the agent's own comment can carry them too.
+  const q = s.openThread(card.id, bob, { kind: "question", text: "Why?" }).thread;
+  assert.equal("shots" in s.answer(q.id, "Because.").thread.messages[1], false);
+  const c = s.openThread(card.id, { agent: true }, { kind: "comment", text: "Redrawn with every comment.", shots: [{ asset: before, stage: "before" }, { asset: after, stage: "after" }] }).thread;
+  assert.deepEqual(c.messages[0].shots.map((x) => x.pair), ["screen", "screen"]);
+});
+
 test("only a designer picks the winning option; votes only suggest one", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });

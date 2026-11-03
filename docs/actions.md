@@ -72,7 +72,8 @@ A skill that replaces a bundled one keeps the action's contract:
     that draws several approaches in one page is run once per approach, or its views are split
     into one file each;
   - `revise`: the same option id with its new file (the Desk keeps the earlier version), and
-    an answer on every note it applied or could not apply;
+    an answer on every note it applied or could not apply, an applied one with its before and
+    after pictures ([requests.md](requests.md) → Variants);
   - `deliver`: the routing by request type, the pictures, the hidden card marker and the
     record ordering of `handoff-github`; the Approve (a designer's, or a developer's on a small change) is the approval a skill asks
     for.

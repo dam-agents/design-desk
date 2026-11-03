@@ -148,8 +148,16 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     new asset: the Desk numbers the version and keeps the earlier one. Then answer each note
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
+    **An applied note always shows what it did**: `design desk fetch` the option's previous
+    asset, then `design compare <previous.html> <new.html> <dir> --view <anchor.view>
+    --selector <anchor.selector> --label "<anchor.label>" > <dir>/shots.json` (no selector
+    for a note on the whole option; `--dark` too when the note is about the dark theme), look
+    at both pictures, and answer with `--shots <dir>/shots.json`: the note shows the same place
+    before and after, the change outlined. Notes done in one rebuild share the previous asset.
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
-    what people preferred, and add one comment listing what changed per comment. Never drop
+    what people preferred, and add one comment listing what changed per comment, with each
+    option's whole view before and after (`design compare` without a selector, `design desk
+    comment … --shots`). Never drop
     or merge an option on votes: only a designer's pick (the card's `chosen`, **Pick as the
     winner**) says which option wins, and only a designer removes one.
 

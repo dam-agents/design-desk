@@ -30,8 +30,12 @@ const USAGE = `usage: design desk <command>
                                            thread_ts, message_ts, reporter, email, url}}
   asset <file> --kind <k> [--card C-n] [--name <n>] [--type <media/type>]
                                            store a file; kinds: screen variant spec patch image report
-  answer <T-n> <text-file|-> [--resolve]   answer a question thread
-  comment <C-n> <text-file|->              add a comment thread as the agent
+  answer <T-n> <text-file|-> [--resolve] [--shots <shots.json>]
+                                           answer a thread; --shots: what a worked-in change did,
+                                           as design compare prints it with assets: [{asset, caption,
+                                           stage: before|after|diff, pair, marks}]
+  comment <C-n> <text-file|-> [--shots <shots.json>]
+                                           add a comment thread as the agent
   ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
       [--form]                             their answer re-queues the step (request explore revise
                                            build handoff figma catalog map); --form: the file is
@@ -109,6 +113,21 @@ export async function call(method, path, body) {
 }
 
 const out = (o) => console.log(JSON.stringify(o, null, 1));
+// The before and after pictures of a change (docs/requests.md → revise), as `design compare`
+// prints them: a picture given as a `file` is stored first and goes as its asset.
+async function shotsArg(file) {
+  if (typeof file !== "string") return null;
+  let list; try { list = JSON.parse(readFileSync(file, "utf8")); } catch (e) { fail(`--shots: not JSON (${e.message})`); }
+  if (!Array.isArray(list)) list = list?.shots;
+  if (!Array.isArray(list)) fail("--shots: a list of pictures, or design compare's output");
+  const shots = [];
+  for (const { file: pic, ...s } of list) {
+    if (s.asset || !pic) { shots.push(s); continue; }
+    const { asset } = await call("POST", "/agent/assets", { card: null, kind: "image", name: basename(pic), contentType: TYPES[extname(pic).toLowerCase()] || "image/jpeg", encoding: "base64", data: readFileSync(pic).toString("base64") });
+    shots.push({ ...s, asset: asset.id });
+  }
+  return shots;
+}
 
 // A lead's ask to add a person (docs/desk.md → People), decided on work/CONFIG.md as it
 // is now: the row already there with that role is `added` (a run that wrote it and died
@@ -201,8 +220,8 @@ export async function main(_cmd, argv) {
         encoding: text ? "utf8" : "base64", data: text ? buf.toString("utf8") : buf.toString("base64"),
       }));
     }
-    case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve) }));
-    case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]) }));
+    case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve), shots: await shotsArg(f.shots) }));
+    case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]), shots: await shotsArg(f.shots) }));
     case "ask": {
       const body = f.form ? JSON.parse(readArg(pos[1])) : { text: readArg(pos[1]) };
       return out(await call("POST", `/agent/cards/${pos[0]}/ask`, { text: body.text, questions: body.questions || null, step: typeof f.step === "string" ? f.step : "" }));

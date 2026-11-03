@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.28.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A note Design Desk applies to an
+option, and a live prototype's update, now answer with the place before and after
+(`design compare`, `design desk answer|comment --shots`; [docs/requests.md](docs/requests.md)
+→ Variants). Older answers have no pictures; nothing to migrate.
+
 ## 1.27.0 — 2026-11-03
 
 **Upgrade:**
