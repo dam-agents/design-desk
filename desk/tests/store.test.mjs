@@ -229,6 +229,26 @@ test("a live prototype's option is the one approved", () => {
   assert.deepEqual([ok.card.approved.variant, ok.card.approved.version], ["v2", 1], "at the version it was built from");
 });
 
+test("while its prototype is live, approve takes live_pick back at feedback; an option taken off leaves live_pick and its waiting build", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<b>x</b>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset }, { id: "v2", name: "Bold", asset }] });
+  const { inbox: build } = s.act(card.id, alice, "build", "v2", { variant: "v2", version: 1 });
+  s.claim(build.id, "run-1"); s.done(build.id, "run-1", "live");
+  // A revise puts the request back at feedback; the prototype is still up.
+  s.upsertCard({ id: card.id, status: "feedback", prototype: { state: "live", url: "https://example.com/p" } });
+  const ok = s.act(card.id, alice, "approve", "v1");
+  assert.deepEqual([ok.inbox.note, ok.card.approved.variant, ok.card.approved.version], ["v2", "v2", 1]);
+  // Another request: a build waits, then its option is dropped.
+  const { card: other } = s.createRequest(bob, { title: "Calmer rows", problem: "Rows shout." });
+  s.upsertCard({ id: other.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset }, { id: "v2", name: "Bold", asset }] });
+  const { inbox: waiting } = s.act(other.id, alice, "build", "v2", { variant: "v2", version: 1 });
+  s.upsertCard({ id: other.id, variants: [{ id: "v1", version: 1, name: "Quiet", asset }, { id: "v2", drop: true }] });
+  assert.equal(s.getCard(other.id).live_pick, undefined, "a dropped option does not go live");
+  assert.deepEqual([s.item(waiting.id).state, s.item(waiting.id).outcome], ["done", "not built: its option was taken off the card"]);
+});
+
 test("a request that needs a developer gets no live prototype", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Week starts per person", problem: "Use my own Monday." });

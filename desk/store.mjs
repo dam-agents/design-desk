@@ -638,8 +638,8 @@ export class Store {
       if (isAuthor(c, who)) throw forbidden("You filed this request, so another developer approves it.");
     }
     // Once a live prototype is built, approving approves what it shows: `live_pick`'s option at
-    // its version, whatever the note says.
-    const shown = action === "approve" && ["prototype", "testing"].includes(c.status) && (c.variants || []).some((v) => v.id === c.live_pick?.variant) ? c.live_pick : null;
+    // its version, whatever the note says — also back at feedback after a revise, while it is up.
+    const shown = action === "approve" && (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && (c.variants || []).some((v) => v.id === c.live_pick?.variant) ? c.live_pick : null;
     if (shown) note = shown.variant;
     // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
     const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
@@ -893,7 +893,7 @@ export class Store {
   // are never overwritten.
   upsertCard(fields) {
     const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts"];
-    let c = fields.id ? own(this.db.cards, fields.id) : null;
+    let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
     if (!c && fields.kind === "screen" && fields.path)
@@ -933,6 +933,8 @@ export class Store {
         next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
+        // Nor does an option taken off go live, nor a build still waiting to build it.
+        if (next.live_pick && !next.variants.some((v) => v.id === next.live_pick.variant)) { goneLive = next.live_pick.variant; delete next.live_pick; }
       }
       else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions);
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
@@ -988,6 +990,8 @@ export class Store {
     this.keepLook(c, next);
     next.updated = this.clock();
     this.db.cards[next.id] = next;
+    for (const it of Object.values(this.db.inbox)) if (goneLive && it.card === next.id && it.kind === "build" && it.state === "open" && it.variant === goneLive)
+      Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not built: its option was taken off the card" });
     this.save();
     return { card: next };
   }

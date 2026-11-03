@@ -34,7 +34,8 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    `version` they looked at, and every one of its `states` at the version listed (each state
    the code can show: hover, disabled, loading, an error…) — in the product's own components,
    styles and copy, following the profile's `PROFILE.md`. The store refuses a build when the option or
-   any of its states is newer than what the check showed, so `live_pick` is the latest when
+   any of its states is newer than what the check showed (a page from before the final check
+   sends no version and gets no such refusal), so `live_pick` is the latest when
    the item is created; build
    from its exact files (`live_pick.asset`, `states[].asset`, `design desk fetch`), not a newer
    version that arrived since. A card with no `live_pick` (a build asked for before the final
