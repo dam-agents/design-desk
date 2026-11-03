@@ -161,6 +161,21 @@ test("a small change: a lead developer marks it, any developer but its author ap
   assert.equal(s.setSize(card.id, lee, false).card.size.small, false);
 });
 
+test("a small change: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const dana = { email: "dana@example.com", role: "developer" };
+  const { card } = s.createRequest({ agent: true }, { title: "Tighter rows", problem: "Too airy.", origin: { channel: "slack", chat: "C0123", thread_ts: "1.0", reporter: "Dana@Example.com" } });
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } });
+  s.setSize(card.id, lee, true);
+  assert.throws(() => s.act(card.id, dana, "approve"), /You filed this request/, "the reporter is the author");
+
+  const d = s.addDecision({ concepts: ["rows"], text: "Rows stay roomy", author: { login: "alice" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
+  s.upsertCard({ id: card.id, conflicts: [{ decision: d.id, why: "It tightens them." }] });
+  assert.throws(() => s.act(card.id, lee, "approve", "", { overrule: true }), (e) => e.status === 403 && /a designer approves it/.test(e.message));
+  assert.ok(s.act(card.id, alice, "approve", "", { overrule: true }).card.overruled, "a designer still overrules");
+});
+
 test("a request that needs a developer gets no live prototype", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Week starts per person", problem: "Use my own Monday." });

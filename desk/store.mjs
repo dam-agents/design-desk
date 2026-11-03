@@ -606,6 +606,8 @@ export class Store {
     }
     // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
     const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
+    // Going against a decision in force stays a designer's call, a small change included.
+    if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even as a small change.`);
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
@@ -1276,8 +1278,12 @@ function favouriteOf(c) {
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
 }
 
-// Whether a person filed the request: its author never approves it as a small change.
-const isAuthor = (c, who) => Boolean(who?.email && c.created_by?.email && who.email.toLowerCase() === c.created_by.email.toLowerCase());
+// Whether a person filed the request: its author never approves it as a small change. A
+// request the agent filed for someone (Slack, an issue) names them in `origin.reporter`.
+const isAuthor = (c, who) => {
+  const me = String(who?.email || "").toLowerCase();
+  return Boolean(me) && [c.created_by?.email, c.origin?.reporter].some((x) => String(x || "").toLowerCase() === me);
+};
 
 function person(who) {
   if (!who) return { agent: true };

@@ -523,8 +523,11 @@
   const can = (a) => Boolean(S.me?.can?.[a]);
   // A small change is approved by any developer but the one who filed it (docs/desk.md → Small changes).
   const DEVELOPERS = ["lead-developer", "developer"];
-  const filedIt = (c) => Boolean(S.me?.email && c.created_by?.email && S.me.email.toLowerCase() === c.created_by.email.toLowerCase());
-  const canApprove = (c) => can("approve") || (Boolean(c.size?.small) && DEVELOPERS.includes(S.me?.role) && !filedIt(c));
+  // A request the agent filed for someone names them in origin.reporter.
+  const filedIt = (c) => Boolean(S.me?.email) && [c.created_by?.email, c.origin?.reporter].some((x) => String(x || "").toLowerCase() === S.me.email.toLowerCase());
+  // Going against a decision in force stays a designer's call, a small change included.
+  const canApprove = (c) => can("approve") || (Boolean(c.size?.small) && DEVELOPERS.includes(S.me?.role) && !filedIt(c)
+    && !(c.conflicts || []).some((x) => x.status === "active"));
   const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
