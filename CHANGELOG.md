@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.32.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A link to a change or its pull
+request now shows a preview on hover, like an issue's; the design workspace fills the whole
+page again; a change's labels have their own colours (in progress violet, against a decision
+red, a presentation suggestion grey); a sent request's status is the one green box with its More menu; the pictures a person
+gave with a request are marked `source: "person"` and show in its brief; a relayed Slack
+reply takes `mentions` and shows names instead of `<@U…>` ([docs/desk.md](docs/desk.md) →
+**Text from Slack**). Nothing to
+migrate.
+
 ## 1.31.0 — 2026-11-03
 
 **Upgrade:**

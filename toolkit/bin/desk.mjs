@@ -60,7 +60,9 @@ const USAGE = `usage: design desk <command>
                                            a voter with is_bot: true (the agent's own legend
                                            👍/⚠️) is ignored
   relay <C-n> <comment.json|->             a reply in Slack, as a comment, once: {variant (none for
-                                           a council thread), name, email, text, slack_ts, url}
+                                           a council thread), name, email, text, slack_ts, url,
+                                           mentions: {<Slack user id>: name}}; a mention without
+                                           a name is left out
   find-poll <ts>                           which card, poll and option a Slack message belongs to
   council-open <C-n> <council.json|->      record a Slack thread whose asks change the request's options:
                                            {chat, thread_ts, url, channel}; reopens a closed one

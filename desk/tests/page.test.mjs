@@ -738,6 +738,35 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
   }
 });
 
+// A link to a pull request previews its change like an issue's link: on a request it came
+// from, and on the change's own row.
+test("a pull request link previews its change", async (t) => {
+  const pr = `const fromPr = { id: "r6", kind: "request", title: "Header too tall", status: "triage", origin: { channel: "github", kind: "pr", number: 45, url: "https://github.com/acme/widgets/pull/45", reporter: "dana" } };`;
+  const bridge = BRIDGE.replace("const digest =", `${pr}\nconst digest =`)
+    .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, fromPr]")
+    .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/r6" ? { card: { ...fromPr, threads: [] } }\n    : path === "/api/cards/ch1"');
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.waitForSelector('[data-tab="requests"]');
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r6"]');
+    await desk.hover('#detail a[href="https://github.com/acme/widgets/pull/45"]');
+    await desk.waitForSelector("#peek");
+    assert.match(await desk.textContent("#peek"), /A new header[\s\S]*PR #45[\s\S]*by dana[\s\S]*From PR #45\./);
+    await desk.hover("#detail h2");
+    await desk.waitForSelector("#peek", { state: "detached" });
+
+    await desk.click('[data-tab="new"]');
+    await desk.hover('.row.item [data-card="ch1"]');
+    await desk.waitForSelector("#peek");
+    assert.match(await desk.textContent("#peek"), /A new header/, "the change's row previews it");
+  } finally {
+    await run.close();
+  }
+});
+
 // The Issues tab: the sprint's issues first, what the UI will need in each row, and an
 // issue's Draw it and Design this.
 test("the Issues tab lists the planned issues; Draw it and Design this act once", async (t) => {

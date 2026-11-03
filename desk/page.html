@@ -12,7 +12,7 @@
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
-    --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
     --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     /* The page grows with the window: text runs wider, the list and pictures get room. */
@@ -25,11 +25,11 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
-      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --shadow: none; color-scheme: dark; }
+      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --shadow: none; color-scheme: dark; }
   }
   :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
-    --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --shadow: none; color-scheme: dark; }
+    --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --shadow: none; color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -112,6 +112,7 @@
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
+  .chip.live { background: var(--live-soft); color: var(--live); }
   .empty { color: var(--muted); padding: 24px 12px; text-align: center; max-width: 60ch; margin: 0 auto; }
   .filters { display: flex; gap: 4px; margin: 0 0 10px; overflow-x: auto; scrollbar-width: none; }
   .filters::-webkit-scrollbar { display: none; } .filters .btn { flex: none; white-space: nowrap; padding: 3px 8px; }
@@ -169,7 +170,7 @@
   .next { padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); }
   .next b { display: block; margin-bottom: 2px; }
   /* A design, a change or a decision that goes against a decision in force. */
-  .against { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); max-width: var(--measure); margin: 10px 0; }
+  .against { padding: 10px 14px; border-radius: var(--radius); background: var(--bad-soft); max-width: var(--measure); margin: 10px 0; }
   .against p { margin: 2px 0; }
   .sent { padding: 10px 14px; border-radius: var(--radius); background: var(--ok-soft); max-width: var(--measure); margin: 10px 0; }
   .sent b { color: var(--ok); } .sent p { margin: 2px 0; }
@@ -237,7 +238,7 @@
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
-  /* An issue's preview on hover: what the Desk knows of it. */
+  /* An issue's or a pull request's preview on hover: what the Desk knows of it. */
   #peek { position: fixed; z-index: 80; width: min(380px, calc(100vw - 16px)); padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); pointer-events: none; font-size: 13.5px; }
   #peek .t { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
   #peek .sub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; color: var(--muted); font-size: 12px; }
@@ -272,7 +273,7 @@
   .ws-top { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   .ws-top .title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ws-body { display: grid; grid-template-columns: 1fr var(--side-w); min-height: 0; }
-  .ws-stage { padding: 12px; display: grid; grid-template-rows: auto auto 1fr; gap: 8px; min-height: 0; }
+  .ws-stage { padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
   #ws-states:empty { display: none; }
   .ws-states { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .ws-states .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-left: 6px; }
@@ -281,7 +282,7 @@
   .checklist { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
   .checklist button { width: 100%; text-align: left; justify-content: flex-start; }
   .checklist button[aria-current="true"] { border-color: var(--accent); }
-  .ws-stage .frame { height: 100%; }
+  .ws-stage .frame { flex: 1; height: auto; min-height: 0; }
   .ws-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; }
   .sel { padding: 10px 12px; border-radius: var(--radius); border: 2px solid var(--accent); background: var(--info-soft); }
   .sel.none { border-style: dashed; border-color: var(--line); background: transparent; }
@@ -586,7 +587,15 @@
       .replace(/(?<![\w./-])([\w.-]+\/[\w.-]+)#(\d+)\b/g, (m, r, n) => a(`${host}/${r}/issues/${n}`, m))
       .replace(/(?<![\w&/#])(?:(PR|pull request|issue)\s+)?#(\d+)\b/gi, (m, kind, n) => base ? a(`${base}/${/^p/i.test(kind || "") ? "pull" : "issues"}/${n}`, m) : m)).join("");
   }
-  const txt = (s, c) => refs(esc(s), c);
+  // Slack's own markup in text relayed from it: a mention with its name shows the name; a bare
+  // one (<@U0123>) says nothing to a reader, so it is left out (docs/desk.md → Text from Slack).
+  const unslack = (s, links = true) => String(s ?? "")
+    .replace(/<[@#!](?:subteam\^)?[\w-]+\|([^>]+)>/g, (m, name) => (m[1] === "#" ? "#" : "@") + name.replace(/^[@#]/, ""))
+    .replace(/<!(here|channel|everyone)>/g, "@$1")
+    .replace(/ ?<[@#!][\w^-]+>/g, "")
+    .replace(/<(https?:\/\/[^|>\s]+)\|([^>]+)>/g, links ? "[$2]($1)" : "$2")
+    .replace(/<(https?:\/\/[^|>\s]+)>/g, "$1");
+  const txt = (s, c) => refs(esc(unslack(s, false)), c);
 
   // The skills the person switched for a request's options, in the words New request showed.
   function skillLine(skills) {
@@ -605,7 +614,7 @@
       .replace(/!\[([^\]]*)\]\(asset:(A-\d+)\)/g, '<figure class="shot" style="max-width:520px;margin:6px 0" data-zoom="$2"><img alt="$1" data-asset="$2" /><figcaption>$1</figcaption></figure>')
       .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     const out = []; let list = null;
-    for (const line of String(src || "").split("\n")) {
+    for (const line of unslack(src).split("\n")) {
       const li = line.match(/^\s*[-*] (.*)$/);
       if (li) { if (!list) { list = []; } list.push(`<li>${inline(li[1])}</li>`); continue; }
       if (list) { out.push(`<ul>${list.join("")}</ul>`); list = null; }
@@ -685,31 +694,44 @@
     return s.length && score(s[0]) > 0 && score(s[0]) > score(s[1] || { id: "" }) ? s[0] : null;
   }
 
-  // ---------- an issue's preview ----------
-  // A link to an issue on the Desk, or to its GitHub page, shows what the Desk knows of it on
-  // hover or focus: its title, where it is planned, the problem and what the UI will need.
-  function issueOf(el) {
+  // ---------- an issue's or a pull request's preview ----------
+  // A link to an issue or a change on the Desk, or to its GitHub page, shows what the Desk
+  // knows of it on hover or focus. An issue: its title, where it is planned, the problem and
+  // what the UI will need. A change (its pull request): whether it shipped, who made it, what
+  // it changes and whether it needs a designer.
+  const PEEKED = ["issue", "change"];
+  function peekOf(el) {
     const id = el.dataset.card || el.dataset.ref;
-    if (id) { const c = S.cards.find((x) => x.id === id); return c?.kind === "issue" ? c : null; }
+    if (id) { const c = S.cards.find((x) => x.id === id); return PEEKED.includes(c?.kind) ? c : null; }
     const href = (el.getAttribute("href") || "").replace(/[?#].*$/, "");
-    if (!/\/issues\/\d+$/.test(href)) return null;
-    return S.cards.find((x) => x.kind === "issue" && String(x.source?.url || "").replace(/[?#].*$/, "") === href) || null;
+    const kind = /\/issues\/\d+$/.test(href) ? "issue" : /\/pull\/\d+$/.test(href) ? "change" : null;
+    if (!kind) return null;
+    return S.cards.find((x) => x.kind === kind && String(x.source?.url || "").replace(/[?#].*$/, "") === href) || null;
+  }
+  function peekIssue(c) {
+    const src = c.source || {};
+    return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
+        <div class="sub">${c.designed ? `<span class="chip ok">✓ Designed in Design Desk</span>` : `<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>`}${src.issue ? `<span>Issue #${esc(src.issue)}</span>` : ""}${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${c.status === "archived" ? `<span class="chip">Closed</span>` : ""}</div>
+        ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${(c.needs || []).length ? `<h4>What the UI will need</h4><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}`;
+  }
+  function peekChange(c) {
+    const src = c.source || {}, at = c.attention;
+    return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
+        <div class="sub">${c.in_progress ? `<span class="chip live">● In progress — not shipped yet</span>` : src.merged_at ? `<span class="chip ok">Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.pr ? `<span>PR #${esc(src.pr)}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${c.acked ? `<span class="chip ok">✓ Seen</span>` : ""}</div>
+        ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${at ? `<h4>${at.level === "designer" ? "Needs a designer" : "Nothing to decide"}</h4>${(at.reasons || []).length ? `<ul>${at.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}` : ""}`;
   }
   let peekTimer = null;
   const peekHide = () => { clearTimeout(peekTimer); $("#peek")?.remove(); };
   function peekShow(el) {
-    // Not on the issue's own page: it says the same there already.
-    const c = issueOf(el);
+    // Not on the card's own page: it says the same there already.
+    const c = peekOf(el);
     if (!c || S.card?.id === c.id) return;
     clearTimeout(peekTimer);
     peekTimer = setTimeout(() => {
       peekHide();
-      const src = c.source || {};
       const box = document.createElement("div");
       box.id = "peek"; box.setAttribute("role", "tooltip");
-      box.innerHTML = `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
-        <div class="sub">${c.designed ? `<span class="chip ok">✓ Designed in Design Desk</span>` : `<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>`}${src.issue ? `<span>Issue #${esc(src.issue)}</span>` : ""}${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${c.status === "archived" ? `<span class="chip">Closed</span>` : ""}</div>
-        ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${(c.needs || []).length ? `<h4>What the UI will need</h4><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}`;
+      box.innerHTML = c.kind === "change" ? peekChange(c) : peekIssue(c);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
@@ -717,7 +739,7 @@
       box.style.top = `${below ? r.bottom + 8 : r.top - 8 - h}px`;
     }, 250);
   }
-  const peekTarget = (e) => e.target.closest?.("[data-card], [data-ref], a[href*='/issues/']");
+  const peekTarget = (e) => e.target.closest?.("[data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']");
   document.addEventListener("mouseover", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekShow(el); });
   document.addEventListener("mouseout", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekHide(); });
   document.addEventListener("focusin", (e) => { const el = peekTarget(e); if (el) peekShow(el); });
@@ -922,7 +944,7 @@
   const waited = (c) => Math.max(0, Math.floor(((Date.parse(handledAt(c)) || Date.now()) - Date.parse(c.created)) / 864e5)) || 0;
   const overdue = (c) => c.kind === "change" && !handledAt(c) && S.me?.due_days > 0 && waited(c) >= S.me.due_days;
   const ageChip = (c) => handledAt(c) ? `<span class="chip ok">✓ Handled</span>`
-    : `<span class="chip ${overdue(c) ? "bad" : ""}" ${S.me?.due_days ? `title="To be handled within ${esc(S.me.due_days)} days"` : ""}>${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
+    : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" ${S.me?.due_days ? `title="To be handled within ${esc(S.me.due_days)} days"` : ""}>${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
   function chipsFor(c) {
     const out = [];
     // A screen or part a designer or developer added, before Design Desk made it.
@@ -934,7 +956,7 @@
       if (c.designed) out.push(`<span class="chip ok" title="Sent to developers from ${esc(c.designed.title)}">✓ Designed in Design Desk</span>`);
       else if (c.busy) out.push(`<span class="chip info">● Drawing</span>`);
       else if (c.sketches) out.push(`<span class="chip ok">Sketch ready</span>`);
-      if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
+      if (c.open_threads) out.push(`<span class="chip">💬 ${plural(c.open_threads, "open question", "open questions")}</span>`);
     }
     else if (c.kind === "screen") {
       if (added) out.push(added);
@@ -948,9 +970,9 @@
       if (c.looks) out.push(`<span class="chip">${plural(c.looks + 1, "version", "versions")}</span>`);
     } else if (c.kind === "change") {
       out.push(ageChip(c));
-      if (c.in_progress) out.push(`<span class="chip warn">In progress — not shipped yet</span>`);
+      if (c.in_progress) out.push(`<span class="chip live">● In progress — not shipped yet</span>`);
       if (c.acked) out.push(`<span class="chip ok">✓ Seen</span>`);
-      if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
+      if (c.open_threads) out.push(`<span class="chip">💬 ${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
       if (c.asks && !closed(c)) out.push(`<span class="chip warn">Waiting for your answer</span>`);
       // Options waiting for a pick is the usual state: no chip for it.
@@ -958,7 +980,7 @@
       if (c.type === "bug") out.push(`<span class="chip bad">🐛 Bug</span>`);
       else if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
-    if (c.conflicts) out.push(`<span class="chip warn" title="Open it to see which decision and why">⚠ Goes against a decision</span>`);
+    if (c.conflicts) out.push(`<span class="chip bad" title="Open it to see which decision and why">⚠ Goes against a decision</span>`);
     return out.join("");
   }
 
@@ -1050,7 +1072,7 @@
     const list = $("#list");
     const states = `<div class="filters">${[["active", "In force"], ["revoked", "Revoked"], ["", "All"]].map(([k, l]) => `<button class="btn small ${S.decisionState === k ? "on" : ""}" data-dstate="${k}">${esc(l)}</button>`).join("")}</div>`;
     const rows = S.decisions.map((d) => `<button class="row" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}</div>
-      <div class="meta"><span class="chip">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip warn">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip">by ${named(d.author)}</span>` : ""}${(d.concepts || []).slice(0, 2).map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></button>`).join("");
+      <div class="meta"><span class="chip">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip bad">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip">by ${named(d.author)}</span>` : ""}${(d.concepts || []).slice(0, 2).map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></button>`).join("");
     list.innerHTML = `${filters}${states}<input id="decision-q" placeholder="Search decisions, or D-3…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
@@ -1112,7 +1134,7 @@
       <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta">${a.option ? `<span class="chip info">Presenting ${esc(a.option)}</span>` : ""}<span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span></div></button>`).join("")}`
       : `<div class="empty">The presentation is what the team shows at its next design meeting. A designer puts things on it: open a request and choose Add to presentation.</div>`)
       + (ideas.length ? `<h3 style="margin:18px 12px 8px">Suggested by Design Desk</h3>${ideas.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}</div>
-      ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip warn">💡 not on the presentation yet</span></div></button>`).join("")}` : "")
+      ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip">💡 not on the presentation yet</span></div></button>`).join("")}` : "")
       + (done.length ? `<h3 style="margin:18px 12px 8px">Presented</h3><div class="done-list">${done.map((a) => `<button class="row" data-card="${esc(a.id)}" aria-current="${S.card?.id === a.id}"><div class="t"><span>${esc(a.title)}</span>${num(a)}</div>
       <div class="meta"><span class="chip ok">✓ Presented ${esc(day(a.agenda.call))}</span>${a.option ? `<span class="chip">${esc(a.option)}</span>` : ""}</div></button>`).join("")}</div>` : "");
   }
@@ -1294,7 +1316,7 @@
     const inProgress = src.pr && !src.merged_at;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
-      <div class="sub">${ageChip(c)}${c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : ""}${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
+      <div class="sub">${ageChip(c)}${c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : ""}${inProgress ? `<span class="chip live">● In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${requestsFrom(c)}
@@ -1503,7 +1525,7 @@
     const was = c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}${shown ? ` · ${esc(shown)}` : ""}</span>${can("close") && recent ? `<button class="btn small" data-unpresent="${esc(c.id)}">Undo</button>` : ""}` : "";
     const add = can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "";
     if (!c.call_suggestion) return was + add;
-    return `${was}<span class="chip warn" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the presentation${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
+    return `${was}<span class="chip" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the presentation${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
   }
 
 
@@ -1520,7 +1542,7 @@
       : c.size?.small ? `A small change: a developer approves it${by ? `, not ${by} who filed it` : ""}.` : "A designer or a lead developer approves it when the team is happy.";
     const b = (act, label, primary = false) => `<button class="btn ${primary ? "primary" : ""}" data-act="${act}">${esc(label)}</button>`;
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
-    if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under Changes.", buttons: "" };
+    if (c.status === "handed-off") return { text: "", buttons: "" };
     if (busy.length) return { text: "", buttons: hasOptions ? b("workspace", "Open the design workspace") : "" };
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
@@ -1567,7 +1589,7 @@
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${sizeLine(c)}
-      ${nx.text || nx.buttons ? `<div class="next">${nx.text ? `<b>${esc(nx.text)}</b>` : ""}${nx.sub ? `<span class="hint">${esc(nx.sub)}</span>` : ""}<div class="actions">${nx.buttons}${more}</div></div>` : ""}
+      ${c.status === "handed-off" ? sentBox(c, more) : nx.text || nx.buttons ? `<div class="next">${nx.text ? `<b>${esc(nx.text)}</b>` : ""}${nx.sub ? `<span class="hint">${esc(nx.sub)}</span>` : ""}<div class="actions">${nx.buttons}${more}</div></div>` : ""}
     </div>`;
   }
 
@@ -1680,7 +1702,10 @@
     // A bug's expected result and its steps, and any request's steps, open on a click.
     const more = [bug && r.goal ? `<h4>What should happen</h4>${md(r.goal)}` : "", r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""].join("");
     // The pictures a person gave belong to the request; the ones Design Desk took sit under its part.
-    const given = (c.screens || []).filter((x) => x.source === "person"), found = (c.screens || []).filter((x) => x.source !== "person");
+    // Design Desk names the source of every picture it takes: one without a source came with
+    // the request (filed before the store marked them).
+    const theirs = (x) => !x.source || x.source === "person";
+    const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub">${bug ? `<span class="chip bad">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}<span>${esc(when(c.created))}</span></div>
@@ -1691,7 +1716,7 @@
       ${shots(given)}</div>
       <h3 class="made">From Design Desk</h3>
       ${renderSteps(c)}
-      ${sentBox(c)}
+      ${c.status === "handed-off" ? "" : sentBox(c)}
       ${renderStatus(c)}
       ${againstBox(c)}${followsLine(c)}
       ${renderResearch(c.research)}
@@ -1718,15 +1743,17 @@
     return `<div class="linked"><span class="k">${p.kind === "issue" ? "Designs the issue" : p.kind === "change" ? "Adjusts the change" : "Comes from"}</span><button class="anchor" data-card="${esc(p.id)}">${esc(p.title)}</button>${num(p)}${out}</div>`;
   }
   // Where the spec went, as its own card on the request: the GitHub issue or pull request, and
-  // its Issues card once the issues run read it (docs/handoff.md step 5).
-  function sentBox(c) {
-    const url = c.spec?.issue_url || c.spec?.pr_url;
-    if (!url) return "";
-    const m = /\/(issues|pull)\/(\d+)/.exec(url);
-    const what = m ? `${m[1] === "pull" ? "PR" : "Issue"} #${m[2]}` : c.spec.pr_url ? "The pull request" : "The issue";
+  // its Issues card once the issues run read it (docs/handoff.md step 5). Once the request is
+  // sent it is the request's one status box, with its More menu.
+  function sentBox(c, more = "") {
+    const url = c.spec?.issue_url || c.spec?.pr_url, sent = c.status === "handed-off";
+    if (!url && !sent) return "";
+    const m = url && /\/(issues|pull)\/(\d+)/.exec(url);
+    const what = m ? `${m[1] === "pull" ? "PR" : "Issue"} #${m[2]}` : c.spec?.pr_url ? "The pull request" : "The issue";
     const card = c.sent_card && S.cards.find((x) => x.id === c.sent_card);
-    return `<div class="sent"><b>Sent to developers${c.status === "handed-off" && c.updated ? ` on ${esc(day(c.updated))}` : ""}</b>
-      <p><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(what)} on GitHub ↗</a>${card ? ` · on the Issues page: <button class="anchor" data-card="${esc(card.id)}">${esc(card.title)}</button>${num(card)}` : ""}</p></div>`;
+    return `<div class="sent"><b>Sent to developers${sent && c.updated ? ` on ${esc(day(c.updated))}` : ""}</b>
+      ${url ? `<p><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(what)} on GitHub ↗</a>${card ? ` · on the Issues page: <button class="anchor" data-card="${esc(card.id)}">${esc(card.title)}</button>${num(card)}` : ""}</p>` : ""}
+      ${sent ? `<p class="hint">When it ships, it appears under Changes.</p>` : ""}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
   }
   function requestsFrom(c) {
     const rs = S.cards.filter((x) => x.kind === "request" && x.from === c.id);

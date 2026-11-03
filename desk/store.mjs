@@ -536,6 +536,10 @@ export class Store {
       summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {},
       triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin, this.db.cards) : null,
     };
+    // The pictures a person gave with the request (filed on the Desk, or reported in a channel
+    // and filed by the agent) are theirs: the page shows them with the request, apart from
+    // the ones Design Desk takes.
+    if (!who?.agent || c.origin?.reporter) c.screens = c.screens.map((x) => ({ ...x, source: x.source || "person", ...(x.by || who?.agent ? {} : { by: person(who) }) }));
     const id = this.next("card", "C");
     c.id = id;
     this.db.cards[id] = c;
@@ -1205,8 +1209,15 @@ export class Store {
   }
 
   // A reply someone wrote in Slack becomes a comment once: on the option it was under, or
-  // on the whole request when it came from a council thread.
-  relayComment(cardId, { variant = null, name, email = null, role = null, text, slack_ts, url = null }) {
+  // on the whole request when it came from a council thread. A mention (<@U0123>) reads as
+  // the person's name the agent looked up (`mentions`), else it is left out.
+  relayComment(cardId, { variant = null, name, email = null, role = null, text, slack_ts, url = null, mentions = {} }) {
+    const named = mentions && typeof mentions === "object" ? mentions : {};
+    text = String(text ?? "").replace(/( ?)<@([\w-]+)(?:\|([^>]+))?>/g, (m, sp, id, label) => {
+      const name = own(named, id);
+      const who = String(typeof name === "string" ? name : label ?? "").replace(/[<>]/g, "").replace(/^@/, "").trim().slice(0, 120);
+      return who ? `${sp}@${who}` : "";
+    }).trim();
     const c = this.card(cardId);
     if (variant && !(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
     const ts = clean(String(slack_ts || ""), 40, "slack_ts");

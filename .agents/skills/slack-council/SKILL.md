@@ -53,7 +53,9 @@ A Slack turn in a council thread, or a `councils_due` entry with `close: false`.
 1. Read the messages after `seen` (`read_thread`; a Slack turn also has its own message).
    None → `council-update --synced <now>`, done.
 2. **Relay** every message that is not yours, once: `design desk relay C-<n> <file>` with
-   `{variant, name, email, text, slack_ts, url}`; `variant` only when it names one option.
+   `{variant, name, email, text, slack_ts, url, mentions}`; `variant` only when it names one option;
+   `mentions` maps each `<@U…>` in the text to the person's name (`describe_channel_users`),
+   and a mention left without a name is dropped from the comment.
 3. **No options on the card yet** (its triage or its first options are still to come):
    `council-update --synced <now>` and stop; `seen` stays, so these asks are worked once the
    options exist.

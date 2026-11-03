@@ -74,9 +74,15 @@ served by the Desk server through the platform's Artifact API relay.
   still opens there), `#requests` a tab, `#presentation` the presentation. The page's **🔗 Copy link** builds it from
   `desk_link`; **Go to** in the header takes a number or such a link; a `C-12` in text on the
   Desk links to that item.
-- **An issue's preview**: hovering or focusing a link to an issue card (its number, its
-  title, or its GitHub link) shows a floating card with what the Desk keeps of it: title,
-  bucket, number, `summary` and `needs`. The issue's GitHub text is not on the Desk.
+- **Text from Slack**: a Slack mention reads as the person's name. A relayed reply carries
+  `mentions` (Slack user id → name), so the server writes `@Name`; a mention with no name
+  is left out. The page does the same for text already on the Desk: `<@U…|name>` shows
+  `@name`, a bare `<@U…>` is not shown, and Slack's links read as links.
+- **An issue's or a pull request's preview**: hovering or focusing a link to an issue or a
+  change card (its number, its title, or its GitHub link) shows a floating card with what the
+  Desk keeps of it: an issue's title, bucket, number, `summary` and `needs`; a change's title,
+  whether it shipped, its PR number and author, `summary` and `attention`. The GitHub text is
+  not on the Desk.
 - **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
   in a channel message (the platform turns it into the share link and keeps `#C-<n>`),
   `<desk_link>#C-<n>` anywhere else (GitHub). The access note: it opens only for people on

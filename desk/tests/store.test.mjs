@@ -375,6 +375,17 @@ test("a bug from Slack lands on the queue with where to answer", () => {
   assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /type must be one of/);
 });
 
+test("the pictures a person gives with a request are marked theirs; the agent's own stay as it named them", () => {
+  const s = fresh();
+  const shot = () => s.addAsset({ kind: "screen", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const mine = s.createRequest(alice, { title: "Bigger button", problem: "Hard to hit.", screens: [shot()] }).card;
+  assert.deepEqual(mine.screens.map((x) => [x.source, x.by?.email]), [["person", "alice@example.com"]]);
+  const reported = s.createRequest({ agent: true }, { title: "Overflow", problem: "Runs over.", screens: [{ asset: shot() }], origin: { channel: "slack", reporter: "Dana" } }).card;
+  assert.deepEqual(reported.screens.map((x) => [x.source, x.by]), [["person", undefined]], "a reporter's picture is theirs, with no Desk person behind it");
+  const proposed = s.createRequest({ agent: true }, { title: "Spend column", problem: "Show it.", screens: [{ asset: shot(), source: "instance" }, { asset: shot() }] }).card;
+  assert.deepEqual(proposed.screens.map((x) => x.source), ["instance", undefined]);
+});
+
 test("every request says where it came from, and what a run filed it on", () => {
   const s = fresh();
   const change = s.upsertCard({ kind: "change", title: "Pinned reports", source: { repo: "acme/widgets", pr: 12, url: "https://github.com/acme/widgets/pull/12", author: "dana", merged_at: "2026-11-01T10:00:00Z" } }).card;
@@ -700,6 +711,16 @@ test("a council remembers its Slack thread, reopens once closed, and relays repl
   assert.equal(thread.anchor, null);
   assert.equal(s.relayComment(card.id, { name: "Jana", text: "Bigger, please.", slack_ts: "2.6" }).duplicate, true);
   assert.throws(() => s.relayComment(card.id, { variant: "v9", name: "Jana", text: "x", slack_ts: "2.7" }), /no option/);
+});
+
+test("a relayed Slack reply names the people it mentions, or leaves a mention out", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Calmer list", problem: "The list shouts." });
+  const say = (text, ts, mentions) => s.relayComment(card.id, { name: "Jana", text, slack_ts: ts, mentions }).thread.messages[0].text;
+  assert.equal(say("<@U0A4HATCHJR> can you look?", "3.1", { U0A4HATCHJR: "Dana" }), "@Dana can you look?");
+  assert.equal(say("Ask <@U0A4HATCHJR> first", "3.2"), "Ask first", "an unknown mention is left out");
+  assert.equal(say("Ask <@U9|Pat>", "3.3"), "Ask @Pat", "the name Slack gave in the mention");
+  assert.equal(say("<@U1>  see:\n    a  b", "3.4", { U1: { name: "x" } }), "see:\n    a  b", "a name that is not text is left out; the rest keeps its spacing");
 });
 
 test("the next call: the agent suggests, a designer adds it with the option to present", () => {
