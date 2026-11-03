@@ -345,6 +345,64 @@ test("Needs a designer filters New and Requests, and New opens on All", (t) => o
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
 }));
 
+// Every item has a number by its title; a link with it, or Go to, opens the item in its tab
+// (in Next call for #call/C-n); a number in text links to that item (docs/desk.md → Links to an item).
+const LINKS = `<script>
+window.copied = [];
+Object.defineProperty(navigator, "clipboard", { value: { async writeText(t) { copied.push(t); } } });
+const cards = [
+  { id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows C-2; nothing to do with C-99." },
+  { id: "C-2", kind: "request", title: "Calmer empty list", status: "feedback" },
+  { id: "C-3", kind: "request", title: "Closed one", status: "declined" },
+];
+window.platform = { async request({ path }) {
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: {}, link: "https://share.example.com/a/xY12" }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [{ ...cards[1], agenda: { brief: "Pick one." } }] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("an item's number and link: shown grey by its title, copied, opened from a link, Go to or a number in text", (t) => open(t, LINKS, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  const shown = async (tab, title) => {
+    await desk.waitForFunction(([tb, ti]) => document.querySelector(`[data-tab="${tb}"]`)?.getAttribute("aria-current") === "true" && document.querySelector("#detail h2")?.textContent.startsWith(ti), [tab, title]);
+    return desk.textContent("#detail h2 .num");
+  };
+  await desk.waitForSelector('#list .row .num');
+  assert.equal(await desk.textContent('.row.item:has([data-card="C-1"]) .num'), "C-1", "each row shows its number");
+
+  await desk.goto(`${base}#C-3`);
+  assert.equal(await shown("requests", "Closed one"), "C-3", "a link opens the item in its own tab");
+  assert.match(await desk.textContent("#list .filters .on"), /Closed/, "with a filter that shows it");
+  const [num, title] = await desk.$eval("#detail h2", (h) => [getComputedStyle(h.querySelector(".num")).color, getComputedStyle(h).color]);
+  assert.notEqual(num, title, "the number is grey, not the title's colour");
+  await desk.click("[data-copy-link]");
+  await desk.waitForFunction(() => copied.length === 1);
+  assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#C-3"]);
+
+  await desk.fill("#goto", "c 1");
+  await desk.press("#goto", "Enter");
+  assert.equal(await shown("new", "A new header"), "C-1", "Go to takes the number");
+  assert.equal(await desk.locator('#detail a[data-ref="C-2"]').count(), 1, "a number in text links to that item");
+  assert.equal(await desk.locator('#detail a[data-ref="C-99"]').count(), 0, "a number the Desk does not have stays text");
+  await desk.click('#detail a[data-ref="C-2"]');
+  assert.equal(await shown("requests", "Calmer empty list"), "C-2");
+
+  await desk.goto(`${base}#call/C-2`);
+  await desk.reload();
+  assert.equal(await shown("call", "Calmer empty list"), "C-2", "a link to Next call opens it there, also on a fresh load");
+  await desk.click("[data-copy-link]");
+  await desk.waitForFunction(() => copied.length === 1);
+  assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#call/C-2"]);
+
+  await desk.fill("#goto", "https://share.example.com/a/xY12#C-99");
+  await desk.press("#goto", "Enter");
+  await desk.waitForSelector(".toast");
+  assert.match(await desk.textContent(".toast"), /nothing numbered C-99/);
+}));
+
 // A designer's Desk with an overdue change of two pictures, one with where it changed, and
 // places that are in Product; and a request whose build waits for the answers to the agent's form.
 const DAY = 864e5;

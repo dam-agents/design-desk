@@ -46,6 +46,10 @@
   nav .count.warn { background: var(--warn); color: var(--bg); }
   .grow { flex: 1; }
   .me { color: var(--muted); font-size: 12px; }
+  /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
+  .num { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: .7em; white-space: nowrap; margin-left: .45em; }
+  .row .t .num { margin-left: auto; font-size: 11px; flex: none; }
+  header .goto { width: 15ch; padding: 4px 9px; font-size: 12.5px; }
   .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
   .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
   .banner.warn { background: var(--warn-soft); }
@@ -219,7 +223,8 @@
   .impact ul { margin: 4px 0 10px; padding-left: 20px; } .impact li { margin-bottom: 4px; }
   .impact .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; text-align: left; } .impact .link:hover { text-decoration: underline; }
   /* The browser's Back leaves the Desk (docs/desk.md → Where it works): every view keeps a way back on screen. */
-  .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px calc(-1 * var(--pad-x)) 14px; padding: 10px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); }
+  .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px calc(-1 * var(--pad-x)) 14px; padding: 10px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+  .crumb [data-copy-link] { margin-left: auto; }
   .pbar { position: sticky; top: -28px; z-index: 5; margin: -28px -48px 0; padding: 12px 48px; background: var(--bg); border-bottom: 1px solid var(--line); }
   /* the design workspace */
   #workspace { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: grid; grid-template-rows: auto 1fr; }
@@ -258,6 +263,7 @@
     <h1 id="title">Design Desk</h1>
     <nav id="nav"></nav>
     <div class="grow"></div>
+    <input class="goto" id="goto" placeholder="Go to C-12" aria-label="Go to an item: its number, like C-12, or its link" title="Type an item's number, like C-12, or paste its link, and press Enter" autocomplete="off" spellcheck="false" />
     <span class="me" id="me"></span>
     <button class="btn theme" id="theme" type="button"></button>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
@@ -428,6 +434,7 @@
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision, each with why.</p>
+<p>Every item has a number, in grey by its title, like C-12. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Go to</b> at the top opens an item by its number or its link.</p>
 <p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
 <p>Each row in New and Requests shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
 <h3>Changing a design</h3>
@@ -502,6 +509,8 @@
     const base = repoOf(c), host = base ? base.split("/").slice(0, 3).join("/") : "https://github.com";
     const a = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     return html.split(/(<a\b[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>|<[^>]*>)/).map((part, i) => i % 2 ? part : part
+      // Another item on the Desk, by its number (docs/desk.md → Links to an item).
+      .replace(/(?<![\w#/.-])C-\d+\b/g, (m) => S.cards.some((x) => x.id === m) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
       .replace(/(?<![\w./-])([\w.-]+\/[\w.-]+)#(\d+)\b/g, (m, r, n) => a(`${host}/${r}/issues/${n}`, m))
       .replace(/(?<![\w&/#])(?:(PR|pull request|issue)\s+)?#(\d+)\b/gi, (m, kind, n) => base ? a(`${base}/${/^p/i.test(kind || "") ? "pull" : "issues"}/${n}`, m) : m)).join("");
   }
@@ -638,8 +647,16 @@
 
   // ---------- header and list ----------
   const TABS = { new: "New", requests: "Requests", issues: "Issues", call: "Next call", product: "Product", people: "People", guide: "How it works" };
+  // Every card's number is its id; its link is the Desk's link with the number, in Next call
+  // the call's: #C-12, #call/C-12 (docs/desk.md → Links to an item).
+  const num = (c) => (c?.id ? `<span class="num">${esc(c.id)}</span>` : "");
+  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${S.tab === "call" ? "call/" : ""}${c.id}` : "");
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
-  const backBar = () => `<div class="crumb"><button class="btn small" data-back>← ${esc(S.tab === "product" && S.productFilter === "decisions" ? "Decisions" : TABS[S.tab] || "Back")}</button></div>`;
+  const backBar = () => {
+    const decisions = S.tab === "product" && S.productFilter === "decisions";
+    const link = !decisions && S.card && itemLink(S.card);
+    return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(S.card.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
+  };
   function renderNav() {
     const unseen = S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && !c.acked).length;
     // Requests counts the open ones, like Next call its items; it turns amber while one waits for an answer.
@@ -658,6 +675,8 @@
 
   // Each tab opens with a short intro for first use; How it works is all intro. An action
   // names what the server must allow (`can`), so a role that may not do it sees so.
+  // Every list's items have a number and a link (docs/desk.md → Links to an item).
+  const LINK = ["Each item has its number in grey by its title, like C-12: <b>🔗 Copy link</b> sends someone straight to it, and <b>Go to</b> at the top opens one by its number."];
   const INTRO = () => ({
     new: { about: "what changed in the product's screens, and what a designer should look at",
       see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
@@ -668,7 +687,7 @@
         ["<b>Ask a question</b> about a change; the answer appears below it.", "ask"],
         ["<b>Add screenshots</b> when a change has none.", "screens"],
         ["<b>Adjust the design</b>: start a request from a change.", "follow-up"],
-        ["<b>Mark handled</b> once a designer has dealt with it.", "handle"]],
+        ["<b>Mark handled</b> once a designer has dealt with it.", "handle"], LINK],
       steps: ["Pick a change on the left.", "Read what changed and why; click a picture to see it large.", "Press Got it, or ask what is unclear.", "A designer marks it handled or adjusts the design."] },
     requests: { about: "design requests, from an idea to a live prototype and a developer spec",
       see: ["Every request and where it stands: Checking, Options ready, Live — try it, Sent to developers.",
@@ -679,7 +698,7 @@
         ["<b>Open the design workspace</b>: click a part of an option and say what should change.", "revise"],
         ["<b>Build a live prototype</b> of the option you choose.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
-        ["Filter by <b>Open</b>, <b>Closed</b> or <b>Needs a designer</b>."]],
+        ["Filter by <b>Open</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
       steps: ["Describe the problem in New request.", "Design Desk checks what can be done and draws two or three options.", "The team votes and comments; a designer refines one.", "Try it as a live prototype, approve it, and it goes to the developers."] },
     issues: { about: "what the team plans that will change the screens",
       see: ["The open issues that change the screens: the current sprint's first, then the ones someone has taken, then the backlog.",
@@ -688,14 +707,14 @@
       can: [["Filter by <b>This sprint</b>, <b>Assigned</b>, <b>Backlog</b> or <b>All</b>."],
         ["<b>Draw it</b>: have an issue without pictures drawn now.", "draw"],
         ["<b>Design this</b>: start a design request from an issue.", "follow-up"],
-        ["<b>Ask a question</b> about an issue; the answer appears below it.", "ask"]],
+        ["<b>Ask a question</b> about an issue; the answer appears below it.", "ask"], LINK],
       steps: ["Pick an issue on the left.", "Read what the UI will need and compare now with the sketch.", "Ask what is unclear, or press Draw it for a sketch.", "Press Design this to have Design Desk draw options for it."] },
     call: { about: "what the team shows at its next design meeting",
       see: ["What designers put on the call, in order, each with a short brief and the decision asked.",
         "Suggested by Design Desk: things worth showing that are not on the call yet."],
       can: [["<b>▶ Present</b>: one item at a time, full screen."],
         ["<b>Add to the next call</b> from any change or request, or say <b>Not now</b> to a suggestion.", "queue"],
-        ["<b>Call is over — clear the list</b> after the meeting.", "close"]],
+        ["<b>Call is over — clear the list</b> after the meeting.", "close"], LINK],
       steps: ["Before the call, a designer adds items and picks the option to present.", "Design Desk writes a brief for each one.", "In the call, press Present and step through.", "Afterwards, clear the list; decisions go into the items' comments."] },
     product: { about: "a map of the product: its screens, its parts and the team's decisions",
       see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
@@ -836,7 +855,7 @@
     // New and Requests say where each came from; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span></div></button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span>${num(c)}</div></button>
       ${sourced ? origin(c) : ""}${c.kind === "issue" && c.needs?.length ? `<div class="s"><b>UI:</b> ${esc(c.needs.join(" · "))}</div>` : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
@@ -907,17 +926,17 @@
   const suggested = () => S.cards.filter((c) => c.suggested && c.status !== "declined" && !S.agenda.some((a) => a.id === c.id));
   function renderAgendaList() {
     const items = S.agenda, ideas = suggested();
-    $("#list").innerHTML = (items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span></div>
+    $("#list").innerHTML = (items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}" aria-current="${S.card?.id === a.id}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span>${num(a)}</div>
       <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta"><span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span>${a.option ? `<span class="chip info">presenting ${esc(a.option)}</span>` : ""}</div></button>`).join("")
       : `<div class="empty">The next call is the team's regular design meeting. A designer puts things on it: open one and choose Add to the next call.</div>`)
-      + (ideas.length ? `<h3 style="margin:18px 12px 8px">Suggested by Design Desk</h3>${ideas.map((c) => `<button class="row" data-card="${esc(c.id)}"><div class="t"><span>${esc(c.title)}</span></div>
+      + (ideas.length ? `<h3 style="margin:18px 12px 8px">Suggested by Design Desk</h3>${ideas.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}</div>
       ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip warn">💡 not on the call yet</span></div></button>`).join("")}` : "");
   }
   function renderAgendaDetail() {
     const items = S.agenda, ideas = suggested();
     $("#detail").innerHTML = `<h2>Next call</h2><p class="hint">What designers chose to show at the team's next design meeting. Present it from here.</p>
       <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length ? `<button class="btn" data-act="clear-call">Call is over — clear the list</button>` : ""}</div>
-      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}
+      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}${num(a)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}
       ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the call until a designer adds it: open it and choose Add to the next call, or Not now.</p>
         <ul>${ideas.map((c) => `<li><button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>${c.suggested.note ? ` <span class="sub" style="display:inline">${esc(c.suggested.note)}</span>` : ""}</li>`).join("")}</ul>` : ""}`;
   }
@@ -935,7 +954,7 @@
     const visual = card.kind === "element" && card.sheet ? card.sheet : fav?.asset || card.screens?.[0]?.asset || null;
     ov.dataset.index = String(n);
     ov.innerHTML = `<div class="sub pbar" style="justify-content:space-between"><button class="btn small" data-exit-present>✕ Exit</button><span>${n + 1} / ${items.length} · Next call</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button></span></div>
-      <h2 style="font-size:28px;margin-top:12px">${txt(card.title, card)}</h2>${card.summary ? `<p class="lead">${txt(card.summary, card)}</p>` : ""}
+      <h2 style="font-size:28px;margin-top:12px">${txt(card.title, card)}${num(card)}</h2>${card.summary ? `<p class="lead">${txt(card.summary, card)}</p>` : ""}
       <div class="panel" style="max-width:calc(var(--measure) + 10ch)"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>
       ${fav && (card.variants || []).length > 1 ? `<p class="sub" style="margin-top:12px">Presenting <b>${esc(fav.name)}</b> · options: ${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
       ${visual ? `<iframe class="frame" id="present-frame" sandbox="allow-scripts" style="height:60vh;margin-top:16px"></iframe>` : ""}`;
@@ -1076,7 +1095,7 @@
     const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
     const inProgress = src.pr && !src.merged_at;
     return `${backBar()}
-      <h2>${txt(c.title)}</h2>
+      <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub">${ageChip(c)}${c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : ""}${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
@@ -1106,7 +1125,7 @@
     const now = c.screens || [], sketch = c.sketches || [];
     const open = c.status !== "archived";
     return `${backBar()}
-      <h2>${txt(c.title)}</h2>
+      <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Backlog")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
@@ -1130,7 +1149,7 @@
     const changes = (c.changes || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean);
     const open = c.instance?.url && c.path ? `${c.instance.url.replace(/\/$/, "")}${c.path}` : null;
     return `${backBar()}
-      <h2>${txt(c.title)}</h2>
+      <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}${c.status === "stale" ? `<span class="chip warn">changed since these pictures</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
@@ -1171,7 +1190,7 @@
   function renderDigest(c) {
     const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
     return `${backBar()}
-      <h2>${txt(c.title)}</h2><div class="sub"><span class="chip info">Weekly digest</span>${c.period ? `<span>${esc(c.period)}</span>` : ""}</div>
+      <h2>${txt(c.title)}${num(c)}</h2><div class="sub"><span class="chip info">Weekly digest</span>${c.period ? `<span>${esc(c.period)}</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       <div class="actions"><button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""}>${seen ? "✓ Seen" : "Got it"}</button>${agendaButton(c)}</div>
       ${shots(c.screens)}${sections(c)}
@@ -1182,7 +1201,7 @@
   function renderElement(c) {
     const src = c.source || {};
     return `${backBar()}
-      <h2>${txt(c.title)}</h2>
+      <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub">${c.group ? `<span class="chip">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn">out of date: the product changed since it was drawn</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${renderWanted(c)}
@@ -1410,7 +1429,7 @@
   function renderRequest(c) {
     const r = c.request || {};
     return `${backBar()}
-      <h2>${txt(c.title)}</h2>
+      <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub">${r.type === "bug" ? `<span class="chip bad">🐛 Something broken</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip">${esc(c.origin.severity)} severity</span>` : ""}<span>${esc(when(c.created))}</span></div>
       ${origin(c)}
       ${renderSteps(c)}
@@ -1692,6 +1711,52 @@
     if (S.ws.open && (!quiet || wsChanged)) renderWorkspace();
   }
 
+  async function showTab(tab) {
+    S.tab = tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
+    if (tab === "guide") store.set("desk-guide-seen", "1");
+    if (tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); }
+  }
+
+  // ---------- links to an item (docs/desk.md → Links to an item) ----------
+  // What a link or Go to names: #C-12, #call/C-12, a tab (#requests); Go to also takes the
+  // number alone (12, c12) or a whole link.
+  function target(text) {
+    const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
+    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)$/i);
+    if (m) return { tab: TABS[m[1]?.toLowerCase()] ? m[1].toLowerCase() : null, id: `C-${m[2]}` };
+    return TABS[h.toLowerCase()] ? { tab: h.toLowerCase(), id: null } : null;
+  }
+  // An item opens in its own tab (in Next call for #call/C-12), with a filter that shows it.
+  const HOME = { change: "new", digest: "new", request: "requests", issue: "issues", screen: "product", element: "product" };
+  async function goTo(to) {
+    if (!to.id) { await showTab(to.tab); return true; }
+    const c = S.cards.find((x) => x.id === to.id);
+    if (!c) { toast(`There is nothing numbered ${to.id} on the Desk.`); return false; }
+    S.tab = to.tab && !["guide", "people"].includes(to.tab) ? to.tab : HOME[c.kind] || "new";
+    if (S.tab === "product") S.productFilter = c.kind === "element" ? "elements" : "screens";
+    if (!visibleCards().some((x) => x.id === c.id)) {
+      if (S.tab === "new") S.newFilter = "all";
+      if (S.tab === "requests") S.reqFilter = closed(c) ? "closed" : "open";
+      if (S.tab === "issues") S.issueFilter = "all";
+    }
+    S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners();
+    await openCard(c.id);
+    return true;
+  }
+  // The frame may not get the clipboard: the browser's own copy, else the link shown to copy by hand.
+  async function copyLink(c) {
+    const link = itemLink(c);
+    try { await navigator.clipboard.writeText(link); toast(`Copied the link to ${c.id}.`); return; } catch {}
+    const t = document.createElement("textarea");
+    t.value = link; t.readOnly = true; t.style.cssText = "position:fixed;top:0;opacity:0";
+    document.body.append(t); t.select();
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch {}
+    t.remove();
+    if (copied) { toast(`Copied the link to ${c.id}.`); return; }
+    await ask({ title: `The link to ${c.id}`, body: `The browser did not let the Desk copy it. Select it and copy it:\n\n\`${link}\``, ok: "Done", send: () => null });
+  }
+
   // ---------- events ----------
   async function act(name) {
     const c = S.card;
@@ -1794,11 +1859,12 @@
   }
 
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("button, a[data-tab], [data-zoom], [data-ws-note]");
+    const el = e.target.closest("button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note]");
     if (!el) return;
     const ds = el.dataset;
-    if (ds.tab) { e.preventDefault(); S.tab = ds.tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail(); if (ds.tab === "guide") store.set("desk-guide-seen", "1");
-      if (ds.tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); } return; }
+    if (ds.tab) { e.preventDefault(); await showTab(ds.tab); return; }
+    if (ds.ref) { e.preventDefault(); await goTo(target(ds.ref)); return; }
+    if ("copyLink" in ds) { await copyLink(S.card); return; }
     if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
     if (ds.card) {
@@ -1913,6 +1979,12 @@
     if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && (S.card?.history || []).length && !S.ws.open && !document.querySelector("dialog[open]") && !e.target.closest("input, textarea, select, [contenteditable]")) {
       const looks = looksOf(S.card), k = looks.findIndex((l) => lookKey(l) === S.look) + (e.key === "ArrowLeft" ? 1 : -1);
       if (k >= 0 && k < looks.length) { e.preventDefault(); S.look = lookKey(looks[k]); S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); }
+      return;
+    }
+    if (e.key === "Enter" && !e.isComposing && e.target.id === "goto") {
+      const to = target(e.target.value);
+      if (!to) { toast("Type an item's number, like C-12, or paste its link."); return; }
+      goTo(to).then((ok) => { if (ok) e.target.value = ""; }).catch(fail);
       return;
     }
     // Enter in a dialog's field would submit its form (docs/desk.md → Where it works): it presses the dialog's own button.
@@ -2096,10 +2168,14 @@
     S.me = await api("GET", "/api/me");
     applyMe();
     await refreshList();
-    // First visit, or an empty Desk: start with how it works.
-    if (!store.get("desk-guide-seen") || !S.cards.length) { S.tab = "guide"; store.set("desk-guide-seen", "1"); }
-    else if (!visibleCards().length && S.cards.some((c) => c.kind === "request" && !closed(c))) S.tab = "requests";
-    renderNav(); renderBanners(); renderList(); renderDetail();
+    // A link to an item opens it; else a first visit, or an empty Desk, starts with how it works.
+    const to = target(location.hash);
+    if (!(to && await goTo(to))) {
+      if (!store.get("desk-guide-seen") || !S.cards.length) { S.tab = "guide"; store.set("desk-guide-seen", "1"); }
+      else if (!visibleCards().length && S.cards.some((c) => c.kind === "request" && !closed(c))) S.tab = "requests";
+      renderNav(); renderBanners(); renderList(); renderDetail();
+    }
+    window.addEventListener("hashchange", guard(async () => { const next = target(location.hash); if (next) await goTo(next); }));
     setInterval(() => { poll().catch(() => {}); }, 4000);
   }
   start().catch((e) => { $("#detail").innerHTML = `<div class="panel">${esc(e instanceof Said ? e.message : `Design Desk can't be reached right now. Try again in a minute; if it keeps happening, tell the Desk's owner.`)}</div>`; });

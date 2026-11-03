@@ -89,7 +89,7 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
     inbox run makes two or three design proposals the team can pick from, adjust and comment
     on. Suggest it for the next call (`design desk agenda C-<n> --note "Design Desk proposes"`).
 12. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
-    each new card's title and the Desk link (`shareUrl` of `desk_artifact`), never card text
+    each new card's title, number and link ([desk.md](desk.md) → Links to an item), never card text
     beyond the title. Send, then log `logev info notified …`.
 
 Any step that fails after the claim → `ledger.sh fail <repo> <pr> "<what failed>"`, log it,

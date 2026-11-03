@@ -49,6 +49,6 @@ picture attached:
 • Shipped: <n> changes — <the two most visible titles>
 • Decided: <n> · Waiting for a decision: <n>
 • Themes in feedback: <the top one or two, with their counts>
-The whole digest is on the Design Desk: <Desk link>"
+The whole digest is on the Design Desk (C-<n>): <link>"
 
 Then `design desk done` is not needed: the digest is not an inbox item. Back up `work/`.

@@ -517,6 +517,7 @@ audit_mode() {
     check desk_server ok "$(jq -r '"cards \(.cards), inbox open \(.inbox_open), claimed \(.inbox_claimed), store \(.db_bytes) bytes"' <<<"$h")"
   else check desk_server fail "the Desk server does not answer on 127.0.0.1:${DESK_PORT:-5555} — rc-service --user design-desk-server status (docs/desk.md → Server)"; fi
   [ -n "$(cfg desk_artifact)" ] && check desk_artifact ok "$(cfg desk_artifact)" || check desk_artifact warn "desk_artifact is not set — the Desk page was never published (docs/desk.md → Publishing the page)"
+  [ -n "$(cfg desk_link)" ] && check desk_link ok "$(cfg desk_link)" || check desk_link warn "desk_link is not set — items on the Desk have no Copy link (docs/desk.md → Publishing the page)"
   [ "$(cfg_table 'Desk people' | grep -c . || true)" -gt 0 ] && check desk_people ok "$(cfg_table 'Desk people' | grep -c .) people" || check desk_people warn "the Desk people table is empty — everyone but the owner is a guest"
 
   # toolchain: the design command, a real build and screenshot, saved brand and repo profiles
