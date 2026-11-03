@@ -1,5 +1,5 @@
 // node --test desk/tests/server.test.mjs — the Desk server over HTTP: who may ask for a
-// new person on the roster, and what the agent's routes refuse.
+// new person on the roster, what the agent's routes refuse, and what a person's page keeps.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -57,4 +57,13 @@ test("only a lead asks for a new person; the owner's ask says so; the agent cann
   const enqueue = await d.agent("/agent/enqueue", { kind: "person", card: "C-1" });
   assert.equal(enqueue.status, 400);
   assert.match(enqueue.body.error, /only from a lead/);
+});
+
+test("a person's folded intros are kept for them alone, guests included", async (t) => {
+  const d = await desk(t);
+  assert.deepEqual((await d.viewer("alice@example.com", "/api/me")).body.prefs, {});
+  assert.equal((await d.viewer("guest@example.com", "/api/me/prefs", { intro: "hidden" })).status, 200);
+  assert.deepEqual((await d.viewer("guest@example.com", "/api/me")).body.prefs, { intro: "hidden" });
+  assert.deepEqual((await d.viewer("alice@example.com", "/api/me")).body.prefs, {}, "one person's choice is theirs alone");
+  assert.equal((await d.viewer("alice@example.com", "/api/me/prefs", { intro: "maybe" })).status, 400);
 });
