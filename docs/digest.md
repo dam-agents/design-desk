@@ -38,7 +38,8 @@ automated test findings, comments, concerns and questions people left.
   requests close to a decision);
 - `screens` — up to four pictures of the week's changes, their "after" pictures first.
 
-Refer to everything by its title; never an id, never a person's name from feedback.
+Refer to everything by its title, a card also by its number, which the Desk links
+([desk.md](desk.md) → Links to an item); never another id, never a person's name from feedback.
 
 ## Slack (`digest: slack`)
 
