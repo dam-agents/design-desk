@@ -9,7 +9,7 @@ description: >-
 # GitHub handoff
 
 The `deliver` action ([docs/actions.md](../../../docs/actions.md)). Reads `handoff`,
-`issue_writeback`, `implementer`, `implementer_mention` and `prototype_remote` from
+`issue_writeback`, `implementer`, `implementer_mention`, `prototype_remote` and `desk_link` from
 `work/CONFIG.md`. The spec is written and uploaded ([docs/handoff.md](../../../docs/handoff.md)
 steps 1 to 3); the designer's **Approve** on the Desk, with their name on the item, is the
 approval to send it.

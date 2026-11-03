@@ -56,7 +56,9 @@ served by the Desk server through the platform's Artifact API relay.
   same emails go in `## Desk people` with a role. The owner needs the Interactive artifacts
   feature on (Settings → five taps on the version → Experimental features). Never set the
   Desk public: the platform refuses an interactive page anyway. Once it is shared, set
-  `desk_link` to its share link (`design config write`): the page builds items' links from it.
+  `desk_link` to its share link, the `shareUrl` that `mcp__platform-outbound__get_artifact`
+  returns for `desk_artifact` (none while it is private), with `design config write`: the page
+  builds items' links from it.
 
 ## Links to an item
 

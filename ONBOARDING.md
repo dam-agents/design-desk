@@ -253,8 +253,9 @@ Write the file in exactly this shape with `design config write` (a restored file
    `desk_artifact` to the id with `design config write`.
 4. **Share.** Ask the owner to open the Desk in the app and share it: Share → Restricted →
    the emails of Step 3.2. Only the owner can; tick `share` when they confirm. Then set
-   `desk_link` to the share link (`design config write`) and give it to them to bookmark: the
-   Desk loads its data there and in this agent's chat, not from the Artifacts page.
+   `desk_link` to the share link ([docs/desk.md](docs/desk.md) → Publishing the page) and give
+   it to them to bookmark: the Desk loads its data there and in this agent's chat, not from the
+   Artifacts page.
 
 ## Step 5 — Product profiles and schedules
 

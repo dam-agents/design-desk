@@ -91,8 +91,8 @@ One `reply` in the thread per round, with the picture:
   earlier decision it goes against — each with its source.> <What was not done, and why.>
   All options and versions are on the Design Desk (C-<n>): <link>. Ask here for more changes."
 - The card's link and access line as in `intake-slack` (*In that Slack turn*, step 5). Never a
-  password, an internal id ("card", "triage", "S-2") or real customer data; made-up numbers
-  say so.
+  password, an internal id ("card", "triage", "S-2"; the card's number `C-<n>` is not one) or
+  real customer data; made-up numbers say so.
 
 ## Close
 

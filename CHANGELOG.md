@@ -14,8 +14,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
    ([docs/desk.md](docs/desk.md) → **Publishing the page**). Every item shows its number.
 2. New key `desk_link` ([docs/config.md](docs/config.md)): unless it is set, write the Desk's
-   share link (its `shareUrl`) with `design config write`; it stays empty until the owner
-   shared the Desk. Messages now carry an item's number and link
+   share link ([docs/desk.md](docs/desk.md) → **Publishing the page**); it stays empty until
+   the owner shared the Desk. Messages now carry an item's number and link
    ([docs/desk.md](docs/desk.md) → **Links to an item**).
 3. Re-run `bash "$HOME/scripts/verify-onboarding.sh" --config`.
 

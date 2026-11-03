@@ -32,4 +32,14 @@ fi
 printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' '- default_style: repo:acme/other' > "$WORK_DIR/CONFIG.md"
 out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)" && { echo "  ✗ verify passes a default_style outside repos"; FAILS=$((FAILS+1)); }
 printf '%s' "$out" | grep -q '^FAIL config_default_style' || { echo "  ✗ verify names config_default_style: $out"; FAILS=$((FAILS+1)); }
+# desk_link is the Desk's share link: anything but a web link fails, a link passes.
+for link in 'javascript:alert(1)' 'share.example.com/a/xY12' 'https://share.example.com/a/xY12'; do
+  printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' "- desk_link: $link" > "$WORK_DIR/CONFIG.md"
+  out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)"
+  if [ "$link" = 'https://share.example.com/a/xY12' ]; then
+    printf '%s' "$out" | grep -q '^FAIL config_desk_link' && { echo "  ✗ verify refuses a share link: $out"; FAILS=$((FAILS+1)); }
+  else
+    printf '%s' "$out" | grep -q '^FAIL config_desk_link' || { echo "  ✗ verify names config_desk_link for '$link': $out"; FAILS=$((FAILS+1)); }
+  fi
+done
 finish
