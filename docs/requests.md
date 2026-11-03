@@ -25,7 +25,8 @@ The person deciding sees it on the card, and every later step builds on it.
    request's words, the UI text and the component names you find; read the relevant ones
    with their comments. A closed `not planned` issue often carries the reason.
 2. **The code.** The few files that implement the screen (the profile's `screens`, then a
-   search for the UI text).
+   search for the UI text). `request.screen`, the person's answer to "Which screen?", says
+   where to start; it is context for you and the Desk does not show it.
 3. **History.** Per key file: `git log --follow --date=short --format='%h %ad %an %s' -- <file>`
    (the clone may be partial: read history through `gh` when it is), map key commits to
    their pull requests (`gh api repos/<o>/<r>/commits/<sha>/pulls`) and read those: body,
