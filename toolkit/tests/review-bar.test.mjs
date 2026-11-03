@@ -10,7 +10,7 @@ import { danglingGotos } from "../bin/build.mjs";
 
 const bar = readFileSync(join(TOOLKIT, "chrome/review-bar.html"), "utf8");
 const PAGE = `<!doctype html><html><body>${bar}
-  <div data-view="1" data-view-name="List"><p id="plain">Three plans</p><button id="open" data-goto-view="2">Open plan</button></div>
+  <div data-view="1" data-view-name="List"><p id="plain">Three plans</p><button id="dead">Export</button><button id="open" data-goto-view="2">Open plan</button></div>
   <div data-view="2" data-view-name="Plan"><a href="#" id="edit" data-goto-view="3">Edit</a><button id="back" data-goto-view="back">Back</button></div>
   <div data-view="3" data-view-name="Edit plan"><p>Form</p></div>
 </body></html>`;
@@ -48,9 +48,16 @@ test("a click walks the flow, Back retraces it, a dead spot flashes what is clic
     assert.equal(await pg.evaluate(() => document.documentElement.classList.contains("review-hot")), true);
     await pg.waitForTimeout(900);
     assert.equal(await pg.evaluate(() => document.documentElement.classList.contains("review-hot")), false);
+    // A product button the prototype does not wire is a dead spot too, and it is not outlined.
+    await pg.click("#dead");
+    assert.equal(await pg.evaluate(() => document.documentElement.classList.contains("review-hot")), true);
+    const outlined = (s) => pg.evaluate((s) => getComputedStyle(document.querySelector(s)).outlineStyle !== "none", s);
+    assert.deepEqual([await outlined("#open"), await outlined("#dead")], [true, false]);
+    await pg.waitForTimeout(900);
     await pg.click("#review [data-hot]");
     await pg.waitForTimeout(900);
     assert.equal(await pg.evaluate(() => document.documentElement.classList.contains("review-hot")), true);
+    assert.equal(await pg.getAttribute("#review [data-hot]", "aria-checked"), "true");
   } finally { await chrome.close(); }
 });
 

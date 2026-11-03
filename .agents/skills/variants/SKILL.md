@@ -172,8 +172,10 @@ Rules — `design build` enforces the mechanical ones:
   wizard, a dialog that opens) is one view per screen, and every control that leads on carries
   `data-goto-view="<n>"` (`"back"` to return), so a person clicks through it as in the product.
   Everything that looks clickable does something — goes to a view, opens a menu or toggles
-  state — or is not drawn as a control. The review bar's **Clickable** outlines what can be
-  clicked; `design build` refuses a `data-goto-view` with no view of that number.
+  state — or is not drawn as a control. The review bar's **Clickable** switch outlines only
+  what is wired (`data-goto-view`, `data-menu-trigger`, `onclick`); a control a small script
+  toggles carries `data-clickable` so it shows too. `design build` refuses a `data-goto-view`
+  with no view of that number.
 - **Light interactions only:** a small inline `<script>` toggling a class or `hidden` is fine.
 - **Empty states:** populated content in `data-populated`, the real empty state in
   `data-empty-view`. The review bar shows the toggle on views that have one.

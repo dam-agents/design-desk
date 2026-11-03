@@ -3,8 +3,9 @@
      and it keeps out of the app's classes on purpose.
      Views: each view root carries data-view="1".."n" and data-view-name="…".
      Flow: a control whose data-goto-view is a view's number opens it when clicked ("back":
-     the previous one). "Clickable" outlines everything a person can click; a click on a spot
-     that does nothing flashes them, as a prototype tool does.
+     the previous one). The "Clickable" switch outlines only what the prototype wires: a
+     data-goto-view, a data-menu-trigger, an onclick, or data-clickable on a control a small
+     script toggles; a click anywhere else flashes them, as a prototype tool does.
      Title: <html data-review-title="#123 · Issue title">.
      Empty state: populated content in [data-populated], the empty one in [data-empty-view].
      Menus: trigger data-menu-trigger="id" (+ data-menu-side="top", data-menu-align="start");
@@ -25,14 +26,20 @@
   html:not(.review-empty) [data-empty-view]{display:none !important;}
   #review .seg[hidden]{display:none;}
   #review #review-back[hidden]{display:none;}
-  html.review-hot :is(a[href],button,[role="button"],[data-goto-view],[data-menu-trigger],input,select,textarea,summary,label[for],[onclick]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;background-color:rgba(15,98,254,.08) !important;}
+  #review .switch{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  #review .switch .track{position:relative;width:26px;height:14px;border-radius:7px;background:#a2a9b0;transition:background .15s;}
+  #review .switch .track::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:left .15s;}
+  #review .switch[aria-checked="true"] .track{background:#0f62fe;}
+  #review .switch[aria-checked="true"] .track::after{left:14px;}
+  #review .switch:focus-visible .track{outline:2px solid #0f62fe;outline-offset:2px;}
+  html.review-hot :is([data-goto-view],[data-menu-trigger],[onclick],[data-clickable]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;background-color:rgba(15,98,254,.08) !important;}
 </style>
 <div id="review">
   <b id="review-title"></b>
   <span class="seg" id="review-back" hidden><button data-review-back>← Back</button></span>
   <span class="seg" id="review-views"></span>
   <span class="seg" data-group="empty"><button data-empty="0" aria-pressed="true">Populated</button><button data-empty="1" aria-pressed="false">Empty state</button></span>
-  <span class="seg" data-group="hot"><button data-hot aria-pressed="false" title="Outline everything you can click">Clickable</button></span>
+  <button class="switch" data-hot role="switch" aria-checked="false" title="Outline what does something in this prototype: opens a screen, a dialog or a menu"><span class="track"></span>Clickable</button>
   <span class="seg" data-group="theme"><button data-theme="light" aria-pressed="true">Light</button><button data-theme="dark" aria-pressed="false">Dark</button></span>
   <span class="style" id="review-style"></span>
 </div>
@@ -59,7 +66,8 @@
     };
     // A control wired to another view walks the flow; Back retraces it.
     const go = (n) => { const from = shown(); if (n === "back") { if (trail.length) show(trail.pop()); } else if (n !== from) { if (from) trail.push(from); show(n); } scrollTo(0, 0); };
-    const HOT = 'a[href],button,[role="button"],[data-goto-view],[data-menu-trigger],input,select,textarea,summary,label[for],[onclick]';
+    // Only what the prototype wires counts; a product button drawn but not wired is a dead spot.
+    const HOT = '[data-goto-view],[data-menu-trigger],[onclick],[data-clickable]';
     let flash = null;
     addEventListener("DOMContentLoaded", () => {
       const seg = document.getElementById("review-views");
@@ -72,7 +80,7 @@
       if (!seg.children.length) seg.remove();
       document.querySelectorAll("#review button").forEach((b) => b.addEventListener("click", () => {
         if (b.dataset.reviewBack !== undefined) { go("back"); return; }
-        if (b.dataset.hot !== undefined) { const on = !de.classList.contains("review-hot"); de.classList.toggle("review-hot", on); b.setAttribute("aria-pressed", on); return; }
+        if (b.dataset.hot !== undefined) { const on = !de.classList.contains("review-hot"); de.classList.toggle("review-hot", on); b.setAttribute("aria-checked", on); return; }
         press(b);
         if (b.dataset.reviewView) { trail.length = 0; show(b.dataset.reviewView); scrollTo(0, 0); }
         if (b.dataset.empty) de.classList.toggle("review-empty", b.dataset.empty === "1");
@@ -106,7 +114,7 @@
       if (e.target.closest("#review")) return;
       const to = e.target.closest("[data-goto-view]");
       if (to) { e.preventDefault(); go(to.dataset.gotoView); return; }
-      if (!e.target.closest(HOT) && !de.classList.contains("review-hot")) { de.classList.add("review-hot"); clearTimeout(flash); flash = setTimeout(() => { if (document.querySelector("#review [data-hot]")?.getAttribute("aria-pressed") !== "true") de.classList.remove("review-hot"); }, 700); }
+      if (!e.target.closest(HOT) && !de.classList.contains("review-hot")) { de.classList.add("review-hot"); clearTimeout(flash); flash = setTimeout(() => { if (document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") !== "true") de.classList.remove("review-hot"); }, 700); }
     });
     addEventListener("scroll", closeMenus, true);
     addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });
