@@ -659,6 +659,28 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
 }));
 
+test("Draw design options asks how many, starting at the request's own count, and sends the one picked", async (t) => {
+  const bridge = BRIDGE_STORIES.replace('status: "feedback"', 'status: "triage"').replace("can: { vote: true, comment: true }", "can: { vote: true, comment: true, explore: true }")
+    .replace("calls.push({ method, path });", "calls.push({ method, path, body });").replace("async request({ method, path })", "async request({ method, path, body })");
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk, posts, settled } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.click('[data-act="explore"]');
+    assert.equal(await desk.isChecked('#confirm-form input[name=choice][value="2"]'), true, "the request asked for two");
+    const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
+    await cf("Cancel").click();
+    await settled("/api/cards/r7/actions", 0, "Cancel draws nothing");
+    await desk.click('[data-act="explore"]');
+    await desk.check('#confirm-form input[name=choice][value="4"]');
+    await cf("Draw them").click();
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/actions"));
+    assert.deepEqual(JSON.parse((await posts("/api/cards/r7/actions"))[0].body), { action: "explore", note: "", count: 4 });
+  } finally { await run.close(); }
+});
+
 // A designer's request from Slack with two options and three comments on the first: one done.
 const BRIDGE_NOTES = `<script>
 window.calls = [];

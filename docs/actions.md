@@ -67,8 +67,10 @@ A skill that replaces a bundled one keeps the action's contract:
   so its links to the repository's own guidelines resolve.
 - **Output on the Desk**, through `design desk`:
   - `options`: one self-contained HTML file per option, uploaded with `--kind variant`, with
-    a name, one line on when it wins, and `fidelity`; a skill that draws several approaches in
-    one page is run once per approach, or its views are split into one file each;
+    a name, one line on when it wins, and `fidelity`; for a request with an `issue_brief`, also
+    how it meets each user story (`stories`, [requests.md](requests.md) → Variants); a skill
+    that draws several approaches in one page is run once per approach, or its views are split
+    into one file each;
   - `revise`: the same option id with its new file (the Desk keeps the earlier version), and
     an answer on every note it applied or could not apply;
   - `deliver`: the routing by request type, the pictures, the hidden card marker and the

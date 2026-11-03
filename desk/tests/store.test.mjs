@@ -173,6 +173,12 @@ test("a request from an issue keeps what the issue says about the design and how
   assert.deepEqual(c.issue_brief.stories.map((x) => [x.id, x.derived]), [["s1", false], ["s2", true]]);
   assert.deepEqual(c.variants[0].stories[0].parts, [{ selector: "#spend", label: "Spend column", view: "1" }]);
   assert.deepEqual([c.grill.state, c.grill.asked], ["done", 3]);
+  const asset2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>y</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2 }] });
+  assert.equal(s.card(card.id).variants[0].version, 2);
+  assert.equal(s.card(card.id).variants[0].stories[0].how, "A spend column.", "a revise that leaves stories out keeps the coverage");
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2, stories: [{ story: "s1", met: "partly", how: "Moved." }] }] });
+  assert.equal(s.card(card.id).variants[0].stories[0].met, "partly", "new stories replace the old");
   assert.throws(() => s.upsertCard({ id: card.id, issue_brief: { stories: [{ id: "s1", text: "a" }, { id: "s1", text: "b" }] } }), /its own/);
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset, stories: [{ story: "s1", met: "maybe", how: "x" }] }] }), /met must be/);
   assert.throws(() => s.upsertCard({ id: issue.id, issue_brief: brief }), /belongs to a request/);

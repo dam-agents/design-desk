@@ -1181,9 +1181,11 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.
+// An entry that leaves `stories` out keeps the option's coverage from before.
 function versioned(variants, before, at) {
-  return variants.map((v) => {
-    const old = before.find((x) => x.id === v.id);
+  return variants.map((given) => {
+    const old = before.find((x) => x.id === given.id);
+    const v = { ...given, stories: given.stories || old?.stories || null };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: old.version || 1, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -1256,7 +1258,7 @@ function cleanVariants(list, assets) {
       fidelity: ["wireframe", "mockup", "figma"].includes(v.fidelity) ? v.fidelity : "mockup",
       asset: v.asset,
       figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
-      ...(v.stories === undefined ? {} : { stories: cleanCoverage(v.stories, i + 1) }),
+      stories: v.stories == null ? null : cleanCoverage(v.stories, i + 1),
     };
   });
 }

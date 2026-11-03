@@ -151,8 +151,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   `stories: [{story, met, how, parts}]` — `met` is `yes`, `partly` or `no`; `how` one or two
   plain sentences; `parts` the elements that do it (`{selector, label, view}`, at most 6: a
   CSS path in the option's file, a plain label, the `data-view` it is on). The page outlines
-  them when a person picks the story. A revised option rewrites its `stories` when its parts
-  moved.
+  them when a person picks the story. An entry without `stories` keeps the option's coverage
+  from before; a revised option whose parts moved sends its new `stories`.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
   `variants: [{id, name, rationale, fidelity, asset, stories}]` (rationale: one line on when
   this one wins) and `status: feedback` in one `design desk upsert`.
