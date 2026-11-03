@@ -2303,7 +2303,7 @@
     const n = Number($("#request-form").options.value);
     $("#rq-count-say").textContent = optionsSay(n);
     $("#rq-count-hint").textContent = !n ? "Design Desk only checks what can be done as a design change; a designer can still have options drawn later."
-      : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer starts them after Design Desk checks what can be done.";
+      : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer or developer starts them after Design Desk checks what can be done.";
   }
   $("#request-form").options.addEventListener("input", sayCount);
 
