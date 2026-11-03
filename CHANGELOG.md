@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.20.0 — 2026-11-03
+## 1.21.0 — 2026-11-03
 
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
@@ -16,6 +16,13 @@ the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 options to draw and whether to ask questions first (the bundled `grill-me` skill, action
 `grill`); a request from an issue shows its user stories ([docs/requests.md](docs/requests.md)).
 Older requests have neither and need nothing.
+
+## 1.20.0 — 2026-11-03
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A request's card is simpler; research
+and triage are written per [docs/requests.md](docs/requests.md) from the next request on.
 
 ## 1.19.1 — 2026-11-03
 
