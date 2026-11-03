@@ -7,6 +7,19 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.28.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A designer, the lead or a
+`lead-developer` now approves a checked request without options, a vote or a live prototype, or
+decides and closes it; a decision item without a thread is recorded from its note
+([docs/desk.md](docs/desk.md) → **Deciding straight away**). While a prototype is live the
+options fold under it and Approve takes the option it was built from (`built`); a prototype
+built before this has no `built` and keeps the option picker. The Desk now always opens on Requests;
+How it works stays under the question mark.
+
 ## 1.27.0 — 2026-11-03
 
 **Upgrade:**

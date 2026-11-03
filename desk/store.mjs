@@ -45,6 +45,9 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev;
     // Whether a request is a small change a developer approves, or goes through a designer.
     case "size": return role === "lead-developer" || role === "lead";
+    // Skip the vote and the live prototype: approve straight away, or decide and close
+    // (docs/desk.md → Deciding straight away).
+    case "skip": return shaper || role === "lead-developer";
     // Deciding: approve, close and reopen, the presentation, handled, the winner.
     case "queue": case "approve": case "close": case "reopen": case "handle": case "choose":
     // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
@@ -64,7 +67,7 @@ export const ORIGIN_JOBS = ["watch", "digest"];
 export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk", "call", "approval", "chat"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "people"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -268,7 +271,7 @@ export class Store {
       const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
       if (asks) reasons.push("Design Desk is waiting for an answer");
-      else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options or close it");
+      else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options, decide or close it");
       // A small change waits for a developer's approval, not a designer's.
       else if (!busy && !c.size?.small && c.status === "feedback") reasons.push(c.chosen ? "A designer picked an option: approve it or build it live" : "Options are ready: pick one or ask for changes");
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
@@ -594,6 +597,7 @@ export class Store {
       c.status = "triage";
       delete c.overruled;
       delete c.approved;
+      delete c.decided;
       c.updated = this.clock();
       const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
       this.save();
@@ -602,12 +606,21 @@ export class Store {
     if (!kinds[action]) throw bad(`unknown action ${action}`);
     if (action === "build" && c.triage?.verdict !== "design")
       throw forbidden(c.triage ? "This request gets no live prototype because part of it needs a developer or a decision. The developer spec covers it." : "Design Desk is still checking this request. You can build a live prototype once it says what can be done.");
-    if (action === "approve" && !["testing", "feedback", "prototype"].includes(c.status))
+    // A designer or a lead developer approves once it is checked, without a vote or a live
+    // prototype; a small change's developer, once there are options (docs/desk.md → Deciding straight away).
+    const direct = who?.agent || can(who?.role, "skip");
+    if (action === "approve") mustBeChecked(c, "Approve");
+    // Before options are on the card, an approval does not race the drawing of them.
+    if (action === "approve" && ["triage", "variants"].includes(c.status) && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise"].includes(i.kind)))
+      throw bad("Design Desk is still drawing the options. Approve once they are here.");
+    if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
-    if (action === "approve" && !who?.agent && !can(who?.role, "approve")) {
-      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers can approve designs. A lead developer can mark a request a small change, which a developer then approves.");
+    if (action === "approve" && !direct && !can(who?.role, "approve")) {
+      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers and lead developers can approve designs. A lead developer can mark a request a small change, which a developer then approves.");
       if (isAuthor(c, who)) throw forbidden("You filed this request, so another developer approves it.");
     }
+    // Once a live prototype is built, approving approves the option it shows, whatever the note says.
+    if (action === "approve" && ["prototype", "testing"].includes(c.status) && (c.variants || []).some((v) => v.id === c.built?.variant)) note = c.built.variant;
     // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
     const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
     // Going against a decision in force stays a designer's call, a small change included.
@@ -624,7 +637,9 @@ export class Store {
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; a small change's approval says so.
-    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small) };
+    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...((c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
+    // Which option the live prototype shows: Approve then approves that one.
+    if (action === "build" && (c.variants || []).some((v) => v.id === note)) c.built = { variant: note, by: person(who), at: this.clock() };
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
@@ -648,6 +663,28 @@ export class Store {
     c.updated = this.clock();
     this.save();
     return { card: c };
+  }
+
+  // A designer or a lead developer decides a request without a vote or a live prototype and
+  // closes it; Design Desk records the decision in their name (docs/desk.md → Deciding straight away).
+  decideAndClose(cardId, who, { text, why = "" } = {}) {
+    const c = this.card(cardId);
+    if (who?.agent) throw forbidden("Design Desk does not decide: a person does");
+    if (c.kind !== "request") throw bad("only a design request is decided here");
+    if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
+    if (c.approved || c.status === "spec") throw bad("This request is already approved.");
+    mustBeChecked(c, "Decide");
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "decision" && !i.thread)) throw bad(BUSY);
+    const said = clean(text, 600, "decision");
+    c.status = "declined"; delete c.call_suggestion;
+    c.decided = { by: person(who), at: this.clock(), text: said };
+    c.updated = this.clock();
+    const item = this.enqueue("decision", cardId, null, who, said);
+    item.why = optText(why, 1500, "why");
+    // Closing switches off its live prototype, as Close does.
+    this.enqueue("teardown", cardId, null, who);
+    this.save();
+    return { card: c, inbox: item };
   }
 
   // ---------- the next call's agenda ----------
@@ -1280,6 +1317,13 @@ function favouriteOf(c) {
   const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
   const s = [...vs].sort((a, b) => score(b) - score(a));
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
+}
+
+// Every way past the vote and the prototype waits for Design Desk's check (docs/desk.md →
+// Deciding straight away).
+// Past Checking, a request was checked.
+function mustBeChecked(c, verb) {
+  if (c.status === "triage" && !c.triage) throw bad(`Design Desk is still checking this request. ${verb} it once it says what can be done.`);
 }
 
 // Whether a person filed the request: its author never approves it as a small change. A

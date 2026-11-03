@@ -105,7 +105,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   | `issue` | an issue or its comment that settles a question | who wrote it | the issue or comment |
   | `commit`, `doc` | research finds it only in a commit or an architecture page | its author (`git log`) | the commit or page |
   | `slack` | a message in a request's or council's thread that settles something | who wrote it | its permalink |
-  | `desk` | a comment a designer marked **Record as a decision** (`decisions_due`) | the comment's author | `card`, `thread`, `message` |
+  | `desk` | a comment a designer marked **Record as a decision**, or **Decide and close** (`decisions_due`) | the comment's author; who decided and closed | `card`, `thread`, `message`; `card` alone |
   | `call` | taken at the design meeting (The presentation) | who decided, as the designer said | the card |
   | `approval` | a design approved ([handoff.md](handoff.md)) | the approver | the card |
   | `chat` | the operator says so in chat | the operator | none needed |
@@ -131,7 +131,9 @@ and `D-12` in text link to it as to a card (Links to an item).
   I-<n>`; the designer's wording in `note`). Claim it; record it (`origin.kind: desk`, the
   message's author, concepts from the card, conflicts checked); answer in the thread
   "Recorded as D-<n>", with any conflict; done. A message that decides nothing: say so in the
-  thread, done `not recorded: <why>`.
+  thread, done `not recorded: <why>`. An item with no `thread` is a **Decide and close**: its
+  `note` (and `why`) are the person's words, `by` is the author; record it, add `D-<n>` to the
+  card's `decisions`, done `D-<n>`.
 
 ## Roles
 
@@ -147,6 +149,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | `developer`, `lead-developer` | approve a small change they did not file ([Small changes](#small-changes)) |
 | `lead-developer`, `lead` | mark a request a small change, or send it through a designer |
+| `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, pick the winning option, record a decision |
 | roles in `prototype_requesters` | start a live prototype |
 | `lead` | also ask you to add a person to the list ([People](#people)) |
@@ -168,6 +171,22 @@ that goes against a decision in force is approved by a designer only. Every appr
 page shows who marked it and who approved it, and a reopen clears `approved`. A small change
 is not in **Needs a designer** for its options or its prototype. The `handoff` item it makes is
 worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
+
+### Deciding straight away
+
+A designer, the lead or a lead developer (`skip`) may skip the options, the vote and the live
+prototype once Design Desk has checked a request:
+
+- **Approve** at any open step from Checking on (**Send to developers now…** before options);
+  the store writes `approved` as any approval. Without options the item's `note` is what to build,
+  in the person's words ([handoff.md](handoff.md)). A lead developer does not overrule a
+  decision in force: that stays a designer's.
+- **Decide and close** (`POST /api/cards/<id>/decide {text}`): the request closes with
+  `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
+  a `teardown`. Reopen clears `decided`; the decision stays until revoked.
+- **While the live prototype is up**, the page folds the options (and building again) under it,
+  and Approve approves the option it was built from (`built.variant`, set on Build), whatever
+  the note.
 
 ## Claims
 

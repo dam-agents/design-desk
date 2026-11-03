@@ -1077,3 +1077,66 @@ test("a small change: the lead developer marks it, a developer but its author ap
   assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*as a small change/, "the card names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
 }));
+
+// Deciding straight away (docs/desk.md → Deciding straight away): the lead developer's buttons,
+// the options folded under a live prototype, and Approve taking the prototype's option.
+const SKIP = `<script>
+window.calls = [];
+const lou = { email: "lou@example.com", role: "lead-developer" }, bob = { email: "bob@example.com", role: "developer" };
+const triage = { verdict: "design", reasons: [] }, variants = [{ id: "v1", name: "Quiet" }, { id: "v2", name: "Bold" }];
+const cards = [
+  { id: "C-1", kind: "request", title: "Checked", status: "triage", triage, created_by: bob },
+  { id: "C-2", kind: "request", title: "Live", status: "testing", prototype: { state: "live", url: "https://example.com/p" }, triage, variants, built: { variant: "v2", by: lou, at: "2026-11-03T10:00:00Z" }, created_by: bob },
+  { id: "C-3", kind: "request", title: "Failed", status: "prototype", prototype: { state: "failed" }, triage, variants, created_by: bob },
+  { id: "C-4", kind: "request", title: "Expired", status: "testing", prototype: { state: "expired" }, triage, variants, created_by: bob },
+  { id: "C-5", kind: "request", title: "Against", status: "triage", triage, created_by: bob, conflicts: [{ decision: "D-1", why: "x", text: "Rows stay roomy", status: "active" }] },
+];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { ...lou, can: { size: true, explore: true, skip: true, build: true, revise: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("deciding straight away: a lead developer approves or decides; a live prototype folds the options and approves its own", (t) => open(t, SKIP, async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  const card = async (id) => {
+    await desk.goto(`${base}#${id}`);
+    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n, id);
+  };
+  await card("C-1");
+  assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 1, "send to developers before any option");
+  assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1, "or decide and close");
+  await desk.click('#detail [data-act="decide"]');
+  await desk.fill("#confirm-form [name=note]", "Headers stay as they are.");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-1/decide"));
+  assert.deepEqual(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-1/decide").body)), { text: "Headers stay as they are." });
+
+  await card("C-2");
+  assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").evaluate((x) => x.open), false, "the options fold while the prototype is live");
+  assert.equal(await desk.locator('#detail details.fold [data-act="build"]').count(), 1, "building again sits with them");
+  await desk.click('#detail .next [data-act="approve"]');
+  assert.match(await desk.textContent("#cf-body"), /Bold/, "the dialog names the prototype's option");
+  assert.equal(await desk.locator("#cf-choices input").count(), 0, "and offers no other");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-2/actions"));
+  assert.equal(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-2/actions").body)).note, "v2");
+
+  for (const id of ["C-3", "C-4"]) {
+    await card(id);
+    assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").count(), 0, `${id}: no live prototype, the options stay open`);
+    assert.equal(await desk.locator('#detail .next [data-act="decide"]').count(), 1, `${id}: decide and close on a switched-off prototype`);
+  }
+  await card("C-5");
+  assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a lead developer does not send it");
+  assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1);
+}));
+
+test("the Desk opens on Requests, a first visit too", (t) => open(t, SKIP.replace(`try { localStorage.setItem("desk-guide-seen", "1"); } catch {}`, `try { localStorage.clear(); } catch {}`), async (desk) => {
+  await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
+  assert.equal(await desk.getAttribute("#help", "aria-current"), "false", "How it works waits under the question mark");
+}));
