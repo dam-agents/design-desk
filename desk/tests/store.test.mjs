@@ -220,11 +220,13 @@ test("a live prototype's option is the one approved", () => {
   const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });
   const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
   s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset }, { id: "v2", name: "Bold", asset }] });
-  assert.equal(s.act(card.id, alice, "build", "v2").card.built.variant, "v2");
-  s.upsertCard({ id: card.id, status: "testing", prototype: { state: "live", url: "https://example.com/p" } });
+  assert.deepEqual([s.act(card.id, alice, "build", "v2", { variant: "v2", version: 1 }).card.live_pick.variant, s.card(card.id).built], ["v2", undefined], "live_pick is the one record of what goes live");
+  // A newer version drawn after the build is not what the prototype shows.
+  const asset2 = s.addAsset({ kind: "variant", name: "v2b", contentType: "text/html", data: Buffer.from("<b>y</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, status: "testing", prototype: { state: "live", url: "https://example.com/p" }, variants: [{ id: "v1", version: 1, name: "Quiet", asset }, { id: "v2", version: 1, name: "Bold", asset: asset2 }] });
   const ok = s.act(card.id, alice, "approve", "v1");
   assert.equal(ok.inbox.note, "v2", "the prototype's option, whatever the pick");
-  assert.equal(ok.card.approved.variant, "v2");
+  assert.deepEqual([ok.card.approved.variant, ok.card.approved.version], ["v2", 1], "at the version it was built from");
 });
 
 test("a request that needs a developer gets no live prototype", () => {

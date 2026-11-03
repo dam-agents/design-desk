@@ -2183,8 +2183,9 @@
       const fav = favourite(c);
       const against = [...new Set((c.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
       // A live prototype's option is the one approved; before options, the spec comes from the request.
-      const built = ["prototype", "testing"].includes(c.status) ? options.find((o) => o.id === c.built?.variant) : null;
-      const what = built ? `**${built.name}**, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
+      // What the live prototype shows: `live_pick`'s option at its version.
+      const built = ["prototype", "testing"].includes(c.status) && options.some((o) => o.id === c.live_pick?.variant) ? { id: c.live_pick.variant, name: c.live_pick.name, version: c.live_pick.version } : null;
+      const what = built ? `**${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
       res = await ask({ title: options.length ? "Approve a design" : "Send to developers", body: `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: options.length ? "Approve" : "Send to developers", choices: options.length && !built ? options : null, pick: fav?.id || null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         send: (a) => post(built?.id || a.choice || a.note || "", against.length ? { overrule: a.check } : {}) });

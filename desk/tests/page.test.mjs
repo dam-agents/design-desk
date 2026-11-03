@@ -1105,7 +1105,7 @@ const lou = { email: "lou@example.com", role: "lead-developer" }, bob = { email:
 const triage = { verdict: "design", reasons: [] }, variants = [{ id: "v1", name: "Quiet" }, { id: "v2", name: "Bold" }];
 const cards = [
   { id: "C-1", kind: "request", title: "Checked", status: "triage", triage, created_by: bob },
-  { id: "C-2", kind: "request", title: "Live", status: "testing", prototype: { state: "live", url: "https://example.com/p" }, triage, variants, built: { variant: "v2", by: lou, at: "2026-11-03T10:00:00Z" }, created_by: bob },
+  { id: "C-2", kind: "request", title: "Live", status: "testing", prototype: { state: "live", url: "https://example.com/p" }, triage, variants, live_pick: { variant: "v2", name: "Bold", version: 2, states: [], by: lou, at: "2026-11-03T10:00:00Z" }, created_by: bob },
   { id: "C-3", kind: "request", title: "Failed", status: "prototype", prototype: { state: "failed" }, triage, variants, created_by: bob },
   { id: "C-4", kind: "request", title: "Expired", status: "testing", prototype: { state: "expired" }, triage, variants, created_by: bob },
   { id: "C-5", kind: "request", title: "Against", status: "triage", triage, created_by: bob, conflicts: [{ decision: "D-1", why: "x", text: "Rows stay roomy", status: "active" }] },
@@ -1139,7 +1139,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").evaluate((x) => x.open), false, "the options fold while the prototype is live");
   assert.equal(await desk.locator('#detail details.fold [data-act="build"]').count(), 1, "building again sits with them");
   await desk.click('#detail .next [data-act="approve"]');
-  assert.match(await desk.textContent("#cf-body"), /Bold/, "the dialog names the prototype's option");
+  assert.match(await desk.textContent("#cf-body"), /Bold\*?\*?, version 2/, "the dialog names the prototype's option and version");
   assert.equal(await desk.locator("#cf-choices input").count(), 0, "and offers no other");
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-2/actions"));

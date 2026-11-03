@@ -637,8 +637,10 @@ export class Store {
       if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers and lead developers can approve designs. A lead developer can mark a request a small change, which a developer then approves.");
       if (isAuthor(c, who)) throw forbidden("You filed this request, so another developer approves it.");
     }
-    // Once a live prototype is built, approving approves the option it shows, whatever the note says.
-    if (action === "approve" && ["prototype", "testing"].includes(c.status) && (c.variants || []).some((v) => v.id === c.built?.variant)) note = c.built.variant;
+    // Once a live prototype is built, approving approves what it shows: `live_pick`'s option at
+    // its version, whatever the note says.
+    const shown = action === "approve" && ["prototype", "testing"].includes(c.status) && (c.variants || []).some((v) => v.id === c.live_pick?.variant) ? c.live_pick : null;
+    if (shown) note = shown.variant;
     // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
     const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
     // Going against a decision in force stays a designer's call, a small change included.
@@ -656,9 +658,8 @@ export class Store {
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; a small change's approval says so.
-    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...((c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
-    // Which option the live prototype shows: Approve then approves that one.
-    if (action === "build" && (c.variants || []).some((v) => v.id === note)) c.built = { variant: note, by: person(who), at: this.clock() };
+    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small),
+      ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
@@ -702,7 +703,7 @@ export class Store {
     mustBeChecked(c, "Decide");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "decision" && !i.thread)) throw bad(BUSY);
     const said = clean(text, 600, "decision");
-    c.status = "declined"; delete c.call_suggestion;
+    c.status = "declined"; delete c.call_suggestion; delete c.live_pick;
     c.decided = { by: person(who), at: this.clock(), text: said };
     c.updated = this.clock();
     const item = this.enqueue("decision", cardId, null, who, said);

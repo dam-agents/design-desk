@@ -185,8 +185,9 @@ prototype once Design Desk has checked a request:
   `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.
 - **While the live prototype is up**, the page folds the options (and building again) under it,
-  and Approve approves the option it was built from (`built.variant`, set on Build), whatever
-  the note.
+  and Approve approves what it was built from — `live_pick`'s option and version (set on Build
+  it live), whatever the note — and keeps them in `approved.variant` and `approved.version`; the
+  spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
 
 ## Claims
 
