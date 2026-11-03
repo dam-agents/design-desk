@@ -108,6 +108,8 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click("#request-dialog #type-choice button[data-type=bug]");
     assert.equal(await desk.isVisible("#rq-skills"), false, "a bug offers no skills");
     assert.equal(await desk.isVisible("#rq-vision"), false, "a bug asks for no picture of how it should look");
+    assert.equal(await desk.isVisible("#rq-count"), false, "a bug asks for no options");
+    assert.equal(await desk.isVisible("#rq-grill"), false, "a bug asks for no questions first");
     await desk.click("#request-dialog #type-choice button[data-type=idea]");
     await rq.button("Send").click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
@@ -117,6 +119,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(sent.length, 1);
     assert.equal(JSON.parse(sent[0].body).problem, "Make the send button bigger");
     assert.deepEqual(JSON.parse(sent[0].body).skills, { copy: true, brand: false }, "each switch is sent as it was set");
+    assert.deepEqual([JSON.parse(sent[0].body).options, JSON.parse(sent[0].body).grill], [3, false], "three options and no questions unless changed");
     await desk.click("#new-request");
     await rq.close();
     await settled("/api/requests", 1, "a close after a Send sends nothing");
@@ -681,9 +684,10 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
   const issues = `const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", needs: ["A spend column in the agents list"], sketches: 0,
     source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41", author: "alice", milestone: "Sprint 12", assignees: ["bob"] }, waiting: [], threads: [] };
   const later = { id: "is2", kind: "issue", status: "open", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], sketches: 0, source: { repo: "acme/widgets", issue: 40, author: "erin" } };
-  const gone = { id: "is3", kind: "issue", status: "archived", title: "Closed", bucket: "sprint", source: { repo: "acme/widgets", issue: 39 } };`;
+  const gone = { id: "is3", kind: "issue", status: "archived", title: "Closed", bucket: "sprint", source: { repo: "acme/widgets", issue: 39 } };
+  const made = { id: "r9", kind: "request", title: "Spend column options", status: "feedback", from: "is1", by: { email: "lead@example.com" } };`;
   const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
-    .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, later, gone]")
+    .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, later, gone, made]")
     .replace("can: { request: true,", "can: { draw: true, \"follow-up\": true, request: true,")
     .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/ch1"');
   const run = await launch(t, bridge);
@@ -704,6 +708,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.click('[data-card="is1"]');
     await desk.waitForSelector("text=What the UI will need");
     assert.match(await desk.textContent("#detail"), /No picture yet[\s\S]*Design Desk sketches it in one of its next daily checks/);
+    assert.match(await desk.textContent("#detail .linked"), /A request from this.*Spend column options/, "the issue lists the request made from it");
 
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
     await desk.click('[data-act="draw"]');
@@ -718,9 +723,76 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.click("[data-adjust]");
     assert.equal(await desk.textContent("#rq-title"), "Design this issue");
     assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "A spend column in the agents list", "the needs start the request");
+    await desk.fill("#request-dialog input[name=options]", "5");
+    assert.equal(await desk.textContent("#rq-count-say"), "5 options");
+    await desk.fill("#request-dialog input[name=options]", "0");
+    assert.equal(await desk.textContent("#rq-count-say"), "None", "none: only a check of what can be done");
+    await desk.click("#rq-grill input");
     await desk.locator("#request-dialog .actions button", { hasText: "Send" }).click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/requests"));
-    assert.equal(JSON.parse((await posts("/api/requests"))[0].body).from, "is1", "the request comes from the issue");
+    const body = JSON.parse((await posts("/api/requests"))[0].body);
+    assert.deepEqual([body.from, body.options, body.grill], ["is1", 0, true], "from the issue, with no options and questions first");
+  } finally { await run.close(); }
+});
+
+// A request from an issue: what the issue says about the design, and how each option meets its stories.
+const BRIDGE_STORIES = `<script>
+window.calls = [];
+const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41" } };
+const request = { id: "r7", kind: "request", title: "Spend in the list", status: "feedback", created: new Date().toISOString(), triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, threads: [],
+  request: { type: "feature", problem: "A spend column", from: "is1", options: 2, grill: true }, grill: { state: "done", asked: 2, summary: "- Weekly spend" },
+  issue_brief: { text: "Each agent shows its weekly spend.", stories: [{ id: "s1", text: "As a lead I see what each agent spends" }, { id: "s2", text: "I can sort by spend", derived: true }] },
+  variants: [{ id: "v1", name: "Column", asset: "A-1", fidelity: "mockup", stories: [{ story: "s1", met: "yes", how: "A spend column on every row.", parts: [{ selector: "#spend", label: "Spend column" }] }, { story: "s2", met: "partly", how: "Sorting needs a developer.", parts: [] }] },
+    { id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };
+window.platform = { async request({ method, path }) {
+  calls.push({ method, path });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }
+    : path === "/api/cards" ? { cards: [issue, { ...request, from: "is1", variants: 2, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r7" ? { card: request }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><table><tr><th id="spend">Spend</th></tr></table></body>' } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a request from an issue names it, folds what the issue says, and shows how each option meets each user story", (t) => open(t, BRIDGE_STORIES, async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.waitForSelector("text=User stories");
+  assert.match(await desk.textContent("#detail .linked"), /Designs the issue.*See what each agent spends.*Issue #41/, "the request names the issue it designs");
+  assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design · 2 user stories/);
+  assert.match(await desk.textContent("#detail"), /Asked for: 2 options · questions first/);
+  assert.match(await desk.textContent("#detail"), /What we agreed before the design · 2 questions/);
+  assert.equal(await desk.textContent('[data-story="s1"] .met'), "✓");
+  assert.match(await desk.textContent(".stories .how"), /Meets it — Column[\s\S]*A spend column on every row/);
+  await desk.waitForFunction(() => document.querySelector("#story-frame")?.srcdoc.includes('id="spend"'));
+  assert.equal(await desk.textContent('[data-story-part="0"]'), "Spend column", "the story's parts, to show in the design");
+  await desk.click('[data-story="s2"]');
+  assert.match(await desk.textContent(".stories .story"), /I can sort by spend.*from the issue's text/);
+  assert.match(await desk.textContent(".stories .how"), /Meets part of it — Column[\s\S]*needs a developer/);
+  await desk.click('.tabs:has(+ .stories) [data-variant="v2"]');
+  assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
+}));
+
+test("Draw design options asks how many, starting at the request's own count, and sends the one picked", async (t) => {
+  const bridge = BRIDGE_STORIES.replace('status: "feedback"', 'status: "triage"').replace("can: { vote: true, comment: true }", "can: { vote: true, comment: true, explore: true }")
+    .replace("calls.push({ method, path });", "calls.push({ method, path, body });").replace("async request({ method, path })", "async request({ method, path, body })");
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk, posts, settled } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.click('[data-act="explore"]');
+    assert.equal(await desk.isChecked('#confirm-form input[name=choice][value="2"]'), true, "the request asked for two");
+    const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
+    await cf("Cancel").click();
+    await settled("/api/cards/r7/actions", 0, "Cancel draws nothing");
+    await desk.click('[data-act="explore"]');
+    await desk.check('#confirm-form input[name=choice][value="4"]');
+    await cf("Draw them").click();
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/actions"));
+    assert.deepEqual(JSON.parse((await posts("/api/cards/r7/actions"))[0].body), { action: "explore", note: "", count: 4 });
   } finally { await run.close(); }
 });
 

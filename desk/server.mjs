@@ -204,6 +204,7 @@ async function viewerRoute(req, res, url, who) {
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
     const { title, problem, goal, screen, steps, from, figma } = b;
+    // How many options, and questions first: a bug is fixed, not designed, so it has neither.
     // From an issue on the Issues page it designs that feature; from a change it adjusts it.
     const type = from ? (store.card(String(from)).kind === "issue" ? "feature" : "adjustment") : b.type === "bug" ? "bug" : "idea";
     // A bug is fixed, not designed: no picture of it and no skills. Only the offered skills count.
@@ -215,7 +216,10 @@ async function viewerRoute(req, res, url, who) {
     const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
     const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "" }));
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills }), s, who));
+    const options = type === "bug" ? 0 : b.options, grill = type !== "bug" && b.grill === true;
+    // The options start right after triage only for someone who may start them.
+    const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto }), s, who));
   }
   // A lead asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }
@@ -243,7 +247,7 @@ async function viewerRoute(req, res, url, who) {
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
-    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, overrule: b.overrule === true }), s, who));
+    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true }), s, who));
   }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
 }

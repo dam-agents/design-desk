@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.25.0 — 2026-11-03
+## 1.26.0 — 2026-11-03
 
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
@@ -19,6 +19,16 @@ and decisions stay a designer's ([docs/desk.md](docs/desk.md) → **Roles**). A 
 ([docs/desk.md](docs/desk.md) → **Small changes**); offer the operator to give it to someone in
 `## Desk people` (**operator-only**). Request cards gain `size` and `approved`; older cards
 need no change.
+
+## 1.25.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). New request now asks how many
+options to draw and whether to ask questions first (the bundled `grill-me` skill, action
+`grill`); a request from an issue shows its user stories ([docs/requests.md](docs/requests.md)).
+Older requests have neither and need nothing.
 
 ## 1.24.0 — 2026-11-03
 

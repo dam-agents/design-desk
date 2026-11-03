@@ -1,7 +1,7 @@
 ---
 name: variants
 description: >-
-  Turn a design request into two or three genuinely distinct variants on sample data — each
+  Turn a design request into genuinely distinct variants on sample data (as many as it asks, two or three by default) — each
   one clickable, self-contained HTML file — or one settled design shown across the screens it
   touches. With a GitHub repo, each variant is built into the product's real screens: its own
   stylesheet compiled by its own toolchain, its real icons and components, markup and copy
@@ -113,8 +113,10 @@ same markup re-skins between brand and Carbon. Pull icons from Carbon by name
 
 ## 6. Approaches
 
-Two or three **genuinely distinct** ideas (a different interaction model or placement), not
-three variants of one widget — two strong directions beat three that overlap. Each is the
+As many **genuinely distinct** ideas as the request asks (a Desk request's `request.options`,
+one to five; else two or three), each a different interaction model or placement, not
+variants of one widget — two strong directions beat three that overlap; say on the card when
+the request asked for more than are genuinely distinct. Each is the
 **smallest clean change** that solves the problem, reusing the product's existing patterns
 before inventing a device. If a control needs a legend, it's too complex. When the user wants
 one settled design (or the discussion already settled it), make the views **the screens of
@@ -210,7 +212,10 @@ Self-check:
 - **A Desk request** — docs/requests.md → Variants: one asset per variant (`design desk asset
   … --kind variant`), each with its name, one-line rationale (when it wins) and fidelity
   (`wireframe` or `mockup`). Give every element people may comment on a stable, readable
-  structure: the Desk pins a comment to an element by its position and text.
+  structure: the Desk pins a comment to an element by its position and text. With the card's
+  `issue_brief`, each variant also says how it meets every user story, pointing at the
+  elements that do it (`stories`, docs/requests.md → Variants): give those elements an `id`
+  so their CSS path stays short and survives a redraw.
 - **Chat or Slack** — docs/requests.md → Chat and Slack: a private artifact and a reply with
   the link plus one line per approach; the style used (repo@commit, brand, Carbon or
   wireframe); in repo mode the files you built from and flags-off or which flag; anything you

@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SERVER = join(dirname(fileURLToPath(import.meta.url)), "..", "server.mjs");
-const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example.com | lead |\n| alice@example.com | designer |\n";
+const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example.com | lead |\n| alice@example.com | designer |\n| pat@example.com | pm |\n";
 
 const freePort = () => new Promise((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 
@@ -58,6 +58,20 @@ test("only a lead asks for a new person; the owner's ask says so; the agent cann
   const enqueue = await d.agent("/agent/enqueue", { kind: "person", card: "C-1" });
   assert.equal(enqueue.status, 400);
   assert.match(enqueue.body.error, /only from a lead/);
+});
+
+test("a request's options start after triage only for someone who may start them; a bug asks for none", async (t) => {
+  const d = await desk(t);
+  const file = (email, body) => d.viewer(email, "/api/requests", { problem: "The list is busy.", ...body });
+  const designer = await file("alice@example.com", { options: 4, grill: true });
+  assert.equal(designer.status, 201);
+  assert.deepEqual([designer.body.card.request.options, designer.body.card.request.grill, designer.body.card.request.auto], [4, true, true]);
+  const pm = await file("pat@example.com", {});
+  assert.deepEqual([pm.body.card.request.options, pm.body.card.request.auto], [3, false], "a pm's options wait for a designer");
+  assert.equal((await file("alice@example.com", { options: 0 })).body.card.request.auto, false, "none asked for: nothing starts");
+  const bug = await file("alice@example.com", { type: "bug", options: 5, grill: true });
+  assert.deepEqual([bug.body.card.request.options, bug.body.card.request.grill, bug.body.card.request.auto], [0, false, false]);
+  assert.equal((await file("guest@example.com", {})).status, 403, "a guest files no request");
 });
 
 test("a person's folded intros are kept for them alone, guests included", async (t) => {

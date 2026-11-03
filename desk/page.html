@@ -177,6 +177,22 @@
   label.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
   label.switch input:checked { background: var(--accent); } label.switch input:checked::after { transform: translateX(14px); }
   label.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* New request: how many options (none to five), and questions first. */
+  .count-pick { display: grid; gap: 4px; } .count-pick .row2 { display: flex; gap: 12px; align-items: center; }
+  .count-pick input[type=range] { flex: 1; accent-color: var(--accent); padding: 0; border: 0; background: none; }
+  .count-pick output { min-width: 15ch; font-weight: 600; font-size: 13.5px; }
+  /* Where a request came from, and the requests a card started. */
+  .linked { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); font-size: 13px; max-width: var(--measure); margin: 8px 0; }
+  .linked .k { color: var(--muted); }
+  /* The issue's user stories: pick one, see the parts of the option that meet it and how. */
+  .stories { display: grid; grid-template-columns: minmax(200px, 30%) minmax(0, 1fr); gap: 14px; margin: 6px 0; }
+  .stories ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; align-content: start; }
+  .stories ol button { width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; display: flex; gap: 8px; }
+  .stories ol button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--muted); }
+  .stories .story { font-weight: 600; margin: 0 0 8px; } .stories .frame { height: 52vh; }
+  .stories .how { margin-top: 10px; }
+  @media (max-width: 900px) { .stories { grid-template-columns: 1fr; } }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -300,6 +316,10 @@
     <label><span id="rq-problem-label">What would you change, and for whom?</span><textarea name="problem" maxlength="4000" required></textarea></label>
     <label id="rq-vision"><span>How do you picture it? (optional)</span><textarea name="vision" maxlength="4000" placeholder="e.g. calmer, like the cards in Settings; the main button on the right; less text"></textarea></label>
     <label><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
+    <div class="count-pick" id="rq-count"><span class="hint" style="margin:0">How many design options should Design Desk draw?</span>
+      <div class="row2"><input type="range" name="options" min="0" max="5" step="1" value="3" aria-label="How many design options to draw" /><output id="rq-count-say">3 options</output></div>
+      <span class="hint" style="margin:0" id="rq-count-hint"></span></div>
+    <label class="switch" id="rq-grill"><input type="checkbox" role="switch" name="grill" /><span>Ask me questions first<small>Before it starts, Design Desk asks you one question at a time about the decisions and how you picture it, each with its suggested answer.</small></span></label>
     <fieldset class="skills" id="rq-skills" hidden><legend>What Design Desk uses for the options</legend><div id="rq-skill-list"></div></fieldset>
     <label id="rq-figma" hidden><span>Figma link (optional)</span><input name="figma" maxlength="500" placeholder="https://www.figma.com/design/…" /></label>
     <div class="drop" id="rq-drop">
@@ -377,7 +397,7 @@
   const WORK = {
     request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
     "follow-up": "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
-    explore: "Drawing two or three design options.",
+    explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     revise: "Changing the design as you asked.",
     build: "Building the live prototype: a private copy of the product with this design. The first one can take up to an hour; you can close this page.",
@@ -443,7 +463,7 @@
   const GUIDE = () => `<h2>How Design Desk works</h2>
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
 <ol>
-<li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
+<li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws the options you asked for (or only checks, if you asked for none), the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
 <li><b>Changes</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches (a screen or a part in Product opens from there), and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
 <li><b>Issues</b> — what the team plans that will change the screens: the current sprint (with the issues of its epics), the next sprint, issues someone has taken, and the ones labelled for design. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches them on its own, the sprint's first; press <b>Draw it</b> to have one sketched now, or <b>Design this</b> to start a request.</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
@@ -732,7 +752,7 @@
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
         ["Filter by <b>Open</b>, <b>Presentation</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
-      steps: ["Describe the problem in New request.", "Design Desk checks what can be done and draws two or three options.", "The team votes and comments; a designer refines one and adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
+      steps: ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer refines one and adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
     issues: { about: "what the team plans that will change the screens",
       see: ["The open issues that change the screens: the current sprint's (with its epics' issues) first, then the next sprint's, the ones someone has taken and the ones labelled for design.",
         "On each issue: what the UI will need, a picture of how it looks now and a sketch of how it could look.",
@@ -1196,6 +1216,7 @@
       <div class="sub">${ageChip(c)}${c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : ""}${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${requestsFrom(c)}
       ${attentionLine(c)}
       ${againstBox(c)}${followsLine(c)}
       <div class="actions">
@@ -1226,6 +1247,7 @@
       <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${requestsFrom(c)}
       ${againstBox(c)}${followsLine(c)}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
       ${open ? `<div class="actions">
@@ -1415,8 +1437,9 @@
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
     if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under Changes.", buttons: "" };
     if (busy.length) return { text: "", buttons: hasOptions ? b("workspace", "Open the design workspace") : "" };
-    if (c.status === "triage" && !c.triage) return { text: "Design Desk will check this soon.", buttons: "" };
-    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", buttons: b("explore", "Draw design options", true) } : { text: "Next: a designer or developer starts the design options.", buttons: "" };
+    if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
+    const none = c.request?.options === 0 ? "No design options were asked for." : "";
+    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) } : { text: none || "Next: a designer or developer starts the design options.", buttons: "" };
     if (c.status === "spec") return { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
@@ -1559,19 +1582,90 @@
       <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub">${bug ? `<span class="chip bad">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}<span>${esc(when(c.created))}</span></div>
       ${origin(c)}
+      ${renderLinked(c)}
       ${renderSteps(c)}
       ${renderStatus(c)}
       ${againstBox(c)}${followsLine(c)}
-      <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${!bug && r.goal ? md(r.goal) : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
+      <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${!bug && r.goal ? md(r.goal) : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}${askedFor(r)}</div>
       ${renderResearch(c.research)}
+      ${renderIssueBrief(c)}
+      ${renderGrill(c)}
       ${shots(c.screens)}
       ${renderVerdict(c)}
       ${renderOptions(c)}
+      ${renderStories(c)}
       ${renderPrototype(c)}
       ${renderImpact(c.impact)}
       ${c.spec?.asset ? `<details class="fold"><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">Open the GitHub issue ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">Open the draft change on GitHub ↗</a></p>` : ""}` : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
       ${renderThreads(c, { skipAsks: true })}`;
+  }
+
+  // ---------- where a request came from, and what it asked for ----------
+  // A request from an issue designs it; one from a change under New adjusts it. Both cards
+  // link to each other: the request names its card, the card lists its requests.
+  function renderLinked(c) {
+    const p = S.cards.find((x) => x.id === c.request?.from);
+    if (!p) return "";
+    const s = p.source || {};
+    const out = s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${p.kind === "issue" ? `Issue #${esc(s.issue || "")}` : `PR #${esc(s.pr || "")}`} ↗</a>` : "";
+    return `<div class="linked"><span class="k">${p.kind === "issue" ? "Designs the issue" : p.kind === "change" ? "Adjusts the change" : "Comes from"}</span><button class="anchor" data-card="${esc(p.id)}">${esc(p.title)}</button>${num(p)}${out}</div>`;
+  }
+  function requestsFrom(c) {
+    const rs = S.cards.filter((x) => x.kind === "request" && x.from === c.id);
+    if (!rs.length) return "";
+    return `<div class="linked"><span class="k">${rs.length === 1 ? "A request from this" : `${rs.length} requests from this`}</span>${rs.map((x) => `<button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>${num(x)}<span class="chip">${esc(STATUS[x.status] || x.status)}</span>`).join("")}</div>`;
+  }
+  function askedFor(r) {
+    if (r.type === "bug" || r.options === undefined) return "";
+    return `<p class="hint">Asked for: ${r.options ? optionsSay(r.options).toLowerCase() : "no design options, only a check of what can be done"}${r.grill ? " · questions first" : ""}</p>`;
+  }
+
+  // What the issue says about the design: only the parts about what people see (docs/requests.md → Research).
+  function renderIssueBrief(c) {
+    const b = c.issue_brief;
+    if (!b || (!b.text && !(b.stories || []).length)) return "";
+    const p = S.cards.find((x) => x.id === c.request?.from), url = p?.source?.url || b.url || c.origin?.url;
+    return `<details class="fold"><summary>What the issue says about the design${(b.stories || []).length ? ` · ${plural(b.stories.length, "user story", "user stories")}` : ""}</summary><div class="panel">
+      ${b.text ? md(b.text) : ""}${(b.stories || []).length ? `<h4>User stories</h4><ul>${b.stories.map((x) => `<li>${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the text</span>` : ""}</li>`).join("")}</ul>` : ""}
+      ${url ? `<p class="hint"><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">The whole issue on GitHub ↗</a></p>` : ""}</div></details>`;
+  }
+
+  // Questions before the design (the grill action): what was agreed, once it is.
+  function renderGrill(c) {
+    if (!c.request?.grill) return "";
+    const g = c.grill || {};
+    if (g.state !== "done") return `<p class="hint">💬 Design Desk asks its questions here first, one at a time${g.asked ? ` (${plural(g.asked, "question", "questions")} so far)` : ""}; your answers shape the options.</p>`;
+    return `<details class="fold"><summary>What we agreed before the design${g.asked ? ` · ${plural(g.asked, "question", "questions")}` : ""}</summary><div class="panel">${md(g.summary || "Nothing to add.")}</div></details>`;
+  }
+
+  // How each option meets the issue's user stories: pick a story, see the parts that do it.
+  const MET = { yes: ["✓", "Meets it"], partly: ["◐", "Meets part of it"], no: ["○", "Does not meet it"] };
+  function storyOf(c) {
+    const ss = c.issue_brief?.stories || [];
+    if (!S.story || !ss.some((x) => x.id === S.story)) S.story = ss[0]?.id || null;
+    return ss.find((x) => x.id === S.story) || null;
+  }
+  function renderStories(c) {
+    const ss = c.issue_brief?.stories || [];
+    if (!ss.length) return "";
+    const vs = c.variants || [], v = vs.find((x) => x.id === S.variant) || null, st = storyOf(c);
+    const cov = (id) => (v?.stories || []).find((x) => x.story === id) || null, k = cov(st.id);
+    const mark = (x) => { const m = MET[cov(x.id)?.met]; return `<span class="met ${esc(cov(x.id)?.met || "")}" title="${esc(m?.[1] || "Not said yet")}">${m?.[0] || "·"}</span>`; };
+    const detail = !v ? `<p class="hint">Once the options are drawn, Design Desk shows here how each one meets this story.</p>`
+      : !k ? `<p class="hint">Design Desk has not said yet how ${esc(v.name)} meets this story.</p>`
+      : `${k.parts.length ? `<div class="actions" style="margin:0 0 8px">${k.parts.map((x, i) => `<button class="btn small" data-story-part="${i}" title="Show it in the design">${esc(x.label)}</button>`).join("")}</div><iframe class="frame" id="story-frame" sandbox="allow-scripts" title="${esc(v.name)}: ${esc(st.text)}"></iframe>` : ""}
+        <div class="panel how"><b>${esc(MET[k.met][1])} — ${esc(v.name)}</b>${md(k.how)}</div>`;
+    return `<h3>User stories</h3>
+      ${vs.length > 1 ? `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v?.id}">${esc(x.name)}</button>`).join("")}</div>` : ""}
+      <div class="stories"><ol>${ss.map((x) => `<li><button data-story="${esc(x.id)}" aria-pressed="${x.id === st.id}">${v ? mark(x) : ""}<span>${txt(x.text)}</span></button></li>`).join("")}</ol>
+        <div><p class="story">${txt(st.text)}${st.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</p>${detail}</div></div>`;
+  }
+  // The story's parts, outlined in the option and the first one scrolled into view.
+  function storyPins() {
+    const c = S.card, v = (c?.variants || []).find((x) => x.id === S.variant), st = c && storyOf(c);
+    const k = st && (v?.stories || []).find((x) => x.story === st.id);
+    return k ? k.parts.map((x, i) => ({ n: i + 1, selector: x.selector, label: x.label, state: "story" })) : [];
   }
 
   // ---------- the design workspace ----------
@@ -1592,7 +1686,7 @@
     // A note on another view of the design opens that view first, through the review bar.
     const reveal = (el) => { const v = el?.closest("[data-view]"); if (v && !v.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(v.dataset.view) + '"]')?.click(); };
     const box = (el, color, label, solid) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; d.appendChild(b); } layer.appendChild(d); };
-    const draw = () => { layer.textContent = ""; for (const p of pins) { const el = find(p.selector); if (el) box(el, p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", "#" + p.n, false); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
+    const draw = () => { layer.textContent = ""; for (const p of pins) { const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story"); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
     addEventListener("scroll", draw, true); addEventListener("resize", draw); setInterval(draw, 700);
     // The screen shown is kept across options: the Desk names the one to open when the frame
     // loads, and from then on hears of each screen the person moves to.
@@ -1601,7 +1695,7 @@
     const openView = (d) => { const vs = [...document.querySelectorAll("[data-view]")]; const t = vs.find((v) => d.view_name && v.dataset.viewName === d.view_name) || (!d.view_name && vs.find((v) => v.dataset.view === d.view)); if (t && !t.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(t.dataset.view) + '"]')?.click(); };
     const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
     new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
-    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     addEventListener("mouseover", (e) => { if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
@@ -1784,6 +1878,13 @@
     if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     if (vf && v) { try { vf.srcdoc = decode(await asset(v.asset)); } catch {} }
+    const sf = $("#story-frame");
+    if (sf && v) {
+      try {
+        sf.srcdoc = withScript(decode(await asset(v.asset)));
+        sf.onload = () => { const pins = storyPins(); sf.contentWindow?.postMessage({ type: "desk-pins", pins }, "*"); if (pins[0]) sf.contentWindow?.postMessage({ type: "desk-show", selector: pins[0].selector }, "*"); };
+      } catch {}
+    }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
@@ -1834,7 +1935,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null }; }
+    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -1942,6 +2043,12 @@
       res = await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. The first one can take up to an hour.", ok: "Build it", choices: options.length > 1 ? options : null, pick: fav?.id || options[0]?.id || null,
         check: "Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)", checked: true,
         send: (a) => post(a.choice || options[0]?.id || "", { ask_first: a.check }) });
+      if (!res) return;
+    }
+    if (name === "explore") {
+      const n = c.request?.options || 3;
+      res = await ask({ title: "Draw design options", body: "Design Desk draws genuinely different directions, each built into the real screen on sample data. It takes a few minutes; the options appear here.", ok: "Draw them",
+        choices: [1, 2, 3, 4, 5].map((k) => ({ id: String(k), name: optionsSay(k) })), pick: String(n), send: (a) => post("", { count: Number(a.choice || n) }) });
       if (!res) return;
     }
     if (name === "history") {
@@ -2097,6 +2204,8 @@
     }
     if (ds.choose !== undefined) { await api("POST", `/api/cards/${S.card.id}/chosen`, { variant: ds.choose || null }); toast(ds.choose ? "Picked as the winner." : "No winner picked."); await refreshList(); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
+    if (ds.story) { S.story = ds.story; renderDetail(); return; }
+    if (ds.storyPart) { const pin = storyPins()[Number(ds.storyPart)]; if (pin) $("#story-frame")?.contentWindow?.postMessage({ type: "desk-show", selector: pin.selector }, "*"); return; }
     if (ds.vote) {
       const mine = S.card.votes?.[S.variant]?.[myKey()]?.vote;
       const vote = mine === ds.vote ? "none" : ds.vote;
@@ -2183,9 +2292,20 @@
     $("#rq-problem-label").textContent = type === "bug" ? "What's wrong, and where? What did you expect instead?" : "What would you change, and for whom?";
     // A bug is fixed, not designed: no picture of how it should look, no skills to choose.
     $("#rq-vision").hidden = type === "bug";
+    $("#rq-count").hidden = type === "bug"; $("#rq-grill").hidden = type === "bug";
     $("#rq-skills").hidden = type === "bug" || !(S.me?.skills || []).length;
   }
   document.addEventListener("click", (e) => { const b = e.target.closest("#type-choice button"); if (b) setType(b.dataset.type); });
+
+  // The options slider says what it will do: none is a check of what can be done only.
+  const optionsSay = (n) => (n ? plural(n, "option", "options") : "None");
+  function sayCount() {
+    const n = Number($("#request-form").options.value);
+    $("#rq-count-say").textContent = optionsSay(n);
+    $("#rq-count-hint").textContent = !n ? "Design Desk only checks what can be done as a design change; a designer can still have options drawn later."
+      : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer starts them after Design Desk checks what can be done.";
+  }
+  $("#request-form").options.addEventListener("input", sayCount);
 
   // A picture is shrunk in the browser before it is sent: 1600 px wide at most, JPEG.
   async function addPicture(file, list = pictures, thumbs = "#rq-thumbs", max = 2) {
@@ -2218,13 +2338,13 @@
     const dlg = $("#request-dialog"), f = $("#request-form");
     f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
     $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
-    setType("idea");
+    setType("idea"); sayCount();
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !S.me?.figma;
     const issue = from?.kind === "issue";
     $("#rq-title").textContent = issue ? "Design this issue" : from ? "Adjust this change" : "New request";
     $("#rq-hint").textContent = issue
-      ? "Design Desk checks what can be done as a design change, draws two or three options for this issue, and the team picks one."
+      ? "Design Desk checks what can be done as a design change, draws options for this issue, shows how each meets the issue's user stories, and the team picks one."
       : from
       ? "Tell Design Desk what should look different. It draws options; once a designer approves one, the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
@@ -2314,6 +2434,7 @@
     const skills = design ? Object.fromEntries([...document.querySelectorAll("#rq-skill-list input[data-skill]")].map((i) => [i.dataset.skill, i.checked])) : {};
     const body = { type: f.type.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
       ...(design && f.vision.value.trim() ? { vision: f.vision.value } : {}), ...(Object.keys(skills).length ? { skills } : {}),
+      ...(design ? { options: Number(f.options.value), grill: f.grill.checked } : {}),
       ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
     toast("Sent. Design Desk first checks what can be done; this page updates by itself.");

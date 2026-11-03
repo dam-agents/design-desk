@@ -58,10 +58,31 @@ The person deciding sees it on the card, and every later step builds on it.
    and a request or option that goes against one in force gets `conflicts`
    ([desk.md](desk.md) → Decisions). A request
    that switched `impact` off (`request.skills`, Variants below) skips this step.
+9. **The issue.** A request from an issue (`request.from` an issue card, or an `origin` of
+   kind `issue`) gets `issue_brief: {text, url, stories}` in one `design desk upsert`: `text`
+   is only what the issue says about what people see (screens, parts, states, words, flows),
+   in plain words, never its back end; `stories` its user stories (`{id, text}`, at most 12),
+   each as the issue writes it, or written from its text with `derived: true` when it has
+   none. The page shows both on the request, and how each option meets each story (Variants).
 
 Variants, the prototype and the spec all take the research into account: they respect a
 deliberate decision unless the team chose to reverse it, avoid a pull request in flight or
 build on it, and link the issues they relate to.
+
+## Questions first (`request.grill`, after research)
+
+A request whose New request switched **Ask me questions first** on is questioned before
+triage, with the `grill` action's skill (`design skill grill --repo <repo>`; bundled:
+`grill-me`).
+
+1. Each run asks **one** question: `design desk ask C-<n> <file> --step request` with one
+   question in `questions` (its options and `suggested`), then `design desk upsert`
+   `{id, grill: {state: "asking", asked: <n>}}` and close your item `--outcome asked`. The
+   person's answer puts the request back on the queue.
+2. The next run reads every `asks` thread of the card with its answer and asks the next
+   question, or stops.
+3. Done → `grill: {state: "done", asked, summary}` (the skill's bullets), then triage in the
+   same run. Triage, the options and the spec follow the summary.
 
 ## Triage (`requests_due`, after research)
 
@@ -85,7 +106,9 @@ The person deciding should know it before a single variant exists.
    a part nobody asked for. The Desk folds it. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
-   `design desk inbox` already holds an open `explore` item of the card.
+   `design desk inbox` already holds an open `explore` item of the card. So does a request
+   with `request.auto` (filed by someone who may start options, with `request.options` above
+   0) whose verdict is not `product`.
 6. `design desk done I-<n> --outcome triaged`.
 
 A request too vague to triage gets **one question from you** instead, with your best guess
@@ -105,7 +128,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   (read its `SKILL.md`), one switched off is not, even where it would run by default; a
   skill not listed follows the usual rules. Say on the card when a choice could not be kept.
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
-  `status: variants`, make two or three genuinely distinct approaches
+  `status: variants`, make `request.options` genuinely distinct approaches (one to five; three
+  when it is missing; 0 means the person asked for none, so only a designer's Draw starts them)
   (the skill says what distinct means), each one self-contained HTML file built into the
   real screen in the product's own styles; `fidelity: wireframe` (`--style wireframe`,
   grayscale boxes) when the question is structure or flow, `mockup` (the product's styles)
@@ -132,9 +156,15 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   notes ask, rebuild only that option, and before closing the item look at the inbox once
   more (`design desk inbox`): a `revise` for the same card that arrived meanwhile is claimed
   and done in the same run.
+- **User stories**: with an `issue_brief`, each option says how it meets every story:
+  `stories: [{story, met, how, parts}]` — `met` is `yes`, `partly` or `no`; `how` one or two
+  plain sentences; `parts` the elements that do it (`{selector, label, view}`, at most 6: a
+  CSS path in the option's file, a plain label, the `data-view` it is on). The page outlines
+  them when a person picks the story. An entry without `stories` keeps the option's coverage
+  from before; a revised option whose parts moved sends its new `stories`.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
-  `variants: [{id, name, rationale, fidelity, asset}]` (rationale: one line on when this
-  one wins) and `status: feedback` in one `design desk upsert`.
+  `variants: [{id, name, rationale, fidelity, asset, stories}]` (rationale: one line on when
+  this one wins) and `status: feedback` in one `design desk upsert`.
 - Look at every variant's screenshots before upload (`design shot`); a variant over 700 KB
   is split or its images shrunk.
 - A variant shows no real person, no real customer data, and no invented number presented

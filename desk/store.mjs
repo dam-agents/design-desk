@@ -16,6 +16,8 @@ export const LIMITS = {
   change: { title: 90, summary: 180, sections: 5, section: 400 },
   // An issue on the Issues page: what it brings, and in a few bullets what the UI will need.
   issue: { title: 90, summary: 180, needs: 3, need: 200, sketches: 2 },
+  // The user stories of the issue a request came from, and how each option meets them.
+  stories: 12,
   // Earlier looks of one element or screen kept on its card; the oldest go first.
   looks: 30,
   // The whole store is one file rewritten on every change; past this people's writes
@@ -143,6 +145,14 @@ function cleanSkills(v) {
   if (e.length > 20) throw bad("skills names 20 skills at most");
   for (const [k, on] of e) if (!SKILL_NAME.test(k) || typeof on !== "boolean") throw bad("skills must be {name: on}");
   return e.length ? Object.fromEntries(e) : null;
+}
+// How many design options a request asks for: none, or one to five (docs/requests.md → Variants).
+export const MAX_OPTIONS = 5;
+function cleanCount(v, fallback = 3) {
+  if (v === undefined || v === null || v === "") return fallback;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 0 || n > MAX_OPTIONS) throw bad(`options must be a whole number from 0 to ${MAX_OPTIONS}`);
+  return n;
 }
 
 export function emptyDb() {
@@ -471,7 +481,7 @@ export class Store {
   // Types: an idea for the design; a UI bug; a feature (a larger piece, usually an
   // issue); an adjustment of UI a developer built (a pull request or a change card);
   // a proposal the agent made for a new feature.
-  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null }) {
+  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false }) {
     if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
     const request = {
@@ -481,6 +491,10 @@ export class Store {
       figma: figma ? String(figma) : null,
       // How the person pictures it, and the skills they switched for its options (docs/requests.md).
       vision: optText(vision, LIMITS.text, "vision"), skills: cleanSkills(skills),
+      // How many options to draw (0: none), whether Design Desk questions the person first
+      // (the grill action), and whether the options start right after triage: only when the
+      // person who filed it may start them (docs/requests.md).
+      options: cleanCount(options), grill: grill === true, auto: auto === true && cleanCount(options) > 0,
     };
     const c = {
       kind: "request", status: "triage", created: this.clock(), updated: this.clock(), created_by: person(who),
@@ -544,7 +558,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, overrule = false } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
@@ -595,6 +609,12 @@ export class Store {
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
+    // Draw design options says how many; the request keeps it for its later redraws.
+    if (action === "explore" && count !== null) {
+      const n = cleanCount(count);
+      if (n < 1) throw bad("Pick how many options to draw: one to five.");
+      c.request = { ...c.request, options: n };
+    }
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; a small change's approval says so.
@@ -801,7 +821,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "decisions", "conflicts"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts"];
     let c = fields.id ? own(this.db.cards, fields.id) : null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -852,6 +872,10 @@ export class Store {
       else if (k === "concepts") { if (!Array.isArray(fields.concepts)) throw bad("concepts must be a list"); next.concepts = fields.concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()); }
       else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
+      else if (k === "issue_brief" || k === "grill") {
+        if (next.kind !== "request") throw bad(`${k} belongs to a request`);
+        next[k] = fields[k] === null ? null : k === "grill" ? cleanGrill(fields.grill) : cleanIssueBrief(fields.issue_brief);
+      }
       // The decisions a card follows, and those it goes against (docs/desk.md → Decisions).
       else if (k === "decisions") { if (!Array.isArray(fields.decisions)) throw bad("decisions must be a list of D-n"); next.decisions = [...new Set(fields.decisions.slice(0, 20).map((id) => this.decision(String(id)).id))]; }
       else if (k === "conflicts") next.conflicts = cleanConflicts(fields.conflicts, this.db.decisions, next.variants);
@@ -1327,9 +1351,11 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.
+// An entry that leaves `stories` out keeps the option's coverage from before.
 function versioned(variants, before, at) {
-  return variants.map((v) => {
-    const old = before.find((x) => x.id === v.id);
+  return variants.map((given) => {
+    const old = before.find((x) => x.id === given.id);
+    const v = { ...given, stories: given.stories || old?.stories || null };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: old.version || 1, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -1451,8 +1477,54 @@ function cleanVariants(list, assets) {
       fidelity: ["wireframe", "mockup", "figma"].includes(v.fidelity) ? v.fidelity : "mockup",
       asset: v.asset,
       figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
+      stories: v.stories == null ? null : cleanCoverage(v.stories, i + 1),
     };
   });
+}
+
+// What an issue says about the design, for a request that came from one: the part of its
+// text that concerns what people see, and its user stories (docs/requests.md → Research).
+// A story the issue did not write as one, the agent wrote from its text: `derived`.
+const STORY_ID = /^[a-z0-9][a-z0-9-]{0,19}$/i;
+function cleanIssueBrief(b) {
+  if (!b || typeof b !== "object" || Array.isArray(b)) throw bad("issue_brief must be {text, stories}");
+  const stories = b.stories === undefined ? [] : b.stories;
+  if (!Array.isArray(stories) || stories.length > LIMITS.stories) throw bad(`issue_brief.stories is a list of at most ${LIMITS.stories}`);
+  const ids = new Set();
+  return {
+    text: optText(b.text, LIMITS.text, "issue_brief.text"),
+    url: /^https?:\/\//i.test(String(b.url || "")) ? String(b.url).slice(0, 500) : null,
+    stories: stories.map((x, i) => {
+      const id = String(x?.id || `s${i + 1}`);
+      if (!STORY_ID.test(id) || ids.has(id)) throw bad(`story ${i + 1}: its id must be short and its own`);
+      ids.add(id);
+      return { id, text: clean(x?.text, 400, "story"), derived: x?.derived === true };
+    }),
+  };
+}
+
+// How one option meets each user story: whether it does, in one or two plain sentences,
+// and the parts of the design that do it (a CSS path in the option's file, a plain label
+// and the view it is on), which the page outlines when a person picks the story.
+function cleanCoverage(list, n) {
+  if (!Array.isArray(list) || list.length > LIMITS.stories) throw bad(`variant ${n}: stories is a list of at most ${LIMITS.stories}`);
+  return list.map((x) => {
+    if (!STORY_ID.test(String(x?.story || ""))) throw bad(`variant ${n}: each story entry names its story`);
+    if (!["yes", "partly", "no"].includes(x.met)) throw bad(`variant ${n}: met must be yes, partly or no`);
+    const parts = x.parts === undefined ? [] : x.parts;
+    if (!Array.isArray(parts) || parts.length > 6) throw bad(`variant ${n}: a story points at 6 parts at most`);
+    return { story: String(x.story), met: x.met, how: clean(x.how, 600, "how"),
+      parts: parts.map((p) => ({ selector: clean(String(p?.selector || ""), 500, "selector"), label: clean(String(p?.label || ""), 120, "label"),
+        ...(p?.view ? { view: String(p.view).slice(0, 40) } : {}) })) };
+  });
+}
+
+// Questions before the design (the grill action): asking, then done with what was agreed.
+function cleanGrill(g) {
+  if (!g || !["asking", "done"].includes(g.state)) throw bad("grill state must be asking or done");
+  const asked = g.asked === undefined ? 0 : Number(g.asked);
+  if (!Number.isInteger(asked) || asked < 0 || asked > 50) throw bad("grill.asked must be a whole number from 0 to 50");
+  return { state: g.state, asked, summary: optText(g.summary, 2000, "grill.summary") };
 }
 
 function cleanTriage(t) {
