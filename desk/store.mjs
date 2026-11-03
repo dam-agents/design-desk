@@ -967,6 +967,9 @@ export class Store {
     for (const [k, x] of Object.entries(box)) if (x.via === "slack") delete box[k];
     for (const v of voters.slice(0, 500)) {
       if (!["prefer", "concern"].includes(v.vote)) continue;
+      // The agent's own 👍 and ⚠️ are the legend it puts on each post so a vote is one
+      // click (slack-polls → Share 4), not votes: a bot's reaction never counts.
+      if (v.is_bot === true) continue;
       const key = clean(String(v.key || ""), 200, "voter key");
       if (box[key]) continue;
       box[key] = { vote: v.vote, role: optText(v.role, 20, "role") || "slack", name: optText(v.name, 120, "name") || null, via: "slack", at: this.clock(), note: "" };

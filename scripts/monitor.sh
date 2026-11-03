@@ -38,6 +38,7 @@ LOG_JOB=monitor
 if ! . "$SCRIPT_DIR/log.sh" >/dev/null 2>&1; then logev() { :; }; fi
 LOG_DIR="${LOG_DIR:-$WORK/logs}"
 . "$SCRIPT_DIR/lib/config.sh" || { echo "cannot source lib/config.sh" >&2; exit 1; }
+. "$SCRIPT_DIR/lib/time.sh" || { echo "cannot source lib/time.sh" >&2; exit 1; }
 
 LOGS=()
 log() { LOGS+=("$1"); logev info monitor "$1"; }
@@ -65,9 +66,9 @@ events_since() { # <epoch>
     cat "$f" 2>/dev/null
   done | jq -cR 'fromjson? // empty' 2>/dev/null \
        | jq -c --argjson since "$1" \
-           'select(((.ts | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601?) // 0) >= $since)' 2>/dev/null
+           "$EPOCH_JQ"'select(((.ts | epoch) // 0) >= $since)' 2>/dev/null
 }
-EP='def ep: (sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601?) // 0;'
+EP="$EPOCH_JQ"
 
 # ---------------------------------------------------------------- ledger ----
 # {"alerts": {"<id>": {"kind", "first", "claimed", "sent"}}}; one writer at a time

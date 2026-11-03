@@ -64,6 +64,20 @@ out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "polls due: never synced, and the one whose request moved on" '[.polls_due[] | [.id, .close]] == [["P-2", false], ["P-3", true]]' "$out"
 assert "the slack-polls skill is read" '.read_set | index(".agents/skills/slack-polls/SKILL.md")' "$out"
 
+# A closing time is a time in whatever offset it is written (a vote was closed a minute
+# after it opened because a "+01:00" value read as the epoch), and a closing time nobody
+# can read never closes a vote at all.
+cat > "$WORK_DIR/desk/db.json" <<JSON
+{"version":1,"cards":{
+ "C-8":{"id":"C-8","kind":"request","status":"feedback","polls":[
+   {"id":"P-4","state":"open","closes":"2099-01-01T01:00:00+01:00","synced":null},
+   {"id":"P-5","state":"open","closes":"not a date","synced":null},
+   {"id":"P-6","state":"open","closes":"2001-01-01T01:00:00+01:00","synced":null}]}}}
+JSON
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "an offset closing time is read, an unreadable one never closes" \
+  '[.polls_due[] | [.id, .close]] == [["P-4", false], ["P-5", false], ["P-6", true]]' "$out"
+
 # An open council is read every council_sync_min minutes while slack_council is on; it
 # closes once its request moved on, or three days after the thread's last message.
 old_ts="$(( $(date -u +%s) - 4 * 86400 )).000100"; new_ts="$(date -u +%s).000100"

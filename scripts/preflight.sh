@@ -45,6 +45,7 @@ log() { LOGS+=("$1"); }
 # drift apart. A missing lib is fatal: parsing config by hand is how they drift.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/lib/config.sh" || { echo "cannot source lib/config.sh" >&2; exit 1; }
+. "$SCRIPT_DIR/lib/time.sh" || { echo "cannot source lib/time.sh" >&2; exit 1; }
 . "$SCRIPT_DIR/lib/toolpath.sh" 2>/dev/null && toolpath_init jq gh >/dev/null 2>&1 || true
 LOG_JOB="$MODE"
 . "$SCRIPT_DIR/log.sh" 2>/dev/null || logev() { :; }
@@ -343,8 +344,7 @@ issues_mode() {
     # first, then someone's, then the backlog; the most recently updated first in each.
     pass="$(jq -c --arg repo "$repo" --arg sprint "$sprint" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
       --rawfile ledger "$ILEDGER" --argjson cards "$cards" --argjson drawing "$drawing" \
-      --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+      --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" "$EPOCH_JQ"'
       def bucket: if $sprint != "" and .milestone.title == $sprint then "sprint" elif ((.assignees // []) | length) > 0 then "assigned" else "backlog" end;
       ($ledger | split("\n") | .[1:] | map(select(length > 0) | split("\t") | select(.[0] == $repo))
         | reduce .[] as $r ({}; .[$r[1]] = {iupd: $r[2], status: $r[3], card: $r[4], ts: $r[5], attempts: (($r[6] | tonumber?) // 0)})) as $L
@@ -416,16 +416,14 @@ inbox_mode() {
   ttl_s=$(( $(jq -r '.claim_ttl_min // 120' "$INBOX") * 60 ))
   # Open items, plus claimed ones whose claim is past its TTL (the session died).
   local items
-  items="$(jq -c --argjson now "$NOW_EPOCH" --argjson ttl "$ttl_s" '
-    def epoch: (sub("Z$"; "") + "Z") | fromdateiso8601? // 0;
+  items="$(jq -c --argjson now "$NOW_EPOCH" --argjson ttl "$ttl_s" "$EPOCH_JQ"'
     [ (.open[] | . + {takeover:false}),
       (.claimed[] | select(($now - (.claimed_at | epoch)) >= $ttl) | . + {takeover:true}) ]' "$INBOX")"
   # A live prototype whose expiry is within a day (and not yet decided for that date),
   # or whose request is closed and whose expiry passed, is due once.
   local expiring="[]"
   if [ -f "$DB" ]; then
-    expiring="$(jq -c --argjson now "$NOW_EPOCH" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+    expiring="$(jq -c --argjson now "$NOW_EPOCH" "$EPOCH_JQ"'
       [ .cards[] | select(.kind == "request" and (.prototype.state == "live" or .prototype.state == "building") and .prototype.expires != null)
         | (.status == "declined" or .status == "handed-off") as $closed
         | ((.prototype.expires | epoch) - $now) as $left
@@ -436,10 +434,10 @@ inbox_mode() {
   # request has moved past the options (approved, handed off, closed).
   local polls="[]"
   if [ -f "$DB" ]; then
-    polls="$(jq -c --argjson now "$NOW_EPOCH" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+    polls="$(jq -c --argjson now "$NOW_EPOCH" "$EPOCH_JQ"'
       [ .cards[] | . as $c | (.polls // [])[] | select(.state == "open")
-        | (((.closes | epoch) <= $now) or (($c.status | IN("variants", "feedback", "prototype", "testing")) | not)) as $close
+        | (((.closes | epoch) as $at | $at != null and $at <= $now)
+           or (($c.status | IN("variants", "feedback", "prototype", "testing")) | not)) as $close
         | select($close or .synced == null or ($now - (.synced | epoch)) >= 1800)
         | {id: .id, card: $c.id, close: $close, closes: .closes} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
@@ -449,8 +447,7 @@ inbox_mode() {
   # agent reads the thread once more and closes it only when nothing new came).
   local councils="[]"
   if [ -f "$DB" ] && [ "$(jq -r .slack_council <<<"$CONF")" = enabled ]; then
-    councils="$(jq -c --argjson now "$NOW_EPOCH" --argjson every "$(jq '.council_sync_min * 60' <<<"$CONF")" '
-      def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+    councils="$(jq -c --argjson now "$NOW_EPOCH" --argjson every "$(jq '.council_sync_min * 60' <<<"$CONF")" "$EPOCH_JQ"'
       [ .cards[] | . as $c | (.councils // [])[] | select(.state == "open")
         | ([(.opened | epoch), ((.seen // "0") | tonumber? // 0 | floor)] | max) as $last
         | (if ($c.status | IN("triage", "variants", "feedback", "prototype", "testing")) | not then "moved"
@@ -637,8 +634,7 @@ digest_mode() {
   [ -f "$DB" ] || { log "no Desk store yet"; quiet_out; }
   period="$(date -u +%G-W%V)"
   local out
-  out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" '
-    def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
+  out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" "$EPOCH_JQ"'
     def within($s): ((. // "") | epoch) >= ($now - $s);
     (7 * 86400) as $week | (30 * 86400) as $month
     | [.cards[]] as $cards
