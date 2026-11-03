@@ -609,7 +609,7 @@ export class Store {
     // A designer or a lead developer approves once it is checked, without a vote or a live
     // prototype; a small change's developer, once there are options (docs/desk.md → Deciding straight away).
     const direct = who?.agent || can(who?.role, "skip");
-    if (action === "approve" && c.status === "triage" && !c.triage) throw bad("Design Desk is still checking this request. Approve it once it says what can be done.");
+    if (action === "approve") mustBeChecked(c);
     if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
     if (action === "approve" && !direct && !can(who?.role, "approve")) {
@@ -670,6 +670,7 @@ export class Store {
     if (c.kind !== "request") throw bad("only a design request is decided here");
     if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
     if (c.approved || c.status === "spec") throw bad("This request is already approved.");
+    mustBeChecked(c);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "decision" && !i.thread)) throw bad(BUSY);
     const said = clean(text, 600, "decision");
     c.status = "declined"; delete c.call_suggestion;
@@ -1313,6 +1314,13 @@ function favouriteOf(c) {
   const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
   const s = [...vs].sort((a, b) => score(b) - score(a));
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
+}
+
+// Every way past the vote and the prototype waits for Design Desk's check (docs/desk.md →
+// Deciding straight away).
+// Past Checking, a request was checked.
+function mustBeChecked(c) {
+  if (c.status === "triage" && !c.triage) throw bad("Design Desk is still checking this request. Decide it once it says what can be done.");
 }
 
 // Whether a person filed the request: its author never approves it as a small change. A

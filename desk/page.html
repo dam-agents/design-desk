@@ -1506,9 +1506,9 @@
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
       return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
-        sub: failed ? "Design Desk wrote why in the comments below." : "", buttons: (design && can("build") ? b("build", failed ? "Try again" : "Build it again", true) : "") + (canApprove(c) ? b("approve", "Approve…") : "") };
+        sub: failed ? "Design Desk wrote why in the comments below." : "", buttons: (design && can("build") ? b("build", failed ? "Try again" : "Build it again", true) : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
-    if (c.status === "testing" || (c.status === "prototype" && p.state === "live")) {
+    if (live(c)) {
       return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c),
         buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
@@ -1624,7 +1624,7 @@
   }
 
   // While the live prototype is up, trying it is the step: the options fold under it.
-  const live = (c) => c.status === "testing" || (c.status === "prototype" && c.prototype?.state === "live");
+  const live = (c) => ["prototype", "testing"].includes(c.status) && c.prototype?.state === "live";
 
   function renderPrototype(c) {
     const p = c.prototype || { state: "none" };

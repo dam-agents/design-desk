@@ -184,12 +184,13 @@ test("deciding straight away: a designer or lead developer approves without opti
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };
   const dana = { email: "dana@example.com", role: "developer" };
-  assert.throws(() => s.decideAndClose("C-999", { agent: true }, { text: "x" }), /no card|Design Desk does not decide/);
   for (const r of ["lead", "designer", "lead-developer"]) assert.equal(can(r, "skip"), true, r);
   for (const r of ["developer", "pm", "guest"]) assert.equal(can(r, "skip"), false, r);
 
   const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
   assert.throws(() => s.act(card.id, lee, "approve"), /still checking/, "not before it is checked");
+  assert.throws(() => s.decideAndClose(card.id, lee, { text: "No." }), /still checking/, "nor decided");
+  assert.throws(() => s.decideAndClose(card.id, { agent: true }, { text: "No." }), (e) => e.status === 403 && e.message === "Design Desk does not decide: a person does");
   s.claim(item.id, "s1"); s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Only the look."] } }); s.done(item.id, "s1", "triaged");
   assert.throws(() => s.act(card.id, dana, "approve"), /nothing to approve yet/, "a developer waits for options, small change or not");
   const ok = s.act(card.id, lee, "approve", "Use the grey header.");
