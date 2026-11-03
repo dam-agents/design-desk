@@ -134,6 +134,13 @@ test("claims: one session per item, a heartbeat renews the lease, takeover only 
   assert.deepEqual(inbox(s).claimed, []);
 });
 
+test("the inbox file is refreshed when the store starts, so an upgrade writes the current lease", () => {
+  const dir = mkdtempSync(join(tmpdir(), "desk-store-"));
+  writeFileSync(join(dir, "inbox.json"), JSON.stringify({ claim_ttl_min: 120, open: [], claimed: [] }));
+  const s = new Store(dir);
+  assert.equal(inbox(s).claim_ttl_min, 15);
+});
+
 test("a small change: a lead developer marks it, any developer but its author approves, the card says who", () => {
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };

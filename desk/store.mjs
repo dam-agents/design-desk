@@ -188,6 +188,7 @@ export class Store {
     this.db.seq = { ...emptyDb().seq, ...this.db.seq };
     for (const d of Object.values(this.db.decisions)) upgradeDecision(d);
     this.mtime = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
+    this.writeInbox();
   }
 
   // Another writer replaced db.json (a restore from the backup): read it before acting,
