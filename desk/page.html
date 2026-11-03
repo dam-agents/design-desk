@@ -2307,7 +2307,7 @@
   function sayCount() {
     const n = Number($("#request-form").options.value);
     $("#rq-count-say").textContent = optionsSay(n);
-    $("#rq-count-hint").textContent = !n ? "Design Desk only checks what can be done as a design change; a designer can still have options drawn later."
+    $("#rq-count-hint").textContent = !n ? "Design Desk only checks what can be done as a design change; a designer or developer can still have options drawn later."
       : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer or developer starts them after Design Desk checks what can be done.";
   }
   $("#request-form").options.addEventListener("input", sayCount);
@@ -2351,7 +2351,7 @@
     $("#rq-hint").textContent = issue
       ? "Design Desk checks what can be done as a design change, draws options for this issue, shows how each meets the issue's user stories, and the team picks one."
       : from
-      ? "Tell Design Desk what should look different. It draws options; once a designer approves one, the coding agent builds it into the product."
+      ? "Tell Design Desk what should look different. It draws options; once a designer approves one (or a developer, on a small change), the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
     if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : `What should look different in “${from.title}”?`;
     if (issue) f.problem.value = (from.needs || []).join("\n");

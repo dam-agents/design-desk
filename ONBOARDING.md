@@ -167,9 +167,9 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    `issue` and `draft-pr` post on the product repository as the agent's account; say so.
    `draft-pr` also needs `prototype_remote` = that repository.
 6. **Slack** — only when a Slack channel is bound: "Should I announce new cards and request
-   steps in the channel?" (`notify`, default `disabled`) and "Should designers be able to
+   steps in the channel?" (`notify`, default `disabled`) and "Should designers and developers be able to
    share design options there for votes and comments?" (`slack_polls`, default `disabled`;
-   `slack_poll_channel` when the agent is bound to more than one channel), "Should designers be
+   `slack_poll_channel` when the agent is bound to more than one channel), "Should designers and developers be
    able to send pictures of the designs to the channel?" (`slack_send`, default `disabled`; a
    request from Slack gets them in its thread anyway), "Should people be
    able to ask for design changes in a request's thread and get the pictures back there?"
