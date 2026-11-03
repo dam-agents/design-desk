@@ -62,9 +62,9 @@ served by the Desk server through the platform's Artifact API relay.
 
 - **Every card has a number**, its id (`C-12`), shown grey by its title on its row and its
   page. It is the one way to refer to an item: people write it in Slack, a comment or chat;
-  `design desk item C-12` reads it.
+  `design desk card C-12` reads it.
 - **An item's link** is the Desk's link with the number: `#C-12` opens it in its own tab,
-  `#call/C-12` in Next call, `#requests` a tab. The page's **🔗 Copy link** builds it from
+  `#call/C-12` in Next call while it is on the call, `#requests` a tab. The page's **🔗 Copy link** builds it from
   `desk_link`; **Go to** in the header takes a number or such a link; a `C-12` in text on the
   Desk links to that item.
 - **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`

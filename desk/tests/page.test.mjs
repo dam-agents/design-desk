@@ -363,7 +363,8 @@ test("Needs a designer filters New and Requests, and New opens on All", (t) => o
 }));
 
 // Every item has a number by its title; a link with it, or Go to, opens the item in its tab
-// (in Next call for #call/C-n); a number in text links to that item (docs/desk.md → Links to an item).
+// (in Next call for #call/C-n while it is on the call); a number in text links to that item
+// (docs/desk.md → Links to an item).
 const LINKS = `<script>
 window.copied = [];
 Object.defineProperty(navigator, "clipboard", { value: { async writeText(t) { copied.push(t); } } });
@@ -414,10 +415,12 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.waitForFunction(() => copied.length === 1);
   assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#call/C-2"]);
 
+  await desk.goto(`${base}#call/C-3`);
+  assert.equal(await shown("requests", "Closed one"), "C-3", "an item that is not on the call opens in its own tab");
+
   await desk.fill("#goto", "https://share.example.com/a/xY12#C-99");
   await desk.press("#goto", "Enter");
-  await desk.waitForSelector(".toast");
-  assert.match(await desk.textContent(".toast"), /nothing numbered C-99/);
+  await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => /nothing numbered C-99/.test(t.textContent)));
 }));
 
 // A designer's Desk with an overdue change of two pictures, one with where it changed, and

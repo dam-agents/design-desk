@@ -1735,13 +1735,17 @@
     if (m) return { tab: TABS[m[1]?.toLowerCase()] ? m[1].toLowerCase() : null, id: `C-${m[2]}` };
     return TABS[h.toLowerCase()] ? { tab: h.toLowerCase(), id: null } : null;
   }
-  // An item opens in its own tab (in Next call for #call/C-12), with a filter that shows it.
+  // An item opens in its own tab, in Next call for #call/C-12 while it is on the call or
+  // suggested for it, with a filter that shows it. The list is read again for a card newer than it.
   const HOME = { change: "new", digest: "new", request: "requests", issue: "issues", screen: "product", element: "product" };
   async function goTo(to) {
+    $("#present")?.remove();
     if (!to.id) { await showTab(to.tab); return true; }
+    if (!S.cards.some((x) => x.id === to.id)) await refreshList();
     const c = S.cards.find((x) => x.id === to.id);
     if (!c) { toast(`There is nothing numbered ${to.id} on the Desk.`); return false; }
-    S.tab = to.tab && !["guide", "people"].includes(to.tab) ? to.tab : HOME[c.kind] || "new";
+    const onCall = S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id);
+    S.tab = to.tab === "call" && onCall ? "call" : HOME[c.kind] || "new";
     if (S.tab === "product") S.productFilter = c.kind === "element" ? "elements" : "screens";
     if (!visibleCards().some((x) => x.id === c.id)) {
       if (S.tab === "new") S.newFilter = "all";
