@@ -15,7 +15,9 @@ export const LIMITS = {
   changeShots: 6,
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
   assetBytes: 720 * 1024,
-  claimTtlMin: 120,
+  // A session renews its claim while it works (design desk claim --heartbeat). A missing
+  // heartbeat therefore returns dead work to the queue on the next inbox tick.
+  claimTtlMin: 15,
   // A change card is read in passing: a short title, a one-sentence summary, a few short sections.
   change: { title: 90, summary: 180, sections: 5, section: 400 },
   // An issue on the Issues page: what it brings, and in a few bullets what the UI will need.
@@ -186,6 +188,7 @@ export class Store {
     this.db.seq = { ...emptyDb().seq, ...this.db.seq };
     for (const d of Object.values(this.db.decisions)) upgradeDecision(d);
     this.mtime = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
+    this.writeInbox();
   }
 
   // Another writer replaced db.json (a restore from the backup): read it before acting,
@@ -214,7 +217,7 @@ export class Store {
     const open = [], claimed = [];
     for (const it of Object.values(this.db.inbox)) {
       if (it.state === "open") open.push(pick(it));
-      else if (it.state === "claimed") claimed.push({ ...pick(it), claimed_by: it.claimed_by, claimed_at: it.claimed_at });
+      else if (it.state === "claimed") claimed.push({ ...pick(it), claimed_by: it.claimed_by, claimed_at: it.claimed_at, claimed_started: it.claimed_started || it.claimed_at });
     }
     const doc = { updated: this.clock(), claim_ttl_min: LIMITS.claimTtlMin, open, claimed };
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
@@ -865,17 +868,21 @@ export class Store {
     return Object.values(this.db.inbox).find((i) => i.state === "open" && i.thread === thread);
   }
 
-  // A claim is the inbox lock: one session per item. A claim older than the TTL is
-  // taken over only by an explicit `takeover`, which the pre-flight decides.
-  claim(itemId, session, { takeover = false } = {}) {
+  // A claim is the inbox lock: one session per item. It is a renewable lease, and a
+  // claim past its TTL is taken over only by the explicit `takeover` the preflight sends.
+  // A heartbeat by the same session renews it; another session still needs a takeover.
+  claim(itemId, session, { takeover = false, heartbeat = false } = {}) {
     const it = this.item(itemId);
     if (it.state === "done") throw new DeskError(409, `${itemId} is done`);
     if (it.state === "claimed" && it.claimed_by !== session) {
       const age = (Date.parse(this.clock()) - Date.parse(it.claimed_at)) / 60000;
       if (!takeover || age < LIMITS.claimTtlMin) throw new DeskError(409, `${itemId} is claimed by ${it.claimed_by} since ${it.claimed_at}`);
     }
+    if (heartbeat && (it.state !== "claimed" || it.claimed_by !== session)) throw new DeskError(409, `${itemId} is not claimed by ${session}`);
     const by = clean(String(session || ""), 200, "session");
+    const was = it.state === "claimed" && it.claimed_by === by;
     it.state = "claimed"; it.claimed_by = by; it.claimed_at = this.clock();
+    if (!was) it.claimed_started = it.claimed_at;
     if (it.thread) it.seen = this.thread(it.thread).messages.length;
     this.save();
     return { item: it, card: it.card ? this.getCard(it.card) : null };

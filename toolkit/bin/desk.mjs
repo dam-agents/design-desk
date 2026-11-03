@@ -10,7 +10,9 @@ const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
   inbox                                    open and claimed inbox items
   item <I-n>                               one inbox item with its card
-  claim <I-n> --session <id> [--takeover]  claim an item for this run (or DESK_SESSION)
+  claim <I-n> --session <id> [--takeover|--heartbeat]
+                                           claim it; --takeover takes an expired lease,
+                                           --heartbeat renews your own claim
   done <I-n> --session <id> [--outcome <text>]
                                            mark a claimed item done, with the same id
   person <I-n> --session <id>              work a lead's ask to add a person: re-check it, add the
@@ -82,7 +84,7 @@ function readArg(p) {
   try { return p === "-" ? readFileSync(0, "utf8") : readFileSync(p, "utf8"); } catch (e) { fail(`cannot read ${p}: ${e.code || e.message}`); }
 }
 
-const BOOLEAN = new Set(["resolve", "takeover", "form"]);
+const BOOLEAN = new Set(["resolve", "takeover", "heartbeat", "form"]);
 function flags(argv) {
   const pos = [], f = {};
   for (let i = 0; i < argv.length; i++) {
@@ -180,7 +182,8 @@ export async function main(_cmd, argv) {
     case "item": return out(await call("GET", `/agent/items/${pos[0]}`));
     case "claim":
       if (!session) fail("pass --session <this run's id> (docs/desk.md → Claims)");
-      return out(await call("POST", `/agent/items/${pos[0]}/claim`, { session, takeover: Boolean(f.takeover) }));
+      if (f.takeover && f.heartbeat) fail("--takeover and --heartbeat are different claims: pass one");
+      return out(await call("POST", `/agent/items/${pos[0]}/claim`, { session, takeover: Boolean(f.takeover), heartbeat: Boolean(f.heartbeat) }));
     case "done":
       if (!session) fail("pass --session <the id you claimed with> (docs/desk.md → Claims)");
       return out(await call("POST", `/agent/items/${pos[0]}/done`, { session, outcome: f.outcome || "done" }));

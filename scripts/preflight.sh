@@ -437,10 +437,12 @@ inbox_mode() {
   CONF="$(config_json)"
   if [ ! -f "$INBOX" ]; then log "no Desk inbox yet ($INBOX) — the Desk server has not started"; quiet_out; fi
   jq -e '.open | type == "array"' "$INBOX" >/dev/null 2>&1 || fail_out "$INBOX is not an inbox document — the Desk server writes it; see docs/desk.md → Server"
-  # The server owns the claim TTL and writes it into the inbox.
-  ttl_s=$(( $(jq -r '.claim_ttl_min // 120' "$INBOX") * 60 ))
-  # Open items, plus claimed ones whose claim is past its TTL (the session died) or whose
-  # claim time nobody can read (scripts/lib/time.sh: such a claim cannot show it is alive).
+  # The server owns the claim TTL and writes it into the inbox. A hand-made inbox may
+  # omit it; use the store's current lease rather than the retired two-hour lock.
+  ttl_s=$(( $(jq -r '.claim_ttl_min // 15' "$INBOX") * 60 ))
+  # Open items, plus claimed ones whose lease is past its TTL (the session died or stopped
+  # renewing it) or whose claim time nobody can read (scripts/lib/time.sh: such a claim
+  # cannot show it is alive). A live session renews its claim with --heartbeat.
   local items
   items="$(jq -c --argjson now "$NOW_EPOCH" --argjson ttl "$ttl_s" "$EPOCH_JQ"'
     [ (.open[] | . + {takeover:false}),

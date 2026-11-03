@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.32.1 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`). An inbox claim is
+now a 15-minute renewable lease instead of a two-hour lock: a session renews it with
+`design desk claim I-<n> --session <id> --heartbeat`, and a worklist entry past its lease is
+taken over by the next inbox pass ([docs/desk.md](docs/desk.md) → **Claims**). Existing
+claims need no migration; an old `claimed_at` becomes stale at the new lease length.
+
 ## 1.32.0 — 2026-11-03
 
 **Upgrade:**

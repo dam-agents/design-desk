@@ -115,18 +115,30 @@ test("a change card stays short, and a designer marks it handled", () => {
   assert.throws(() => s.handle(r.id, alice), /only a change/);
 });
 
-test("claims: one session per item, takeover only past the TTL", () => {
+test("claims: one session per item, a heartbeat renews the lease, takeover only past it", () => {
   let now = "2026-10-30T10:00:00Z";
   const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => now });
   const { inbox: item } = s.createRequest(alice, { title: "Calmer empty state", problem: "It shouts." });
   s.claim(item.id, "s1");
   assert.throws(() => s.claim(item.id, "s2"), (e) => e instanceof DeskError && e.status === 409);
-  now = "2026-10-30T11:00:00Z";
+  now = "2026-10-30T10:10:00Z";
+  assert.equal(s.claim(item.id, "s1", { heartbeat: true }).item.claimed_at, now, "the owner renews its lease");
+  assert.throws(() => s.claim(item.id, "s2", { heartbeat: true }), /claimed by s1/);
+  now = "2026-10-30T10:20:00Z";
   assert.throws(() => s.claim(item.id, "s2", { takeover: true }), /claimed by s1/);
-  now = "2026-10-30T13:00:00Z";
+  now = "2026-10-30T10:25:00Z";
   assert.equal(s.claim(item.id, "s2", { takeover: true }).item.claimed_by, "s2");
+  assert.equal(s.item(item.id).claimed_started, "2026-10-30T10:25:00Z", "a takeover starts the new session's lease");
   assert.throws(() => s.done(item.id, "s1"), /claimed by s2/);
   assert.equal(s.done(item.id, "s2", "triaged").item.state, "done");
+  assert.deepEqual(inbox(s).claimed, []);
+});
+
+test("the inbox file is refreshed when the store starts, so an upgrade writes the current lease", () => {
+  const dir = mkdtempSync(join(tmpdir(), "desk-store-"));
+  writeFileSync(join(dir, "inbox.json"), JSON.stringify({ claim_ttl_min: 120, open: [], claimed: [] }));
+  const s = new Store(dir);
+  assert.equal(inbox(s).claim_ttl_min, 15);
 });
 
 test("a small change: a lead developer marks it, any developer but its author approves, the card says who", () => {

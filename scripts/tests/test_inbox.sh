@@ -99,6 +99,17 @@ printf -- '- slack_council: enabled\n' > "$WORK_DIR/CONFIG.md"
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "councils due: never read, idle, and moved on" '[.councils_due[] | [.id, .close, .why]] == [["S-2", false, null], ["S-3", true, "idle"], ["S-5", true, "moved"]]' "$out"
 assert "the slack-council skill is read" '.read_set | index(".agents/skills/slack-council/SKILL.md")' "$out"
+
+# A claim is a 15-minute renewable lease, not the old two-hour lock.
+stale="$(date -u -d '20 minutes ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-20M +%Y-%m-%dT%H:%M:%SZ)"
+live="$(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-10M +%Y-%m-%dT%H:%M:%SZ)"
+cat > "$WORK_DIR/desk/inbox.json" <<JSON
+{"updated":"$new","claim_ttl_min":15,"open":[],"claimed":[
+ {"id":"I-12","kind":"explore","card":"C-7","thread":null,"created":"$new","claimed_by":"s3","claimed_at":"$stale"},
+ {"id":"I-13","kind":"explore","card":"C-7","thread":null,"created":"$new","claimed_by":"s4","claimed_at":"$live"}]}
+JSON
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "a stale lease is due, a 10-minute heartbeat holds a 15-minute one" '[.variants_due[] | [.id, .takeover]] == [["I-12", true]]' "$out"
 printf -- '- slack_council: enabled\n- council_sync_min: 1\n' > "$WORK_DIR/CONFIG.md"
 assert "a shorter interval reads the recent one too" '[.councils_due[].id] | index("S-1")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 
