@@ -256,7 +256,28 @@ export class Store {
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
         attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
+        designed: this.designedOf(c), sent_card: this.sentCardOf(c),
       }));
+  }
+
+  // An issue that already went through Design Desk: a request made from it, or whose spec
+  // went to it, was sent to developers (docs/issues.md → On the Desk). The newest one; null
+  // for any other card.
+  designedOf(c) {
+    if (c.kind !== "issue") return null;
+    const key = issueKey(c.source?.url);
+    const r = Object.values(this.db.cards)
+      .filter((x) => x.kind === "request" && x.status === "handed-off" && (x.request?.from === c.id || (key && issueKey(x.spec?.issue_url) === key)))
+      .sort((a, b) => b.updated.localeCompare(a.updated))[0];
+    return r ? { card: r.id, title: r.title, at: r.updated, url: r.spec?.issue_url || r.spec?.pr_url || null } : null;
+  }
+
+  // The Issues card of the issue a request's spec went to, once the issues run carded it.
+  sentCardOf(c) {
+    const key = c.kind === "request" ? issueKey(c.spec?.issue_url) : null;
+    if (!key) return null;
+    const x = Object.values(this.db.cards).find((i) => i.kind === "issue" && i.status !== "archived" && issueKey(i.source?.url) === key);
+    return x ? x.id : null;
   }
 
   // Whether a card waits for a designer, and why (docs/desk.md → Needs a designer). A
@@ -292,7 +313,7 @@ export class Store {
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), designed: this.designedOf(c), sent_card: this.sentCardOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -1534,6 +1555,12 @@ function cleanQuestions(list) {
     if (suggested !== null && !options.includes(suggested)) throw bad("suggested must be one of the question's options");
     return { text: clean(q.text, 300, "question"), why: optText(q.why, 300, "why"), options, suggested };
   });
+}
+
+// One issue or pull request whatever the link points into (a comment, a tab): "owner/name#12".
+function issueKey(url) {
+  const m = /^https?:\/\/[^/]+\/([^/\s]+\/[^/\s]+)\/(?:issues|pull)\/(\d+)/i.exec(String(url || ""));
+  return m ? `${m[1].toLowerCase()}#${m[2]}` : null;
 }
 
 // What else the step's last item named (the option and the part whose states are drawn),

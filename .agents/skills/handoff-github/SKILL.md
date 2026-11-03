@@ -18,15 +18,24 @@ approval to send it.
 ## The pictures
 
 A developer reads the design from pictures, so every issue, comment or pull request this
-skill writes carries them, scaled for reading in GitHub:
+skill writes carries them in its own body, scaled for reading in GitHub; a link to the Desk
+never stands in for them (a developer may not see the Desk):
 
 1. Build the approved option (its latest version) and shoot it at a reading width:
    `design shot <option.html> <dir> --width 1280`, plus `--width 390` when the request is about
-   a small screen. Light first; dark when the change is about colour.
+   a small screen. Light first; dark when the change is about colour. Add the screen as it is
+   today from the card's screens (`design desk fetch <A-n> <file>`), so the developer sees before and after.
 2. Keep the views the spec names, at most six pictures, each under 5 MB.
-3. Attach them with the GitHub CLI's attachment upload, `--attach <file>` repeated per picture
-   (`gh issue create`, `gh issue comment`, `gh pr comment`), and refer to each in the body as
-   `![<view name>](<file>)` so it lands in place. Never push a branch to host a picture.
+3. Attach them with `--attach <file>#<alt>`, repeated per picture (`gh issue create`,
+   `gh issue comment`, `gh issue edit`, `gh pr create`, `gh pr comment`, `gh pr edit`), and
+   refer to each in the body as `![<view name>](<file>)` so it lands in place. A comment
+   edited through `gh api` takes no attachment, so a revision whose pictures changed posts a
+   new comment with them and edits the old one to a link to it. Never push a branch to host
+   a picture.
+4. Check what was written: every picture's reference in the posted body is an uploaded
+   attachment URL, not the local file name (`gh issue view` / `gh api` the comment). A picture
+   that did not upload is attached again; a delivery without its pictures is not done, so it
+   fails with the reason (`ledger.sh fail`) instead of closing as handed off.
 
 ## Another skill writes the issue
 
@@ -40,31 +49,40 @@ Every issue, comment or pull request this skill writes carries the hidden marker
 thread's comments) and edit what it finds instead of writing a second one.
 Every call names the repository with `-R <[host/]owner/name>`.
 
+## Nothing to ask
+
+What this skill sends is built from without asking: never an open question, a "please
+confirm" or a choice left to the reader. Every question went to the Desk first
+([docs/handoff.md](../../../docs/handoff.md) step 4); a spec that still holds one goes back
+there instead of out. The body's last line before the marker names the Desk card
+(`<desk_link>#C-<n>`) as the place for a question that still comes up.
+
 ## By the request's type
 
 - **`feature`** (from an issue), with `issue_writeback: enabled`: one comment on the origin
-  issue with the chosen design in a sentence, the screens (upload them to the comment as
-  images, or link the Desk), the states and copy table, the open questions, the card's number
-  and link (`<desk_link>#C-<n>`, [docs/desk.md](../../../docs/desk.md) → Links to an item) and
-  the marker; a later revision edits that comment.
+  issue with the chosen design in a sentence, the pictures above, the states and copy table,
+  what was settled at handoff, the card's number and link (`<desk_link>#C-<n>`,
+  [docs/desk.md](../../../docs/desk.md) → Links to an item) and the marker; a later revision
+  edits that comment (new pictures: The pictures, step 3).
   A developer builds from it.
   Set `spec.issue_url` to the comment's URL.
 - **`adjustment` and `bug`**: to the coding agent, per `implementer`:
   - `pr-comment`: one comment on the pull request (for a bug with no pull request, on a new
-    issue) with the spec, the patch, and `implementer_mention` as its first line when set (for
+    issue) with the spec, the pictures, the patch, and `implementer_mention` as its first line when set (for
     example a coding agent's handle), so the agent that watches it implements the change;
-  - `issue`: a new issue with the spec, the patch attached, and the profile's
+  - `issue`: a new issue with the spec, the pictures and the patch attached, and the profile's
     `handoff.labels`, for a coding agent that takes labelled issues.
 
   The coding agent's own pull request is then reviewed like any other.
 - **`idea` and `proposal`**, per `handoff`:
   - `desk`: nothing more; the spec is on the card;
   - `issue`: `gh issue create -R <repo> --title "<card title>" --body-file spec.md` with the
-    profile's `handoff.labels`, the body ending with the marker.
+    pictures attached and the profile's `handoff.labels`, the body ending with the marker.
     Set `spec.issue_url`;
   - `draft-pr`: needs `prototype_remote` to be the repository itself; push the branch
     ([docs/prototype.md](../../../docs/prototype.md) → Push) and open a **draft** pull request
-    from it with the title `design: <card title>`, `spec.md` as its body and the marker.
+    from it with the title `design: <card title>`, `spec.md` as its body, the pictures
+    attached and the marker.
     Set `spec.pr_url`.
     Never mark it ready, never merge.
 

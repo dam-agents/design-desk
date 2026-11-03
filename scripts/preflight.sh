@@ -320,12 +320,18 @@ issues_mode() {
   local MAXJ="${ISSUES_MAX_JUDGE:-40}" MAXC="${ISSUES_MAX_CLOSE_CHECKS:-15}"
   [ -f "$ILEDGER" ] || { mkdir -p "$WORK"; printf 'repo\tissue\tissue_updated\tstatus\tcard\tupdated\tattempts\tnote\n' > "$ILEDGER"; }
   # The issue cards on the Desk, and the ones a person asked to draw that wait for it.
-  local cards='[]' drawing='[]'
+  local cards='[]' drawing='[]' designed='[]'
   if [ -f "$DB" ]; then
     cards="$(jq -c '[.cards[] | select(.kind == "issue" and .status != "archived")
       | {id, repo: .source.repo, issue: (.source.issue | tostring), bucket, sketches: ((.sketches // []) | length), failures: (.draw.failures // 0)}]' "$DB" 2>/dev/null)" \
       || fail_out "cannot read the Desk store at $DB"
     drawing="$(jq -c '[.inbox[]? | select(.kind == "draw" and .state != "done") | .card]' "$DB" 2>/dev/null || echo '[]')"
+    # The issues a request sent to developers came from or went to: done on the design side,
+    # never drawn (docs/issues.md → On the Desk). "owner/name#12", whatever the link points into.
+    designed="$(jq -c '(.cards | map(select(.kind == "issue")) | INDEX(.id)) as $I
+      | [ .cards[] | select(.kind == "request" and .status == "handed-off")
+          | ($I[.request.from // ""].source.url // empty), (.spec.issue_url // empty) ]
+      | map(capture("^https?://[^/]+/(?<r>[^/]+/[^/]+)/(issues|pull)/(?<n>[0-9]+)"; "i")? | "\(.r | ascii_downcase)#\(.n)") | unique' "$DB" 2>/dev/null || echo '[]')"
   fi
   local news='[]' draw='[]' nmove=0 nleave=0 nclose=0 deferred=0 sprints='{}' nexts='{}' repo
   for repo in $(printf '%s' "$REPOS" | tr ',' ' '); do
@@ -355,8 +361,8 @@ issues_mode() {
     # (draw). In bucket order, the most recently updated first in each.
     # A date nobody can read (scripts/lib/time.sh) sorts as the oldest, and a claim row whose
     # time nobody can read is taken over: it cannot show that its session is alive.
-    pass="$(jq -c --arg repo "$repo" --arg sprint "$sprint" --arg next "$next" --arg label "$LABEL" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
-      --rawfile ledger "$ILEDGER" --argjson cards "$cards" --argjson drawing "$drawing" \
+    pass="$(jq -c --arg repo "$repo" --arg slug "$slug" --arg sprint "$sprint" --arg next "$next" --arg label "$LABEL" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
+      --rawfile ledger "$ILEDGER" --argjson cards "$cards" --argjson drawing "$drawing" --argjson designed "$designed" \
       --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" "$EPOCH_JQ"'
       def plan: if $sprint != "" and .milestone.title == $sprint then "sprint" elif $next != "" and .milestone.title == $next then "next" else null end;
       (.items | map(select(.url != null) | {key: .url, value: plan}) | from_entries) as $P
@@ -377,6 +383,7 @@ issues_mode() {
              elif $st == "failed" then (if $row.attempts < 3 then "retry" else "gave-up" end)
              else null end) as $kind
           | ((($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
+             and (($designed | index("\($slug | ascii_downcase)#\($n)")) == null)
              and ($card == null or ($drawing | index($card.id)) == null)) as $wants
           | ($card.id // (if ($row.card // "") == "" then null else $row.card end)) as $cid
           | {id: "\($repo)#\($n)", repo: $repo, issue: $i.number, card: $cid, title: ($i.title | gsub("[\t\n]"; " ")), url: $i.html_url,

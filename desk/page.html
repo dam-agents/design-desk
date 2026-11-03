@@ -171,6 +171,8 @@
   /* A design, a change or a decision that goes against a decision in force. */
   .against { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); max-width: var(--measure); margin: 10px 0; }
   .against p { margin: 2px 0; }
+  .sent { padding: 10px 14px; border-radius: var(--radius); background: var(--ok-soft); max-width: var(--measure); margin: 10px 0; }
+  .sent b { color: var(--ok); } .sent p { margin: 2px 0; }
   .revoked-text { text-decoration: line-through; color: var(--muted); }
   .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
   .asks .reply { border: 0; padding: 8px 0 0; }
@@ -706,7 +708,7 @@
       const box = document.createElement("div");
       box.id = "peek"; box.setAttribute("role", "tooltip");
       box.innerHTML = `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
-        <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>${src.issue ? `<span>Issue #${esc(src.issue)}</span>` : ""}${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${c.status === "archived" ? `<span class="chip">Closed</span>` : ""}</div>
+        <div class="sub">${c.designed ? `<span class="chip ok">✓ Designed in Design Desk</span>` : `<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>`}${src.issue ? `<span>Issue #${esc(src.issue)}</span>` : ""}${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${c.status === "archived" ? `<span class="chip">Closed</span>` : ""}</div>
         ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${(c.needs || []).length ? `<h4>What the UI will need</h4><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}`;
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
@@ -889,9 +891,12 @@
   // The list filter a person picked last is kept in their browser.
   // Issues of the current sprint first, then the next sprint's, someone's and the labelled; the newest first in each.
   const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
-  const issueCards = (filter) => S.cards.filter((c) => c.kind === "issue" && c.status !== "archived" && (filter === "all" || c.bucket === filter))
+  // An issue that already went through Design Desk is done on the design side: it leaves the
+  // open lists, All too, for its own (docs/issues.md → On the Desk).
+  const issueCards = (filter) => S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
+      && (filter === "designed" ? c.designed : !c.designed && (filter === "all" || c.bucket === filter)))
     .sort((a, b) => Object.keys(BUCKET).indexOf(a.bucket) - Object.keys(BUCKET).indexOf(b.bucket) || (b.source?.updated || b.updated).localeCompare(a.source?.updated || a.updated));
-  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all"] };
+  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
 
@@ -925,8 +930,9 @@
     if (c.kind === "digest") out.push(`<span class="chip info">Weekly digest</span>`);
     else if (c.kind === "issue") {
       const s = c.source || {};
-      out.push(`<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(c.bucket === "sprint" && s.milestone ? `Sprint ${s.milestone}` : BUCKET[c.bucket] || "Issue")}</span>`);
-      if (c.busy) out.push(`<span class="chip info">● Drawing</span>`);
+      if (!c.designed) out.push(`<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(c.bucket === "sprint" && s.milestone ? `Sprint ${s.milestone}` : BUCKET[c.bucket] || "Issue")}</span>`);
+      if (c.designed) out.push(`<span class="chip ok" title="Sent to developers from ${esc(c.designed.title)}">✓ Designed in Design Desk</span>`);
+      else if (c.busy) out.push(`<span class="chip info">● Drawing</span>`);
       else if (c.sketches) out.push(`<span class="chip ok">Sketch ready</span>`);
       if (c.open_threads) out.push(`<span class="chip">${plural(c.open_threads, "open question", "open questions")}</span>`);
     }
@@ -966,7 +972,7 @@
     const designer = (n) => `Needs a designer${n ? ` (${n})` : ""}`;
     let filters = S.tab === "new" ? f("newFilter", [["all", "All"], ["new", "Not seen yet"], ["open", "Not handled"], ["designer", designer(newCards("designer").length)]])
       : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["presentation", `Presentation${S.agenda.length ? ` (${S.agenda.length})` : ""}`], ["closed", "Closed"], ["designer", designer(requestCards("designer").length)]])
-      : S.tab === "issues" ? f("issueFilter", Object.entries({ ...BUCKET, all: "All" }).map(([k, l]) => [k, `${l}${k === "all" ? "" : ` (${issueCards(k).length})`}`]))
+      : S.tab === "issues" ? f("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, `${l}${k === "all" ? "" : ` (${issueCards(k).length})`}`]))
       : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]]) : "";
     const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product style="margin-left:auto">+ Add</button>` : "";
     if (add) filters = filters.replace(/<\/div>$/, `${add}</div>`);
@@ -976,6 +982,7 @@
     const empty = {
       new: S.newFilter === "designer" ? waiting : S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : S.newFilter === "open" ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
+        : S.issueFilter === "designed" ? "No issue has gone through Design Desk yet. One lands here once its request is sent to developers."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       requests: S.reqFilter === "designer" ? waiting : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
@@ -1319,20 +1326,21 @@
     const open = c.status !== "archived";
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
-      <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
+      <div class="sub">${c.designed ? `<span class="chip ok">✓ Designed in Design Desk</span>` : `<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>`}${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${c.designed ? `<div class="sent"><b>✓ Already through Design Desk — done on the design side.</b><p><button class="anchor" data-card="${esc(c.designed.card)}">${esc(c.designed.title)}</button>${num({ id: c.designed.card })} was sent to developers${c.designed.at ? ` on ${esc(day(c.designed.at))}` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
       ${againstBox(c)}${followsLine(c)}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
       ${open ? `<div class="actions">
-        ${can("draw") && !busy && !sketch.length ? `<button class="btn primary" data-act="draw">Draw it</button>` : ""}
-        ${can("follow-up") ? `<button class="btn" data-adjust>Design this</button>` : ""}
+        ${can("draw") && !busy && !sketch.length && !c.designed ? `<button class="btn primary" data-act="draw">Draw it</button>` : ""}
+        ${can("follow-up") ? `<button class="btn" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : ""}
         <button class="btn" data-focus-composer>Ask a question</button>
         ${agendaButton(c)}
       </div>` : ""}
       ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
-      <h3>How it could look</h3>${sketch.length ? `${shots(sketch)}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
+      ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch)}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
         : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>`}
       ${c.draw?.note ? `<p class="hint">${txt(c.draw.note)}</p>` : ""}
       ${renderThreads(c)}`;
@@ -1519,7 +1527,10 @@
     // A designer or a lead developer may skip the options, the vote and the prototype.
     const skip = (can("skip") && canApprove(c) ? b("approve", "Send to developers now…") : "") + (can("skip") ? b("decide", "Decide and close…") : "");
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) + skip } : { text: none || "Next: a designer or developer starts the design options.", buttons: skip };
-    if (c.status === "spec") return { text: "", buttons: "" };
+    // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
+    if (c.status === "spec") return (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
+      ? { text: "Before it goes to developers, Design Desk needs your answers above.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "" }
+      : { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
       return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
@@ -1680,6 +1691,7 @@
       ${shots(given)}</div>
       <h3 class="made">From Design Desk</h3>
       ${renderSteps(c)}
+      ${sentBox(c)}
       ${renderStatus(c)}
       ${againstBox(c)}${followsLine(c)}
       ${renderResearch(c.research)}
@@ -1690,7 +1702,7 @@
       ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}`
         : `${renderOptions(c)}${renderStories(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
-      ${c.spec?.asset ? `<details class="fold"><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">Open the GitHub issue ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">Open the draft change on GitHub ↗</a></p>` : ""}` : ""}
+      ${c.spec?.asset ? `<details class="fold"${c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? " open" : ""}><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>` : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
       ${renderThreads(c, { skipAsks: true })}`;
   }
@@ -1704,6 +1716,17 @@
     const s = p.source || {};
     const out = s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${p.kind === "issue" ? `Issue #${esc(s.issue || "")}` : `PR #${esc(s.pr || "")}`} ↗</a>` : "";
     return `<div class="linked"><span class="k">${p.kind === "issue" ? "Designs the issue" : p.kind === "change" ? "Adjusts the change" : "Comes from"}</span><button class="anchor" data-card="${esc(p.id)}">${esc(p.title)}</button>${num(p)}${out}</div>`;
+  }
+  // Where the spec went, as its own card on the request: the GitHub issue or pull request, and
+  // its Issues card once the issues run read it (docs/handoff.md step 5).
+  function sentBox(c) {
+    const url = c.spec?.issue_url || c.spec?.pr_url;
+    if (!url) return "";
+    const m = /\/(issues|pull)\/(\d+)/.exec(url);
+    const what = m ? `${m[1] === "pull" ? "PR" : "Issue"} #${m[2]}` : c.spec.pr_url ? "The pull request" : "The issue";
+    const card = c.sent_card && S.cards.find((x) => x.id === c.sent_card);
+    return `<div class="sent"><b>Sent to developers${c.status === "handed-off" && c.updated ? ` on ${esc(day(c.updated))}` : ""}</b>
+      <p><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(what)} on GitHub ↗</a>${card ? ` · on the Issues page: <button class="anchor" data-card="${esc(card.id)}">${esc(card.title)}</button>${num(card)}` : ""}</p></div>`;
   }
   function requestsFrom(c) {
     const rs = S.cards.filter((x) => x.kind === "request" && x.from === c.id);
