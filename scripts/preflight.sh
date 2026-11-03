@@ -77,7 +77,8 @@ config_json() {
     --arg screens "$(cfg screens)" --arg max_screen_prs "$(cfg max_screen_prs)" \
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
     --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
-    --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg max_issue_drawings "$(cfg max_issue_drawings)" \
+    --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg issue_next_sprint "$(cfg issue_next_sprint)" --arg issue_news_label "$(cfg issue_news_label)" \
+    --arg max_issue_drawings "$(cfg max_issue_drawings)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -119,6 +120,8 @@ config_json() {
       council_sync_min: ($council_sync_min | tonumber? // 30),
       issue_news: ($issue_news | if . == "" then "disabled" else . end),
       issue_sprint: ($issue_sprint | if . == "" then "milestone" else . end),
+      issue_next_sprint: ($issue_next_sprint | if . == "" then "milestone" else . end),
+      issue_news_label: ($issue_news_label | if . == "" then "none" else . end),
       max_issue_drawings: ($max_issue_drawings | tonumber? // 5)}'
 }
 
@@ -301,16 +304,17 @@ watch_mode() {
 # The agent judges whether an issue changes the screens; this pass only says which issues
 # are new or changed since that judgement (work/ISSUES.tsv: the columns of CHANGES.tsv,
 # the issue's updated_at in the third), which judged ones to draw, which moved between the
-# sprint, someone's and the backlog, and which closed — each closed one verified by its
-# own lookup, never by its absence from the list. The decisions over hundreds of issues
+# buckets, which left them (its card is archived, its row stays carded so it comes back),
+# and which closed — each closed one verified by its own lookup, never by its absence. The decisions over hundreds of issues
 # are one jq program per repository: a process per issue would outrun the gate's budget.
 issues_mode() {
-  local CONF REPOS SPRINT_CFG MAXD DB="$DESK_DIR/db.json" ILEDGER="$WORK/ISSUES.tsv"
+  local CONF REPOS SPRINT_CFG NEXT_CFG LABEL MAXD DB="$DESK_DIR/db.json" ILEDGER="$WORK/ISSUES.tsv"
   CONF="$(config_json)"
   [ "$(jq -r .issue_news <<<"$CONF")" = enabled ] || { log "the Issues page is off (issue_news)"; quiet_out; }
   REPOS="$(jq -r '.repos' <<<"$CONF")"
   [ "$REPOS" = none ] && { log "no watched repositories (repos: none)"; quiet_out; }
-  SPRINT_CFG="$(jq -r .issue_sprint <<<"$CONF")"; MAXD="$(jq -r .max_issue_drawings <<<"$CONF")"
+  SPRINT_CFG="$(jq -r .issue_sprint <<<"$CONF")"; NEXT_CFG="$(jq -r .issue_next_sprint <<<"$CONF")"
+  LABEL="$(jq -r .issue_news_label <<<"$CONF")"; [ "$LABEL" = none ] && LABEL=""; MAXD="$(jq -r .max_issue_drawings <<<"$CONF")"
   # Reading is cheap and drawing is not: a backlog is read over several passes.
   local MAXJ="${ISSUES_MAX_JUDGE:-40}" MAXC="${ISSUES_MAX_CLOSE_CHECKS:-15}"
   [ -f "$ILEDGER" ] || { mkdir -p "$WORK"; printf 'repo\tissue\tissue_updated\tstatus\tcard\tupdated\tattempts\tnote\n' > "$ILEDGER"; }
@@ -322,51 +326,63 @@ issues_mode() {
       || fail_out "cannot read the Desk store at $DB"
     drawing="$(jq -c '[.inbox[]? | select(.kind == "draw" and .state != "done") | .card]' "$DB" 2>/dev/null || echo '[]')"
   fi
-  local news='[]' draw='[]' nmove=0 nclose=0 deferred=0 sprints='{}' repo
+  local news='[]' draw='[]' nmove=0 nleave=0 nclose=0 deferred=0 sprints='{}' nexts='{}' repo
   for repo in $(printf '%s' "$REPOS" | tr ',' ' '); do
-    local slug sprint="" found pass; slug="$(repo_slug "$repo")"
+    local slug sprint="" next="" found pass ms='[]'; slug="$(repo_slug "$repo")"
     local hostargs=(); case "$repo" in */*/*) hostargs=(--hostname "${repo%%/*}");; esac
-    # The current sprint: the open milestone due next (today counts), or the one named.
-    case "$SPRINT_CFG" in
+    # The current sprint: the open milestone due next (today counts), or the one named; the
+    # next sprint: the open milestone due after it, or the one named.
+    if [ "$SPRINT_CFG" = milestone ] || [ "$NEXT_CFG" = milestone ]; then
+      found="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/milestones?state=open&sort=due_on&direction=asc&per_page=50" 2>/dev/null)" \
+        && jq -e 'type == "array"' >/dev/null 2>&1 <<<"$found" || fail_out "could not list the milestones of $repo — is the GitHub connection granted?"
+      ms="$(jq -c --arg today "${NOW_ISO%%T*}" '[.[] | select(.due_on != null and .due_on[0:10] >= $today) | .title]' <<<"$found")"
+    fi
+    case "$SPRINT_CFG" in none) ;; milestone) sprint="$(jq -r '.[0] // ""' <<<"$ms")";; *) sprint="$SPRINT_CFG";; esac
+    case "$NEXT_CFG" in
       none) ;;
-      milestone)
-        found="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/milestones?state=open&sort=due_on&direction=asc&per_page=50" 2>/dev/null)" \
-          && jq -e 'type == "array"' >/dev/null 2>&1 <<<"$found" || fail_out "could not list the milestones of $repo — is the GitHub connection granted?"
-        sprint="$(jq -r --arg today "${NOW_ISO%%T*}" '[.[] | select(.due_on != null and .due_on[0:10] >= $today)][0].title // ""' <<<"$found")";;
-      *) sprint="$SPRINT_CFG";;
+      milestone) [ -n "$sprint" ] && next="$(jq -r --arg s "$sprint" '(index($s) // -9) as $i | .[$i + 1] // ""' <<<"$ms")";;
+      *) next="$NEXT_CFG";;
     esac
     sprints="$(jq -c --arg r "$repo" --arg s "$sprint" '. + {($r): (if $s == "" then null else $s end)}' <<<"$sprints")"
-    log "$repo: current sprint ${sprint:-none}"
+    nexts="$(jq -c --arg r "$repo" --arg s "$next" '. + {($r): (if $s == "" then null else $s end)}' <<<"$nexts")"
+    log "$repo: current sprint ${sprint:-none}, next ${next:-none}"
     found="$(search "$repo" "repo:$slug is:issue is:open")" || fail_out "could not list the open issues of $repo"
-    # Per issue, the ledger's last row decides: read it (first, changed, takeover, retry) or
-    # not; a read one follows the plan (move) and gets its pictures once (draw). The sprint
-    # first, then someone's, then the backlog; the most recently updated first in each.
-    pass="$(jq -c --arg repo "$repo" --arg sprint "$sprint" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
+    # An issue is on the page when it is in the sprint, the next sprint, someone's or
+    # labelled; a sub-issue counts in its parent's sprint (an epic's, by parent_issue_url).
+    # Per issue, the ledger's last row decides: read it (first, changed, returned, takeover,
+    # retry) or not; a read one follows the plan (move, leave) and gets its pictures once
+    # (draw). In bucket order, the most recently updated first in each.
+    pass="$(jq -c --arg repo "$repo" --arg sprint "$sprint" --arg next "$next" --arg label "$LABEL" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
       --rawfile ledger "$ILEDGER" --argjson cards "$cards" --argjson drawing "$drawing" \
       --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" '
       def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
-      def bucket: if $sprint != "" and .milestone.title == $sprint then "sprint" elif ((.assignees // []) | length) > 0 then "assigned" else "backlog" end;
+      def plan: if $sprint != "" and .milestone.title == $sprint then "sprint" elif $next != "" and .milestone.title == $next then "next" else null end;
+      (.items | map(select(.url != null) | {key: .url, value: plan}) | from_entries) as $P
+      | def bucket: (plan // $P[.parent_issue_url // ""]
+          // if ((.assignees // []) | length) > 0 then "assigned"
+             elif $label != "" and ([(.labels // [])[].name] | index($label)) != null then "label" else "out" end);
       ($ledger | split("\n") | .[1:] | map(select(length > 0) | split("\t") | select(.[0] == $repo))
         | reduce .[] as $r ({}; .[$r[1]] = {iupd: $r[2], status: $r[3], card: $r[4], ts: $r[5], attempts: (($r[6] | tonumber?) // 0)})) as $L
       | ($cards | map(select(.repo == $repo)) | INDEX(.issue)) as $C
       | [ .items[] | select(.pull_request == null) | . + {b: bucket} ]
-      | sort_by([({sprint: 0, assigned: 1, backlog: 2}[.b]), (0 - ((.updated_at // "") | epoch))])
+      | sort_by([({sprint: 0, next: 1, assigned: 2, label: 3, out: 4}[.b]), (0 - ((.updated_at // "") | epoch))])
       | reduce .[] as $i ({news: [], draw: [], rows: [], logs: [], seen: [], nj: 0, nd: 0, deferred: 0};
           ($i.number | tostring) as $n | ($L[$n] // {}) as $row | $C[$n] as $card
           | ($row.status // "") as $st
           | (if $st == "" then "first"
-             elif ($st == "carded" or $st == "skipped") then (if $row.iupd != $i.updated_at then "changed" else null end)
+             elif ($st == "carded" or $st == "skipped") then (if $row.iupd != $i.updated_at then "changed" elif $st == "carded" and $card == null then "returned" else null end)
              elif ($st == "due" or $st == "in_progress") then (if ($nowe - ($row.ts | epoch)) >= 10800 then "takeover" else "held" end)
              elif $st == "failed" then (if $row.attempts < 3 then "retry" else "gave-up" end)
              else null end) as $kind
-          | (($i.b == "sprint" or $i.b == "assigned") and (($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
+          | ((($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
              and ($card == null or ($drawing | index($card.id)) == null)) as $wants
           | ($card.id // (if ($row.card // "") == "" then null else $row.card end)) as $cid
           | {id: "\($repo)#\($n)", repo: $repo, issue: $i.number, card: $cid, title: ($i.title | gsub("[\t\n]"; " ")), url: $i.html_url,
              author: $i.user.login, updated: $i.updated_at, bucket: $i.b, milestone: ($i.milestone.title // null),
              assignees: [($i.assignees // [])[].login], labels: [($i.labels // [])[].name]} as $e
           | .seen += [$n]
-          | if $kind == "held" then .logs += ["\($e.id): \($st) since \($row.ts) — left to its session"]
+          | if $i.b == "out" then (if $card != null then .news += [$e + {need: "leave", judge: false, kind: null}] | .logs += ["\($e.id): left the plan — archive its card"] else . end)
+            elif $kind == "held" then .logs += ["\($e.id): \($st) since \($row.ts) — left to its session"]
             elif $kind == "gave-up" then .logs += ["\($e.id): failed \($row.attempts) times — left for the audit"]
             elif $kind != null then
               (if $wants and .nd < $maxd then .draw += [$e + {need: "draw", judge: true, kind: $kind}] | .nd += 1 | .logs += ["\($e.id): \($i.b), \($kind) — to read and draw"]
@@ -381,7 +397,7 @@ issues_mode() {
     jq -r '.rows[]' <<<"$pass" >> "$ILEDGER"
     while IFS= read -r l; do [ -n "$l" ] && log "$l"; done < <(jq -r '.logs[]' <<<"$pass")
     news="$(jq -c --argjson p "$pass" '. + $p.news' <<<"$news")"; draw="$(jq -c --argjson p "$pass" '. + $p.draw' <<<"$draw")"
-    nmove=$((nmove + $(jq '[.news[] | select(.need == "move")] | length' <<<"$pass"))); deferred=$((deferred + $(jq .deferred <<<"$pass")))
+    nmove=$((nmove + $(jq '[.news[] | select(.need == "move")] | length' <<<"$pass"))); nleave=$((nleave + $(jq '[.news[] | select(.need == "leave")] | length' <<<"$pass"))); deferred=$((deferred + $(jq .deferred <<<"$pass")))
     # A card whose issue the list no longer shows: closed only when its own lookup says so.
     local checks=0 cid cnum state
     while IFS=$'\t' read -r cid cnum; do
@@ -396,12 +412,12 @@ issues_mode() {
   done
   local njudge ndraw; njudge="$(jq '[.[] | select(.need == "judge")] | length' <<<"$news")"; ndraw="$(jq length <<<"$draw")"
   [ "$deferred" -gt 0 ] && log "$deferred more issues wait for the next pass (at most $MAXJ to read and $MAXD to draw a pass)"
-  printf '%s read=%s draw=%s move=%s close=%s deferred=%s\n' "$NOW_ISO" "$njudge" "$ndraw" "$nmove" "$nclose" "$deferred" >> "$WORK/ISSUES.log"
+  printf '%s read=%s draw=%s move=%s leave=%s close=%s deferred=%s\n' "$NOW_ISO" "$njudge" "$ndraw" "$nmove" "$nleave" "$nclose" "$deferred" >> "$WORK/ISSUES.log"
   [ "$(jq length <<<"$news")" -gt 0 ] || [ "$ndraw" -gt 0 ] || quiet_out
-  logev info preflight "issues: $njudge to read, $ndraw to draw, $nmove moved, $nclose closed"
-  jq -n --argjson news "$news" --argjson draw "$draw" --argjson sprints "$sprints" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+  logev info preflight "issues: $njudge to read, $ndraw to draw, $nmove moved, $nleave left, $nclose closed"
+  jq -n --argjson news "$news" --argjson draw "$draw" --argjson sprints "$sprints" --argjson nexts "$nexts" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     --arg title "$(jq -r '.[] | "#\(.issue)"' <<<"$(jq -c --argjson a "$draw" '$a + .' <<<"$news")" | title_for Read issues)" \
-    '{mode:"issues", nothing_to_do:false, title:$title, sprint:$sprints,
+    '{mode:"issues", nothing_to_do:false, title:$title, sprint:$sprints, next_sprint:$nexts,
       read_set: (["docs/issues.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end)),
       issue_news_due:$news, drawings_due:$draw, config:$config, logs:$logs}'
 }
