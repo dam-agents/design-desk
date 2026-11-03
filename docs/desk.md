@@ -284,7 +284,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.
 - **Comments on options** are pinned to an element and its view; people reply, mark them
-  done or reopen them, and a designer presses **Work it in** (one, or every open one) to turn
+  done or reopen them, and a designer or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). **The winner** is
   a designer's pick (**Pick as the winner**, the card's `chosen`); votes, Slack and you only
   advise, and nothing you write sets it.

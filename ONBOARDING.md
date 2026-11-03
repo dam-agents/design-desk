@@ -141,7 +141,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    `watch_since` as now (UTC): changes merged before onboarding get no card. Offer, once,
    to start a few days back instead.
 2. **People** (`## Desk people`) — "Who will use the Desk? Their email and one role each:
-   designer, PM, developer, or lead." The emails must be the ones they sign in to the
+   designer, PM, developer, lead developer (marks small changes another developer
+   approves), or lead." The emails must be the ones they sign in to the
    platform with.
 3. **Live prototypes and screens** — "Should I build live prototypes on Environments? And
    keep my own copy of the product for screenshots of what ships, which people can open and

@@ -13,11 +13,12 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
 the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A `developer` now starts and changes
-everything a designer does; approving, closing, the presentation, marking handled, the winner
-and decisions stay a designer's ([docs/desk.md](docs/desk.md) → **Roles**). A new roster role,
+design options and Product as a designer does; approving, closing, the presentation, marking
+handled, the winner and decisions stay a designer's, and live prototypes still follow
+`prototype_requesters` ([docs/desk.md](docs/desk.md) → **Roles**). A new roster role,
 `lead-developer`, marks a request a small change, which any developer but its author approves
 ([docs/desk.md](docs/desk.md) → **Small changes**); offer the operator to give it to someone in
-`## Desk people` (**operator-only**). Request cards gain `size` and `approved`; older cards
+`## Desk people`, or a lead asks for it on the Desk's People tab. Request cards gain `size` and `approved`; older cards
 need no change.
 
 ## 1.25.1 — 2026-11-03

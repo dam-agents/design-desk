@@ -976,3 +976,54 @@ test("the screen shown stays when the person switches options, where the other o
     await run.close();
   }
 });
+
+// Small changes (docs/desk.md → Small changes): who sees which button, and what the card says.
+const SMALL = `<script>
+window.calls = [];
+const as = new URLSearchParams(location.search).get("as") || "lou";
+const ME = { lou: { role: "lead-developer", can: { size: true, explore: true } }, dana: { role: "developer", can: { explore: true } }, bob: { role: "developer", can: { explore: true } } }[as];
+const bob = { email: "bob@example.com", role: "developer" }, lou = { email: "lou@example.com", role: "lead-developer" }, dana = { email: "dana@example.com", role: "developer" };
+const at = "2026-11-03T10:00:00Z", live = { state: "live", url: "https://example.com/p" }, triage = { verdict: "design", reasons: [] };
+const cards = [
+  { id: "C-1", kind: "request", title: "Not sized", status: "testing", prototype: live, triage, created_by: bob },
+  { id: "C-2", kind: "request", title: "Small", status: "testing", prototype: live, triage, created_by: bob, size: { small: true, by: lou, at } },
+  { id: "C-3", kind: "request", title: "Small, approved", status: "spec", triage, created_by: bob, size: { small: true, by: lou, at }, approved: { by: dana, at, small: true } },
+];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { ...ME, email: as + "@example.com" }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a small change: the lead developer marks it, a developer but its author approves, the card says who", (t) => open(t, SMALL, async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  const card = async (who, id) => {
+    await desk.goto(`${base}?as=${who}#${id}`);
+    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n, id);
+    return desk.textContent("#detail");
+  };
+  const count = (sel) => desk.locator(`#detail ${sel}`).count();
+
+  await card("lou", "C-1");
+  assert.equal(await count('[data-size="small"]'), 1, "the lead developer marks an open request");
+  assert.equal(await count('[data-act="approve"]'), 0, "and approves no request that is not a small change");
+  await desk.click('#detail [data-size="small"]');
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-1/size"));
+  assert.deepEqual(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-1/size").body)), { small: true });
+
+  const small = await card("dana", "C-2");
+  assert.match(small, /Small change — a developer approves[\s\S]*lou@example\.com/, "the card names who marked it");
+  assert.equal(await count('[data-act="approve"]'), 1, "another developer approves a small change");
+  assert.equal(await count("[data-size]"), 0, "a developer does not mark it");
+
+  assert.match(await card("bob", "C-2"), /not bob@example\.com who filed it/);
+  assert.equal(await count('[data-act="approve"]'), 0, "its author does not approve it");
+
+  assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*as a small change/, "the card names who approved it");
+  assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
+}));

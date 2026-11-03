@@ -719,7 +719,7 @@
   function renderBanners() {
     const out = [];
     if (S.offline) out.push(`<div class="banner warn">Can't reach Design Desk right now. Retrying…</div>`);
-    if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, PM or developer.</div>`);
+    if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, lead developer, developer or PM.</div>`);
     $("#banners").innerHTML = out.join("") + renderIntro();
   }
 
@@ -752,7 +752,7 @@
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
         ["Filter by <b>Open</b>, <b>Presentation</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
-      steps: ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer refines one and adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
+      steps: ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer or developer refines one, and a designer adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
     issues: { about: "what the team plans that will change the screens",
       see: ["The open issues that change the screens: the current sprint's (with its epics' issues) first, then the next sprint's, the ones someone has taken and the ones labelled for design.",
         "On each issue: what the UI will need, a picture of how it looks now and a sketch of how it could look.",
@@ -776,7 +776,7 @@
       steps: ["Pick Screens, Elements, Decisions or History.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
     people: { about: "who is on this Desk, and what each role can do",
       see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked.", "Asks to add someone, and where each one stands."],
-      can: [["<b>+ Add a person</b>: Design Desk puts them on the list as a designer, PM or developer.", "people"],
+      can: [["<b>+ Add a person</b>: Design Desk puts them on the list as a designer, lead developer, developer or PM.", "people"],
         [`To get another role, or to make someone a lead, ask ${esc(contact())}.`]] },
   });
   function renderIntro() {

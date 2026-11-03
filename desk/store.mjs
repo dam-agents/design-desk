@@ -636,6 +636,7 @@ export class Store {
     const c = this.card(cardId);
     if (c.kind !== "request") throw bad("only a design request is a small change or not");
     if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
+    if (c.approved) throw bad("This request is already approved. Reopen it to change who approves it.");
     if (typeof small !== "boolean") throw bad("small must be true or false");
     c.size = { small, by: person(who), at: this.clock() };
     c.updated = this.clock();

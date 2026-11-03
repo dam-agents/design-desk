@@ -163,8 +163,9 @@ else
   if grep -qx '## Desk people' "$CONFIG"; then
     hdr="$(sed -n '/^## Desk people$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
     [ "$hdr" = "|email|role|" ] && ok desk_people_header "| email | role |" || fail desk_people_header "the Desk people table header is '$hdr'" "use | email | role |"
-    badrole="$(cfg_table 'Desk people' | awk -F'|' '{gsub(/ /,"",$3); if ($3 !~ /^(lead|designer|pm|developer|guest)$/) print $2}' | head -3 | tr '\n' ' ')"
-    [ -z "$badrole" ] && ok desk_people_roles "roles valid" || fail desk_people_roles "rows with an unknown role: $badrole" "lead, designer, pm, developer or guest"
+    # A role is read as the server reads it: lower case, inner spaces as hyphens (`Lead developer`).
+    badrole="$(cfg_table 'Desk people' | awk -F'|' '{r=tolower($3); gsub(/^ +| +$/,"",r); gsub(/ +/,"-",r); if (r !~ /^(lead|designer|lead-developer|developer|pm|guest)$/) print $2}' | head -3 | tr '\n' ' ')"
+    [ -z "$badrole" ] && ok desk_people_roles "roles valid" || fail desk_people_roles "rows with an unknown role: $badrole" "lead, designer, lead-developer, developer, pm or guest"
   else
     warn desk_people "no ## Desk people table — everyone but the owner is a guest"
   fi
