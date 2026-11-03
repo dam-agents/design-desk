@@ -27,7 +27,7 @@ const USAGE = `usage: design desk <command>
   report <bug.json|->                      put a UI bug someone reported on the queue as a request
                                            of type bug: {title, problem, goal, steps, screen,
                                            screens: [{asset, caption}], origin: {channel, chat,
-                                           thread_ts, message_ts, reporter, url}}
+                                           thread_ts, message_ts, reporter, email, url}}
   asset <file> --kind <k> [--card C-n] [--name <n>] [--type <media/type>]
                                            store a file; kinds: screen variant spec patch image report
   answer <T-n> <text-file|-> [--resolve]   answer a question thread

@@ -20,7 +20,9 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "approve"), true);
   assert.equal(can("developer", "queue"), false);
   assert.equal(can("designer", "queue"), true);
-  assert.equal(can("developer", "add"), false);
+  for (const a of ["explore", "revise", "refresh", "history", "change", "figma", "share", "add", "draw"]) assert.equal(can("developer", a), true, a);
+  for (const a of ["approve", "close", "reopen", "queue", "handle", "choose", "decide"]) assert.equal(can("developer", a), false, a);
+  assert.equal(can("pm", "explore"), false);
   assert.equal(can("lead", "add"), true);
 });
 
@@ -125,6 +127,57 @@ test("claims: one session per item, takeover only past the TTL", () => {
   assert.equal(s.claim(item.id, "s2", { takeover: true }).item.claimed_by, "s2");
   assert.throws(() => s.done(item.id, "s1"), /claimed by s2/);
   assert.equal(s.done(item.id, "s2", "triaged").item.state, "done");
+});
+
+test("a small change: a lead developer marks it, any developer but its author approves, the card says who", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const dana = { email: "dana@example.com", role: "developer" };
+  assert.equal(can("lead-developer", "size"), true);
+  assert.equal(can("lead", "size"), true);
+  for (const r of ["designer", "developer", "pm", "guest"]) assert.equal(can(r, "size"), false, r);
+  assert.equal(can("lead-developer", "approve"), false, "a developer approves only a small change, per card");
+  assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", role: "lead-developer" }]);
+
+  const { card, inbox: item } = s.createRequest(bob, { title: "Tighter row spacing", problem: "Rows are too airy." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } });
+  assert.equal(s.attentionOf(s.card(card.id)).level, "designer", "options ready: a designer's, until it is a small change");
+  assert.throws(() => s.act(card.id, dana, "approve"), (e) => e.status === 403 && /Only designers/.test(e.message), "not a small change yet: a designer's");
+  assert.throws(() => s.setSize(card.id, lee, "yes"), /true or false/);
+  const marked = s.setSize(card.id, lee, true).card;
+  assert.deepEqual(marked.size, { small: true, by: { email: "lee@example.com", role: "lead-developer" }, at: marked.size.at });
+  assert.equal(s.attentionOf(marked), null, "a small change waits for a developer, not a designer");
+  assert.throws(() => s.act(card.id, bob, "approve"), (e) => e.status === 403 && /You filed this request/.test(e.message));
+  assert.throws(() => s.act(card.id, { email: "pat@example.com", role: "pm" }, "approve"), (e) => e.status === 403);
+  const ok = s.act(card.id, dana, "approve");
+  assert.equal(ok.inbox.kind, "handoff");
+  assert.deepEqual(ok.card.approved, { by: { email: "dana@example.com", role: "developer" }, at: ok.card.approved.at, small: true });
+
+  s.act(card.id, alice, "close");
+  assert.throws(() => s.setSize(card.id, lee, false), /closed/);
+  s.act(card.id, alice, "reopen");
+  assert.equal(s.card(card.id).approved, undefined, "a reopened request waits for a new approval");
+  assert.equal(s.setSize(card.id, lee, false).card.size.small, false);
+});
+
+test("a small change: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const dana = { email: "dana@example.com", role: "developer" };
+  const { card } = s.createRequest({ agent: true }, { title: "Tighter rows", problem: "Too airy.", origin: { channel: "slack", chat: "C0123", thread_ts: "1.0", reporter: "Dana", email: "Dana@Example.com" } });
+  assert.equal(s.card(card.id).origin.email, "dana@example.com");
+  assert.throws(() => s.createRequest({ agent: true }, { title: "x", problem: "y", origin: { channel: "slack", reporter: "Dana", email: "Dana" } }), /origin.email must be an email/);
+  const none = s.createRequest({ agent: true }, { title: "x", problem: "y", origin: { channel: "slack", reporter: "Dana", email: " " } }).card;
+  assert.equal("email" in s.card(none.id).origin, false, "an empty email is no email");
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } });
+  s.setSize(card.id, lee, true);
+  assert.throws(() => s.act(card.id, dana, "approve"), /You filed this request/, "the reporter's email is the author");
+
+  const d = s.addDecision({ concepts: ["rows"], text: "Rows stay roomy", author: { login: "alice" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
+  s.upsertCard({ id: card.id, conflicts: [{ decision: d.id, why: "It tightens them." }] });
+  assert.throws(() => s.act(card.id, lee, "approve", "", { overrule: true }), (e) => e.status === 403 && /a designer approves it/.test(e.message));
+  assert.ok(s.act(card.id, alice, "approve", "", { overrule: true }).card.overruled, "a designer still overrules");
 });
 
 test("a request that needs a developer gets no live prototype", () => {
@@ -610,7 +663,8 @@ test("a screen keeps its earlier pictures; a designer asks for an element's hist
   assert.equal(inbox(s).open.find((i) => i.id === item.id).scope, "history");
   assert.equal(s.getCard(el.id).waiting[0].scope, "history");
   assert.throws(() => s.act(el.id, alice, "refresh"), /already working/);
-  assert.equal(can("developer", "history"), false);
+  assert.equal(can("developer", "history"), true);
+  assert.equal(can("pm", "history"), false);
   assert.equal(can("designer", "history"), true);
 });
 
@@ -705,7 +759,7 @@ test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   const s = fresh();
   const pm = { email: "pat@example.com", role: "pm" };
   assert.equal(can("pm", "draw"), true);
-  assert.equal(can("developer", "draw"), false);
+  assert.equal(can("developer", "draw"), true);
   assert.equal(can("guest", "draw"), false);
   const c = s.upsertCard({ kind: "issue", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], source: { repo: "acme/widgets", issue: 31 } }).card;
   const { inbox: item } = s.act(c.id, pm, "draw", "try a checklist");
