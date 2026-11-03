@@ -90,7 +90,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
       close: () => desk.evaluate((i) => document.getElementById(i).close(), id),
     });
 
-    // Requests counts the open ones, like Next call; amber while one waits for an answer.
+    // Requests counts the open ones; amber while one waits for an answer.
     await desk.waitForSelector('[data-tab="requests"] .count');
     assert.equal(await desk.textContent('[data-tab="requests"] .count'), "2", "the tab counts every open request");
     assert.equal(await desk.getAttribute('[data-tab="requests"] .count', "class"), "count warn", "one waits for an answer");
@@ -167,7 +167,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // The screenshot dialog, on a shipped change.
     const sh = dialog("shots-dialog"), screens = "/api/cards/ch1/screens";
     await desk.click('[data-tab="new"]');
-    assert.equal(await desk.locator('[data-card="d1"]').count(), 0, "a digest is not in New");
+    assert.equal(await desk.locator('[data-card="d1"]').count(), 0, "a digest is not in Changes");
     await desk.click('[data-tab="product"]');
     await desk.click('[data-filter="productFilter:history"]');
     assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest is in Product → History, with no status word");
@@ -204,7 +204,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
 
-    // Every row in New and Requests says where it came from and who started it; its
+    // Every row in Changes and Requests says where it came from and who started it; its
     // links go to the source, the rest of the row opens the item.
     assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /PR #45.*by dana.*Automatic/);
     await desk.click('[data-tab="requests"]');
@@ -280,10 +280,10 @@ const cards = [
   { id: "c1", kind: "change", title: "A new settings page", acked: false, attention: { level: "designer", reasons: ["a new screen"] } },
   { id: "c2", kind: "change", title: "Tighter rows", acked: false, attention: { level: "fyi", reasons: ["follows the list pattern"] } },
   { id: "c3", kind: "change", title: "Seen already", acked: true, attention: { level: "designer", reasons: ["its own grey"] } },
-  { id: "c4", kind: "change", title: "Seen, and suggested", acked: true, suggested: { note: "A new pattern" }, attention: { level: "designer", reasons: ["its own grey", "Suggested for the next call"] } },
+  { id: "c4", kind: "change", title: "Seen, and suggested", acked: true, suggested: { note: "A new pattern" }, attention: { level: "designer", reasons: ["its own grey", "Suggested for the presentation"] } },
   { id: "r1", kind: "request", title: "Calmer empty list", status: "feedback", attention: { level: "designer", reasons: ["Options are ready: pick one or ask for changes"] } },
   { id: "r2", kind: "request", title: "Bigger send button", status: "triage" },
-  { id: "r3", kind: "request", title: "Shipped and worth showing", status: "handed-off", suggested: { note: "Worth showing" }, attention: { level: "designer", reasons: ["Suggested for the next call"] } },
+  { id: "r3", kind: "request", title: "Shipped and worth showing", status: "handed-off", suggested: { note: "Worth showing" }, attention: { level: "designer", reasons: ["Suggested for the presentation"] } },
 ];
 window.platform = { async request({ path }) {
   const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { request: true } }
@@ -327,16 +327,17 @@ window.platform = { async request(r) {
 
 test("every tab but How it works opens with its intro; folding one folds them all, and the server keeps it", (t) => open(t, KEPT, async (desk) => {
   const intro = '#banners details.intro';
-  await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
+  await desk.waitForSelector(`${intro}[data-intro="requests"][open]`);
   assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
-  assert.match(await desk.textContent(`${intro} li.off`), /Got it[\s\S]*not with your role/, "an action the role may not do says so");
-  for (const tab of ["requests", "call", "product", "people"]) {
+  assert.match(await desk.textContent(`${intro} li.off`), /Vote on the options[\s\S]*not with your role/, "an action the role may not do says so");
+  for (const tab of ["new", "issues", "product", "people"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"][open]`);
   }
   assert.match(await desk.textContent('#banners [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
+  assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
   await desk.click('[data-tab="new"]');
   await desk.click(`${intro} > summary`);
   await desk.click('[data-tab="requests"]');
@@ -352,9 +353,14 @@ test("every tab but How it works opens with its intro; folding one folds them al
   await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
 }));
 
-test("Needs a designer filters New and Requests, and New opens on All", (t) => open(t, LIST, async (desk) => {
+test("Needs a designer filters Changes and Requests, and Changes opens on All", (t) => open(t, LIST, async (desk) => {
   const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
-  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
+  // Requests leads the menu; Changes and Issues follow, then Product and People.
+  await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
+  assert.deepEqual(await desk.$$eval("#nav button", (bs) => bs.map((b) => b.dataset.tab)), ["requests", "new", "issues", "product", "people"], "the Desk opens on Requests");
+  assert.match(await desk.textContent('[data-tab="new"]'), /^Changes/);
+  await desk.click('[data-tab="new"]');
+  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on All");
   assert.match(await desk.textContent("#list .filters .on"), /^All$/);
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
@@ -368,8 +374,8 @@ test("Needs a designer filters New and Requests, and New opens on All", (t) => o
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
 }));
 
-// A request's next-call actions sit under More, and stay there once the request is closed
-// (docs/desk.md → The next call): Add, Not now and Take off each send their call.
+// A request's presentation actions sit under More, and stay there once the request is closed
+// (docs/desk.md → The presentation): Add, Not now and Take off each send their call.
 const CALL = `<script>
 window.calls = [];
 const cards = [
@@ -386,7 +392,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a closed request keeps Add to the next call, Not now and Take off under More", (t) => open(t, CALL, async (desk) => {
+test("a closed request keeps Add to presentation, Not now and Take off under More", (t) => open(t, CALL, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   const more = async (id) => {
     if (!desk.url().endsWith(`#${id}`)) await desk.goto(`${base}#${id}`);
@@ -397,7 +403,7 @@ test("a closed request keeps Add to the next call, Not now and Take off under Mo
   const sent = (method, path) => desk.waitForFunction(([m, p]) => calls.some((c) => c.method === m && c.path === p), [method, path]);
 
   await more("C-5");
-  assert.doesNotMatch(await desk.textContent("#detail"), /suggests it for the next call/, "no suggestion strip on the card");
+  assert.doesNotMatch(await desk.textContent("#detail"), /suggests it for the presentation/, "no suggestion strip on the card");
   await desk.click('#detail [data-act="not-now"]');
   await sent("DELETE", "/api/cards/C-5/suggestion");
   await more("C-5");
@@ -406,14 +412,14 @@ test("a closed request keeps Add to the next call, Not now and Take off under Mo
   await sent("POST", "/api/cards/C-5/agenda");
 
   await more("C-4");
-  assert.match(await desk.textContent("#detail .sub"), /On the next call/);
+  assert.match(await desk.textContent("#detail .sub"), /On the presentation/);
   assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 0, "a queued request offers no second Add");
   await desk.click('#detail [data-act="unqueue"]');
   await sent("DELETE", "/api/cards/C-4/agenda");
 }));
 
 // Every item has a number by its title; a link with it, or Go to, opens the item in its tab
-// (in Next call for #call/C-n while it is on the call); a number in text links to that item
+// (on the presentation for #presentation/C-n while it is on it); a number in text links to that item
 // (docs/desk.md → Links to an item).
 const LINKS = `<script>
 window.copied = [];
@@ -438,7 +444,9 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
     await desk.waitForFunction(([tb, ti]) => document.querySelector(`[data-tab="${tb}"]`)?.getAttribute("aria-current") === "true" && document.querySelector("#detail h2")?.textContent.startsWith(ti), [tab, title]);
     return desk.textContent("#detail h2 .num");
   };
-  await desk.waitForSelector('#list .row .num');
+  // The Desk opens on Requests; the change C-1 is under Changes.
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector('.row.item:has([data-card="C-1"]) .num');
   assert.equal(await desk.textContent('.row.item:has([data-card="C-1"]) .num'), "C-1", "each row shows its number");
 
   await desk.goto(`${base}#C-3`);
@@ -458,19 +466,74 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.click('#detail a[data-ref="C-2"]');
   assert.equal(await shown("requests", "Calmer empty list"), "C-2");
 
-  await desk.goto(`${base}#call/C-2`);
+  await desk.goto(`${base}#presentation/C-2`);
   await desk.reload();
-  assert.equal(await shown("call", "Calmer empty list"), "C-2", "a link to Next call opens it there, also on a fresh load");
+  assert.equal(await shown("requests", "Calmer empty list"), "C-2", "a link to the presentation opens it there, also on a fresh load");
+  assert.match(await desk.textContent("#list .filters .on"), /Presentation \(1\)/, "on the Presentation filter");
   await desk.click("[data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
-  assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#call/C-2"]);
+  assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#presentation/C-2"]);
+  await desk.click("[data-back]");
+  await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent === "Presentation");
 
   await desk.goto(`${base}#call/C-3`);
-  assert.equal(await shown("requests", "Closed one"), "C-3", "an item that is not on the call opens in its own tab");
+  assert.equal(await shown("requests", "Closed one"), "C-3", "an older #call link still works; an item that is not on the presentation opens in its own tab");
 
   await desk.fill("#goto", "https://share.example.com/a/xY12#C-99");
   await desk.press("#goto", "Enter");
   await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => /nothing numbered C-99/.test(t.textContent)));
+}));
+
+// The presentation (docs/desk.md → The presentation): a designer marks an item presented in
+// the list and while presenting; Undo takes back one of today, never one of an earlier meeting.
+const PRESENTATION = `<script>
+window.calls = [];
+const hour = 36e5, iso = (ms) => new Date(Date.now() - ms).toISOString();
+const queued = { status: "queued", by: { email: "d@example.com" }, at: iso(2 * hour), variant: null, brief: "Pick one." };
+const cards = [
+  { id: "C-2", kind: "request", title: "Calmer empty list", status: "triage", agenda: queued },
+  { id: "C-4", kind: "request", title: "Presented today", status: "triage", agenda: { ...queued, status: "presented", call: iso(hour), undo_until: iso(-hour) } },
+  { id: "C-5", kind: "request", title: "Presented last week", status: "triage", agenda: { ...queued, status: "presented", call: iso(7 * 24 * hour), undo_until: iso(7 * 24 * hour - 2 * hour) } },
+];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { close: true, queue: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [cards[0]], presented: [cards[1], cards[2]] }
+    : method === "GET" && one ? { card: one } : { card: cards[0] };
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("the presentation: mark an item presented, in the list and while presenting; Undo only for today's", (t) => open(t, PRESENTATION, async (desk) => {
+  const sent = (path) => desk.evaluate((p) => calls.filter((c) => c.method === "POST" && c.path === p).map((c) => JSON.parse(c.body)), path);
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#presentation");
+  await desk.reload();
+  await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent === "Presentation");
+  assert.match(await desk.textContent("#list"), /To present[\s\S]*Calmer empty list[\s\S]*Presented[\s\S]*Presented today[\s\S]*Presented last week/, "the queue, then what was presented");
+
+  await desk.click('#detail [data-presented="C-2"]');
+  await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/C-2/presented"));
+  assert.deepEqual(await sent("/api/cards/C-2/presented"), [{ presented: true }]);
+
+  await desk.click('#list [data-card="C-4"]');
+  await desk.waitForSelector('#detail [data-unpresent="C-4"]', { state: "attached" });
+  await desk.evaluate(() => { document.querySelector("#detail details.more").open = true; });
+  await desk.click('#detail [data-unpresent="C-4"]');
+  await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/C-4/presented"));
+  assert.deepEqual(await sent("/api/cards/C-4/presented"), [{ presented: false }], "Undo sends presented: false");
+
+  await desk.click("[data-back]");
+  await desk.click('#list [data-card="C-5"]');
+  await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent.startsWith("Presented last week"));
+  assert.equal(await desk.locator("#detail [data-unpresent]").count(), 0, "no Undo for an earlier meeting's item");
+  assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 1, "it can go on again, once");
+
+  await desk.click("[data-back]");
+  await desk.click('#detail [data-present="0"]');
+  await desk.click('#present [data-presented="C-2"]');
+  await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/cards/C-2/presented").length === 2);
 }));
 
 // A designer's Desk with an overdue change of two pictures, one with where it changed, and

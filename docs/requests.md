@@ -49,8 +49,8 @@ The person deciding sees it on the card, and every later step builds on it.
    - **Who to ask**: the people who own the decision, only when the request reverses it.
 
    Keep the full notes as an asset (`--kind report`) and set `research.asset`.
-7. A `deliberate`, `duplicate` or `collision` verdict is suggested for the next call with the
-   question it raises (`design desk agenda` → [desk.md](desk.md) → The next call), and the
+7. A `deliberate`, `duplicate` or `collision` verdict is suggested for the presentation with the
+   question it raises (`design desk agenda` → [desk.md](desk.md) → The presentation), and the
    triage says what that means for the request.
 8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
    else the same thing shows up, what a change touches, and the earlier decisions about it,

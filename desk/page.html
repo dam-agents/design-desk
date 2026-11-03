@@ -39,11 +39,15 @@
   .app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .01em; }
-  nav { display: flex; gap: 4px; flex-wrap: wrap; }
-  nav button { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+  /* Requests leads the menu; the other tabs are smaller, their counts grey. */
+  nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  nav button { border: 0; background: transparent; padding: 5px 10px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 13px; }
+  nav button.main { padding: 6px 12px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
-  nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; line-height: 18px; text-align: center; }
-  nav .count.warn { background: var(--warn); color: var(--bg); }
+  nav .sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
+  nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--soft); color: var(--muted); font-size: 11px; line-height: 17px; text-align: center; font-weight: 500; }
+  nav .main .count { background: var(--accent); color: var(--accent-ink); line-height: 18px; font-weight: 600; }
+  nav .main .count.warn { background: var(--warn); color: var(--bg); }
   .grow { flex: 1; }
   .me { color: var(--muted); font-size: 12px; }
   /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
@@ -51,6 +55,9 @@
   .row .t .num { margin-left: auto; font-size: 11px; flex: none; }
   header .goto { width: 15ch; padding: 4px 9px; font-size: 12.5px; }
   .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
+  .theme svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  .theme[aria-current="true"] { background: var(--soft); border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .done-list .row { color: var(--muted); padding: 8px 12px; }
   .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
   .banner.warn { background: var(--warn-soft); }
   /* A tab's intro: what it shows, what you can do, the steps; folded per person. */
@@ -264,11 +271,11 @@
 <body>
 <div class="app">
   <header>
-    <h1 id="title">Design Desk</h1>
-    <nav id="nav"></nav>
+    <nav id="nav" aria-label="Desk"></nav>
     <div class="grow"></div>
     <input class="goto" id="goto" placeholder="Go to C-12" aria-label="Go to an item: its number, like C-12 or D-3, or its link" title="Type an item's number, like C-12, a decision's, like D-3, or paste its link, and press Enter" autocomplete="off" spellcheck="false" />
     <span class="me" id="me"></span>
+    <button class="btn theme" id="help" type="button" data-tab="guide" aria-label="How it works" title="How it works"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.75c-.5.2-.8.6-.8 1.1v.4"/><circle cx="8" cy="11.4" r=".4"/></svg></button>
     <button class="btn theme" id="theme" type="button"></button>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
   </header>
@@ -377,7 +384,7 @@
     handoff: "Writing the developer spec and sending it on.",
     teardown: "Switching off the live prototype.",
     figma: "Working with Figma.",
-    agenda: "Writing a short brief for the next call.",
+    agenda: "Writing a short brief for the presentation.",
     catalog: "Drawing every state of this element.",
     "catalog-history": "Drawing how this element looked at its earlier changes in the code. Older versions appear below one by one.",
     map: "Finding this screen in the product and taking its pictures.",
@@ -418,7 +425,7 @@
     [["vote", "request", "follow-up", "screens"], "Vote on options, send requests and bug reports, add screenshots"],
     [["explore", "revise", "refresh"], "Start design options and change them in the workspace"],
     [["approve", "close", "reopen"], "Approve designs, close and reopen requests"],
-    [["queue"], "Choose what the next call presents"],
+    [["queue"], "Choose what the presentation shows"],
     [["change"], "Note changes on a product element"],
     [["handle"], "Mark changes handled"],
     [["decide"], "Record a decision from a comment, revoke and restore decisions"],
@@ -434,15 +441,15 @@
   const GUIDE = () => `<h2>How Design Desk works</h2>
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
 <ol>
-<li><b>New</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches (a screen or a part in Product opens from there), and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
 <li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws two or three options, the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
+<li><b>Changes</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches (a screen or a part in Product opens from there), and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
 <li><b>Issues</b> — what the team plans that will change the screens: the current sprint (with the issues of its epics), the next sprint, issues someone has taken, and the ones labelled for design. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches them on its own, the sprint's first; press <b>Draw it</b> to have one sketched now, or <b>Design this</b> to start a request.</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
-<p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision.</p>
+<p><b>Needs a designer</b>, at the top of Requests and Changes, shows only what waits for a designer's decision.</p>
 <p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Go to</b> at the top opens an item by its number or its link.</p>
 <p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
-<p>Each row in New and Requests shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
+<p>Each row in Requests and Changes shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
 <h3>Changing a design</h3>
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
@@ -461,7 +468,7 @@
 <h3>Who can do what</h3>
 <p>Your role is shown top right. <a href="#" data-tab="people">People</a> lists everyone's role and what each role can do; ${esc(S.me?.contact || "the Desk's owner")} changes them.</p>
 <h3>Also here</h3><ul>
-<li><b>Next call</b> — what designers chose to show at the team's design meeting, each with a short brief; Design Desk suggests things, a designer adds them.</li>
+<li><b>Presentation</b> — a filter on Requests: what designers chose to show at the team's design meeting, each in its final version with a short brief. Press <b>▶ Present</b> in the meeting, then <b>Mark as presented</b>. Design Desk suggests things, a designer adds them.</li>
 <li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable. A screen and a part keep how they looked in earlier versions: step back through them, or put one next to now. A designer adds a missing screen or part with <b>+ Add</b>.</li>
 <li><b>History</b> — under Product, one page a week, named by its dates: what changed in the product's UX that week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
 <li><b>Slack</b> — tell Design Desk in the team channel when something looks broken, or ask it for a design; it puts it here as a request and answers in your thread, the options included. When the Desk's owner turns it on, anyone in a request's thread can ask for changes there and gets each new option or version back as a before and after picture.</li>
@@ -485,7 +492,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "new", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -654,24 +661,33 @@
   }
 
   // ---------- header and list ----------
-  const TABS = { new: "New", requests: "Requests", issues: "Issues", call: "Next call", product: "Product", people: "People", guide: "How it works" };
-  // Every card's number is its id; its link is the Desk's link with the number, in Next call
-  // the call's: #C-12, #call/C-12 (docs/desk.md → Links to an item).
+  // The tab of the product's changes keeps its key `new`, so older links (#new) still open it.
+  const TABS = { requests: "Requests", new: "Changes", issues: "Issues", product: "Product", people: "People", guide: "How it works" };
+  // Links name the presentation, a filter on Requests, by its own word; #call is its old name.
+  const VIEWS = { presentation: "presentation", call: "presentation", changes: "new" };
+  const presenting = () => S.tab === "requests" && S.reqFilter === "presentation";
+  // Every card's number is its id; its link is the Desk's link with the number, on the
+  // presentation the presentation's: #C-12, #presentation/C-12 (docs/desk.md → Links to an item).
   const num = (c) => (c?.id ? `<span class="num">${esc(c.id)}</span>` : "");
-  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${S.tab === "call" ? "call/" : ""}${c.id}` : "");
+  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${presenting() ? "presentation/" : ""}${c.id}` : "");
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
   const backBar = () => {
     const decisions = S.tab === "product" && S.productFilter === "decisions";
     const it = decisions ? S.decision : S.card, link = it && itemLink(it);
-    return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(it.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
+    return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : presenting() ? "Presentation" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(it.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
   };
+  // Requests leads; Changes and Issues follow smaller with grey counts, then Product and People.
+  // How it works sits under the question mark next to the day and night switch.
   function renderNav() {
     const unseen = S.cards.filter((c) => c.kind === "change" && !c.acked).length;
-    // Requests counts the open ones, like Next call its items; it turns amber while one waits for an answer.
+    // Requests counts the open ones; it turns amber while one waits for an answer.
     const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
     const asks = open.filter((c) => c.asks).length;
-    const tabs = [["new", TABS.new, unseen], ["requests", TABS.requests, open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"], ["issues", TABS.issues, issueCards("sprint").length], ["call", TABS.call, S.agenda.length], ["product", TABS.product], ["people", TABS.people], ["guide", TABS.guide]];
-    $("#nav").innerHTML = tabs.map(([k, label, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}">${esc(label)}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`).join("");
+    const tab = ([k, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}"${k === "requests" ? ` class="main"` : ""}>${esc(TABS[k])}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`;
+    const sep = `<span class="sep" aria-hidden="true"></span>`;
+    $("#nav").innerHTML = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], [["new", unseen], ["issues", issueCards("sprint").length]], [["product"], ["people"]]]
+      .map((group) => group.map(tab).join("")).join(sep);
+    $("#help").setAttribute("aria-current", String(S.tab === "guide"));
   }
 
   function renderBanners() {
@@ -694,19 +710,23 @@
         ["<b>Ask a question</b> about a change; the answer appears below it.", "ask"],
         ["<b>Add screenshots</b> when a change has none.", "screens"],
         ["<b>Adjust the design</b>: start a request from a change.", "follow-up"],
+        ["<b>Add to presentation</b>: show it at the next design meeting.", "queue"],
         ["<b>Mark handled</b> once a designer has dealt with it.", "handle"], LINK],
       steps: ["Pick a change on the left.", "Read what changed and why; click a picture to see it large.", "Press Got it, or ask what is unclear.", "A designer marks it handled or adjusts the design."] },
     requests: { about: "design requests, from an idea to a live prototype and a developer spec",
       see: ["Every request and where it stands: Checking, Options ready, Live — try it, Sent to developers.",
         "On each request: what is already known about it, and what of your ask needs a developer or a decision, and why.",
+        "<b>Presentation</b>: what designers chose to show at the team's next design meeting, each in its final version with a short brief.",
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
         ["<b>Open the design workspace</b>: click a part of an option and say what should change.", "revise"],
         ["<b>Build a live prototype</b> of the option you choose.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
-        ["Filter by <b>Open</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
-      steps: ["Describe the problem in New request.", "Design Desk checks what can be done and draws two or three options.", "The team votes and comments; a designer refines one.", "Try it as a live prototype, approve it, and it goes to the developers."] },
+        ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
+        ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
+        ["Filter by <b>Open</b>, <b>Presentation</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
+      steps: ["Describe the problem in New request.", "Design Desk checks what can be done and draws two or three options.", "The team votes and comments; a designer refines one and adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
     issues: { about: "what the team plans that will change the screens",
       see: ["The open issues that change the screens: the current sprint's (with its epics' issues) first, then the next sprint's, the ones someone has taken and the ones labelled for design.",
         "On each issue: what the UI will need, a picture of how it looks now and a sketch of how it could look.",
@@ -716,13 +736,6 @@
         ["<b>Design this</b>: start a design request from an issue.", "follow-up"],
         ["<b>Ask a question</b> about an issue; the answer appears below it.", "ask"], LINK],
       steps: ["Pick an issue on the left.", "Read what the UI will need and compare now with the sketch.", "Ask what is unclear, or press Draw it for a sketch.", "Press Design this to have Design Desk draw options for it."] },
-    call: { about: "what the team shows at its next design meeting",
-      see: ["What designers put on the call, in order, each with a short brief and the decision asked.",
-        "Suggested by Design Desk: things worth showing that are not on the call yet."],
-      can: [["<b>▶ Present</b>: one item at a time, full screen."],
-        ["<b>Add to the next call</b> from any change or request, or say <b>Not now</b> to a suggestion.", "queue"],
-        ["<b>Call is over — clear the list</b> after the meeting.", "close"], LINK],
-      steps: ["Before the call, a designer adds items and picks the option to present.", "Design Desk writes a brief for each one.", "In the call, press Present and step through.", "Afterwards, clear the list; decisions go into the items' comments."] },
     product: { about: "a map of the product: its screens, its parts and the team's decisions",
       see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
         "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in.",
@@ -764,11 +777,11 @@
   }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
-  // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the next call.
+  // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
   const designerReasons = (c) => {
     if (c.attention?.level !== "designer") return [];
     if (!(c.kind === "change" && (c.acked || c.handled)) && !closed(c)) return c.attention.reasons;
-    return c.suggested ? ["Suggested for the next call"] : [];
+    return c.suggested ? ["Suggested for the presentation"] : [];
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
   const attentionLine = (c) => (c.attention ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
@@ -781,7 +794,7 @@
   const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
   const issueCards = (filter) => S.cards.filter((c) => c.kind === "issue" && c.status !== "archived" && (filter === "all" || c.bucket === filter))
     .sort((a, b) => Object.keys(BUCKET).indexOf(a.bucket) - Object.keys(BUCKET).indexOf(b.bucket) || (b.source?.updated || b.updated).localeCompare(a.source?.updated || a.updated));
-  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all"] };
+  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
 
@@ -795,6 +808,7 @@
       const gone = (c) => c.status === "dropped" && Date.now() - Date.parse(c.updated) > 7 * 864e5;
       return S.cards.filter((c) => c.kind === kind && !gone(c)).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
     }
+    if (presenting()) return S.cards.filter((c) => S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id));
     if (S.tab === "requests") return requestCards(S.reqFilter);
     if (S.tab === "issues") return issueCards(S.issueFilter);
     return [];
@@ -850,17 +864,17 @@
     const main = $("#main");
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
-    if (S.tab === "call") { renderAgendaList(); return; }
     const cards = visibleCards();
     const f = (key, opts) => `<div class="filters">${opts.map(([k, l]) => `<button class="btn small ${S[key] === k ? "on" : ""}" data-filter="${key}:${k}">${esc(l)}</button>`).join("")}</div>`;
     const designer = (n) => `Needs a designer${n ? ` (${n})` : ""}`;
     let filters = S.tab === "new" ? f("newFilter", [["all", "All"], ["new", "Not seen yet"], ["open", "Not handled"], ["designer", designer(newCards("designer").length)]])
-      : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["closed", "Closed"], ["designer", designer(requestCards("designer").length)]])
+      : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["presentation", `Presentation${S.agenda.length ? ` (${S.agenda.length})` : ""}`], ["closed", "Closed"], ["designer", designer(requestCards("designer").length)]])
       : S.tab === "issues" ? f("issueFilter", Object.entries({ ...BUCKET, all: "All" }).map(([k, l]) => [k, `${l}${k === "all" ? "" : ` (${issueCards(k).length})`}`]))
       : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]]) : "";
     const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product style="margin-left:auto">+ Add</button>` : "";
     if (add) filters = filters.replace(/<\/div>$/, `${add}</div>`);
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(filters); return; }
+    if (presenting()) { renderAgendaList(filters); return; }
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
       new: S.newFilter === "designer" ? waiting : S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : S.newFilter === "open" ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
@@ -872,7 +886,7 @@
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
-    // New and Requests say where each came from; screens and elements are Design Desk's own map.
+    // Changes and Requests say where each came from; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span>${num(c)}</div></button>
@@ -925,7 +939,7 @@
   }
 
   // ---------- decisions (docs/desk.md → Decisions) ----------
-  const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The next call", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
+  const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The presentation", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
   const named = (a) => a ? esc(a.name || a.login || a.email || "someone") : "";
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
@@ -933,7 +947,7 @@
     const states = `<div class="filters">${[["active", "In force"], ["revoked", "Revoked"], ["", "All"]].map(([k, l]) => `<button class="btn small ${S.decisionState === k ? "on" : ""}" data-dstate="${k}">${esc(l)}</button>`).join("")}</div>`;
     const rows = S.decisions.map((d) => `<button class="row" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text)}</span>${num(d)}</div>
       <div class="meta"><span class="chip">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip warn">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip">by ${named(d.author)}</span>` : ""}${d.concepts.slice(0, 2).map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></button>`).join("");
-    list.innerHTML = `${filters}${states}<input id="decision-q" placeholder="Search decisions, or D-3…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the next call, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    list.innerHTML = `${filters}${states}<input id="decision-q" placeholder="Search decisions, or D-3…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
     try { S.decisions = (await api("GET", `/api/decisions?q=${encodeURIComponent(S.decisionQuery)}&state=${encodeURIComponent(S.decisionState)}`)).decisions || []; } catch { S.decisions = []; }
@@ -982,24 +996,40 @@
     return xs.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("");
   }
 
-  // ---------- the next call ----------
-  // Cards Design Desk suggests for the call; a designer adds them, or not.
+  // ---------- the presentation ----------
+  // A filter on Requests (docs/desk.md → The presentation): what designers chose to show at
+  // the team's design meeting, each in its final version; a designer marks each one presented.
+  // Cards Design Desk suggests for it; a designer adds them, or not.
   const suggested = () => S.cards.filter((c) => c.suggested && c.status !== "declined" && !S.agenda.some((a) => a.id === c.id));
-  function renderAgendaList() {
-    const items = S.agenda, ideas = suggested();
-    $("#list").innerHTML = (items.length ? items.map((a, i) => `<button class="row" data-card="${esc(a.id)}" aria-current="${S.card?.id === a.id}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span>${num(a)}</div>
-      <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta"><span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span>${a.option ? `<span class="chip info">presenting ${esc(a.option)}</span>` : ""}</div></button>`).join("")
-      : `<div class="empty">The next call is the team's regular design meeting. A designer puts things on it: open one and choose Add to the next call.</div>`)
+  const markButton = (a) => can("close") ? `<button class="btn small" data-presented="${esc(a.id)}">✓ Mark as presented</button>` : "";
+  function renderAgendaList(filters = "") {
+    const items = S.agenda, ideas = suggested(), done = S.presented || [];
+    $("#list").innerHTML = filters + (items.length ? `<h3 style="margin:4px 12px 8px">To present · in this order</h3>${items.map((a, i) => `<button class="row" data-card="${esc(a.id)}" aria-current="${S.card?.id === a.id}"><div class="t"><span>${i + 1}. ${esc(a.title)}</span>${num(a)}</div>
+      <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta">${a.option ? `<span class="chip info">Presenting ${esc(a.option)}</span>` : ""}<span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span></div></button>`).join("")}`
+      : `<div class="empty">The presentation is what the team shows at its next design meeting. A designer puts things on it: open a request and choose Add to presentation.</div>`)
       + (ideas.length ? `<h3 style="margin:18px 12px 8px">Suggested by Design Desk</h3>${ideas.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}</div>
-      ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip warn">💡 not on the call yet</span></div></button>`).join("")}` : "");
+      ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip warn">💡 not on the presentation yet</span></div></button>`).join("")}` : "")
+      + (done.length ? `<h3 style="margin:18px 12px 8px">Presented</h3><div class="done-list">${done.map((a) => `<button class="row" data-card="${esc(a.id)}" aria-current="${S.card?.id === a.id}"><div class="t"><span>${esc(a.title)}</span>${num(a)}</div>
+      <div class="meta"><span class="chip ok">✓ Presented ${esc(day(a.agenda.call))}</span>${a.option ? `<span class="chip">${esc(a.option)}</span>` : ""}</div></button>`).join("")}</div>` : "");
   }
   function renderAgendaDetail() {
     const items = S.agenda, ideas = suggested();
-    $("#detail").innerHTML = `<h2>Next call</h2><p class="hint">What designers chose to show at the team's next design meeting. Present it from here.</p>
-      <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length ? `<button class="btn" data-act="clear-call">Call is over — clear the list</button>` : ""}</div>
-      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}${num(a)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("") || `<div class="empty">Nothing is on the next call yet.</div>`}
-      ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the call until a designer adds it: open it and choose Add to the next call, or Not now (on a request, both are under More).</p>
+    $("#detail").innerHTML = `<h2>Presentation</h2><p class="hint">What designers chose to show at the team's next design meeting, each in its final version. Present from here, then mark each one as presented.</p>
+      <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length > 1 ? `<button class="btn" data-act="clear-call">Mark all as presented</button>` : ""}</div>
+      ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}${num(a)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}
+        <div class="actions">${markButton(a)}<button class="btn small" data-card="${esc(a.id)}">Open</button></div></div>`).join("") || `<div class="empty">Nothing is on the presentation yet.</div>`}
+      ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the presentation until a designer adds it: open it and choose Add to presentation, or Not now (on a request, both are under More).</p>
         <ul>${ideas.map((c) => `<li><button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>${c.suggested.note ? ` <span class="sub" style="display:inline">${esc(c.suggested.note)}</span>` : ""}</li>`).join("")}</ul>` : ""}`;
+  }
+  // Mark one item presented (or put it back with Undo); the presentation steps on to the next.
+  async function markPresented(id, presented = true) {
+    await api("POST", `/api/cards/${encodeURIComponent(id)}/presented`, { presented });
+    const ov = $("#present"), at = Number(ov?.dataset.index || 0);
+    await refreshList();
+    if (ov) { if (S.agenda.length) await present(at); else { ov.remove(); toast("Everything is presented."); } }
+    else if (S.card?.id === id) await openCard(id);
+    else renderDetail();
+    if (presented && !ov) toast("Marked as presented.");
   }
 
   // Presenting: one item at a time, full screen; arrows or the buttons move.
@@ -1014,7 +1044,7 @@
     const fav = (card.variants || []).find((v) => v.id === card.agenda?.variant) || favourite(card) || card.variants?.[0];
     const visual = card.kind === "element" && card.sheet ? card.sheet : fav?.asset || card.screens?.[0]?.asset || null;
     ov.dataset.index = String(n);
-    ov.innerHTML = `<div class="sub pbar" style="justify-content:space-between"><button class="btn small" data-exit-present>✕ Exit</button><span>${n + 1} / ${items.length} · Next call</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button></span></div>
+    ov.innerHTML = `<div class="sub pbar" style="justify-content:space-between"><button class="btn small" data-exit-present>✕ Exit</button><span>${n + 1} / ${items.length} · Presentation</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> ${markButton(items[n])} <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button></span></div>
       <h2 style="font-size:28px;margin-top:12px">${txt(card.title, card)}${num(card)}</h2>${card.summary ? `<p class="lead">${txt(card.summary, card)}</p>` : ""}
       <div class="panel" style="max-width:calc(var(--measure) + 10ch)"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>
       ${fav && (card.variants || []).length > 1 ? `<p class="sub" style="margin-top:12px">Presenting <b>${esc(fav.name)}</b> · options: ${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
@@ -1350,18 +1380,22 @@
     return `<div class="steps">${steps.map(([, l], n) => `<span class="step ${n < i ? "done" : n === i ? "now" : ""}"><span class="n">${n < i ? "✓" : n + 1}</span>${esc(l)}</span>`).join("")}</div>`;
   }
 
-  // Only a designer puts a card on the next call, with the option to present; Design Desk
-  // only suggests one (docs/desk.md → The next call).
+  // Only a designer puts a card on the presentation, with its final version; Design Desk
+  // only suggests one (docs/desk.md → The presentation).
   function agendaButton(c) {
+    const shown = c.agenda?.variant ? optionName(c, c.agenda.variant) : "";
     if (c.agenda?.status === "queued") {
       const mine = c.agenda.by?.email && c.agenda.by.email === S.me?.email;
-      const shown = c.agenda.variant ? optionName(c, c.agenda.variant) : "";
-      return `<span class="chip info">📅 On the next call${shown ? ` · presenting ${esc(shown)}` : ""}</span>${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the call</button>` : ""}`;
+      return `<span class="chip info">▶ On the presentation${shown ? ` · ${esc(shown)}` : ""}</span>${markButton(c)}${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the presentation</button>` : ""}`;
     }
-    const add = can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>` : "";
-    if (!c.call_suggestion) return add;
-    return `<span class="chip warn" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the next call${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
+    // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
+    const recent = Date.now() <= Date.parse(c.agenda?.undo_until);
+    const was = c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}${shown ? ` · ${esc(shown)}` : ""}</span>${can("close") && recent ? `<button class="btn small" data-unpresent="${esc(c.id)}">Undo</button>` : ""}` : "";
+    const add = can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "";
+    if (!c.call_suggestion) return was + add;
+    return `${was}<span class="chip warn" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the presentation${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
   }
+
 
   // What happens next, whose turn it is, and the one button that moves it on.
   function nextFor(c) {
@@ -1371,7 +1405,7 @@
     const hasOptions = (c.variants || []).length > 0;
     const b = (act, label, primary = false) => `<button class="btn ${primary ? "primary" : ""}" data-act="${act}">${esc(label)}</button>`;
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
-    if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under New.", buttons: "" };
+    if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under Changes.", buttons: "" };
     if (busy.length) return { text: "", buttons: hasOptions ? b("workspace", "Open the design workspace") : "" };
     if (c.status === "triage" && !c.triage) return { text: "Design Desk will check this soon.", buttons: "" };
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", buttons: b("explore", "Draw design options", true) } : { text: "Next: a designer starts the design options.", buttons: "" };
@@ -1398,11 +1432,13 @@
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
     const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
     const nx = nextFor(c);
-    // The next call lives in More too: the card shows its main buttons and nothing else.
-    const queued = c.agenda?.status === "queued";
-    const call = queued ? (c.agenda.by?.email && c.agenda.by.email === S.me?.email) || can("close") ? `<button class="btn" data-act="unqueue">Take off the next call</button>` : ""
-      : can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>${c.call_suggestion ? `<button class="btn" data-act="not-now" title="Design Desk suggested it for the next call; it will not suggest it again">Not now: don't suggest it for the next call</button>` : ""}` : "";
-    // A closed request keeps its next-call actions; only the design actions leave.
+    // The presentation lives in More too: the card shows its main buttons and nothing else.
+    const queued = c.agenda?.status === "queued", presented = c.agenda?.status === "presented";
+    // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
+    const undo = presented && can("close") && Date.now() <= Date.parse(c.agenda.undo_until) ? `<button class="btn" data-unpresent="${esc(c.id)}">Undo: not presented yet</button>` : "";
+    const call = queued ? (can("close") ? `<button class="btn" data-presented="${esc(c.id)}">✓ Mark as presented</button>` : "") + ((c.agenda.by?.email && c.agenda.by.email === S.me?.email) || can("close") ? `<button class="btn" data-act="unqueue">Take off the presentation</button>` : "")
+      : undo + (can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>${c.call_suggestion ? `<button class="btn" data-act="not-now" title="Design Desk suggested it for the presentation; it will not suggest it again">Not now: don't suggest it for the presentation</button>` : ""}` : "");
+    // A closed request keeps its presentation actions; only the design actions leave.
     const items = call + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status">
@@ -1501,7 +1537,7 @@
     const more = [bug && r.goal ? `<h4>What should happen</h4>${md(r.goal)}` : "", r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""].join("");
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
-      <div class="sub">${bug ? `<span class="chip bad">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info">📅 On the next call${c.agenda.variant ? ` · presenting ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : ""}<span>${esc(when(c.created))}</span></div>
+      <div class="sub">${bug ? `<span class="chip bad">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}<span>${esc(when(c.created))}</span></div>
       ${origin(c)}
       ${renderSteps(c)}
       ${renderStatus(c)}
@@ -1746,10 +1782,10 @@
 
   function renderDetail() {
     const d = $("#detail");
-    $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || S.tab === "call" || S.tab === "people");
+    $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
     if (S.tab === "people") { d.innerHTML = `<div class="guide">${renderPeople()}</div>`; return; }
-    if (S.tab === "call" && !S.card) { renderAgendaDetail(); return; }
+    if (presenting() && !S.card) { renderAgendaDetail(); return; }
     if (S.tab === "product" && S.productFilter === "decisions") {
       d.innerHTML = S.decision ? renderDecision(S.decision) : `<div class="empty">Every decision the team made about the product, with where it was made. Pick one, or search.</div>`;
       $("#main").classList.toggle("has-detail", Boolean(S.decision));
@@ -1772,7 +1808,7 @@
   // ---------- loading ----------
   async function refreshList() {
     S.cards = (await api("GET", "/api/cards")).cards || [];
-    try { S.agenda = (await api("GET", "/api/agenda")).agenda || []; } catch { S.agenda = []; }
+    try { const a = await api("GET", "/api/agenda"); S.agenda = a.agenda || []; S.presented = a.presented || []; } catch { S.agenda = []; S.presented = []; }
     renderNav(); renderList();
   }
   async function openCard(id, { quiet = false } = {}) {
@@ -1801,28 +1837,30 @@
   }
 
   // ---------- links to an item (docs/desk.md → Links to an item) ----------
-  // What a link or Go to names: #C-12, #call/C-12, a tab (#requests); Go to also takes the
-  // number alone (12, c12) or a whole link.
+  // What a link or Go to names: #C-12, #presentation/C-12 (#call/C-12 before), a tab
+  // (#requests, #presentation); Go to also takes the number alone (12, c12) or a whole link.
+  const view = (w) => { const k = String(w || "").toLowerCase(); return VIEWS[k] || (TABS[k] ? k : null); };
   function target(text) {
     const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
     const d = h.match(/^D\s*-?\s*(\d+)$/i);
     if (d) return { tab: "product", id: null, decision: `D-${d[1]}` };
     const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)$/i);
-    if (m) return { tab: TABS[m[1]?.toLowerCase()] ? m[1].toLowerCase() : null, id: `C-${m[2]}` };
-    return TABS[h.toLowerCase()] ? { tab: h.toLowerCase(), id: null } : null;
+    if (m) return { tab: view(m[1]), id: `C-${m[2]}` };
+    return view(h) ? { tab: view(h), id: null } : null;
   }
-  // An item opens in its own tab, in Next call for #call/C-12 while it is on the call or
-  // suggested for it, with a filter that shows it. The list is read again for a card newer than it.
+  // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
+  // or suggested for it, with a filter that shows it. The list is read again for a card newer than it.
   const HOME = { change: "new", digest: "product", request: "requests", issue: "issues", screen: "product", element: "product" };
   async function goTo(to) {
     $("#present")?.remove();
     if (to.decision) return openDecision(to.decision);
-    if (!to.id) { await showTab(to.tab); return true; }
+    if (!to.id) { if (to.tab === "presentation") { S.reqFilter = "presentation"; await showTab("requests"); } else await showTab(to.tab); return true; }
     if (!S.cards.some((x) => x.id === to.id)) await refreshList();
     const c = S.cards.find((x) => x.id === to.id);
     if (!c) { toast(`There is nothing numbered ${to.id} on the Desk.`); return false; }
     const onCall = S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id);
-    S.tab = to.tab === "call" && onCall ? "call" : HOME[c.kind] || "new";
+    S.tab = to.tab === "presentation" && onCall ? "requests" : HOME[c.kind] || "new";
+    if (to.tab === "presentation" && onCall) S.reqFilter = "presentation";
     if (S.tab === "product") S.productFilter = { element: "elements", digest: "history" }[c.kind] || "screens";
     if (!visibleCards().some((x) => x.id === c.id)) {
       if (S.tab === "new") S.newFilter = "all";
@@ -1853,17 +1891,17 @@
     if (name === "workspace") { S.ws.open = true; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); return; }
     if (name === "queue") {
       const opts = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
-      const r = await ask({ title: "Add to the next call", body: `The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.${opts.length ? " Pick the design option to present." : ""}`, ok: "Add to the call",
-        choices: opts.length ? opts : null, pick: (favourite(c) || c.variants?.[0])?.id || null, note: "What should the team decide? (optional)",
+      const r = await ask({ title: "Add to presentation", body: `The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.${opts.length ? " Which version is the final one?" : ""}`, ok: "Add to presentation",
+        choices: opts.length ? opts : null, pick: (favourite(c) || c.variants?.[0])?.id || null, note: "Note for the meeting: what should the team look at? (optional)",
         send: (a) => api("POST", `/api/cards/${c.id}/agenda`, { note: a.note, ...(a.choice ? { variant: a.choice } : {}) }) });
       if (!r) return;
-      toast("Added to the next call. Design Desk will write a short brief.");
+      toast("Added to the presentation. Design Desk will write a short brief.");
       await refreshList(); await openCard(c.id); return;
     }
     if (name === "not-now") { await api("DELETE", `/api/cards/${c.id}/suggestion`); await refreshList(); await openCard(c.id); return; }
     if (name === "unqueue") { await api("DELETE", `/api/cards/${c.id}/agenda`); await refreshList(); await openCard(c.id); return; }
     if (name === "clear-call") {
-      const r = await ask({ title: "Is the call over?", body: "This clears the next-call list for everyone. Each item is marked as shown today.", ok: "Clear the list", send: () => api("POST", "/api/calls", {}) });
+      const r = await ask({ title: "Mark all as presented?", body: "Everything on the presentation is marked as presented today, for everyone.", ok: "Mark all as presented", send: () => api("POST", "/api/calls", {}) });
       if (!r) return;
       await refreshList(); renderDetail(); return;
     }
@@ -1958,6 +1996,8 @@
     if (ds.tab) { e.preventDefault(); await showTab(ds.tab); return; }
     if (ds.ref) { e.preventDefault(); await goTo(target(ds.ref)); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
+    if (ds.presented) { await markPresented(ds.presented); return; }
+    if (ds.unpresent) { await markPresented(ds.unpresent, false); return; }
     if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
     if (ds.dstate !== undefined) { S.decisionState = ds.dstate; S.decision = null; await loadDecisions(); renderList(); renderDetail(); return; }
@@ -2254,7 +2294,7 @@
 
   function applyMe() {
     $("#new-request").hidden = !can("request");
-    $("#title").textContent = S.me?.name || "Design Desk";
+    document.title = S.me?.name || "Design Desk";
     $("#me").textContent = S.me ? `${S.me.email || ""} · ${roleName(S.me.role)}` : "";
     renderBanners();
   }
@@ -2285,7 +2325,6 @@
     const to = target(location.hash);
     if (!(to && await goTo(to))) {
       if (!store.get("desk-guide-seen") || !S.cards.length) { S.tab = "guide"; store.set("desk-guide-seen", "1"); }
-      else if (!visibleCards().length && S.cards.some((c) => c.kind === "request" && !closed(c))) S.tab = "requests";
       renderNav(); renderBanners(); renderList(); renderDetail();
     }
     window.addEventListener("hashchange", guard(async () => { const next = target(location.hash); if (next) await goTo(next); }));
