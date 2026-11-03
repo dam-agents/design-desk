@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.28.0 — 2026-11-03
+## 1.31.0 — 2026-11-03
 
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
@@ -21,6 +21,45 @@ to carries the design's pictures, before and after; on a pull request they go in
 A request sent to developers shows a card linking its issue; that issue, and the one it came
 from, leave the Issues page's open lists for **✓ Designed** and are never drawn
 ([docs/issues.md](docs/issues.md) → On the Desk). Derived from the cards; nothing to migrate.
+
+## 1.30.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A note Design Desk applies to an
+option, and a live prototype's update, now answer with the place before and after
+(`design compare --anchor`, `design desk answer|comment --shots`; [docs/requests.md](docs/requests.md)
+→ Variants). Older answers have no pictures; nothing to migrate.
+
+## 1.29.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A designer or developer can now have
+one part of an option drawn in every state (**Draw every state**, inbox kind `states`, action
+`states`, [docs/requests.md](docs/requests.md) → **Every state of a part**); Build a live
+prototype opens a final check and records what goes live on the card (`live_pick`,
+[docs/prototype.md](docs/prototype.md) → Build). `live_pick` replaces 1.28.0's `built`: Approve in
+a prototype step takes `live_pick`'s option and version (`approved.variant`, `approved.version`),
+and the spec is written from them. A card built under 1.28.0 has `built` and no `live_pick`;
+its Approve falls back to the option picker. Older cards need nothing. The inbox pre-flight lists
+`states` items under `variants_due`, and an upsert of options sends each option and state with
+its `version` ([docs/requests.md](docs/requests.md) → Variants).
+
+## 1.28.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A designer, the lead or a
+`lead-developer` now approves a checked request without options, a vote or a live prototype, or
+decides and closes it; a decision item without a thread is recorded from its note
+([docs/desk.md](docs/desk.md) → **Deciding straight away**). While a prototype is live the
+options fold under it and Approve takes the option it was built from (`built`); a prototype
+built before this has no `built` and keeps the option picker. The Desk now always opens on Requests;
+How it works stays under the question mark.
 
 ## 1.27.0 — 2026-11-03
 

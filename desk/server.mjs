@@ -106,7 +106,7 @@ function settings() {
 const VERBS = { ack: "mark changes as seen", handle: "mark changes as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
-  draw: "draw issues", decide: "record and revoke decisions", size: "mark a request a small change", people: "add people to the Desk" };
+  draw: "draw issues", decide: "record and revoke decisions", size: "mark a request a small change", skip: "decide without a vote or a live prototype", people: "add people to the Desk" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -151,7 +151,7 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "a lead" : action === "size" ? "a lead developer" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "a lead" : action === "size" ? "a lead developer" : action === "skip" ? "designers and lead developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
@@ -171,7 +171,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in"].includes(p[3]))) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
   if (m === "POST" && p[1] === "me" && p[2] === "prefs") return send(res, 200, store.setPrefs(actor, { intro: b.intro }));
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note, typeof b.variant === "string" ? b.variant : null), s, who)); }
@@ -195,6 +195,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "decisions" && p[3] === "revoke") { need("decide"); return send(res, 200, store.revokeDecision(p[2], actor, { reason: b.reason, replaced_by: b.replaced_by || null })); }
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "decide") { need("skip"); return send(res, 201, withPing(store.decideAndClose(p[2], actor, { text: b.text, why: b.why }), s, who)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "chosen") { need("choose"); return send(res, 200, store.choose(p[2], actor, b.variant === null ? null : String(b.variant || ""))); }
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }
@@ -243,12 +244,16 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
-    // A small change's approval is a developer's too; the store checks who (docs/desk.md → Small changes).
-    if (action !== "approve" || !store.card(p[2]).size?.small) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action);
+    // A small change's approval is a developer's too, and a lead developer approves any request;
+    // the store checks who (docs/desk.md → Small changes, Deciding straight away).
+    // Drawing every state of a part is changing the option: a designer's or developer's.
+    if (action !== "approve" || !(store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action === "states" ? "revise" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
-    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true }), s, who));
+    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true,
+      variant: typeof b.variant === "string" ? b.variant : null, version: Number.isInteger(b.version) ? b.version : null,
+      states: b.states && typeof b.states === "object" && !Array.isArray(b.states) ? b.states : null, part: b.part && typeof b.part === "object" ? b.part : null }), s, who));
   }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
 }
@@ -285,8 +290,8 @@ async function agentRoute(req, res, url) {
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
-  if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve) }));
-  if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));
+  if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve), shots: b.shots ?? null }));
+  if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text, shots: b.shots ?? null }));
   if (m === "POST" && p[1] === "cards" && p[3] === "ask") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "asks", text: b.text, step: b.step, questions: b.questions || null }));
   if (m === "POST" && p[1] === "decisions" && !p[2]) return send(res, 201, store.addDecision(b));
   // The agent revokes only in the name of the person who did, with where they said it.

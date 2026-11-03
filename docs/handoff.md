@@ -1,6 +1,6 @@
 # Handoff — the developer spec
 
-A `handoff` item comes from an **Approve** (with the option picked in its note): a designer's, or a developer's on a small change ([desk.md](desk.md) → Small changes). The spec is what a
+A `handoff` item comes from an **Approve** (with the option picked in its note): a designer's, a lead developer's, or a developer's on a small change ([desk.md](desk.md) → Small changes, Deciding straight away). Approved before any option, its note is what to build in the approver's words: write the spec from the request, the triage and that note, and leave out what has no design. The spec is what a
 developer needs to build the approved design without asking: the design, its states and copy,
 exactly what the prototype changed, and what it could not change. **Nothing leaves with an open
 question.** What the Desk did not settle is asked and answered on the Desk, before the spec is
@@ -10,7 +10,11 @@ sent; the developer or coding agent gets only answers.
 
 1. Claim; set `status: spec`. Read the card whole: the request, triage, the impact, the
    variants and their votes, every thread and note, the prototype and its guard report. The
-   approved option is the one the item's note names (picked on Approve).
+   approved option is the one the item's note names (picked on Approve). While the card is at
+   Building prototype or Live — try it, or its prototype is live (back at Options ready after a
+   revise), it is what the prototype shows: the card's `live_pick` — its option, `version` and
+   assets (`live_pick.asset`, `states[].asset`), which `approved.variant` and `approved.version`
+   repeat; write the spec from those, not from a newer version drawn since.
 2. Write `/tmp/design-desk-c<n>/spec.md`, with these sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in the requester's words, the decisions taken on the Desk (which

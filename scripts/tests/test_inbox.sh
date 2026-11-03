@@ -51,6 +51,8 @@ printf -- '- dispatch: disabled\n' > "$WORK_DIR/CONFIG.md"
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"; printf '%s' "$out" > "$wl"
 assert "dispatch disabled keeps all" 'length == 0' "$(bash "$ROOT/scripts/dispatch.sh" plan "$wl")"
 
+printf '{"updated":"%s","open":[{"id":"I-10","kind":"states","card":"C-2","thread":null,"created":"%s","variant":"v1"}],"claimed":[]}' "$new" "$new" > "$WORK_DIR/desk/inbox.json"
+assert "every state of a part sorted with the variants, its option kept" '[.variants_due[] | [.id, .kind, .variant]] == [["I-10", "states", "v1"]]' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 printf '{"updated":"%s","open":[],"claimed":[]}' "$new" > "$WORK_DIR/desk/inbox.json"; rm "$WORK_DIR/desk/db.json"
 assert "empty inbox is quiet" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 

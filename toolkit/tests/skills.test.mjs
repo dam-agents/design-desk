@@ -20,6 +20,8 @@ test("an action takes the operator's skill, then the product's, then the bundled
   assert.equal(missing.skill, "variants");
   assert.match(missing.notes[0], /not-here .* not installed/);
   assert.equal(resolve("revise", { profile: { options: "acme-prototyper" } }).skill, "acme-prototyper");
+  assert.equal(resolve("states").skill, "variants", "every state of a part is drawn by the variants skill");
+  assert.equal(resolve("states", { profile: { options: "acme-prototyper" } }).skill, "acme-prototyper", "and by the product's own options skill");
   assert.equal(resolve("prototype").skill, null);
 });
 

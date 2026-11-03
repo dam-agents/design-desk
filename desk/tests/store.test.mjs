@@ -180,6 +180,75 @@ test("a small change: the reporter of a request the agent filed is its author; a
   assert.ok(s.act(card.id, alice, "approve", "", { overrule: true }).card.overruled, "a designer still overrules");
 });
 
+test("deciding straight away: a designer or lead developer approves without options or a vote, or decides and closes", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const dana = { email: "dana@example.com", role: "developer" };
+  for (const r of ["lead", "designer", "lead-developer"]) assert.equal(can(r, "skip"), true, r);
+  for (const r of ["developer", "pm", "guest"]) assert.equal(can(r, "skip"), false, r);
+
+  const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
+  assert.throws(() => s.act(card.id, lee, "approve"), /still checking/, "not before it is checked");
+  assert.throws(() => s.act(card.id, lee, "approve"), /Approve it once/, "the refusal names the approval");
+  assert.throws(() => s.decideAndClose(card.id, lee, { text: "No." }), /Decide it once/, "nor decided");
+  assert.throws(() => s.decideAndClose(card.id, { agent: true }, { text: "No." }), (e) => e.status === 403 && e.message === "Design Desk does not decide: a person does");
+  s.claim(item.id, "s1"); s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Only the look."] } }); s.done(item.id, "s1", "triaged");
+  assert.throws(() => s.act(card.id, dana, "approve"), /nothing to approve yet/, "a developer waits for options, small change or not");
+  const drawing = s.act(card.id, alice, "explore").inbox;
+  assert.throws(() => s.act(card.id, lee, "approve"), /still drawing the options/, "no approval while the options are drawn");
+  s.claim(drawing.id, "s2"); s.done(drawing.id, "s2", "drawn");
+  const ok = s.act(card.id, lee, "approve", "Use the grey header.");
+  assert.equal(ok.inbox.kind, "handoff");
+  assert.equal(ok.inbox.note, "Use the grey header.");
+  assert.deepEqual(ok.card.approved, { by: { email: "lee@example.com", role: "lead-developer" }, at: ok.card.approved.at, small: false });
+
+  const other = s.createRequest(bob, { title: "Louder badge", problem: "Hard to see." }).card;
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: other.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Red", asset }, { id: "v2", name: "Blue", asset }] });
+  assert.throws(() => s.decideAndClose(other.id, lee, { text: " " }), /decision/);
+  const decided = s.decideAndClose(other.id, lee, { text: "Badges stay as they are: colour is for errors only.", why: "Agreed at the meeting." });
+  assert.equal(decided.card.status, "declined");
+  assert.deepEqual([decided.inbox.kind, decided.inbox.thread, decided.inbox.note, decided.inbox.why], ["decision", null, "Badges stay as they are: colour is for errors only.", "Agreed at the meeting."]);
+  assert.equal(decided.card.decided.by.email, "lee@example.com");
+  assert.throws(() => s.decideAndClose(other.id, lee, { text: "Again" }), /closed/);
+  s.act(other.id, alice, "reopen");
+  assert.equal(s.card(other.id).decided, undefined, "a reopened request waits for a new decision");
+});
+
+test("a live prototype's option is the one approved", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset }, { id: "v2", name: "Bold", asset }] });
+  assert.deepEqual([s.act(card.id, alice, "build", "v2", { variant: "v2", version: 1 }).card.live_pick.variant, s.card(card.id).built], ["v2", undefined], "live_pick is the one record of what goes live");
+  // A newer version drawn after the build is not what the prototype shows.
+  const asset2 = s.addAsset({ kind: "variant", name: "v2b", contentType: "text/html", data: Buffer.from("<b>y</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, status: "testing", prototype: { state: "live", url: "https://example.com/p" }, variants: [{ id: "v1", version: 1, name: "Quiet", asset }, { id: "v2", version: 1, name: "Bold", asset: asset2 }] });
+  const ok = s.act(card.id, alice, "approve", "v1");
+  assert.equal(ok.inbox.note, "v2", "the prototype's option, whatever the pick");
+  assert.deepEqual([ok.card.approved.variant, ok.card.approved.version], ["v2", 1], "at the version it was built from");
+});
+
+test("while its prototype is live, approve takes live_pick back at feedback; an option taken off leaves live_pick and its waiting build", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<b>x</b>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset }, { id: "v2", name: "Bold", asset }] });
+  const { inbox: build } = s.act(card.id, alice, "build", "v2", { variant: "v2", version: 1 });
+  s.claim(build.id, "run-1"); s.done(build.id, "run-1", "live");
+  // A revise puts the request back at feedback; the prototype is still up.
+  s.upsertCard({ id: card.id, status: "feedback", prototype: { state: "live", url: "https://example.com/p" } });
+  const ok = s.act(card.id, alice, "approve", "v1");
+  assert.deepEqual([ok.inbox.note, ok.card.approved.variant, ok.card.approved.version], ["v2", "v2", 1]);
+  // Another request: a build waits, then its option is dropped.
+  const { card: other } = s.createRequest(bob, { title: "Calmer rows", problem: "Rows shout." });
+  s.upsertCard({ id: other.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset }, { id: "v2", name: "Bold", asset }] });
+  const { inbox: waiting } = s.act(other.id, alice, "build", "v2", { variant: "v2", version: 1 });
+  s.upsertCard({ id: other.id, variants: [{ id: "v1", version: 1, name: "Quiet", asset }, { id: "v2", drop: true }] });
+  assert.equal(s.getCard(other.id).live_pick, undefined, "a dropped option does not go live");
+  assert.deepEqual([s.item(waiting.id).state, s.item(waiting.id).outcome], ["done", "not built: its option was taken off the card"]);
+});
+
 test("a request that needs a developer gets no live prototype", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Week starts per person", problem: "Use my own Monday." });
@@ -227,10 +296,10 @@ test("a request from an issue keeps what the issue says about the design and how
   assert.deepEqual(c.variants[0].stories[0].parts, [{ selector: "#spend", label: "Spend column", view: "1" }]);
   assert.deepEqual([c.grill.state, c.grill.asked], ["done", 3]);
   const asset2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>y</b>").toString("base64") }).asset.id;
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2 }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Column", asset: asset2 }] });
   assert.equal(s.card(card.id).variants[0].version, 2);
   assert.equal(s.card(card.id).variants[0].stories[0].how, "A spend column.", "a revise that leaves stories out keeps the coverage");
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2, stories: [{ story: "s1", met: "partly", how: "Moved." }] }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 2, name: "Column", asset: asset2, stories: [{ story: "s1", met: "partly", how: "Moved." }] }] });
   assert.equal(s.card(card.id).variants[0].stories[0].met, "partly", "new stories replace the old");
   assert.throws(() => s.upsertCard({ id: card.id, issue_brief: { stories: [{ id: "s1", text: "a" }, { id: "s1", text: "b" }] } }), /its own/);
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset, stories: [{ story: "s1", met: "maybe", how: "x" }] }] }), /met must be/);
@@ -344,7 +413,7 @@ test("change notes on elements wake the agent once; its redraw keeps the earlier
   assert.equal(first.id, second.id);
   assert.deepEqual(s.getCard(card.id).waiting.map((w) => w.kind), ["request", "revise"]);
   const a2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>2</p>", encoding: "utf8" }).asset.id;
-  const v = s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "One button", asset: a2 }] }).card.variants[0];
+  const v = s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "One button", asset: a2 }] }).card.variants[0];
   assert.equal(v.version, 2);
   assert.equal(v.history[0].asset, a1);
 });
@@ -376,6 +445,31 @@ test("comments on options: replies, done and reopen, and a designer has them wor
   assert.equal(s.reopenThread(two.id, alice).inbox.id, item.id);
 });
 
+test("a worked-in change is answered with the place before and after", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { problem: "Save is easy to miss." });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Tabs", asset: a }] });
+  const { thread } = s.openThread(card.id, alice, { kind: "change", text: "Make Save primary", anchor: { variant: "v1", selector: "button", label: "Save" } });
+  const pic = () => s.addAsset({ kind: "image", name: "p.jpg", contentType: "image/jpeg", data: Buffer.from("jpg").toString("base64") }).asset.id;
+  const [before, after] = [pic(), pic()];
+  const marks = [{ x: 0.1, y: 0.2, w: 0.3, h: 0.1 }];
+  assert.throws(() => s.answer(thread.id, "Done.", { shots: [{ asset: after, stage: "after", pair: "Save" }] }), /needs a before and an after/);
+  assert.throws(() => s.answer(thread.id, "Done.", { shots: [{ asset: before }, { asset: after, stage: "after" }] }), /needs a before and an after/);
+  assert.throws(() => s.answer(thread.id, "Done.", { shots: [{ asset: "A-999", stage: "before" }, { asset: after, stage: "after" }] }), /no asset/);
+  assert.throws(() => s.openThread(card.id, alice, { kind: "comment", text: "Look", shots: [{ asset: before, stage: "before" }, { asset: after, stage: "after" }] }), /only Design Desk/);
+  assert.equal(s.getCard(card.id).threads[0].messages.length, 1, "a refused answer leaves the thread as it was");
+  s.answer(thread.id, "Save is the primary button now.", { resolve: true, shots: [{ asset: before, stage: "before", pair: "Save", marks }, { asset: after, stage: "after", pair: "Save", marks }] });
+  const t = s.getCard(card.id).threads[0];
+  assert.equal(t.state, "resolved");
+  assert.deepEqual(t.messages[1].shots.map((x) => [x.asset, x.stage, x.pair, x.marks]), [[before, "before", "Save", marks], [after, "after", "Save", marks]]);
+  // An answer without pictures carries none; the agent's own comment can carry them too.
+  const q = s.openThread(card.id, bob, { kind: "question", text: "Why?" }).thread;
+  assert.equal("shots" in s.answer(q.id, "Because.").thread.messages[1], false);
+  const c = s.openThread(card.id, { agent: true }, { kind: "comment", text: "Redrawn with every comment.", shots: [{ asset: before, stage: "before" }, { asset: after, stage: "after" }] }).thread;
+  assert.deepEqual(c.messages[0].shots.map((x) => x.pair), ["screen", "screen"]);
+});
+
 test("only a designer picks the winning option; votes only suggest one", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });
@@ -397,8 +491,88 @@ test("only a designer picks the winning option; votes only suggest one", () => {
   assert.equal(s.queueForCall(card.id, alice).card.agenda.variant, "v2");
   assert.equal(s.choose(card.id, alice, null).card.chosen, undefined);
   s.choose(card.id, alice, "v2");
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Table", asset: a }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Table", asset: a }, { id: "v2", drop: true }] });
   assert.equal(s.getCard(card.id).chosen, undefined, "an option that is gone is no longer the winner");
+});
+
+test("every state of a part: drawn per option, versioned, noted on its own; a build names what goes live", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "triaged"); }
+  const page = (t) => s.addAsset({ kind: "variant", name: t, contentType: "text/html", data: `<p>${t}</p>`, encoding: "utf8" }).asset.id;
+  const a = page("A"), b = page("B");
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Big", asset: a }, { id: "v2", name: "Small", asset: b }] });
+  // A designer asks for every state of the part they selected.
+  assert.throws(() => s.act(card.id, alice, "states", "", { variant: "v9" }), /Pick the design option/);
+  assert.throws(() => s.act(card.id, alice, "states", " ", { variant: "v1" }), /Select the part/);
+  const { inbox: item } = s.act(card.id, alice, "states", "Also a drag hover.", { variant: "v1", part: { selector: "body > button", label: "Button “Upload”", text: "Upload" } });
+  assert.deepEqual([item.kind, item.variant, item.part.label], ["states", "v1", "Button “Upload”"]);
+  assert.equal(inbox(s).open.find((i) => i.id === item.id).variant, "v1", "the inbox file names the option");
+  assert.throws(() => s.act(card.id, alice, "states", "Again", { variant: "v2" }), /already working/);
+  // The agent's question resumes the same option and part.
+  s.claim(item.id, "run-2"); s.done(item.id, "run-2", "asked");
+  const { thread: q } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "The upload button?", step: "states" });
+  const { inbox: resumed } = s.reply(q.id, alice, "Yes.");
+  assert.deepEqual([resumed.kind, resumed.variant, resumed.part.label], ["states", "v1", "Button “Upload”"]);
+  s.claim(resumed.id, "run-3"); s.done(resumed.id, "run-3", "drew");
+  // The states: one page each, kept when an upsert leaves them out, versioned under their id.
+  const h = page("hover"), e = page("error");
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "x", name: "X", asset: "A-99" }] }] }), /no asset/);
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "x", name: "X", asset: h }, { id: "x", name: "Y", asset: e }] }] }), /its own/);
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states: [{ id: "hover", name: "Hovered", how: "The pointer is over it.", part: "Upload button", asset: h }, { id: "error", name: "Failed", part: "Upload button", asset: e }] }, { id: "v2", version: 1, name: "Small", asset: b }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a }, { id: "v2", version: 1, name: "Small", asset: b }] });
+  assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.id, x.version]), [["hover", 1], ["error", 1]], "leaving states out keeps them");
+  // A note on one state names it; a state the option does not have is refused.
+  assert.throws(() => s.openThread(card.id, alice, { kind: "change", text: "Red.", anchor: { variant: "v1", state: "loading" } }), /not drawn/);
+  const { thread: note } = s.openThread(card.id, alice, { kind: "change", text: "Make it red.", anchor: { variant: "v1", state: "error", label: "the whole state" } });
+  assert.equal(note.anchor.state, "error");
+  const e2 = page("error 2");
+  const states = s.getCard(card.id).variants[0].states.map((x) => (x.id === "error" ? { ...x, asset: e2 } : x));
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states }, { id: "v2", version: 1, name: "Small", asset: b }] });
+  const err = s.getCard(card.id).variants[0].states.find((x) => x.id === "error");
+  assert.deepEqual([err.version, err.asset, err.history[0].asset], [2, e2, e], "a redrawn state keeps the one it replaces");
+  // Build it live: exactly the option and version the person checked.
+  assert.throws(() => s.act(card.id, alice, "build", "v9", { variant: "v9" }), /Pick the design option to build/);
+  assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 0 }), (x) => x.status === 409 && /newer version of Big/.test(x.message));
+  // A state redrawn alone, or one the check did not show, is not what the person saw.
+  assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 1, states: { hover: 1, error: 1 } }), (x) => x.status === 409);
+  assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 1, states: { hover: 1 } }), (x) => x.status === 409);
+  const { card: built, inbox: job } = s.act(card.id, alice, "build", "v1", { variant: "v1", version: 1, states: { hover: 1, error: 2 }, askFirst: true });
+  assert.deepEqual([job.variant, job.version, job.note], ["v1", 1, "v1"]);
+  assert.deepEqual([built.live_pick.variant, built.live_pick.version, built.live_pick.asset, built.live_pick.by.email], ["v1", 1, a, alice.email]);
+  assert.deepEqual(built.live_pick.states.map((x) => [x.id, x.version, x.asset]), [["hover", 1, h], ["error", 2, e2]]);
+  // The agent's card writes never carry it.
+  s.upsertCard({ id: card.id, live_pick: { variant: "v2" } });
+  assert.equal(s.getCard(card.id).live_pick.variant, "v1");
+  // A revise of the option leaves its states drawn for the earlier version: no build until
+  // they are drawn again for the new one.
+  s.claim(job.id, "run-4"); s.done(job.id, "run-4", "live");
+  const a2 = page("A2");
+  const now = s.getCard(card.id).variants;
+  s.upsertCard({ id: card.id, variants: [{ ...now[0], asset: a2 }, now[1]] });
+  const v1 = s.getCard(card.id).variants[0];
+  assert.deepEqual([v1.version, v1.states.map((x) => x.of)], [2, [1, 1]]);
+  assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 2, states: { hover: 1, error: 2 } }), (x) => x.status === 409 && /drawn for an earlier version/.test(x.message));
+  const h2 = page("hover 2"), e3 = page("error 3");
+  s.upsertCard({ id: card.id, variants: [{ ...v1, states: [{ ...v1.states[0], asset: h2 }, { ...v1.states[1], asset: e3 }] }, now[1]] });
+  assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.version, x.of]), [[2, 2], [3, 2]]);
+  assert.equal(s.act(card.id, alice, "build", "v1", { variant: "v1", version: 2, states: { hover: 2, error: 3 } }).card.live_pick.version, 2);
+  // Two runs on one card: the one that read an older version is refused, not saved over.
+  const fresh2 = s.getCard(card.id).variants;
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], version: 1 }, fresh2[1]] }), (x) => x.status === 409 && /Big is at version 2 now; you read version 1/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], states: [{ ...fresh2[0].states[0], version: 1, asset: page("old") }, fresh2[0].states[1]] }, fresh2[1]] }), (x) => x.status === 409 && /Hovered is at version 2/.test(x.message));
+  assert.equal(s.getCard(card.id).variants[0].states[0].asset, h2, "a refused write changes nothing");
+  // A run that sends no version, or leaves an option or a state out, is refused too.
+  const noVersion = ({ version, ...x }) => x;
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...noVersion(fresh2[0]), asset: page("older") }, fresh2[1]] }), (x) => x.status === 409 && /send the version you read/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], states: [noVersion(fresh2[0].states[0]), fresh2[0].states[1]] }, fresh2[1]] }), (x) => x.status === 409 && /Hovered is on the card at version 2/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [fresh2[0]] }), (x) => x.status === 409 && /Small is on the card but not in what you sent/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], states: [fresh2[0].states[0]] }, fresh2[1]] }), (x) => x.status === 409 && /Failed is on the card but not in what you sent/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [...fresh2, { id: "v9", drop: true }] }), /no option v9/);
+  assert.deepEqual(s.getCard(card.id).variants.map((x) => x.id), ["v1", "v2"], "nothing refused was saved");
+  // A closed request has nothing going live.
+  s.claim(Object.values(s.db.inbox).find((i) => i.kind === "build" && i.state === "open").id, "run-5");
+  assert.equal(s.act(card.id, alice, "close").card.live_pick, undefined);
 });
 
 test("Send designs to Slack is one slack item scoped send, and needs options", () => {
@@ -687,7 +861,7 @@ test("needs a designer: the agent judges a change, a request's comes from where 
   s.upsertCard({ id: req.id, triage: { verdict: "design", reasons: ["Only the look."] } });
   assert.equal(att(req.id), null, "still Design Desk's turn until its triage is done");
   s.done(triage.id, "s1", "triaged");
-  assert.deepEqual(att(req.id).reasons, ["Checked: draw options or close it"]);
+  assert.deepEqual(att(req.id).reasons, ["Checked: draw options, decide or close it"]);
   s.act(req.id, alice, "explore");
   assert.equal(att(req.id), null, "while Design Desk draws, it waits for nobody");
   s.suggestForCall(req.id, "A decision is due");
