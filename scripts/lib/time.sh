@@ -10,7 +10,12 @@
 # the same instant whatever the offset says. A value it cannot read is `null`, never 0:
 # a broken timestamp must not read as "long ago", which would close a vote or expire a
 # prototype the moment it was written. Callers treat `null` as "no date", each in its own
-# safe direction. `ep` is the older name the monitor uses.
+# safe direction: it never closes, expires or idles anything; a claim or a sync time
+# nobody can read is stale, so the takeover or the sync writes a fresh one; when a date
+# only orders, filters or retains, it is the oldest; the monitor reports an inbox item it
+# cannot date. A caller tests the value for null before any arithmetic or `max`: in jq,
+# `$now - null` is an error that drops the whole filter's output, and `max` hides a null.
+# `ep` is the older name the monitor uses.
 EPOCH_JQ='def epoch:
   if type != "string" then null
   else

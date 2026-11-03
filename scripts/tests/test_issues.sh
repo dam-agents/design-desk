@@ -34,6 +34,15 @@ assert "a title from ids" '.title == "Read issues #43, #41 +2 more"' "$out"
 out2="$(bash "$ROOT/scripts/preflight.sh" issues)"
 assert "fresh due rows are left alone" '.nothing_to_do == true' "$out2"
 
+# A claim row whose time nobody can read is taken over (scripts/lib/time.sh); a fresh one
+# written with an offset is still held.
+recent_off="$(date -u -d '55 minutes' +%Y-%m-%dT%H:%M:%S+01:00 2>/dev/null || date -u -v+55M +%Y-%m-%dT%H:%M:%S+01:00)"
+printf 'acme/widgets\t42\t2026-10-28T10:00:00Z\tdue\t\tnot a date\t0\t\n' >> "$WORK_DIR/ISSUES.tsv"
+printf 'acme/widgets\t40\t2026-10-30T10:00:00Z\tdue\t\t%s\t0\t\n' "$recent_off" >> "$WORK_DIR/ISSUES.tsv"
+out2b="$(bash "$ROOT/scripts/preflight.sh" issues)"
+assert "an undatable claim is taken over, a fresh offset one is held" \
+  '[(.drawings_due + .issue_news_due)[] | [.issue, .kind]] == [[42, "takeover"]] and (.logs | map(test("#40: due since")) | any)' "$out2b"
+
 # The agent's outcomes: 41 is UI (card C-1, no sketch yet), 42 UI and drawn (C-2), 40 is not UI.
 L() { bash "$ROOT/scripts/ledger.sh" --issues "$@" >/dev/null; }
 L done acme/widgets 41 C-1; L done acme/widgets 42 C-2; L skip acme/widgets 40 "back end"; L done acme/widgets 43 C-3

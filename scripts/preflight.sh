@@ -341,7 +341,9 @@ issues_mode() {
     found="$(search "$repo" "repo:$slug is:issue is:open")" || fail_out "could not list the open issues of $repo"
     # Per issue, the ledger's last row decides: read it (first, changed, takeover, retry) or
     # not; a read one follows the plan (move) and gets its pictures once (draw). The sprint
-    # first, then someone's, then the backlog; the most recently updated first in each.
+    # first, then someone's, then the backlog; the most recently updated first in each. A
+    # date nobody can read (scripts/lib/time.sh) sorts as the oldest, and a claim row whose
+    # time nobody can read is taken over: it cannot show that its session is alive.
     pass="$(jq -c --arg repo "$repo" --arg sprint "$sprint" --arg now "$NOW_ISO" --argjson nowe "$NOW_EPOCH" \
       --rawfile ledger "$ILEDGER" --argjson cards "$cards" --argjson drawing "$drawing" \
       --argjson maxd "$((MAXD - $(jq length <<<"$draw")))" --argjson maxj "$((MAXJ - $(jq '[.[] | select(.need == "judge")] | length' <<<"$news")))" "$EPOCH_JQ"'
@@ -350,13 +352,13 @@ issues_mode() {
         | reduce .[] as $r ({}; .[$r[1]] = {iupd: $r[2], status: $r[3], card: $r[4], ts: $r[5], attempts: (($r[6] | tonumber?) // 0)})) as $L
       | ($cards | map(select(.repo == $repo)) | INDEX(.issue)) as $C
       | [ .items[] | select(.pull_request == null) | . + {b: bucket} ]
-      | sort_by([({sprint: 0, assigned: 1, backlog: 2}[.b]), (0 - ((.updated_at // "") | epoch))])
+      | sort_by([({sprint: 0, assigned: 1, backlog: 2}[.b]), ((.updated_at | epoch) as $at | if $at == null then 0 else 0 - $at end)])
       | reduce .[] as $i ({news: [], draw: [], rows: [], logs: [], seen: [], nj: 0, nd: 0, deferred: 0};
           ($i.number | tostring) as $n | ($L[$n] // {}) as $row | $C[$n] as $card
           | ($row.status // "") as $st
           | (if $st == "" then "first"
              elif ($st == "carded" or $st == "skipped") then (if $row.iupd != $i.updated_at then "changed" else null end)
-             elif ($st == "due" or $st == "in_progress") then (if ($nowe - ($row.ts | epoch)) >= 10800 then "takeover" else "held" end)
+             elif ($st == "due" or $st == "in_progress") then (($row.ts | epoch) as $at | if $at == null or ($nowe - $at) >= 10800 then "takeover" else "held" end)
              elif $st == "failed" then (if $row.attempts < 3 then "retry" else "gave-up" end)
              else null end) as $kind
           | (($i.b == "sprint" or $i.b == "assigned") and (($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
@@ -414,45 +416,52 @@ inbox_mode() {
   jq -e '.open | type == "array"' "$INBOX" >/dev/null 2>&1 || fail_out "$INBOX is not an inbox document — the Desk server writes it; see docs/desk.md → Server"
   # The server owns the claim TTL and writes it into the inbox.
   ttl_s=$(( $(jq -r '.claim_ttl_min // 120' "$INBOX") * 60 ))
-  # Open items, plus claimed ones whose claim is past its TTL (the session died).
+  # Open items, plus claimed ones whose claim is past its TTL (the session died) or whose
+  # claim time nobody can read (scripts/lib/time.sh: such a claim cannot show it is alive).
   local items
   items="$(jq -c --argjson now "$NOW_EPOCH" --argjson ttl "$ttl_s" "$EPOCH_JQ"'
     [ (.open[] | . + {takeover:false}),
-      (.claimed[] | select(($now - (.claimed_at | epoch)) >= $ttl) | . + {takeover:true}) ]' "$INBOX")"
+      (.claimed[] | select((.claimed_at | epoch) as $at | $at == null or ($now - $at) >= $ttl) | . + {takeover:true}) ]' "$INBOX")"
   # A live prototype whose expiry is within a day (and not yet decided for that date),
-  # or whose request is closed and whose expiry passed, is due once.
+  # or whose request is closed and whose expiry passed, is due once. An expiry nobody can
+  # read is never due: it must not extend or tear down a prototype.
   local expiring="[]"
   if [ -f "$DB" ]; then
     expiring="$(jq -c --argjson now "$NOW_EPOCH" "$EPOCH_JQ"'
       [ .cards[] | select(.kind == "request" and (.prototype.state == "live" or .prototype.state == "building") and .prototype.expires != null)
         | (.status == "declined" or .status == "handed-off") as $closed
-        | ((.prototype.expires | epoch) - $now) as $left
+        | (.prototype.expires | epoch) as $at | select($at != null)
+        | ($at - $now) as $left
         | select(if $closed then $left <= 0 else ($left < 86400 and .prototype.expiry_checked != .prototype.expires) end)
         | {id: ("E-" + .id), card: .id, env: .prototype.env, expires: .prototype.expires, closed: $closed} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   # An open Slack vote is synced every 30 minutes, and closed on its date or once its
-  # request has moved past the options (approved, handed off, closed).
+  # request has moved past the options (approved, handed off, closed). A closing time nobody
+  # can read never closes a vote; a sync time nobody can read is due, like none (the sync
+  # writes a fresh one).
   local polls="[]"
   if [ -f "$DB" ]; then
     polls="$(jq -c --argjson now "$NOW_EPOCH" "$EPOCH_JQ"'
       [ .cards[] | . as $c | (.polls // [])[] | select(.state == "open")
         | (((.closes | epoch) as $at | $at != null and $at <= $now)
            or (($c.status | IN("variants", "feedback", "prototype", "testing")) | not)) as $close
-        | select($close or .synced == null or ($now - (.synced | epoch)) >= 1800)
+        | select($close or ((.synced | epoch) as $at | $at == null or ($now - $at) >= 1800))
         | {id: .id, card: $c.id, close: $close, closes: .closes} ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   # An open council (a Slack thread whose asks change a request's options) is read every
   # council_sync_min minutes for asks nobody tagged the agent in; it is due to close once its
   # request moved past the options, or three days after the last message the agent read (the
-  # agent reads the thread once more and closes it only when nothing new came).
+  # agent reads the thread once more and closes it only when nothing new came). An opening
+  # time nobody can read is no last message, so it never makes a council idle; a sync time
+  # nobody can read is due, like none.
   local councils="[]"
   if [ -f "$DB" ] && [ "$(jq -r .slack_council <<<"$CONF")" = enabled ]; then
     councils="$(jq -c --argjson now "$NOW_EPOCH" --argjson every "$(jq '.council_sync_min * 60' <<<"$CONF")" "$EPOCH_JQ"'
       [ .cards[] | . as $c | (.councils // [])[] | select(.state == "open")
-        | ([(.opened | epoch), ((.seen // "0") | tonumber? // 0 | floor)] | max) as $last
+        | ([(.opened | epoch), ((.seen // "0") | tonumber? // 0 | floor)] | map(select(. != null and . > 0)) | max) as $last
         | (if ($c.status | IN("triage", "variants", "feedback", "prototype", "testing")) | not then "moved"
-           elif ($now - $last) >= 259200 then "idle" else null end) as $why
-        | select($why != null or .synced == null or ($now - (.synced | epoch)) >= $every)
+           elif $last != null and ($now - $last) >= 259200 then "idle" else null end) as $why
+        | select($why != null or ((.synced | epoch) as $at | $at == null or ($now - $at) >= $every))
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   local n; n="$(jq 'length' <<<"$items")"
@@ -635,7 +644,7 @@ digest_mode() {
   period="$(date -u +%G-W%V)"
   local out
   out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" "$EPOCH_JQ"'
-    def within($s): ((. // "") | epoch) >= ($now - $s);
+    def within($s): epoch as $at | $at != null and $at >= ($now - $s);
     (7 * 86400) as $week | (30 * 86400) as $month
     | [.cards[]] as $cards
     | {
