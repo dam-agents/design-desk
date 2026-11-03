@@ -1297,7 +1297,6 @@
       <div class="sub">${ageChip(c)}${c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : ""}${inProgress ? `<span class="chip warn">In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
-      ${c.designed ? `<div class="sent"><b>✓ Already through Design Desk — done on the design side.</b><p><button class="anchor" data-card="${esc(c.designed.card)}">${esc(c.designed.title)}</button>${num({ id: c.designed.card })} was sent to developers${c.designed.at ? ` on ${esc(day(c.designed.at))}` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
       ${attentionLine(c)}
       ${againstBox(c)}${followsLine(c)}
@@ -1327,8 +1326,9 @@
     const open = c.status !== "archived";
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
-      <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
+      <div class="sub">${c.designed ? `<span class="chip ok">✓ Designed in Design Desk</span>` : `<span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Issue")}</span>`}${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${c.designed ? `<div class="sent"><b>✓ Already through Design Desk — done on the design side.</b><p><button class="anchor" data-card="${esc(c.designed.card)}">${esc(c.designed.title)}</button>${num({ id: c.designed.card })} was sent to developers${c.designed.at ? ` on ${esc(day(c.designed.at))}` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
       ${againstBox(c)}${followsLine(c)}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
