@@ -755,6 +755,20 @@ test("an issue card: found again by its issue, short needs, pictures of now and 
   assert.deepEqual([row.bucket, row.needs.length, row.sketches], ["assigned", 1, 1]);
 });
 
+test("an issue a request was sent to developers from, or to, is designed; the request links the issue's card", () => {
+  const s = fresh();
+  const from = s.upsertCard({ kind: "issue", title: "See spend", bucket: "sprint", needs: ["A spend column"], source: { repo: "acme/widgets", issue: 30, url: "https://github.com/acme/widgets/issues/30" } }).card;
+  const sent = s.upsertCard({ kind: "issue", title: "Build the spend column", bucket: "assigned", needs: ["A spend column"], source: { repo: "acme/widgets", issue: 31, url: "https://github.com/Acme/Widgets/issues/31" } }).card;
+  const r = s.createRequest(alice, { title: "Spend column", problem: "No spend.", type: "feature", from: from.id }).card;
+  s.upsertCard({ id: r.id, status: "spec", spec: { issue_url: "https://github.com/acme/widgets/issues/31#issuecomment-5" } });
+  assert.equal(s.getCard(from.id).designed, null, "not before it is sent");
+  assert.equal(s.getCard(r.id).sent_card, sent.id, "the request links the issue its spec went to");
+  s.upsertCard({ id: r.id, status: "handed-off" });
+  const rows = Object.fromEntries(s.listCards({ kind: "issue" }).map((c) => [c.id, c.designed?.card]));
+  assert.deepEqual(rows, { [from.id]: r.id, [sent.id]: r.id }, "both the issue it came from and the one it went to");
+  assert.equal(s.getCard(sent.id).designed.title, "Spend column");
+});
+
 test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   const s = fresh();
   const pm = { email: "pat@example.com", role: "pm" };

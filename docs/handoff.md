@@ -57,7 +57,9 @@ sent; the developer or coding agent gets only answers.
      `implementer_mention`), which builds it into the product;
    - `idea` and `proposal` — per `handoff`: `desk` (nothing more), `issue` or `draft-pr`.
 
-   The skill sets `spec.issue_url` or `spec.pr_url`. What it sends asks nothing of its reader:
+   The skill sets `spec.issue_url` or `spec.pr_url`; the request then shows a card linking
+   it, and the issue's own card on the Issues page once the issues run read it, filed under
+   **✓ Designed** ([issues.md](issues.md) → On the Desk). What it sends asks nothing of its reader:
    it is the spec as the Desk settled it, and it names the Desk card as the place for a
    question that still comes up.
 6. Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,

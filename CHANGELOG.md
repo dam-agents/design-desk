@@ -10,13 +10,17 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.28.0 — 2026-11-03
 
 **Upgrade:**
-Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A spec now leaves without open
 questions: what it does not settle is asked on the Desk as a form (`--step handoff`) and
 answered there before it is sent ([docs/handoff.md](docs/handoff.md) step 4). A spec already
 sent keeps its text; nothing to migrate. Every issue, comment or pull request the spec goes
 to carries the design's pictures, before and after; on a pull request they go in a comment
 `gh issue comment --attach` writes, since `gh pr comment` and `gh pr create` attach nothing.
+A request sent to developers shows a card linking its issue; that issue, and the one it came
+from, leave the Issues page's open lists for **✓ Designed** and are never drawn
+([docs/issues.md](docs/issues.md) → On the Desk). Derived from the cards; nothing to migrate.
 
 ## 1.27.0 — 2026-11-03
 
