@@ -973,7 +973,9 @@
   }
   // The decisions in force a card goes against: on the card, and on the option it names.
   // The decisions a card follows, by their numbers.
-  const followsLine = (c) => (c.decisions || []).length ? `<p class="hint">Follows ${c.decisions.map((id) => decRef(id)).join(", ")}</p>` : "";
+  // A cited decision no longer in force is crossed out and says so.
+  const citeRef = (c, id) => c.cited?.[id]?.status === "revoked" ? `<span class="revoked-text">${decRef(id)}</span> <span class="chip bad">revoked</span>` : decRef(id);
+  const followsLine = (c) => (c.decisions || []).length ? `<p class="hint">Follows ${c.decisions.map((id) => citeRef(c, id)).join(", ")}</p>` : "";
   function againstBox(c, variant = null) {
     const xs = (c.conflicts || []).filter((x) => x.status === "active" && (variant ? x.variant === variant : !x.variant));
     return xs.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("");
@@ -1123,7 +1125,7 @@
     return `<details class="fold"><summary><b>Where else this shows up, and what it touches</b></summary><div class="impact section">
       <p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li>${productLink(p)}${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}
       ${im.affects?.length ? `<p><b>What a change here touches</b></p>${li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${txt(a.why)}` : ""}${srcLink(a.source)}</li>`)}` : ""}
-      ${im.decisions?.length ? `<p><b>Earlier decisions about it</b></p>${li(im.decisions, (d) => `<li>${d.id ? `${decRef(d.id)} ` : ""}${txt(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`)}` : ""}</div></details>`;
+      ${im.decisions?.length ? `<p><b>Earlier decisions about it</b></p>${li(im.decisions, (d) => `<li>${d.id ? `${citeRef(S.card, d.id)} ` : ""}${txt(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`)}` : ""}</div></details>`;
   }
 
   function renderThreads(c, { skipAsks = false } = {}) {
@@ -1743,6 +1745,8 @@
     }
     const keep = $("#composer-text")?.value || "";
     d.innerHTML = { change: renderChange, element: renderElement, screen: renderScreen, digest: renderDigest, issue: renderIssue }[S.card.kind]?.(S.card) ?? renderRequest(S.card);
+    // Screens, elements and digests have no place of their own for the decisions they follow.
+    if (["screen", "element", "digest"].includes(S.card.kind)) d.insertAdjacentHTML("beforeend", followsLine(S.card));
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
     if (S.card.kind === "screen") loadTimeline(S.card);

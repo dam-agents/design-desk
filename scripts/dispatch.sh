@@ -10,7 +10,7 @@
 # worklist every expensive item (a request to triage, variants, a prototype, a
 # handoff, a catalog drawing, a screen for the map, Figma work, an issue to draw) after the first expensive one; in an
 # issues worklist every issue to draw after the first. Questions, teardowns, expiring
-# prototypes and issues only to read are quick and stay in the run.
+# prototypes, comments to record as decisions and issues only to read are quick and stay in the run.
 # A unit's task text carries the item id and the unit's path and nothing from the
 # item: it becomes the new session's prompt. Titles come from ids alone.
 # `dispatch: disabled` in the worklist's config keeps everything in the run.

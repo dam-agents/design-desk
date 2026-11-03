@@ -254,7 +254,10 @@ export class Store {
     const c = this.card(id);
     // A conflict carries the decision's words and where it stands, so the page warns without another read.
     const conflicts = (c.conflicts || []).map((x) => { const d = own(this.db.decisions, x.decision); return { ...x, text: d?.text || "", status: d?.status || "revoked", replaced_by: d?.revoked?.replaced_by || null }; });
-    return { ...c, conflicts, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    // Each decision the card cites, with its words and whether it is still in force.
+    const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean)]
+      .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.

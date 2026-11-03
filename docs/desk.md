@@ -102,6 +102,8 @@ and `D-12` in text link to it as to a card (Links to an item).
   | `approval` | a design approved ([handoff.md](handoff.md)) | the approver | the card |
   | `chat` | the operator says so in chat | the operator | none needed |
 
+  `other` marks only a record from before decisions named their origin; never write it.
+
 - **Citing**: whatever rests on a decision names its number — a card's `decisions: ["D-3"]`,
   `impact.decisions[].id`, a section, an answer, a spec, a Slack reply, the digest.
 - **Conflicts**: before writing a triage verdict, options, a change card, an issue's sketch or
