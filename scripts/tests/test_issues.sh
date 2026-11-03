@@ -42,10 +42,10 @@ assert "fresh due rows are left alone" '.nothing_to_do == true' "$out2"
 # written with an offset is still held.
 recent_off="$(date -u -d '55 minutes' +%Y-%m-%dT%H:%M:%S+01:00 2>/dev/null || date -u -v+55M +%Y-%m-%dT%H:%M:%S+01:00)"
 printf 'acme/widgets\t42\t2026-10-28T10:00:00Z\tdue\t\tnot a date\t0\t\n' >> "$WORK_DIR/ISSUES.tsv"
-printf 'acme/widgets\t40\t2026-10-30T10:00:00Z\tdue\t\t%s\t0\t\n' "$recent_off" >> "$WORK_DIR/ISSUES.tsv"
+printf 'acme/widgets\t44\t2026-10-25T10:00:00Z\tdue\t\t%s\t0\t\n' "$recent_off" >> "$WORK_DIR/ISSUES.tsv"
 out2b="$(bash "$ROOT/scripts/preflight.sh" issues)"
 assert "an undatable claim is taken over, a fresh offset one is held" \
-  '[(.drawings_due + .issue_news_due)[] | [.issue, .kind]] == [[42, "takeover"]] and (.logs | map(test("#40: due since")) | any)' "$out2b"
+  '[(.drawings_due + .issue_news_due)[] | [.issue, .kind]] == [[42, "takeover"]] and (.logs | map(test("#44: due since")) | any)' "$out2b"
 
 # The agent's outcomes: 41 is UI (card C-1, no sketch yet), 42 UI and drawn (C-2), 40 is not UI.
 L() { bash "$ROOT/scripts/ledger.sh" --issues "$@" >/dev/null; }
@@ -94,13 +94,13 @@ assert "the run keeps the rest" '.title == "Read issues #41, #40"' "$rest"
 rm -f "$WORK_DIR/ISSUES.tsv" "$DESK_DIR/db.json"
 cat > "$STUB_DIR/open-issues.json" <<'JSON'
 {"incomplete_results":false,"items":[
- {"number":50,"title":"Undated","html_url":"https://github.com/acme/widgets/issues/50","user":{"login":"erin"},"updated_at":"not a date","milestone":null,"assignees":[],"labels":[]},
- {"number":51,"title":"Offset","html_url":"https://github.com/acme/widgets/issues/51","user":{"login":"erin"},"updated_at":"2026-10-02T11:00:00+02:00","milestone":null,"assignees":[],"labels":[]},
- {"number":52,"title":"Later","html_url":"https://github.com/acme/widgets/issues/52","user":{"login":"erin"},"updated_at":"2026-10-02T10:00:00Z","milestone":null,"assignees":[],"labels":[]}]}
+ {"number":50,"title":"Undated","html_url":"https://github.com/acme/widgets/issues/50","user":{"login":"erin"},"updated_at":"not a date","milestone":null,"assignees":[{"login":"erin"}],"labels":[]},
+ {"number":51,"title":"Offset","html_url":"https://github.com/acme/widgets/issues/51","user":{"login":"erin"},"updated_at":"2026-10-02T11:00:00+02:00","milestone":null,"assignees":[{"login":"erin"}],"labels":[]},
+ {"number":52,"title":"Later","html_url":"https://github.com/acme/widgets/issues/52","user":{"login":"erin"},"updated_at":"2026-10-02T10:00:00Z","milestone":null,"assignees":[{"login":"erin"}],"labels":[]}]}
 JSON
 out5="$(bash "$ROOT/scripts/preflight.sh" issues)"
 assert "an undatable issue is read last, an offset one by its instant" \
-  '.nothing_to_do == false and [.issue_news_due[] | .issue] == [52, 51, 50]' "$out5"
+  '.nothing_to_do == false and [(.drawings_due + .issue_news_due)[] | .issue] == [52, 51, 50]' "$out5"
 
 # A failing GitHub is an error, never a quiet pass.
 assert "a failed list is an error" '.error != null' "$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" issues)"
