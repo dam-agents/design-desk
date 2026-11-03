@@ -442,8 +442,8 @@ const hour = 36e5, iso = (ms) => new Date(Date.now() - ms).toISOString();
 const queued = { status: "queued", by: { email: "d@example.com" }, at: iso(2 * hour), variant: null, brief: "Pick one." };
 const cards = [
   { id: "C-2", kind: "request", title: "Calmer empty list", status: "triage", agenda: queued },
-  { id: "C-4", kind: "request", title: "Presented today", status: "triage", agenda: { ...queued, status: "presented", call: iso(hour) } },
-  { id: "C-5", kind: "request", title: "Presented last week", status: "triage", agenda: { ...queued, status: "presented", call: iso(7 * 24 * hour) } },
+  { id: "C-4", kind: "request", title: "Presented today", status: "triage", agenda: { ...queued, status: "presented", call: iso(hour), undo_until: iso(-hour) } },
+  { id: "C-5", kind: "request", title: "Presented last week", status: "triage", agenda: { ...queued, status: "presented", call: iso(7 * 24 * hour), undo_until: iso(7 * 24 * hour - 2 * hour) } },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });

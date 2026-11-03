@@ -76,8 +76,10 @@ export const ELEMENT_STATES = ["current", "stale", "building", "dropped"];
 export const ISSUE_STATES = ["open", "archived"];
 // Where an issue stands in the team's plan: the current sprint, someone's, or the backlog.
 export const ISSUE_BUCKETS = ["sprint", "assigned", "backlog"];
-// How long Undo can take back an item marked presented (docs/desk.md → The presentation).
-export const UNDO_PRESENTED_MS = 864e5;
+// Undo takes back an item marked presented until the end of that day, UTC: the store
+// writes the deadline, `undo_until`, and the page shows Undo only before it
+// (docs/desk.md → The presentation).
+const endOfDay = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? null : new Date(Math.floor(t / 864e5) * 864e5 + 864e5 - 1000).toISOString().replace(/\.\d{3}Z$/, "Z"); };
 const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
@@ -620,18 +622,19 @@ export class Store {
     return { card: c };
   }
 
-  // A designer marks one item presented once the team saw it. Undo puts it back on, only
-  // within a day: an item of an earlier meeting keeps its date and who presented it.
+  // A designer marks one item presented once the team saw it. Undo puts it back on until
+  // the end of that day: an item of an earlier meeting keeps its date and who presented it.
   markPresented(cardId, who, presented = true) {
     if (!can(who.role, "close")) throw forbidden("Only a designer or the lead marks an item presented.");
     const c = this.card(cardId);
     if (presented) {
       if (c.agenda?.status !== "queued") throw bad("it is not on the presentation");
-      c.agenda = { ...c.agenda, status: "presented", call: this.clock(), presented_by: person(who) };
+      const at = this.clock();
+      c.agenda = { ...c.agenda, status: "presented", call: at, presented_by: person(who), undo_until: endOfDay(at) };
     } else {
       if (c.agenda?.status !== "presented") throw bad("it was not presented");
-      if (!(Date.parse(this.clock()) - Date.parse(c.agenda.call) < UNDO_PRESENTED_MS)) throw bad("it was presented at an earlier meeting; add it to the presentation again instead");
-      const { call, presented_by, ...rest } = c.agenda;
+      if (!(this.clock() <= (c.agenda.undo_until || ""))) throw bad("it was presented at an earlier meeting; add it to the presentation again instead");
+      const { call, presented_by, undo_until, ...rest } = c.agenda;
       c.agenda = { ...rest, status: "queued" };
     }
     c.updated = this.clock();
@@ -642,9 +645,9 @@ export class Store {
   // Mark all as presented: what was queued becomes presented, with the date.
   closeCall(who, { date = null } = {}) {
     if (!can(who.role, "close")) throw forbidden("Only a designer or the lead marks the presentation presented.");
-    const when = optText(date, 40, "date") || this.clock();
+    const when = optText(date, 40, "date") || this.clock(), until = endOfDay(this.clock());
     const done = [];
-    for (const c of Object.values(this.db.cards)) if (c.agenda?.status === "queued") { c.agenda = { ...c.agenda, status: "presented", call: when }; done.push(c.id); }
+    for (const c of Object.values(this.db.cards)) if (c.agenda?.status === "queued") { c.agenda = { ...c.agenda, status: "presented", call: when, undo_until: until }; done.push(c.id); }
     this.db.calls = [...(this.db.calls || []), { at: when, by: person(who), cards: done }].slice(-100);
     this.save();
     return { presented: done };

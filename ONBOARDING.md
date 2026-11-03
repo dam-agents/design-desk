@@ -370,7 +370,7 @@ Give the operator a short **summary**:
 2. What runs: every schedule of Step 5b with its cadence and model; the Desk link; whether live
    prototypes and handoff issues are on.
 3. Day-to-day:
-   - New UI changes appear on the Desk within the hour, under **What's new**.
+   - New UI changes appear on the Desk within the hour, under **Changes**.
    - Anyone on the list asks questions on a card; designers file **New request**, and each
      request shows what happens next and whose turn it is.
    - In the chat: "mock up the empty state of …", "a deck from this doc", "what changed in
@@ -385,6 +385,6 @@ Give the operator a short **summary**:
    > compare and a live version you can click through.
    > It only ever changes how <product> looks, never what it does, and it tells you up front
    > what needs a developer.
-   > Start with **What's new**, or press **New request**.
+   > Start with **Requests**, or press **New request**.
 
 From now on the guard short-circuits and normal runs follow `CLAUDE.md`.

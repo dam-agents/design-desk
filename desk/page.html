@@ -1336,8 +1336,8 @@
       const mine = c.agenda.by?.email && c.agenda.by.email === S.me?.email;
       return `<span class="chip info">▶ On the presentation${shown ? ` · ${esc(shown)}` : ""}</span>${markButton(c)}${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the presentation</button>` : ""}`;
     }
-    // Undo only within a day, as the store allows: an earlier meeting's item keeps its record.
-    const recent = Date.now() - Date.parse(c.agenda?.call) < 864e5;
+    // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
+    const recent = Date.now() <= Date.parse(c.agenda?.undo_until);
     const was = c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}${shown ? ` · ${esc(shown)}` : ""}</span>${can("close") && recent ? `<button class="btn small" data-unpresent="${esc(c.id)}">Undo</button>` : ""}` : "";
     const add = can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "";
     if (!c.call_suggestion) return was + add;

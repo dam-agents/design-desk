@@ -468,15 +468,16 @@ test("the presentation: a designer marks one item presented, and Undo puts it ba
   assert.equal(s.getCard(card.id).agenda.call, undefined);
 });
 
-test("the presentation: an item of an earlier meeting keeps its record; Undo is refused", () => {
-  let now = Date.UTC(2026, 10, 3, 9);
+test("the presentation: Undo ends with the day; an earlier meeting's item keeps its record", () => {
+  let now = Date.UTC(2026, 10, 3, 17);
   const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
   const { card: other } = s.createRequest(alice, { problem: "The header is too tall." });
   s.queueForCall(card.id, alice); s.queueForCall(other.id, alice);
   s.markPresented(card.id, alice);
   s.closeCall(alice);
-  now += 2 * 864e5;
+  assert.equal(s.getCard(card.id).agenda.undo_until, "2026-11-03T23:59:59Z", "the store writes the deadline");
+  now += 23 * 36e5;
   for (const id of [card.id, other.id]) {
     const before = s.getCard(id).agenda;
     assert.throws(() => s.markPresented(id, alice, false), (e) => e.status === 400, "an earlier meeting's item is not taken back");
