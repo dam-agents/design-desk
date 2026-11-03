@@ -39,9 +39,16 @@ The person deciding sees it on the card, and every later step builds on it.
    accidental.
 6. **Record it on the card** with the `explain` skill, in plain words: `research: {verdict,
    summary, links}`. `verdict`: `clear`, `duplicate`, `deliberate`, `collision` (someone is
-   changing it now) or `unclear`. The summary names the history in one or two lines, what is
-   in flight, and who owns the decision. Keep the full notes as an asset (`--kind report`)
-   and set `research.asset`.
+   changing it now) or `unclear`. The Desk shows it open near the top, so the summary is this
+   short report, one line each, every source linked in `links`:
+   - **Already asked for**: duplicates and close issues with their state, or "none found";
+   - **Where it lives**: the screen, in plain words; the code files go in `links` only;
+   - **History**: who added it and why, the last change and what it did;
+   - **In flight**: open pull requests and issues on the same area, or "nothing";
+   - **Deliberate or a slip**: the verdict and its evidence, one quote or link;
+   - **Who to ask**: the people who own the decision, only when the request reverses it.
+
+   Keep the full notes as an asset (`--kind report`) and set `research.asset`.
 7. A `deliberate`, `duplicate` or `collision` verdict is suggested for the next call with the
    question it raises (`design desk agenda` → [desk.md](desk.md) → The next call), and the
    triage says what that means for the request.
@@ -72,9 +79,10 @@ The person deciding should know it before a single variant exists.
      new action;
    - `product` — the request changes what the product does or who it is for; it needs a
      decision before design work makes sense.
-4. Write `triage` on the card: `verdict`, `reasons` (one or two plain sentences), `can` and
-   `cannot` (each a short list, each `cannot` with its reason in the person's terms). Keep
-   `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+4. Write `triage` on the card: `verdict`, `reasons` (one plain sentence, only when the verdict
+   needs it) and `cannot`: only what the person asked for — in the issue, the request or
+   their answers — that a design change cannot do, each with its reason in their terms; never
+   a part nobody asked for. The Desk folds it. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card.
