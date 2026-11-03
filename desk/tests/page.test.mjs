@@ -24,7 +24,7 @@ test("nothing on the page submits a form", () => {
 });
 
 // A stand-in bridge records every call; the server answers just enough for a lead's Desk
-// with one shipped change, a weekly digest and two open requests, one of them waiting for
+// with one shipped change, two weekly digests and two open requests, one of them waiting for
 // an answer.
 // /api/people as the server builds it: every role, with the default prototype_requesters.
 const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "lead" }, { email: "pat@example.com", role: "pm" }],
@@ -32,7 +32,8 @@ const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "lea
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45", author: "dana" } };
-const digest = { id: "d1", kind: "digest", title: "This week", status: "new" };
+const earlier = { id: "d0", kind: "digest", title: "22 Oct – 28 Oct 2026", period: "2026-W44", status: "new" };
+const digest = { id: "d1", kind: "digest", title: "29 Oct – 4 Nov 2026", period: "2026-W45", status: "new" };
 const requests = [
   { id: "r2", kind: "request", title: "Softer colours", status: "triage", asks: true, by: { agent: true }, origin: { channel: "slack", reporter: "Carla", url: "https://acme.slack.com/archives/C0123ABCD/p1" } },
   { id: "r3", kind: "request", title: "A wider sidebar", status: "triage", by: { agent: true }, origin: { channel: "chat", reporter: "Gita" } },
@@ -42,7 +43,7 @@ window.platform = { async request({ method, path, body }) {
   if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true },
       skills: [{ name: "copy", does: "Write the words", on: true }, { name: "brand", does: "Use a saved brand", on: false }] }
-    : path === "/api/cards" ? { cards: [change, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [change, earlier, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
     : path === "/api/cards/e1" ? { card: { id: "e1", kind: "element", title: "The agent row", status: "building", wanted: { part: "The agent row", where: "", show: "" }, created_by: { email: "lead@example.com", role: "lead" } } }
@@ -166,7 +167,13 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // The screenshot dialog, on a shipped change.
     const sh = dialog("shots-dialog"), screens = "/api/cards/ch1/screens";
     await desk.click('[data-tab="new"]');
-    assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest row shows no status word");
+    assert.equal(await desk.locator('[data-card="d1"]').count(), 0, "a digest is not in New");
+    await desk.click('[data-tab="product"]');
+    await desk.click('[data-filter="productFilter:history"]');
+    assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest is in Product → History, with no status word");
+    assert.deepEqual(await desk.$$eval("#list .row.item .open", (els) => els.map((e) => e.dataset.card)), ["d1", "d0"], "History lists the newest week first");
+    await desk.click('[data-filter="productFilter:screens"]');
+    await desk.click('[data-tab="new"]');
     await desk.click('[data-card="ch1"]');
     const withPicture = async () => {
       await desk.click("[data-add-shots]");
@@ -611,7 +618,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
   const later = { id: "is2", kind: "issue", status: "open", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], sketches: 0, source: { repo: "acme/widgets", issue: 40, author: "erin" } };
   const gone = { id: "is3", kind: "issue", status: "archived", title: "Closed", bucket: "sprint", source: { repo: "acme/widgets", issue: 39 } };`;
   const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
-    .replace("cards: [change, digest, ...requests]", "cards: [change, digest, ...requests, issue, later, gone]")
+    .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, later, gone]")
     .replace("can: { request: true,", "can: { draw: true, \"follow-up\": true, request: true,")
     .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/ch1"');
   const run = await launch(t, bridge);
