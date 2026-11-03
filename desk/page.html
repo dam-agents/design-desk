@@ -446,7 +446,7 @@
 <h3>Changing a design</h3>
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
-<p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and <b>Clickable</b> in its top bar outlines everything you can click. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
+<p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
 <p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. Votes and comments help, but a designer picks the winning option with <b>Pick as the winner</b>. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
@@ -486,7 +486,7 @@
 
   // ---------- state ----------
   const S = { me: null, tab: "new", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], offline: false, assetCache: new Map(),
-    ws: { open: false, mode: "select", selected: null, edit: null, version: null, seen: {} } };
+    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
@@ -1531,7 +1531,14 @@
     const box = (el, color, label, solid) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; d.appendChild(b); } layer.appendChild(d); };
     const draw = () => { layer.textContent = ""; for (const p of pins) { const el = find(p.selector); if (el) box(el, p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", "#" + p.n, false); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
     addEventListener("scroll", draw, true); addEventListener("resize", draw); setInterval(draw, 700);
-    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    // The screen shown is kept across options: the Desk names the one to open when the frame
+    // loads, and from then on hears of each screen the person moves to.
+    const shownView = () => document.querySelector("[data-view].review-shown");
+    let lastView = null;
+    const openView = (d) => { const vs = [...document.querySelectorAll("[data-view]")]; const t = vs.find((v) => d.view_name && v.dataset.viewName === d.view_name) || (!d.view_name && vs.find((v) => v.dataset.view === d.view)); if (t && !t.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(t.dataset.view) + '"]')?.click(); };
+    const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
+    new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     addEventListener("mouseover", (e) => { if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
@@ -1668,6 +1675,7 @@
       frame.onload = () => {
         const old = assetId !== v.asset;
         frame.contentWindow?.postMessage({ type: "desk-mode", mode: old ? "off" : S.ws.mode }, "*");
+        frame.contentWindow?.postMessage({ type: "desk-view", ...(S.ws.view || {}) }, "*");
         sendPins(S.card, v);
         if (S.ws.selected?.selector) frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*");
       };
@@ -1684,6 +1692,8 @@
     if (!frame || e.source !== frame.contentWindow) return;
     const d = e.data || {};
     const pickOf = (text) => ({ selector: String(d.selector || "").slice(0, 500), text: String(text || "").slice(0, 120), tag: String(d.tag || "").slice(0, 40), label: String(d.label || "").slice(0, 120), ...(d.view ? { view: String(d.view).slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) } : {}) });
+    // The screen the person moved to; the next option or version opens the same one if it has it.
+    if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
     if (d.type === "desk-picked") { S.ws.selected = pickOf(d.text); S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
     if (d.type === "desk-edited") {
@@ -1761,7 +1771,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null }; }
+    if (before?.id !== card.id) { S.variant = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
