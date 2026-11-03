@@ -180,6 +180,46 @@ test("a small change: the reporter of a request the agent filed is its author; a
   assert.ok(s.act(card.id, alice, "approve", "", { overrule: true }).card.overruled, "a designer still overrules");
 });
 
+test("deciding straight away: a designer or lead developer approves without options or a vote, or decides and closes", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const dana = { email: "dana@example.com", role: "developer" };
+  assert.throws(() => s.decideAndClose("C-999", { agent: true }, { text: "x" }), /no card|Design Desk does not decide/);
+  for (const r of ["lead", "designer", "lead-developer"]) assert.equal(can(r, "skip"), true, r);
+  for (const r of ["developer", "pm", "guest"]) assert.equal(can(r, "skip"), false, r);
+
+  const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
+  assert.throws(() => s.act(card.id, lee, "approve"), /still checking/, "not before it is checked");
+  s.claim(item.id, "s1"); s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Only the look."] } }); s.done(item.id, "s1", "triaged");
+  assert.throws(() => s.act(card.id, dana, "approve"), /nothing to approve yet/, "a developer waits for options, small change or not");
+  const ok = s.act(card.id, lee, "approve", "Use the grey header.");
+  assert.equal(ok.inbox.kind, "handoff");
+  assert.equal(ok.inbox.note, "Use the grey header.");
+  assert.deepEqual(ok.card.approved, { by: { email: "lee@example.com", role: "lead-developer" }, at: ok.card.approved.at, small: false });
+
+  const other = s.createRequest(bob, { title: "Louder badge", problem: "Hard to see." }).card;
+  s.upsertCard({ id: other.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Red" }, { id: "v2", name: "Blue" }] });
+  assert.throws(() => s.decideAndClose(other.id, lee, { text: " " }), /decision/);
+  const decided = s.decideAndClose(other.id, lee, { text: "Badges stay as they are: colour is for errors only.", why: "Agreed at the meeting." });
+  assert.equal(decided.card.status, "declined");
+  assert.deepEqual([decided.inbox.kind, decided.inbox.thread, decided.inbox.note, decided.inbox.why], ["decision", null, "Badges stay as they are: colour is for errors only.", "Agreed at the meeting."]);
+  assert.equal(decided.card.decided.by.email, "lee@example.com");
+  assert.throws(() => s.decideAndClose(other.id, lee, { text: "Again" }), /closed/);
+  s.act(other.id, alice, "reopen");
+  assert.equal(s.card(other.id).decided, undefined, "a reopened request waits for a new decision");
+});
+
+test("a live prototype's option is the one approved", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet" }, { id: "v2", name: "Bold" }] });
+  assert.equal(s.act(card.id, alice, "build", "v2").card.built.variant, "v2");
+  s.upsertCard({ id: card.id, status: "testing", prototype: { state: "live", url: "https://example.com/p" } });
+  const ok = s.act(card.id, alice, "approve", "v1");
+  assert.equal(ok.inbox.note, "v2", "the prototype's option, whatever the pick");
+  assert.equal(ok.card.approved.variant, "v2");
+});
+
 test("a request that needs a developer gets no live prototype", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Week starts per person", problem: "Use my own Monday." });
@@ -687,7 +727,7 @@ test("needs a designer: the agent judges a change, a request's comes from where 
   s.upsertCard({ id: req.id, triage: { verdict: "design", reasons: ["Only the look."] } });
   assert.equal(att(req.id), null, "still Design Desk's turn until its triage is done");
   s.done(triage.id, "s1", "triaged");
-  assert.deepEqual(att(req.id).reasons, ["Checked: draw options or close it"]);
+  assert.deepEqual(att(req.id).reasons, ["Checked: draw options, decide or close it"]);
   s.act(req.id, alice, "explore");
   assert.equal(att(req.id), null, "while Design Desk draws, it waits for nobody");
   s.suggestForCall(req.id, "A decision is due");
