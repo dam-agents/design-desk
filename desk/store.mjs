@@ -11,6 +11,8 @@ export const LIMITS = {
   // The states drawn of one option (docs/requests.md → Every state of a part).
   optionStates: 24,
   messagesPerThread: 200,
+  // An answer to a change shows before and after pictures: a pair or two (light, dark), each with its diff.
+  changeShots: 6,
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
   assetBytes: 720 * 1024,
   claimTtlMin: 120,
@@ -340,7 +342,7 @@ export class Store {
     return { card: c };
   }
 
-  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null } = {}) {
+  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null, shots = null } = {}) {
     const c = this.card(cardId);
     if (!THREAD_KINDS.includes(kind)) throw bad(`kind must be one of ${THREAD_KINDS.join(", ")}`);
     if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
@@ -349,11 +351,12 @@ export class Store {
     if (anchor?.state && !(c.variants || []).find((v) => v.id === anchor.variant)?.states?.some((x) => x.id === anchor.state)) throw bad("That state is not drawn for this option.");
     if ((c.threads || []).length >= LIMITS.threadsPerCard) throw bad("This page holds at most 300 conversations. Mark some as done first.");
     const body = clean(text, LIMITS.text, "text");
+    const pictures = this.changeShots(shots, who);
     const id = this.next("thread", "T");
     const t = {
       id, card: cardId, kind, state: "open", anchor: anchor ? cleanAnchor(anchor) : null,
       needs_agent: kind === "question" || kind === "change", created: this.clock(),
-      messages: [{ by: person(who), at: this.clock(), text: body }],
+      messages: [{ by: person(who), at: this.clock(), text: body, ...pictures }],
       // The agent's questions can come as a form; the answer resumes the step with its note.
       ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...resumeOf(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
     };
@@ -866,16 +869,17 @@ export class Store {
     return { item: it };
   }
 
-  answer(threadId, text, { resolve = false } = {}) {
+  answer(threadId, text, { resolve = false, shots = null } = {}) {
     const t = this.thread(threadId);
     const body = clean(text, LIMITS.text, "text");
+    const pictures = this.changeShots(shots, { agent: true });
     // The answer closes the items it could have read: the claimed ones, and open ones
     // whose message was already there when a claim read the thread. A message that came
     // later keeps its own item open, and the thread keeps waiting for the agent.
     const items = Object.values(this.db.inbox).filter((it) => it.thread === threadId && it.kind === "question" && it.state !== "done");
     const claimed = items.filter((it) => it.state === "claimed");
     const seen = claimed.length ? Math.max(...claimed.map((it) => it.seen ?? t.messages.length)) : t.messages.length;
-    t.messages.push({ by: { agent: true }, at: this.clock(), text: body });
+    t.messages.push({ by: { agent: true }, at: this.clock(), text: body, ...pictures });
     let waiting = false;
     for (const it of items) {
       if (it.state === "claimed" || (it.msg_count ?? 0) <= seen) { it.state = "done"; it.done_at = this.clock(); it.outcome = "answered"; }
@@ -886,6 +890,20 @@ export class Store {
     this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t };
+  }
+
+  // What a comment worked in did to the design, as Design Desk shows it under its answer:
+  // the same place before and after, each pair named, and the differences outlined.
+  changeShots(list, who) {
+    if (list == null || (Array.isArray(list) && !list.length)) return {};
+    if (!who?.agent) throw forbidden("only Design Desk shows what a change did");
+    if (!Array.isArray(list) || list.length > LIMITS.changeShots) throw bad(`shots: a list of at most ${LIMITS.changeShots} pictures`);
+    const shots = cleanRefs(list, this.db.assets, "shots");
+    for (const pair of new Set(shots.map((x) => x.pair))) {
+      const stages = shots.filter((x) => x.pair === pair).map((x) => x.stage);
+      if (!stages.includes("before") || !stages.includes("after")) throw bad(`shots: "${pair || "a picture"}" needs a before and an after picture`);
+    }
+    return { shots };
   }
 
   // Create or update a card the agent writes (a change card, or the agent's parts of a

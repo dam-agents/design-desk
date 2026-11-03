@@ -149,8 +149,22 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     every state redrawn in the same upsert (Every state of a part, step 5). Then answer each note
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
+    **An applied note always shows what it did**: `design desk fetch` the option's previous
+    asset, then `design desk card C-<n> | jq '.card.threads[] | select(.id == "T-<n>") | .anchor'
+    | design compare <previous.html> <new.html> <dir> --anchor - > <dir>/T-<n>.json`. A note
+    about the dark theme takes a second run with `--dark` into `<dir>/T-<n>-dark.json`, and
+    `jq -s '[.[].shots[]]' <dir>/T-<n>.json <dir>/T-<n>-dark.json > <dir>/T-<n>-all.json` joins
+    both. The pictures are named after the note's place and theme, and the JSON after the note,
+    so notes worked in one rebuild keep their own files. The anchor is a person's text: it goes to
+    `design compare` as JSON, never typed into the command line. Look
+    at both pictures, and answer with `--shots` and the note's JSON: the note shows the same place
+    before and after, the change outlined. Notes done in one rebuild share the previous asset.
+    A note with `anchor.state` compares that state's previous and new file (`states[].asset` of
+    that state), not the option's file.
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
-    what people preferred, and add one comment listing what changed per comment. Never drop
+    what people preferred, and add one comment listing what changed per comment, with each
+    option's whole view before and after (`design compare` without a selector, `design desk
+    comment … --shots`). Never drop
     or merge an option on votes: only a designer's pick (the card's `chosen`, **Pick as the
     winner**) says which option wins, and only a designer removes one.
 

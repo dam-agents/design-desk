@@ -19,6 +19,16 @@ export async function main(_cmd, argv) {
   const [before, after, out] = pos;
   if (!before || !after || !out) fail("usage: design diff <before> <after> <out.jpg> [--threshold 24]");
   const browser = await launch();
+  const result = await measure(browser, before, after, threshold);
+  await browser.close();
+  writeFileSync(out, Buffer.from(result.image.split(",")[1], "base64"));
+  const { image: _, ...found } = result;
+  console.log(JSON.stringify({ ...found, out }));
+}
+
+// The two pictures compared in a browser of the caller's; `image` is the outlined after
+// picture as a JPEG data URL. `design compare` measures with it too.
+export async function measure(browser, before, after, threshold = 24) {
   const pg = await (await browser.newContext()).newPage();
   const result = await pg.evaluate(async ({ a, b, threshold }) => {
     const load = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error("cannot read a picture")); i.src = src; });
@@ -62,9 +72,8 @@ export async function main(_cmd, argv) {
     for (const r of boxes) { g.drawImage(ib, r.x, r.y, r.w, r.h, r.x, r.y, r.w, r.h); g.strokeStyle = "#e8a400"; g.lineWidth = 4; g.strokeRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6); }
     return { changed_pct: Math.round((changed / (cols * rows)) * 1000) / 10, boxes, w, h, same_size: ia.naturalWidth === w && ia.naturalHeight === h, image: c.toDataURL("image/jpeg", 0.82) };
   }, { a: dataUrl(before), b: dataUrl(after), threshold });
-  await browser.close();
-  writeFileSync(out, Buffer.from(result.image.split(",")[1], "base64"));
+  await pg.context().close();
   const boxes = result.boxes.slice(0, 50), r = (v) => Math.round(v * 10000) / 10000;
   const marks = boxes.slice(0, 20).map((b) => ({ x: r(b.x / result.w), y: r(b.y / result.h), w: r(Math.min(b.w, result.w - b.x) / result.w), h: r(Math.min(b.h, result.h - b.y) / result.h) }));
-  console.log(JSON.stringify({ changed_pct: result.changed_pct, boxes, marks, partial: result.boxes.length > marks.length, same_size: result.same_size, out }));
+  return { changed_pct: result.changed_pct, boxes, marks, partial: result.boxes.length > marks.length, same_size: result.same_size, image: result.image };
 }

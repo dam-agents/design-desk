@@ -866,18 +866,53 @@ const request = { id: "r5", kind: "request", title: "Plans page", status: "feedb
   origin: { channel: "slack", reporter: "Carla", url: "https://acme.slack.com/archives/C0123ABCD/p1" },
   variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }, { id: "v2", name: "One page", asset: "A-1", fidelity: "wireframe" }],
   threads: [note("t1", "comment", "open", "Save is easy to miss", { messages: [{ by, at, text: "Save is easy to miss" }, { by: { email: "alice@example.com", role: "designer" }, at, text: "Agreed" }] }),
-    note("t2", "concern", "open", "Too many tabs"), note("t3", "comment", "resolved", "Typo in the title")] };
+    note("t2", "concern", "open", "Too many tabs"),
+    // Worked in: Design Desk's answer carries the place before and after, the change outlined on both.
+    note("t3", "comment", "resolved", "Typo in the title", { messages: [{ by, at, text: "Typo in the title" }, { by: { agent: true }, at, text: "Fixed the title.",
+      shots: [{ asset: "A-8", stage: "before", pair: "Title", caption: "", marks: [{ x: 0.25, y: 0, w: 0.5, h: 0.5 }] }, { asset: "A-9", stage: "after", pair: "Title", caption: "", marks: [{ x: 0.25, y: 0, w: 0.5, h: 0.5 }] }] }] })] };
+const pic = (c) => ({ contentType: "image/svg+xml", encoding: "utf8", data: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><rect width="4" height="3" fill="' + c + '"/></svg>' });
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", slack_send: false, can: { comment: true, change: true, choose: true, share: true, vote: true } }
     : path === "/api/cards" ? { cards: [{ ...request, variants: 2, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r5" ? { card: request }
     : path === "/api/cards/r5/work-in" ? { threads: JSON.parse(body).threads.map((id) => ({ id })), inbox: { id: "I-1" } }
-    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div><div data-view="2"><button>Save</button></div></body>' } : {};
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div><div data-view="2"><button>Save</button></div></body>' }
+    : path === "/api/assets/A-8" ? pic("red") : path === "/api/assets/A-9" ? pic("blue") : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
+
+test("a worked-in note shows the place before and after, outlined, in the thread and in the workspace notes", async (t) => {
+  const run = await launch(t, BRIDGE_NOTES);
+  if (!run) return;
+  const { desk } = run;
+  // Both pictures of the answer: their labels, a loaded image each, and the after one's marks on both.
+  const pictures = (root) => desk.$$eval(`${root} .changed figure`, (fs) => fs.map((f) => ({
+    label: f.querySelector("figcaption b")?.textContent, loaded: Boolean(f.querySelector("img")?.src), marks: f.querySelectorAll(".mark").length })));
+  const both = [{ label: "Before", loaded: true, marks: 1 }, { label: "After", loaded: true, marks: 1 }];
+  const loaded = (root) => desk.waitForFunction((r) => { const imgs = [...document.querySelectorAll(`${r} .changed img`)]; return imgs.length === 2 && imgs.every((i) => i.src); }, root);
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r5"]');
+    await desk.waitForSelector("#th-t3 .changed");
+    await loaded("#th-t3");
+    assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");
+    assert.deepEqual(await pictures("#th-t3"), both, "the thread shows before and after");
+    assert.equal(await desk.locator("#th-t1 .changed").count(), 0, "a message without pictures shows none");
+
+    await desk.click('[data-act="workspace"]');
+    await desk.waitForSelector("#ws-side .notes");
+    await desk.click('[data-ws-filter="done"]');
+    await desk.click('[data-ws-note="t3"]');
+    await desk.waitForSelector("#ws-side .changed");
+    await loaded("#ws-side");
+    assert.deepEqual(await pictures("#ws-side"), both, "the workspace note shows before and after");
+  } finally {
+    await run.close();
+  }
+});
 
 test("notes in the workspace: open and done, a whole conversation, worked in together; a designer picks the winner; designs go to the Slack thread", async (t) => {
   const run = await launch(t, BRIDGE_NOTES);

@@ -290,8 +290,8 @@ async function agentRoute(req, res, url) {
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
-  if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve) }));
-  if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text }));
+  if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve), shots: b.shots ?? null }));
+  if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text, shots: b.shots ?? null }));
   if (m === "POST" && p[1] === "cards" && p[3] === "ask") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "asks", text: b.text, step: b.step, questions: b.questions || null }));
   if (m === "POST" && p[1] === "decisions" && !p[2]) return send(res, 201, store.addDecision(b));
   // The agent revokes only in the name of the person who did, with where they said it.

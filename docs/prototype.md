@@ -76,7 +76,17 @@ for the operator only when the operator is debugging it; otherwise delete it.
 
 A `build` item on a card whose prototype is `live` is an update: the same worktree, the new
 change, the guard again, then `proto.sh run C-<n> update` (the profile rebuilds only what
-changed — for a UI change, the UI) instead of `up`.
+changed — for a UI change, the UI) instead of `up`. Then capture the same screens as step 7 and
+answer the item's note with one comment, the update's only comment: it names what went live
+from the card's `live_pick` ("<option>, version <n>, with <k> states", as step 7 says it) and
+shows what the update did. The before pictures are
+the card's newest prototype `screens` of each screen, from step 7 or the last update, taken
+before this update: each goes in by its `asset` with `stage: before`. The new captures are
+the after pictures: each goes in as a `file` with `stage: after`. Both pictures of one screen
+carry the same `pair`, the screen's name, so every screen keeps its own pair. The after one's
+`marks` come from `design diff` against the before one (`design desk fetch <A-n>` saves it).
+Then `design desk comment C-<n> <file> --shots <shots.json>`, and add the new captures to the
+card's `screens` as step 7 does.
 
 ## Expiry (`expiring_due`)
 
