@@ -1134,7 +1134,7 @@
       <div class="s">${esc(a.agenda.brief || "Design Desk is writing a short brief.")}</div><div class="meta">${a.option ? `<span class="chip info">Presenting ${esc(a.option)}</span>` : ""}<span class="chip">added by ${esc(a.agenda.by?.email || "Design Desk")}</span></div></button>`).join("")}`
       : `<div class="empty">The presentation is what the team shows at its next design meeting. A designer puts things on it: open a request and choose Add to presentation.</div>`)
       + (ideas.length ? `<h3 style="margin:18px 12px 8px">Suggested by Design Desk</h3>${ideas.map((c) => `<button class="row" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}</div>
-      ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip warn">💡 not on the presentation yet</span></div></button>`).join("")}` : "")
+      ${c.suggested.note ? `<div class="s">${esc(c.suggested.note)}</div>` : ""}<div class="meta"><span class="chip">💡 not on the presentation yet</span></div></button>`).join("")}` : "")
       + (done.length ? `<h3 style="margin:18px 12px 8px">Presented</h3><div class="done-list">${done.map((a) => `<button class="row" data-card="${esc(a.id)}" aria-current="${S.card?.id === a.id}"><div class="t"><span>${esc(a.title)}</span>${num(a)}</div>
       <div class="meta"><span class="chip ok">✓ Presented ${esc(day(a.agenda.call))}</span>${a.option ? `<span class="chip">${esc(a.option)}</span>` : ""}</div></button>`).join("")}</div>` : "");
   }
@@ -1525,7 +1525,7 @@
     const was = c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}${shown ? ` · ${esc(shown)}` : ""}</span>${can("close") && recent ? `<button class="btn small" data-unpresent="${esc(c.id)}">Undo</button>` : ""}` : "";
     const add = can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "";
     if (!c.call_suggestion) return was + add;
-    return `${was}<span class="chip warn" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the presentation${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
+    return `${was}<span class="chip" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the presentation${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
   }
 
 

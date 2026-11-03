@@ -15,7 +15,7 @@ Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A link to a change or its pull
 request now shows a preview on hover, like an issue's; the design workspace fills the whole
 page again; a change's labels have their own colours (in progress violet, against a decision
-red); a sent request's status is the one green box with its More menu; the pictures a person
+red, a presentation suggestion grey); a sent request's status is the one green box with its More menu; the pictures a person
 gave with a request are marked `source: "person"` and show in its brief; a relayed Slack
 reply takes `mentions` and shows names instead of `<@U…>` ([docs/desk.md](docs/desk.md) →
 **Text from Slack**). Nothing to
