@@ -118,6 +118,8 @@ test("deciding straight away: a lead developer approves or decides and closes, a
   assert.deepEqual([ok.body.inbox.kind, ok.body.card.approved.by.email], ["handoff", "lou@example.com"]);
 
   const other = (await d.viewer("bob@example.com", "/api/requests", { problem: "The badge is hard to see.", options: 0 })).body.card.id;
+  assert.equal((await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Too early." })).status, 400, "not before Design Desk checked it");
+  assert.equal((await d.agent("/agent/cards", { id: other, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
   const decided = await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Badges stay: colour is for errors only." });
   assert.equal(decided.status, 201);
   assert.deepEqual([decided.body.card.status, decided.body.inbox.kind], ["declined", "decision"]);
