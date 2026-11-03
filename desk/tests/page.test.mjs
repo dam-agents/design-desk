@@ -166,7 +166,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // The screenshot dialog, on a shipped change.
     const sh = dialog("shots-dialog"), screens = "/api/cards/ch1/screens";
     await desk.click('[data-tab="new"]');
-    assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest row shows no status word");
+    assert.equal(await desk.locator('[data-card="d1"]').count(), 0, "a digest is not in New");
+    await desk.click('[data-tab="product"]');
+    await desk.click('[data-filter="productFilter:history"]');
+    assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest is in Product → History, with no status word");
+    await desk.click('[data-tab="new"]');
     await desk.click('[data-card="ch1"]');
     const withPicture = async () => {
       await desk.click("[data-add-shots]");

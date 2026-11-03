@@ -642,8 +642,12 @@ digest_mode() {
     def within($s): ((. // "") | epoch) >= ($now - $s);
     (7 * 86400) as $week | (30 * 86400) as $month
     | [.cards[]] as $cards
+    # The page is named by the days it covers, the seven up to yesterday: "29 Oct – 4 Nov 2026".
+    | def day($e): ($e | strftime("%d %b %Y") | ltrimstr("0"));
+    [day($now - $week), day($now - 86400)] as [$from, $to]
     | {
       done: any($cards[]; .kind == "digest" and .period == $period),
+      dates: ((if $from[-4:] == $to[-4:] then $from[:-5] else $from end) + " – " + $to),
       changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | within($week)))
                  | {id, title, merged_at: .source.merged_at, in_progress: (.source.merged_at == null), screen: ([.screens[]? | select(.stage == "after" or .stage == null) | .asset][0])} ],
       requests_new: [ $cards[] | select(.kind == "request" and (.created | within($week))) | {id, title, type: .request.type, status} ],
@@ -660,7 +664,7 @@ digest_mode() {
   if [ "$(jq '(.changes + .requests_new + .handed_off + .decisions + .feedback) | length' <<<"$out")" -eq 0 ]; then
     log "a quiet week: nothing to digest for $period"; quiet_out
   fi
-  log "digest $period: $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.feedback|length) pieces of feedback"' <<<"$out")"
+  log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.feedback|length) pieces of feedback"' <<<"$out")"
   jq -n --argjson d "$out" --arg period "$period" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md"], config:$config, logs:$logs} | del(.done)'
 }
