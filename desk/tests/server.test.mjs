@@ -76,6 +76,23 @@ test("a request's options start after triage only for someone who may start them
   assert.deepEqual(pasted.body.card.screens.map((x) => [x.source, x.by?.email]), [["person", "alice@example.com"]], "a pasted picture is the person's: the page shows it with the request, by who added it");
 });
 
+test("drawing every state of a part is a designer's or developer's, not a viewer's, and carries the part", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: asset.id }] })).status, 200);
+  const ask = { action: "states", note: "", variant: "v1", part: { selector: "body > button", label: "Button “Upload”" } };
+  const pm = await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(pm.status, 403);
+  assert.match(pm.body.error, /Only designers can redraw options/);
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask)).status, 403, "a viewer off the roster may not");
+  const dev = await d.viewer("bob@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(dev.status, 200, "a developer changes options too");
+  assert.deepEqual([dev.body.inbox.kind, dev.body.inbox.variant, dev.body.inbox.part.label], ["states", "v1", "Button “Upload”"]);
+  const again = await d.viewer("alice@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(again.status, 400, "one states item at a time per request");
+});
+
 test("a small change: only a lead developer marks it, any developer but its author approves it", async (t) => {
   const d = await desk(t);
   const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 });

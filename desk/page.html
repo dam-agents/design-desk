@@ -270,7 +270,15 @@
   .ws-top { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   .ws-top .title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ws-body { display: grid; grid-template-columns: 1fr var(--side-w); min-height: 0; }
-  .ws-stage { padding: 12px; display: grid; grid-template-rows: auto 1fr; gap: 8px; min-height: 0; }
+  .ws-stage { padding: 12px; display: grid; grid-template-rows: auto auto 1fr; gap: 8px; min-height: 0; }
+  #ws-states:empty { display: none; }
+  .ws-states { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ws-states .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-left: 6px; }
+  .ws-states + .hint { margin: 4px 0 0; }
+  .ws-states .step-by { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .checklist { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .checklist button { width: 100%; text-align: left; justify-content: flex-start; }
+  .checklist button[aria-current="true"] { border-color: var(--accent); }
   .ws-stage .frame { height: 100%; }
   .ws-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; }
   .sel { padding: 10px 12px; border-radius: var(--radius); border: 2px solid var(--accent); background: var(--info-soft); }
@@ -411,6 +419,7 @@
     explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     revise: "Changing the design as you asked.",
+    states: "Drawing every state of the part you picked. Each state appears in the design workspace as it is drawn.",
     build: "Building the live prototype: a private copy of the product with this design. The first one can take up to an hour; you can close this page.",
     handoff: "Writing the developer spec and sending it on.",
     teardown: "Switching off the live prototype.",
@@ -488,6 +497,8 @@
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
 <p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
+<p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
+<p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
 <p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Pick as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
@@ -527,7 +538,7 @@
 
   // ---------- state ----------
   const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
-    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {} } };
+    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set(), askFirst: true } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
@@ -803,7 +814,8 @@
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
         ["<b>Open the design workspace</b>: click a part of an option and say what should change.", "revise"],
-        ["<b>Build a live prototype</b> of the option you choose.", "build"],
+        ["<b>Draw every state</b> of a part of an option, then step through and change each state on its own.", "revise"],
+        ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
         ["Skip the vote and the live prototype: <b>Send to developers now</b>, or <b>Decide and close</b> with what you decided.", "skip"],
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
@@ -1587,12 +1599,13 @@
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
-      <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}</button>`).join("")}</div>
+      <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}${(x.states || []).length ? ` <span class="chip">${plural(x.states.length, "state", "states")}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info">▶ Goes live</span>` : ""}</button>`).join("")}</div>
       ${againstBox(c, v.id)}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : ""}
       <div class="vbar">
         ${can("vote") ? `<button class="btn small ${mine === "prefer" ? "on" : ""}" data-vote="prefer">👍 I like this one</button><button class="btn small ${mine === "concern" ? "on" : ""}" data-vote="concern">⚠ I have a concern</button>` : ""}
         <button class="btn small" data-act="workspace">Open in the design workspace</button>
+        ${can("revise") && !closed(c) ? `<button class="btn small" data-act="states" title="Design Desk draws a part of this option in every state it can be in">Draw every state…</button>` : ""}
         ${vs.length > 1 && can("choose") ? (c.chosen?.variant === v.id ? `<button class="btn small on" data-choose="">★ The winner — undo</button>` : `<button class="btn small" data-choose="${esc(v.id)}">★ Pick as the winner</button>`) : ""}
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
         ${S.me?.slack && can("share") && !(c.polls || []).some((x) => x.state === "open") && !working(c).some((k) => k.startsWith("slack")) ? `<button class="btn small" data-act="slack-share">Share in Slack</button>` : ""}
@@ -1623,15 +1636,22 @@
       : `<p class="hint">💬 Slack discussion ended ${esc(day(x.closed))}${x.result ? `: ${esc(x.result)}` : ""}.${link}</p>`;
   }
 
+  // Which option, at which version and with which states, a person sent to be built.
+  function livePickLine(c) {
+    const l = c.live_pick;
+    if (!l) return "";
+    const n = (l.states || []).length;
+    return `<p class="hint" style="max-width:var(--measure)"><span class="chip info">▶ Goes live</span> <b>${esc(l.name)}</b>, version ${esc(l.version)}${n ? `, with ${plural(n, "state", "states")}` : ""} · ${who(l.by)} sent it ${esc(when(l.at))}${(c.variants || []).find((v) => v.id === l.variant && (v.version || 1) > l.version) ? ` · <span class="chip warn">a newer version exists; build again to try it</span>` : ""}</p>`;
+  }
   // While the live prototype is up, trying it is the step: the options fold under it.
   const live = (c) => ["prototype", "testing"].includes(c.status) && c.prototype?.state === "live";
 
   function renderPrototype(c) {
     const p = c.prototype || { state: "none" };
-    if (p.state === "none") return "";
+    if (p.state === "none") return c.live_pick && working(c).includes("build") ? `<h3>Live prototype</h3>${livePickLine(c)}` : "";
     const msg = { building: "Building the live prototype…", live: "It's live. Open it and click around.", failed: "This try didn't work.", expired: "This prototype was switched off.", "torn-down": "This prototype was switched off." }[p.state] || p.state;
     const g = p.guard ? `<dt>Look-only check</dt><dd>${p.guard.ok ? `<span class="chip ok">✓ only the look changed</span>` : `<span class="chip warn">Part of this would change what the product does, so it was left out of the prototype. The developer spec lists it.</span>`}</dd>` : "";
-    return `<h3>Live prototype</h3><div class="panel proto"><b>${esc(msg)}</b>
+    return `<h3>Live prototype</h3>${livePickLine(c)}<div class="panel proto"><b>${esc(msg)}</b>
       ${p.state === "live" ? `<p class="hint">You may first be asked to sign in with your usual account; then sign in to the product with the demo account below, not your own. Everything in it is made-up data; nothing you do reaches real customers. Can't open it? Ask ${esc(contact())} to add you.</p>` : ""}
       ${p.state === "live" && p.url ? `<div><a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open the prototype ↗</a></div>` : ""}
       <dl class="kv">${p.login ? `<dt>Demo account</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}${p.login.hint ? ` <span class="sub">${esc(p.login.hint)}</span>` : ""}</dd>` : ""}
@@ -1805,6 +1825,14 @@
     return ["open", th.kind === "question" ? "Question" : "Comment"];
   }
 
+  // The drawing shown: the option itself, or one of its states (docs/requests.md → Every state of a part).
+  function wsDrawing(v) {
+    const st = (v.states || []).find((x) => x.id === S.ws.state);
+    if (!st) S.ws.state = null;
+    return st || v;
+  }
+  const inDrawing = (n) => (n.anchor.state || null) === (S.ws.state || null);
+
   function wsVariant(c) {
     const vs = c.variants || [];
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0])?.id;
@@ -1817,32 +1845,83 @@
     const ws = $("#workspace");
     const c = S.card, v = S.ws.open && c ? wsVariant(c) : null;
     if (!v) { S.ws.open = false; S.ws.shown = null; ws.hidden = true; ws.innerHTML = ""; return; }
-    const versions = [{ version: v.version || 1, asset: v.asset }, ...(v.history || [])];
-    const showing = versions.find((h) => h.version === (S.ws.version || versions[0].version)) || versions[0];
-    const key = `${c.id}|${v.id}|${showing.asset}`;
+    const d = wsDrawing(v);
+    const versions = [{ version: d.version || 1, asset: d.asset }, ...(d.history || [])];
+    // The final check shows only what goes live: the latest version.
+    const showing = S.ws.check ? versions[0] : versions.find((h) => h.version === (S.ws.version || versions[0].version)) || versions[0];
+    const key = `${c.id}|${v.id}|${S.ws.state || ""}|${showing.asset}`;
     ws.hidden = false;
     if (S.ws.shown !== key || !$("#ws-frame")) {
-      ws.innerHTML = `<div class="ws-top" id="ws-top"></div><div class="ws-body"><div class="ws-stage"><div class="actions" style="margin:0" id="ws-tools"></div>
+      ws.innerHTML = `<div class="ws-top" id="ws-top"></div><div class="ws-body"><div class="ws-stage"><div class="actions" style="margin:0" id="ws-tools"></div><div id="ws-states"></div>
         <iframe class="frame" id="ws-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div><aside class="ws-side" id="ws-side"></aside></div>`;
       S.ws.shown = key;
-      loadWsFrame(c, v, showing.asset);
+      loadWsFrame(c, v, showing.asset, d.asset);
     }
-    const old = showing.version !== (v.version || 1);
+    if (S.ws.check) S.ws.looked.add(`${v.id}|${S.ws.state || ""}`);
+    const old = showing.version !== (d.version || 1);
     const shaper = can("change");
-    $("#ws-top").innerHTML = `<button class="btn small" data-ws-close>← Back to the request</button>
+    $("#ws-top").innerHTML = S.ws.check ? `<button class="btn small" data-ws-close>← Back to the request</button>
+      <span class="title" title="${esc(c.title)}">Final check: ${esc(v.name)} goes live</span><span class="chip">version ${esc(v.version || 1)}</span><span class="grow"></span>`
+      : `<button class="btn small" data-ws-close>← Back to the request</button>
       <span class="title" title="${esc(c.title)}">${esc(c.title)}</span>
       <div class="tabs" style="margin:0">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>
       ${versions.length > 1 ? `<select id="ws-version" style="width:auto">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : ""}
       <span class="grow"></span>
       ${S.me?.figma && can("figma") ? `<button class="btn small" data-act="figma-import">Import from Figma</button><button class="btn small" data-act="figma-export">Send to Figma</button>` : ""}
       ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}`;
-    $("#ws-tools").innerHTML = old ? `<span class="chip warn">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `
+    $("#ws-tools").innerHTML = S.ws.check ? `<span class="hint">Click through it as people will use it: every screen, and every state above. This is exactly what goes live.</span>`
+      : old ? `<span class="chip warn">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `
       <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
       <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
-    renderWsSide(c, v, old);
+    $("#ws-states").innerHTML = wsStates(c, v);
+    if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
     sendPins(c, v);
+  }
+
+  // The option's states in a row above the design, grouped by the part they are of, with
+  // a step back and forth through the option and every state.
+  function wsStates(c, v) {
+    const sts = v.states || [];
+    if (!sts.length) return "";
+    const open = (id) => notesOf(c).filter((n) => n.anchor.variant === v.id && (n.anchor.state || null) === id && n.state !== "resolved").length;
+    const badge = (id) => { const n = open(id); return n ? ` <span class="chip">${n}</span>` : ""; };
+    const i = sts.findIndex((x) => x.id === S.ws.state), cur = sts[i];
+    return `<div class="ws-states"><button class="btn small ${cur ? "" : "on"}" data-ws-state="" title="The option as it was drawn">The option${badge(null)}</button>
+      ${[...new Set(sts.map((x) => x.part))].map((p) => `<span class="k">${esc(p)}</span>${sts.filter((x) => x.part === p).map((x) => `<button class="btn small ${x.id === S.ws.state ? "on" : ""}" data-ws-state="${esc(x.id)}" title="${esc(x.how || x.name)}">${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip">v${x.version}</span>` : ""}${badge(x.id)}</button>`).join("")}`).join("")}
+      <span class="grow"></span><span class="step-by"><button class="btn small" data-ws-step="-1" title="Previous state">‹</button><span class="hint">${cur ? `State ${i + 1} of ${sts.length}` : `${plural(sts.length, "state", "states")}`}</span><button class="btn small" data-ws-step="1" title="Next state">›</button></span></div>
+      ${cur?.how ? `<p class="hint">${esc(cur.name)}: ${esc(cur.how)}</p>` : ""}`;
+  }
+
+  // The last look before a build: what goes live, its states, and what is still open.
+  function renderCheckSide(c, v) {
+    const side = $("#ws-side");
+    const askFirst = S.ws.askFirst !== false;
+    const sts = v.states || [];
+    const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved");
+    const changes = open.filter((n) => n.kind === "change"), comments = open.length - changes.length;
+    const changing = (c.waiting || []).some((w) => w.kind === "revise" && w.state === "claimed");
+    const drawing = (c.waiting || []).some((w) => w.kind === "states");
+    // A state is a copy of the whole option: one drawn for an earlier version is out of date.
+    const stale = sts.filter((x) => (x.of || 1) < (v.version || 1));
+    const looked = (id) => S.ws.looked.has(`${v.id}|${id || ""}`);
+    const seen = [null, ...sts.map((x) => x.id)].filter(looked).length;
+    const row = (id, name, sub, ver) => `<li><button class="btn small" data-ws-state="${esc(id || "")}" aria-current="${(S.ws.state || null) === id}">${looked(id) ? "✓" : "○"} ${esc(name)}${sub ? ` <span class="hint" style="display:inline">${esc(sub)}</span>` : ""}${ver > 1 ? ` <span class="chip">version ${ver}</span>` : ""}</button></li>`;
+    side.innerHTML = `<div class="sel"><div class="k">Goes live</div><b>${esc(v.name)}</b> <span class="chip">version ${esc(v.version || 1)}</span>${c.chosen?.variant === v.id ? ` <span class="chip ok">★ The winner</span>` : ""}
+        <p class="hint">${v.drawn ? `Drawn ${esc(when(v.drawn))}. ` : ""}The latest version, with every note Design Desk has worked in so far.</p></div>
+      ${againstBox(c, v.id)}
+      <div><h4 style="margin:0 0 6px">Click through ${sts.length ? `the option and its ${plural(sts.length, "state", "states")}` : "the option"}</h4>
+        <ol class="checklist">${row(null, "The option", "", 1)}${sts.map((x) => row(x.id, x.name, x.part, x.version || 1)).join("")}</ol>
+        <p class="hint">${sts.length ? `You looked at ${seen} of ${sts.length + 1}.` : "No states are drawn for this option. To check a part in every state first, make more changes and press Draw every state."}</p></div>
+      ${changing ? `<div class="working"><span class="spin"></span><div>Design Desk is changing this option right now. Wait for the new version; it appears here by itself.</div></div>` : ""}
+      ${drawing ? `<div class="working"><span class="spin"></span><div>Design Desk is still drawing states of this request; they appear here as they are drawn.</div></div>` : ""}
+      ${changes.length && !changing ? `<p><span class="chip warn">${plural(changes.length, "note is", "notes are")} not worked in yet</span> <span class="hint" style="display:inline">Build now and ${changes.length === 1 ? "it is" : "they are"} left out, or wait for Design Desk.</span></p>` : ""}
+      ${stale.length ? `<p><span class="chip warn">${esc(stale.map((x) => x.name).join(", "))}: drawn for an earlier version</span> <span class="hint" style="display:inline">They still show the option as it was. Design Desk redraws them when it changes the option; press Draw every state to have them drawn again now.</span></p>` : ""}
+      ${comments ? `<p class="hint">${plural(comments, "open comment", "open comments")} on this option. Comments are not built in unless someone presses Work it in.</p>` : ""}
+      <label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="ws-ask-first" data-ws-ask ${askFirst ? "checked" : ""} style="width:auto;margin-top:3px" /> <span>Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)</span></label>
+      <div class="actions" style="margin:0"><button class="btn primary" data-ws-build ${changing || stale.length ? "disabled" : ""}>Build it live</button><button class="btn" data-ws-edit>Make more changes</button>${(c.variants || []).length > 1 ? `<button class="btn" data-act="build">Pick another option</button>` : ""}</div>
+      <p class="hint">Design Desk builds exactly this version, with made-up data; the first build can take up to an hour. The request then says which option and version is live.</p>`;
   }
 
   function renderWsSide(c, v, old) {
@@ -1850,11 +1929,12 @@
     const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
     const shaper = can("change");
     const sel = S.ws.selected;
-    const busy = working(c).filter((k) => ["revise", "figma", "explore"].includes(k));
+    const busy = working(c).filter((k) => ["revise", "states", "figma", "explore"].includes(k));
     side.innerHTML = `<div class="sel ${sel ? "" : "none"}">
         <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
         <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
         ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
+        ${sel && can("revise") && !S.ws.state ? `<div class="actions" style="margin:6px 0 0"><button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button></div>` : ""}
       </div>
       ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
       ${old ? "" : `<div class="composer" style="margin:0">
@@ -1871,13 +1951,14 @@
   // Notes on this option: open first, each with its whole conversation once picked, a reply,
   // Done or Reopen, and Work it in for a comment a designer or developer hands to Design Desk.
   function renderWsNotes(c, v, sel) {
-    const all = notesOf(c).filter((n) => n.anchor.variant === v.id);
+    const all = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n));
+    const st = (v.states || []).find((x) => x.id === S.ws.state);
     const f = S.ws.filter || "open";
     const notes = all.filter((n) => f === "all" || (f === "done") === (n.state === "resolved"));
     const count = (k) => all.filter((n) => k === "all" || (k === "done") === (n.state === "resolved")).length;
     const workIn = all.filter((n) => workable(c, n));
     const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}</div>`;
-    return `<div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}</h3>
+    return `<div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}${st ? ` · ${esc(st.name)}` : ""}</h3>
       <div class="tabs" style="margin:0 0 8px">${[["open", "Open"], ["done", "Done"], ["all", "All"]].map(([k, l]) => `<button data-ws-filter="${k}" aria-pressed="${f === k}">${l} ${count(k)}</button>`).join("")}</div>
       ${workIn.length > 1 ? `<div class="actions" style="margin:0 0 8px"><button class="btn small" data-work-in="${esc(workIn.map((n) => n.id).join(","))}">Work in all ${workIn.length} open comments</button></div>` : ""}
       ${notes.length ? `<ol class="notes">${notes.map((th) => {
@@ -1892,15 +1973,15 @@
     </div>`;
   }
 
-  async function loadWsFrame(c, v, assetId) {
+  async function loadWsFrame(c, v, assetId, latest) {
     const frame = $("#ws-frame");
     try {
       const a = await asset(assetId);
       if ($("#ws-frame") !== frame) return;
       frame.srcdoc = withScript(decode(a));
       frame.onload = () => {
-        const old = assetId !== v.asset;
-        frame.contentWindow?.postMessage({ type: "desk-mode", mode: old ? "off" : S.ws.mode }, "*");
+        const old = assetId !== latest;
+        frame.contentWindow?.postMessage({ type: "desk-mode", mode: old || S.ws.check ? "off" : S.ws.mode }, "*");
         frame.contentWindow?.postMessage({ type: "desk-view", ...(S.ws.view || {}) }, "*");
         sendPins(S.card, v);
         if (S.ws.selected?.selector) frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*");
@@ -1908,7 +1989,7 @@
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
   }
   function sendPins(c, v) {
-    const pins = notesOf(c).filter((n) => n.anchor.variant === v.id && n.anchor.selector).map((n) => ({ n: n.n, selector: n.anchor.selector, state: noteState(c, n)[0] }));
+    const pins = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector).map((n) => ({ n: n.n, selector: n.anchor.selector, state: noteState(c, n)[0] }));
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
   }
   const frameSay = (msg) => $("#ws-frame")?.contentWindow?.postMessage(msg, "*");
@@ -1933,7 +2014,7 @@
   // What the workspace shows; a refresh that changes none of it leaves it alone.
   function wsFingerprint(c) {
     const v = (c.variants || []).find((x) => x.id === S.variant);
-    return JSON.stringify([v?.asset, v?.version, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
+    return JSON.stringify([v?.asset, v?.version, (v?.states || []).map((x) => x.asset), (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
   }
 
   // ---------- rendering the detail ----------
@@ -2004,7 +2085,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null }; }
+    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, check: false }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -2077,7 +2158,7 @@
   // ---------- events ----------
   async function act(name) {
     const c = S.card;
-    if (name === "workspace") { S.ws.open = true; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); return; }
+    if (name === "workspace") { S.ws.open = true; S.ws.check = false; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); return; }
     if (name === "queue") {
       const opts = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
       const r = await ask({ title: "Add to presentation", body: `The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.${opts.length ? " Which version is the final one?" : ""}`, ok: "Add to presentation",
@@ -2102,18 +2183,37 @@
       const fav = favourite(c);
       const against = [...new Set((c.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
       // A live prototype's option is the one approved; before options, the spec comes from the request.
-      const built = ["prototype", "testing"].includes(c.status) ? options.find((o) => o.id === c.built?.variant) : null;
-      const what = built ? `**${built.name}**, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
+      // What the live prototype shows: `live_pick`'s option at its version.
+      const built = (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && options.some((o) => o.id === c.live_pick?.variant) ? { id: c.live_pick.variant, name: c.live_pick.name, version: c.live_pick.version } : null;
+      const what = built ? `**${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
       res = await ask({ title: options.length ? "Approve a design" : "Send to developers", body: `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: options.length ? "Approve" : "Send to developers", choices: options.length && !built ? options : null, pick: fav?.id || null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         send: (a) => post(built?.id || a.choice || a.note || "", against.length ? { overrule: a.check } : {}) });
       if (!res) return;
     }
+    // Build: pick the option, then look at its latest version and states once more in the
+    // final check, which builds exactly what it shows (docs/prototype.md → Build).
+    if (name === "build" && options.length) {
+      const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : favourite(c)?.id || options[0].id, send: async (a) => a.choice || options[0].id }) : options[0].id;
+      if (!pick) return;
+      S.variant = pick; S.ws.state = null; S.ws.version = null; S.ws.selected = null; S.ws.edit = null; S.ws.note = null;
+      S.ws.open = true; S.ws.check = true; S.ws.mode = "off"; S.ws.looked = new Set(); S.ws.askFirst = true;
+      renderWorkspace(); frameSay({ type: "desk-mode", mode: "off" });
+      return;
+    }
     if (name === "build") {
-      const fav = favourite(c);
-      res = await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. The first one can take up to an hour.", ok: "Build it", choices: options.length > 1 ? options : null, pick: fav?.id || options[0]?.id || null,
+      res = await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with made-up data, that everyone on the list can open. The first one can take up to an hour.", ok: "Build it",
         check: "Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)", checked: true,
-        send: (a) => post(a.choice || options[0]?.id || "", { ask_first: a.check }) });
+        send: (a) => post("", { ask_first: a.check }) });
+      if (!res) return;
+    }
+    // Every state of one part of an option: the part selected in the workspace, or the one named.
+    if (name === "states") {
+      const sel = S.ws.open ? S.ws.selected : null;
+      const v = (S.ws.open ? wsVariant(c) : null) || (c.variants || []).find((x) => x.id === S.variant) || c.variants?.[0];
+      if (!v) return;
+      res = await ask({ title: "Draw every state of a part", body: `Design Desk draws ${sel ? `**${sel.label}**` : "the part you name"} of **${v.name}** in every state it can be in — such as hovered, pressed, disabled, loading, empty, with an error or with a long text — each as its own picture you can step through, comment on and change. It takes a few minutes.`,
+        ok: "Draw the states", note: sel ? "Anything to add? e.g. which states matter most (optional)" : "Which part? e.g. the upload button, the list of files", send: (a) => post(a.note || "", { variant: v.id, ...(sel ? { part: { selector: sel.selector, text: sel.text, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } } : {}) }) });
       if (!res) return;
     }
     if (name === "explore") {
@@ -2180,11 +2280,23 @@
     await openCard(S.card.id);
   }
 
+  // The final check's Build it live: exactly the option and version it shows.
+  async function buildChecked() {
+    const c = S.card, v = wsVariant(c);
+    if (!v) return;
+    // The option's version and each state's: the store refuses a build of anything newer.
+    const states = Object.fromEntries((v.states || []).map((x) => [x.id, x.version || 1]));
+    const res = await api("POST", `/api/cards/${c.id}/actions`, { action: "build", note: v.id, variant: v.id, version: v.version || 1, states, ask_first: S.ws.askFirst !== false });
+    S.ws.open = false; S.ws.check = false; renderWorkspace();
+    if (res.inbox) toast(`Building ${v.name}, version ${v.version || 1}. This page updates by itself.`);
+    await refreshList(); await openCard(c.id);
+  }
+
   async function wsSend(only) {
     const c = S.card, v = wsVariant(c);
     const text = $("#ws-text")?.value.trim(); if (!text || !v) return;
     const sel = S.ws.selected;
-    const anchor = { variant: v.id, ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}) };
+    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}) };
     const kind = can("change") && only !== "comment" ? "change" : "comment";
     await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
     $("#ws-text").value = ""; S.ws.edit = null;
@@ -2293,14 +2405,24 @@
     if (ds.goto) {
       const th = (S.card.threads || []).find((x) => x.id === ds.goto);
       if (!th?.anchor?.variant) return;
-      S.variant = th.anchor.variant; S.ws.open = true; S.ws.version = null;
+      S.variant = th.anchor.variant; S.ws.state = th.anchor.state || null; S.ws.open = true; S.ws.check = false; S.ws.version = null;
       S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       renderWorkspace(); return;
     }
     if (ds.act) { await act(ds.act); return; }
     // the workspace
-    if ("wsClose" in ds) { S.ws.open = false; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
-    if (ds.wsVariant) { S.variant = ds.wsVariant; S.ws.selected = null; S.ws.edit = null; S.ws.version = null; renderWorkspace(); return; }
+    if ("wsClose" in ds) { S.ws.open = false; S.ws.check = false; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
+    if (ds.wsVariant) { S.variant = ds.wsVariant; S.ws.state = null; S.ws.selected = null; S.ws.edit = null; S.ws.version = null; renderWorkspace(); return; }
+    // One state of the option, or a step to the one before or after it.
+    if (ds.wsState !== undefined || ds.wsStep) {
+      const v = wsVariant(S.card), ids = [null, ...(v?.states || []).map((x) => x.id)];
+      const at = ids.indexOf(S.ws.state || null);
+      S.ws.state = ds.wsStep ? ids[(at + Number(ds.wsStep) + ids.length) % ids.length] : ds.wsState || null;
+      S.ws.selected = null; S.ws.edit = null; S.ws.version = null; S.ws.note = null;
+      renderWorkspace(); return;
+    }
+    if ("wsBuild" in ds) { await buildChecked(); return; }
+    if ("wsEdit" in ds) { S.ws.check = false; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); frameSay({ type: "desk-mode", mode: S.ws.mode }); return; }
     if (ds.wsMode) { S.ws.mode = ds.wsMode; renderWorkspace(); frameSay({ type: "desk-mode", mode: ds.wsMode }); return; }
     if ("wsSend" in ds) { await wsSend(ds.wsSend); return; }
     if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }
@@ -2310,6 +2432,7 @@
       const th = (S.card.threads || []).find((x) => x.id === ds.wsNote);
       if (!th?.anchor) return;
       S.ws.note = th.id;
+      if ((th.anchor.state || null) !== (S.ws.state || null)) { S.ws.state = th.anchor.state || null; S.ws.version = null; }
       S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       S.ws.edit = null;
       renderWorkspace();
@@ -2328,7 +2451,9 @@
 
   document.addEventListener("change", (e) => {
     if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
-    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsVariant(S.card)?.version || 1) ? null : n; renderWorkspace(); }
+    // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
+    if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }
+    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; renderWorkspace(); }
   });
 
   document.addEventListener("keydown", (e) => {
@@ -2341,7 +2466,7 @@
       present(Number(ov.dataset.index) + (e.key === "ArrowRight" ? 1 : -1)).catch(fail);
       return;
     }
-    if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; renderWorkspace(); renderDetail(); return; }
+    if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; S.ws.check = false; renderWorkspace(); renderDetail(); return; }
     if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && (S.card?.history || []).length && !S.ws.open && !document.querySelector("dialog[open]") && !e.target.closest("input, textarea, select, [contenteditable]")) {
       const looks = looksOf(S.card), k = looks.findIndex((l) => lookKey(l) === S.look) + (e.key === "ArrowLeft" ? 1 : -1);
       if (k >= 0 && k < looks.length) { e.preventDefault(); S.look = lookKey(looks[k]); S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); }

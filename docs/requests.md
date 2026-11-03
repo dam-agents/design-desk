@@ -117,7 +117,7 @@ as the suggested answer: `design desk ask C-<n> <file> --step request`. The Desk
 the top of the request; the person's answer puts the request back on the queue. Close your
 item with `--outcome asked`.
 
-## Variants (`variants_due`: `explore` and `revise`)
+## Variants (`variants_due`: `explore` and `revise`; `states` is [below](#every-state-of-a-part-variants_due-states))
 
 Variants are quick, static and on **sample data**: the place to compare directions before
 anyone builds. Make them with the skill `design skill options --repo <repo>` names (the
@@ -145,7 +145,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its
-    new asset: the Desk numbers the version and keeps the earlier one. Then answer each note
+    new asset: the Desk numbers the version and keeps the earlier one. An option with `states` gets
+    every state redrawn in the same upsert (Every state of a part, step 5). Then answer each note
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
@@ -157,6 +158,9 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   notes ask, rebuild only that option, and before closing the item look at the inbox once
   more (`design desk inbox`): a `revise` for the same card that arrived meanwhile is claimed
   and done in the same run.
+- **Notes on a state** carry `anchor.state` too (Every state of a part, below): apply them to
+  that state's own file and upload it under the same state id; the option's other states and
+  its own file stay as they are.
 - **User stories**: with an `issue_brief`, each option says how it meets every story:
   `stories: [{story, met, how, parts}]` — `met` is `yes`, `partly` or `no`; `how` one or two
   plain sentences; `parts` the elements that do it (`{selector, label, view}`, at most 6: a
@@ -164,12 +168,56 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   them when a person picks the story. An entry without `stories` keeps the option's coverage
   from before; a revised option whose parts moved sends its new `stories`.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
-  `variants: [{id, name, rationale, fidelity, asset, stories}]` (rationale: one line on when
-  this one wins) and `status: feedback` in one `design desk upsert`.
+  `variants: [{id, version, name, rationale, fidelity, asset, stories, states}]` (rationale: one
+  line on when this one wins) and `status: feedback` in one `design desk upsert`. The list is
+  every option on the card: one already there goes with the `version` (and each of its states
+  with its `version`) the card gave you, a new one without; one to take off goes as `{id,
+  drop: true}`, only when a designer asked. The store refuses (409) a list that leaves an
+  option or a state out, or sends one without its version or at an older one.
 - Look at every variant's screenshots before upload (`design shot`); a variant over 700 KB
   is split or its images shrunk.
 - A variant shows no real person, no real customer data, and no invented number presented
   as fact.
+
+## Every state of a part (`variants_due`: `states`)
+
+A designer or developer selects a part of an option in the workspace (a button, a list, a form) and presses
+**Draw every state**, or names the part. The item names the option (`variant`), the part they
+selected (`part`: `{selector, text, label, view, view_name}`; none when they only named it) and
+their words (`note`). Make it with the `states` action's skill (`design skill states --repo <repo>`).
+
+1. Claim; read the option's latest file (`design desk fetch`) and its source under
+   `work/output/`. Find the part in it; a part you cannot find → `design desk ask C-<n> <file>
+   --step states` with your best guess, done `--outcome asked`.
+2. **Which states.** Read the product's component the part is drawn from (`design states <file>
+   --export <Component> --root <clone>`, [catalog.md](catalog.md) → Its dimensions) and choose
+   as the catalog does: one state per value that changes what a person sees — hovered,
+   focused, pressed, disabled, loading, empty, an error, a long text, a missing picture, a
+   count of 0 and of many — and what the note asks first. Not the cross product; 24 at most.
+   A state the product cannot be in today is drawn only when the request adds it, labelled
+   "new".
+3. **Draw** each state as its own self-contained HTML file: the option's whole page with only
+   the part in that state, built like the option (`design build`, the same style), so a person
+   compares states one by one. A state that needs a developer (new data, a new rule) is drawn
+   and labelled "needs a developer", as in the options.
+4. Look at every state's shot (`design shot`), upload each (`--kind variant`), then one `design
+   desk upsert` with every option (each with its `version`, Variants above) and, on this one,
+   `states: [{id, version, name, how, part, asset}]` (`version` only for a state already there):
+   `id` short and stable (`hover`, `error`), `name` the state in plain words, `how` when it
+   happens in one sentence, `part` the part in the product's words (states of several parts
+   are grouped by it). Keep the option's earlier states of other parts in the list; leaving
+   `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
+   version; the Desk keeps the earlier one.
+5. A state is a copy of the whole option, so a later `revise` of the option redraws every one
+   of its states in the same run (the same ids), whatever part the notes touched. The store
+   records the option version each state was drawn for (`of`); a build refuses an option whose
+   states are older than it, and the final check says which.
+   **Two runs on one card** (a `states` and a `revise` dispatched to two sessions): just before
+   its upsert, each run reads the card again (`design desk card C-<n>`) and sends every option
+   and state as it read it, `version` included, changing only its own. The store refuses (409)
+   an option or a state sent at a version older than the card's: read the card again, apply
+   your change to what is there now, and send it again.
+6. `design desk done I-<n> --session <id> --outcome "drew <k> states of <part>"`.
 
 ## UI bugs
 

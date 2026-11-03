@@ -7,6 +7,22 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.29.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A designer or developer can now have
+one part of an option drawn in every state (**Draw every state**, inbox kind `states`, action
+`states`, [docs/requests.md](docs/requests.md) → **Every state of a part**); Build a live
+prototype opens a final check and records what goes live on the card (`live_pick`,
+[docs/prototype.md](docs/prototype.md) → Build). `live_pick` replaces 1.28.0's `built`: Approve in
+a prototype step takes `live_pick`'s option and version (`approved.variant`, `approved.version`),
+and the spec is written from them. A card built under 1.28.0 has `built` and no `live_pick`;
+its Approve falls back to the option picker. Older cards need nothing. The inbox pre-flight lists
+`states` items under `variants_due`, and an upsert of options sends each option and state with
+its `version` ([docs/requests.md](docs/requests.md) → Variants).
+
 ## 1.28.0 — 2026-11-03
 
 **Upgrade:**

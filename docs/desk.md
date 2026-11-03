@@ -146,7 +146,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | everyone | read, mark reviewed, ask, comment |
 | `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
 | `pm`, `developer`, `lead-developer`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
-| `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | `developer`, `lead-developer` | approve a small change they did not file ([Small changes](#small-changes)) |
 | `lead-developer`, `lead` | mark a request a small change, or send it through a designer |
 | `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
@@ -185,8 +185,9 @@ prototype once Design Desk has checked a request:
   `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.
 - **While the live prototype is up**, the page folds the options (and building again) under it,
-  and Approve approves the option it was built from (`built.variant`, set on Build), whatever
-  the note.
+  and Approve approves what it was built from — `live_pick`'s option and version (set on Build
+  it live), whatever the note, also back at Options ready after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
+  spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
 
 ## Claims
 
