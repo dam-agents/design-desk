@@ -165,10 +165,12 @@ test("a small change: the reporter of a request the agent filed is its author; a
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };
   const dana = { email: "dana@example.com", role: "developer" };
-  const { card } = s.createRequest({ agent: true }, { title: "Tighter rows", problem: "Too airy.", origin: { channel: "slack", chat: "C0123", thread_ts: "1.0", reporter: "Dana@Example.com" } });
+  const { card } = s.createRequest({ agent: true }, { title: "Tighter rows", problem: "Too airy.", origin: { channel: "slack", chat: "C0123", thread_ts: "1.0", reporter: "Dana", email: "Dana@Example.com" } });
+  assert.equal(s.card(card.id).origin.email, "dana@example.com");
+  assert.throws(() => s.createRequest({ agent: true }, { title: "x", problem: "y", origin: { channel: "slack", reporter: "Dana", email: "Dana" } }), /origin.email must be an email/);
   s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } });
   s.setSize(card.id, lee, true);
-  assert.throws(() => s.act(card.id, dana, "approve"), /You filed this request/, "the reporter is the author");
+  assert.throws(() => s.act(card.id, dana, "approve"), /You filed this request/, "the reporter's email is the author");
 
   const d = s.addDecision({ concepts: ["rows"], text: "Rows stay roomy", author: { login: "alice" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
   s.upsertCard({ id: card.id, conflicts: [{ decision: d.id, why: "It tightens them." }] });

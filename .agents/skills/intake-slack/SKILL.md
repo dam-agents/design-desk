@@ -21,7 +21,8 @@ In that Slack turn:
 
 1. **Read it whole**: the message, the thread so far, and every picture it carries (they are
    in `~/.uploads/`; an earlier message's picture comes with `fetch_message_attachment`).
-   The reporter is a Slack id: `describe_channel_users` gives their name.
+   The reporter is a Slack id: `describe_channel_users` gives their name, and their email
+   where the workspace discloses it.
 2. **Only what is missing, once.** When you cannot tell which screen or what is wrong, ask one
    question in the thread (`reply`) with your best guess as the suggested answer, and end the
    turn; their answer arrives as the next turn of the same thread.
@@ -32,8 +33,9 @@ In that Slack turn:
 4. **Queue it.** Upload each picture (`design desk asset <file> --kind screen`), then
    `design desk report <bug.json>` with `title` (what is wrong where, in the product's words),
    `problem` (what happens), `goal` (what should happen, when they said), `steps`, `screen`,
-   `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter, url}`; `chat`
-   and `thread_ts` come from the turn, `reporter` is their name, `url` the message's Slack
+   `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter, email, url}`; `chat`
+   and `thread_ts` come from the turn, `reporter` is their name, `email` their email when
+   `describe_channel_users` gave one (else leave it out), `url` the message's Slack
    link when the turn gives one (the Desk links the row to it).
    It lands in the queue for triage like any request.
 5. **Answer in the thread**: `react` with `bug`, then one `reply`, in these words:

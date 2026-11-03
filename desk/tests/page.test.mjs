@@ -988,6 +988,10 @@ const cards = [
   { id: "C-1", kind: "request", title: "Not sized", status: "testing", prototype: live, triage, created_by: bob },
   { id: "C-2", kind: "request", title: "Small", status: "testing", prototype: live, triage, created_by: bob, size: { small: true, by: lou, at } },
   { id: "C-3", kind: "request", title: "Small, approved", status: "spec", triage, created_by: bob, size: { small: true, by: lou, at }, approved: { by: dana, at, small: true } },
+  { id: "C-4", kind: "request", title: "Small, against a decision", status: "testing", prototype: live, triage, created_by: bob, size: { small: true, by: lou, at },
+    conflicts: [{ decision: "D-1", why: "It tightens them.", text: "Rows stay roomy", status: "active" }] },
+  { id: "C-5", kind: "request", title: "Small, filed from Slack", status: "testing", prototype: live, triage, created_by: { agent: true }, size: { small: true, by: lou, at },
+    origin: { channel: "slack", reporter: "Dana", email: "dana@example.com" } },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
@@ -1023,6 +1027,13 @@ test("a small change: the lead developer marks it, a developer but its author ap
 
   assert.match(await card("bob", "C-2"), /not bob@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "its author does not approve it");
+
+  await card("dana", "C-4");
+  assert.equal(await count('[data-act="approve"]'), 0, "a small change against a decision in force is a designer's");
+  await card("dana", "C-5");
+  assert.equal(await count('[data-act="approve"]'), 0, "the reporter of a request filed for them does not approve it");
+  await card("bob", "C-5");
+  assert.equal(await count('[data-act="approve"]'), 1, "another developer does");
 
   assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*as a small change/, "the card names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");

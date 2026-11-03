@@ -1279,10 +1279,16 @@ function favouriteOf(c) {
 }
 
 // Whether a person filed the request: its author never approves it as a small change. A
-// request the agent filed for someone (Slack, an issue) names them in `origin.reporter`.
+// request the agent filed for someone carries their email in `origin.email` when the channel
+// disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
 const isAuthor = (c, who) => {
   const me = String(who?.email || "").toLowerCase();
-  return Boolean(me) && [c.created_by?.email, c.origin?.reporter].some((x) => String(x || "").toLowerCase() === me);
+  return Boolean(me) && [c.created_by?.email, c.origin?.email].some((x) => String(x || "").toLowerCase() === me);
+};
+const cleanEmail = (v) => {
+  const e = String(v).trim().toLowerCase();
+  if (!EMAIL.test(e) || e.length > 200) throw bad("origin.email must be an email");
+  return e;
 };
 
 function person(who) {
@@ -1576,6 +1582,8 @@ function cleanOrigin(o, cards) {
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40),
+    // The reporter's email where the channel discloses it (Slack): who counts as a request's author.
+    ...(o.email != null ? { email: cleanEmail(o.email) } : {}),
     ...(o.job ? { job: String(o.job) } : {}),
     ...(o.event ? { event: cleanSource(o.event, cards) } : {}),
     // A finding an automated test posted (Quality Inspector), not a person's report.

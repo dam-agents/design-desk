@@ -159,7 +159,8 @@ A request goes through a designer unless a lead developer marks it a **small cha
 (`POST /api/cards/<id>/size {small}`; the card's `size: {small, by, at}`), and may send it back
 the same way while it is open and not approved. A small change is approved by a designer or
 by any `developer` or `lead-developer` except the person who filed it (`created_by`, or
-`origin.reporter` when you filed it for them); the store refuses the author. A small change
+`origin.email` when you filed it for them); the store refuses the author. A request whose
+`origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A small change
 that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card; the
 page shows who marked it and who approved it, and a reopen clears `approved`. A small change
 is not in **Needs a designer** for its options or its prototype. The `handoff` item it makes is
@@ -276,7 +277,8 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`
   (an issue or PR), `chat` (the operator asked you in the direct session) or `agent` (your own);
   `reporter` (the person's name or login, required on every channel but `agent`, shown as
-  the author); `url` (their thread, the issue); and when a scheduled run filed it, `job`
+  the author); `email` (the reporter's email where the channel discloses it, Slack's member
+  list: a small change's author, [Small changes](#small-changes)); `url` (their thread, the issue); and when a scheduled run filed it, `job`
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
   A request made from a card (`request.from`: an issue's **Design this**, a change's
