@@ -13,7 +13,7 @@ demo videos and copy.
 | Developers, PMs | Votes and comments pinned to elements of a variant, before anyone builds. |
 | The whole team | A **live prototype**: the real product with only its look changed, on its own instance with demo data. |
 | Developers | A spec of the approved design: screens, states, copy, the exact change, and what is left for them. |
-| Designers, PMs | With `issue_news: enabled`, the planned issues that change the screens — this sprint's, assigned ones, the backlog — each with what the UI will need, how it looks now and a sketch. |
+| Designers, PMs | With `issue_news: enabled`, the planned issues that change the screens — this sprint's and its epics', the next sprint's, assigned ones, a label's — each with what the UI will need, how it looks now and a sketch. |
 
 It never changes what a product does. A prototype may change layout, styles, copy and icons;
 a guard reads every prototype's diff and refuses anything that touches data, rules,
