@@ -42,4 +42,13 @@ for link in 'javascript:alert(1)' 'share.example.com/a/xY12' 'https://share.exam
     printf '%s' "$out" | grep -q '^FAIL config_desk_link' || { echo "  ✗ verify names config_desk_link for '$link': $out"; FAILS=$((FAILS+1)); }
   fi
 done
+# A roster role reads as the server reads it: a spaced or tabbed role passes, an unknown one fails.
+for row in '| lou@example.com | Lead developer |' $'| lou@example.com | lead\tdeveloper |' '| ops@example.com | ops |'; do
+  printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' '' '## Desk people' '' '| email | role |' '| --- | --- |' "$row" > "$WORK_DIR/CONFIG.md"
+  out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)"
+  case "$row" in
+    *ops*) printf '%s' "$out" | grep -q '^FAIL desk_people_roles' || { echo "  ✗ verify names an unknown role: $out"; FAILS=$((FAILS+1)); } ;;
+    *) printf '%s' "$out" | grep -q '^ok  *desk_people_roles' || { echo "  ✗ verify passes '$row': $out"; FAILS=$((FAILS+1)); } ;;
+  esac
+done
 finish

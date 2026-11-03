@@ -20,7 +20,8 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
-- `prototype_requesters` (`designer, lead`), `max_prototypes` (`2`; `0` = none),
+- `prototype_requesters` (`designer, lead`; roles read as in `## Desk people`, so `lead developer`
+  is `lead-developer`), `max_prototypes` (`2`; `0` = none),
   `prototype_expiry_days` (`7`), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
   proposals; `issue_writeback` (`enabled`) — a feature's design goes back into its issue;
@@ -45,7 +46,7 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   `max_issue_drawings` (`5`) — issues drawn a day.
 - `digest` (`desk`) — where the weekly UX digest goes: `desk` | `slack` (the Desk and the
   bound channel) | `disabled`.
-- `slack_polls` (`disabled`) — `enabled`: designers share options in Slack for 👍 / ⚠️ votes
+- `slack_polls` (`disabled`) — `enabled`: designers and developers share options in Slack for 👍 / ⚠️ votes
   and replies (the `slack-polls` skill); `slack_poll_channel` — where (empty: the bound channel).
 - `slack_send` (`disabled`) — `enabled`: **Send designs to Slack** posts pictures of a request's
   options to `slack_poll_channel` (the `slack-polls` skill → Send); a request from Slack has the
@@ -64,6 +65,6 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   mark it handled before the Desk shows it red as overdue; `0`/`off` disables.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
-- `## Desk people` table, `| email | role |`: `lead`, `designer`, `pm` or `developer`;
+- `## Desk people` table, `| email | role |`: `lead`, `designer`, `lead-developer`, `developer` or `pm`;
   anyone else on the share list is a `guest`; the owner is always `lead`. A lead may ask
   on the Desk for a new row ([desk.md](desk.md) → People).

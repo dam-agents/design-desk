@@ -3,9 +3,9 @@ name: slack-polls
 description: >-
   Post a design request's options to Slack for the team to vote on and discuss: one message
   per option with its picture, votes as 👍 / ⚠️ reactions, comments as thread replies, all
-  brought back to the Desk; the result is posted when the vote closes. Use when a designer
+  brought back to the Desk; the result is posted when the vote closes. Use when someone
   presses Share in Slack (`slack_due`), when an open vote is due to sync or close
-  (`polls_due`), when a designer presses Send designs to Slack (`slack_due` with `scope:
+  (`polls_due`), when someone presses Send designs to Slack (`slack_due` with `scope:
   send`: pictures only, no vote), or when someone asks in chat to "send the options to Slack".
 ---
 
