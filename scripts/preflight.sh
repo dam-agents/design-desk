@@ -508,6 +508,7 @@ inbox_mode() {
       slack_due: pick(["slack"]),
       drawings_due: pick(["draw"]),
       people_due: [ pick(["person"])[] | select(.person != null) ],
+      decisions_due: pick(["decision"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
@@ -677,17 +678,18 @@ digest_mode() {
       handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | inweek)) | {id, title} ],
       waiting: [ $cards[] | select(.agenda.status == "queued") | {id, title, note: .agenda.note} ],
       polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | inweek)) | {card: $c.id, title: $c.title, state, closes, result} ],
-      decisions: [ (.decisions // {})[] | select(.recorded | inweek) | {id, text, concepts} ],
+      decisions: [ (.decisions // {})[] | select(.recorded | inweek) | {id, text, concepts, author, conflicts} ],
+      revoked: [ (.decisions // {})[] | select(.revoked.at | inweek) | {id, text, reason: .revoked.reason, replaced_by: .revoked.replaced_by} ],
       feedback: ([ ($cards[] | select(.kind == "request" and .request.type == "bug" and (.created | within($month)))
                    | {card: .id, kind: (if .origin.automated then "test finding" else "bug" end), text: ((.title + ": " + (.request.problem // ""))[0:240])}),
                  (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.created | within($month)) and (.messages[0].by.agent != true))
                    | {card, kind, text: (.messages[0].text[0:240])}) ] | .[0:150])
     }' "$DB" 2>/dev/null)" || fail_out "cannot read the Desk store at $DB"
   if [ "$(jq -r .done <<<"$out")" = true ]; then log "the digest of $period is written"; quiet_out; fi
-  if [ "$(jq '(.changes + .requests_new + .handed_off + .decisions + .feedback) | length' <<<"$out")" -eq 0 ]; then
+  if [ "$(jq '(.changes + .requests_new + .handed_off + .decisions + .revoked + .feedback) | length' <<<"$out")" -eq 0 ]; then
     log "a quiet week: nothing to digest for $period"; quiet_out
   fi
-  log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.feedback|length) pieces of feedback"' <<<"$out")"
+  log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.revoked|length) revoked, \(.feedback|length) pieces of feedback"' <<<"$out")"
   jq -n --argjson d "$out" --arg period "$period" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md"], config:$config, logs:$logs} | del(.done)'
 }

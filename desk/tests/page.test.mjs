@@ -783,6 +783,33 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
   }
 });
 
+test("a decision: what goes against it warns with a link to it; a designer revokes it with a reason", async (t) => {
+  const decision = `const decision = { id: "D-1", concepts: ["header"], text: "The header stays one line", why: "", author: { name: "Dana", login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" }, at: "2026-10-01T00:00:00Z", status: "active" };`;
+  const bridge = BRIDGE.replace("const digest =", `${decision}\nchange.conflicts = [{ decision: "D-1", why: "It wraps the header to two lines.", text: decision.text, status: "active" }];\nchange.decisions = ["D-2"]; change.cited = { "D-2": { text: "Headers use the brand colour", status: "revoked" } };\nchange.impact = { concept: "the header", places: [], decisions: [{ id: "D-2", when: "2026-09-01" }] };\nconst digest =`)
+    .replace("can: { request: true,", "can: { decide: true, request: true,")
+    .replace(': path === "/api/cards/ch1"', ': path === "/api/decisions/D-1" ? { decision, refs: [{ id: "ch1", kind: "change", title: "A new header", how: "conflicts" }] }\n    : path.startsWith("/api/decisions?") ? { decisions: [decision] }\n    : path === "/api/cards/ch1"');
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-tab="new"]');
+    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .meta'), /Goes against a decision/);
+    await desk.click('[data-card="ch1"]');
+    await desk.waitForSelector("#detail .against");
+    assert.match(await desk.textContent("#detail .against"), /Goes against D-1: The header stays one line[\s\S]*wraps the header/);
+    assert.match(await desk.textContent("#detail"), /Follows D-2 revoked/, "a cited decision no longer in force says so");
+    assert.equal(await desk.locator('#detail .impact [data-ref="D-2"]').count(), 1, "the impact cites a decision by its number");
+    await desk.click('#detail .against [data-ref="D-1"]');
+    await desk.waitForSelector("text=Who decided");
+    assert.match(await desk.textContent("#detail"), /Dana[\s\S]*PR #40[\s\S]*A new header ch1[\s\S]*goes against it/);
+    await desk.click('[data-revoke="D-1"]');
+    await desk.fill("#confirm-form [name=note]", "Two lines are fine now");
+    await desk.locator("#confirm-dialog .actions button", { hasText: "Revoke it" }).click();
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/decisions/D-1/revoke"));
+    assert.deepEqual(JSON.parse((await posts("/api/decisions/D-1/revoke"))[0].body), { reason: "Two lines are fine now", replaced_by: null });
+  } finally { await run.close(); }
+});
+
 test("the screen shown stays when the person switches options, where the other option has it", async (t) => {
   const run = await launch(t, BRIDGE_BAR);
   if (!run) return;

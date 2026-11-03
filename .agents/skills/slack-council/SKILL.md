@@ -72,7 +72,9 @@ A Slack turn in a council thread, or a `councils_due` entry with `close: false`.
    - No option named and more than one open → the one the thread discussed last; still
      unclear → one question in the thread with your best guess, and do the other asks.
 5. One rebuild per option for all its asks; upload and upsert as in Variants. Comment on the
-   card what was asked in Slack, by whom, and what changed.
+   card what was asked in Slack, by whom, and what changed. A message that settles something
+   is recorded as a decision with `origin.kind: slack`, and an ask against one in force goes in
+   `conflicts` ([docs/desk.md](../../../docs/desk.md) → Decisions).
 6. **Answer**, then `council-update --seen <newest ts> --synced <now>`.
 7. **Agreement?** Below.
 
@@ -88,7 +90,7 @@ One `reply` in the thread per round, with the picture:
 - **Text**:
   "*<option name> — version <n>*: <what changed, one line per ask, with who asked>.
   <Consequences, when there are any: where else this shows, what needs a developer, an
-  earlier decision it goes against — each with its source.> <What was not done, and why.>
+  earlier decision it goes against, by its number `D-<n>` — each with its source.> <What was not done, and why.>
   All options and versions are on the Design Desk (C-<n>): <link>. Ask here for more changes."
 - The card's link and access line as in `intake-slack` (*In that Slack turn*, step 5). Never a
   password, an internal id ("card", "triage", "S-2"; the card's number `C-<n>` is not one) or
