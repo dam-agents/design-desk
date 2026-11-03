@@ -26,13 +26,12 @@ never stands in for them (a developer may not see the Desk):
    a small screen. Light first; dark when the change is about colour. Add the screen as it is
    today from the card's screens (`design desk fetch <A-n> <file>`), so the developer sees before and after.
 2. Keep the views the spec names, at most six pictures, each under 5 MB.
-3. Only `gh issue create` and `gh issue comment` take `--attach <file>#<alt>`, repeated per
-   picture; refer to each in the body as `![<view name>](<file>)` so it lands in place.
-   `gh pr comment`, `gh pr create` and every edit take none, so on a pull request the spec
-   comment goes through `gh issue comment <pr number> --attach …` (a pull request is an issue
-   to GitHub). A draft pull request is opened first, then the spec and its pictures go in that
-   comment, and the body links it. A revision whose pictures changed posts a new comment with
-   them and edits the old one to a link to it. Never push a branch to host a picture.
+3. Attach them with `--attach <file>#<alt>`, repeated per picture (`gh issue create`,
+   `gh issue comment`, `gh issue edit`, `gh pr create`, `gh pr comment`, `gh pr edit`), and
+   refer to each in the body as `![<view name>](<file>)` so it lands in place. A comment
+   edited through `gh api` takes no attachment, so a revision whose pictures changed posts a
+   new comment with them and edits the old one to a link to it. Never push a branch to host
+   a picture.
 4. Check what was written: every picture's reference in the posted body is an uploaded
    attachment URL, not the local file name (`gh issue view` / `gh api` the comment). A picture
    that did not upload is attached again; a delivery without its pictures is not done, so it
@@ -82,8 +81,8 @@ there instead of out. The body's last line before the marker names the Desk card
     Set `spec.issue_url`;
   - `draft-pr`: needs `prototype_remote` to be the repository itself; push the branch
     ([docs/prototype.md](../../../docs/prototype.md) → Push) and open a **draft** pull request
-    from it with the title `design: <card title>`, `spec.md` as its body and the marker; the
-    pictures go in its spec comment (The pictures, step 3).
+    from it with the title `design: <card title>`, `spec.md` as its body, the pictures
+    attached and the marker.
     Set `spec.pr_url`.
     Never mark it ready, never merge.
 

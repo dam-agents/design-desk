@@ -16,8 +16,7 @@ the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 questions: what it does not settle is asked on the Desk as a form (`--step handoff`) and
 answered there before it is sent ([docs/handoff.md](docs/handoff.md) step 4). A spec already
 sent keeps its text; nothing to migrate. Every issue, comment or pull request the spec goes
-to carries the design's pictures, before and after; on a pull request they go in a comment
-`gh issue comment --attach` writes, since `gh pr comment` and `gh pr create` attach nothing.
+to carries the design's pictures, before and after, attached with `gh … --attach`.
 A request sent to developers shows a card linking its issue; that issue, and the one it came
 from, leave the Issues page's open lists for **✓ Designed** and are never drawn
 ([docs/issues.md](docs/issues.md) → On the Desk). Derived from the cards; nothing to migrate.
