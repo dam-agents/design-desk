@@ -146,6 +146,45 @@ test("a request keeps how the person pictures it and the skills they switched", 
   assert.throws(() => s.createRequest(alice, { problem: "x", skills: { "../x": true } }), /skills must be/);
 });
 
+test("a request keeps how many options it asks for and questions first; Draw design options can change the count", () => {
+  const s = fresh();
+  const r = s.createRequest(alice, { problem: "The list is busy.", options: 5, grill: true, auto: true }).card;
+  assert.deepEqual([r.request.options, r.request.grill, r.request.auto], [5, true, true]);
+  const d = s.createRequest(alice, { problem: "x" }).card.request;
+  assert.deepEqual([d.options, d.grill, d.auto], [3, false, false], "three options, no questions, a designer starts them");
+  assert.equal(s.createRequest(alice, { problem: "x", options: 0, auto: true }).card.request.auto, false, "none asked for: nothing starts on its own");
+  assert.throws(() => s.createRequest(alice, { problem: "x", options: 6 }), /options must be/);
+  assert.throws(() => s.createRequest(alice, { problem: "x", options: 1.5 }), /options must be/);
+  assert.throws(() => s.act(r.id, alice, "explore", "", { count: 0 }), /one to five/);
+  s.act(r.id, alice, "explore", "", { count: 2 });
+  assert.equal(s.card(r.id).request.options, 2);
+});
+
+test("a request from an issue keeps what the issue says about the design and how each option meets its stories", () => {
+  const s = fresh();
+  const issue = s.upsertCard({ kind: "issue", title: "See spend", status: "open", bucket: "sprint", needs: ["A spend column"], source: { repo: "acme/widgets", issue: 41 } }).card;
+  const { card } = s.createRequest(alice, { problem: "A spend column", type: "feature", from: issue.id });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  const brief = { text: "People see each agent's weekly spend.", url: "https://github.com/acme/widgets/issues/41", stories: [{ id: "s1", text: "As a lead I see what each agent spends." }, { id: "s2", text: "I can sort by spend.", derived: true }] };
+  s.upsertCard({ id: card.id, issue_brief: brief, grill: { state: "done", asked: 3, summary: "- Weekly, not monthly" },
+    variants: [{ id: "v1", name: "Column", asset, stories: [{ story: "s1", met: "yes", how: "A spend column.", parts: [{ selector: "#spend", label: "Spend column", view: "1" }] }] }] });
+  const c = s.card(card.id);
+  assert.equal(c.request.from, issue.id);
+  assert.deepEqual(c.issue_brief.stories.map((x) => [x.id, x.derived]), [["s1", false], ["s2", true]]);
+  assert.deepEqual(c.variants[0].stories[0].parts, [{ selector: "#spend", label: "Spend column", view: "1" }]);
+  assert.deepEqual([c.grill.state, c.grill.asked], ["done", 3]);
+  const asset2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>y</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2 }] });
+  assert.equal(s.card(card.id).variants[0].version, 2);
+  assert.equal(s.card(card.id).variants[0].stories[0].how, "A spend column.", "a revise that leaves stories out keeps the coverage");
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2, stories: [{ story: "s1", met: "partly", how: "Moved." }] }] });
+  assert.equal(s.card(card.id).variants[0].stories[0].met, "partly", "new stories replace the old");
+  assert.throws(() => s.upsertCard({ id: card.id, issue_brief: { stories: [{ id: "s1", text: "a" }, { id: "s1", text: "b" }] } }), /its own/);
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset, stories: [{ story: "s1", met: "maybe", how: "x" }] }] }), /met must be/);
+  assert.throws(() => s.upsertCard({ id: issue.id, issue_brief: brief }), /belongs to a request/);
+  assert.throws(() => s.upsertCard({ id: card.id, grill: { state: "later" } }), /grill state/);
+});
+
 test("input limits and asset size are enforced", () => {
   const s = fresh();
   assert.throws(() => s.createRequest(alice, { title: "x".repeat(201), problem: "y" }), /longer than 200/);
