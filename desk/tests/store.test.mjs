@@ -227,10 +227,10 @@ test("a request from an issue keeps what the issue says about the design and how
   assert.deepEqual(c.variants[0].stories[0].parts, [{ selector: "#spend", label: "Spend column", view: "1" }]);
   assert.deepEqual([c.grill.state, c.grill.asked], ["done", 3]);
   const asset2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>y</b>").toString("base64") }).asset.id;
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2 }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Column", asset: asset2 }] });
   assert.equal(s.card(card.id).variants[0].version, 2);
   assert.equal(s.card(card.id).variants[0].stories[0].how, "A spend column.", "a revise that leaves stories out keeps the coverage");
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset: asset2, stories: [{ story: "s1", met: "partly", how: "Moved." }] }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 2, name: "Column", asset: asset2, stories: [{ story: "s1", met: "partly", how: "Moved." }] }] });
   assert.equal(s.card(card.id).variants[0].stories[0].met, "partly", "new stories replace the old");
   assert.throws(() => s.upsertCard({ id: card.id, issue_brief: { stories: [{ id: "s1", text: "a" }, { id: "s1", text: "b" }] } }), /its own/);
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Column", asset, stories: [{ story: "s1", met: "maybe", how: "x" }] }] }), /met must be/);
@@ -344,7 +344,7 @@ test("change notes on elements wake the agent once; its redraw keeps the earlier
   assert.equal(first.id, second.id);
   assert.deepEqual(s.getCard(card.id).waiting.map((w) => w.kind), ["request", "revise"]);
   const a2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>2</p>", encoding: "utf8" }).asset.id;
-  const v = s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "One button", asset: a2 }] }).card.variants[0];
+  const v = s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "One button", asset: a2 }] }).card.variants[0];
   assert.equal(v.version, 2);
   assert.equal(v.history[0].asset, a1);
 });
@@ -397,7 +397,7 @@ test("only a designer picks the winning option; votes only suggest one", () => {
   assert.equal(s.queueForCall(card.id, alice).card.agenda.variant, "v2");
   assert.equal(s.choose(card.id, alice, null).card.chosen, undefined);
   s.choose(card.id, alice, "v2");
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Table", asset: a }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Table", asset: a }, { id: "v2", drop: true }] });
   assert.equal(s.getCard(card.id).chosen, undefined, "an option that is gone is no longer the winner");
 });
 
@@ -425,8 +425,8 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   const h = page("hover"), e = page("error");
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "x", name: "X", asset: "A-99" }] }] }), /no asset/);
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "x", name: "X", asset: h }, { id: "x", name: "Y", asset: e }] }] }), /its own/);
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "hover", name: "Hovered", how: "The pointer is over it.", part: "Upload button", asset: h }, { id: "error", name: "Failed", part: "Upload button", asset: e }] }, { id: "v2", name: "Small", asset: b }] });
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a }, { id: "v2", name: "Small", asset: b }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states: [{ id: "hover", name: "Hovered", how: "The pointer is over it.", part: "Upload button", asset: h }, { id: "error", name: "Failed", part: "Upload button", asset: e }] }, { id: "v2", version: 1, name: "Small", asset: b }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a }, { id: "v2", version: 1, name: "Small", asset: b }] });
   assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.id, x.version]), [["hover", 1], ["error", 1]], "leaving states out keeps them");
   // A note on one state names it; a state the option does not have is refused.
   assert.throws(() => s.openThread(card.id, alice, { kind: "change", text: "Red.", anchor: { variant: "v1", state: "loading" } }), /not drawn/);
@@ -434,7 +434,7 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   assert.equal(note.anchor.state, "error");
   const e2 = page("error 2");
   const states = s.getCard(card.id).variants[0].states.map((x) => (x.id === "error" ? { ...x, asset: e2 } : x));
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states }, { id: "v2", name: "Small", asset: b }] });
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states }, { id: "v2", version: 1, name: "Small", asset: b }] });
   const err = s.getCard(card.id).variants[0].states.find((x) => x.id === "error");
   assert.deepEqual([err.version, err.asset, err.history[0].asset], [2, e2, e], "a redrawn state keeps the one it replaces");
   // Build it live: exactly the option and version the person checked.
@@ -468,6 +468,14 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], version: 1 }, fresh2[1]] }), (x) => x.status === 409 && /Big is at version 2 now; you read version 1/.test(x.message));
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], states: [{ ...fresh2[0].states[0], version: 1, asset: page("old") }, fresh2[0].states[1]] }, fresh2[1]] }), (x) => x.status === 409 && /Hovered is at version 2/.test(x.message));
   assert.equal(s.getCard(card.id).variants[0].states[0].asset, h2, "a refused write changes nothing");
+  // A run that sends no version, or leaves an option or a state out, is refused too.
+  const noVersion = ({ version, ...x }) => x;
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...noVersion(fresh2[0]), asset: page("older") }, fresh2[1]] }), (x) => x.status === 409 && /send the version you read/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], states: [noVersion(fresh2[0].states[0]), fresh2[0].states[1]] }, fresh2[1]] }), (x) => x.status === 409 && /Hovered is on the card at version 2/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [fresh2[0]] }), (x) => x.status === 409 && /Small is on the card but not in what you sent/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], states: [fresh2[0].states[0]] }, fresh2[1]] }), (x) => x.status === 409 && /Failed is on the card but not in what you sent/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [...fresh2, { id: "v9", drop: true }] }), /no option v9/);
+  assert.deepEqual(s.getCard(card.id).variants.map((x) => x.id), ["v1", "v2"], "nothing refused was saved");
   // A closed request has nothing going live.
   s.claim(Object.values(s.db.inbox).find((i) => i.kind === "build" && i.state === "open").id, "run-5");
   assert.equal(s.act(card.id, alice, "close").card.live_pick, undefined);

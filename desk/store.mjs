@@ -215,7 +215,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.variant ? { variant: i.variant } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -1405,14 +1405,27 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 // An entry that leaves `stories` out keeps the option's coverage from before.
 // Two runs on one card each send the whole list: a run that read an option or a state at a
 // version older than the card's would put back the drawing it replaced, so it is refused.
-function versioned(variants, before, at) {
+// An option or a state already on the card is sent with the `version` the run read; one
+// it leaves out is gone only when it says so (`drop: true`, or `states: []`).
+function versioned(list, before, at) {
+  const stale = (m) => new DeskError(409, `${m} Read the card again and send what is there now.`);
+  const dropped = new Set(list.filter((x) => x.drop).map((x) => x.id));
+  for (const id of dropped) if (!before.some((x) => x.id === id)) throw bad(`there is no option ${id} to drop`);
+  const variants = list.filter((x) => !x.drop);
+  if (variants.length > 6) throw bad("a request has at most 6 options");
+  for (const o of before) if (!dropped.has(o.id) && !variants.some((x) => x.id === o.id)) throw stale(`${o.name} is on the card but not in what you sent; send it, or {id: "${o.id}", drop: true} to take it off.`);
   for (const given of variants) {
     const old = before.find((x) => x.id === given.id);
-    const behind = (g, o) => o && g.read != null && g.read < (o.version || 1);
-    if (behind(given, old)) throw new DeskError(409, `${given.name} is at version ${old.version} now; you read version ${given.read}. Read the card again and send what is there now.`);
-    for (const st of given.states || []) {
-      const o = (old?.states || []).find((x) => x.id === st.id);
-      if (behind(st, o)) throw new DeskError(409, `${given.name}: the state ${st.name} is at version ${o.version} now; you read version ${st.read}. Read the card again and send what is there now.`);
+    if (!old) continue;
+    if (given.read == null) throw stale(`${given.name} is on the card at version ${old.version || 1}; send the version you read.`);
+    if (given.read < (old.version || 1)) throw stale(`${given.name} is at version ${old.version} now; you read version ${given.read}.`);
+    if (!given.states || !given.states.length) continue;
+    for (const o of old.states || []) if (!given.states.some((x) => x.id === o.id)) throw stale(`${given.name}: the state ${o.name} is on the card but not in what you sent; send it, or states: [] to remove them all.`);
+    for (const st of given.states) {
+      const o = (old.states || []).find((x) => x.id === st.id);
+      if (!o) continue;
+      if (st.read == null) throw stale(`${given.name}: the state ${st.name} is on the card at version ${o.version || 1}; send the version you read.`);
+      if (st.read < (o.version || 1)) throw stale(`${given.name}: the state ${st.name} is at version ${o.version} now; you read version ${st.read}.`);
     }
   }
   return variants.map(({ read, ...given }) => {
@@ -1560,7 +1573,9 @@ function cleanShotlist(list) {
 
 function cleanVariants(list, assets) {
   if (!Array.isArray(list)) throw bad("variants must be a list");
-  return list.slice(0, 6).map((v, i) => {
+  return list.slice(0, 12).map((v, i) => {
+    // An option the run takes off the card on purpose: `{id, drop: true}`.
+    if (v?.drop === true) return { id: String(v.id || "").replace(/[^a-z0-9-]/gi, "").slice(0, 20), drop: true };
     if (!own(assets, v.asset)) throw bad(`variant ${i + 1}: no asset ${v.asset}`);
     return {
       id: String(v.id || `v${i + 1}`).replace(/[^a-z0-9-]/gi, "").slice(0, 20),

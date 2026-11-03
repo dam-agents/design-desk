@@ -168,8 +168,12 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   them when a person picks the story. An entry without `stories` keeps the option's coverage
   from before; a revised option whose parts moved sends its new `stories`.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
-  `variants: [{id, name, rationale, fidelity, asset, stories}]` (rationale: one line on when
-  this one wins) and `status: feedback` in one `design desk upsert`.
+  `variants: [{id, version, name, rationale, fidelity, asset, stories, states}]` (rationale: one
+  line on when this one wins) and `status: feedback` in one `design desk upsert`. The list is
+  every option on the card: one already there goes with the `version` (and each of its states
+  with its `version`) the card gave you, a new one without; one to take off goes as `{id,
+  drop: true}`, only when a designer asked. The store refuses (409) a list that leaves an
+  option or a state out, or sends one without its version or at an older one.
 - Look at every variant's screenshots before upload (`design shot`); a variant over 700 KB
   is split or its images shrunk.
 - A variant shows no real person, no real customer data, and no invented number presented
@@ -197,7 +201,8 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    compares states one by one. A state that needs a developer (new data, a new rule) is drawn
    and labelled "needs a developer", as in the options.
 4. Look at every state's shot (`design shot`), upload each (`--kind variant`), then one `design
-   desk upsert` with every option and, on this one, `states: [{id, name, how, part, asset}]`:
+   desk upsert` with every option (each with its `version`, Variants above) and, on this one,
+   `states: [{id, version, name, how, part, asset}]` (`version` only for a state already there):
    `id` short and stable (`hover`, `error`), `name` the state in plain words, `how` when it
    happens in one sentence, `part` the part in the product's words (states of several parts
    are grouped by it). Keep the option's earlier states of other parts in the list; leaving
