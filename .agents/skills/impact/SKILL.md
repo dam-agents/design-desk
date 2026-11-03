@@ -47,7 +47,8 @@ Then read, do not count:
 
 ## 3. Find what it touches, from earlier decisions
 
-- `design desk decisions --concept "<concept>"` — what the team decided before, with sources.
+- `design desk decisions --concept "<concept>"` — what the team decided before, with who and
+  where; a revoked one no longer binds.
 - The pull requests that last changed each place, their `author-decisions` blocks, the issues
   they close, and the architecture pages the profile's `docs.architecture` names.
 - For each place, say what a change would do to it: words that would stop matching, a colour
@@ -67,20 +68,20 @@ On a card, one `design desk upsert` with:
              {"where": "Slack spend alert", "how": "“Agent X reached its spend limit”", "kind": "message"}],
   "affects": [{"what": "The spend alert", "why": "it says “near its limit”; a different word in the list would make them disagree",
                "source": {"label": "pull request #5810", "url": "https://github.com/…"}}],
-  "decisions": [{"text": "Spend limits reset every Monday (UTC) for everyone.", "when": "2026-09-14",
+  "decisions": [{"id": "D-7", "when": "2026-09-14"},
+                {"text": "Spend limits reset every Monday (UTC) for everyone.", "when": "2026-09-14",
                  "source": {"label": "pull request #5810", "url": "https://github.com/…"}}]}}
 ```
 
 `kind` is one of `screen`, `component`, `message`, `email`, `document`, `other`. A place that
 is a screen or a part in Product (`design desk cards --kind screen`, `--kind element`) carries
-its `card` id, and the page opens it from there. At most 30
+its `card` id, and the page opens it from there. A decision on the Desk is cited by its `id`;
+one found elsewhere by its words and source. At most 30
 places, 20 effects, 20 decisions; the most important first.
 
 In chat, the same three lists in plain words.
 
 ## 5. Keep the decisions
 
-A decision you found that the Desk does not know yet, with its source, is recorded once:
-`design desk decision <file>` with `{concepts, text, why, source, at}`. Approved designs and
-the outcomes of the presentation are recorded the same way (docs/handoff.md, docs/desk.md), so
-the next analysis starts from them.
+A decision you found that the Desk does not know yet, with who made it and where, is recorded
+once, and what the card goes against becomes its `conflicts`: docs/desk.md → Decisions.
