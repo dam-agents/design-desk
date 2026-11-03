@@ -464,7 +464,7 @@
 <h3>Also here</h3><ul>
 <li><b>Presentation</b> — a filter on Requests: what designers chose to show at the team's design meeting, each in its final version with a short brief. Press <b>▶ Present</b> in the meeting, then <b>Mark as presented</b>. Design Desk suggests things, a designer adds them.</li>
 <li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable. A screen and a part keep how they looked in earlier versions: step back through them, or put one next to now. A designer adds a missing screen or part with <b>+ Add</b>.</li>
-<li><b>Weekly digest</b> — under Changes: what changed in the product's UX this week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
+<li><b>History</b> — under Product, one page a week, named by its dates: what changed in the product's UX that week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
 <li><b>Slack</b> — tell Design Desk in the team channel when something looks broken, or ask it for a design; it puts it here as a request and answers in your thread, the options included. When the Desk's owner turns it on, anyone in a request's thread can ask for changes there and gets each new option or version back as a before and after picture.</li>
 <li><b>Chat</b> — the Desk's owner can do everything here also by talking to Design Desk in its chat.</li></ul>`;
 
@@ -671,7 +671,7 @@
   // Requests leads; Changes and Issues follow smaller with grey counts, then Product and People.
   // How it works sits under the question mark next to the day and night switch.
   function renderNav() {
-    const unseen = S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && !c.acked).length;
+    const unseen = S.cards.filter((c) => c.kind === "change" && !c.acked).length;
     // Requests counts the open ones; it turns amber while one waits for an answer.
     const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
     const asks = open.filter((c) => c.asks).length;
@@ -696,8 +696,7 @@
   const INTRO = () => ({
     new: { about: "what changed in the product's screens, and what a designer should look at",
       see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
-        "On each row: where it came from and who made it, how long it has been open (red when overdue), and whether it needs a designer.",
-        "The weekly digest: the week's UX changes, the decisions taken and the themes in feedback."],
+        "On each row: where it came from and who made it, how long it has been open (red when overdue), and whether it needs a designer."],
       can: [["Filter by <b>All</b>, <b>Not seen yet</b>, <b>Not handled</b> or <b>Needs a designer</b>."],
         ["Press <b>Got it</b> once you have read a change.", "ack"],
         ["<b>Ask a question</b> about a change; the answer appears below it.", "ask"],
@@ -733,12 +732,13 @@
       see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
         "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in.",
         "<b>Decisions</b>: everything the team decided, searchable.",
+        "<b>History</b>: one page a week, named by its dates: the week's UX changes, the decisions taken and the themes in people's feedback.",
         "Earlier looks of a screen or part: step back through them, or put one next to now."],
-      can: [["Switch between <b>Screens</b>, <b>Elements</b> and <b>Decisions</b>."],
+      can: [["Switch between <b>Screens</b>, <b>Elements</b>, <b>Decisions</b> and <b>History</b>."],
         ["<b>Ask about this screen</b>: why it works the way it does.", "ask"],
         ["<b>+ Add</b> a screen or part that is missing.", "add"],
         ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
-      steps: ["Pick Screens, Elements or Decisions.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
+      steps: ["Pick Screens, Elements, Decisions or History.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
     people: { about: "who is on this Desk, and what each role can do",
       see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked.", "Asks to add someone, and where each one stands."],
       can: [["<b>+ Add a person</b>: Design Desk puts them on the list as a designer, PM or developer.", "people"],
@@ -776,7 +776,7 @@
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
   const attentionLine = (c) => (c.attention ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
-  const newCards = (filter) => S.cards.filter((c) => (c.kind === "change" || c.kind === "digest")
+  const newCards = (filter) => S.cards.filter((c) => c.kind === "change"
     && (filter === "all" || (filter === "designer" ? forDesigner(c) : filter === "open" ? c.kind === "change" && !c.handled : !c.acked)));
   const requestCards = (filter) => S.cards.filter((c) => c.kind === "request"
     && (filter === "designer" ? forDesigner(c) : filter === "open" ? !closed(c) : closed(c)));
@@ -791,6 +791,8 @@
 
   function visibleCards() {
     if (S.tab === "new") return newCards(S.newFilter);
+    // History: the weekly digests, the newest week first (docs/digest.md).
+    if (S.tab === "product" && S.productFilter === "history") return S.cards.filter((c) => c.kind === "digest").sort((a, b) => String(b.period || b.created).localeCompare(String(a.period || a.created)));
     if (S.tab === "product" && S.productFilter !== "decisions") {
       const kind = S.productFilter === "elements" ? "element" : "screen";
       // One Design Desk could not add stays a week, so the person who asked sees why.
@@ -858,8 +860,8 @@
     let filters = S.tab === "new" ? f("newFilter", [["all", "All"], ["new", "Not seen yet"], ["open", "Not handled"], ["designer", designer(newCards("designer").length)]])
       : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["presentation", `Presentation${S.agenda.length ? ` (${S.agenda.length})` : ""}`], ["closed", "Closed"], ["designer", designer(requestCards("designer").length)]])
       : S.tab === "issues" ? f("issueFilter", Object.entries({ ...BUCKET, all: "All" }).map(([k, l]) => [k, `${l}${k === "all" ? "" : ` (${issueCards(k).length})`}`]))
-      : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"]]) : "";
-    const add = S.tab === "product" && S.productFilter !== "decisions" && can("add") ? `<button class="btn small primary" data-add-product style="margin-left:auto">+ Add</button>` : "";
+      : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]]) : "";
+    const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product style="margin-left:auto">+ Add</button>` : "";
     if (add) filters = filters.replace(/<\/div>$/, `${add}</div>`);
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(filters); return; }
     if (presenting()) { renderAgendaList(filters); return; }
@@ -869,7 +871,8 @@
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       requests: S.reqFilter === "designer" ? waiting : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
-      product: (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
+      product: S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
+        : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
@@ -1225,11 +1228,9 @@
   }
 
   function renderDigest(c) {
-    const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2><div class="sub"><span class="chip info">Weekly digest</span>${c.period ? `<span>${esc(c.period)}</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
-      <div class="actions"><button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""}>${seen ? "✓ Seen" : "Got it"}</button>${agendaButton(c)}</div>
       ${shots(c.screens)}${sections(c)}
       ${renderThreads(c)}`;
   }
@@ -1790,7 +1791,7 @@
   }
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
   // or suggested for it, with a filter that shows it. The list is read again for a card newer than it.
-  const HOME = { change: "new", digest: "new", request: "requests", issue: "issues", screen: "product", element: "product" };
+  const HOME = { change: "new", digest: "product", request: "requests", issue: "issues", screen: "product", element: "product" };
   async function goTo(to) {
     $("#present")?.remove();
     if (!to.id) { if (to.tab === "presentation") { S.reqFilter = "presentation"; await showTab("requests"); } else await showTab(to.tab); return true; }
@@ -1800,7 +1801,7 @@
     const onCall = S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id);
     S.tab = to.tab === "presentation" && onCall ? "requests" : HOME[c.kind] || "new";
     if (to.tab === "presentation" && onCall) S.reqFilter = "presentation";
-    if (S.tab === "product") S.productFilter = c.kind === "element" ? "elements" : "screens";
+    if (S.tab === "product") S.productFilter = { element: "elements", digest: "history" }[c.kind] || "screens";
     if (!visibleCards().some((x) => x.id === c.id)) {
       if (S.tab === "new") S.newFilter = "all";
       if (S.tab === "requests") S.reqFilter = closed(c) ? "closed" : "open";

@@ -154,7 +154,7 @@ the **Presentation** filter on Requests. (The store and the CLI keep its older n
 
 - Only a designer or the lead puts a card on it (**Add to presentation**), with a note and,
   for a request with options, its final version. The agent never adds one: it
-  **suggests** its proposals, research verdicts that need a decision, prototypes ready for
+  **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
   suggestion shows on the card (a request's under **More**) and under the presentation until a
   designer adds it or says **Not now**; after **Not now** the store keeps the card from being
