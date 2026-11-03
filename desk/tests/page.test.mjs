@@ -170,6 +170,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click('[data-tab="product"]');
     await desk.click('[data-filter="productFilter:history"]');
     assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest is in Product → History, with no status word");
+    await desk.click('[data-filter="productFilter:screens"]');
     await desk.click('[data-tab="new"]');
     await desk.click('[data-card="ch1"]');
     const withPicture = async () => {
