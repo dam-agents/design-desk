@@ -524,7 +524,7 @@
 
   // ---------- state ----------
   const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
-    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set() } };
+    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set(), askFirst: true } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
@@ -1809,7 +1809,7 @@
   // The last look before a build: what goes live, its states, and what is still open.
   function renderCheckSide(c, v) {
     const side = $("#ws-side");
-    const ask = $("#ws-ask-first"), askFirst = ask ? ask.checked : true;
+    const askFirst = S.ws.askFirst !== false;
     const sts = v.states || [];
     const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved");
     const changes = open.filter((n) => n.kind === "change"), comments = open.length - changes.length;
@@ -1828,7 +1828,7 @@
       ${drawing ? `<div class="working"><span class="spin"></span><div>Design Desk is still drawing states of this request; they appear here as they are drawn.</div></div>` : ""}
       ${changes.length && !changing ? `<p><span class="chip warn">${plural(changes.length, "note is", "notes are")} not worked in yet</span> <span class="hint" style="display:inline">Build now and ${changes.length === 1 ? "it is" : "they are"} left out, or wait for Design Desk.</span></p>` : ""}
       ${comments ? `<p class="hint">${plural(comments, "open comment", "open comments")} on this option. Comments are not built in unless someone presses Work it in.</p>` : ""}
-      <label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="ws-ask-first" ${askFirst ? "checked" : ""} style="width:auto;margin-top:3px" /> <span>Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)</span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="ws-ask-first" data-ws-ask ${askFirst ? "checked" : ""} style="width:auto;margin-top:3px" /> <span>Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)</span></label>
       <div class="actions" style="margin:0"><button class="btn primary" data-ws-build ${changing ? "disabled" : ""}>Build it live</button><button class="btn" data-ws-edit>Make more changes</button>${(c.variants || []).length > 1 ? `<button class="btn" data-act="build">Pick another option</button>` : ""}</div>
       <p class="hint">Design Desk builds exactly this version, with made-up data; the first build can take up to an hour. The request then says which option and version is live.</p>`;
   }
@@ -2103,7 +2103,7 @@
       const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : favourite(c)?.id || options[0].id, send: async (a) => a.choice || options[0].id }) : options[0].id;
       if (!pick) return;
       S.variant = pick; S.ws.state = null; S.ws.version = null; S.ws.selected = null; S.ws.edit = null; S.ws.note = null;
-      S.ws.open = true; S.ws.check = true; S.ws.mode = "off"; S.ws.looked = new Set();
+      S.ws.open = true; S.ws.check = true; S.ws.mode = "off"; S.ws.looked = new Set(); S.ws.askFirst = true;
       renderWorkspace(); frameSay({ type: "desk-mode", mode: "off" });
       return;
     }
@@ -2185,7 +2185,9 @@
   async function buildChecked() {
     const c = S.card, v = wsVariant(c);
     if (!v) return;
-    const res = await api("POST", `/api/cards/${c.id}/actions`, { action: "build", note: v.id, variant: v.id, version: v.version || 1, ask_first: Boolean($("#ws-ask-first")?.checked) });
+    // The option's version and each state's: the store refuses a build of anything newer.
+    const states = Object.fromEntries((v.states || []).map((x) => [x.id, x.version || 1]));
+    const res = await api("POST", `/api/cards/${c.id}/actions`, { action: "build", note: v.id, variant: v.id, version: v.version || 1, states, ask_first: S.ws.askFirst !== false });
     S.ws.open = false; S.ws.check = false; renderWorkspace();
     if (res.inbox) toast(`Building ${v.name}, version ${v.version || 1}. This page updates by itself.`);
     await refreshList(); await openCard(c.id);
@@ -2342,6 +2344,8 @@
 
   document.addEventListener("change", (e) => {
     if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
+    // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
+    if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }
     if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; renderWorkspace(); }
   });
 

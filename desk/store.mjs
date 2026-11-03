@@ -552,7 +552,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, variant = null, version = null, part = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, variant = null, version = null, states = null, part = null } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
@@ -584,8 +584,11 @@ export class Store {
     // one that arrived meanwhile is looked at first (docs/prototype.md → Build).
     const live = action === "build" ? (c.variants || []).find((v) => v.id === (variant || note)) : null;
     if (action === "build" && (c.variants || []).length && !live) throw bad("Pick the design option to build.");
-    if (live && version != null && Number(version) !== (live.version || 1))
-      throw new DeskError(409, `A newer version of ${live.name} arrived while you looked. Look at it again before it goes live.`);
+    // The states it shows count too: one redrawn, added or removed alone is not what they saw.
+    const seen = states && typeof states === "object" ? states : null;
+    const statesMoved = live && seen && ((live.states || []).length !== Object.keys(seen).length || (live.states || []).some((x) => Number(seen[x.id]) !== (x.version || 1)));
+    if (live && version != null && (Number(version) !== (live.version || 1) || statesMoved))
+      throw new DeskError(409, `A newer version of ${live.name} or one of its states arrived while you looked. Look at it again before it goes live.`);
     if (action.startsWith("slack-") && !(c.variants || []).length) throw bad("There are no design options to share yet.");
     if (action === "slack-share" && (c.polls || []).some((x) => x.state === "open")) throw bad("These options are already being voted on in Slack.");
     if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");

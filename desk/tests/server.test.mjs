@@ -74,6 +74,20 @@ test("a request's options start after triage only for someone who may start them
   assert.equal((await file("guest@example.com", {})).status, 403, "a guest files no request");
 });
 
+test("drawing every state of a part is a designer's, like redrawing an option, and carries the part", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: asset.id }] })).status, 200);
+  const ask = { action: "states", note: "", variant: "v1", part: { selector: "body > button", label: "Button “Upload”" } };
+  const pm = await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(pm.status, 403);
+  assert.match(pm.body.error, /Only designers can redraw options/);
+  const designer = await d.viewer("alice@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(designer.status, 200);
+  assert.deepEqual([designer.body.inbox.kind, designer.body.inbox.variant, designer.body.inbox.part.label], ["states", "v1", "Button “Upload”"]);
+});
+
 test("a person's folded intros are kept for them alone, guests included", async (t) => {
   const d = await desk(t);
   assert.deepEqual((await d.viewer("alice@example.com", "/api/me")).body.prefs, {});

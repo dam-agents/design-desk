@@ -116,7 +116,7 @@ as the suggested answer: `design desk ask C-<n> <file> --step request`. The Desk
 the top of the request; the person's answer puts the request back on the queue. Close your
 item with `--outcome asked`.
 
-## Variants (`variants_due`: `explore` and `revise`)
+## Variants (`variants_due`: `explore` and `revise`; `states` is [below](#every-state-of-a-part-variants_due-states))
 
 Variants are quick, static and on **sample data**: the place to compare directions before
 anyone builds. Make them with the skill `design skill options --repo <repo>` names (the

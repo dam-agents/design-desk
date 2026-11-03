@@ -387,7 +387,10 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   // Build it live: exactly the option and version the person checked.
   assert.throws(() => s.act(card.id, alice, "build", "v9", { variant: "v9" }), /Pick the design option to build/);
   assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 0 }), (x) => x.status === 409 && /newer version of Big/.test(x.message));
-  const { card: built, inbox: job } = s.act(card.id, alice, "build", "v1", { variant: "v1", version: 1, askFirst: true });
+  // A state redrawn alone, or one the check did not show, is not what the person saw.
+  assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 1, states: { hover: 1, error: 1 } }), (x) => x.status === 409);
+  assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 1, states: { hover: 1 } }), (x) => x.status === 409);
+  const { card: built, inbox: job } = s.act(card.id, alice, "build", "v1", { variant: "v1", version: 1, states: { hover: 1, error: 2 }, askFirst: true });
   assert.deepEqual([job.variant, job.version, job.note], ["v1", 1, "v1"]);
   assert.deepEqual([built.live_pick.variant, built.live_pick.version, built.live_pick.asset, built.live_pick.by.email], ["v1", 1, a, alice.email]);
   assert.deepEqual(built.live_pick.states.map((x) => [x.id, x.version, x.asset]), [["hover", 1, h], ["error", 2, e2]]);

@@ -559,12 +559,12 @@ const change = { id: "ch2", kind: "change", title: "See which agents stopped", s
   sections: [{ key: "what", title: "What changed", body: "- A red dot.", source: { label: "PR #11", url: "https://github.com/acme/widgets/pull/11" } },
     { key: "why", title: "Why it is like this", body: "- Owners missed stopped agents.", source: { label: "not documented" } }] };
 const request = { id: "r2", kind: "request", title: "Bigger send button", status: "feedback", created, triage: { verdict: "design", reasons: [] },
-  variants: [{ id: "v1", name: "Calm", asset: "A-3" }], prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Calm", asset: "A-3", version: 1, states: [{ id: "error", name: "Failed", how: "The message did not go.", part: "Send button", asset: "A-3", version: 1 }] }], prototype: { state: "none" },
   threads: [{ id: "t1", kind: "asks", state: "open", step: "build", messages: [{ by: { agent: true }, at: created, text: "Two things." }],
     questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Send", "Send message"] }] }] };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
-  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", due_days: 21, can: { handle: true, build: true, comment: true, ask: true } }
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", due_days: 21, can: { handle: true, build: true, comment: true, ask: true, revise: true } }
     : path === "/api/cards" ? { cards: [{ ...change, screens: 2 }, { id: "ch3", kind: "change", title: "Handled already", status: "handled", created, handled: created, attention: { level: "designer", reasons: ["a new screen"] } }, { ...request, variants: 1, threads: undefined, asks: true }, { id: "s9", kind: "screen", title: "Agents list" }, { ...pairs, screens: 4 }, { id: "e9", kind: "element", title: "Agent row" }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/ch2" ? { card: change } : path === "/api/cards/ch4" ? { card: pairs }
     : path === "/api/assets/A-4" || path === "/api/assets/A-5" || path === "/api/assets/A-6" ? svg("white") : path === "/api/assets/A-7" ? svg("white", 6) : path === "/api/cards/r2" ? { card: request }
@@ -662,6 +662,20 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-skip-form="t1"]');
     assert.deepEqual(await sent("/api/threads/t1/answers", 2), { answers: [{ choice: null, note: "" }, { choice: null, note: "" }] });
 
+    // Every state of a part: asked for by name from the card, stepped through in the workspace.
+    const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
+    await desk.click('[data-act="states"]');
+    await desk.fill("#confirm-form [name=note]", "the send button");
+    await cf("Draw the states").click();
+    assert.deepEqual(await sent("/api/cards/r2/actions", 1), { action: "states", note: "the send button", variant: "v1" });
+    await desk.waitForSelector('.vbar [data-act="workspace"]');
+    await desk.click('.vbar [data-act="workspace"]');
+    await desk.click('[data-ws-state="error"]');
+    assert.match(await desk.textContent("#ws-states"), /Send button[\s\S]*State 1 of 1[\s\S]*Failed: The message did not go\./);
+    await desk.click('[data-ws-step="1"]');
+    assert.match(await desk.textContent("#ws-states"), /1 state\b/, "the step goes back round to the option");
+    await desk.click("[data-ws-close]");
+
     // Build opens the final check of the only option: it builds exactly the version it
     // shows, and asks first unless the designer unticks it.
     await desk.click('[data-act="build"]');
@@ -669,13 +683,15 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.match(await desk.textContent("#ws-top"), /Final check: Calm goes live[\s\S]*version 1/);
     assert.equal(await desk.isChecked("#ws-ask-first"), true, "Ask me first is ticked");
     await desk.click("[data-ws-build]");
-    assert.deepEqual(await sent("/api/cards/r2/actions", 1), { action: "build", note: "v1", variant: "v1", version: 1, ask_first: true });
+    assert.deepEqual(await sent("/api/cards/r2/actions", 2), { action: "build", note: "v1", variant: "v1", version: 1, states: { error: 1 }, ask_first: true });
     await desk.waitForSelector('[data-act="build"]');
     assert.equal(await desk.isVisible("#workspace"), false, "the check closes once it is sent");
     await desk.click('[data-act="build"]');
     await desk.uncheck("#ws-ask-first");
+    await desk.click('[data-ws-state="error"]');
+    assert.equal(await desk.isChecked("#ws-ask-first"), false, "a step to a state keeps the unticked box");
     await desk.click("[data-ws-build]");
-    assert.equal((await sent("/api/cards/r2/actions", 2)).ask_first, false);
+    assert.equal((await sent("/api/cards/r2/actions", 3)).ask_first, false);
   } finally {
     await run.close();
   }

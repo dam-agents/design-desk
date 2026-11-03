@@ -16,7 +16,8 @@ cat > "$WORK_DIR/desk/inbox.json" <<JSON
  {"id":"I-6","kind":"map","card":"C-5","thread":null,"created":"$new"},
  {"id":"I-7","kind":"person","card":null,"thread":null,"created":"$new","person":{"email":"alex@example.com","role":"pm"}},
  {"id":"I-8","kind":"person","card":null,"thread":null,"created":"$new"},
- {"id":"I-9","kind":"decision","card":"C-1","thread":"T-1","created":"$new"}],
+ {"id":"I-9","kind":"decision","card":"C-1","thread":"T-1","created":"$new"},
+ {"id":"I-10","kind":"states","card":"C-2","thread":null,"created":"$new","variant":"v1"}],
  "claimed":[
  {"id":"I-4","kind":"explore","card":"C-3","thread":null,"created":"$old","claimed_by":"s1","claimed_at":"$old"},
  {"id":"I-5","kind":"handoff","card":"C-4","thread":null,"created":"$new","claimed_by":"s2","claimed_at":"$new"}]}
@@ -34,6 +35,7 @@ assert "a screen someone added sorted" '[.map_due[].id] == ["I-6"]' "$out"
 assert "a person a lead asked for sorted, with no card; one without its payload is not due" '[.people_due[] | select(.card == null) | .person.email] == ["alex@example.com"]' "$out"
 assert "a comment to record as a decision sorted" '[.decisions_due[].id] == ["I-9"]' "$out"
 assert "stale claim taken over" '[.variants_due[] | select(.takeover) | .id] == ["I-4"]' "$out"
+assert "every state of a part sorted with the variants, its option kept" '[.variants_due[] | select(.kind == "states") | [.id, .variant]] == [["I-10", "v1"]]' "$out"
 assert "fresh claim left alone" '[.handoffs_due[].id] == []' "$out"
 assert "expiring prototype" '[.expiring_due[].card] == ["C-2"]' "$out"
 assert "read_set covers the arrays" '(.read_set | index("docs/prototype.md")) and (.read_set | index("docs/requests.md")) and (.read_set | index(".agents/skills/explain/SKILL.md")) and (.read_set | index("docs/map.md"))' "$out"
