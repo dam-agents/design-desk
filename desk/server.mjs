@@ -214,7 +214,7 @@ async function viewerRoute(req, res, url, who) {
     // Pictures a person pasted: two at most, images only, stored before the card names them.
     const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
-    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "" }));
+    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "", source: "person" }));
     const options = type === "bug" ? 0 : b.options, grill = type !== "bug" && b.grill === true;
     // The options start right after triage only for someone who may start them.
     const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);

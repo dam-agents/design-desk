@@ -1186,7 +1186,7 @@ export class Store {
       .filter((d) => (!state || d.status === state)
         && (!c || d.concepts.some((x) => x.includes(c) || c.includes(x)))
         && (!w || d.id.toLowerCase() === w || `${d.text} ${d.why}`.toLowerCase().includes(w)))
-      .sort((a, b) => b.at.localeCompare(a.at));
+      .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
   }
 
   // One decision with everything that names it: cards that follow it or go against it, and
@@ -1362,6 +1362,10 @@ function upgradeDecision(d) {
   if (!d.status) d.status = "active";
   if (d.origin === undefined) { d.origin = d.source ? { kind: "other", ...d.source } : null; delete d.source; }
   if (d.author === undefined) d.author = null;
+  // A decision written before concepts were a list, or by hand, still lists and opens.
+  if (!Array.isArray(d.concepts)) d.concepts = d.concept ? [String(d.concept).toLowerCase()] : [];
+  if (typeof d.text !== "string") d.text = String(d.text ?? "");
+  if (typeof d.at !== "string") d.at = d.recorded || "";
 }
 
 // Who decided: a person's name, login or email; never Design Desk.
