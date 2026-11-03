@@ -1031,6 +1031,9 @@ const cards = [
     conflicts: [{ decision: "D-1", why: "It tightens them.", text: "Rows stay roomy", status: "active" }] },
   { id: "C-5", kind: "request", title: "Small, filed from Slack", status: "testing", prototype: live, triage, created_by: { agent: true }, size: { small: true, by: lou, at },
     origin: { channel: "slack", reporter: "Dana", email: "dana@example.com" } },
+  { id: "C-6", kind: "request", title: "Spec with a question", status: "spec", triage, created_by: bob, spec: { asset: "A-9" },
+    threads: [{ id: "T-1", kind: "asks", state: "open", step: "handoff", messages: [{ by: { agent: true }, at, text: "The spec waits for one answer." }],
+      questions: [{ text: "What does an empty list show?", why: "No option shows it.", options: ["A short hint", "Nothing"], suggested: "A short hint" }] }] },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
@@ -1076,4 +1079,9 @@ test("a small change: the lead developer marks it, a developer but its author ap
 
   assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*as a small change/, "the card names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
+
+  // docs/handoff.md step 4: a question the spec leaves open is asked on the Desk, next to the spec.
+  assert.match(await card("dana", "C-6"), /Before it goes to developers, Design Desk needs your answers/);
+  assert.equal(await count("[data-send-form]"), 1, "the question is a form on the card");
+  assert.equal(await count("details.fold[open] #spec-body"), 1, "the spec it will send is open to read");
 }));

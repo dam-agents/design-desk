@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.28.0 — 2026-11-03
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A spec now leaves without open
+questions: what it does not settle is asked on the Desk as a form (`--step handoff`) and
+answered there before it is sent ([docs/handoff.md](docs/handoff.md) step 4). A spec already
+sent keeps its text; nothing to migrate.
+
 ## 1.27.0 — 2026-11-03
 
 **Upgrade:**

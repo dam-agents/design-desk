@@ -40,11 +40,19 @@ Every issue, comment or pull request this skill writes carries the hidden marker
 thread's comments) and edit what it finds instead of writing a second one.
 Every call names the repository with `-R <[host/]owner/name>`.
 
+## Nothing to ask
+
+What this skill sends is built from without asking: never an open question, a "please
+confirm" or a choice left to the reader. Every question went to the Desk first
+([docs/handoff.md](../../../docs/handoff.md) step 4); a spec that still holds one goes back
+there instead of out. The body's last line before the marker names the Desk card
+(`<desk_link>#C-<n>`) as the place for a question that still comes up.
+
 ## By the request's type
 
 - **`feature`** (from an issue), with `issue_writeback: enabled`: one comment on the origin
   issue with the chosen design in a sentence, the screens (upload them to the comment as
-  images, or link the Desk), the states and copy table, the open questions, the card's number
+  images, or link the Desk), the states and copy table, what was settled at handoff, the card's number
   and link (`<desk_link>#C-<n>`, [docs/desk.md](../../../docs/desk.md) → Links to an item) and
   the marker; a later revision edits that comment.
   A developer builds from it.

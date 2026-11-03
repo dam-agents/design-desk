@@ -2,7 +2,9 @@
 
 A `handoff` item comes from an **Approve** (with the option picked in its note): a designer's, or a developer's on a small change ([desk.md](desk.md) → Small changes). The spec is what a
 developer needs to build the approved design without asking: the design, its states and copy,
-exactly what the prototype changed, and what it could not change.
+exactly what the prototype changed, and what it could not change. **Nothing leaves with an open
+question.** What the Desk did not settle is asked and answered on the Desk, before the spec is
+sent; the developer or coding agent gets only answers.
 
 ## Writing it
 
@@ -27,9 +29,23 @@ exactly what the prototype changed, and what it could not change.
      guard refusal, each with the reason.
    - **Tests to update** — tests in the repository that assert copy or structure the design
      changes (`git grep` the old strings under the profile's `tests` paths).
-   - **Open questions** — anything the Desk did not settle.
-3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset}`.
-4. Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
+   - **Settled at handoff** — each question the Desk answered before sending, with its
+     answer and who gave it (or "left to Design Desk": your suggested answer). Never a
+     section of open questions.
+3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset}`; the card
+   shows it under **The developer spec**.
+4. **Questions on the Desk, never in the spec.** List what the spec leaves to the developer's
+   judgement that changes what gets built (a state, a copy, a breakpoint, an edge case the
+   options never showed, which of two readings of a note) and that the card, its threads and
+   the answers of an earlier pass do not settle. None → go on. Some → one form,
+   `design desk ask C-<n> <file> --step handoff --form` with `{text, questions: [{text, why,
+   options, suggested}]}`: at most 6 questions, 2–4 concrete options each, `suggested` your
+   pick; the text says the spec waits for these answers and is on the card to read. Keep
+   `status: spec`, `done --outcome asked` and stop. The answer re-queues the handoff with the
+   same option; the next pass reads the form's answers, takes `suggested` for a question left
+   to Design Desk, rewrites **Settled at handoff**, re-uploads the spec and goes on. Ask once
+   per pass; a question already answered is never asked again.
+5. Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
    [actions.md](actions.md); the bundled one is
    [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)), with the approved option's
    pictures attached, by the request's type:
@@ -39,11 +55,13 @@ exactly what the prototype changed, and what it could not change.
      `implementer_mention`), which builds it into the product;
    - `idea` and `proposal` — per `handoff`: `desk` (nothing more), `issue` or `draft-pr`.
 
-   The skill sets `spec.issue_url` or `spec.pr_url`.
-5. Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,
+   The skill sets `spec.issue_url` or `spec.pr_url`. What it sends asks nothing of its reader:
+   it is the spec as the Desk settled it, and it names the Desk card as the place for a
+   question that still comes up.
+6. Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,
    what was approved in one sentence, `origin.kind: approval`, the approver as `author`; the
    decisions it was approved against (`overruled`) as its `conflicts`.
-6. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
+7. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
    so the developer can open it; it no longer holds a place, and the expiry pass tears it
    down once the date passes ([prototype.md](prototype.md) → Expiry).
 

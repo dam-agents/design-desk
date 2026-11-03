@@ -1496,7 +1496,10 @@
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) } : { text: none || "Next: a designer or developer starts the design options.", buttons: "" };
-    if (c.status === "spec") return { text: "", buttons: "" };
+    // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
+    if (c.status === "spec") return (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
+      ? { text: "Before it goes to developers, Design Desk needs your answers above.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "" }
+      : { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
       return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
@@ -1657,7 +1660,7 @@
       ${renderStories(c)}
       ${renderPrototype(c)}
       ${renderImpact(c.impact)}
-      ${c.spec?.asset ? `<details class="fold"><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">Open the GitHub issue ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">Open the draft change on GitHub ↗</a></p>` : ""}` : ""}
+      ${c.spec?.asset ? `<details class="fold"${c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? " open" : ""}><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">Open the GitHub issue ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">Open the draft change on GitHub ↗</a></p>` : ""}` : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
       ${renderThreads(c, { skipAsks: true })}`;
   }
