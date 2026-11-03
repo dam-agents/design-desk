@@ -3,7 +3,7 @@
 Once a week the team gets one page of what happened to the product's UX: what shipped,
 what was asked and decided, what waits for a decision, how the votes went, and the themes
 in what people said. It lands in **Product → History** on the Desk, one page a week, never in
-New; and in Slack with `digest: slack`.
+Changes; and in Slack with `digest: slack`.
 
 `design-desk-digest-weekly` runs it; its pre-flight (`preflight.sh digest`) reads the Desk's
 own store and stays silent in a quiet week, or once the week's digest exists.
@@ -12,7 +12,7 @@ own store and stays silent in a quiet week, or once the week's digest exists.
 
 `period` (`2026-W44`), `dates` (`29 Oct – 4 Nov 2026`: the seven whole UTC days up to
 yesterday), and from those days: `changes` (with a picture each, when it has one), `requests_new`,
-`handed_off`, `waiting` (on the next call), `polls` (open, or closed this week with their
+`handed_off`, `waiting` (on the presentation), `polls` (open, or closed this week with their
 result), `decisions` (with author and conflicts) and `revoked`; from the last 30 days: `feedback`, the bugs,
 automated test findings, comments, concerns and questions people left.
 

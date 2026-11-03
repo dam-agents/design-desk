@@ -39,7 +39,7 @@ its `SKILL.md` is; read it before doing the action.
 | `poll-sync` | bring Slack votes and replies to the Desk; close the vote with its result | every 30 minutes while a vote is open | `slack-polls` |
 | `council` | each ask in a request's Slack thread as a new option or version, answered there before/after | an ask in a Slack thread; `councils_due` | `slack-council` |
 | `catalog` | a real element drawn in every state; its earlier versions | onboarding; Update the drawing; Draw how it looked before; + Add on the Desk; the watch | [catalog.md](catalog.md) |
-| `brief` | what the next call decides about an item | Add to the next call | [desk.md](desk.md) → The next call |
+| `brief` | what the presentation decides about an item | Add to presentation | [desk.md](desk.md) → The presentation |
 | `deck`, `walkthrough`, `video`, `brand`, `copy` | the Designer kit's deliverables | chat, Slack; `walkthrough`, `brand`, `copy` also from a request's switch in New request (`copy` on unless switched off) | `slides`, `walkthrough`, `demo-video`, `brand`, `copy` |
 
 ## Another skill for an action

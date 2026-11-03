@@ -496,6 +496,40 @@ test("the next call: the agent suggests, a designer adds it with the option to p
   assert.equal(s.agenda()[0].agenda.variant, "v2", "a page that sends no option presents the favourite");
 });
 
+test("the presentation: a designer marks one item presented, and Undo puts it back", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  const { card: other } = s.createRequest(alice, { problem: "The header is too tall." });
+  s.queueForCall(card.id, alice); s.queueForCall(other.id, alice);
+  assert.throws(() => s.markPresented(card.id, bob), (e) => e.status === 403, "a developer does not mark it");
+  s.markPresented(card.id, alice);
+  assert.deepEqual(s.agenda().map((a) => a.id), [other.id], "the other one stays to present");
+  assert.deepEqual(s.presented().map((a) => a.id), [card.id]);
+  assert.equal(s.getCard(card.id).agenda.presented_by.email, alice.email);
+  assert.throws(() => s.markPresented(card.id, alice), (e) => e.status === 400, "it is presented once");
+  s.markPresented(card.id, alice, false);
+  assert.deepEqual(s.agenda().map((a) => a.id).sort(), [card.id, other.id].sort(), "Undo puts it back on");
+  assert.equal(s.getCard(card.id).agenda.call, undefined);
+});
+
+test("the presentation: Undo ends with the day; an earlier meeting's item keeps its record", () => {
+  let now = Date.UTC(2026, 10, 3, 17);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  const { card: other } = s.createRequest(alice, { problem: "The header is too tall." });
+  s.queueForCall(card.id, alice); s.queueForCall(other.id, alice);
+  s.markPresented(card.id, alice);
+  s.closeCall(alice);
+  assert.equal(s.getCard(card.id).agenda.undo_until, "2026-11-03T23:59:59Z", "the store writes the deadline");
+  now += 23 * 36e5;
+  for (const id of [card.id, other.id]) {
+    const before = s.getCard(id).agenda;
+    assert.throws(() => s.markPresented(id, alice, false), (e) => e.status === 400, "an earlier meeting's item is not taken back");
+    assert.deepEqual(s.getCard(id).agenda, before, "its date and who presented it stay");
+  }
+  assert.equal(s.agenda().length, 0);
+});
+
 test("the next call: a designer's Not now holds, a closed request takes no suggestion", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
@@ -603,7 +637,7 @@ test("needs a designer: the agent judges a change, a request's comes from where 
   s.act(req.id, alice, "explore");
   assert.equal(att(req.id), null, "while Design Desk draws, it waits for nobody");
   s.suggestForCall(req.id, "A decision is due");
-  assert.deepEqual(att(req.id).reasons, ["Suggested for the next call"], "a suggestion waits for a designer even while Design Desk works");
+  assert.deepEqual(att(req.id).reasons, ["Suggested for the presentation"], "a suggestion waits for a designer even while Design Desk works");
   s.act(req.id, alice, "close");
   assert.equal(att(req.id), null, "a closed request waits for nobody");
 
@@ -612,10 +646,10 @@ test("needs a designer: the agent judges a change, a request's comes from where 
   s.upsertCard({ id: shipped.id, status: "handed-off" });
   assert.equal(att(shipped.id), null);
   s.suggestForCall(shipped.id, "Worth showing");
-  assert.deepEqual(att(shipped.id), { level: "designer", reasons: ["Suggested for the next call"] });
+  assert.deepEqual(att(shipped.id), { level: "designer", reasons: ["Suggested for the presentation"] });
   assert.deepEqual(s.getCard(shipped.id).attention, att(shipped.id), "the card read and the list read agree");
   s.suggestForCall(change.id, "A new pattern");
-  assert.deepEqual(s.getCard(change.id).attention, { level: "designer", reasons: ["Suggested for the next call"] }, "a suggestion outranks the agent's fyi");
+  assert.deepEqual(s.getCard(change.id).attention, { level: "designer", reasons: ["Suggested for the presentation"] }, "a suggestion outranks the agent's fyi");
 });
 
 test("a screen or part a designer adds goes to the agent, and never becomes a second copy", () => {

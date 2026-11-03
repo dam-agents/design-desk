@@ -31,7 +31,7 @@ export const ACTIONS = {
   "poll-sync": { skill: "slack-polls", does: "bring Slack votes and replies to the Desk; close a vote with its result" },
   council: { skill: "slack-council", does: "turn each ask in a request's Slack thread into a new option or version, answered there before/after" },
   catalog: { doc: "docs/catalog.md", does: "draw a real UI element in every state" },
-  brief: { doc: "docs/desk.md", does: "the brief of an item on the next call" },
+  brief: { doc: "docs/desk.md", does: "the brief of an item on the presentation" },
   deck: { skill: "slides", does: "a slide deck and its PDF" },
   walkthrough: { skill: "walkthrough", does: "a step-by-step tour of a flow" },
   video: { skill: "demo-video", does: "a demo or launch video" },
