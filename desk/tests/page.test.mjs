@@ -40,7 +40,9 @@ const requests = [
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
-  if (window.failNext) { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
+  // failNext fails the next send only: the page polls with GETs every few seconds, and on a
+  // slow machine a poll must not take the failure that a dialog's send is to get.
+  if (window.failNext && method !== "GET") { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
   const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true },
       skills: [{ name: "copy", does: "Write the words", on: true }, { name: "brand", does: "Use a saved brand", on: false }] }
     : path === "/api/cards" ? { cards: [change, earlier, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }

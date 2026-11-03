@@ -20,6 +20,12 @@ and decisions stay a designer's ([docs/desk.md](docs/desk.md) → **Roles**). A 
 `## Desk people` (**operator-only**). Request cards gain `size` and `approved`; older cards
 need no change.
 
+## 1.25.1 — 2026-11-03
+
+**Upgrade:**
+Nothing to do. Only a page test changes: the Desk's poll no longer takes the failure
+that the test means for a dialog's send. The Desk itself does not change.
+
 ## 1.25.0 — 2026-11-03
 
 **Upgrade:**

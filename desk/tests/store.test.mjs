@@ -644,7 +644,8 @@ test("a screen keeps its earlier pictures; a designer asks for an element's hist
   assert.equal(inbox(s).open.find((i) => i.id === item.id).scope, "history");
   assert.equal(s.getCard(el.id).waiting[0].scope, "history");
   assert.throws(() => s.act(el.id, alice, "refresh"), /already working/);
-  assert.equal(can("developer", "history"), false);
+  assert.equal(can("developer", "history"), true);
+  assert.equal(can("pm", "history"), false);
   assert.equal(can("designer", "history"), true);
 });
 
@@ -739,7 +740,7 @@ test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   const s = fresh();
   const pm = { email: "pat@example.com", role: "pm" };
   assert.equal(can("pm", "draw"), true);
-  assert.equal(can("developer", "draw"), false);
+  assert.equal(can("developer", "draw"), true);
   assert.equal(can("guest", "draw"), false);
   const c = s.upsertCard({ kind: "issue", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], source: { repo: "acme/widgets", issue: 31 } }).card;
   const { inbox: item } = s.act(c.id, pm, "draw", "try a checklist");
