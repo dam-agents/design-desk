@@ -9,7 +9,7 @@ description: >-
 # GitHub handoff
 
 The `deliver` action ([docs/actions.md](../../../docs/actions.md)). Reads `handoff`,
-`issue_writeback`, `implementer`, `implementer_mention` and `prototype_remote` from
+`issue_writeback`, `implementer`, `implementer_mention`, `prototype_remote` and `desk_link` from
 `work/CONFIG.md`. The spec is written and uploaded ([docs/handoff.md](../../../docs/handoff.md)
 steps 1 to 3); the designer's **Approve** on the Desk, with their name on the item, is the
 approval to send it.
@@ -43,7 +43,8 @@ Every call names the repository with `-R <[host/]owner/name>`.
 
 - **`feature`** (from an issue), with `issue_writeback: enabled`: one comment on the origin
   issue with the chosen design in a sentence, the screens (upload them to the comment as
-  images, or link the Desk), the states and copy table, the open questions, the Desk link and
+  images, or link the Desk), the states and copy table, the open questions, the card's number
+  and link (`<desk_link>#C-<n>`, [docs/desk.md](../../../docs/desk.md) → Links to an item) and
   the marker; a later revision edits that comment.
   A developer builds from it.
   Set `spec.issue_url` to the comment's URL.

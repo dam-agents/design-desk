@@ -29,8 +29,8 @@ The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`.
    "🗳️ *<request title>* — which design should we take? <the note, when there is one>
    Vote on each option below with 👍 (I like it) or ⚠️ (I have a concern), and reply in its
    thread to say why. Voting closes <closes, in the reader's words: "Friday at 15:00">.
-   Details on the Design Desk: <Desk link>". The Desk link is `platform://artifacts/<desk_artifact>`,
-   which the platform turns into the Desk's share link.
+   Details on the Design Desk (C-<n>): <link>". The link is the card's
+   ([docs/desk.md](../../../docs/desk.md) → Links to an item).
 3. **One message per option** (`send_channel_message` with its picture), in order:
    "*Option <A/B/C>: <name>* — <its one line on when it wins>". When the request has a live
    prototype, one more message: "Try it live: the link and the demo account are on the Desk".
@@ -53,7 +53,7 @@ The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`.
 2. Per option asked for, its latest version: `design desk fetch`, then `design shot … --width
    1280`; a design with several views gets one picture per view (`1-light.png`, `2-light.png`…).
 3. One message: "🎨 *<request title>* — <n> design options. <the note> Comments and the
-   choice are on the Design Desk: <Desk link>", the link as in Share → 2. Then one reply per
+   choice are on the Design Desk (C-<n>): <link>", the link as in Share → 2. Then one reply per
    option, its pictures attached: "*<name>* — <its one line on when it wins>". The pick is a
    designer's on the Desk; never ask Slack to choose.
 4. `design desk done I-<n> --session <id> --outcome sent`. The Desk keeps no record of these

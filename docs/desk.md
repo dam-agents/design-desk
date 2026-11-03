@@ -55,7 +55,28 @@ served by the Desk server through the platform's Artifact API relay.
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
   same emails go in `## Desk people` with a role. The owner needs the Interactive artifacts
   feature on (Settings → five taps on the version → Experimental features). Never set the
-  Desk public: the platform refuses an interactive page anyway.
+  Desk public: the platform refuses an interactive page anyway. Once it is shared, set
+  `desk_link` to its share link, the `shareUrl` that `mcp__platform-outbound__get_artifact`
+  returns for `desk_artifact` (none while it is private), with `design config write`: the page
+  builds items' links from it.
+
+## Links to an item
+
+- **Every card has a number**, its id (`C-12`), shown grey by its title on its row and its
+  page. It is the one way to refer to an item: people write it in Slack, a comment or chat;
+  `design desk card C-12` reads it.
+- **An item's link** is the Desk's link with the number: `#C-12` opens it in its own tab,
+  `#call/C-12` in Next call while it is on the call, `#requests` a tab. The page's **🔗 Copy link** builds it from
+  `desk_link`; **Go to** in the header takes a number or such a link; a `C-12` in text on the
+  Desk links to that item.
+- **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
+  in a channel message (the platform turns it into the share link and keeps `#C-<n>`),
+  `<desk_link>#C-<n>` anywhere else (GitHub). The access note: it opens only for people on
+  the Desk's list.
+- **Stopgap:** the platform's share page does not pass a link's `#…` into the page yet, so a
+  link opens the Desk on its first tab and the number is the way on (Go to). The fix is the
+  platform's: its share page forwarding the fragment to the frame. Keep the number in every
+  message until then.
 
 ## Roles
 
@@ -167,9 +188,10 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
 ## Writing on the Desk
 
 - Everything on the Desk is for people who do not read code: the product's own words, no
-  file paths, no jargon the profile's glossary does not define. Never write a card, item or
-  thread id (`C-12`, `I-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
-  Environment name: refer to things by their title, and to steps with the words the Desk
+  file paths, no jargon the profile's glossary does not define. Never write an inbox item or
+  thread id (`I-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
+  Environment name: refer to things by their title, another card by its title and number
+  ([Links to an item](#links-to-an-item)), and to steps with the words the Desk
   shows ("Checking", "Options ready", "Live — try it", "Sent to developers"). An issue or
   pull request is written `#12` / `PR #12` (the card's repository, else the first of `repos`)
   or `owner/name#12`; the page links it to GitHub.
@@ -198,8 +220,8 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person
   closed it. People's own actions set the rest through the server.
 - When `notify` is `slack`, a request moving to `feedback`, `testing` or `handed-off` gets
-  one message in the bound channel: "<title> — Options ready to vote on: <link>", "— Live
-  prototype ready to try: <link>" or "— Sent to developers: <link>". A private artifact link
-  opens only for people on the Desk's list; attach a picture when it helps.
+  one message in the bound channel: "<title> (C-<n>) — Options ready to vote on: <link>", "— Live
+  prototype ready to try: <link>" or "— Sent to developers: <link>", the link the card's
+  ([Links to an item](#links-to-an-item)); attach a picture when it helps.
 - A request with a Slack `origin` gets its news in its own thread instead, after triage too,
   whatever `notify` says ([requests.md](requests.md) → Answering in the thread).

@@ -38,7 +38,8 @@ automated test findings, comments, concerns and questions people left.
   requests close to a decision);
 - `screens` — up to four pictures of the week's changes, their "after" pictures first.
 
-Refer to everything by its title; never an id, never a person's name from feedback.
+Refer to everything by its title, a card also by its number, which the Desk links
+([desk.md](desk.md) → Links to an item); never another id, never a person's name from feedback.
 
 ## Slack (`digest: slack`)
 
@@ -49,6 +50,6 @@ picture attached:
 • Shipped: <n> changes — <the two most visible titles>
 • Decided: <n> · Waiting for a decision: <n>
 • Themes in feedback: <the top one or two, with their counts>
-The whole digest is on the Design Desk: <Desk link>"
+The whole digest is on the Design Desk (C-<n>): <link>"
 
 Then `design desk done` is not needed: the digest is not an inbox item. Back up `work/`.

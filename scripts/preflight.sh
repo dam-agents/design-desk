@@ -67,7 +67,7 @@ config_json() {
     --arg default_style "$(cfg default_style)" --arg prototype_requesters "$(cfg prototype_requesters)" \
     --arg max_prototypes "$(cfg max_prototypes)" --arg prototype_expiry_days "$(cfg prototype_expiry_days)" \
     --arg prototype_remote "$(cfg prototype_remote)" --arg handoff "$(cfg handoff)" \
-    --arg desk_ping "$(cfg desk_ping)" --arg bug_reports "$(cfg bug_reports)" \
+    --arg desk_ping "$(cfg desk_ping)" --arg desk_artifact "$(cfg desk_artifact)" --arg desk_link "$(cfg desk_link)" --arg bug_reports "$(cfg bug_reports)" \
     --arg watch_open_prs "$(cfg watch_open_prs)" --arg issue_label "$(cfg issue_label)" --arg proposals "$(cfg proposals)" \
     --arg max_proposals_per_week "$(cfg max_proposals_per_week)" --arg implementer "$(cfg implementer)" \
     --arg implementer_mention "$(cfg implementer_mention)" --arg issue_writeback "$(cfg issue_writeback)" --arg notify "$(cfg notify)" --arg run_model "$(cfg run_model)" \
@@ -91,6 +91,8 @@ config_json() {
       prototype_remote: ($prototype_remote | if . == "" then "none" else . end),
       handoff: ($handoff | if . == "" then "desk" else . end),
       desk_ping: ($desk_ping | if . == "" then "enabled" else . end),
+      desk_artifact: $desk_artifact,
+      desk_link: $desk_link,
       bug_reports: ($bug_reports | if . == "" then "enabled" else . end),
       watch_open_prs: ($watch_open_prs | if . == "" then "enabled" else . end),
       issue_label: ($issue_label | if . == "" then "design" else . end),
@@ -517,6 +519,7 @@ audit_mode() {
     check desk_server ok "$(jq -r '"cards \(.cards), inbox open \(.inbox_open), claimed \(.inbox_claimed), store \(.db_bytes) bytes"' <<<"$h")"
   else check desk_server fail "the Desk server does not answer on 127.0.0.1:${DESK_PORT:-5555} — rc-service --user design-desk-server status (docs/desk.md → Server)"; fi
   [ -n "$(cfg desk_artifact)" ] && check desk_artifact ok "$(cfg desk_artifact)" || check desk_artifact warn "desk_artifact is not set — the Desk page was never published (docs/desk.md → Publishing the page)"
+  [ -n "$(cfg desk_link)" ] && check desk_link ok "$(cfg desk_link)" || check desk_link warn "desk_link is not set — items on the Desk have no Copy link (docs/desk.md → Publishing the page)"
   [ "$(cfg_table 'Desk people' | grep -c . || true)" -gt 0 ] && check desk_people ok "$(cfg_table 'Desk people' | grep -c .) people" || check desk_people warn "the Desk people table is empty — everyone but the owner is a guest"
 
   # toolchain: the design command, a real build and screenshot, saved brand and repo profiles

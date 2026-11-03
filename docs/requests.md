@@ -173,8 +173,8 @@ the words the Desk shows:
 - live (`testing`): "Live prototype ready to try: <link>"; handed off: "Sent to developers:
   <link>"; closed: one sentence why.
 
-The link is the Desk's, with the access note of
-[`intake-slack`](../.agents/skills/intake-slack/SKILL.md) (*In that Slack turn*, step 5). A reply the messenger
+The link is the card's, with its number ([desk.md](desk.md) → Links to an item) and the access
+note of [`intake-slack`](../.agents/skills/intake-slack/SKILL.md) (*In that Slack turn*, step 5). A reply the messenger
 refuses is logged, and the card is the record.
 
 ## Issues (`issues_due`, flow 1)

@@ -1,5 +1,6 @@
 // node --test desk/tests/server.test.mjs — the Desk server over HTTP: who may ask for a
-// new person on the roster, what the agent's routes refuse, and what a person's page keeps.
+// new person on the roster, what the agent's routes refuse, what a person's page keeps, and
+// the Desk's link.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -14,9 +15,9 @@ const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example
 
 const freePort = () => new Promise((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 
-async function desk(t) {
+async function desk(t, config = "") {
   const work = mkdtempSync(join(tmpdir(), "desk-server-"));
-  writeFileSync(join(work, "CONFIG.md"), ROSTER);
+  writeFileSync(join(work, "CONFIG.md"), config + ROSTER);
   mkdirSync(join(work, "desk"));
   const port = await freePort();
   const proc = spawn(process.execPath, [SERVER], { env: { ...process.env, WORK_DIR: work, DESK_DIR: join(work, "desk"), DESK_PORT: String(port) }, stdio: "ignore" });
@@ -66,4 +67,13 @@ test("a person's folded intros are kept for them alone, guests included", async 
   assert.deepEqual((await d.viewer("guest@example.com", "/api/me")).body.prefs, { intro: "hidden" });
   assert.deepEqual((await d.viewer("alice@example.com", "/api/me")).body.prefs, {}, "one person's choice is theirs alone");
   assert.equal((await d.viewer("alice@example.com", "/api/me/prefs", { intro: "maybe" })).status, 400);
+});
+
+test("the page gets the Desk's share link to build an item's link from, and nothing that is not a web link", async (t) => {
+  const d = await desk(t, "- desk_link: https://share.example.com/a/xY12  # the share link\n\n");
+  assert.equal((await d.viewer("guest@example.com", "/api/me")).body.link, "https://share.example.com/a/xY12");
+  const bad = await desk(t, "- desk_link: javascript:alert(1)\n\n");
+  assert.equal((await bad.viewer("guest@example.com", "/api/me")).body.link, null);
+  const unset = await desk(t);
+  assert.equal((await unset.viewer("guest@example.com", "/api/me")).body.link, null);
 });

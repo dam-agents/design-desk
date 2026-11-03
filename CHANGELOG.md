@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.19.0 — 2026-11-03
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**). Every item shows its number.
+2. New key `desk_link` ([docs/config.md](docs/config.md)): unless it is set, write the Desk's
+   share link ([docs/desk.md](docs/desk.md) → **Publishing the page**); it stays empty until
+   the owner shared the Desk. Messages now carry an item's number and link
+   ([docs/desk.md](docs/desk.md) → **Links to an item**).
+3. Re-run `bash "$HOME/scripts/verify-onboarding.sh" --config`.
+
 ## 1.18.0 — 2026-11-02
 
 **Upgrade:**

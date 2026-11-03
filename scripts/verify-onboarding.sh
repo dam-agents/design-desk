@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint max_issue_drawings"
+KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint max_issue_drawings"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -136,6 +136,7 @@ else
   enum digest desk slack disabled
   enum issue_news enabled disabled
   ff="$(cfg figma_file)"; [ -z "$ff" ] || printf '%s' "$ff" | grep -qE '^https://([a-z0-9-]+\.)?figma\.com/' || fail config_figma_file "figma_file is '$ff'" "a link to a Figma file, or empty"
+  dl="$(cfg desk_link)"; [ -z "$dl" ] || printf '%s' "$dl" | grep -qE '^https?://[^[:space:]#]+$' || fail config_desk_link "desk_link is '$dl'" "the Desk's share link, without #…, or empty"
   if grep -qx '## Skills' "$CONFIG"; then
     shdr="$(sed -n '/^## Skills$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
     [ "$shdr" = "|action|skill|" ] && ok skills_header "| action | skill |" || fail skills_header "the Skills table header is '$shdr'" "use | action | skill | (docs/actions.md)"
@@ -187,6 +188,7 @@ if [ "$LIVE" = 1 ]; then
   if curl -sf --max-time 3 "http://127.0.0.1:${DESK_PORT:-5555}/health" >/dev/null; then ok desk_server "answers on 127.0.0.1:${DESK_PORT:-5555}"
   else fail desk_server "the Desk server does not answer" "bash \"\$HOME/scripts/desk-service.sh\" install (docs/desk.md → Server)"; fi
   [ -n "$(cfg desk_artifact)" ] && ok desk_artifact "$(cfg desk_artifact)" || fail desk_artifact "the Desk page was never published" "docs/desk.md → Publishing the page"
+  [ -n "$(cfg desk_link)" ] && ok desk_link "$(cfg desk_link)" || warn desk_link "desk_link is not set — items on the Desk have no Copy link until the owner shared it (docs/desk.md → Publishing the page)"
   t="$(mktemp -d "${TMPDIR:-/tmp}/design-desk-verify.XXXXXX")"
   printf '%s\n' '<!doctype html><html lang="en" data-review-title="v"><head><meta charset="utf-8"><title>v</title><!-- design:css --></head>' \
     '<body><!-- design:review-bar --><div data-view="1" data-view-name="V" class="p-6 bg-background"><button class="rounded-md bg-primary px-3 text-primary-foreground">Ok</button></div></body></html>' > "$t/v.src.html"

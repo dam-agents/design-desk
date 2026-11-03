@@ -201,6 +201,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - handoff: desk
 - desk_ping: enabled
 - desk_artifact:
+- desk_link:
 - bug_reports: enabled
 - watch_open_prs: enabled
 - issue_label: design
@@ -251,9 +252,10 @@ Write the file in exactly this shape with `design config write` (a restored file
    `desk_artifact` is empty: `create_artifact` with `interactive: true`, private; set
    `desk_artifact` to the id with `design config write`.
 4. **Share.** Ask the owner to open the Desk in the app and share it: Share → Restricted →
-   the emails of Step 3.2. Only the owner can; tick `share` when they confirm. Then give
-   them the share link to bookmark: the Desk loads its data there and in this agent's chat,
-   not from the Artifacts page.
+   the emails of Step 3.2. Only the owner can; tick `share` when they confirm. Then set
+   `desk_link` to the share link ([docs/desk.md](docs/desk.md) → Publishing the page) and give
+   it to them to bookmark: the Desk loads its data there and in this agent's chat, not from the
+   Artifacts page.
 
 ## Step 5 — Product profiles and schedules
 

@@ -89,16 +89,16 @@ One `reply` in the thread per round, with the picture:
   "*<option name> — version <n>*: <what changed, one line per ask, with who asked>.
   <Consequences, when there are any: where else this shows, what needs a developer, an
   earlier decision it goes against — each with its source.> <What was not done, and why.>
-  All options and versions are on the Design Desk: <link>. Ask here for more changes."
-- The Desk link and access line as in `intake-slack` (*In that Slack turn*, step 5). Never a
-  password, an internal id ("card", "triage", "S-2") or real customer data; made-up numbers
-  say so.
+  All options and versions are on the Design Desk (C-<n>): <link>. Ask here for more changes."
+- The card's link and access line as in `intake-slack` (*In that Slack turn*, step 5). Never a
+  password, an internal id ("card", "triage", "S-2"; the card's number `C-<n>` is not one) or
+  real customer data; made-up numbers say so.
 
 ## Close
 
 - **The thread agrees**: everyone who wrote since the last version agrees on one option and
   version, with no open concern and no ask left. Reply: "Looks like we agree on *<option>
-  v<n>*. A designer makes the final pick and the fine-tuning on the Design Desk: <link>."
+  v<n>*. A designer makes the final pick and the fine-tuning on the Design Desk (C-<n>): <link>."
   Comment the same on the card, then `council-update --result "Agreed on <option> v<n>"`.
   Never approve or change the request's status: that is the designer's, on the Desk. A new
   ask in the thread opens it again (Start → step 3).

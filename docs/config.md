@@ -27,7 +27,9 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   `implementer` — `pr-comment` (default) | `issue`, how an adjustment or a bug reaches the
   coding agent; `implementer_mention` — its handle, the comment's first line (empty: none).
 - `desk_ping` (`enabled`) — the page wakes you at once; `desk_artifact` — the Desk page's
-  id, written when it is first published; `bug_reports` (`enabled`) — Slack messages about
+  id, written when it is first published; `desk_link` — its share link, written once the owner
+  shared it; items' links are built from it (empty: no **Copy link**,
+  [desk.md](desk.md) → Links to an item); `bug_reports` (`enabled`) — Slack messages about
   a UI bug go on the Desk's queue; `notify` — `disabled` (default) | `slack`:
   announce new cards and request steps in the bound channel.
 - `run_model` (`default`), `dispatch` (`enabled`), `work_repo` (`none`; env
