@@ -456,7 +456,7 @@
   const ROLE_ABOUT = {
     lead: "The Desk's owner is always a lead. The first lead on the list is who people ask for access or help.",
     designer: "Shapes the designs: starts options, changes and approves them.",
-    "lead-developer": "A developer who also says which requests are small changes: those a developer approves instead of a designer.",
+    "lead-developer": "A developer who also approves designs or decides a request straight away, and says which requests are small changes: those a developer approves instead of a designer.",
     developer: "Brings problems and bug reports, and starts and changes design options; a designer decides, or another developer on a small change.",
     pm: "Brings problems and ideas, and votes on the options.",
     guest: "Follows along. Anyone the Desk is shared with who has no role on the list.",
@@ -474,6 +474,7 @@
     [["history"], "Draw how a screen or part looked before"],
     [["draw"], "Draw an issue: how it looks now and a sketch of how it could look"],
     [["size"], "Mark a request a small change, which a developer approves, or send it through a designer"],
+    [["skip"], "Approve or decide a request straight away, without a vote or a live prototype"],
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
     [["share"], "Share options in Slack", "slack"],
@@ -498,7 +499,7 @@
 <p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
 <p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
 <p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Pick as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Pick as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -548,8 +549,9 @@
   // A request the agent filed for someone carries their email in origin.email, when the channel disclosed it.
   const filedIt = (c) => Boolean(S.me?.email) && [c.created_by?.email, c.origin?.email].some((x) => String(x || "").toLowerCase() === S.me.email.toLowerCase());
   // Going against a decision in force stays a designer's call, a small change included.
-  const canApprove = (c) => can("approve") || (Boolean(c.size?.small) && DEVELOPERS.includes(S.me?.role) && !filedIt(c)
-    && !(c.conflicts || []).some((x) => x.status === "active"));
+  // A designer or a lead developer approves at any step once it is checked (docs/desk.md → Deciding straight away).
+  const canApprove = (c) => can("approve") || (!(c.conflicts || []).some((x) => x.status === "active")
+    && (can("skip") || (Boolean(c.size?.small) && DEVELOPERS.includes(S.me?.role) && !filedIt(c))));
   const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
@@ -815,6 +817,7 @@
         ["<b>Draw every state</b> of a part of an option, then step through and change each state on its own.", "revise"],
         ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
+        ["Skip the vote and the live prototype: <b>Send to developers now</b>, or <b>Decide and close</b> with what you decided.", "skip"],
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
         ["Filter by <b>Open</b>, <b>Presentation</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
@@ -1499,29 +1502,32 @@
     const hasOptions = (c.variants || []).length > 0;
     // Who approves: a designer, or on a small change any developer but its author.
     // A small change against a decision in force is a designer's, as the store says.
-    const approver = (c, by = c.created_by?.email || c.origin?.email) => c.size?.small && !(c.conflicts || []).some((x) => x.status === "active")
-      ? `A small change: a developer approves it${by ? `, not ${by} who filed it` : ""}.` : "A designer approves it when the team is happy.";
+    const against = (c.conflicts || []).some((x) => x.status === "active");
+    const approver = (c, by = c.created_by?.email || c.origin?.email) => against ? "A designer approves it: it goes against a decision in force."
+      : c.size?.small ? `A small change: a developer approves it${by ? `, not ${by} who filed it` : ""}.` : "A designer or a lead developer approves it when the team is happy.";
     const b = (act, label, primary = false) => `<button class="btn ${primary ? "primary" : ""}" data-act="${act}">${esc(label)}</button>`;
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
     if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under Changes.", buttons: "" };
     if (busy.length) return { text: "", buttons: hasOptions ? b("workspace", "Open the design workspace") : "" };
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
-    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) } : { text: none || "Next: a designer or developer starts the design options.", buttons: "" };
+    // A designer or a lead developer may skip the options, the vote and the prototype.
+    const skip = (can("skip") && canApprove(c) ? b("approve", "Send to developers now…") : "") + (can("skip") ? b("decide", "Decide and close…") : "");
+    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) + skip } : { text: none || "Next: a designer or developer starts the design options.", buttons: skip };
     if (c.status === "spec") return { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
       return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
-        sub: failed ? "Design Desk wrote why in the comments below." : "", buttons: (design && can("build") ? b("build", failed ? "Try again" : "Build it again", true) : "") + (canApprove(c) ? b("approve", "Approve…") : "") };
+        sub: failed ? "Design Desk wrote why in the comments below." : "", buttons: (design && can("build") ? b("build", failed ? "Try again" : "Build it again", true) : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
-    if (c.status === "testing" || (c.status === "prototype" && p.state === "live")) {
+    if (live(c)) {
       return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c),
-        buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + (hasOptions ? b("workspace", "Open the design workspace") : "") };
+        buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       const shaper = can("revise");
       return { text: "Your turn: look at the options, 👍 the one you like or ⚠ what worries you, and comment on any part.",
-        buttons: b("workspace", shaper ? "Open the design workspace" : "Comment on the design", true) + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") };
+        buttons: b("workspace", shaper ? "Open the design workspace" : "Comment on the design", true) + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
     return { text: "", buttons: "" };
   }
@@ -1554,7 +1560,7 @@
   function sizeLine(c) {
     const sz = c.size, ap = c.approved;
     const said = sz ? `<span class="chip ${sz.small ? "info" : ""}">${sz.small ? "Small change — a developer approves" : "Goes through a designer"}</span> <span class="hint">${who(sz.by)} decided · ${esc(when(sz.at))}</span>` : "";
-    const approved = ap && c.status !== "declined" ? `<span class="chip ok">✓ Approved</span> <span class="hint">by ${who(ap.by)}${ap.small ? " as a small change" : ""} · ${esc(when(ap.at))}</span>` : "";
+    const approved = ap && c.status !== "declined" ? `<span class="chip ok">✓ Approved</span> <span class="hint">${ap.variant ? `${esc(optionName(c, ap.variant))} · ` : ""}by ${who(ap.by)}${ap.small ? " as a small change" : ""} · ${esc(when(ap.at))}</span>` : c.decided && c.status === "declined" ? `<span class="chip ok">✓ Decided</span> <span class="hint">by ${who(c.decided.by)} · ${esc(when(c.decided.at))}: ${esc(c.decided.text)}</span>` : "";
     const open = !closed(c) && c.status !== "spec" && !ap;
     const btn = can("size") && open ? (sz?.small ? `<button class="btn small" data-size="designer">Send through a designer</button>` : `<button class="btn small" data-size="small">Mark as small change</button>`) : "";
     return said || approved || btn ? `<div class="hint size">${said}${btn}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
@@ -1637,6 +1643,8 @@
     const n = (l.states || []).length;
     return `<p class="hint" style="max-width:var(--measure)"><span class="chip info">▶ Goes live</span> <b>${esc(l.name)}</b>, version ${esc(l.version)}${n ? `, with ${plural(n, "state", "states")}` : ""} · ${who(l.by)} sent it ${esc(when(l.at))}${(c.variants || []).find((v) => v.id === l.variant && (v.version || 1) > l.version) ? ` · <span class="chip warn">a newer version exists; build again to try it</span>` : ""}</p>`;
   }
+  // While the live prototype is up, trying it is the step: the options fold under it.
+  const live = (c) => ["prototype", "testing"].includes(c.status) && c.prototype?.state === "live";
 
   function renderPrototype(c) {
     const p = c.prototype || { state: "none" };
@@ -1674,9 +1682,8 @@
       ${renderGrill(c)}
       ${shots(found)}
       ${renderVerdict(c)}
-      ${renderOptions(c)}
-      ${renderStories(c)}
-      ${renderPrototype(c)}
+      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}`
+        : `${renderOptions(c)}${renderStories(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
       ${c.spec?.asset ? `<details class="fold"><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>${c.spec.issue_url ? `<p><a href="${safeUrl(c.spec.issue_url)}" target="_blank" rel="noopener noreferrer">Open the GitHub issue ↗</a></p>` : ""}${c.spec.pr_url ? `<p><a href="${safeUrl(c.spec.pr_url)}" target="_blank" rel="noopener noreferrer">Open the draft change on GitHub ↗</a></p>` : ""}` : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
@@ -2096,7 +2103,6 @@
 
   async function showTab(tab) {
     S.tab = tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
-    if (tab === "guide") store.set("desk-guide-seen", "1");
     if (tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); }
   }
 
@@ -2176,9 +2182,12 @@
       const to = HANDOFF_TO[S.me?.handoff?.[c.request?.type || "idea"]] || HANDOFF_TO.desk;
       const fav = favourite(c);
       const against = [...new Set((c.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
-      res = await ask({ title: "Approve a design", body: `Design Desk writes the developer spec for the option you pick and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: "Approve", choices: options.length ? options : null, pick: fav?.id || null,
+      // A live prototype's option is the one approved; before options, the spec comes from the request.
+      const built = ["prototype", "testing"].includes(c.status) ? options.find((o) => o.id === c.built?.variant) : null;
+      const what = built ? `**${built.name}**, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
+      res = await ask({ title: options.length ? "Approve a design" : "Send to developers", body: `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: options.length ? "Approve" : "Send to developers", choices: options.length && !built ? options : null, pick: fav?.id || null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
-        send: (a) => post(a.choice || "", against.length ? { overrule: a.check } : {}) });
+        send: (a) => post(built?.id || a.choice || a.note || "", against.length ? { overrule: a.check } : {}) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the
@@ -2220,6 +2229,11 @@
       res = await ask({ title: "Draw this issue", body: "Design Desk takes a picture of how this part of the product looks now and sketches one way it could look, in the product's own style. It takes a few minutes; the pictures appear here.", ok: "Draw it", note: "Anything the sketch should show or try? (optional)", send: (a) => post(a.note || "") });
       if (!res) return;
     }
+    if (name === "decide") {
+      res = await ask({ title: "Decide and close", body: "Write what you decided, and why. Design Desk records it as a decision in your name, under Product → Decisions, and closes this request without a vote or a live prototype. You can reopen it later.", ok: "Decide and close",
+        note: "What did you decide, and why?", send: (a) => api("POST", `/api/cards/${c.id}/decide`, { text: a.note }) });
+      if (!res) return;
+    }
     if (name === "close") {
       res = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. You can reopen it later.", ok: "Close it", send: () => post("") });
       if (!res) return;
@@ -2248,7 +2262,7 @@
       if (!res) return;
     }
     res ||= await post("");
-    if (res.inbox) toast(name === "close" ? "Closed." : "Sent. Design Desk is on it; this page updates by itself.");
+    if (res.inbox) toast(name === "close" ? "Closed." : name === "decide" ? "Closed. Design Desk records your decision." : "Sent. Design Desk is on it; this page updates by itself.");
     await refreshList(); await openCard(c.id);
   }
   function tallyText(c, id) {
@@ -2370,7 +2384,7 @@
     if (ds.size) {
       const small = ds.size === "small";
       const r = await ask({ title: small ? "Mark as a small change" : "Send through a designer",
-        body: small ? "Any developer but the person who filed it can then approve it, without a designer. The request shows that you decided this." : "A designer approves it again. The request shows that you decided this.",
+        body: small ? "Any developer but the person who filed it can then approve it, without a designer. The request shows that you decided this." : "A designer or a lead developer approves it again. The request shows that you decided this.",
         ok: small ? "Mark as small change" : "Send through a designer", send: () => api("POST", `/api/cards/${S.card.id}/size`, { small }) });
       if (!r) return;
       await refreshList(); await openCard(S.card.id); return;
@@ -2532,7 +2546,7 @@
     $("#rq-hint").textContent = issue
       ? "Design Desk checks what can be done as a design change, draws options for this issue, shows how each meets the issue's user stories, and the team picks one."
       : from
-      ? "Tell Design Desk what should look different. It draws options; once a designer approves one (or a developer, on a small change), the coding agent builds it into the product."
+      ? "Tell Design Desk what should look different. It draws options; once a designer or lead developer approves one (or a developer, on a small change), the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
     if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : `What should look different in “${from.title}”?`;
     if (issue) f.problem.value = (from.needs || []).join("\n");
@@ -2656,10 +2670,10 @@
     S.me = await api("GET", "/api/me");
     applyMe();
     await refreshList();
-    // A link to an item opens it; else a first visit, or an empty Desk, starts with how it works.
+    // A link to an item opens it; else the Desk opens on Requests. How it works is under the
+    // question mark, and each tab's intro explains it on first use.
     const to = target(location.hash);
     if (!(to && await goTo(to))) {
-      if (!store.get("desk-guide-seen") || !S.cards.length) { S.tab = "guide"; store.set("desk-guide-seen", "1"); }
       renderNav(); renderBanners(); renderList(); renderDetail();
     }
     window.addEventListener("hashchange", guard(async () => { const next = target(location.hash); if (next) await goTo(next); }));

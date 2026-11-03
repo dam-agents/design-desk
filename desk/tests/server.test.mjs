@@ -121,6 +121,27 @@ test("a small change: only a lead developer marks it, any developer but its auth
   assert.equal((await size("lou@example.com", false)).status, 400, "approved: the size stays");
 });
 
+test("deciding straight away: a lead developer approves or decides and closes, a developer does not", async (t) => {
+  const d = await desk(t);
+  const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 });
+  const id = filed.body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
+  const me = await d.viewer("lou@example.com", "/api/me");
+  assert.equal(me.body.can.skip, true);
+  assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/actions`, { action: "approve" })).status, 403, "a developer approves only a small change");
+  assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/decide`, { text: "No." })).status, 403);
+  const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header." });
+  assert.equal(ok.status, 200);
+  assert.deepEqual([ok.body.inbox.kind, ok.body.card.approved.by.email], ["handoff", "lou@example.com"]);
+
+  const other = (await d.viewer("bob@example.com", "/api/requests", { problem: "The badge is hard to see.", options: 0 })).body.card.id;
+  assert.equal((await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Too early." })).status, 400, "not before Design Desk checked it");
+  assert.equal((await d.agent("/agent/cards", { id: other, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
+  const decided = await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Badges stay: colour is for errors only." });
+  assert.equal(decided.status, 201);
+  assert.deepEqual([decided.body.card.status, decided.body.inbox.kind], ["declined", "decision"]);
+});
+
 test("prototype_requesters reads a role as the roster does: `Lead developer` is lead-developer", async (t) => {
   const d = await desk(t, "- prototype_requesters: designer, Lead developer\n\n");
   const build = async (email) => (await d.viewer(email, "/api/me")).body.can.build;

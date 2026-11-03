@@ -12,12 +12,13 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
 the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**). A designer or developer can now have
-one part of an option drawn in every state (**Draw every state**, inbox kind `states`, action
-`states`, [docs/requests.md](docs/requests.md) → **Every state of a part**); Build a live
-prototype opens a final check and records what goes live on the card (`live_pick`,
-[docs/prototype.md](docs/prototype.md) → Build). Older cards have neither and need nothing. The
-inbox pre-flight lists `states` items under `variants_due`.
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A designer, the lead or a
+`lead-developer` now approves a checked request without options, a vote or a live prototype, or
+decides and closes it; a decision item without a thread is recorded from its note
+([docs/desk.md](docs/desk.md) → **Deciding straight away**). While a prototype is live the
+options fold under it and Approve takes the option it was built from (`built`); a prototype
+built before this has no `built` and keeps the option picker. The Desk now always opens on Requests;
+How it works stays under the question mark.
 
 ## 1.27.0 — 2026-11-03
 
