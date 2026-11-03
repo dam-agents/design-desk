@@ -14,6 +14,14 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    ([docs/desk.md](docs/desk.md) → **Publishing the page**). The weekly digests move from New
    to **Product → History**, named by the days they cover; earlier ones keep their titles.
 
+## 1.19.1 — 2026-11-03
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The workspace keeps the screen
+shown when the person switches options. Designs built from now on get the review bar's
+Clickable switch, which outlines only what the design wires; built designs keep theirs.
+
 ## 1.19.0 — 2026-11-03
 
 **Upgrade:**
