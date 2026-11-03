@@ -2,11 +2,14 @@
 //                [--selector <css>] [--label <text>] [--width 1440] [--dark] [--pad 120]
 // What a worked-in comment did to an option: the same place in its earlier and its new version,
 // cropped around the element the comment is pinned to (`anchor.selector`, on `anchor.view`). Both
-// crops are one box (the element's place in either version, padded, at least 720×400), so they line up; without a
+// crops are one box (the element's place in either version, padded, at least 720×400), so they line up; where
+// that does not fit both pages, the box around the after version's element; without a
 // selector, or where neither version has the element, the whole view. The review bar is left out.
-// Prints {found, changed_pct, shots}: `shots` is what `design desk answer --shots` takes, a
-// before and an after picture as `file`s (the Desk command uploads them), the changed boxes as
-// `marks` on both when they are the same size, on the after one otherwise.
+// Prints {found, changed_pct, shots}: `found` says whether each picture shows the element;
+// `shots` is what `design desk answer --shots` takes, a before and an after picture as `file`s
+// (`<outdir>/<pair>-<light|dark>-before.jpg` and `…-after.jpg`, so runs into one directory keep
+// each other's; the Desk command uploads them), the changed boxes as `marks` on both when they
+// are the same size, on the after one otherwise.
 // A note's anchor is a person's text: give it with --anchor (its JSON as the Desk keeps it, a file
 // or stdin), so no view, selector or label passes through a shell command line.
 import { readFileSync, statSync } from "node:fs";
@@ -49,21 +52,29 @@ export async function main(_cmd, argv) {
   for (const file of [before, after]) pages.push(await open(browser, file, { view, selector, width, dark }));
   const [a, b] = pages;
   // One box for both: where the element is in either version, padded and at least MIN big so a
-  // person sees what is around it, inside both pages.
-  const boxes = [a.box, b.box].filter(Boolean);
+  // person sees what is around it, inside both pages. Where that span does not fit both pages
+  // (the element moved further than the shorter page holds), the box is the after version's.
   const W = Math.min(a.size.w, b.size.w), H = Math.min(a.size.h, b.size.h);
-  let clip = { x: 0, y: 0, w: W, h: H };
-  if (boxes.length) {
-    const span = (lo, hi, min, max) => {
-      const want = Math.min(max, Math.max(hi - lo, min)), mid = (lo + hi) / 2;
-      const from = Math.max(0, Math.min(mid - want / 2, max - want));
-      return [Math.round(from), Math.round(want)];
-    };
+  const span = (lo, hi, min, max) => {
+    const want = Math.min(max, Math.max(hi - lo, min)), mid = (lo + hi) / 2;
+    const from = Math.max(0, Math.min(mid - want / 2, max - want));
+    return [Math.round(from), Math.round(want)];
+  };
+  const around = (boxes) => {
     const [x, w] = span(Math.min(...boxes.map((r) => r.x)) - pad, Math.max(...boxes.map((r) => r.x + r.w)) + pad, MIN.w, W);
     const [y, h] = span(Math.min(...boxes.map((r) => r.y)) - pad, Math.max(...boxes.map((r) => r.y + r.h)) + pad, MIN.h, H);
-    if (w > 0 && h > 0) clip = { x, y, w, h };
-  }
-  const files = [`${out}/before.jpg`, `${out}/after.jpg`];
+    return w > 0 && h > 0 ? { x, y, w, h } : null;
+  };
+  const inside = (r, c) => Boolean(r) && r.x >= c.x && r.y >= c.y && r.x + r.w <= c.x + c.w && r.y + r.h <= c.y + c.h;
+  const boxes = [a.box, b.box].filter(Boolean);
+  let clip = (boxes.length && around(boxes)) || { x: 0, y: 0, w: W, h: H };
+  if (boxes.length > 1 && !boxes.every((r) => inside(r, clip))) clip = around([b.box]) || clip;
+  // `found` says whether each picture shows the element: tested against the box both are cut to.
+  const found = { before: inside(a.box, clip), after: inside(b.box, clip) };
+  // Named after the pair and the theme, so runs into one directory keep each other's pictures.
+  const pair = label || (view ? `View ${view}` : "the option");
+  const stem = `${pair.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "option"}-${dark ? "dark" : "light"}`;
+  const files = [`${out}/${stem}-before.jpg`, `${out}/${stem}-after.jpg`];
   for (const [i, p] of pages.entries()) {
     for (const quality of QUALITY) {
       await p.pg.screenshot({ path: files[i], type: "jpeg", quality, fullPage: true, clip: { x: clip.x, y: clip.y, width: clip.w, height: clip.h } });
@@ -75,11 +86,10 @@ export async function main(_cmd, argv) {
   if (big.length) { await browser.close(); fail(`${big.join(", ")}: more than the Desk's 720 KiB at quality ${QUALITY.at(-1)}; give a --selector, or a smaller --width`); }
   const m = await measure(browser, files[0], files[1]);
   await browser.close();
-  const pair = label || (view ? `View ${view}` : "the option");
   const caption = dark ? "Dark" : "";
   const marks = m.marks.length ? { marks: m.marks } : {};
   console.log(JSON.stringify({
-    found: { before: Boolean(a.box), after: Boolean(b.box) }, changed_pct: m.changed_pct,
+    found, changed_pct: m.changed_pct,
     shots: [
       { file: files[0], stage: "before", pair, caption, ...(m.same_size ? marks : {}) },
       { file: files[1], stage: "after", pair, caption, ...marks },

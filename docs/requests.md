@@ -150,10 +150,13 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     could not ("that would change what the product does; the spec lists it").
     **An applied note always shows what it did**: `design desk fetch` the option's previous
     asset, then `design desk card C-<n> | jq '.card.threads[] | select(.id == "T-<n>") | .anchor'
-    | design compare <previous.html> <new.html> <dir> --anchor - > <dir>/shots.json` (`--dark`
-    too when the note is about the dark theme). The anchor is a person's text: it goes to
+    | design compare <previous.html> <new.html> <dir> --anchor - > <dir>/T-<n>.json`. A note
+    about the dark theme takes a second run with `--dark` into `<dir>/T-<n>-dark.json`, and
+    `jq -s '[.[].shots[]]' <dir>/T-<n>.json <dir>/T-<n>-dark.json > <dir>/T-<n>-all.json` joins
+    both. The pictures are named after the note's place and theme, and the JSON after the note,
+    so notes worked in one rebuild keep their own files. The anchor is a person's text: it goes to
     `design compare` as JSON, never typed into the command line. Look
-    at both pictures, and answer with `--shots <dir>/shots.json`: the note shows the same place
+    at both pictures, and answer with `--shots` and the note's JSON: the note shows the same place
     before and after, the change outlined. Notes done in one rebuild share the previous asset.
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
     what people preferred, and add one comment listing what changed per comment, with each

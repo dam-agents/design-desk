@@ -61,7 +61,8 @@ test("compare crops both versions to one box around the element and marks the ch
   try { r = JSON.parse((await promisify(execFile)(process.execPath, [design, "compare", join(dir, "a.html"), join(dir, "b.html"), join(dir, "out"), "--view", "2", "--selector", "#save", "--label", "Save", "--pad", "40"], { timeout: 60000 })).stdout); }
   catch (e) { if (/Chromium|browser/i.test(String(e.stderr))) return t.skip("no browser here"); throw e; }
   assert.deepEqual(r.found, { before: true, after: true });
-  assert.deepEqual(r.shots.map((s) => [s.stage, s.pair, s.file.endsWith(`${s.stage}.jpg`)]), [["before", "Save", true], ["after", "Save", true]]);
+  assert.deepEqual(r.shots.map((s) => [s.stage, s.pair, s.file.endsWith(`/save-light-${s.stage}.jpg`)]), [["before", "Save", true], ["after", "Save", true]],
+    "named after the pair and the theme, so another run into one directory keeps them");
   assert.ok(r.shots[1].marks.length && r.shots[0].marks, "the same box on both pictures, so both carry the marks");
   assert.ok(r.changed_pct > 0 && r.changed_pct < 20, `only the button changed (${r.changed_pct}%)`);
 });
