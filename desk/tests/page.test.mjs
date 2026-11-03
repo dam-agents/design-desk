@@ -306,7 +306,19 @@ async function open(t, bridge, fn) {
   }
 }
 
-test("every tab but How it works opens with its intro, which stays folded once folded", (t) => open(t, LIST, async (desk) => {
+// LIST with a stand-in server that keeps the person's prefs where the page never looks
+// (sessionStorage), so a reload with the page's own storage cleared shows what the server kept.
+const KEPT = LIST.replace(/<\/script>$/, `
+const listed = window.platform.request;
+window.platform = { async request(r) {
+  if (r.path === "/api/me/prefs") { sessionStorage.setItem("server-prefs", r.body); return { status: 200, contentType: "application/json", body: JSON.stringify({ prefs: JSON.parse(r.body) }) }; }
+  const res = await listed(r);
+  if (r.path === "/api/me") res.body = JSON.stringify({ ...JSON.parse(res.body), prefs: JSON.parse(sessionStorage.getItem("server-prefs") || "{}") });
+  return res;
+} };
+</script>`);
+
+test("every tab but How it works opens with its intro; folding one folds them all, and the server keeps it", (t) => open(t, KEPT, async (desk) => {
   const intro = '#banners details.intro';
   await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
   assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
@@ -321,11 +333,16 @@ test("every tab but How it works opens with its intro, which stays folded once f
   await desk.click('[data-tab="new"]');
   await desk.click(`${intro} > summary`);
   await desk.click('[data-tab="requests"]');
-  assert.equal(await desk.locator(`${intro}[open]`).count(), 1, "folding one tab's intro leaves the others open");
+  await desk.waitForSelector(`${intro}[data-intro="requests"]`);
+  assert.equal(await desk.locator(`${intro}[open]`).count(), 0, "folding one tab's intro folds the others");
+  await desk.evaluate(() => localStorage.clear());
   await desk.reload();
+  await desk.click('[data-tab="product"]');
+  await desk.waitForSelector(`${intro}[data-intro="product"]`);
+  assert.equal(await desk.locator(`${intro}[open]`).count(), 0, "it stays folded after a reload, without this browser's storage");
+  await desk.click(`${intro} > summary`);
   await desk.click('[data-tab="new"]');
-  await desk.waitForSelector(`${intro}[data-intro="new"]`);
-  assert.equal(await desk.locator(`${intro}[open]`).count(), 0, "a folded intro stays folded");
+  await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
 }));
 
 test("Needs a designer filters New and Requests, and New opens on All", (t) => open(t, LIST, async (desk) => {
