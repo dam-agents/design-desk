@@ -345,11 +345,12 @@ export class Store {
     if (kind === "change" && !(c.variants || []).some((v) => v.id === anchor?.variant)) throw bad("a change note belongs to one of the design options");
     if ((c.threads || []).length >= LIMITS.threadsPerCard) throw bad("This page holds at most 300 conversations. Mark some as done first.");
     const body = clean(text, LIMITS.text, "text");
+    const pictures = this.changeShots(shots, who);
     const id = this.next("thread", "T");
     const t = {
       id, card: cardId, kind, state: "open", anchor: anchor ? cleanAnchor(anchor) : null,
       needs_agent: kind === "question" || kind === "change", created: this.clock(),
-      messages: [{ by: person(who), at: this.clock(), text: body, ...this.changeShots(shots, who) }],
+      messages: [{ by: person(who), at: this.clock(), text: body, ...pictures }],
       // The agent's questions can come as a form; the answer resumes the step with its note.
       ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
     };
