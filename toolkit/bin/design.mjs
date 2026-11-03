@@ -16,8 +16,9 @@ const USAGE = `usage: design <command> [args]
   skill [<action>] [--repo <owner/name>]  which skill does an action (docs/actions.md)
   where <file> --export <Component> --root <clone>   where else the data an element shows appears
   diff <before> <after> <out.jpg>      the after picture with every changed region outlined
-  compare <before.html> <after.html> <outdir> [--view <n>] [--selector <css>] [--label <text>] [--dark]
-                                       one place of two versions of an option, before and after
+  compare <before.html> <after.html> <outdir> [--anchor <anchor.json|->] [--view <n>] [--selector <css>]
+          [--label <text>] [--dark]    one place of two versions of an option, before and after;
+                                       --anchor: a note's anchor as JSON (a person's text stays off the command line)
   build <src.html> <out.html> [--style repo:<owner/name>|brand|carbon|wireframe] [--ref <ref>]
                                        compile a variant, mockup or walkthrough source
   shot <page.html|url> <outdir> [--width 1440] [--views] [--dark] [--click <selector>]...

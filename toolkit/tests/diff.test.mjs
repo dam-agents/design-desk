@@ -65,3 +65,19 @@ test("compare crops both versions to one box around the element and marks the ch
   assert.ok(r.shots[1].marks.length && r.shots[0].marks, "the same box on both pictures, so both carry the marks");
   assert.ok(r.changed_pct > 0 && r.changed_pct < 20, `only the button changed (${r.changed_pct}%)`);
 });
+
+test("compare takes a note's anchor as JSON, and a quote in it stays text", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "dd-compare-"));
+  writeFileSync(join(dir, "a.html"), option("#ddd")); writeFileSync(join(dir, "b.html"), option("#0f62fe"));
+  const run = async (anchor) => {
+    writeFileSync(join(dir, "anchor.json"), JSON.stringify(anchor));
+    return JSON.parse((await promisify(execFile)(process.execPath, [design, "compare", join(dir, "a.html"), join(dir, "b.html"), join(dir, "out"), "--anchor", join(dir, "anchor.json"), "--pad", "40"], { timeout: 60000 })).stdout);
+  };
+  let r;
+  try { r = await run({ anchor: { variant: "v1", view: "2", selector: "section > #save", label: "Save \"now\"" } }); }
+  catch (e) { if (/Chromium|browser/i.test(String(e.stderr))) return t.skip("no browser here"); throw e; }
+  assert.deepEqual(r.found, { before: true, after: true }, "a selector with a space and > finds the element");
+  assert.equal(r.shots[0].pair, "Save \"now\"");
+  r = await run({ view: "2\"]", selector: "#save" });
+  assert.deepEqual(r.found, { before: false, after: false }, "a view name with a quote finds no tab and does not fail");
+});

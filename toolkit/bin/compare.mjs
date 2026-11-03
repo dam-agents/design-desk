@@ -1,5 +1,5 @@
-// design compare <before.html> <after.html> <outdir> [--view <n>] [--selector <css>] [--label <text>]
-//                [--width 1440] [--dark] [--pad 120]
+// design compare <before.html> <after.html> <outdir> [--anchor <anchor.json|->] [--view <n>]
+//                [--selector <css>] [--label <text>] [--width 1440] [--dark] [--pad 120]
 // What a worked-in comment did to an option: the same place in its earlier and its new version,
 // cropped around the element the comment is pinned to (`anchor.selector`, on `anchor.view`). Both
 // crops are one box (the element's place in either version, padded, at least 720×400), so they line up; without a
@@ -7,18 +7,33 @@
 // Prints {found, changed_pct, shots}: `shots` is what `design desk answer --shots` takes, a
 // before and an after picture as `file`s (the Desk command uploads them), the changed boxes as
 // `marks` on both when they are the same size, on the after one otherwise.
+// A note's anchor is a person's text: give it with --anchor (its JSON as the Desk keeps it, a file
+// or stdin), so no view, selector or label passes through a shell command line.
+import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ensureDir, fail, launch } from "../lib/core.mjs";
 import { measure } from "./diff.mjs";
 
 const MIN = { w: 720, h: 400 };
+// The Desk stores an asset of at most 720 KiB (desk/store.mjs LIMITS.assetBytes); a tall whole
+// view is shot again at a lower quality until it fits.
+const MAX_BYTES = 700 * 1024, QUALITY = [82, 70, 55, 40];
 
 export async function main(_cmd, argv) {
   const pos = []; let view = "", selector = "", label = "", width = 1440, dark = false, pad = 120;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--view") view = String(argv[++i]);
+    if (a === "--anchor") {
+      const src = argv[++i];
+      let an; try { an = JSON.parse(readFileSync(src === "-" ? 0 : src, "utf8")); } catch (e) { fail(`--anchor: not JSON (${e.message})`); }
+      an = an?.anchor ?? an;
+      if (!an || typeof an !== "object") fail("--anchor: the note's anchor, {view, selector, label}");
+      if (typeof an.view === "string") view = an.view;
+      if (typeof an.selector === "string") selector = an.selector;
+      if (typeof an.label === "string") label = an.label;
+    }
+    else if (a === "--view") view = String(argv[++i]);
     else if (a === "--selector") selector = argv[++i];
     else if (a === "--label") label = argv[++i];
     else if (a === "--width") width = Number(argv[++i]);
@@ -27,7 +42,7 @@ export async function main(_cmd, argv) {
     else pos.push(a);
   }
   const [before, after, out] = pos;
-  if (!before || !after || !out) fail("usage: design compare <before.html> <after.html> <outdir> [--view <n>] [--selector <css>] [--label <text>] [--dark]");
+  if (!before || !after || !out) fail("usage: design compare <before.html> <after.html> <outdir> [--anchor <anchor.json|->] [--view <n>] [--selector <css>] [--label <text>] [--dark]");
   ensureDir(out);
   const browser = await launch();
   const pages = [];
@@ -50,9 +65,14 @@ export async function main(_cmd, argv) {
   }
   const files = [`${out}/before.jpg`, `${out}/after.jpg`];
   for (const [i, p] of pages.entries()) {
-    await p.pg.screenshot({ path: files[i], type: "jpeg", quality: 82, fullPage: true, clip: { x: clip.x, y: clip.y, width: clip.w, height: clip.h } });
+    for (const quality of QUALITY) {
+      await p.pg.screenshot({ path: files[i], type: "jpeg", quality, fullPage: true, clip: { x: clip.x, y: clip.y, width: clip.w, height: clip.h } });
+      if (statSync(files[i]).size <= MAX_BYTES) break;
+    }
     await p.pg.close();
   }
+  const big = files.filter((f) => statSync(f).size > MAX_BYTES);
+  if (big.length) { await browser.close(); fail(`${big.join(", ")}: more than the Desk's 720 KiB at quality ${QUALITY.at(-1)}; give a --selector, or a smaller --width`); }
   const m = await measure(browser, files[0], files[1]);
   await browser.close();
   const pair = label || (view ? `View ${view}` : "the option");
@@ -76,7 +96,8 @@ async function open(browser, file, { view, selector, width, dark }) {
   pg.on("pageerror", (e) => errors.push(e.message));
   await pg.goto(pathToFileURL(resolve(file)).href);
   await pg.evaluate(() => document.fonts.ready);
-  if (view) { const tab = pg.locator(`[data-review-view="${view}"]`); if (await tab.count()) await tab.first().click(); }
+  // The view's tab found by its value, not by a selector built from it: a quote in a name stays text.
+  if (view) await pg.evaluate((v) => [...document.querySelectorAll("[data-review-view]")].find((e) => e.dataset.reviewView === v)?.click(), view);
   await pg.evaluate((d) => {
     const de = document.documentElement;
     de.classList.toggle("dark", d); de.classList.remove("review-hot");
