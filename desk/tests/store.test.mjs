@@ -20,7 +20,9 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "approve"), true);
   assert.equal(can("developer", "queue"), false);
   assert.equal(can("designer", "queue"), true);
-  assert.equal(can("developer", "add"), false);
+  for (const a of ["explore", "revise", "refresh", "history", "change", "figma", "share", "add", "draw"]) assert.equal(can("developer", a), true, a);
+  for (const a of ["approve", "close", "reopen", "queue", "handle", "choose", "decide"]) assert.equal(can("developer", a), false, a);
+  assert.equal(can("pm", "explore"), false);
   assert.equal(can("lead", "add"), true);
 });
 

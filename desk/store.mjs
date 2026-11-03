@@ -35,8 +35,11 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": return member;
     // Pictures of an issue: how it looks now and a sketch of how it could look (docs/issues.md).
-    case "draw": return shaper || role === "pm";
-    case "queue": case "explore": case "revise": case "approve": case "close": case "reopen": case "refresh": case "history": case "change": case "figma": case "share": case "add": case "handle": case "choose":
+    case "draw": return shaper || role === "pm" || role === "developer";
+    // A developer starts and changes everything a designer does; deciding stays a designer's.
+    case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || role === "developer";
+    // Deciding: approve, close and reopen, the presentation, handled, the winner.
+    case "queue": case "approve": case "close": case "reopen": case "handle": case "choose":
     // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
     case "decide": return shaper;
     case "build": return prototypeRoles.includes(role);

@@ -139,8 +139,9 @@ owner is `lead`, anyone else on the share list is `guest`.
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment |
 | `developer`, `pm` | also vote, file a request, start a follow-up from a change, add screenshots |
-| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the presentation shows and mark it presented, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack, pick the winning option |
-| `pm`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
+| `pm`, `developer`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
+| `developer`, `designer`, `lead` | also start, revise and redraw variants, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, pick the winning option, record a decision |
 | roles in `prototype_requesters` | start a live prototype |
 | `lead` | also ask you to add a person to the list ([People](#people)) |
 

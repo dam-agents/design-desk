@@ -416,8 +416,8 @@
   const ROLE_ABOUT = {
     lead: "The Desk's owner is always a lead. The first lead on the list is who people ask for access or help.",
     designer: "Shapes the designs: starts options, changes and approves them.",
+    developer: "Brings problems and bug reports, and starts and changes design options; a designer decides.",
     pm: "Brings problems and ideas, and votes on the options.",
-    developer: "Brings problems and bug reports, and votes on the options.",
     guest: "Follows along. Anyone the Desk is shared with who has no role on the list.",
   };
   const ABILITIES = [
@@ -454,7 +454,7 @@
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
 <p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. Votes and comments help, but a designer picks the winning option with <b>Pick as the winner</b>. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. Votes and comments help, but a designer picks the winning option with <b>Pick as the winner</b>. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -469,7 +469,7 @@
 <p>Your role is shown top right. <a href="#" data-tab="people">People</a> lists everyone's role and what each role can do; ${esc(S.me?.contact || "the Desk's owner")} changes them.</p>
 <h3>Also here</h3><ul>
 <li><b>Presentation</b> — a filter on Requests: what designers chose to show at the team's design meeting, each in its final version with a short brief. Press <b>▶ Present</b> in the meeting, then <b>Mark as presented</b>. Design Desk suggests things, a designer adds them.</li>
-<li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable. A screen and a part keep how they looked in earlier versions: step back through them, or put one next to now. A designer adds a missing screen or part with <b>+ Add</b>.</li>
+<li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable. A screen and a part keep how they looked in earlier versions: step back through them, or put one next to now. A designer or developer adds a missing screen or part with <b>+ Add</b>.</li>
 <li><b>History</b> — under Product, one page a week, named by its dates: what changed in the product's UX that week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
 <li><b>Slack</b> — tell Design Desk in the team channel when something looks broken, or ask it for a design; it puts it here as a request and answers in your thread, the options included. When the Desk's owner turns it on, anyone in a request's thread can ask for changes there and gets each new option or version back as a before and after picture.</li>
 <li><b>Chat</b> — the Desk's owner can do everything here also by talking to Design Desk in its chat.</li></ul>`;
@@ -823,7 +823,7 @@
     : `<span class="chip ${overdue(c) ? "bad" : ""}" ${S.me?.due_days ? `title="To be handled within ${esc(S.me.due_days)} days"` : ""}>${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
   function chipsFor(c) {
     const out = [];
-    // A screen or part a designer added, before Design Desk made it.
+    // A screen or part a designer or developer added, before Design Desk made it.
     const added = c.status === "building" ? `<span class="chip info">● Being added</span>` : c.status === "dropped" ? `<span class="chip warn">Not added</span>` : "";
     if (c.kind === "digest") out.push(`<span class="chip info">Weekly digest</span>`);
     else if (c.kind === "issue") {
@@ -1335,7 +1335,7 @@
       const ch = S.cards.find((x) => x.id === S.lookMiss);
       const draw = working(c).includes("catalog-history") ? " Design Desk is drawing the earlier versions now; they appear here as they are drawn."
         : can("history") && c.kind === "element" && c.sheet ? ` <button class="btn small" data-act="history">Draw how it looked before</button>`
-        : " A designer can ask Design Desk to draw how it looked before.";
+        : " A designer or developer can ask Design Desk to draw how it looked before.";
       notes.push(`The Desk keeps no version from before ${ch ? `“${esc(ch.title)}”` : "that change"}, so it cannot show before and after.${draw}`);
     }
     return notes.map((x) => `<p class="hint" style="max-width:var(--measure)">${x}</p>`).join("");
@@ -1408,7 +1408,7 @@
     if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under Changes.", buttons: "" };
     if (busy.length) return { text: "", buttons: hasOptions ? b("workspace", "Open the design workspace") : "" };
     if (c.status === "triage" && !c.triage) return { text: "Design Desk will check this soon.", buttons: "" };
-    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", buttons: b("explore", "Draw design options", true) } : { text: "Next: a designer starts the design options.", buttons: "" };
+    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", buttons: b("explore", "Draw design options", true) } : { text: "Next: a designer or developer starts the design options.", buttons: "" };
     if (c.status === "spec") return { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
@@ -1686,7 +1686,7 @@
   }
 
   // Notes on this option: open first, each with its whole conversation once picked, a reply,
-  // Done or Reopen, and Work it in for a comment a designer hands to Design Desk.
+  // Done or Reopen, and Work it in for a comment a designer or developer hands to Design Desk.
   function renderWsNotes(c, v, sel) {
     const all = notesOf(c).filter((n) => n.anchor.variant === v.id);
     const f = S.ws.filter || "open";
