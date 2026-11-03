@@ -351,8 +351,7 @@ test("Needs a designer filters New and Requests, and New opens on All", (t) => o
   assert.match(await desk.textContent("#list .filters .on"), /^All$/);
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
-  assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
-  assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
+  assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-filter="reqFilter:designer"]');
   assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
