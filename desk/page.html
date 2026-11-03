@@ -1435,7 +1435,7 @@
     const design = c.triage?.verdict === "design";
     const hasOptions = (c.variants || []).length > 0;
     // Who approves: a designer, or on a small change any developer but its author.
-    const approver = (c) => c.size?.small ? `A small change: a developer approves it${c.created_by?.email ? `, not ${c.created_by.email} who filed it` : ""}.` : "A designer approves it when the team is happy.";
+    const approver = (c, by = c.created_by?.email || c.origin?.email) => c.size?.small ? `A small change: a developer approves it${by ? `, not ${by} who filed it` : ""}.` : "A designer approves it when the team is happy.";
     const b = (act, label, primary = false) => `<button class="btn ${primary ? "primary" : ""}" data-act="${act}">${esc(label)}</button>`;
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
     if (c.status === "handed-off") return { text: `Sent to developers${c.updated ? ` on ${day(c.updated)}` : ""}.`, sub: "When it ships, it appears under Changes.", buttons: "" };
