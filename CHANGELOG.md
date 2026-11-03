@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.20.0 — 2026-11-03
+## 1.21.0 — 2026-11-03
 
 **Upgrade:**
 1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
@@ -18,6 +18,13 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 2. New keys `issue_next_sprint` (`milestone`) and `issue_news_label` (`none`: off — offer it
    to the operator) ([docs/config.md](docs/config.md)). Re-run
    `bash "$HOME/scripts/verify-onboarding.sh" --config`.
+
+## 1.20.0 — 2026-11-03
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A request's card is simpler; research
+and triage are written per [docs/requests.md](docs/requests.md) from the next request on.
 
 ## 1.19.1 — 2026-11-03
 
