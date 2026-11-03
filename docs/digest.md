@@ -10,8 +10,8 @@ own store and stays silent in a quiet week, or once the week's digest exists.
 
 ## The worklist
 
-`period` (`2026-W44`), `dates` (the seven days it covers, `29 Oct – 4 Nov 2026`), and from
-the last 7 days: `changes` (with a picture each, when it has one), `requests_new`,
+`period` (`2026-W44`), `dates` (`29 Oct – 4 Nov 2026`: the seven whole UTC days up to
+yesterday), and from those days: `changes` (with a picture each, when it has one), `requests_new`,
 `handed_off`, `waiting` (on the next call), `polls` (open, or closed this week with their
 result) and `decisions`; from the last 30 days: `feedback`, the bugs,
 automated test findings, comments, concerns and questions people left.
@@ -25,8 +25,7 @@ automated test findings, comments, concerns and questions people left.
 3. A theme with three pieces or more, or with a high-severity test finding, and no request
    yet: file a proposal (`design desk request` with `type: proposal`, the theme as its
    problem, `from` the change or request it came out of when there is one, `origin: {channel:
-   "agent", job: "digest", event: {label: "a theme in feedback, <dates>"}}`). It is not
-   suggested for the next call.
+   "agent", job: "digest", event: {label: "a theme in feedback, <dates>"}}`).
 
 ## The card
 

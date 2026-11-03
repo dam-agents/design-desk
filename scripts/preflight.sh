@@ -629,7 +629,8 @@ HTML
 
 # ============================================================ DIGEST MODE ===
 # The week in the Desk's own store: what shipped, what was asked, decided and voted on, and
-# 30 days of what people said, for the themes. Read-only; nothing in a quiet week.
+# 30 days of what people said, for the themes. The week is the seven whole UTC days up to
+# yesterday: the page's name and its items share that span. Read-only; nothing in a quiet week.
 digest_mode() {
   local DB="$DESK_DIR/db.json" CONF period
   CONF="$(config_json)"
@@ -640,21 +641,22 @@ digest_mode() {
   out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" '
     def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
     def within($s): ((. // "") | epoch) >= ($now - $s);
-    (7 * 86400) as $week | (30 * 86400) as $month
+    (30 * 86400) as $month | ($now / 86400 | floor | . * 86400) as $end | ($end - 7 * 86400) as $start
+    | def inweek: ((. // "") | epoch) as $e | $e >= $start and $e < $end;
+    def day($e): ($e | strftime("%d %b %Y") | ltrimstr("0"));
+    # Named by its days: "29 Oct – 4 Nov 2026", the year once when both days share it.
+    [day($start), day($end - 86400)] as [$from, $to]
     | [.cards[]] as $cards
-    # The page is named by the days it covers, the seven up to yesterday: "29 Oct – 4 Nov 2026".
-    | def day($e): ($e | strftime("%d %b %Y") | ltrimstr("0"));
-    [day($now - $week), day($now - 86400)] as [$from, $to]
     | {
       done: any($cards[]; .kind == "digest" and .period == $period),
       dates: ((if $from[-4:] == $to[-4:] then $from[:-5] else $from end) + " – " + $to),
-      changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | within($week)))
+      changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | inweek))
                  | {id, title, merged_at: .source.merged_at, in_progress: (.source.merged_at == null), screen: ([.screens[]? | select(.stage == "after" or .stage == null) | .asset][0])} ],
-      requests_new: [ $cards[] | select(.kind == "request" and (.created | within($week))) | {id, title, type: .request.type, status} ],
-      handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | within($week))) | {id, title} ],
+      requests_new: [ $cards[] | select(.kind == "request" and (.created | inweek)) | {id, title, type: .request.type, status} ],
+      handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | inweek)) | {id, title} ],
       waiting: [ $cards[] | select(.agenda.status == "queued") | {id, title, note: .agenda.note} ],
-      polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | within($week))) | {card: $c.id, title: $c.title, state, closes, result} ],
-      decisions: [ (.decisions // {})[] | select(.recorded | within($week)) | {id, text, concepts} ],
+      polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | inweek)) | {card: $c.id, title: $c.title, state, closes, result} ],
+      decisions: [ (.decisions // {})[] | select(.recorded | inweek) | {id, text, concepts} ],
       feedback: ([ ($cards[] | select(.kind == "request" and .request.type == "bug" and (.created | within($month)))
                    | {card: .id, kind: (if .origin.automated then "test finding" else "bug" end), text: ((.title + ": " + (.request.problem // ""))[0:240])}),
                  (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.created | within($month)) and (.messages[0].by.agent != true))
