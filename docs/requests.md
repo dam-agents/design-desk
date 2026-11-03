@@ -129,7 +129,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   skill not listed follows the usual rules. Say on the card when a choice could not be kept.
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
   `status: variants`, make `request.options` genuinely distinct approaches (one to five; three
-  when it is missing; 0 means the person asked for none, so only a designer's Draw starts them)
+  when it is missing; 0 means the person asked for none, so only a designer's or developer's Draw starts them)
   (the skill says what distinct means), each one self-contained HTML file built into the
   real screen in the product's own styles; `fidelity: wireframe` (`--style wireframe`,
   grayscale boxes) when the question is structure or flow, `mockup` (the product's styles)
@@ -140,7 +140,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   - **Notes on elements** from the design workspace: threads of kind `change`, each anchored
     to one option (`anchor.variant`) and, usually, one element (`anchor.selector`, its text and
     a plain `label`; `anchor.view`/`view_name` the view it is on; `anchor.edit` is a text the
-    person typed in place: `{from, to}`). A comment a designer pressed **Work it in** on is one
+    person typed in place: `{from, to}`). A comment a designer or developer pressed **Work it in** on is one
     too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its

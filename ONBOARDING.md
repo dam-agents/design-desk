@@ -141,7 +141,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    `watch_since` as now (UTC): changes merged before onboarding get no card. Offer, once,
    to start a few days back instead.
 2. **People** (`## Desk people`) — "Who will use the Desk? Their email and one role each:
-   designer, PM, developer, or lead." The emails must be the ones they sign in to the
+   designer, PM, developer, lead developer (marks small changes another developer
+   approves), or lead." The emails must be the ones they sign in to the
    platform with.
 3. **Live prototypes and screens** — "Should I build live prototypes on Environments? And
    keep my own copy of the product for screenshots of what ships, which people can open and
@@ -166,9 +167,9 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    `issue` and `draft-pr` post on the product repository as the agent's account; say so.
    `draft-pr` also needs `prototype_remote` = that repository.
 6. **Slack** — only when a Slack channel is bound: "Should I announce new cards and request
-   steps in the channel?" (`notify`, default `disabled`) and "Should designers be able to
+   steps in the channel?" (`notify`, default `disabled`) and "Should designers and developers be able to
    share design options there for votes and comments?" (`slack_polls`, default `disabled`;
-   `slack_poll_channel` when the agent is bound to more than one channel), "Should designers be
+   `slack_poll_channel` when the agent is bound to more than one channel), "Should designers and developers be
    able to send pictures of the designs to the channel?" (`slack_send`, default `disabled`; a
    request from Slack gets them in its thread anyway), "Should people be
    able to ask for design changes in a request's thread and get the pictures back there?"

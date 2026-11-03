@@ -1,6 +1,6 @@
 # Handoff — the developer spec
 
-A `handoff` item comes from a designer's **Approve** (with the option they picked in its note). The spec is what a
+A `handoff` item comes from an **Approve** (with the option picked in its note): a designer's, or a developer's on a small change ([desk.md](desk.md) → Small changes). The spec is what a
 developer needs to build the approved design without asking: the design, its states and copy,
 exactly what the prototype changed, and what it could not change.
 
@@ -8,7 +8,7 @@ exactly what the prototype changed, and what it could not change.
 
 1. Claim; set `status: spec`. Read the card whole: the request, triage, the impact, the
    variants and their votes, every thread and note, the prototype and its guard report. The
-   approved option is the one the item's note names (the designer picked it on Approve).
+   approved option is the one the item's note names (picked on Approve).
 2. Write `/tmp/design-desk-c<n>/spec.md`, with these sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in the requester's words, the decisions taken on the Desk (which

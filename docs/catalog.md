@@ -20,7 +20,7 @@ A card of kind `element` on the Desk:
 - `sheet` — the asset id of the state sheet (one HTML file with every tile);
 - `screens` — one thumbnail (the sheet's first screen), for the list;
 - `status` — `building`, `current`, `stale` (its code changed since it was drawn), or
-  `dropped` (a designer added it and it could not be drawn).
+  `dropped` (a person added it and it could not be drawn).
 - `history` — its earlier looks, newest first, kept by the store ([History](#history)).
 
 The profile lists the elements worth having under `catalog.elements`
@@ -69,7 +69,7 @@ The profile lists the elements worth having under `catalog.elements`
 - The watch run marks an element `stale` when a merged change touched its file (or a child
   the sheet depends on) and enqueues a redraw: `design desk enqueue catalog C-<n>`
   ([watch.md](watch.md) step 10).
-- A designer can press **Update the drawing** on an element.
+- A designer or developer can press **Update the drawing** on an element.
 - "Build the catalog" in chat: create one element card per entry of `catalog.elements`
   (`status: building`) and enqueue a `catalog` item for each; the inbox runs fan them out.
 
