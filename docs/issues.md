@@ -1,18 +1,23 @@
 # The Issues page — what is planned that will change the screens
 
-Once a day the issues run reads the open issues of `repos` and keeps one Desk card for
-each that changes what a person sees: what the UI will need in a few bullets, a picture of
+Once a day the issues run reads the open issues of `repos` that are in the team's plan and
+keeps one Desk card for each that changes what a person sees: what the UI will need in a few bullets, a picture of
 how it looks now, and a sketch of how it could look. Only with `issue_news: enabled`.
 
 ## Where an issue stands
 
-The pre-flight puts every open issue in one `bucket`, and the card copies it:
+The pre-flight puts every open issue in the first `bucket` that fits, and the card copies it:
 
 - `sprint` — its milestone is the current sprint: the open milestone due next
   (`issue_sprint: milestone`), or the milestone `issue_sprint` names; the worklist's
   `sprint` says which, per repository;
+- `next` — its milestone is the next sprint: the open milestone due after the current one
+  (`issue_next_sprint: milestone`), or the one it names; the worklist's `next_sprint`;
+- a sub-issue (an epic's issue) without one of those takes its parent's `sprint` or `next`;
 - `assigned` — someone has it;
-- `backlog` — the rest.
+- `label` — it carries `issue_news_label`.
+
+Any other issue is not on the page: it is not read, and its card, when it has one, is archived.
 
 ## The worklist (`preflight.sh issues`)
 
@@ -20,9 +25,9 @@ Every entry carries the issue's `title`, `url`, `author`, `updated`, `bucket`,
 `milestone`, `assignees`, `labels`, and its `card` once it has one.
 
 - `issue_news_due` — quick work, all in this run: `need: judge` (new or changed since it was
-  last read; `kind` first, changed, takeover or retry), `move` (it moved between sprint,
-  assigned and backlog) and `close` (its own lookup says it is closed).
-- `drawings_due` — a sprint's or assigned issue without a sketch yet, at most
+  last read; `kind` first, changed, returned, takeover or retry), `move` (it moved to another
+  bucket), `leave` (it is in no bucket now) and `close` (its own lookup says it is closed).
+- `drawings_due` — an issue without a sketch yet, the sprint's first, at most
   `max_issue_drawings` a pass; `judge: true` when it must be read first. Keep the first and
   dispatch the rest ([CLAUDE.md](../CLAUDE.md) → Fan-out). A person's **Draw it** arrives as
   an inbox `draw` item in the inbox worklist's `drawings_due`: claim it first.
@@ -55,6 +60,8 @@ Every entry carries the issue's `title`, `url`, `author`, `updated`, `bucket`,
 ## Move and close
 
 - `move` → `design desk upsert` `{id: <card>, bucket, source}` from the entry.
+- `leave` → `{id: <card>, status: "archived"}`; no ledger write: the issue stays read, and
+  when it is back in a bucket it comes back as `returned`.
 - `close` → `{id: <card>, status: "archived"}`, then
   `ledger.sh --issues skip <repo> <n> "closed"`. A reopened issue comes back as changed.
 
@@ -95,8 +102,8 @@ person's **Draw it** tries again.
 
 ## On the Desk
 
-- The **Issues** tab lists the open cards: **This sprint** first, then **Assigned**,
-  **Backlog** and **All**; each row names its issue and author and the needs in one line.
+- The **Issues** tab lists the open cards: **This sprint** first, then **Next sprint**,
+  **Assigned**, **For design** (`label`) and **All**; each row names its issue and author and the needs in one line.
 - **Draw it** (designer, lead, PM) puts a `draw` item on the inbox. **Design this** files a
   `feature` request from the card (`request.from`); its research starts from the card and
   its issue and writes its `issue_brief` ([requests.md](requests.md) → Research). The card

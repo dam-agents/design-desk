@@ -76,8 +76,9 @@ export const CHANGE_STATES = ["new", "handled", "archived"];
 export const ELEMENT_STATES = ["current", "stale", "building", "dropped"];
 // An issue on the Issues page: listed while it is open, archived once it is closed or no UI.
 export const ISSUE_STATES = ["open", "archived"];
-// Where an issue stands in the team's plan: the current sprint, someone's, or the backlog.
-export const ISSUE_BUCKETS = ["sprint", "assigned", "backlog"];
+// Where an issue stands in the team's plan: the current sprint, the next one, someone's, or
+// labelled for design (docs/issues.md).
+export const ISSUE_BUCKETS = ["sprint", "next", "assigned", "label"];
 const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
