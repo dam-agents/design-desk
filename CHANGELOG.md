@@ -7,6 +7,12 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.25.1 — 2026-11-03
+
+**Upgrade:**
+Nothing to do. Only a page test changes: the Desk's poll no longer takes the failure
+that the test means for a dialog's send. The Desk itself does not change.
+
 ## 1.25.0 — 2026-11-03
 
 **Upgrade:**
