@@ -590,7 +590,7 @@
   // Slack's own markup in text relayed from it: a mention with its name shows the name; a bare
   // one (<@U0123>) says nothing to a reader, so it is left out (docs/desk.md → Text from Slack).
   const unslack = (s, links = true) => String(s ?? "")
-    .replace(/<[@#!](?:subteam\^)?[\w-]+\|([^>]+)>/g, (m, name) => (m[1] === "#" ? "#" : "@") + name)
+    .replace(/<[@#!](?:subteam\^)?[\w-]+\|([^>]+)>/g, (m, name) => (m[1] === "#" ? "#" : "@") + name.replace(/^[@#]/, ""))
     .replace(/<!(here|channel|everyone)>/g, "@$1")
     .replace(/ ?<[@#!][\w^-]+>/g, "")
     .replace(/<(https?:\/\/[^|>\s]+)\|([^>]+)>/g, links ? "[$2]($1)" : "$2")

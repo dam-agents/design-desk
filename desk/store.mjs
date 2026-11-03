@@ -1213,10 +1213,11 @@ export class Store {
   // the person's name the agent looked up (`mentions`), else it is left out.
   relayComment(cardId, { variant = null, name, email = null, role = null, text, slack_ts, url = null, mentions = {} }) {
     const named = mentions && typeof mentions === "object" ? mentions : {};
-    text = String(text ?? "").replace(/<@([\w-]+)(?:\|([^>]+))?>/g, (m, id, label) => {
-      const who = String(own(named, id) ?? label ?? "").replace(/[<>]/g, "").trim().slice(0, 120);
-      return who ? `@${who}` : "";
-    }).replace(/[ \t]{2,}/g, " ").trim();
+    text = String(text ?? "").replace(/( ?)<@([\w-]+)(?:\|([^>]+))?>/g, (m, sp, id, label) => {
+      const name = own(named, id);
+      const who = String(typeof name === "string" ? name : label ?? "").replace(/[<>]/g, "").replace(/^@/, "").trim().slice(0, 120);
+      return who ? `${sp}@${who}` : "";
+    }).trim();
     const c = this.card(cardId);
     if (variant && !(c.variants || []).some((v) => v.id === variant)) throw bad(`no option ${variant}`);
     const ts = clean(String(slack_ts || ""), 40, "slack_ts");

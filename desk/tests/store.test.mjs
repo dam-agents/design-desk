@@ -720,6 +720,7 @@ test("a relayed Slack reply names the people it mentions, or leaves a mention ou
   assert.equal(say("<@U0A4HATCHJR> can you look?", "3.1", { U0A4HATCHJR: "Dana" }), "@Dana can you look?");
   assert.equal(say("Ask <@U0A4HATCHJR> first", "3.2"), "Ask first", "an unknown mention is left out");
   assert.equal(say("Ask <@U9|Pat>", "3.3"), "Ask @Pat", "the name Slack gave in the mention");
+  assert.equal(say("<@U1>  see:\n    a  b", "3.4", { U1: { name: "x" } }), "see:\n    a  b", "a name that is not text is left out; the rest keeps its spacing");
 });
 
 test("the next call: the agent suggests, a designer adds it with the option to present", () => {
