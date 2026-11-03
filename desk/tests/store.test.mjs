@@ -468,6 +468,23 @@ test("the presentation: a designer marks one item presented, and Undo puts it ba
   assert.equal(s.getCard(card.id).agenda.call, undefined);
 });
 
+test("the presentation: an item of an earlier meeting keeps its record; Undo is refused", () => {
+  let now = Date.UTC(2026, 10, 3, 9);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  const { card: other } = s.createRequest(alice, { problem: "The header is too tall." });
+  s.queueForCall(card.id, alice); s.queueForCall(other.id, alice);
+  s.markPresented(card.id, alice);
+  s.closeCall(alice);
+  now += 2 * 864e5;
+  for (const id of [card.id, other.id]) {
+    const before = s.getCard(id).agenda;
+    assert.throws(() => s.markPresented(id, alice, false), (e) => e.status === 400, "an earlier meeting's item is not taken back");
+    assert.deepEqual(s.getCard(id).agenda, before, "its date and who presented it stay");
+  }
+  assert.equal(s.agenda().length, 0);
+});
+
 test("the next call: a designer's Not now holds, a closed request takes no suggestion", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });

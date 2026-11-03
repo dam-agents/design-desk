@@ -167,7 +167,9 @@ the **Presentation** filter on Requests. (The store and the CLI keep its older n
   was presented lately; **▶ Present** shows one item at a time, full screen, with the version
   the designer picked (sheet or screens otherwise); comments go in the card's threads.
 - In or after the meeting a designer marks each item **presented** (`POST
-  /api/cards/<id>/presented`; `{presented: false}` is its Undo), or every one at once with
+  /api/cards/<id>/presented`; `{presented: false}` is its Undo, within a day of it: an item
+  of an earlier meeting keeps its date and who presented it, and goes on again with Add to
+  presentation), or every one at once with
   **Mark all as presented** (`POST /api/calls`): it becomes `presented` with the date and leaves
   the list. Decisions taken in the meeting go into the cards' threads (a person writes them, or
   you write what they told you in chat, attributed), and each one is recorded with

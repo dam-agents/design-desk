@@ -394,7 +394,9 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
     await desk.waitForFunction(([tb, ti]) => document.querySelector(`[data-tab="${tb}"]`)?.getAttribute("aria-current") === "true" && document.querySelector("#detail h2")?.textContent.startsWith(ti), [tab, title]);
     return desk.textContent("#detail h2 .num");
   };
-  await desk.waitForSelector('#list .row .num');
+  // The Desk opens on Requests; the change C-1 is under Changes.
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector('.row.item:has([data-card="C-1"]) .num');
   assert.equal(await desk.textContent('.row.item:has([data-card="C-1"]) .num'), "C-1", "each row shows its number");
 
   await desk.goto(`${base}#C-3`);
@@ -430,6 +432,57 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.fill("#goto", "https://share.example.com/a/xY12#C-99");
   await desk.press("#goto", "Enter");
   await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => /nothing numbered C-99/.test(t.textContent)));
+}));
+
+// The presentation (docs/desk.md → The presentation): a designer marks an item presented in
+// the list and while presenting; Undo takes back one of today, never one of an earlier meeting.
+const PRESENTATION = `<script>
+window.calls = [];
+const hour = 36e5, iso = (ms) => new Date(Date.now() - ms).toISOString();
+const queued = { status: "queued", by: { email: "d@example.com" }, at: iso(2 * hour), variant: null, brief: "Pick one." };
+const cards = [
+  { id: "C-2", kind: "request", title: "Calmer empty list", status: "triage", agenda: queued },
+  { id: "C-4", kind: "request", title: "Presented today", status: "triage", agenda: { ...queued, status: "presented", call: iso(hour) } },
+  { id: "C-5", kind: "request", title: "Presented last week", status: "triage", agenda: { ...queued, status: "presented", call: iso(7 * 24 * hour) } },
+];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { close: true, queue: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [cards[0]], presented: [cards[1], cards[2]] }
+    : method === "GET" && one ? { card: one } : { card: cards[0] };
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("the presentation: mark an item presented, in the list and while presenting; Undo only for today's", (t) => open(t, PRESENTATION, async (desk) => {
+  const sent = (path) => desk.evaluate((p) => calls.filter((c) => c.method === "POST" && c.path === p).map((c) => JSON.parse(c.body)), path);
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#presentation");
+  await desk.reload();
+  await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent === "Presentation");
+  assert.match(await desk.textContent("#list"), /To present[\s\S]*Calmer empty list[\s\S]*Presented[\s\S]*Presented today[\s\S]*Presented last week/, "the queue, then what was presented");
+
+  await desk.click('#detail [data-presented="C-2"]');
+  await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/C-2/presented"));
+  assert.deepEqual(await sent("/api/cards/C-2/presented"), [{ presented: true }]);
+
+  await desk.click('#list [data-card="C-4"]');
+  await desk.waitForSelector('#detail [data-unpresent="C-4"]');
+  await desk.click('#detail [data-unpresent="C-4"]');
+  await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/C-4/presented"));
+  assert.deepEqual(await sent("/api/cards/C-4/presented"), [{ presented: false }], "Undo sends presented: false");
+
+  await desk.click("[data-back]");
+  await desk.click('#list [data-card="C-5"]');
+  await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent.startsWith("Presented last week"));
+  assert.equal(await desk.locator("#detail [data-unpresent]").count(), 0, "no Undo for an earlier meeting's item");
+  assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 1, "it can go on again, once");
+
+  await desk.click("[data-back]");
+  await desk.click('#detail [data-present="0"]');
+  await desk.click('#present [data-presented="C-2"]');
+  await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/cards/C-2/presented").length === 2);
 }));
 
 // A designer's Desk with an overdue change of two pictures, one with where it changed, and

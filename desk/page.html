@@ -1336,7 +1336,9 @@
       const mine = c.agenda.by?.email && c.agenda.by.email === S.me?.email;
       return `<span class="chip info">▶ On the presentation${shown ? ` · ${esc(shown)}` : ""}</span>${markButton(c)}${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the presentation</button>` : ""}`;
     }
-    const was = c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}${shown ? ` · ${esc(shown)}` : ""}</span>${can("close") ? `<button class="btn small" data-unpresent="${esc(c.id)}">Undo</button>` : ""}` : "";
+    // Undo only within a day, as the store allows: an earlier meeting's item keeps its record.
+    const recent = Date.now() - Date.parse(c.agenda?.call) < 864e5;
+    const was = c.agenda?.status === "presented" ? `<span class="chip ok">✓ Presented ${esc(day(c.agenda.call))}${shown ? ` · ${esc(shown)}` : ""}</span>${can("close") && recent ? `<button class="btn small" data-unpresent="${esc(c.id)}">Undo</button>` : ""}` : "";
     const add = can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "";
     if (!c.call_suggestion) return was + add;
     return `${was}<span class="chip warn" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the presentation${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
@@ -1379,7 +1381,7 @@
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
     const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
     const nx = nextFor(c);
-    const more = closed(c) ? "" : `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${c.agenda?.status === "queued" || c.call_suggestion ? "" : can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : ""}${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}</div></details>`;
+    const more = closed(c) ? "" : `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${c.agenda?.status === "queued" || c.agenda?.status === "presented" || c.call_suggestion ? "" : can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : ""}${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}</div></details>`;
     return `<div class="status">
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
