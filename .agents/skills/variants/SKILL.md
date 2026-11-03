@@ -216,6 +216,11 @@ Self-check:
   `issue_brief`, each variant also says how it meets every user story, pointing at the
   elements that do it (`stories`, docs/requests.md → Variants): give those elements an `id`
   so their CSS path stays short and survives a redraw.
+- **Every state of a part** (the `states` action) — docs/requests.md → Every state of a part:
+  one built page per state of the part, each the whole option with only that part changed,
+  uploaded with `--kind variant` but sent as the option's `states` (`{id, name, how, part,
+  asset}`), never as new options; each option and state goes back with the `version` the
+  card gave it.
 - **Chat or Slack** — docs/requests.md → Chat and Slack: a private artifact and a reply with
   the link plus one line per approach; the style used (repo@commit, brand, Carbon or
   wireframe); in repo mode the files you built from and flags-off or which flag; anything you

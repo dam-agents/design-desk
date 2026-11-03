@@ -463,6 +463,11 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   s.upsertCard({ id: card.id, variants: [{ ...v1, states: [{ ...v1.states[0], asset: h2 }, { ...v1.states[1], asset: e3 }] }, now[1]] });
   assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.version, x.of]), [[2, 2], [3, 2]]);
   assert.equal(s.act(card.id, alice, "build", "v1", { variant: "v1", version: 2, states: { hover: 2, error: 3 } }).card.live_pick.version, 2);
+  // Two runs on one card: the one that read an older version is refused, not saved over.
+  const fresh2 = s.getCard(card.id).variants;
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], version: 1 }, fresh2[1]] }), (x) => x.status === 409 && /Big is at version 2 now; you read version 1/.test(x.message));
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ ...fresh2[0], states: [{ ...fresh2[0].states[0], version: 1, asset: page("old") }, fresh2[0].states[1]] }, fresh2[1]] }), (x) => x.status === 409 && /Hovered is at version 2/.test(x.message));
+  assert.equal(s.getCard(card.id).variants[0].states[0].asset, h2, "a refused write changes nothing");
   // A closed request has nothing going live.
   s.claim(Object.values(s.db.inbox).find((i) => i.kind === "build" && i.state === "open").id, "run-5");
   assert.equal(s.act(card.id, alice, "close").card.live_pick, undefined);

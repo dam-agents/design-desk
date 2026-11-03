@@ -1403,8 +1403,20 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.
 // An entry that leaves `stories` out keeps the option's coverage from before.
+// Two runs on one card each send the whole list: a run that read an option or a state at a
+// version older than the card's would put back the drawing it replaced, so it is refused.
 function versioned(variants, before, at) {
-  return variants.map((given) => {
+  for (const given of variants) {
+    const old = before.find((x) => x.id === given.id);
+    const behind = (g, o) => o && g.read != null && g.read < (o.version || 1);
+    if (behind(given, old)) throw new DeskError(409, `${given.name} is at version ${old.version} now; you read version ${given.read}. Read the card again and send what is there now.`);
+    for (const st of given.states || []) {
+      const o = (old?.states || []).find((x) => x.id === st.id);
+      if (behind(st, o)) throw new DeskError(409, `${given.name}: the state ${st.name} is at version ${o.version} now; you read version ${st.read}. Read the card again and send what is there now.`);
+    }
+  }
+  return variants.map(({ read, ...given }) => {
+    if (given.states) given.states = given.states.map(({ read: _, ...x }) => x);
     const old = before.find((x) => x.id === given.id);
     const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
     const v = { ...given, stories: given.stories || old?.stories || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was) };
@@ -1558,6 +1570,8 @@ function cleanVariants(list, assets) {
       asset: v.asset,
       figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
       stories: v.stories == null ? null : cleanCoverage(v.stories, i + 1),
+      // The version the run read (`version` as the card gave it): an older one is refused.
+      ...(Number.isInteger(v.version) ? { read: v.version } : {}),
       // Leaving `states` out keeps the option's states from before; [] removes them.
       ...(v.states === undefined ? {} : { states: cleanOptionStates(v.states, assets, i + 1) }),
     };
@@ -1576,7 +1590,7 @@ function cleanOptionStates(list, assets, n) {
     if (!STATE_ID.test(id) || ids.has(id)) throw bad(`variant ${n}, state ${i + 1}: its id must be short and its own`);
     ids.add(id);
     if (!own(assets, x.asset)) throw bad(`variant ${n}, state ${i + 1}: no asset ${x.asset}`);
-    return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset };
+    return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset, ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
   });
 }
 

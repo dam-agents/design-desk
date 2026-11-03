@@ -209,8 +209,9 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    states are older than it, and the final check says which.
    **Two runs on one card** (a `states` and a `revise` dispatched to two sessions): just before
    its upsert, each run reads the card again (`design desk card C-<n>`) and sends every option
-   with its *current* asset and states, changing only its own; never the copy it read at the
-   start, or it puts back an older drawing.
+   and state as it read it, `version` included, changing only its own. The store refuses (409)
+   an option or a state sent at a version older than the card's: read the card again, apply
+   your change to what is there now, and send it again.
 6. `design desk done I-<n> --session <id> --outcome "drew <k> states of <part>"`.
 
 ## UI bugs
