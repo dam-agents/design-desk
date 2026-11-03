@@ -5,7 +5,7 @@
      Flow: a control whose data-goto-view is a view's number opens it when clicked ("back":
      the previous one). The "Clickable" switch outlines only what the prototype wires: a
      data-goto-view, a data-menu-trigger, an onclick, or data-clickable on a control a small
-     script toggles; a click anywhere else flashes them, as a prototype tool does.
+     script toggles; a click anywhere else but a field flashes them, as a prototype tool does.
      Title: <html data-review-title="#123 · Issue title">.
      Empty state: populated content in [data-populated], the empty one in [data-empty-view].
      Menus: trigger data-menu-trigger="id" (+ data-menu-side="top", data-menu-align="start");
@@ -68,6 +68,8 @@
     const go = (n) => { const from = shown(); if (n === "back") { if (trail.length) show(trail.pop()); } else if (n !== from) { if (from) trail.push(from); show(n); } scrollTo(0, 0); };
     // Only what the prototype wires counts; a product button drawn but not wired is a dead spot.
     const HOT = '[data-goto-view],[data-menu-trigger],[onclick],[data-clickable]';
+    // A field takes a click to type into: not wired, not outlined, and no dead spot either.
+    const FIELD = 'input,select,textarea,label,summary,[contenteditable]';
     let flash = null;
     addEventListener("DOMContentLoaded", () => {
       const seg = document.getElementById("review-views");
@@ -114,7 +116,7 @@
       if (e.target.closest("#review")) return;
       const to = e.target.closest("[data-goto-view]");
       if (to) { e.preventDefault(); go(to.dataset.gotoView); return; }
-      if (!e.target.closest(HOT) && !de.classList.contains("review-hot")) { de.classList.add("review-hot"); clearTimeout(flash); flash = setTimeout(() => { if (document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") !== "true") de.classList.remove("review-hot"); }, 700); }
+      if (!e.target.closest(HOT) && !e.target.closest(FIELD) && !de.classList.contains("review-hot")) { de.classList.add("review-hot"); clearTimeout(flash); flash = setTimeout(() => { if (document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") !== "true") de.classList.remove("review-hot"); }, 700); }
     });
     addEventListener("scroll", closeMenus, true);
     addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenus(); });

@@ -201,6 +201,7 @@ Self-check:
 - built into the real screen (or, without a repo, a complete plausible one), not a floating card;
 - approaches distinct and each simple; no rationale text on the page;
 - a flow walks from its first view to its last by clicking, and nothing that looks clickable is dead;
+- every control a script toggles carries `data-clickable`, so **Clickable** outlines it;
 - classes and copy from the source; no hand-written CSS;
 - empty state where something can be empty; light and dark both work.
 

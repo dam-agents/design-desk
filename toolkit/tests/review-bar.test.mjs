@@ -10,7 +10,9 @@ import { danglingGotos } from "../bin/build.mjs";
 
 const bar = readFileSync(join(TOOLKIT, "chrome/review-bar.html"), "utf8");
 const PAGE = `<!doctype html><html><body>${bar}
-  <div data-view="1" data-view-name="List"><p id="plain">Three plans</p><button id="dead">Export</button><button id="open" data-goto-view="2">Open plan</button></div>
+  <div data-view="1" data-view-name="List"><p id="plain">Three plans</p><button id="dead">Export</button><button id="open" data-goto-view="2">Open plan</button>
+    <button id="menu" data-menu-trigger="m1">More</button><div id="m1"><button>Archive</button></div>
+    <button id="js" onclick="this.dataset.on = 1">Expand</button><button id="mark" data-clickable>Pin</button><input id="field"></div>
   <div data-view="2" data-view-name="Plan"><a href="#" id="edit" data-goto-view="3">Edit</a><button id="back" data-goto-view="back">Back</button></div>
   <div data-view="3" data-view-name="Edit plan"><p>Form</p></div>
 </body></html>`;
@@ -43,6 +45,9 @@ test("a click walks the flow, Back retraces it, a dead spot flashes what is clic
     await pg.click("#back");
     assert.equal(await shown(), "1");
     assert.equal(await pg.isVisible("#review-back"), false);
+    const hot = () => pg.evaluate(() => document.documentElement.classList.contains("review-hot"));
+    // Every wired control acts, and so does a field: neither flashes as a dead spot.
+    for (const s of ["#menu", "#js", "#mark", "#field"]) { await pg.click(s); assert.equal(await hot(), false, s); }
     // A click on a spot that does nothing outlines the clickable parts for a moment.
     await pg.click("#plain");
     assert.equal(await pg.evaluate(() => document.documentElement.classList.contains("review-hot")), true);
@@ -52,7 +57,8 @@ test("a click walks the flow, Back retraces it, a dead spot flashes what is clic
     await pg.click("#dead");
     assert.equal(await pg.evaluate(() => document.documentElement.classList.contains("review-hot")), true);
     const outlined = (s) => pg.evaluate((s) => getComputedStyle(document.querySelector(s)).outlineStyle !== "none", s);
-    assert.deepEqual([await outlined("#open"), await outlined("#dead")], [true, false]);
+    const marks = ["#open", "#menu", "#js", "#mark", "#dead", "#field"];
+    assert.deepEqual(await Promise.all(marks.map(outlined)), [true, true, true, true, false, false], "only what the design wires is outlined");
     await pg.waitForTimeout(900);
     await pg.click("#review [data-hot]");
     await pg.waitForTimeout(900);
