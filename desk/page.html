@@ -433,7 +433,7 @@
 <li><b>Issues</b> — what the team plans that will change the screens: the current sprint, issues someone has taken, and the backlog. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches the sprint's and the assigned ones on its own; press <b>Draw it</b> on any other, or <b>Design this</b> to start a request.</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
-<p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision, each with why.</p>
+<p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision.</p>
 <p>Every item has a number, in grey by its title, like C-12. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Go to</b> at the top opens an item by its number or its link.</p>
 <p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
 <p>Each row in New and Requests shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
@@ -1348,7 +1348,9 @@
     const queued = c.agenda?.status === "queued";
     const call = queued ? (c.agenda.by?.email && c.agenda.by.email === S.me?.email) || can("close") ? `<button class="btn" data-act="unqueue">Take off the next call</button>` : ""
       : can("queue") ? `<button class="btn" data-act="queue">📅 Add to the next call</button>${c.call_suggestion ? `<button class="btn" data-act="not-now" title="Design Desk suggested it for the next call; it will not suggest it again">Not now: don't suggest it for the next call</button>` : ""}` : "";
-    const more = closed(c) ? "" : `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${call}${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}</div></details>`;
+    // A closed request keeps its next-call actions; only the design actions leave.
+    const items = call + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
+    const more = items ? `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status">
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}

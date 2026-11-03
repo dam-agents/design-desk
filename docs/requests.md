@@ -42,7 +42,7 @@ The person deciding sees it on the card, and every later step builds on it.
    changing it now) or `unclear`. The Desk shows it open near the top, so the summary is this
    short report, one line each, every source linked in `links`:
    - **Already asked for**: duplicates and close issues with their state, or "none found";
-   - **Where it lives**: the screen and the few files that draw it;
+   - **Where it lives**: the screen, in plain words; the code files go in `links` only;
    - **History**: who added it and why, the last change and what it did;
    - **In flight**: open pull requests and issues on the same area, or "nothing";
    - **Deliberate or a slip**: the verdict and its evidence, one quote or link;
