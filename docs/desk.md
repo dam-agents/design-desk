@@ -207,6 +207,8 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
   the author); `url` (their thread, the issue); and when a scheduled run filed it, `job`
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
+  A request made from a card (`request.from`: an issue's **Design this**, a change's
+  **Adjust the design**) names that card at its top, and the card lists its requests.
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.

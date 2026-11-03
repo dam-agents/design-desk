@@ -99,5 +99,6 @@ person's **Draw it** tries again.
   **Backlog** and **All**; each row names its issue and author and the needs in one line.
 - **Draw it** (designer, lead, PM) puts a `draw` item on the inbox. **Design this** files a
   `feature` request from the card (`request.from`); its research starts from the card and
-  its issue ([requests.md](requests.md)).
+  its issue and writes its `issue_brief` ([requests.md](requests.md) → Research). The card
+  lists the requests made from it.
 - A question on an issue card is answered like any other ([desk.md](desk.md) → Questions).
