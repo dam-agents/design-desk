@@ -103,7 +103,7 @@ person's **Draw it** tries again.
 ## On the Desk
 
 - The **Issues** tab lists the open cards: **This sprint** first, then **Next sprint**,
-  **Assigned**, **For design** (`label`) and **All**; each row names its issue and author and the needs in one line.
+  **Assigned**, **For design** (`label`) and **All**; each row names its issue and author; hovering or focusing the row (or any link to the issue) shows its summary and needs.
 - **Draw it** (designer, lead, PM) puts a `draw` item on the inbox. **Design this** files a
   `feature` request from the card (`request.from`); its research starts from the card and
   its issue and writes its `issue_brief` ([requests.md](requests.md) → Research). The card
