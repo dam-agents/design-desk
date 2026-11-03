@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.27.0 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A request's page shows what was
+asked, with its pasted screenshots, apart from what Design Desk made; rows on Changes,
+Requests and Issues drop their description; a link to an issue shows its preview on hover;
+a decision without concepts no longer stops the Decisions list. Pictures pasted into an
+older request show under Design Desk's part; nothing to migrate.
+
 ## 1.26.0 — 2026-11-03
 
 **Upgrade:**

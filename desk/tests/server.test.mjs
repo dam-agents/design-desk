@@ -72,6 +72,8 @@ test("a request's options start after triage only for someone who may start them
   const bug = await file("alice@example.com", { type: "bug", options: 5, grill: true });
   assert.deepEqual([bug.body.card.request.options, bug.body.card.request.grill, bug.body.card.request.auto], [0, false, false]);
   assert.equal((await file("guest@example.com", {})).status, 403, "a guest files no request");
+  const pasted = await file("alice@example.com", { images: [{ contentType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" }] });
+  assert.deepEqual(pasted.body.card.screens.map((x) => [x.source, x.by?.email]), [["person", "alice@example.com"]], "a pasted picture is the person's: the page shows it with the request, by who added it");
 });
 
 test("a small change: only a lead developer marks it, any developer but its author approves it", async (t) => {

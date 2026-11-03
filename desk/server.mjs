@@ -216,7 +216,7 @@ async function viewerRoute(req, res, url, who) {
     // Pictures a person pasted: two at most, images only, stored before the card names them.
     const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
-    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "" }));
+    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "", source: "person", by: { email: actor.email, role: actor.role } }));
     const options = type === "bug" ? 0 : b.options, grill = type !== "bug" && b.grill === true;
     // The options start right after triage only for someone who may start them.
     const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);
@@ -229,7 +229,7 @@ async function viewerRoute(req, res, url, who) {
     if (b.kind === "screen" && !s.screens) throw new DeskError(400, `Screens need Design Desk's own copy of the product, which is not turned on yet. Ask ${s.contact}.`);
     const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be attached");
-    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "", source: "person" }));
+    const screens = images.map((im, i) => ({ asset: store.addAsset({ kind: "screen", name: `pasted-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id, caption: "", source: "person", by: { email: actor.email, role: actor.role } }));
     const { kind, part, where, show } = b;
     return send(res, 201, withPing(store.addToProduct(actor, { kind, part, where, show, screens }), s, who));
   }
