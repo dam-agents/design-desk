@@ -197,9 +197,15 @@ else
 fi
 # Work people left on the Desk that nobody picked up: the inbox schedule or the pings
 # are not working. An item whose created time nobody can read is reported with them.
+# No inbox file yet is no item, as for the inbox pass; a file that is not an inbox
+# document is logged and keeps any inbox_stuck row: a read failure clears nothing.
 INBOX_FILE="${DESK_DIR:-$WORK/desk}/inbox.json"
-STUCK="$(jq -c --argjson now "$NOW_EPOCH" "$EP"'[.open[]? | select((.created | ep) as $at | $at == null or ($now - $at) > 7200) | .id]' "$INBOX_FILE" 2>/dev/null || echo '[]')"
-if [ "$(printf '%s' "$STUCK" | jq 'length')" -gt 0 ]; then
+if [ ! -f "$INBOX_FILE" ]; then
+  CLEARED="$CLEARED inbox_stuck"
+elif ! STUCK="$(jq -c --argjson now "$NOW_EPOCH" "$EP"'.open | if type == "array" then . else error("no open list") end
+    | [.[] | select((.created | ep) as $at | $at == null or ($now - $at) > 7200) | .id]' "$INBOX_FILE" 2>/dev/null)"; then
+  log "Desk inbox unreadable ($INBOX_FILE) — inbox_stuck kept as it is"
+elif [ "$(printf '%s' "$STUCK" | jq 'length')" -gt 0 ]; then
   cand "$(jq -nc --argjson ids "$STUCK" '{id: "inbox:\($ids[0])", kind: "inbox_stuck", items: $ids}')"
 else
   CLEARED="$CLEARED inbox_stuck"

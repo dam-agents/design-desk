@@ -2,7 +2,8 @@
 # The monitor's detector reads local files only. A time nobody can read
 # (scripts/lib/time.sh) never hides a condition: an inbox item it cannot date is
 # reported as stuck, a claim it cannot date is no claim, and a ledger row it cannot date
-# is old and leaves. A time written with an offset is read.
+# is old and leaves. A time written with an offset is read. An inbox file it cannot read
+# clears nothing.
 . "$(dirname "$0")/lib.sh"
 mkdir -p "$DESK_DIR"
 recent_off="$(date -u -d '55 minutes' +%Y-%m-%dT%H:%M:%S+01:00 2>/dev/null || date -u -v+55M +%Y-%m-%dT%H:%M:%S+01:00)"
@@ -26,4 +27,13 @@ state="$(cat "$WORK_DIR/MONITOR.json")"
 assert "a row it cannot date is old and leaves, a fresh offset one stays" \
   '(.alerts | has("model:1") | not) and (.alerts | has("model:2"))' "$state"
 assert "the claim is written afresh" '.alerts["inbox:I-2"].claimed | test("Z$")' "$state"
+
+# A torn inbox file is logged and keeps the stuck row; no inbox file is no item, so it leaves.
+printf '{"open":' > "$DESK_DIR/inbox.json"
+out2="$(bash "$ROOT/scripts/monitor.sh")"
+assert "an unreadable inbox is logged" '.logs | map(test("inbox unreadable")) | any' "$out2"
+assert "and clears nothing" '.alerts | has("inbox:I-2")' "$(cat "$WORK_DIR/MONITOR.json")"
+rm "$DESK_DIR/inbox.json"
+bash "$ROOT/scripts/monitor.sh" >/dev/null
+assert "no inbox file clears the row" '.alerts | has("inbox:I-2") | not' "$(cat "$WORK_DIR/MONITOR.json")"
 finish

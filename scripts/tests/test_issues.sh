@@ -81,6 +81,19 @@ assert "the unit has no quick work" '(.issue_news_due == null) and ([.drawings_d
 rest="$(bash "$ROOT/scripts/dispatch.sh" rest "$TMPDIR/wl.json" acme/widgets#43)"
 assert "the run keeps the rest" '.title == "Read issues #41, #40"' "$rest"
 
+# An issue whose updated_at nobody can read (scripts/lib/time.sh) sorts last in its bucket
+# and does not stop the pass; one written with an offset sorts by its instant.
+rm -f "$WORK_DIR/ISSUES.tsv" "$DESK_DIR/db.json"
+cat > "$STUB_DIR/open-issues.json" <<'JSON'
+{"incomplete_results":false,"items":[
+ {"number":50,"title":"Undated","html_url":"https://github.com/acme/widgets/issues/50","user":{"login":"erin"},"updated_at":"not a date","milestone":null,"assignees":[],"labels":[]},
+ {"number":51,"title":"Offset","html_url":"https://github.com/acme/widgets/issues/51","user":{"login":"erin"},"updated_at":"2026-10-02T11:00:00+02:00","milestone":null,"assignees":[],"labels":[]},
+ {"number":52,"title":"Later","html_url":"https://github.com/acme/widgets/issues/52","user":{"login":"erin"},"updated_at":"2026-10-02T10:00:00Z","milestone":null,"assignees":[],"labels":[]}]}
+JSON
+out5="$(bash "$ROOT/scripts/preflight.sh" issues)"
+assert "an undatable issue is read last, an offset one by its instant" \
+  '.nothing_to_do == false and [.issue_news_due[] | .issue] == [52, 51, 50]' "$out5"
+
 # A failing GitHub is an error, never a quiet pass.
 assert "a failed list is an error" '.error != null' "$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" issues)"
 finish
