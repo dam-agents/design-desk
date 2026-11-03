@@ -753,17 +753,20 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
 // workspace's frame: it acts in Select mode, and only a click on the design picks.
 const BAR = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "chrome", "review-bar.html"), "utf8");
 const WITH_BAR = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Billing"><button>Save</button></div></body>`;
+// The second option has the same Billing screen under another number, and a Plans screen the first lacks.
+const WITH_BAR_2 = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Plans"><button>Pick</button></div><div data-view="3" data-view-name="Billing"><button>Pay</button></div></body>`;
 const BRIDGE_BAR = `<script>
 window.calls = [];
 const at = new Date().toISOString();
 const request = { id: "r6", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
-  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }], threads: [] };
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }, { id: "v2", name: "One page", asset: "A-2", fidelity: "wireframe" }], threads: [] };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
-    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 2, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r6" ? { card: request }
-    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(WITH_BAR).replace(/</g, "\\u003c")} } : {};
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(WITH_BAR).replace(/</g, "\\u003c")} }
+    : path === "/api/assets/A-2" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(WITH_BAR_2).replace(/</g, "\\u003c")} } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
@@ -797,6 +800,34 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await frame.click('[data-view="2"] button');
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
     assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
+  } finally {
+    await run.close();
+  }
+});
+
+test("the screen shown stays when the person switches options, where the other option has it", async (t) => {
+  const run = await launch(t, BRIDGE_BAR);
+  if (!run) return;
+  const { desk } = run;
+  const frameShows = async (view) => {
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForFunction((v) => document.querySelector("[data-view].review-shown")?.dataset.view === v, view);
+    return frame;
+  };
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r6"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await frameShows("1");
+    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+    await frame.click('#review [data-review-view="2"]');
+    await desk.click('[data-ws-variant="v2"]');
+    await frameShows("3"); // Billing, under its own number in this option
+    await desk.click('[data-ws-variant="v1"]');
+    const back = await frameShows("2");
+    await back.click('#review [data-review-view="1"]');
+    await desk.click('[data-ws-variant="v2"]');
+    await frameShows("1");
   } finally {
     await run.close();
   }

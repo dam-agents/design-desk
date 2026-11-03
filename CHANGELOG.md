@@ -17,6 +17,14 @@ options to draw and whether to ask questions first (the bundled `grill-me` skill
 `grill`); a request from an issue shows its user stories ([docs/requests.md](docs/requests.md)).
 Older requests have neither and need nothing.
 
+## 1.19.1 — 2026-11-03
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The workspace keeps the screen
+shown when the person switches options. Designs built from now on get the review bar's
+Clickable switch, which outlines only what the design wires; built designs keep theirs.
+
 ## 1.19.0 — 2026-11-03
 
 **Upgrade:**
