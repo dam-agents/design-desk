@@ -177,7 +177,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
 
 ## Every state of a part (`variants_due`: `states`)
 
-A designer selects a part of an option in the workspace (a button, a list, a form) and presses
+A designer or developer selects a part of an option in the workspace (a button, a list, a form) and presses
 **Draw every state**, or names the part. The item names the option (`variant`), the part they
 selected (`part`: `{selector, text, label, view, view_name}`; none when they only named it) and
 their words (`note`). Make it with the `states` action's skill (`design skill states --repo <repo>`).

@@ -76,7 +76,7 @@ test("a request's options start after triage only for someone who may start them
   assert.deepEqual(pasted.body.card.screens.map((x) => [x.source, x.by?.email]), [["person", "alice@example.com"]], "a pasted picture is the person's: the page shows it with the request, by who added it");
 });
 
-test("drawing every state of a part is a designer's or a developer's, like redrawing an option, and carries the part", async (t) => {
+test("drawing every state of a part is a designer's or developer's, not a viewer's, and carries the part", async (t) => {
   const d = await desk(t);
   const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
   const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
@@ -85,6 +85,7 @@ test("drawing every state of a part is a designer's or a developer's, like redra
   const pm = await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(pm.status, 403);
   assert.match(pm.body.error, /Only designers can redraw options/);
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask)).status, 403, "a viewer off the roster may not");
   const dev = await d.viewer("bob@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(dev.status, 200, "a developer changes options too");
   assert.deepEqual([dev.body.inbox.kind, dev.body.inbox.variant, dev.body.inbox.part.label], ["states", "v1", "Button “Upload”"]);

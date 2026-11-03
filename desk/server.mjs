@@ -244,7 +244,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
     // A small change's approval is a developer's too; the store checks who (docs/desk.md → Small changes).
-    // Drawing every state of a part is changing the option.
+    // Drawing every state of a part is changing the option: a designer's or developer's.
     if (action !== "approve" || !store.card(p[2]).size?.small) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action === "states" ? "revise" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
