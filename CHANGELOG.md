@@ -16,6 +16,12 @@ the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 themselves (in force, their source as `origin`, author not recorded); new ones name who
 decided and where ([docs/desk.md](docs/desk.md) → **Decisions**).
 
+## 1.22.1 — 2026-11-03
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`): it stops counting a
+bot's reaction as a vote. Scripts and skills are read per run; nothing else changes.
+
 ## 1.22.0 — 2026-11-03
 
 **Upgrade:**

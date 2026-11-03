@@ -52,7 +52,9 @@ const USAGE = `usage: design desk <command>
   poll-update <C-n> <P-n> [--synced <iso>] [--result <text>]
                                            mark a poll synced, or close it with its result
   slack-votes <C-n> <votes.json|->         one option's reactions as they are now: {variant,
-                                           voters: [{email, slack_id, name, vote}]}
+                                           voters: [{email, slack_id, name, vote, is_bot}]};
+                                           a voter with is_bot: true (the agent's own legend
+                                           👍/⚠️) is ignored
   relay <C-n> <comment.json|->             a reply in Slack, as a comment, once: {variant (none for
                                            a council thread), name, email, text, slack_ts, url}
   find-poll <ts>                           which card, poll and option a Slack message belongs to
