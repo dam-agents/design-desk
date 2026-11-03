@@ -16,7 +16,9 @@ sent; the developer or coding agent gets only answers.
    - **Why** — the request in the requester's words, the decisions taken on the Desk (which
      variant, which concerns changed it), each with who decided.
    - **The design** — the prototype link and demo sign-in while it lives, the variant
-     names, and the screens (asset ids on the card).
+     names, and the screens as pictures, before and after (`![<view>](<file>)`; the deliver
+     skill attaches them, [handoff-github](../.agents/skills/handoff-github/SKILL.md) → The
+     pictures).
    - **Changes by screen** — per screen: layout, components, styles and tokens, icons.
    - **States** — empty, loading, error, long content, small screens, permissions: what each
      looks like, and which the prototype shows.

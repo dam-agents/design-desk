@@ -14,7 +14,9 @@ Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.ht
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A spec now leaves without open
 questions: what it does not settle is asked on the Desk as a form (`--step handoff`) and
 answered there before it is sent ([docs/handoff.md](docs/handoff.md) step 4). A spec already
-sent keeps its text; nothing to migrate.
+sent keeps its text; nothing to migrate. Every issue, comment or pull request the spec goes
+to carries the design's pictures, before and after; on a pull request they go in a comment
+`gh issue comment --attach` writes, since `gh pr comment` and `gh pr create` attach nothing.
 
 ## 1.27.0 — 2026-11-03
 
