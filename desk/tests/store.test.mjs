@@ -129,6 +129,38 @@ test("claims: one session per item, takeover only past the TTL", () => {
   assert.equal(s.done(item.id, "s2", "triaged").item.state, "done");
 });
 
+test("a small change: a lead developer marks it, any developer but its author approves, the card says who", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const dana = { email: "dana@example.com", role: "developer" };
+  assert.equal(can("lead-developer", "size"), true);
+  assert.equal(can("lead", "size"), true);
+  for (const r of ["designer", "developer", "pm", "guest"]) assert.equal(can(r, "size"), false, r);
+  assert.equal(can("lead-developer", "approve"), false, "a developer approves only a small change, per card");
+  assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", role: "lead-developer" }]);
+
+  const { card, inbox: item } = s.createRequest(bob, { title: "Tighter row spacing", problem: "Rows are too airy." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } });
+  assert.equal(s.attentionOf(s.card(card.id)).level, "designer", "options ready: a designer's, until it is a small change");
+  assert.throws(() => s.act(card.id, dana, "approve"), (e) => e.status === 403 && /Only designers/.test(e.message), "not a small change yet: a designer's");
+  assert.throws(() => s.setSize(card.id, lee, "yes"), /true or false/);
+  const marked = s.setSize(card.id, lee, true).card;
+  assert.deepEqual(marked.size, { small: true, by: { email: "lee@example.com", role: "lead-developer" }, at: marked.size.at });
+  assert.equal(s.attentionOf(marked), null, "a small change waits for a developer, not a designer");
+  assert.throws(() => s.act(card.id, bob, "approve"), (e) => e.status === 403 && /You filed this request/.test(e.message));
+  assert.throws(() => s.act(card.id, { email: "pat@example.com", role: "pm" }, "approve"), (e) => e.status === 403);
+  const ok = s.act(card.id, dana, "approve");
+  assert.equal(ok.inbox.kind, "handoff");
+  assert.deepEqual(ok.card.approved, { by: { email: "dana@example.com", role: "developer" }, at: ok.card.approved.at, small: true });
+
+  s.act(card.id, alice, "close");
+  assert.throws(() => s.setSize(card.id, lee, false), /closed/);
+  s.act(card.id, alice, "reopen");
+  assert.equal(s.card(card.id).approved, undefined, "a reopened request waits for a new approval");
+  assert.equal(s.setSize(card.id, lee, false).card.size.small, false);
+});
+
 test("a request that needs a developer gets no live prototype", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Week starts per person", problem: "Use my own Monday." });

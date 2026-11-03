@@ -248,20 +248,21 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.click('[data-tab="people"]');
     await desk.waitForSelector("table.people");
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
-    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "developer", "PM", "viewer"]);
+    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "lead developer", "developer", "PM", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer can, and:\s+Ask Design Desk to add people to the list/, "only a lead adds people");
+    assert.match(await panel(0), /Everything a designer can, and:\s+Mark a request a small change[\s\S]*Ask Design Desk to add people to the list/, "only a lead adds people");
     assert.match(await panel(1), /Everything a developer can, and:\s+Approve designs[\s\S]*Build live prototypes/, "a role names the largest one below it");
-    assert.match(await panel(2), /Everything a PM can, and:\s+Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
-    assert.doesNotMatch(await panel(2), /Approve designs|Choose what|Record a decision/);
-    assert.match(await panel(3), /Everything a viewer can, and:\s+Vote on options[\s\S]*Draw an issue/, "a PM also has issues drawn");
-    assert.doesNotMatch(await panel(4), /Everything|Same as/, "the smallest role lists its own");
+    assert.match(await panel(2), /Everything a developer can, and:\s+Mark a request a small change/, "a lead developer says what is a small change");
+    assert.match(await panel(3), /Everything a PM can, and:\s+Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
+    assert.doesNotMatch(await panel(3), /Approve designs|Choose what|Record a decision/);
+    assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Draw an issue/, "a PM also has issues drawn");
+    assert.doesNotMatch(await panel(5), /Everything|Same as/, "the smallest role lists its own");
 
     // A lead asks Design Desk to add a person with a role; the roles to pick leave out lead.
     const pe = dialog("person-dialog");
     await desk.click("[data-add-person]");
     assert.equal(await pe.open(), true);
-    assert.deepEqual(await desk.locator("#pe-roles input").evaluateAll((xs) => xs.map((x) => x.value)), ["designer", "pm", "developer"]);
+    assert.deepEqual(await desk.locator("#pe-roles input").evaluateAll((xs) => xs.map((x) => x.value)), ["designer", "lead-developer", "developer", "pm"]);
     await pe.button("Ask Design Desk").click();
     assert.equal(await pe.open(), true, "an Ask without an email stays open");
     await desk.fill("#person-form [name=email]", "alex@example.com");

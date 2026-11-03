@@ -53,7 +53,7 @@ test("only a lead asks for a new person; the owner's ask says so; the agent cann
 
   const people = await d.viewer("alice@example.com", "/api/people");
   assert.deepEqual(people.body.asks.map((a) => a.email).sort(), ["alex@example.com", "dee@example.com"]);
-  assert.deepEqual(people.body.addable, ["designer", "pm", "developer"]);
+  assert.deepEqual(people.body.addable, ["designer", "lead-developer", "developer", "pm"]);
 
   const enqueue = await d.agent("/agent/enqueue", { kind: "person", card: "C-1" });
   assert.equal(enqueue.status, 400);

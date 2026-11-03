@@ -23,7 +23,9 @@ export const LIMITS = {
   dbBytes: 50 * 1024 * 1024,
 };
 
-export const ROLES = ["lead", "designer", "pm", "developer", "guest"];
+export const ROLES = ["lead", "designer", "lead-developer", "developer", "pm", "guest"];
+// The roles that approve a small change, when they did not file it (docs/desk.md → Small changes).
+export const DEVELOPERS = ["lead-developer", "developer"];
 const BUSY = "Design Desk is already working on this. The result appears here.";
 
 // Who may do what. The operator's roster assigns roles; the owner is always `lead`.
@@ -31,13 +33,16 @@ const BUSY = "Design Desk is already working on this. The result appears here.";
 export function can(role, action, prototypeRoles = ["designer", "lead"]) {
   const member = role !== "guest";
   const shaper = role === "designer" || role === "lead";
+  const dev = DEVELOPERS.includes(role);
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": return member;
     // Pictures of an issue: how it looks now and a sketch of how it could look (docs/issues.md).
-    case "draw": return shaper || role === "pm" || role === "developer";
+    case "draw": return shaper || dev || role === "pm";
     // A developer starts and changes everything a designer does; deciding stays a designer's.
-    case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || role === "developer";
+    case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev;
+    // Whether a request is a small change a developer approves, or goes through a designer.
+    case "size": return role === "lead-developer" || role === "lead";
     // Deciding: approve, close and reopen, the presentation, handled, the winner.
     case "queue": case "approve": case "close": case "reopen": case "handle": case "choose":
     // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
@@ -57,21 +62,21 @@ export const ORIGIN_JOBS = ["watch", "digest"];
 export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk", "call", "approval", "chat"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "people"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "people"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // The roster as the server reads a role (`## Desk people` rows): the first row of an email
 // counts, and an unknown role is a guest's.
 export function rosterOf(rows) {
   const seen = new Set();
-  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: String(r.role || "").trim().toLowerCase() }))
+  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: String(r.role || "").trim().toLowerCase().replace(/\s+/g, "-") }))
     .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
     .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
 }
 
 // The roles a lead may ask Design Desk to give a new person (docs/desk.md → People);
 // making a lead stays the operator's.
-export const ADDABLE_ROLES = ["designer", "pm", "developer"];
+export const ADDABLE_ROLES = ["designer", "lead-developer", "developer", "pm"];
 const EMAIL = /^[^\s@|`<>]+@[^\s@|`<>]+\.[^\s@|`<>]+$/;
 
 export const REQUEST_TYPES = ["idea", "bug", "feature", "adjustment", "proposal"];
@@ -250,8 +255,9 @@ export class Store {
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
       if (asks) reasons.push("Design Desk is waiting for an answer");
       else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options or close it");
-      else if (!busy && c.status === "feedback") reasons.push(c.chosen ? "A designer picked an option: approve it or build it live" : "Options are ready: pick one or ask for changes");
-      else if (!busy && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
+      // A small change waits for a developer's approval, not a designer's.
+      else if (!busy && !c.size?.small && c.status === "feedback") reasons.push(c.chosen ? "A designer picked an option: approve it or build it live" : "Options are ready: pick one or ask for changes");
+      else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
     reasons.push(...suggested);
     if (reasons.length) return { level: "designer", reasons };
@@ -569,6 +575,7 @@ export class Store {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
       c.status = "triage";
       delete c.overruled;
+      delete c.approved;
       c.updated = this.clock();
       const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
       this.save();
@@ -579,6 +586,10 @@ export class Store {
       throw forbidden(c.triage ? "This request gets no live prototype because part of it needs a developer or a decision. The developer spec covers it." : "Design Desk is still checking this request. You can build a live prototype once it says what can be done.");
     if (action === "approve" && !["testing", "feedback", "prototype"].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
+    if (action === "approve" && !who?.agent && !can(who?.role, "approve")) {
+      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers can approve designs. A lead developer can mark a request a small change, which a developer then approves.");
+      if (isAuthor(c, who)) throw forbidden("You filed this request, so another developer approves it.");
+    }
     // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
     const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
@@ -586,6 +597,8 @@ export class Store {
     if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
+    // Who approved, shown on the card; a small change's approval says so.
+    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small) };
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
@@ -594,6 +607,20 @@ export class Store {
     if (action === "slack-send") item.scope = "send";
     this.save();
     return { card: c, inbox: item };
+  }
+
+  // A lead developer marks a request a small change, which any developer but its author
+  // approves, or sends it through a designer (the default); the card keeps who and when
+  // (docs/desk.md → Small changes).
+  setSize(cardId, who, small) {
+    const c = this.card(cardId);
+    if (c.kind !== "request") throw bad("only a design request is a small change or not");
+    if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
+    if (typeof small !== "boolean") throw bad("small must be true or false");
+    c.size = { small, by: person(who), at: this.clock() };
+    c.updated = this.clock();
+    this.save();
+    return { card: c };
   }
 
   // ---------- the next call's agenda ----------
@@ -1223,6 +1250,9 @@ function favouriteOf(c) {
   const s = [...vs].sort((a, b) => score(b) - score(a));
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
 }
+
+// Whether a person filed the request: its author never approves it as a small change.
+const isAuthor = (c, who) => Boolean(who?.email && c.created_by?.email && who.email.toLowerCase() === c.created_by.email.toLowerCase());
 
 function person(who) {
   if (!who) return { agent: true };

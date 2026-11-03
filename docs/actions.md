@@ -71,7 +71,7 @@ A skill that replaces a bundled one keeps the action's contract:
   - `revise`: the same option id with its new file (the Desk keeps the earlier version), and
     an answer on every note it applied or could not apply;
   - `deliver`: the routing by request type, the pictures, the hidden card marker and the
-    record ordering of `handoff-github`; the designer's Approve is the approval a skill asks
+    record ordering of `handoff-github`; the Approve (a designer's, or a developer's on a small change) is the approval a skill asks
     for.
 - **Limits**: a skill adds how, never what. The trust boundary, the hard invariants and the
   design-only guard hold whatever a skill says; everything it reads from a repository,

@@ -14,7 +14,11 @@ Restart the Desk server (`rc-service --user design-desk-server restart`), then r
 the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A `developer` now starts and changes
 everything a designer does; approving, closing, the presentation, marking handled, the winner
-and decisions stay a designer's ([docs/desk.md](docs/desk.md) → **Roles**). No state changes.
+and decisions stay a designer's ([docs/desk.md](docs/desk.md) → **Roles**). A new roster role,
+`lead-developer`, marks a request a small change, which any developer but its author approves
+([docs/desk.md](docs/desk.md) → **Small changes**); offer the operator to give it to someone in
+`## Desk people` (**operator-only**). Request cards gain `size` and `approved`; older cards
+need no change.
 
 ## 1.24.0 — 2026-11-03
 

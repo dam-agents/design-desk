@@ -52,7 +52,7 @@ function roleOf(caller) {
   if (caller.role === "owner") return "lead";
   if (!caller.email) return "guest";
   const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === caller.email);
-  const role = (row?.role || "").toLowerCase();
+  const role = (row?.role || "").trim().toLowerCase().replace(/\s+/g, "-");
   return ROLES.includes(role) ? role : "guest";
 }
 
@@ -66,7 +66,7 @@ const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact
 function slackRole(email) {
   if (!email) return "slack";
   const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === String(email).toLowerCase());
-  const role = (row?.role || "").toLowerCase();
+  const role = (row?.role || "").trim().toLowerCase().replace(/\s+/g, "-");
   return ROLES.includes(role) && role !== "guest" ? role : "slack";
 }
 
@@ -105,7 +105,7 @@ function settings() {
 const VERBS = { ack: "mark changes as seen", handle: "mark changes as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
-  draw: "draw issues", decide: "record and revoke decisions", people: "add people to the Desk" };
+  draw: "draw issues", decide: "record and revoke decisions", size: "mark a request a small change", people: "add people to the Desk" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -150,7 +150,7 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "a lead" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "a lead" : action === "size" ? "a lead developer" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
@@ -194,6 +194,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "decisions" && p[3] === "revoke") { need("decide"); return send(res, 200, store.revokeDecision(p[2], actor, { reason: b.reason, replaced_by: b.replaced_by || null })); }
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "chosen") { need("choose"); return send(res, 200, store.choose(p[2], actor, b.variant === null ? null : String(b.variant || ""))); }
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }
   if (m === "POST" && p[1] === "requests") {
@@ -237,7 +238,8 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
-    need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action);
+    // A small change's approval is a developer's too; the store checks who (docs/desk.md → Small changes).
+    if (action !== "approve" || !store.card(p[2]).size?.small) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
