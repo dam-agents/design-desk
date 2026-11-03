@@ -630,7 +630,8 @@ HTML
 
 # ============================================================ DIGEST MODE ===
 # The week in the Desk's own store: what shipped, what was asked, decided and voted on, and
-# 30 days of what people said, for the themes. Read-only; nothing in a quiet week.
+# 30 days of what people said, for the themes. The week is the seven whole UTC days up to
+# yesterday: the page's name and its items share that span. Read-only; nothing in a quiet week.
 digest_mode() {
   local DB="$DESK_DIR/db.json" CONF period
   CONF="$(config_json)"
@@ -641,18 +642,23 @@ digest_mode() {
   out="$(jq -c --argjson now "$NOW_EPOCH" --arg period "$period" '
     def epoch: (sub("\\.[0-9]+"; "") | sub("(\\+00:00|\\+0000)$"; "Z") | fromdateiso8601?) // 0;
     def within($s): ((. // "") | epoch) >= ($now - $s);
-    (7 * 86400) as $week | (30 * 86400) as $month
+    (30 * 86400) as $month | ($now / 86400 | floor | . * 86400) as $end | ($end - 7 * 86400) as $start
+    | def inweek: ((. // "") | epoch) as $e | $e >= $start and $e < $end;
+    def day($e): ($e | strftime("%d %b %Y") | ltrimstr("0"));
+    # Named by its days: "29 Oct – 4 Nov 2026", the year once when both days share it.
+    [day($start), day($end - 86400)] as [$from, $to]
     | [.cards[]] as $cards
     | {
       done: any($cards[]; .kind == "digest" and .period == $period),
-      changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | within($week)))
+      dates: ((if $from[-4:] == $to[-4:] then $from[:-5] else $from end) + " – " + $to),
+      changes: [ $cards[] | select(.kind == "change" and ((.source.merged_at // .created) | inweek))
                  | {id, title, merged_at: .source.merged_at, in_progress: (.source.merged_at == null), screen: ([.screens[]? | select(.stage == "after" or .stage == null) | .asset][0])} ],
-      requests_new: [ $cards[] | select(.kind == "request" and (.created | within($week))) | {id, title, type: .request.type, status} ],
-      handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | within($week))) | {id, title} ],
+      requests_new: [ $cards[] | select(.kind == "request" and (.created | inweek)) | {id, title, type: .request.type, status} ],
+      handed_off: [ $cards[] | select(.kind == "request" and .status == "handed-off" and (.updated | inweek)) | {id, title} ],
       waiting: [ $cards[] | select(.agenda.status == "queued") | {id, title, note: .agenda.note} ],
-      polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | within($week))) | {card: $c.id, title: $c.title, state, closes, result} ],
-      decisions: [ (.decisions // {})[] | select(.recorded | within($week)) | {id, text, concepts, author, conflicts} ],
-      revoked: [ (.decisions // {})[] | select(.revoked.at | within($week)) | {id, text, reason: .revoked.reason, replaced_by: .revoked.replaced_by} ],
+      polls: [ $cards[] | . as $c | (.polls // [])[] | select(.state == "open" or (.closed | inweek)) | {card: $c.id, title: $c.title, state, closes, result} ],
+      decisions: [ (.decisions // {})[] | select(.recorded | inweek) | {id, text, concepts, author, conflicts} ],
+      revoked: [ (.decisions // {})[] | select(.revoked.at | inweek) | {id, text, reason: .revoked.reason, replaced_by: .revoked.replaced_by} ],
       feedback: ([ ($cards[] | select(.kind == "request" and .request.type == "bug" and (.created | within($month)))
                    | {card: .id, kind: (if .origin.automated then "test finding" else "bug" end), text: ((.title + ": " + (.request.problem // ""))[0:240])}),
                  (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.created | within($month)) and (.messages[0].by.agent != true))
@@ -662,7 +668,7 @@ digest_mode() {
   if [ "$(jq '(.changes + .requests_new + .handed_off + .decisions + .revoked + .feedback) | length' <<<"$out")" -eq 0 ]; then
     log "a quiet week: nothing to digest for $period"; quiet_out
   fi
-  log "digest $period: $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.revoked|length) revoked, \(.feedback|length) pieces of feedback"' <<<"$out")"
+  log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.revoked|length) revoked, \(.feedback|length) pieces of feedback"' <<<"$out")"
   jq -n --argjson d "$out" --arg period "$period" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md"], config:$config, logs:$logs} | del(.done)'
 }

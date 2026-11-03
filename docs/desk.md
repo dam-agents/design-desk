@@ -195,7 +195,7 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
 
 - Only a designer or the lead puts a card on it (**Add to the next call**), with a note and,
   for a request with options, the option to present. The agent never adds one: it
-  **suggests** its proposals, research verdicts that need a decision, prototypes ready for
+  **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
   suggestion shows on the card (a request's under **More**) and in the tab until a designer
   adds it or says **Not now**; after **Not now** the store keeps the card from being suggested again. Without an option
