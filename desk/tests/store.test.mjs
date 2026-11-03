@@ -198,7 +198,8 @@ test("deciding straight away: a designer or lead developer approves without opti
   assert.deepEqual(ok.card.approved, { by: { email: "lee@example.com", role: "lead-developer" }, at: ok.card.approved.at, small: false });
 
   const other = s.createRequest(bob, { title: "Louder badge", problem: "Hard to see." }).card;
-  s.upsertCard({ id: other.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Red" }, { id: "v2", name: "Blue" }] });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: other.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Red", asset }, { id: "v2", name: "Blue", asset }] });
   assert.throws(() => s.decideAndClose(other.id, lee, { text: " " }), /decision/);
   const decided = s.decideAndClose(other.id, lee, { text: "Badges stay as they are: colour is for errors only.", why: "Agreed at the meeting." });
   assert.equal(decided.card.status, "declined");
@@ -212,7 +213,8 @@ test("deciding straight away: a designer or lead developer approves without opti
 test("a live prototype's option is the one approved", () => {
   const s = fresh();
   const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });
-  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet" }, { id: "v2", name: "Bold" }] });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset }, { id: "v2", name: "Bold", asset }] });
   assert.equal(s.act(card.id, alice, "build", "v2").card.built.variant, "v2");
   s.upsertCard({ id: card.id, status: "testing", prototype: { state: "live", url: "https://example.com/p" } });
   const ok = s.act(card.id, alice, "approve", "v1");
