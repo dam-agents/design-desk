@@ -20,7 +20,7 @@ const USAGE = `usage: design desk <command>
   upsert <card.json|->                     create or update a card (agent fields only)
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
-  agenda <C-n> [--note <text>]             suggest a card for the next call; a designer adds it
+  agenda <C-n> [--note <text>]             suggest a card for the presentation; a designer adds it
   look <C-n> <look.json|->                 add an earlier look of an element or a screen, drawn from the
                                            code's history: {at, commit, sheet, thumb, states, made_by,
                                            links: [{label, url}], note} (a screen: screens instead of sheet)

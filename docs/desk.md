@@ -47,6 +47,10 @@ served by the Desk server through the platform's Artifact API relay.
   screen while it scrolls (an open item's back bar, the presentation's Exit, a picture's Close).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
+- **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
+  answer); **Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
+  with grey counts, then **Product** and **People**. **How it works** opens from the question
+  mark next to the day and night switch. The Desk opens on Requests.
 - **Tab intros.** Every tab but How it works opens with a foldable intro (what it shows, what
   you can do and, where a tab has a flow, step by step), `INTRO` in `desk/page.html`. Folding
   one folds every tab's; the server keeps the choice per person (`POST /api/me/prefs`, `prefs`
@@ -66,7 +70,8 @@ served by the Desk server through the platform's Artifact API relay.
   page. It is the one way to refer to an item: people write it in Slack, a comment or chat;
   `design desk card C-12` reads it.
 - **An item's link** is the Desk's link with the number: `#C-12` opens it in its own tab,
-  `#call/C-12` in Next call while it is on the call, `#requests` a tab. The page's **🔗 Copy link** builds it from
+  `#presentation/C-12` on the presentation while it is on it (`#call/C-12`, its older form,
+  still opens there), `#requests` a tab, `#presentation` the presentation. The page's **🔗 Copy link** builds it from
   `desk_link`; **Go to** in the header takes a number or such a link; a `C-12` in text on the
   Desk links to that item.
 - **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
@@ -87,7 +92,7 @@ owner is `lead`, anyone else on the share list is `guest`.
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment |
 | `developer`, `pm` | also vote, file a request, start a follow-up from a change, add screenshots |
-| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the next call presents, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack, pick the winning option |
+| `designer`, `lead` | also start, revise and redraw variants, approve, close and reopen, choose what the presentation shows and mark it presented, note changes on an element, add a screen or part to Product, mark a change handled, use Figma, share in Slack, pick the winning option |
 | `pm`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
 | roles in `prototype_requesters` | start a live prototype |
 | `lead` | also ask you to add a person to the list ([People](#people)) |
@@ -142,32 +147,35 @@ with a role; it has no card. This is the one roster change that comes from the D
 3. `added` → tell the operator in the run's report to share the Desk with that email (Share →
    Restricted): only the owner shares it, the row alone opens nothing.
 
-## The next call
+## The presentation
 
-The team meets regularly; the Desk keeps the list of what to show at the next call.
+The team meets regularly; the Desk keeps the list of what to show at the next design meeting,
+the **Presentation** filter on Requests. (The store and the CLI keep its older name, `agenda`.)
 
-- Only a designer or the lead puts a card on it (**Add to the next call**), with a note and,
-  for a request with options, the option to present. The agent never adds one: it
+- Only a designer or the lead puts a card on it (**Add to presentation**), with a note and,
+  for a request with options, its final version. The agent never adds one: it
   **suggests** its proposals, research verdicts that need a decision, prototypes ready for
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
-  suggestion shows on the card and in the tab until a designer adds it or says **Not now**;
-  after **Not now** the store keeps the card from being suggested again. Without an option
-  picked (an older page), the designer's pick (`chosen`) is presented, else the option
-  designers' votes clearly prefer.
-- **The brief** (`agenda_due`): for every card on the call, write `brief` on the card —
+  suggestion shows on the card and under the presentation until a designer adds it or says
+  **Not now**; after **Not now** the store keeps the card from being suggested again. Without
+  a version picked (an older page), the designer's pick (`chosen`) is presented, else the
+  option designers' votes clearly prefer.
+- **The brief** (`agenda_due`): for every card on the presentation, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
-- The **Next call** tab lists the agenda with the briefs; **Present** shows one item at a
-  time, full screen, with the option the designer picked (sheet or screens otherwise);
-  comments go in the card's threads.
-- After the call a designer presses **Call is over — clear the list**: every item becomes
-  `presented` with the date. Decisions taken in the call go into the cards' threads (a person
-  writes them, or you write what they told you in chat, attributed), and each one is recorded
-  with `design desk decision`, the card as its source.
+- The **Presentation** filter lists what is to present, in order, with the briefs, and what
+  was presented lately; **▶ Present** shows one item at a time, full screen, with the version
+  the designer picked (sheet or screens otherwise); comments go in the card's threads.
+- In or after the meeting a designer marks each item **presented** (`POST
+  /api/cards/<id>/presented`; `{presented: false}` is its Undo), or every one at once with
+  **Mark all as presented** (`POST /api/calls`): it becomes `presented` with the date and leaves
+  the list. Decisions taken in the meeting go into the cards' threads (a person writes them, or
+  you write what they told you in chat, attributed), and each one is recorded with
+  `design desk decision`, the card as its source.
 
 ## Needs a designer
 
-New and Requests have a **Needs a designer** filter next to their others (New opens on
+Changes and Requests have a **Needs a designer** filter next to their others (Changes opens on
 **All**, Requests on **Open**): only the cards that wait for a designer's decision, each with
 its reasons. One designer cannot read every change; this keeps the rest a click away.
 
@@ -180,7 +188,7 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are ready, or its live prototype is ready to approve.
-- **A suggestion for the next call** puts either kind on it until a designer adds it or says
+- **A suggestion for the presentation** puts either kind on it until a designer adds it or says
   **Not now**, even once the card was seen or the request closed.
 - Every read of a card (the list, the card, `design desk item`) returns the derived
   `attention`; what you write on a change is only your judgement.
@@ -198,7 +206,7 @@ its reasons. One designer cannot read every change; this keeps the rest a click 
 - When a step cannot go on without a person, ask once, with a suggested answer:
   `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
-- **Where a card came from.** Every row in New and Requests shows its source, its author and,
+- **Where a card came from.** Every row in Changes and Requests shows its source, its author and,
   for what no person asked for, the event behind it. A change card shows its `source` (the PR,
   its author, merged or open); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`

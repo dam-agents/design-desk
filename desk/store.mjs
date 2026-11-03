@@ -222,7 +222,7 @@ export class Store {
   // Null: not judged.
   attentionOf(c) {
     if (c.kind !== "change" && c.kind !== "request") return null;
-    const suggested = c.call_suggestion ? ["Suggested for the next call"] : [];
+    const suggested = c.call_suggestion ? ["Suggested for the presentation"] : [];
     if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
       return suggested.length ? { level: "designer", reasons: suggested } : null;
     const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
@@ -573,8 +573,8 @@ export class Store {
   // closes the agenda. The agent only suggests a card; a designer adds it or says Not now.
   queueForCall(cardId, who, note = "", variant = null) {
     const c = this.card(cardId);
-    if (who?.agent) throw forbidden("only a designer puts a card on the next call; the agent suggests it");
-    if (c.agenda?.status === "queued") throw bad("It is already on the next call.");
+    if (who?.agent) throw forbidden("only a designer puts a card on the presentation; the agent suggests it");
+    if (c.agenda?.status === "queued") throw bad("It is already on the presentation.");
     const vs = c.variants || [];
     // A page published before the option picker sends none: the favourite, else the first.
     if (vs.length && variant == null) variant = (favouriteOf(c) || vs[0]).id;
@@ -591,7 +591,7 @@ export class Store {
   // puts it on a call. A closed request takes no suggestion.
   suggestForCall(cardId, note = "") {
     const c = this.card(cardId);
-    const skip = c.agenda?.status === "queued" ? "it is already on the next call" : c.call_dismissed ? "a designer said Not now to it" : c.status === "declined" ? "the request is closed" : null;
+    const skip = c.agenda?.status === "queued" ? "it is already on the presentation" : c.call_dismissed ? "a designer said Not now to it" : c.status === "declined" ? "the request is closed" : null;
     if (skip) return { card: c, suggested: false, reason: skip };
     c.call_suggestion = { note: optText(note, 500, "note"), at: this.clock() };
     c.updated = this.clock();
@@ -600,7 +600,7 @@ export class Store {
   }
 
   dismissSuggestion(cardId, who) {
-    if (!can(who.role, "queue")) throw forbidden("Only a designer decides what goes on the next call.");
+    if (!can(who.role, "queue")) throw forbidden("Only a designer decides what goes on the presentation.");
     const c = this.card(cardId);
     if (c.call_suggestion) c.call_dismissed = { by: person(who), at: this.clock(), note: c.call_suggestion.note };
     delete c.call_suggestion;
@@ -610,10 +610,27 @@ export class Store {
 
   unqueue(cardId, who) {
     const c = this.card(cardId);
-    if (c.agenda?.status !== "queued") throw bad("it is not on the next call");
+    if (c.agenda?.status !== "queued") throw bad("it is not on the presentation");
     const mine = c.agenda.by?.email && c.agenda.by.email === who.email;
-    if (!mine && !can(who.role, "close")) throw forbidden("Only the person who added it, or a designer, can take it off the call.");
+    if (!mine && !can(who.role, "close")) throw forbidden("Only the person who added it, or a designer, can take it off the presentation.");
     c.agenda = { ...c.agenda, status: "removed", removed_at: this.clock() };
+    this.save();
+    return { card: c };
+  }
+
+  // A designer marks one item presented once the team saw it; Undo puts it back on.
+  markPresented(cardId, who, presented = true) {
+    if (!can(who.role, "close")) throw forbidden("Only a designer or the lead marks an item presented.");
+    const c = this.card(cardId);
+    if (presented) {
+      if (c.agenda?.status !== "queued") throw bad("it is not on the presentation");
+      c.agenda = { ...c.agenda, status: "presented", call: this.clock(), presented_by: person(who) };
+    } else {
+      if (c.agenda?.status !== "presented") throw bad("it was not presented");
+      const { call, presented_by, ...rest } = c.agenda;
+      c.agenda = { ...rest, status: "queued" };
+    }
+    c.updated = this.clock();
     this.save();
     return { card: c };
   }
@@ -636,6 +653,13 @@ export class Store {
         source: c.source || null, origin: c.origin ? { repo: c.origin.repo, url: c.origin.url } : null,
         option: (c.variants || []).find((v) => v.id === c.agenda.variant)?.name || null,
         thumb: (c.variants || []).find((v) => v.id === c.agenda.variant)?.asset || c.screens?.[0]?.asset || c.variants?.[0]?.asset || null }));
+  }
+
+  // What was presented lately, the newest first: the page lists it under the queue.
+  presented(limit = 10) {
+    return Object.values(this.db.cards).filter((c) => c.agenda?.status === "presented")
+      .sort((a, b) => String(b.agenda.call || "").localeCompare(String(a.agenda.call || ""))).slice(0, limit)
+      .map((c) => ({ id: c.id, kind: c.kind, title: c.title, agenda: c.agenda, option: (c.variants || []).find((v) => v.id === c.agenda.variant)?.name || null }));
   }
 
   // ---------- agent actions ----------

@@ -88,7 +88,7 @@ On its date, or when the request moved on (approved, closed):
    platform allows it): "🗳️ *<request title>* — the vote is closed. <result>. A designer picks
    the winner on the Design Desk."
 4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. Without a designer's
-   pick yet, suggest it for the next call (`design desk agenda C-<n> --note "Slack vote: <result>"`).
+   pick yet, suggest it for the presentation (`design desk agenda C-<n> --note "Slack vote: <result>"`).
 
 ## In a Slack turn
 

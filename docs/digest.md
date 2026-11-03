@@ -2,7 +2,7 @@
 
 Once a week the team gets one page of what happened to the product's UX: what shipped,
 what was asked and decided, what waits for a decision, how the votes went, and the themes
-in what people said. It lands under **New** on the Desk, and in Slack with `digest: slack`.
+in what people said. It lands under **Changes** on the Desk, and in Slack with `digest: slack`.
 
 `design-desk-digest-weekly` runs it; its pre-flight (`preflight.sh digest`) reads the Desk's
 own store and stays silent in a quiet week, or once the week's digest exists.
@@ -10,7 +10,7 @@ own store and stays silent in a quiet week, or once the week's digest exists.
 ## The worklist
 
 `period` (`2026-W44`), and from the last 7 days: `changes` (with a picture each, when it has
-one), `requests_new`, `handed_off`, `waiting` (on the next call), `polls` (open, or closed
+one), `requests_new`, `handed_off`, `waiting` (on the presentation), `polls` (open, or closed
 this week with their result) and `decisions`; from the last 30 days: `feedback`, the bugs,
 automated test findings, comments, concerns and questions people left.
 
@@ -24,7 +24,7 @@ automated test findings, comments, concerns and questions people left.
    yet: file a proposal (`design desk request` with `type: proposal`, the theme as its
    problem, `from` the change or request it came out of when there is one, `origin: {channel:
    "agent", job: "digest", event: {label: "a theme in feedback, <period>"}}`) and suggest it for
-   the next call (`design desk agenda C-<n> --note "A theme in feedback: <name>"`).
+   the presentation (`design desk agenda C-<n> --note "A theme in feedback: <name>"`).
 
 ## The card
 

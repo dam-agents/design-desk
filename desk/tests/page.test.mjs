@@ -89,7 +89,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
       close: () => desk.evaluate((i) => document.getElementById(i).close(), id),
     });
 
-    // Requests counts the open ones, like Next call; amber while one waits for an answer.
+    // Requests counts the open ones; amber while one waits for an answer.
     await desk.waitForSelector('[data-tab="requests"] .count');
     assert.equal(await desk.textContent('[data-tab="requests"] .count'), "2", "the tab counts every open request");
     assert.equal(await desk.getAttribute('[data-tab="requests"] .count', "class"), "count warn", "one waits for an answer");
@@ -273,10 +273,10 @@ const cards = [
   { id: "c1", kind: "change", title: "A new settings page", acked: false, attention: { level: "designer", reasons: ["a new screen"] } },
   { id: "c2", kind: "change", title: "Tighter rows", acked: false, attention: { level: "fyi", reasons: ["follows the list pattern"] } },
   { id: "c3", kind: "change", title: "Seen already", acked: true, attention: { level: "designer", reasons: ["its own grey"] } },
-  { id: "c4", kind: "change", title: "Seen, and suggested", acked: true, suggested: { note: "A new pattern" }, attention: { level: "designer", reasons: ["its own grey", "Suggested for the next call"] } },
+  { id: "c4", kind: "change", title: "Seen, and suggested", acked: true, suggested: { note: "A new pattern" }, attention: { level: "designer", reasons: ["its own grey", "Suggested for the presentation"] } },
   { id: "r1", kind: "request", title: "Calmer empty list", status: "feedback", attention: { level: "designer", reasons: ["Options are ready: pick one or ask for changes"] } },
   { id: "r2", kind: "request", title: "Bigger send button", status: "triage" },
-  { id: "r3", kind: "request", title: "Shipped and worth showing", status: "handed-off", suggested: { note: "Worth showing" }, attention: { level: "designer", reasons: ["Suggested for the next call"] } },
+  { id: "r3", kind: "request", title: "Shipped and worth showing", status: "handed-off", suggested: { note: "Worth showing" }, attention: { level: "designer", reasons: ["Suggested for the presentation"] } },
 ];
 window.platform = { async request({ path }) {
   const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { request: true } }
@@ -320,16 +320,17 @@ window.platform = { async request(r) {
 
 test("every tab but How it works opens with its intro; folding one folds them all, and the server keeps it", (t) => open(t, KEPT, async (desk) => {
   const intro = '#banners details.intro';
-  await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
+  await desk.waitForSelector(`${intro}[data-intro="requests"][open]`);
   assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
-  assert.match(await desk.textContent(`${intro} li.off`), /Got it[\s\S]*not with your role/, "an action the role may not do says so");
-  for (const tab of ["requests", "call", "product", "people"]) {
+  assert.match(await desk.textContent(`${intro} li.off`), /Vote on the options[\s\S]*not with your role/, "an action the role may not do says so");
+  for (const tab of ["new", "issues", "product", "people"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"][open]`);
   }
   assert.match(await desk.textContent('#banners [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
+  assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
   await desk.click('[data-tab="new"]');
   await desk.click(`${intro} > summary`);
   await desk.click('[data-tab="requests"]');
@@ -345,14 +346,19 @@ test("every tab but How it works opens with its intro; folding one folds them al
   await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
 }));
 
-test("Needs a designer filters New and Requests, and New opens on All", (t) => open(t, LIST, async (desk) => {
+test("Needs a designer filters Changes and Requests, and Changes opens on All", (t) => open(t, LIST, async (desk) => {
   const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
-  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "New opens on All");
+  // Requests leads the menu; Changes and Issues follow, then Product and People.
+  await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
+  assert.deepEqual(await desk.$$eval("#nav button", (bs) => bs.map((b) => b.dataset.tab)), ["requests", "new", "issues", "product", "people"], "the Desk opens on Requests");
+  assert.match(await desk.textContent('[data-tab="new"]'), /^Changes/);
+  await desk.click('[data-tab="new"]');
+  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on All");
   assert.match(await desk.textContent("#list .filters .on"), /^All$/);
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
   assert.match(await desk.textContent("#list .row"), /Needs a designer: a new screen/);
-  assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the next call/, "a seen change shows only its suggestion");
+  assert.match(await desk.textContent('.row.item:has([data-card="c4"])'), /Needs a designer: Suggested for the presentation/, "a seen change shows only its suggestion");
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-filter="reqFilter:designer"]');
   assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
@@ -363,7 +369,7 @@ test("Needs a designer filters New and Requests, and New opens on All", (t) => o
 }));
 
 // Every item has a number by its title; a link with it, or Go to, opens the item in its tab
-// (in Next call for #call/C-n while it is on the call); a number in text links to that item
+// (on the presentation for #presentation/C-n while it is on it); a number in text links to that item
 // (docs/desk.md → Links to an item).
 const LINKS = `<script>
 window.copied = [];
@@ -408,15 +414,18 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.click('#detail a[data-ref="C-2"]');
   assert.equal(await shown("requests", "Calmer empty list"), "C-2");
 
-  await desk.goto(`${base}#call/C-2`);
+  await desk.goto(`${base}#presentation/C-2`);
   await desk.reload();
-  assert.equal(await shown("call", "Calmer empty list"), "C-2", "a link to Next call opens it there, also on a fresh load");
+  assert.equal(await shown("requests", "Calmer empty list"), "C-2", "a link to the presentation opens it there, also on a fresh load");
+  assert.match(await desk.textContent("#list .filters .on"), /Presentation \(1\)/, "on the Presentation filter");
   await desk.click("[data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
-  assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#call/C-2"]);
+  assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#presentation/C-2"]);
+  await desk.click("[data-back]");
+  await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent === "Presentation");
 
   await desk.goto(`${base}#call/C-3`);
-  assert.equal(await shown("requests", "Closed one"), "C-3", "an item that is not on the call opens in its own tab");
+  assert.equal(await shown("requests", "Closed one"), "C-3", "an older #call link still works; an item that is not on the presentation opens in its own tab");
 
   await desk.fill("#goto", "https://share.example.com/a/xY12#C-99");
   await desk.press("#goto", "Enter");

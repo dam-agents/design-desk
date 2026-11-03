@@ -104,7 +104,7 @@ function settings() {
 // The words a person reads when their role lacks an action.
 const VERBS = { ack: "mark changes as seen", handle: "mark changes as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
-  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the next call", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
+  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "pick the winning option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
   draw: "draw issues", people: "add people to the Desk" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
@@ -163,7 +163,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
-  if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), calls: (store.db.calls || []).slice(-5) });
+  if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
   if (m === "GET" && p[1] === "decisions") return send(res, 200, { decisions: store.listDecisions({ concept: url.searchParams.get("concept") || "", q: url.searchParams.get("q") || "" }).slice(0, 200) });
   const b = m === "GET" ? {} : await body(req);
   if (m !== "GET") {
@@ -176,6 +176,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "DELETE" && p[1] === "cards" && p[3] === "suggestion") return send(res, 200, store.dismissSuggestion(p[2], actor));
   if (m === "DELETE" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.unqueue(p[2], actor));
   if (m === "POST" && p[1] === "calls") return send(res, 200, store.closeCall(actor, b));
+  if (m === "POST" && p[1] === "cards" && p[3] === "presented") return send(res, 200, store.markPresented(p[2], actor, b.presented !== false));
   if (m === "POST" && p[1] === "cards" && p[3] === "ack") { need("ack"); return send(res, 200, store.ack(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "handled") { need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "threads") {
@@ -264,7 +265,7 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
   if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
-  // The agent suggests a card for the next call; a designer puts it on (docs/desk.md → The next call).
+  // The agent suggests a card for the presentation; a designer puts it on (docs/desk.md → The presentation).
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.suggestForCall(p[2], b.note));
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));

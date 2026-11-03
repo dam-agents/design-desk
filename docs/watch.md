@@ -87,7 +87,7 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
     → Where a card came from): `label` "PR #<n> shipped" once `source.merged_at` is set,
     else "PR #<n> opened"; research it from what you just read, and enqueue `explore`: the
     inbox run makes two or three design proposals the team can pick from, adjust and comment
-    on. Suggest it for the next call (`design desk agenda C-<n> --note "Design Desk proposes"`).
+    on. Suggest it for the presentation (`design desk agenda C-<n> --note "Design Desk proposes"`).
 12. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title, number and link ([desk.md](desk.md) → Links to an item), never card text
     beyond the title. Send, then log `logev info notified …`.

@@ -82,5 +82,5 @@ In chat, the same three lists in plain words.
 
 A decision you found that the Desk does not know yet, with its source, is recorded once:
 `design desk decision <file>` with `{concepts, text, why, source, at}`. Approved designs and
-the outcomes of the next call are recorded the same way (docs/handoff.md, docs/desk.md), so
+the outcomes of the presentation are recorded the same way (docs/handoff.md, docs/desk.md), so
 the next analysis starts from them.
