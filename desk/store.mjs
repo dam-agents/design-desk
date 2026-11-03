@@ -8,6 +8,8 @@ export const LIMITS = {
   title: 200,
   text: 4000,
   threadsPerCard: 300,
+  // The states drawn of one option (docs/requests.md → Every state of a part).
+  optionStates: 24,
   messagesPerThread: 200,
   // An answer to a change shows before and after pictures: a pair or two (light, dark), each with its diff.
   changeShots: 6,
@@ -47,6 +49,9 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev;
     // Whether a request is a small change a developer approves, or goes through a designer.
     case "size": return role === "lead-developer" || role === "lead";
+    // Skip the vote and the live prototype: approve straight away, or decide and close
+    // (docs/desk.md → Deciding straight away).
+    case "skip": return shaper || role === "lead-developer";
     // Deciding: approve, close and reopen, the presentation, handled, the winner.
     case "queue": case "approve": case "close": case "reopen": case "handle": case "choose":
     // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
@@ -66,7 +71,7 @@ export const ORIGIN_JOBS = ["watch", "digest"];
 export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk", "call", "approval", "chat"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "people"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -102,7 +107,7 @@ export const ISSUE_BUCKETS = ["sprint", "next", "assigned", "label"];
 // writes the deadline, `undo_until`, and the page shows Undo only before it
 // (docs/desk.md → The presentation).
 const endOfDay = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? null : new Date(Math.floor(t / 864e5) * 864e5 + 864e5 - 1000).toISOString().replace(/\.\d{3}Z$/, "Z"); };
-const INBOX_KINDS = ["question", "request", "explore", "revise", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
@@ -110,7 +115,7 @@ const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "tes
 // the agent asks (`asks`) when a step cannot go on without a person's answer.
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks"];
 // The step an agent's question blocks, which a person's answer resumes.
-const ASK_STEPS = ["request", "explore", "revise", "build", "handoff", "figma", "catalog", "map"];
+const ASK_STEPS = ["request", "explore", "revise", "states", "build", "handoff", "figma", "catalog", "map"];
 const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
 
 export class DeskError extends Error {
@@ -215,7 +220,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -270,7 +275,7 @@ export class Store {
       const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
       if (asks) reasons.push("Design Desk is waiting for an answer");
-      else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options or close it");
+      else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options, decide or close it");
       // A small change waits for a developer's approval, not a designer's.
       else if (!busy && !c.size?.small && c.status === "feedback") reasons.push(c.chosen ? "A designer picked an option: approve it or build it live" : "Options are ready: pick one or ask for changes");
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
@@ -294,7 +299,7 @@ export class Store {
   waitingFor(cardId) {
     return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done")
       .sort((a, b) => a.created.localeCompare(b.created))
-      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}) }));
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}) }));
   }
 
   getAsset(id) {
@@ -343,6 +348,7 @@ export class Store {
     if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
     if (kind === "asks" && !ASK_STEPS.includes(step)) throw bad(`an agent question names the step it blocks: ${ASK_STEPS.join(", ")}`);
     if (kind === "change" && !(c.variants || []).some((v) => v.id === anchor?.variant)) throw bad("a change note belongs to one of the design options");
+    if (anchor?.state && !(c.variants || []).find((v) => v.id === anchor.variant)?.states?.some((x) => x.id === anchor.state)) throw bad("That state is not drawn for this option.");
     if ((c.threads || []).length >= LIMITS.threadsPerCard) throw bad("This page holds at most 300 conversations. Mark some as done first.");
     const body = clean(text, LIMITS.text, "text");
     const pictures = this.changeShots(shots, who);
@@ -352,7 +358,7 @@ export class Store {
       needs_agent: kind === "question" || kind === "change", created: this.clock(),
       messages: [{ by: person(who), at: this.clock(), text: body, ...pictures }],
       // The agent's questions can come as a form; the answer resumes the step with its note.
-      ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
+      ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...resumeOf(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
     };
     this.db.threads[id] = t;
     c.threads = [...(c.threads || []), id];
@@ -379,7 +385,7 @@ export class Store {
     }
     // A person's answer to the agent's question resumes the step it blocked; a follow-up
     // on a change note goes back to the agent with the other notes.
-    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); }
+    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); if (t.resume && !item.variant) Object.assign(item, structuredClone(t.resume)); }
     if (t.kind === "change" && !who?.agent) { t.state = "open"; t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
     this.card(t.card).updated = this.clock();
     this.save();
@@ -565,7 +571,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, variant = null, version = null, states = null, part = null } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
@@ -587,8 +593,23 @@ export class Store {
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
     if (closed && action !== "reopen") throw bad("This request is closed. Press Reopen first.");
-    const kinds = { explore: "explore", revise: "revise", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
+    const kinds = { explore: "explore", revise: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
+    // Every state of one part of an option: the option and the part a person picked.
+    const stateOf = action === "states" ? (c.variants || []).find((v) => v.id === variant) : null;
+    if (action === "states" && !stateOf) throw bad("Pick the design option whose states to draw.");
+    if (action === "states" && !part?.label && !String(note || "").trim()) throw bad("Select the part of the design, or say which part, whose states to draw.");
+    // What goes live is the option a person checked, at the version they looked at: a newer
+    // one that arrived meanwhile is looked at first (docs/prototype.md → Build).
+    const live = action === "build" ? (c.variants || []).find((v) => v.id === (variant || note)) : null;
+    if (action === "build" && (c.variants || []).length && !live) throw bad("Pick the design option to build.");
+    // The states it shows count too: one redrawn, added or removed alone is not what they saw.
+    const seen = states && typeof states === "object" ? states : null;
+    const statesMoved = live && seen && ((live.states || []).length !== Object.keys(seen).length || (live.states || []).some((x) => Number(seen[x.id]) !== (x.version || 1)));
+    if (live && version != null && (Number(version) !== (live.version || 1) || statesMoved))
+      throw new DeskError(409, `A newer version of ${live.name} or one of its states arrived while you looked. Look at it again before it goes live.`);
+    const stale = live ? staleStates(live) : [];
+    if (stale.length) throw new DeskError(409, `${stale.map((x) => x.name).join(", ")} of ${live.name} ${stale.length === 1 ? "was" : "were"} drawn for an earlier version of it. Have the states drawn again first.`);
     if (action.startsWith("slack-") && !(c.variants || []).length) throw bad("There are no design options to share yet.");
     if (action === "slack-share" && (c.polls || []).some((x) => x.state === "open")) throw bad("These options are already being voted on in Slack.");
     if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");
@@ -597,6 +618,7 @@ export class Store {
       c.status = "triage";
       delete c.overruled;
       delete c.approved;
+      delete c.decided;
       c.updated = this.clock();
       const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
       this.save();
@@ -605,19 +627,31 @@ export class Store {
     if (!kinds[action]) throw bad(`unknown action ${action}`);
     if (action === "build" && c.triage?.verdict !== "design")
       throw forbidden(c.triage ? "This request gets no live prototype because part of it needs a developer or a decision. The developer spec covers it." : "Design Desk is still checking this request. You can build a live prototype once it says what can be done.");
-    if (action === "approve" && !["testing", "feedback", "prototype"].includes(c.status))
+    // A designer or a lead developer approves once it is checked, without a vote or a live
+    // prototype; a small change's developer, once there are options (docs/desk.md → Deciding straight away).
+    const direct = who?.agent || can(who?.role, "skip");
+    if (action === "approve") mustBeChecked(c, "Approve");
+    // Before options are on the card, an approval does not race the drawing of them.
+    if (action === "approve" && ["triage", "variants"].includes(c.status) && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise"].includes(i.kind)))
+      throw bad("Design Desk is still drawing the options. Approve once they are here.");
+    if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
-    if (action === "approve" && !who?.agent && !can(who?.role, "approve")) {
-      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers can approve designs. A lead developer can mark a request a small change, which a developer then approves.");
+    if (action === "approve" && !direct && !can(who?.role, "approve")) {
+      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers and lead developers can approve designs. A lead developer can mark a request a small change, which a developer then approves.");
       if (isAuthor(c, who)) throw forbidden("You filed this request, so another developer approves it.");
     }
+    // Once a live prototype is built, approving approves what it shows: `live_pick`'s option at
+    // its version, whatever the note says — also back at feedback after a revise, while it is up.
+    const shown = action === "approve" && (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && (c.variants || []).some((v) => v.id === c.live_pick?.variant) ? c.live_pick : null;
+    if (shown) note = shown.variant;
     // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
     const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
     // Going against a decision in force stays a designer's call, a small change included.
     if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even as a small change.`);
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
-    if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
+    // A closed request has nothing going live.
+    if (action === "close") { c.status = "declined"; delete c.call_suggestion; delete c.live_pick; }
     // Draw design options says how many; the request keeps it for its later redraws.
     if (action === "explore" && count !== null) {
       const n = cleanCount(count);
@@ -627,11 +661,19 @@ export class Store {
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; a small change's approval says so.
-    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small) };
+    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small),
+      ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
     if (action === "build" && askFirst) item.ask_first = true;
+    if (stateOf) { item.variant = stateOf.id; if (part?.label) item.part = cleanPart(part); }
+    if (live) {
+      item.variant = live.id; item.version = live.version || 1;
+      // The card says which option, at which version and with which states, goes live.
+      c.live_pick = { variant: live.id, name: live.name, version: live.version || 1, asset: live.asset,
+        states: (live.states || []).map((x) => ({ id: x.id, name: x.name, part: x.part, version: x.version || 1, of: x.of || 1, asset: x.asset })), by: person(who), at: this.clock() };
+    }
     // Pictures of the options posted to Slack, not a vote (the slack-polls skill → Send).
     if (action === "slack-send") item.scope = "send";
     this.save();
@@ -651,6 +693,28 @@ export class Store {
     c.updated = this.clock();
     this.save();
     return { card: c };
+  }
+
+  // A designer or a lead developer decides a request without a vote or a live prototype and
+  // closes it; Design Desk records the decision in their name (docs/desk.md → Deciding straight away).
+  decideAndClose(cardId, who, { text, why = "" } = {}) {
+    const c = this.card(cardId);
+    if (who?.agent) throw forbidden("Design Desk does not decide: a person does");
+    if (c.kind !== "request") throw bad("only a design request is decided here");
+    if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
+    if (c.approved || c.status === "spec") throw bad("This request is already approved.");
+    mustBeChecked(c, "Decide");
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "decision" && !i.thread)) throw bad(BUSY);
+    const said = clean(text, 600, "decision");
+    c.status = "declined"; delete c.call_suggestion; delete c.live_pick;
+    c.decided = { by: person(who), at: this.clock(), text: said };
+    c.updated = this.clock();
+    const item = this.enqueue("decision", cardId, null, who, said);
+    item.why = optText(why, 1500, "why");
+    // Closing switches off its live prototype, as Close does.
+    this.enqueue("teardown", cardId, null, who);
+    this.save();
+    return { card: c, inbox: item };
   }
 
   // ---------- the next call's agenda ----------
@@ -847,7 +911,7 @@ export class Store {
   // are never overwritten.
   upsertCard(fields) {
     const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts"];
-    let c = fields.id ? own(this.db.cards, fields.id) : null;
+    let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
     if (!c && fields.kind === "screen" && fields.path)
@@ -887,6 +951,8 @@ export class Store {
         next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
+        // Nor does an option taken off go live, nor a build still waiting to build it.
+        if (next.live_pick && !next.variants.some((v) => v.id === next.live_pick.variant)) { goneLive = next.live_pick.variant; delete next.live_pick; }
       }
       else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions);
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
@@ -942,6 +1008,8 @@ export class Store {
     this.keepLook(c, next);
     next.updated = this.clock();
     this.db.cards[next.id] = next;
+    for (const it of Object.values(this.db.inbox)) if (goneLive && it.card === next.id && it.kind === "build" && it.state === "open" && it.variant === goneLive)
+      Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not built: its option was taken off the card" });
     this.save();
     return { card: next };
   }
@@ -1300,6 +1368,13 @@ function favouriteOf(c) {
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
 }
 
+// Every way past the vote and the prototype waits for Design Desk's check (docs/desk.md →
+// Deciding straight away).
+// Past Checking, a request was checked.
+function mustBeChecked(c, verb) {
+  if (c.status === "triage" && !c.triage) throw bad(`Design Desk is still checking this request. ${verb} it once it says what can be done.`);
+}
+
 // Whether a person filed the request: its author never approves it as a small change. A
 // request the agent filed for someone carries their email in `origin.email` when the channel
 // disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
@@ -1320,10 +1395,18 @@ function person(who) {
   return { email: who.email || null, role: who.role || "guest" };
 }
 
+// The part of an option whose states a person asked for: what they selected in the workspace.
+function cleanPart(p) {
+  const a = cleanAnchor(p);
+  return { selector: a.selector, text: a.text, label: a.label, view: a.view, view_name: a.view_name };
+}
+
 function cleanAnchor(a) {
   if (typeof a !== "object") throw bad("anchor must be an object");
   return {
     variant: typeof a.variant === "string" ? a.variant.slice(0, 40) : null,
+    // One state of the option (its `states`), when the note is about that state's drawing.
+    state: typeof a.state === "string" ? a.state.slice(0, 40) : null,
     asset: typeof a.asset === "string" ? a.asset.slice(0, 40) : null,
     selector: typeof a.selector === "string" ? a.selector.slice(0, 500) : null,
     text: typeof a.text === "string" ? a.text.slice(0, 300) : null,
@@ -1387,14 +1470,56 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.
 // An entry that leaves `stories` out keeps the option's coverage from before.
-function versioned(variants, before, at) {
-  return variants.map((given) => {
+// Two runs on one card each send the whole list: a run that read an option or a state at a
+// version older than the card's would put back the drawing it replaced, so it is refused.
+// An option or a state already on the card is sent with the `version` the run read; one
+// it leaves out is gone only when it says so (`drop: true`, or `states: []`).
+function versioned(list, before, at) {
+  const stale = (m) => new DeskError(409, `${m} Read the card again and send what is there now.`);
+  const dropped = new Set(list.filter((x) => x.drop).map((x) => x.id));
+  for (const id of dropped) if (!before.some((x) => x.id === id)) throw bad(`there is no option ${id} to drop`);
+  const variants = list.filter((x) => !x.drop);
+  if (variants.length > 6) throw bad("a request has at most 6 options");
+  for (const o of before) if (!dropped.has(o.id) && !variants.some((x) => x.id === o.id)) throw stale(`${o.name} is on the card but not in what you sent; send it, or {id: "${o.id}", drop: true} to take it off.`);
+  for (const given of variants) {
     const old = before.find((x) => x.id === given.id);
-    const v = { ...given, stories: given.stories || old?.stories || null };
+    if (!old) continue;
+    if (given.read == null) throw stale(`${given.name} is on the card at version ${old.version || 1}; send the version you read.`);
+    if (given.read < (old.version || 1)) throw stale(`${given.name} is at version ${old.version} now; you read version ${given.read}.`);
+    if (!given.states || !given.states.length) continue;
+    for (const o of old.states || []) if (!given.states.some((x) => x.id === o.id)) throw stale(`${given.name}: the state ${o.name} is on the card but not in what you sent; send it, or states: [] to remove them all.`);
+    for (const st of given.states) {
+      const o = (old.states || []).find((x) => x.id === st.id);
+      if (!o) continue;
+      if (st.read == null) throw stale(`${given.name}: the state ${st.name} is on the card at version ${o.version || 1}; send the version you read.`);
+      if (st.read < (o.version || 1)) throw stale(`${given.name}: the state ${st.name} is at version ${o.version} now; you read version ${st.read}.`);
+    }
+  }
+  return variants.map(({ read, ...given }) => {
+    if (given.states) given.states = given.states.map(({ read: _, ...x }) => x);
+    const old = before.find((x) => x.id === given.id);
+    const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
+    const v = { ...given, stories: given.stories || old?.stories || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was) };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
-    if (old.asset === v.asset) return { ...v, version: old.version || 1, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
-    return { ...v, version: (old.version || 1) + 1, drawn: at, figma_url: v.figma_url || null,
+    if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
+    return { ...v, version: now, drawn: at, figma_url: v.figma_url || null,
+      history: [{ asset: old.asset, version: was, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
+  });
+}
+
+// A state is a copy of the whole option: drawn for an earlier version of it, it is out of date.
+export const staleStates = (v) => (v?.states || []).filter((x) => (x.of || 1) < (v.version || 1));
+
+// A state redrawn under its id gets the next version and keeps the one it replaces. `of` is
+// the option's version it was drawn for: a new or redrawn state is of the option as it is now,
+// an unchanged one keeps its own (one from before `of` was kept: the option's earlier version).
+function versionedStates(states, before, at, now, was) {
+  return states.map((given) => {
+    const old = before.find((x) => x.id === given.id);
+    if (!old) return { ...given, of: now, version: given.version || 1, history: given.history || [], drawn: given.drawn || at };
+    if (old.asset === given.asset) return { ...given, of: old.of || was, version: old.version || 1, history: old.history || [], drawn: old.drawn || at };
+    return { ...given, of: now, version: (old.version || 1) + 1, drawn: at,
       history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
   });
 }
@@ -1409,6 +1534,14 @@ function cleanQuestions(list) {
     if (suggested !== null && !options.includes(suggested)) throw bad("suggested must be one of the question's options");
     return { text: clean(q.text, 300, "question"), why: optText(q.why, 300, "why"), options, suggested };
   });
+}
+
+// What else the step's last item named (the option and the part whose states are drawn),
+// so an answer resumes the same work.
+function resumeOf(inbox, card, kind) {
+  const xs = Object.values(inbox).filter((i) => i.card === card && i.kind === kind && i.variant).sort((a, b) => a.created.localeCompare(b.created));
+  const last = xs[xs.length - 1];
+  return last ? { resume: { variant: last.variant, ...(last.part ? { part: last.part } : {}) } } : {};
 }
 
 function lastNote(inbox, card, kind) {
@@ -1507,7 +1640,9 @@ function cleanShotlist(list) {
 
 function cleanVariants(list, assets) {
   if (!Array.isArray(list)) throw bad("variants must be a list");
-  return list.slice(0, 6).map((v, i) => {
+  return list.slice(0, 12).map((v, i) => {
+    // An option the run takes off the card on purpose: `{id, drop: true}`.
+    if (v?.drop === true) return { id: String(v.id || "").replace(/[^a-z0-9-]/gi, "").slice(0, 20), drop: true };
     if (!own(assets, v.asset)) throw bad(`variant ${i + 1}: no asset ${v.asset}`);
     return {
       id: String(v.id || `v${i + 1}`).replace(/[^a-z0-9-]/gi, "").slice(0, 20),
@@ -1517,7 +1652,27 @@ function cleanVariants(list, assets) {
       asset: v.asset,
       figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
       stories: v.stories == null ? null : cleanCoverage(v.stories, i + 1),
+      // The version the run read (`version` as the card gave it): an older one is refused.
+      ...(Number.isInteger(v.version) ? { read: v.version } : {}),
+      // Leaving `states` out keeps the option's states from before; [] removes them.
+      ...(v.states === undefined ? {} : { states: cleanOptionStates(v.states, assets, i + 1) }),
     };
+  });
+}
+
+// Every state of a part of an option (docs/requests.md → Every state of a part): one
+// self-contained page per state, each its own drawing with its own versions and notes.
+const STATE_ID = /^[a-z0-9][a-z0-9-]{0,39}$/i;
+function cleanOptionStates(list, assets, n) {
+  if (list === null) return [];
+  if (!Array.isArray(list) || list.length > LIMITS.optionStates) throw bad(`variant ${n}: states is a list of at most ${LIMITS.optionStates}`);
+  const ids = new Set();
+  return list.map((x, i) => {
+    const id = String(x?.id || `s${i + 1}`);
+    if (!STATE_ID.test(id) || ids.has(id)) throw bad(`variant ${n}, state ${i + 1}: its id must be short and its own`);
+    ids.add(id);
+    if (!own(assets, x.asset)) throw bad(`variant ${n}, state ${i + 1}: no asset ${x.asset}`);
+    return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset, ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
   });
 }
 

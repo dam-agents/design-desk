@@ -18,7 +18,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    requests count; a closed one's prototype waits for its expiry teardown.
    `create_environment` missing from your tools → comment that the owner must turn on
    Environments, tell the operator, stop.
-   **Ask first** — an item with `ask_first` (the designer left "Ask me first" ticked when pressing Build):
+   **Ask first** — an item with `ask_first` (the designer left "Ask me first" ticked in the final check before Build it live):
    list the design decisions the option and its comments leave open (a missing state, copy,
    a small screen…). None → build. Some → one form, `design desk ask C-<n> <file> --step build
    --form` with `{text, questions: [{text, why, options, suggested}]}`: at most 6 questions
@@ -29,10 +29,18 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree C-<n> <repo>` → a checkout of the
    default branch on `design-desk/c<n>-<slug>`, printed as JSON with its path and base.
    An existing worktree of the card is reused (an update).
-3. **Change the code.** Implement the option the item's note names (the person picked it
-   when they pressed Build), at its latest version with every applied note — in the
-   product's own components, styles and copy, following the profile's `PROFILE.md`. An item
-   without a note takes the card's `chosen`, the option a designer picked; without one, ask
+3. **Change the code.** Implement what the person checked before pressing **Build it live**:
+   the card's `live_pick` — the option (`variant`, also the item's `variant` and note), at the
+   `version` they looked at, and every one of its `states` at the version listed (each state
+   the code can show: hover, disabled, loading, an error…) — in the product's own components,
+   styles and copy, following the profile's `PROFILE.md`. The store refuses a build when the option or
+   any of its states is newer than what the check showed (a page from before the final check
+   sends no version and gets no such refusal), so `live_pick` is the latest when
+   the item is created; build
+   from its exact files (`live_pick.asset`, `states[].asset`, `design desk fetch`), not a newer
+   version that arrived since. A card with no `live_pick` (a build asked for before the final
+   check existed) builds the option its note names, at its latest version; a closed request's
+   `live_pick` is gone. An item without a note takes the card's `chosen`, the option a designer picked; without one, ask
    which option (`design desk ask C-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
    `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
@@ -49,7 +57,8 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    (an install takes many minutes), then poll `proto.sh run C-<n> status` until it says
    `running` or `failed`. The profile's `bin/env up` installs the worktree into the
    Environment over the Environment Link (`ssh env-c<n>`) and seeds the demo data.
-7. **Publish.** `list_environments` gives the endpoint address of `engine.open_endpoint`;
+7. **Publish.** The card already says what goes live (`live_pick`); say it once more in the
+   build's comment ("<option>, version <n>, with <k> states"). `list_environments` gives the endpoint address of `engine.open_endpoint`;
    `proto.sh run C-<n> credentials` gives the demo sign-in. Set `prototype: {state: "live",
    url, login: {user, password, hint}, env: "c<n>", expires, …}` and `status: testing`.
    Capture two or three screens of the changed screen: `proto.sh run C-<n> tunnel` prints
@@ -68,7 +77,9 @@ for the operator only when the operator is debugging it; otherwise delete it.
 A `build` item on a card whose prototype is `live` is an update: the same worktree, the new
 change, the guard again, then `proto.sh run C-<n> update` (the profile rebuilds only what
 changed — for a UI change, the UI) instead of `up`. Then capture the same screens as step 7 and
-answer the item's note with one comment showing what the update did. The before pictures are
+answer the item's note with one comment, the update's only comment: it names what went live
+from the card's `live_pick` ("<option>, version <n>, with <k> states", as step 7 says it) and
+shows what the update did. The before pictures are
 the card's newest prototype `screens` of each screen, from step 7 or the last update, taken
 before this update: each goes in by its `asset` with `stage: before`. The new captures are
 the after pictures: each goes in as a `file` with `stage: after`. Both pictures of one screen
