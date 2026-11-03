@@ -602,6 +602,8 @@ export class Store {
     const statesMoved = live && seen && ((live.states || []).length !== Object.keys(seen).length || (live.states || []).some((x) => Number(seen[x.id]) !== (x.version || 1)));
     if (live && version != null && (Number(version) !== (live.version || 1) || statesMoved))
       throw new DeskError(409, `A newer version of ${live.name} or one of its states arrived while you looked. Look at it again before it goes live.`);
+    const stale = live ? staleStates(live) : [];
+    if (stale.length) throw new DeskError(409, `${stale.map((x) => x.name).join(", ")} of ${live.name} ${stale.length === 1 ? "was" : "were"} drawn for an earlier version of it. Have the states drawn again first.`);
     if (action.startsWith("slack-") && !(c.variants || []).length) throw bad("There are no design options to share yet.");
     if (action === "slack-share" && (c.polls || []).some((x) => x.state === "open")) throw bad("These options are already being voted on in Slack.");
     if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");
@@ -630,7 +632,8 @@ export class Store {
     if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even as a small change.`);
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
-    if (action === "close") { c.status = "declined"; delete c.call_suggestion; }
+    // A closed request has nothing going live.
+    if (action === "close") { c.status = "declined"; delete c.call_suggestion; delete c.live_pick; }
     // Draw design options says how many; the request keeps it for its later redraws.
     if (action === "explore" && count !== null) {
       const n = cleanCount(count);
@@ -650,7 +653,7 @@ export class Store {
       item.variant = live.id; item.version = live.version || 1;
       // The card says which option, at which version and with which states, goes live.
       c.live_pick = { variant: live.id, name: live.name, version: live.version || 1, asset: live.asset,
-        states: (live.states || []).map((x) => ({ id: x.id, name: x.name, part: x.part, version: x.version || 1, asset: x.asset })), by: person(who), at: this.clock() };
+        states: (live.states || []).map((x) => ({ id: x.id, name: x.name, part: x.part, version: x.version || 1, of: x.of || 1, asset: x.asset })), by: person(who), at: this.clock() };
     }
     // Pictures of the options posted to Slack, not a vote (the slack-polls skill → Send).
     if (action === "slack-send") item.scope = "send";
@@ -1403,22 +1406,28 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 function versioned(variants, before, at) {
   return variants.map((given) => {
     const old = before.find((x) => x.id === given.id);
-    const v = { ...given, stories: given.stories || old?.stories || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at) };
+    const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
+    const v = { ...given, stories: given.stories || old?.stories || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was) };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
-    if (old.asset === v.asset) return { ...v, version: old.version || 1, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
-    return { ...v, version: (old.version || 1) + 1, drawn: at, figma_url: v.figma_url || null,
-      history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
+    if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
+    return { ...v, version: now, drawn: at, figma_url: v.figma_url || null,
+      history: [{ asset: old.asset, version: was, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
   });
 }
 
-// A state redrawn under its id gets the next version and keeps the one it replaces.
-function versionedStates(states, before, at) {
+// A state is a copy of the whole option: drawn for an earlier version of it, it is out of date.
+export const staleStates = (v) => (v?.states || []).filter((x) => (x.of || 1) < (v.version || 1));
+
+// A state redrawn under its id gets the next version and keeps the one it replaces. `of` is
+// the option's version it was drawn for: a new or redrawn state is of the option as it is now,
+// an unchanged one keeps its own (one from before `of` was kept: the option's earlier version).
+function versionedStates(states, before, at, now, was) {
   return states.map((given) => {
     const old = before.find((x) => x.id === given.id);
-    if (!old) return { ...given, version: given.version || 1, history: given.history || [], drawn: given.drawn || at };
-    if (old.asset === given.asset) return { ...given, version: old.version || 1, history: old.history || [], drawn: old.drawn || at };
-    return { ...given, version: (old.version || 1) + 1, drawn: at,
+    if (!old) return { ...given, of: now, version: given.version || 1, history: given.history || [], drawn: given.drawn || at };
+    if (old.asset === given.asset) return { ...given, of: old.of || was, version: old.version || 1, history: old.history || [], drawn: old.drawn || at };
+    return { ...given, of: now, version: (old.version || 1) + 1, drawn: at,
       history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
   });
 }

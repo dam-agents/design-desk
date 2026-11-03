@@ -144,7 +144,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its
-    new asset: the Desk numbers the version and keeps the earlier one. Then answer each note
+    new asset: the Desk numbers the version and keeps the earlier one. An option with `states` gets
+    every state redrawn in the same upsert (Every state of a part, step 5). Then answer each note
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
@@ -201,8 +202,14 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    are grouped by it). Keep the option's earlier states of other parts in the list; leaving
    `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
    version; the Desk keeps the earlier one.
-5. A later `revise` of the option that changes the part redraws its states in the same run, so
-   what goes live and its states agree.
+5. A state is a copy of the whole option, so a later `revise` of the option redraws every one
+   of its states in the same run (the same ids), whatever part the notes touched. The store
+   records the option version each state was drawn for (`of`); a build refuses an option whose
+   states are older than it, and the final check says which.
+   **Two runs on one card** (a `states` and a `revise` dispatched to two sessions): just before
+   its upsert, each run reads the card again (`design desk card C-<n>`) and sends every option
+   with its *current* asset and states, changing only its own; never the copy it read at the
+   start, or it puts back an older drawing.
 6. `design desk done I-<n> --session <id> --outcome "drew <k> states of <part>"`.
 
 ## UI bugs

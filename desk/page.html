@@ -1542,7 +1542,7 @@
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
-      <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}${(x.states || []).length ? ` <span class="chip">${plural(x.states.length, "state", "states")}</span>` : ""}${c.live_pick?.variant === x.id ? ` <span class="chip info">▶ Goes live</span>` : ""}</button>`).join("")}</div>
+      <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}${(x.states || []).length ? ` <span class="chip">${plural(x.states.length, "state", "states")}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info">▶ Goes live</span>` : ""}</button>`).join("")}</div>
       ${againstBox(c, v.id)}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : vs.length > 1 ? `<p class="hint" style="max-width:var(--measure)">Votes and comments help; a designer picks the winner.</p>` : ""}
       <div class="vbar">
@@ -1840,6 +1840,8 @@
     const changes = open.filter((n) => n.kind === "change"), comments = open.length - changes.length;
     const changing = (c.waiting || []).some((w) => w.kind === "revise" && w.state === "claimed");
     const drawing = (c.waiting || []).some((w) => w.kind === "states");
+    // A state is a copy of the whole option: one drawn for an earlier version is out of date.
+    const stale = sts.filter((x) => (x.of || 1) < (v.version || 1));
     const looked = (id) => S.ws.looked.has(`${v.id}|${id || ""}`);
     const seen = [null, ...sts.map((x) => x.id)].filter(looked).length;
     const row = (id, name, sub, ver) => `<li><button class="btn small" data-ws-state="${esc(id || "")}" aria-current="${(S.ws.state || null) === id}">${looked(id) ? "✓" : "○"} ${esc(name)}${sub ? ` <span class="hint" style="display:inline">${esc(sub)}</span>` : ""}${ver > 1 ? ` <span class="chip">version ${ver}</span>` : ""}</button></li>`;
@@ -1852,9 +1854,10 @@
       ${changing ? `<div class="working"><span class="spin"></span><div>Design Desk is changing this option right now. Wait for the new version; it appears here by itself.</div></div>` : ""}
       ${drawing ? `<div class="working"><span class="spin"></span><div>Design Desk is still drawing states of this request; they appear here as they are drawn.</div></div>` : ""}
       ${changes.length && !changing ? `<p><span class="chip warn">${plural(changes.length, "note is", "notes are")} not worked in yet</span> <span class="hint" style="display:inline">Build now and ${changes.length === 1 ? "it is" : "they are"} left out, or wait for Design Desk.</span></p>` : ""}
+      ${stale.length ? `<p><span class="chip warn">${esc(stale.map((x) => x.name).join(", "))}: drawn for an earlier version</span> <span class="hint" style="display:inline">They still show the option as it was. Design Desk redraws them when it changes the option; press Draw every state to have them drawn again now.</span></p>` : ""}
       ${comments ? `<p class="hint">${plural(comments, "open comment", "open comments")} on this option. Comments are not built in unless someone presses Work it in.</p>` : ""}
       <label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="ws-ask-first" data-ws-ask ${askFirst ? "checked" : ""} style="width:auto;margin-top:3px" /> <span>Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)</span></label>
-      <div class="actions" style="margin:0"><button class="btn primary" data-ws-build ${changing ? "disabled" : ""}>Build it live</button><button class="btn" data-ws-edit>Make more changes</button>${(c.variants || []).length > 1 ? `<button class="btn" data-act="build">Pick another option</button>` : ""}</div>
+      <div class="actions" style="margin:0"><button class="btn primary" data-ws-build ${changing || stale.length ? "disabled" : ""}>Build it live</button><button class="btn" data-ws-edit>Make more changes</button>${(c.variants || []).length > 1 ? `<button class="btn" data-act="build">Pick another option</button>` : ""}</div>
       <p class="hint">Design Desk builds exactly this version, with made-up data; the first build can take up to an hour. The request then says which option and version is live.</p>`;
   }
 

@@ -37,7 +37,9 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    any of its states is newer than what the check showed, so `live_pick` is the latest when
    the item is created; build
    from its exact files (`live_pick.asset`, `states[].asset`, `design desk fetch`), not a newer
-   version that arrived since. An item without a note takes the card's `chosen`, the option a designer picked; without one, ask
+   version that arrived since. A card with no `live_pick` (a build asked for before the final
+   check existed) builds the option its note names, at its latest version; a closed request's
+   `live_pick` is gone. An item without a note takes the card's `chosen`, the option a designer picked; without one, ask
    which option (`design desk ask C-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
    `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
