@@ -40,8 +40,9 @@ exactly what the prototype changed, and what it could not change.
    - `idea` and `proposal` — per `handoff`: `desk` (nothing more), `issue` or `draft-pr`.
 
    The skill sets `spec.issue_url` or `spec.pr_url`.
-5. Record the approval as a decision (`design desk decision`): the impact's concept, what
-   was approved in one sentence, who approved it, and the card as its source.
+5. Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,
+   what was approved in one sentence, `origin.kind: approval`, the approver as `author`; the
+   decisions it was approved against (`overruled`) as its `conflicts`.
 6. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
    so the developer can open it; it no longer holds a place, and the expiry pass tears it
    down once the date passes ([prototype.md](prototype.md) → Expiry).

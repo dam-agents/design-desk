@@ -63,8 +63,9 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    the person to ask.
    - `impact` — where else the same thing shows up and what the change touches, from earlier
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
-     the PR records ("per week because the limit resets weekly") becomes a decision
-     (`design desk decision`) with the PR as its source.
+     the PR records ("per week because the limit resets weekly") becomes a decision with the
+     PR as its origin; a change that goes against one in force gets `conflicts`
+     ([desk.md](desk.md) → Decisions).
    - `attention` — whether a designer should look at it, and why ([desk.md](desk.md) →
      Needs a designer).
 8. **Publish.** Upload each screen: `design desk asset <file> --kind screen --name <name>`

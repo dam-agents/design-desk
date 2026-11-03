@@ -78,6 +78,50 @@ served by the Desk server through the platform's Artifact API relay.
   platform's: its share page forwarding the fragment to the frame. Keep the number in every
   message until then.
 
+## Decisions
+
+Every decision the team made about the product is one record `D-<n>` on Product →
+Decisions: `text`, `why`, `concepts`, **who decided** (`author` — a person, never Design Desk),
+**where** (`origin`, with a link), `at`, and whether it is **in force** or **revoked**. `#D-12`
+and `D-12` in text link to it as to a card (Links to an item).
+
+- **Recording**: check `design desk decisions --concept <c>` first (one already there is
+  cited, never recorded twice), then `design desk decision <file>` with `{concepts, text,
+  why, author: {name, login, email}, origin: {kind, label, url, card, thread, message}, at,
+  replaces, conflicts}`. With no person who decided it, record nothing: write what you found
+  on the card. Origins:
+
+  | `origin.kind` | When | `author` | Link |
+  | --- | --- | --- | --- |
+  | `pr` | a reason a PR records ([watch.md](watch.md)), a deliberate behaviour research finds | the PR's author, or who wrote the note | the PR |
+  | `issue` | an issue or its comment that settles a question | who wrote it | the issue or comment |
+  | `commit`, `doc` | research finds it only in a commit or an architecture page | its author (`git log`) | the commit or page |
+  | `slack` | a message in a request's or council's thread that settles something | who wrote it | its permalink |
+  | `desk` | a comment a designer marked **Record as a decision** (`decisions_due`) | the comment's author | `card`, `thread`, `message` |
+  | `call` | taken in the next call (The next call) | who decided, as the designer said | the card |
+  | `approval` | a design approved ([handoff.md](handoff.md)) | the approver | the card |
+  | `chat` | the operator says so in chat | the operator | none needed |
+
+- **Citing**: whatever rests on a decision names its number — a card's `decisions: ["D-3"]`,
+  `impact.decisions[].id`, a section, an answer, a spec, a Slack reply, the digest.
+- **Conflicts**: before writing a triage verdict, options, a change card, an issue's sketch or
+  a decision, read the ones in force for its concepts (`design desk decisions --concept <c>
+  --state active`). Each one it goes against goes in `conflicts: [{decision, why, variant}]`
+  on the card (`variant`: the option it concerns) or on the new decision. The page warns with
+  a link, the card waits for a designer, and approving it takes a designer's explicit
+  confirmation (the store keeps `overruled`). Never reshape a design silently to dodge one.
+- **Revoking**: a designer or lead revokes one on its page with a reason (and what replaces
+  it), or restores it. A new decision that reverses an earlier one names it in `replaces`; the
+  store revokes it as "Replaced by D-<n>". A person revoking one in Slack, the call or chat:
+  `design desk decision-revoke D-<n> <file>` with `{reason, by, origin, replaced_by}`. Design
+  Desk never revokes on its own judgement: what goes against a decision records the conflict
+  and asks in the card's thread whether `D-<n>` still holds.
+- **`decisions_due`**: the item names a `thread` and its `message` (`design desk item
+  I-<n>`; the designer's wording in `note`). Claim it; record it (`origin.kind: desk`, the
+  message's author, concepts from the card, conflicts checked); answer in the thread
+  "Recorded as D-<n>", with any conflict; done. A message that decides nothing: say so in the
+  thread, done `not recorded: <why>`.
+
 ## Roles
 
 The server reads the role from `## Desk people` by the email the platform verified; the
@@ -163,7 +207,7 @@ The team meets regularly; the Desk keeps the list of what to show at the next ca
 - After the call a designer presses **Call is over — clear the list**: every item becomes
   `presented` with the date. Decisions taken in the call go into the cards' threads (a person
   writes them, or you write what they told you in chat, attributed), and each one is recorded
-  with `design desk decision`, the card as its source.
+  with `origin.kind: call` (Decisions).
 
 ## Needs a designer
 

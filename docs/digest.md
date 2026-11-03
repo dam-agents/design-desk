@@ -11,7 +11,7 @@ own store and stays silent in a quiet week, or once the week's digest exists.
 
 `period` (`2026-W44`), and from the last 7 days: `changes` (with a picture each, when it has
 one), `requests_new`, `handed_off`, `waiting` (on the next call), `polls` (open, or closed
-this week with their result) and `decisions`; from the last 30 days: `feedback`, the bugs,
+this week with their result), `decisions` (with author and conflicts) and `revoked`; from the last 30 days: `feedback`, the bugs,
 automated test findings, comments, concerns and questions people left.
 
 ## Themes in the feedback
@@ -33,12 +33,13 @@ automated test findings, comments, concerns and questions people left.
 - `title` — "Week 44: <what the week was about, in a few words>";
 - `summary` — two sentences: the week in plain words;
 - `sections`, each only with content: **Shipped** (each change's title, one line on what a
-  person notices), **Decided**, **Waiting for a decision**, **Votes** (each with its result),
+  person notices), **Decided** (each decision by its number and who decided it; the ones
+  revoked this week too, with why), **Waiting for a decision**, **Votes** (each with its result),
   **What people said** (the themes, most pieces first), **Coming up** (prototypes live,
   requests close to a decision);
 - `screens` — up to four pictures of the week's changes, their "after" pictures first.
 
-Refer to everything by its title, a card also by its number, which the Desk links
+Refer to everything by its title, a card or a decision also by its number, which the Desk links
 ([desk.md](desk.md) → Links to an item); never another id, never a person's name from feedback.
 
 ## Slack (`digest: slack`)

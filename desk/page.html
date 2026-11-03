@@ -155,6 +155,10 @@
   @keyframes pulse { 50% { opacity: .25; } }
   .next { padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); }
   .next b { display: block; margin-bottom: 2px; }
+  /* A design, a change or a decision that goes against a decision in force. */
+  .against { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); max-width: var(--measure); margin: 10px 0; }
+  .against p { margin: 2px 0; }
+  .revoked-text { text-decoration: line-through; color: var(--muted); }
   .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
   .asks .reply { border: 0; padding: 8px 0 0; }
   .asks fieldset.q { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; display: grid; gap: 4px; }
@@ -263,7 +267,7 @@
     <h1 id="title">Design Desk</h1>
     <nav id="nav"></nav>
     <div class="grow"></div>
-    <input class="goto" id="goto" placeholder="Go to C-12" aria-label="Go to an item: its number, like C-12, or its link" title="Type an item's number, like C-12, or paste its link, and press Enter" autocomplete="off" spellcheck="false" />
+    <input class="goto" id="goto" placeholder="Go to C-12" aria-label="Go to an item: its number, like C-12 or D-3, or its link" title="Type an item's number, like C-12, a decision's, like D-3, or paste its link, and press Enter" autocomplete="off" spellcheck="false" />
     <span class="me" id="me"></span>
     <button class="btn theme" id="theme" type="button"></button>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
@@ -367,6 +371,7 @@
     request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
     "follow-up": "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
     explore: "Drawing two or three design options.",
+    decision: "Recording a decision from a comment, with who said it and a link back to it.",
     revise: "Changing the design as you asked.",
     build: "Building the live prototype: a private copy of the product with this design. The first one can take up to an hour; you can close this page.",
     handoff: "Writing the developer spec and sending it on.",
@@ -416,6 +421,7 @@
     [["queue"], "Choose what the next call presents"],
     [["change"], "Note changes on a product element"],
     [["handle"], "Mark changes handled"],
+    [["decide"], "Record a decision from a comment, revoke and restore decisions"],
     [["add"], "Add a missing screen or part to Product"],
     [["history"], "Draw how a screen or part looked before"],
     [["draw"], "Draw an issue: how it looks now and a sketch of how it could look"],
@@ -434,7 +440,7 @@
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of New and Requests, shows only what waits for a designer's decision, each with why.</p>
-<p>Every item has a number, in grey by its title, like C-12. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Go to</b> at the top opens an item by its number or its link.</p>
+<p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Go to</b> at the top opens an item by its number or its link.</p>
 <p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
 <p>Each row in New and Requests shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
 <h3>Changing a design</h3>
@@ -479,7 +485,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "new", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "new", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, seen: {} } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -511,6 +517,8 @@
     return html.split(/(<a\b[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>|<[^>]*>)/).map((part, i) => i % 2 ? part : part
       // Another item on the Desk, by its number (docs/desk.md → Links to an item).
       .replace(/(?<![\w#/.-])C-\d+\b/g, (m) => S.cards.some((x) => x.id === m) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
+      // A decision, by its number (docs/desk.md → Decisions).
+      .replace(/(?<![\w#/.-])D-\d+\b/g, (m) => `<a href="#${m}" data-ref="${m}">${m}</a>`)
       .replace(/(?<![\w./-])([\w.-]+\/[\w.-]+)#(\d+)\b/g, (m, r, n) => a(`${host}/${r}/issues/${n}`, m))
       .replace(/(?<![\w&/#])(?:(PR|pull request|issue)\s+)?#(\d+)\b/gi, (m, kind, n) => base ? a(`${base}/${/^p/i.test(kind || "") ? "pull" : "issues"}/${n}`, m) : m)).join("");
   }
@@ -654,8 +662,8 @@
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
   const backBar = () => {
     const decisions = S.tab === "product" && S.productFilter === "decisions";
-    const link = !decisions && S.card && itemLink(S.card);
-    return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(S.card.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
+    const it = decisions ? S.decision : S.card, link = it && itemLink(it);
+    return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(it.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
   };
   function renderNav() {
     const unseen = S.cards.filter((c) => (c.kind === "change" || c.kind === "digest") && !c.acked).length;
@@ -719,11 +727,12 @@
     product: { about: "a map of the product: its screens, its parts and the team's decisions",
       see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
         "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in.",
-        "<b>Decisions</b>: everything the team decided, searchable.",
+        "<b>Decisions</b>: everything the team decided, each with its number (D-3), who decided it and where; revoked ones too.",
         "Earlier looks of a screen or part: step back through them, or put one next to now."],
       can: [["Switch between <b>Screens</b>, <b>Elements</b> and <b>Decisions</b>."],
         ["<b>Ask about this screen</b>: why it works the way it does.", "ask"],
         ["<b>+ Add</b> a screen or part that is missing.", "add"],
+        ["<b>Revoke</b> a decision that no longer holds, or restore it.", "decide"],
         ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
       steps: ["Pick Screens, Elements or Decisions.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
     people: { about: "who is on this Desk, and what each role can do",
@@ -832,6 +841,7 @@
       if (c.type === "bug") out.push(`<span class="chip bad">🐛 Broken</span>`);
       else if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
+    if (c.conflicts) out.push(`<span class="chip warn" title="Open it to see which decision and why">⚠ Goes against a decision</span>`);
     return out.join("");
   }
 
@@ -913,21 +923,58 @@
       <div class="roles">${roles}</div>`;
   }
 
-  // ---------- decisions ----------
+  // ---------- decisions (docs/desk.md → Decisions) ----------
+  const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The next call", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
+  const named = (a) => a ? esc(a.name || a.login || a.email || "someone") : "";
+  const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
     const list = $("#list");
-    const rows = S.decisions.map((d) => `<button class="row" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span>${esc(d.text)}</span></div>
-      <div class="meta"><span class="chip">${esc(day(d.at))}</span>${d.concepts.slice(0, 3).map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></button>`).join("");
-    list.innerHTML = `${filters}<input id="decision-q" placeholder="Search decisions…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery ? "No decision matches." : "No decisions recorded yet. Approved designs, outcomes of the next call and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    const states = `<div class="filters">${[["active", "In force"], ["revoked", "Revoked"], ["", "All"]].map(([k, l]) => `<button class="btn small ${S.decisionState === k ? "on" : ""}" data-dstate="${k}">${esc(l)}</button>`).join("")}</div>`;
+    const rows = S.decisions.map((d) => `<button class="row" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text)}</span>${num(d)}</div>
+      <div class="meta"><span class="chip">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip warn">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip">by ${named(d.author)}</span>` : ""}${d.concepts.slice(0, 2).map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></button>`).join("");
+    list.innerHTML = `${filters}${states}<input id="decision-q" placeholder="Search decisions, or D-3…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the next call, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
-    try { S.decisions = (await api("GET", `/api/decisions?q=${encodeURIComponent(S.decisionQuery)}`)).decisions || []; } catch { S.decisions = []; }
+    try { S.decisions = (await api("GET", `/api/decisions?q=${encodeURIComponent(S.decisionQuery)}&state=${encodeURIComponent(S.decisionState)}`)).decisions || []; } catch { S.decisions = []; }
+  }
+  // One decision, read with everything that cites it or goes against it.
+  async function openDecision(id) {
+    let r;
+    try { r = await api("GET", `/api/decisions/${encodeURIComponent(id)}`); } catch { toast(`There is no decision numbered ${id} on the Desk.`); return false; }
+    S.tab = "product"; S.productFilter = "decisions"; S.card = null; S.ws.open = false;
+    S.decision = { ...r.decision, refs: r.refs || [] };
+    if (!S.decisions.some((x) => x.id === id)) { S.decisionState = ""; S.decisionQuery = ""; }
+    await loadDecisions();
+    renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
+    return true;
+  }
+  function originLine(o) {
+    if (!o) return `<p class="hint">Where it was decided was not recorded.</p>`;
+    const card = o.card && S.cards.find((x) => x.id === o.card);
+    const where = o.url ? `<a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.label || ORIGIN_KIND[o.kind] || "source")} ↗</a>`
+      : card ? `<button class="anchor" data-card="${esc(card.id)}">${esc(o.label || card.title)} ${esc(card.id)}</button>` : esc(o.label || "");
+    return `<p><b>${esc(ORIGIN_KIND[o.kind] || "Source")}</b>${where ? ` — ${where}` : ""}${o.url && card ? ` · on <button class="anchor" data-card="${esc(card.id)}">${esc(card.id)}</button>` : ""}</p>`;
   }
   function renderDecision(d) {
-    return `${backBar()}<h2>${txt(d.text)}</h2>
-      <div class="sub"><span>${esc(day(d.at))}</span>${d.concepts.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>
+    const HOW = { conflicts: "goes against it", cites: "follows it", replaces: "replaces it" };
+    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, r.title, r.status === "revoked") : `<button class="anchor" data-card="${esc(r.id)}">${esc(r.title)} ${esc(r.id)}</button>`} — <span class="${r.how === "conflicts" ? "chip warn" : "chip"}">${esc(HOW[r.how] || r.how)}</span></li>`).join("");
+    const against = (d.conflicts || []).filter((x) => x.status === "active");
+    const rv = d.revoked;
+    return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}</h2>
+      <div class="sub"><span>${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.concepts.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>
+      ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
+      ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
+      <div class="actions">${can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : ""}</div>
+      <h3>Who decided</h3><p>${d.author ? `<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` <span class="sub" style="display:inline">(${esc(d.author.login)})</span>` : ""}` : `<span class="hint">Not recorded.</span>`}</p>
+      <h3>Where it was decided</h3>${originLine(d.origin)}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
-      ${d.source ? `<h3>Where it was decided</h3><p>${srcLink(d.source) || "—"}</p>` : ""}`;
+      ${(d.replaces || []).length ? `<h3>It replaces</h3><ul>${d.replaces.map((id) => `<li>${decRef(id)}</li>`).join("")}</ul>` : ""}
+      <h3>What refers to it</h3>${refs ? `<ul>${refs}</ul>` : `<p class="hint">Nothing on the Desk refers to it yet.</p>`}`;
+  }
+  // The decisions in force a card goes against: on the card, and on the option it names.
+  function againstBox(c, variant = null) {
+    const xs = (c.conflicts || []).filter((x) => x.status === "active" && (variant ? x.variant === variant : !x.variant));
+    return xs.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("");
   }
 
   // ---------- the next call ----------
@@ -1086,7 +1133,7 @@
       const state = th.state === "resolved" ? `<span class="chip ok">done</span>` : th.state === "answered" ? `<span class="chip">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}">${esc(name)}</span>${anchor}${state}</div>
-        ${th.messages.map((m) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${md(m.text)}</div>`).join("")}
+        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
         ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`}
       </article>`;
@@ -1109,6 +1156,7 @@
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${attentionLine(c)}
+      ${againstBox(c)}
       <div class="actions">
         <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Marks it seen for you: it leaves Not seen yet and Needs a designer; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
         ${can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : ""}
@@ -1137,6 +1185,7 @@
       <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub"><span class="chip ${c.bucket === "sprint" ? "info" : ""}">${esc(BUCKET[c.bucket] || "Backlog")}</span>${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip">Closed</span>`}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${againstBox(c)}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
       ${open ? `<div class="actions">
         ${can("draw") && !busy && !sketch.length ? `<button class="btn primary" data-act="draw">Draw it</button>` : ""}
@@ -1388,6 +1437,7 @@
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
       <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)} <span class="chip">${esc(FIDELITY[x.fidelity] || x.fidelity)}</span>${(x.version || 1) > 1 ? ` <span class="chip">version ${x.version}</span>` : ""}</button>`).join("")}</div>
+      ${againstBox(c, v.id)}
       ${v.rationale ? `<p class="hint" style="max-width:var(--measure)"><b>When this one wins:</b> ${esc(v.rationale)}</p>` : ""}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : vs.length > 1 ? `<p class="hint" style="max-width:var(--measure)">Votes and comments help; a designer picks the winner.</p>` : ""}
       <div class="vbar">
@@ -1444,6 +1494,7 @@
       ${renderSteps(c)}
       ${renderStatus(c)}
       ${attentionLine(c)}
+      ${againstBox(c)}
       <div class="section">${r.type === "bug" ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.goal ? `${r.type === "bug" ? "<h4>What should happen</h4>" : ""}${md(r.goal)}` : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""}${r.screen ? `<p class="hint">Screen: ${esc(r.screen)}</p>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(c.screens)}
       ${renderVerdict(c)}
@@ -1731,6 +1782,8 @@
   // number alone (12, c12) or a whole link.
   function target(text) {
     const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
+    const d = h.match(/^D\s*-?\s*(\d+)$/i);
+    if (d) return { tab: "product", id: null, decision: `D-${d[1]}` };
     const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)$/i);
     if (m) return { tab: TABS[m[1]?.toLowerCase()] ? m[1].toLowerCase() : null, id: `C-${m[2]}` };
     return TABS[h.toLowerCase()] ? { tab: h.toLowerCase(), id: null } : null;
@@ -1740,6 +1793,7 @@
   const HOME = { change: "new", digest: "new", request: "requests", issue: "issues", screen: "product", element: "product" };
   async function goTo(to) {
     $("#present")?.remove();
+    if (to.decision) return openDecision(to.decision);
     if (!to.id) { await showTab(to.tab); return true; }
     if (!S.cards.some((x) => x.id === to.id)) await refreshList();
     const c = S.cards.find((x) => x.id === to.id);
@@ -1796,7 +1850,10 @@
     if (name === "approve") {
       const to = HANDOFF_TO[S.me?.handoff?.[c.request?.type || "idea"]] || HANDOFF_TO.desk;
       const fav = favourite(c);
-      res = await ask({ title: "Approve a design", body: `Design Desk writes the developer spec for the option you pick and sends it to ${to}. Once sent, it can't be taken back.`, ok: "Approve", choices: options.length ? options : null, pick: fav?.id || null, send: (a) => post(a.choice || "") });
+      const against = [...new Set((c.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
+      res = await ask({ title: "Approve a design", body: `Design Desk writes the developer spec for the option you pick and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: "Approve", choices: options.length ? options : null, pick: fav?.id || null,
+        ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
+        send: (a) => post(a.choice || "", against.length ? { overrule: a.check } : {}) });
       if (!res) return;
     }
     if (name === "build") {
@@ -1877,9 +1934,29 @@
     const ds = el.dataset;
     if (ds.tab) { e.preventDefault(); await showTab(ds.tab); return; }
     if (ds.ref) { e.preventDefault(); await goTo(target(ds.ref)); return; }
-    if ("copyLink" in ds) { await copyLink(S.card); return; }
+    if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
-    if (ds.decision) { S.decision = S.decisions.find((x) => x.id === ds.decision) || null; renderList(); renderDetail(); return; }
+    if (ds.decision) { await openDecision(ds.decision); return; }
+    if (ds.dstate !== undefined) { S.decisionState = ds.dstate; S.decision = null; await loadDecisions(); renderList(); renderDetail(); return; }
+    if (ds.decide) {
+      const [th, i] = ds.decide.split(":");
+      const r = await ask({ title: "Record as a decision", body: "Design Desk writes it up as a numbered decision, with who said it and a link back to this comment, and checks it against the decisions already in force.", ok: "Record it", note: "How should it read? (optional)",
+        send: (a) => api("POST", `/api/threads/${th}/decision`, { message: Number(i), note: a.note }) });
+      if (!r) return;
+      toast("Design Desk is recording it; the comment shows its number once it is done.");
+      await openCard(S.card.id); return;
+    }
+    if (ds.revoke) {
+      const d = S.decision;
+      // Another decision in force about the same thing can be the one that replaces it.
+      const others = S.decisions.filter((x) => x.id !== d.id && x.status === "active" && x.concepts.some((k) => d.concepts.includes(k))).slice(0, 3);
+      const r = await ask({ title: `Revoke ${d.id}?`, body: "It stays on the Desk, crossed out, with your reason; what refers to it stops warning.", ok: "Revoke it", note: "Why does it no longer hold?",
+        choices: others.length ? [{ id: "", name: "Nothing replaces it" }, ...others.map((x) => ({ id: x.id, name: `Replaced by ${x.id}`, hint: x.text }))] : null, pick: "",
+        send: (a) => api("POST", `/api/decisions/${d.id}/revoke`, { reason: a.note, replaced_by: a.choice || null }) });
+      if (!r) return;
+      await refreshList(); await openDecision(d.id); return;
+    }
+    if (ds.restore) { await api("POST", `/api/decisions/${ds.restore}/restore`, {}); await refreshList(); await openDecision(ds.restore); return; }
     if (ds.card) {
       await openCard(ds.card);
       if (ds.madeBy) { showBeforeAfter(S.card, ds.madeBy); renderDetail(); }
