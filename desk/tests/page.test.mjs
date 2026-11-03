@@ -678,6 +678,45 @@ test("a change shows its age and gets handled, pictures step through, the form a
   }
 });
 
+// A request's page: what was asked, with the pictures a person pasted, boxed apart from
+// what Design Desk made; a link to an issue shows its preview on hover, on its row too.
+test("a request's brief sits apart from Design Desk's part; an issue link previews the issue", async (t) => {
+  const cards = `const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", summary: "Nobody knows what an agent costs.", needs: ["A spend column in the agents list"],
+    source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41" } };
+  const made = { id: "r9", kind: "request", title: "Spend column options", status: "triage", from: "is1", by: { email: "lead@example.com" } };
+  const full = { ...made, request: { type: "feature", problem: "Show the spend.", from: "is1", screen: "Agents → list" }, threads: [],
+    screens: [{ asset: "a1", caption: "", source: "person" }, { asset: "a2", caption: "How it looks now", source: "instance" }] };`;
+  const bridge = BRIDGE.replace("const digest =", `${cards}\nconst digest =`)
+    .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, made]")
+    .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/r9" ? { card: full }\n    : path === "/api/cards/ch1"');
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.waitForSelector('[data-tab="requests"]');
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r9"]');
+    await desk.waitForSelector("#detail .brief");
+    assert.match(await desk.textContent("#detail .brief"), /The request[\s\S]*Show the spend\./);
+    assert.deepEqual(await desk.locator("#detail .brief figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a1"], "the pasted picture belongs to the request");
+    assert.deepEqual(await desk.locator("#detail h3.made ~ * figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
+    assert.doesNotMatch(await desk.textContent("#detail"), /Screen: Agents/, "the screen line is gone");
+
+    await desk.hover("#detail .linked .anchor");
+    await desk.waitForSelector("#peek");
+    assert.match(await desk.textContent("#peek"), /See what each agent spends[\s\S]*This sprint[\s\S]*Issue #41[\s\S]*Nobody knows what an agent costs[\s\S]*A spend column in the agents list/);
+    await desk.hover("#detail h2");
+    await desk.waitForSelector("#peek", { state: "detached" });
+
+    await desk.click('[data-tab="issues"]');
+    await desk.hover('.row.item [data-card="is1"]');
+    await desk.waitForSelector("#peek");
+    assert.match(await desk.textContent("#peek"), /A spend column in the agents list/, "the row, now without its needs, previews them");
+  } finally {
+    await run.close();
+  }
+});
+
 // The Issues tab: the sprint's issues first, what the UI will need in each row, and an
 // issue's Draw it and Design this.
 test("the Issues tab lists the planned issues; Draw it and Design this act once", async (t) => {

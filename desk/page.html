@@ -672,9 +672,9 @@
   let peekTimer = null;
   const peekHide = () => { clearTimeout(peekTimer); $("#peek")?.remove(); };
   function peekShow(el) {
-    // Not on the issue's own row or page: it says the same there already.
+    // Not on the issue's own page: it says the same there already.
     const c = issueOf(el);
-    if (!c || el.closest("#list") || S.card?.id === c.id) return;
+    if (!c || S.card?.id === c.id) return;
     clearTimeout(peekTimer);
     peekTimer = setTimeout(() => {
       peekHide();

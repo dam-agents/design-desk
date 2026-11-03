@@ -1,7 +1,7 @@
 // node --test desk/tests/store.test.mjs — the Desk store: roles, the inbox, claims and answers.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store, can, DeskError, ACTIONS, abilities, rosterOf } from "../store.mjs";
@@ -807,4 +807,14 @@ test("decisions: a new one replaces an earlier one; the agent revokes in a perso
   assert.throws(() => s.revokeDecision(b.id, { agent: true }, { reason: "Dropped", by: { name: "Carla" } }), /names its origin/);
   s.revokeDecision(b.id, { agent: true }, { reason: "Dropped in the call", by: { name: "Carla" }, origin: { kind: "chat" } });
   assert.deepEqual([s.db.decisions[b.id].revoked.by.name, s.listDecisions({ state: "revoked" }).length], ["Carla", 2]);
+});
+
+test("a decision written by hand without concepts, text or date still lists and opens", () => {
+  const dir = mkdtempSync(join(tmpdir(), "desk-store-"));
+  const db = { decisions: { "D-1": { id: "D-1", concept: "Prices", text: "Prices show tax", status: "active", recorded: "2026-11-01T10:00:00Z" }, "D-2": { id: "D-2", status: "active" } } };
+  writeFileSync(join(dir, "db.json"), JSON.stringify(db));
+  const s = new Store(dir);
+  assert.deepEqual(s.listDecisions().map((d) => [d.id, d.concepts, d.text, d.at]), [["D-1", ["prices"], "Prices show tax", "2026-11-01T10:00:00Z"], ["D-2", [], "", ""]]);
+  assert.deepEqual(s.listDecisions({ concept: "prices" }).map((d) => d.id), ["D-1"], "a concept search skips the one without concepts");
+  assert.equal(s.getDecision("D-2").decision.id, "D-2");
 });
