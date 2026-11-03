@@ -374,7 +374,7 @@ issues_mode() {
              elif ($st == "due" or $st == "in_progress") then (if ($nowe - ($row.ts | epoch)) >= 10800 then "takeover" else "held" end)
              elif $st == "failed" then (if $row.attempts < 3 then "retry" else "gave-up" end)
              else null end) as $kind
-          | (($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
+          | ((($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
              and ($card == null or ($drawing | index($card.id)) == null)) as $wants
           | ($card.id // (if ($row.card // "") == "" then null else $row.card end)) as $cid
           | {id: "\($repo)#\($n)", repo: $repo, issue: $i.number, card: $cid, title: ($i.title | gsub("[\t\n]"; " ")), url: $i.html_url,
