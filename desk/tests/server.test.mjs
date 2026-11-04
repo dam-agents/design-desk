@@ -150,15 +150,6 @@ test("prototype_requesters reads a role as the roster does: `Lead developer` is 
   assert.equal(await build("bob@example.com"), false, "a developer is not listed");
 });
 
-test("a person's folded intros are kept for them alone, guests included", async (t) => {
-  const d = await desk(t);
-  assert.deepEqual((await d.viewer("alice@example.com", "/api/me")).body.prefs, {});
-  assert.equal((await d.viewer("guest@example.com", "/api/me/prefs", { intro: "hidden" })).status, 200);
-  assert.deepEqual((await d.viewer("guest@example.com", "/api/me")).body.prefs, { intro: "hidden" });
-  assert.deepEqual((await d.viewer("alice@example.com", "/api/me")).body.prefs, {}, "one person's choice is theirs alone");
-  assert.equal((await d.viewer("alice@example.com", "/api/me/prefs", { intro: "maybe" })).status, 400);
-});
-
 test("the page gets the Desk's share link to build an item's link from, and nothing that is not a web link", async (t) => {
   const d = await desk(t, "- desk_link: https://share.example.com/a/xY12  # the share link\n\n");
   assert.equal((await d.viewer("guest@example.com", "/api/me")).body.link, "https://share.example.com/a/xY12");

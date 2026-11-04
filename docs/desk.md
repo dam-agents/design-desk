@@ -51,11 +51,13 @@ served by the Desk server through the platform's Artifact API relay.
   answer); **Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
   with grey counts, then **Product** and **People**. **How it works** opens from the question
   mark next to the day and night switch. The Desk opens on Requests.
-- **Tab intros.** Every tab but How it works opens with a foldable intro (what it shows, what
-  you can do and, where a tab has a flow, step by step), `INTRO` in `desk/page.html`. Folding
-  one folds every tab's; the server keeps the choice per person (`POST /api/me/prefs`, `prefs`
-  in `db.json`), so it holds after a reload and in another browser. A change that adds,
-  renames or removes a tab's action updates its intro too.
+- **Tab intros.** Every tab but How it works has an intro (what it shows, what you can do and,
+  where a tab has a flow, step by step), `INTRO` in `desk/page.html`. It fills the pane beside
+  the list while nothing is open there; People shows it above its list, beside it on a wide
+  screen. A change that adds, renames or removes a tab's action updates its intro too.
+- **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
+  works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a
+  label by its own `title`. A new button or label gets its line in the same change.
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
   same emails go in `## Desk people` with a role. The owner needs the Interactive artifacts
   feature on (Settings → five taps on the version → Experimental features). Never set the

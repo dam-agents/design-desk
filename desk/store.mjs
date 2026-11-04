@@ -169,7 +169,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, prefs: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
 }
 
 export class Store {
@@ -342,17 +342,6 @@ export class Store {
     c.acks[who.email || who.sub] = this.clock();
     this.save();
     return { acked: true };
-  }
-
-  // What a person chose on the page for themselves, kept for them in any browser: whether
-  // the tab intros are folded (docs/desk.md → Tab intros).
-  prefsOf(who) { return own(this.db.prefs, who.email || who.sub) || {}; }
-
-  setPrefs(who, { intro } = {}) {
-    if (!["shown", "hidden"].includes(intro)) throw bad("intro must be shown or hidden");
-    const prefs = this.prefsOf(who);
-    if (prefs.intro !== intro) { this.db.prefs[who.email || who.sub] = { ...prefs, intro }; this.save(); }
-    return { prefs: this.prefsOf(who) };
   }
 
   // A designer marks a change handled: design has nothing more to do with it. Until then
