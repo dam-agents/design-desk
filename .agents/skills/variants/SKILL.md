@@ -114,7 +114,8 @@ same markup re-skins between brand and Carbon. Pull icons from Carbon by name
 ## 6. Approaches
 
 As many **genuinely distinct** ideas as the request asks (a Desk request's `request.options`,
-one to five; else two or three), each a different interaction model or placement, not
+one to five; else two or three; an `explore` item with `scope: "add"` asks for one more option,
+and a `revise` with `scope: "alternatives"` for three ways of one part), each a different interaction model or placement, not
 variants of one widget — two strong directions beat three that overlap; say on the card when
 the request asked for more than are genuinely distinct. Each is the
 **smallest clean change** that solves the problem, reusing the product's existing patterns

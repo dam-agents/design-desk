@@ -403,6 +403,13 @@
   .ws-states { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .ws-states .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-left: 6px; }
   .ws-states + .hint { margin: 4px 0 0; }
+  /* The tab that adds one more option */
+  .tabs.vtabs .vclose { margin-left: 6px; padding: 0 4px; border-radius: 4px; font-size: 11px; color: var(--muted); }
+  .tabs.vtabs .vclose:hover { background: var(--soft); color: var(--ink); }
+  .tabs.vtabs button.vadd { border-style: dashed; color: var(--accent, var(--ink)); }
+  .tabs.vtabs button.vadd[disabled] { opacity: .7; cursor: default; }
+  .ws-alts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ws-alts .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-right: 2px; }
   .ws-states .step-by { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
   .checklist { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
   .checklist button { width: 100%; text-align: left; justify-content: flex-start; }
@@ -548,6 +555,17 @@
   </form>
 </dialog>
 
+<dialog id="option-dialog">
+  <form method="dialog" id="option-form">
+    <h2>Add a design option</h2>
+    <p class="hint" style="margin:0">Design Desk draws one more option next to the others, in the product's own style and on sample data, for the same brief. It takes a few minutes; the new tab appears by itself.</p>
+    <label>What should it look like, and what should it have?<textarea name="note" maxlength="2000" required placeholder="e.g. Like the compact table, but with the filters on top as chips and a summary above the list"></textarea></label>
+    <div><div class="k" style="font-size:12.5px;color:var(--muted);margin-bottom:4px">Start from</div><div class="choices" id="of-base"></div></div>
+    <p class="hint" id="of-error" style="color:var(--bad, #b42318);margin:0" hidden></p>
+    <div class="actions"><button type="button" class="btn primary" data-close="ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
 <dialog id="confirm-dialog">
   <form method="dialog" id="confirm-form">
     <h2 id="cf-title"></h2>
@@ -574,6 +592,7 @@
     explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     revise: "Changing the design as you asked.",
+    alternatives: "Drawing other ways the part you picked could look, as you described it. They appear above the design; pick the one to keep.",
     states: "Drawing every state of the part you picked. Each state appears in the design workspace as it is drawn, and in the request's design catalog with the use case it covers.",
     build: "Building the live prototype: a private copy of the product with this design. The first one can take up to an hour; you can close this page.",
     handoff: "Writing the developer spec and sending it on.",
@@ -652,6 +671,8 @@
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
 <p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
+<p><b>One more option</b>: press the <b>+ New option</b> tab after the options. Write what it should look like and have, and pick the option it starts from (or something new). Design Desk draws it next to the others.</p>
+<p><b>Try 3 ways</b>: select a part of an option in the workspace, press <b>Try 3 ways</b> and describe how you picture it. Design Desk draws three ways above the design; click through them and press <b>Use this one</b> on the one to keep. It becomes the option's next version; the one before stays under its versions.</p>
 <p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions. On the request, the <b>Design catalog</b> shows each state as a picture of the part alone, with the use case of the brief it covers.</p>
 <p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
 <p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Select as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
@@ -913,7 +934,7 @@
 
   // ---------- state ----------
   const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
-    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
+    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
@@ -1137,6 +1158,9 @@
     // A number in text (C-11, D-26) previews whatever it names; a card's button only an issue or a change.
     const own = el.dataset.ref;
     if (own && /^D-\d+$/.test(own)) { const d = await decisionOf(own); return d ? { ...d, kind: "decision" } : null; }
+    // A numbered part or state of an item, C-12.3, previews the item it is on.
+    const part = own?.match(/^(C-\d+)\.(\d+)$/);
+    if (part) { const c = S.cards.find((x) => x.id === part[1]); return c ? { ...c, sub: Number(part[2]) } : null; }
     if (own) return S.cards.find((x) => x.id === own) || null;
     const id = el.dataset.card;
     if (id) { const c = S.cards.find((x) => x.id === id); return PEEKED.includes(c?.kind) ? c : null; }
@@ -1208,7 +1232,7 @@
     peekTimer = setTimeout(async () => {
       // Not on the card's own page: it says the same there already.
       const c = await peekOf(el);
-      if (peekFor !== el || !el.isConnected || !c || (c.id && (S.card?.id === c.id || S.decision?.id === c.id))) return;
+      if (peekFor !== el || !el.isConnected || !c || (c.id && !c.sub && (S.card?.id === c.id || S.decision?.id === c.id))) return;
       // What the Desk keeps of its issue or pull request on GitHub, read once per page load.
       const keys = c.kind === "link" ? [c.ref.key] : c.kind === "snip" || c.kind === "decision" ? [] : refsOf(c);
       await ghLoad(keys).catch(() => {});
@@ -1221,7 +1245,7 @@
         box.innerHTML = `<div class="snipbox"><iframe sandbox="allow-scripts" title="The element the note is about"></iframe></div>`;
         const h = snipDoc(c.html, c.sel || "", c.text || "");
         box.querySelector("iframe").srcdoc = h;
-      } else box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c) + ghPeek(keys);
+      } else box.innerHTML = (c.sub ? `<p class="hint" style="margin:0 0 4px">Number ${esc(c.sub)} on ${esc(c.id)}</p>` : "") + ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c) + ghPeek(keys);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
@@ -1333,6 +1357,8 @@
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
         ["<b>Open the design workspace</b>: click a part of an option and say what should change.", "revise"],
+        ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
+        ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
         ["<b>Draw every state</b> of a part in the design workspace, step through and change each state on its own; the request's <b>Design catalog</b> shows each with the use case it covers.", "revise"],
         ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
@@ -1737,7 +1763,7 @@
   // The agent's questions as a form: each has its options and "Leave it to Design Desk",
   // which is picked until a person chooses; one button leaves all of them.
   function askForm(th) {
-    const qs = th.questions.map((q, i) => `<fieldset class="q" data-q="${i}"><legend>${i + 1}. ${esc(q.text)}</legend>${q.why ? `<p class="hint">${esc(q.why)}</p>` : ""}
+    const qs = th.questions.map((q, i) => `<fieldset class="q" data-q="${i}"><legend>${i + 1}. ${txt(q.text)}</legend>${q.why ? `<p class="hint">${txt(q.why)}</p>` : ""}
       ${q.options.map((o) => `<label><input type="radio" name="q-${esc(th.id)}-${i}" value="${esc(o)}" /> ${esc(o)}${o === q.suggested ? ` <span class="chip info" title="Design Desk's suggested answer; it takes it if you leave the question">suggested</span>` : ""}</label>`).join("")}
       <label><input type="radio" name="q-${esc(th.id)}-${i}" value="" checked /> Leave it to Design Desk</label>
       <input placeholder="Anything to add? (optional)" data-q-note maxlength="500" /></fieldset>`).join("");
@@ -2307,6 +2333,18 @@
     return `<div class="tally">${chip(by("prefer"), "ok", "👍")}${chip(by("concern"), "warn", "⚠")}</div>`;
   }
 
+  // The last tab adds one more option from what a person writes (docs/requests.md → One more option).
+  function addOptionTab(c) {
+    if (closed(c) || !can("explore")) return "";
+    if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
+    if ((c.variants || []).length >= 6) return "";
+    return `<button class="vadd" data-act="add-option" title="Describe one more option and Design Desk draws it next to these">+ New option</button>`;
+  }
+
+  // A tab's ✕ takes the option off, as a browser tab closes; a designer's, never the last one.
+  const closeTab = (c, x) => !closed(c) && can("choose") && (c.variants || []).length > 1
+    ? `<span class="vclose" role="button" tabindex="0" data-drop-option="${esc(x.id)}" aria-label="Remove ${esc(x.name)}" title="Remove ${esc(x.name)}">✕</span>` : "";
+
   function renderOptions(c) {
     const vs = c.variants || [];
     if (!vs.length) return "";
@@ -2314,7 +2352,7 @@
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}</button>`).join("")}</div>
+      <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
       ${againstBox(c, v.id)}${whyStrip(c, v)}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="A designer picked this option as the winner">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : ""}
@@ -2607,6 +2645,9 @@
 
   // The drawing shown: the option itself, or one of its states (docs/requests.md → Every state of a part).
   function wsDrawing(v) {
+    const alt = (v.alternatives || []).find((x) => x.id === S.ws.alt);
+    if (!alt) S.ws.alt = null;
+    if (alt) { S.ws.state = null; return { ...alt, version: v.version || 1, history: [] }; }
     const st = (v.states || []).find((x) => x.id === S.ws.state);
     if (!st) S.ws.state = null;
     return st || v;
@@ -2629,7 +2670,7 @@
     const versions = [{ version: d.version || 1, asset: d.asset }, ...(d.history || [])];
     // The final check shows only what goes live: the latest version.
     const showing = S.ws.check ? versions[0] : versions.find((h) => h.version === (S.ws.version || versions[0].version)) || versions[0];
-    const key = `${c.id}|${v.id}|${S.ws.state || ""}|${showing.asset}`;
+    const key = `${c.id}|${v.id}|${S.ws.state || ""}|${S.ws.alt || ""}|${showing.asset}`;
     ws.hidden = false;
     if (S.ws.shown !== key || !$("#ws-frame")) {
       ws.innerHTML = `<div class="ws-top" id="ws-top"></div><div class="ws-body"><div class="ws-stage"><div class="actions" style="margin:0" id="ws-tools"></div><div id="ws-states"></div>
@@ -2644,7 +2685,7 @@
       <span class="title" title="${esc(c.title)}">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span><span class="grow"></span>`
       : `<button class="btn small" data-ws-close>← Back to the request</button>
       <span class="title" title="${esc(c.title)}">${esc(c.title)}</span>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>
+      <div class="tabs vtabs" role="group" aria-label="Design options">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <span class="grow"></span>
       ${S.me?.figma && can("figma") ? `<button class="btn small" data-act="figma-import">Import from Figma</button><button class="btn small" data-act="figma-export">Send to Figma</button>` : ""}
       ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}`;
@@ -2657,9 +2698,19 @@
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
       ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
       <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
-    $("#ws-states").innerHTML = wsStates(c, v);
+    $("#ws-states").innerHTML = wsAlts(c, v) + wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
     sendPins(c, v);
+  }
+
+  // The ways a part could look, drawn from what a person wrote: the option as it is, then
+  // each alternative; the one picked becomes the option's next version.
+  function wsAlts(c, v) {
+    const alts = v.alternatives || [];
+    if (!alts.length || S.ws.check) return "";
+    const part = alts[0].part;
+    return `<div class="ws-alts"><span class="k">${esc(part)}: try</span><button class="btn small ${S.ws.alt ? "" : "on"}" data-ws-alt="" title="The option as it is now">As it is now</button>
+      ${alts.map((x, i) => `<button class="btn small ${x.id === S.ws.alt ? "on" : ""}" data-ws-alt="${esc(x.id)}" title="${esc(x.how || x.name)}">${String.fromCharCode(65 + i)} · ${esc(x.name)}</button>`).join("")}</div>`;
   }
 
   // The option's states in a row above the design, grouped by the part they are of, with
@@ -2711,14 +2762,26 @@
     const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
     const shaper = can("change");
     const sel = S.ws.selected;
-    const busy = working(c).filter((k) => ["revise", "states", "figma", "explore"].includes(k));
+    const altBusy = (c.waiting || []).some((w) => w.kind === "revise" && w.scope === "alternatives");
+    const busy = working(c).filter((k) => ["revise", "states", "figma", "explore"].includes(k)).map((k) => (k === "revise" && altBusy ? "alternatives" : k));
     // The note is written inside the box of what it is about: the part selected, or the whole option.
+    const alt = (v.alternatives || []).find((x) => x.id === S.ws.alt);
+    if (alt) {
+      const stale = (alt.of || 1) < (v.version || 1);
+      side.innerHTML = `<div class="sel"><div class="k">Alternative of ${esc(alt.part)}</div><b>${esc(alt.name)}</b>
+        ${alt.how ? `<p class="hint">${esc(alt.how)}</p>` : ""}${alt.ask ? `<p class="hint">You asked: “${esc(alt.ask)}”</p>` : ""}
+        ${stale ? `<p><span class="chip warn">Drawn for an earlier version of ${esc(v.name)}</span></p>` : ""}
+        <div class="actions" style="margin:8px 0 0">${can("revise") && !stale ? `<button class="btn primary small" data-ws-pick="${esc(alt.id)}" title="It becomes version ${(v.version || 1) + 1} of ${esc(v.name)}; the version before stays in its history">Use this one → version ${(v.version || 1) + 1}</button>` : ""}<button class="btn small" data-ws-alt="">Back to the option</button></div></div>
+        <p class="hint">Only ${esc(alt.part)} differs from the option as it is now. Click through it; the other alternatives are in the row above the design.</p>`;
+      loadPictures(side);
+      return;
+    }
     side.innerHTML = `<div class="sel ${sel ? "" : "none"}">
         <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
         <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
         ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
         ${whyOfSelected(c, v, sel)}
-        ${sel ? `<div class="actions" style="margin:6px 0 0">${can("revise") && !S.ws.state ? `<button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button>` : ""}<button class="btn small" data-ws-clear>Clear selection</button></div>` : ""}
+        ${sel ? `<div class="actions" style="margin:6px 0 0">${can("revise") && !S.ws.state ? `<button class="btn small" data-act="alternatives" title="Describe how you picture this part; Design Desk draws three ways and you pick one">Try 3 ways</button><button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button>` : ""}<button class="btn small" data-ws-clear>Clear selection</button></div>` : ""}
         ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
         ${old ? "" : `<div class="composer" style="margin:10px 0 0">
         <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change in this part? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
@@ -2929,7 +2992,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, check: false, reason: null }; }
+    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -3048,7 +3111,7 @@
     if (name === "build" && options.length) {
       const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : favourite(c)?.id || options[0].id, send: async (a) => a.choice || options[0].id }) : options[0].id;
       if (!pick) return;
-      S.variant = pick; S.ws.state = null; S.ws.version = null; S.ws.selected = null; S.ws.edit = null; S.ws.note = null;
+      S.variant = pick; S.ws.state = null; S.ws.alt = null; S.ws.version = null; S.ws.selected = null; S.ws.edit = null; S.ws.note = null;
       S.ws.open = true; S.ws.check = true; S.ws.mode = "off"; S.ws.looked = new Set(); S.ws.askFirst = true;
       renderWorkspace(); frameSay({ type: "desk-mode", mode: "off" });
       return;
@@ -3068,6 +3131,18 @@
         ok: "Draw the states", note: sel ? "Anything to add? e.g. which states matter most (optional)" : "Which part? e.g. the upload button, the list of files", send: (a) => post(a.note || "", { variant: v.id, ...(sel ? { part: { selector: sel.selector, text: sel.text, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } } : {}) }) });
       if (!res) return;
     }
+    // Three ways one part could look, from what the person writes (docs/requests.md → Alternatives of a part).
+    if (name === "alternatives") {
+      const sel = S.ws.open ? S.ws.selected : null, v = S.ws.open ? wsVariant(c) : null;
+      if (!sel || !v) return;
+      res = await ask({ title: "Try 3 ways", body: `Three ways **${sel.label}** could look. The one you pick becomes the next version.`,
+        ok: "Draw 3 ways", note: "How do you picture it? e.g. filters as chips, the active one highlighted, on one line", send: (a) => {
+          if (!a.note) throw new Error("Say how you picture this part.");
+          return post(a.note, { variant: v.id, version: v.version || 1, part: { selector: sel.selector, text: sel.text, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } });
+        } });
+      if (!res) return;
+    }
+    if (name === "add-option") { res = await addOption(c); if (!res) return; }
     if (name === "explore") {
       const n = c.request?.options || 3;
       res = await ask({ title: "Draw design options", body: "Design Desk draws genuinely different directions, each built into the real screen on sample data. It takes a few minutes; the options appear here.", ok: "Draw them",
@@ -3119,6 +3194,26 @@
     if (res.inbox) toast(name === "close" ? "Closed." : name === "decide" ? "Closed. Design Desk records your decision." : "Sent. Design Desk is on it; this page updates by itself.");
     await refreshList(); await openCard(c.id);
   }
+  // One more option: what it should look like and have, and what it starts from.
+  function addOption(c) {
+    const dlg = $("#option-dialog"), f = $("#option-form");
+    f.reset(); $("#of-error").hidden = true;
+    const vs = c.variants || [];
+    const from = S.ws.open ? S.variant : S.variant || vs[0]?.id;
+    $("#of-base").innerHTML = [...vs.map((v) => ({ id: v.id, name: `Like ${v.name}, changed as I describe` })), { id: "", name: "Something new, from scratch" }]
+      .map((o) => `<label><input type="radio" name="base" value="${esc(o.id)}" ${o.id === (from || "") ? "checked" : ""} /> ${esc(o.name)}</label>`).join("");
+    dlg.returnValue = ""; dlg.showModal();
+    // The page's frame has no allow-forms: the send runs on the dialog's close, as #confirm-form's.
+    return new Promise((resolve) => {
+      dlg.onclose = async () => {
+        if (dlg.returnValue !== "ok") { resolve(null); return; }
+        const note = f.note.value.trim(), base = f.querySelector("input[name=base]:checked")?.value || "";
+        try { resolve(await sendOrReopen(dlg, () => api("POST", `/api/cards/${c.id}/actions`, { action: "add-option", note, ...(base ? { variant: base } : {}) }))); }
+        catch (err) { $("#of-error").textContent = err.message || String(err); $("#of-error").hidden = false; }
+      };
+    });
+  }
+
   function tallyText(c, id) {
     const votes = Object.values(c.votes?.[id] || {});
     const up = votes.filter((x) => x.vote === "prefer").length, down = votes.filter((x) => x.vote === "concern").length;
@@ -3158,7 +3253,7 @@
   }
 
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note], [data-reason]");
+    const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note], [data-reason]");
     if (!el) return;
     const ds = el.dataset;
     if (ds.hit) { await openHit(ds.hit); return; }
@@ -3258,7 +3353,7 @@
     }
     if (ds.choose !== undefined) { await api("POST", `/api/cards/${S.card.id}/chosen`, { variant: ds.choose || null }); toast(ds.choose ? "Picked as the winner." : "No winner picked."); await refreshList(); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
-    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
+    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
     if (ds.story) { S.story = ds.story; renderDetail(); return; }
     if (ds.storyPart) { const pin = storyPins()[Number(ds.storyPart)]; if (pin) $("#story-frame")?.contentWindow?.postMessage({ type: "desk-show", selector: pin.selector }, "*"); return; }
     if (ds.vote) {
@@ -3278,8 +3373,24 @@
     }
     if (ds.act) { await act(ds.act); return; }
     // the workspace
-    if ("wsClose" in ds) { S.ws.open = false; S.ws.check = false; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
-    if (ds.wsVariant) { S.variant = ds.wsVariant; S.ws.state = null; S.ws.selected = null; S.ws.edit = null; S.ws.version = null; renderWorkspace(); return; }
+    if ("wsClose" in ds) { S.ws.open = false; S.ws.check = false; S.ws.alt = null; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
+    if (ds.dropOption) {
+      const c = S.card, v = (c.variants || []).find((x) => x.id === ds.dropOption);
+      if (!v) return;
+      const r = await ask({ title: `Remove ${v.name}?`, body: "It's removed from this request for everyone.", ok: "Remove",
+        send: () => api("POST", `/api/cards/${c.id}/actions`, { action: "drop-option", variant: v.id }) });
+      if (!r) return;
+      if (S.variant === v.id) S.variant = null;
+      await refreshList(); await openCard(c.id); return;
+    }
+    if (ds.wsAlt !== undefined) { S.ws.alt = ds.wsAlt || null; S.ws.selected = null; S.ws.edit = null; S.ws.version = null; renderWorkspace(); return; }
+    if (ds.wsPick) {
+      const v = wsVariant(S.card);
+      await api("POST", `/api/cards/${S.card.id}/actions`, { action: "pick-alternative", variant: v.id, note: ds.wsPick });
+      S.ws.alt = null; S.ws.version = null;
+      await refreshList(); await openCard(S.card.id); return;
+    }
+    if (ds.wsVariant) { S.ws.alt = null; S.variant = ds.wsVariant; S.ws.state = null; S.ws.selected = null; S.ws.edit = null; S.ws.version = null; renderWorkspace(); return; }
     // One state of the option, or a step to the one before or after it.
     if (ds.wsState !== undefined || ds.wsStep) {
       const v = wsVariant(S.card), ids = [null, ...(v?.states || []).map((x) => x.id)];
