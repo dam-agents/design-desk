@@ -2393,12 +2393,11 @@
     // The version picker sits with the design's own tools, so the bar above keeps its height.
     const versionPick = versions.length > 1 ? `<select id="ws-version" style="width:auto;padding:3px 8px;font-size:12px">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : "";
     $("#ws-tools").innerHTML = S.ws.check ? `<span class="hint">Click through it as people will use it: every screen, and every state above. This is exactly what goes live.</span>`
-      : old ? `${versionPick}<span class="chip warn" title="Pick the latest version beside to comment or change it">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `
+      : old ? `${versionPick}<span class="chip warn" title="Pick the latest version beside to comment or change it">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `${versionPick}
       <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
       ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
-      ${versionPick}
       <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
     $("#ws-states").innerHTML = wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
