@@ -175,8 +175,12 @@ async function viewerRoute(req, res, url, who) {
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
-  if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
+  if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2], { viewer: who.email || who.sub || null }) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
+  // What the Desk keeps of the issues and pull requests its items point at, for previews.
+  if (m === "GET" && p[1] === "github") return send(res, 200, { records: store.github(String(url.searchParams.get("keys") || "").split(",").filter(Boolean).slice(0, 50)) });
+  // A person's own private asks, and no one else's (docs/desk.md → Private asks).
+  if (m === "GET" && p[1] === "private") return send(res, 200, { asks: store.privateAsks(actor) });
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
   if (m === "GET" && p[1] === "decisions" && !p[2]) return send(res, 200, { decisions: store.listDecisions(decisionQuery(url)).slice(0, 200).map(withSide) });
@@ -185,7 +189,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide"].includes(p[3]))) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note, typeof b.variant === "string" ? b.variant : null), s, who)); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "suggestion") return send(res, 200, store.dismissSuggestion(p[2], actor));
@@ -199,6 +203,7 @@ async function viewerRoute(req, res, url, who) {
     const { kind, text, anchor } = b;
     return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor }), s, who));
   }
+  if (m === "POST" && p[1] === "private") { need("ask"); return send(res, 201, withPing(store.openPrivate(actor, { text: b.text, starter: typeof b.starter === "string" ? b.starter : null, context: b.context }), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need("comment"); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "answers") { need("comment"); return send(res, 200, withPing(store.answerForm(p[2], actor, b.answers), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "resolve") { need("comment"); return send(res, 200, store.resolve(p[2], actor)); }
@@ -288,7 +293,7 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "inbox") return send(res, 200, JSON.parse(readFileSync(join(DIR, "inbox.json"), "utf8")));
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
-  if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: it.card ? store.getCard(it.card) : null }); }
+  if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: it.card ? store.getCard(it.card) : null, thread: it.thread ? store.thread(it.thread) : null }); }
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "decisions" && !p[2]) return send(res, 200, { decisions: store.listDecisions(decisionQuery(url)) });
   if (m === "GET" && p[1] === "decisions" && p[2]) return send(res, 200, store.getDecision(p[2]));
@@ -324,6 +329,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover), heartbeat: Boolean(b.heartbeat) }));
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   // An ask to add a person carries its payload; only a lead's ask on the page makes one.
+  if (m === "GET" && p[1] === "github") { const card = url.searchParams.get("card"); const keys = url.searchParams.get("keys"); return send(res, 200, keys ? { records: store.github(keys.split(",").filter(Boolean)) } : { refs: store.githubRefs(card || null) }); }
+  if (m === "POST" && p[1] === "github") return send(res, 200, store.putGithub(b.records));
   if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from a lead on the People tab");
   if (m === "POST" && p[1] === "enqueue") return send(res, 201, (() => { store.card(String(b.card)); const it = store.enqueue(String(b.kind), String(b.card), null, { agent: true }, typeof b.note === "string" ? b.note.slice(0, 1000) : ""); store.save(); return { item: it }; })());
   throw new DeskError(404, `no route ${m} ${url.pathname}`);

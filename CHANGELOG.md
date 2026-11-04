@@ -7,12 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.38.0 — 2026-11-04
+## 1.39.0 — 2026-11-04
 
 **Upgrade:**
 Nothing — skills and docs are re-read per run. Slack replies about a request now carry its
 card link and a PNG where one exists; with `slack_polls: enabled`, finished options start
 their vote in that request's own thread.
+
+## 1.38.0 — 2026-11-04
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Recorded threads and cards need no
+change; the store's GitHub copy starts empty and the next watch run fills it.
 
 ## 1.37.1 — 2026-11-04
 

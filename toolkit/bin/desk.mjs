@@ -3,7 +3,7 @@
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
 import { readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { WORK, fail, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
+import { WORK, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
 import { ADDABLE_ROLES, rosterOf } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
@@ -74,6 +74,11 @@ const USAGE = `usage: design desk <command>
                                            council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
   enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
+  github-sync [--card <C-n>]               read every issue and pull request the cards point at (or one
+                                           card's) on GitHub with its comments and keep it on the Desk;
+                                           prints {synced, failed, fresh: [{key, cards, comments}]}, the
+                                           comments new since the last read
+  github <owner/repo#n>[,…]                what the Desk keeps of them
 `;
 
 const TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml",
@@ -167,6 +172,32 @@ async function person(id, session) {
   return { item: id, email, role, outcome: verdict.outcome };
 }
 
+// One issue or pull request as GitHub has it now: its text, labels and every comment, a
+// pull request's reviews among them (docs/desk.md → GitHub on the Desk).
+export function ghRecord(key, gh = (args) => run("gh", args)) {
+  const [repo, n] = key.split("#");
+  const api = (path) => { const r = gh(["api", "--paginate", "--slurp", path]); if (r.status !== 0) throw new Error((r.stderr || "").trim().split("\n")[0] || `gh api ${path} failed`); return JSON.parse(r.stdout).flat(); };
+  const [it] = api(`repos/${repo}/issues/${n}`);
+  const pr = Boolean(it.pull_request);
+  const said = api(`repos/${repo}/issues/${n}/comments`).map((c) => ({ author: c.user?.login || "", at: c.created_at, url: c.html_url, body: c.body || "" }));
+  const reviews = pr ? api(`repos/${repo}/pulls/${n}/reviews`).filter((v) => v.body).map((v) => ({ author: v.user?.login || "", at: v.submitted_at, url: v.html_url, body: `[review: ${v.state}] ${v.body}` })) : [];
+  return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",
+    labels: (it.labels || []).map((l) => l.name), body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
+}
+// `io` stands in for the Desk server and gh in a test.
+export async function githubSync(card, io = { call, gh: undefined }) {
+  const { refs } = await io.call("GET", `/agent/github${card ? `?card=${encodeURIComponent(card)}` : ""}`);
+  const done = [], failed = [], fresh = [];
+  for (let i = 0; i < refs.length; i += 5) {
+    const batch = [];
+    for (const key of refs.slice(i, i + 5)) { try { batch.push(ghRecord(key, io.gh)); } catch (e) { failed.push({ key, error: e.message }); } }
+    if (!batch.length) continue;
+    const r = await io.call("POST", "/agent/github", { records: batch });
+    done.push(...batch.map((x) => x.key)); fresh.push(...r.fresh);
+  }
+  return { synced: done.length, failed, fresh };
+}
+
 // The row goes in through the one writer of work/CONFIG.md (docs/config.md).
 export const addRosterRow = (work, email, role) => writeConfig(work, (text) => withRosterRow(text, email, role));
 
@@ -250,6 +281,8 @@ export async function main(_cmd, argv) {
     case "find-council": return out(await call("GET", `/agent/councils?ts=${encodeURIComponent(pos[0] || "")}`));
     case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}&state=${encodeURIComponent(typeof f.state === "string" ? f.state : "")}`));
+    case "github-sync": return out(await githubSync(typeof f.card === "string" ? f.card : null));
+    case "github": return out(await call("GET", `/agent/github?keys=${encodeURIComponent(pos[0] || "")}`));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
     default: process.stdout.write(USAGE); process.exit(sub ? 2 : 0);
   }
