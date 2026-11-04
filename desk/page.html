@@ -177,7 +177,15 @@
   .section { margin: 0 0 14px; max-width: var(--measure); }
   /* A request's brief, what a person asked for, apart from what Design Desk made of it. */
   .brief { border: 1px solid var(--line); border-left: 3px solid var(--ink); border-radius: var(--radius); background: var(--panel); padding: 12px 16px 4px; margin: 14px 0 0; }
-  .brief-k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 0 0 8px; }
+  details.brief:not([open]) { padding-bottom: 12px; }
+  details.brief:not([open]) > .brief-k { margin: 0; }
+  .brief-k::marker { content: ""; } .brief-k::-webkit-details-marker { display: none; }
+  details.brief > .brief-k::before { content: "▸"; display: inline-block; width: 1.2em; transition: transform .15s; }
+  details.brief[open] > .brief-k::before { transform: rotate(90deg); }
+  /* Who sized a request and who approved it: a row each, with room between them. */
+  .hint.size { display: grid; gap: 8px; line-height: 1.5; }
+  .hint.size > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .brief-k { cursor: pointer; list-style: none; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 0 0 8px; }
   .brief .shots { margin-bottom: 12px; }
   h3.made { border-top: 1px solid var(--line); padding-top: 18px; }
   /* Sections stand side by side once each still gets a comfortable line. */
@@ -1242,6 +1250,8 @@
   // Folding one intro folds every tab's, and it stays so in this browser. Kept on the person's
   // click, not on toggle: a freshly drawn open intro fires a toggle of its own.
   document.addEventListener("click", (e) => { const d = e.target.closest?.("details.intro > summary")?.parentElement; if (d) store.set("desk-intro", d.open ? "hidden" : "shown"); }, true);
+  // A request's own text folds the same way, for every request in this browser.
+  document.addEventListener("click", (e) => { const d = e.target.closest?.("details.brief > summary")?.parentElement; if (d) store.set("desk-brief", d.open ? "folded" : "open"); }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
@@ -1977,7 +1987,7 @@
     const sz = c.size, ap = c.approved;
     const said = sz ? `<span class="chip ${sz.small ? "info" : ""}" title="${sz.small ? "Any developer but the person who filed it approves it, without a designer" : "A designer or a lead developer approves it"}">${sz.small ? "Small change — a developer approves" : "Goes through a designer"}</span> <span class="hint">${who(sz.by)} decided · ${esc(when(sz.at))}</span>` : "";
     const approved = ap && c.status !== "declined" ? `<span class="chip ok" title="Approved: Design Desk writes the developer spec from it">✓ Approved</span> <span class="hint">${ap.variant ? `${esc(optionName(c, ap.variant))} · ` : ""}by ${who(ap.by)}${ap.small ? " as a small change" : ""}${ap.implement ? ", straight to the coding agent" : ""} · ${esc(when(ap.at))}</span>` : c.decided && c.status === "declined" ? `<span class="chip ok" title="Closed with a decision, recorded under Product → Decisions">✓ Decided</span> <span class="hint">by ${who(c.decided.by)} · ${esc(when(c.decided.at))}: ${esc(c.decided.text)}</span>` : "";
-    return said || approved ? `<div class="hint size">${said}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
+    return said || approved ? `<div class="hint size">${said ? `<div>${said}</div>` : ""}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
   }
 
   function renderVerdict(c) {
@@ -2085,11 +2095,11 @@
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}<span>${esc(when(c.created))}</span></div>
-      <div class="brief"><div class="brief-k">${bug ? "The report" : "The request"}</div>
+      <details class="brief"${store.get("desk-brief") === "folded" ? "" : " open"}><summary class="brief-k" title="Fold or unfold what was asked; it stays so in this browser">${bug ? "The report" : "The request"}</summary>
       ${origin(c)}
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${!bug && r.goal ? md(r.goal) : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}${askedFor(r)}</div>
-      ${shots(given)}</div>
+      ${shots(given)}</details>
       <h3 class="made">From Design Desk</h3>
       ${renderSteps(c)}
       ${c.status === "handed-off" ? "" : sentBox(c)}
