@@ -4063,7 +4063,7 @@
     try {
       if (me) {
         if (t) localStorage.setItem(`desk-theme:${me}`, t);
-        else { localStorage.removeItem(`desk-theme:${me}`); localStorage.removeItem(`desk-theme-unsaved:${me}`); }
+        else localStorage.removeItem(`desk-theme:${me}`);
         localStorage.setItem("desk-theme-last", me);
       }
       localStorage.removeItem("desk-theme");
@@ -4071,14 +4071,16 @@
     renderTheme();
   }
   // A choice the server has not taken yet stays marked unsaved (desk-theme-unsaved:<email>)
-  // until it answers; the next load sends it again.
+  // until it answers; the next load sends it again. Saves go one after another, and a save's
+  // answer clears the mark only while its value is still the browser's copy.
+  let themeSaves = Promise.resolve();
   function saveTheme(t, { quiet = false } = {}) {
     const me = myKey();
     if (!me) return;
     store.set(`desk-theme-unsaved:${me}`, "1");
-    api("POST", "/api/prefs", { theme: t })
-      .then(() => { try { localStorage.removeItem(`desk-theme-unsaved:${me}`); } catch {} })
-      .catch(() => { if (!quiet) toast("Switched here only: the Desk couldn't save it for your other devices yet. It tries again the next time you open the Desk."); });
+    themeSaves = themeSaves.then(() => api("POST", "/api/prefs", { theme: t })
+      .then(() => { if (store.get(`desk-theme:${me}`) === t) try { localStorage.removeItem(`desk-theme-unsaved:${me}`); } catch {} })
+      .catch(() => { if (!quiet) toast("Switched here only: the Desk couldn't save it for your other devices yet. It tries again the next time you open the Desk."); }));
   }
   // A choice this browser has not saved yet wins and is sent again; then their saved choice;
   // then a copy this browser kept before copies were named, saved for the first person here.

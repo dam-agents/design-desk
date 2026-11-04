@@ -477,7 +477,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   closed it. People's own actions set the rest through the server.
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
-  they fine-tune the options, until its author, a designer or a developer presses **Ask the team
+  they fine-tune the options, until its author, a designer, a developer or a lead presses **Ask the team
   for feedback** (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
