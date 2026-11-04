@@ -130,9 +130,10 @@ test("deciding straight away: a lead developer approves or decides and closes, a
   assert.equal(me.body.can.skip, true);
   assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/actions`, { action: "approve" })).status, 403, "a developer approves only a small change");
   assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/decide`, { text: "No." })).status, 403);
-  const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header." });
+  const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header.", implement: true });
   assert.equal(ok.status, 200);
   assert.deepEqual([ok.body.inbox.kind, ok.body.card.approved.by.email], ["handoff", "lou@example.com"]);
+  assert.deepEqual([ok.body.card.approved.implement, ok.body.inbox.implement], [true, true], "straight to implementation: the handoff labels its issue");
 
   const other = (await d.viewer("bob@example.com", "/api/requests", { problem: "The badge is hard to see.", options: 0 })).body.card.id;
   assert.equal((await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Too early." })).status, 400, "not before Design Desk checked it");

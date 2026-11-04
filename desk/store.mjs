@@ -223,7 +223,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -588,7 +588,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, variant = null, version = null, states = null, part = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, variant = null, version = null, states = null, part = null } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
@@ -678,12 +678,14 @@ export class Store {
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; a small change's approval says so.
-    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small),
+    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...(implement ? { implement: true } : {}),
       ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
     if (action === "build" && askFirst) item.ask_first = true;
+    // Straight to the coding agent: the handoff labels its issue (docs/handoff.md, step 5).
+    if (action === "approve" && implement) item.implement = true;
     if (stateOf) { item.variant = stateOf.id; if (part?.label) item.part = cleanPart(part); }
     if (live) {
       item.variant = live.id; item.version = live.version || 1;

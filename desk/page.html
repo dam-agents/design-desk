@@ -409,6 +409,7 @@
     <label id="cf-note-wrap" hidden><span id="cf-note-label"></span><textarea name="note" maxlength="500"></textarea></label>
     <label id="cf-url-wrap" hidden><span id="cf-url-label"></span><input name="url" maxlength="500" /></label>
     <label id="cf-check-wrap" class="check" hidden><input type="checkbox" name="check" /> <span id="cf-check-label"></span></label>
+    <label id="cf-check2-wrap" class="check" hidden><input type="checkbox" name="check2" /> <span id="cf-check2-label"></span></label>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="cf-ok"></button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
@@ -506,7 +507,7 @@
 <p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
 <p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
 <p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Pick as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Pick as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the coding agent then builds it at once. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -874,7 +875,7 @@
   });
   // A confirmation for anything that cannot be taken back; optional choice, note or link.
   // `send(answer)` does the action; ask() resolves to its result, or to null on Cancel.
-  function ask({ title, body, ok, choices = null, pick = null, note = null, url = null, check = null, checked = false, send }) {
+  function ask({ title, body, ok, choices = null, pick = null, note = null, url = null, check = null, checked = false, check2 = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
@@ -884,11 +885,12 @@
     $("#cf-note-wrap").hidden = !note; $("#cf-note-label").textContent = note || "";
     $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url);
     $("#cf-check-wrap").hidden = !check; $("#cf-check-label").textContent = check || ""; f.check.checked = Boolean(check && checked);
+    $("#cf-check2-wrap").hidden = !check2; $("#cf-check2-label").textContent = check2 || ""; f.check2.checked = false;
     dlg.returnValue = ""; dlg.showModal();
     return new Promise((resolve) => {
       dlg.onclose = async () => {
         if (dlg.returnValue !== "ok") { resolve(null); return; }
-        const answer = { choice: f.querySelector("input[name=choice]:checked")?.value || null, note: f.note.value.trim(), url: f.url.value.trim(), check: f.check.checked };
+        const answer = { choice: f.querySelector("input[name=choice]:checked")?.value || null, note: f.note.value.trim(), url: f.url.value.trim(), check: f.check.checked, check2: f.check2.checked };
         try { resolve(await sendOrReopen(dlg, () => send(answer))); } catch (e) { fail(e); }
       };
     });
@@ -1702,7 +1704,7 @@
   function sizeLine(c) {
     const sz = c.size, ap = c.approved;
     const said = sz ? `<span class="chip ${sz.small ? "info" : ""}" title="${sz.small ? "Any developer but the person who filed it approves it, without a designer" : "A designer or a lead developer approves it"}">${sz.small ? "Small change — a developer approves" : "Goes through a designer"}</span> <span class="hint">${who(sz.by)} decided · ${esc(when(sz.at))}</span>` : "";
-    const approved = ap && c.status !== "declined" ? `<span class="chip ok" title="Approved: Design Desk writes the developer spec from it">✓ Approved</span> <span class="hint">${ap.variant ? `${esc(optionName(c, ap.variant))} · ` : ""}by ${who(ap.by)}${ap.small ? " as a small change" : ""} · ${esc(when(ap.at))}</span>` : c.decided && c.status === "declined" ? `<span class="chip ok" title="Closed with a decision, recorded under Product → Decisions">✓ Decided</span> <span class="hint">by ${who(c.decided.by)} · ${esc(when(c.decided.at))}: ${esc(c.decided.text)}</span>` : "";
+    const approved = ap && c.status !== "declined" ? `<span class="chip ok" title="Approved: Design Desk writes the developer spec from it">✓ Approved</span> <span class="hint">${ap.variant ? `${esc(optionName(c, ap.variant))} · ` : ""}by ${who(ap.by)}${ap.small ? " as a small change" : ""}${ap.implement ? ", straight to the coding agent" : ""} · ${esc(when(ap.at))}</span>` : c.decided && c.status === "declined" ? `<span class="chip ok" title="Closed with a decision, recorded under Product → Decisions">✓ Decided</span> <span class="hint">by ${who(c.decided.by)} · ${esc(when(c.decided.at))}: ${esc(c.decided.text)}</span>` : "";
     const open = !closed(c) && c.status !== "spec" && !ap;
     const btn = can("size") && open ? (sz?.small ? `<button class="btn small" data-size="designer">Send through a designer</button>` : `<button class="btn small" data-size="small">Mark as small change</button>`) : "";
     return said || approved || btn ? `<div class="hint size">${said}${btn}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
@@ -2350,9 +2352,12 @@
       // What the live prototype shows: `live_pick`'s option at its version.
       const built = (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && options.some((o) => o.id === c.live_pick?.variant) ? { id: c.live_pick.variant, name: c.live_pick.name, version: c.live_pick.version } : null;
       const what = built ? `**${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
+      // Straight to the coding agent: its issue gets the agent's label, only where the spec reaches GitHub (docs/handoff.md).
+      const github = (S.me?.handoff?.[c.request?.type || "idea"] || "desk") !== "desk";
       res = await ask({ title: options.length ? "Approve a design" : "Send to developers", body: `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: options.length ? "Approve" : "Send to developers", choices: options.length && !built ? options : null, pick: fav?.id || null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
-        send: (a) => post(built?.id || a.choice || a.note || "", against.length ? { overrule: a.check } : {}) });
+        ...(github ? { check2: "Straight to implementation: the coding agent's label goes on its issue, so the agent builds it" } : {}),
+        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? { implement: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the

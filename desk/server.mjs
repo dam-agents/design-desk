@@ -250,7 +250,7 @@ async function viewerRoute(req, res, url, who) {
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
-    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true,
+    return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true, implement: b.implement === true,
       variant: typeof b.variant === "string" ? b.variant : null, version: Number.isInteger(b.version) ? b.version : null,
       states: b.states && typeof b.states === "object" && !Array.isArray(b.states) ? b.states : null, part: b.part && typeof b.part === "object" ? b.part : null }), s, who));
   }
