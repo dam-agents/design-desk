@@ -919,7 +919,7 @@ export class Store {
     if (c.kind !== "request" || c.status !== "variants" || !(c.variants || []).length) throw bad("There are no drawn options to show the team yet.");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind)))
       throw bad("Design Desk is still drawing the options. Ask the team once they are here.");
-    if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, developers or the person who filed it ask the team for feedback.");
+    if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, developers, leads or the person who filed it ask the team for feedback.");
     c.status = "feedback";
     c.team_feedback = { state: "open", by: person(who), at: this.clock() };
     c.updated = this.clock();

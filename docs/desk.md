@@ -67,7 +67,8 @@ served by the Desk server through the platform's Artifact API relay.
   with grey counts, then **Product** and **People**. **How it works** opens from the question
   mark next to the day and night switch. The switch keeps each person's choice on the Desk
   (`POST /api/prefs {theme}`, `theme` in `GET /api/me`; null follows the system), so it follows
-  them to every device; the browser keeps a copy named for them only to open without a flash.
+  them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
+  the server takes it, and sent again on the next load.
   The Desk opens on Requests.
 - **Tab intros.** Every tab but How it works has an intro (what it shows, what you can do and,
   where a tab has a flow, step by step), `INTRO` in `desk/page.html`. It fills the pane beside
@@ -428,7 +429,8 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   the product's"). It leaves the filter once the person saw it or a designer marked it handled.
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
-  options are ready, or its live prototype is ready to approve (not on a small change).
+  options are drawn and wait to go to the team (Team feedback), its options are ready, or its
+  live prototype is ready to approve (not on a small change).
 - **A suggestion for the presentation** puts either kind on it until a designer adds it or says
   **Not now**, even once the card was seen or the request closed.
 - Every read of a card (the list, the card, `design desk item`) returns the derived

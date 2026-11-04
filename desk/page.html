@@ -1633,7 +1633,7 @@
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
-        ["<b>Ask the team for feedback</b> once a request's options are fine-tuned: its author may, whatever their role, and designers and developers may on any request filed here. One from Slack goes to the team by itself.", "request"],
+        ["<b>Ask the team for feedback</b> once a request's options are fine-tuned: its author may, whatever their role, and designers, developers and leads may on any request filed here. One from Slack goes to the team by itself.", "request"],
         ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
         ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
@@ -2570,8 +2570,8 @@
     }
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
-      return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. The request's author, a designer or a developer asks the team for feedback once they are fine-tuned.",
-        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers and developers may on any request"}.">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
+      return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. The request's author, a designer, a developer or a lead asks the team for feedback once they are fine-tuned.",
+        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       const shaper = can("revise");
@@ -4061,17 +4061,32 @@
     if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
     const me = myKey();
     try {
-      if (me) { if (t) localStorage.setItem(`desk-theme:${me}`, t); else localStorage.removeItem(`desk-theme:${me}`); localStorage.setItem("desk-theme-last", me); }
+      if (me) {
+        if (t) localStorage.setItem(`desk-theme:${me}`, t);
+        else { localStorage.removeItem(`desk-theme:${me}`); localStorage.removeItem(`desk-theme-unsaved:${me}`); }
+        localStorage.setItem("desk-theme-last", me);
+      }
       localStorage.removeItem("desk-theme");
     } catch {}
     renderTheme();
   }
-  // Their saved choice wins; a copy this browser kept before copies were named is saved for
-  // the first person who opens the Desk here.
+  // A choice the server has not taken yet stays marked unsaved (desk-theme-unsaved:<email>)
+  // until it answers; the next load sends it again.
+  function saveTheme(t, { quiet = false } = {}) {
+    const me = myKey();
+    if (!me) return;
+    store.set(`desk-theme-unsaved:${me}`, "1");
+    api("POST", "/api/prefs", { theme: t })
+      .then(() => { try { localStorage.removeItem(`desk-theme-unsaved:${me}`); } catch {} })
+      .catch(() => { if (!quiet) toast("Switched here only: the Desk couldn't save it for your other devices yet. It tries again the next time you open the Desk."); });
+  }
+  // A choice this browser has not saved yet wins and is sent again; then their saved choice;
+  // then a copy this browser kept before copies were named, saved for the first person here.
   function applyMyTheme() {
-    const mine = S.me?.theme, before = store.get("desk-theme");
+    const me = myKey(), mine = S.me?.theme, here = me ? store.get(`desk-theme:${me}`) : null, before = store.get("desk-theme");
+    if ((here === "light" || here === "dark") && store.get(`desk-theme-unsaved:${me}`)) { setTheme(here); saveTheme(here, { quiet: true }); return; }
     if (mine === "light" || mine === "dark") return setTheme(mine);
-    if ((before === "light" || before === "dark") && myKey()) { setTheme(before); api("POST", "/api/prefs", { theme: before }).catch(() => {}); return; }
+    if ((before === "light" || before === "dark") && me) { setTheme(before); saveTheme(before, { quiet: true }); return; }
     setTheme(null);
   }
   function renderTheme() {
@@ -4082,8 +4097,7 @@
   }
   $("#theme").addEventListener("click", () => {
     const next = isDark() ? "light" : "dark";
-    setTheme(next);
-    if (myKey()) api("POST", "/api/prefs", { theme: next }).catch(() => toast("Switched here only: the Desk couldn't save it for your other devices. Try the switch again in a minute."));
+    setTheme(next); saveTheme(next);
   });
   systemDark.addEventListener("change", renderTheme);
   renderTheme();
