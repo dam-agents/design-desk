@@ -768,7 +768,7 @@
       decide: "flag", reopen: "undo", revise: "redo", close: "x", states: "layers", "slack-share": "chat", "slack-send": "send", unqueue: "minus", "not-now": "off",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
-    adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: "send",
+    adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
   };
   const OWN_SIGN = /^[^\p{L}\p{N}]/u;
   function iconFor(el) {
@@ -2274,13 +2274,19 @@
     const viewOf = (el) => { const v = el.closest("[data-view]"); return v ? { view: v.dataset.view, view_name: v.dataset.viewName || "View " + v.dataset.view } : {}; };
     // A note on another view of the design opens that view first, through the review bar.
     const reveal = (el) => { const v = el?.closest("[data-view]"); if (v && !v.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(v.dataset.view) + '"]')?.click(); };
-    const box = (el, color, label, solid) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; d.appendChild(b); } layer.appendChild(d); };
+    // A note's number can be pointed at (the Desk shows what the note says) and clicked (the Desk opens it).
+    const say = (m) => parent.postMessage(m, "*");
+    // The pins are drawn afresh every moment, so leaving one is read from the pointer, not the pin.
+    // Opened on the press: the pin is redrawn before a click could land on it, and that click is not a pick.
+    let pinTip = false, pinPressed = 0;
+    addEventListener("mousemove", (e) => { if (pinTip && !e.target.closest?.("[data-note-pin]")) { pinTip = false; say({ type: "desk-pin-tip", note: null }); } }, true);
+    const box = (el, color, label, solid, note) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; if (note) { b.dataset.notePin = note; b.style.pointerEvents = "auto"; b.style.cursor = "pointer"; b.onmouseenter = () => { pinTip = true; const q = b.getBoundingClientRect(); say({ type: "desk-pin-tip", note, rect: { left: q.left, top: q.top, bottom: q.bottom, width: q.width } }); }; b.onpointerdown = (e) => { e.stopPropagation(); e.preventDefault(); pinPressed = Date.now(); say({ type: "desk-pin-open", note }); }; } d.appendChild(b); } layer.appendChild(d); };
     // A part a decision shaped: a dashed frame with a small mark in its corner; the decisions'
     // numbers show on the part under the pointer and, framed solid, on the decision picked,
     // while the others keep only a faint frame. A decision no longer in force is red.
     const tag = (el, text, focus, quiet, gone, full) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const c = gone ? "#b3261e" : "#0d7d78"; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border-radius:5px;box-sizing:border-box;" + (focus ? "border:2px solid " + c + ";background:" + (gone ? "rgba(179,38,30,.07)" : "rgba(13,125,120,.08)") : "border:1px dashed " + c + (quiet ? ";opacity:.3" : "")); layer.appendChild(d); if (quiet || !text) return; const b = document.createElement("span"); if (!full) { b.textContent = "◆"; b.style.cssText = "position:absolute;right:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#fff;color:" + c + ";border:1px solid " + c + ";font:9px/13px system-ui,sans-serif;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.18)"; d.appendChild(b); return; } b.textContent = "◆ " + text; b.style.cssText = "position:absolute;right:-2px;" + (r.top + scrollY < 22 ? "bottom:-20px" : "top:-20px") + ";background:" + (focus ? c : "#fff") + ";color:" + (focus ? "#fff" : c) + ";border:1px solid " + c + ";font:600 11px/17px system-ui,sans-serif;padding:0 6px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.18)" + (gone ? ";text-decoration:line-through" : ""); d.appendChild(b); };
     const shaped = (el) => [...new Set(pins.filter((p) => p.why && find(p.selector)?.contains(el)).map((p) => p.why))];
-    const draw = () => { layer.textContent = ""; const why = new Map(); for (const p of pins) { if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story"); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
+    const draw = () => { layer.textContent = ""; const why = new Map(); for (const p of pins) { if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
       // A part inside another part the same decision shaped does not repeat its number.
       const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
       for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
@@ -2297,6 +2303,7 @@
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
       // The review bar always acts (views, Clickable, theme), and so do its clicks for a note.
+      if (Date.now() - pinPressed < 800) { e.preventDefault(); e.stopPropagation(); return; }
       if (mode === "off" || !e.isTrusted || e.target.closest("#review")) return;
       if (editing && editing.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
@@ -2450,7 +2457,6 @@
       ${old ? "" : `<div class="composer" style="margin:0">
         <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
         <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button>` : ""}${sel ? `<button class="btn small" data-ws-clear>Clear selection</button>` : ""}</div>
-        ${shaper ? `<p class="hint">Design Desk changes the design and the new version appears here by itself. Notes sent in a row are done together.</p>` : ""}
       </div>`}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
       ${renderWsNotes(c, v, sel)}
@@ -2497,9 +2503,11 @@
     const notes = all.filter((n) => f === "all" || (f === "done") === (n.state === "resolved"));
     const count = (k) => all.filter((n) => k === "all" || (k === "done") === (n.state === "resolved")).length;
     const workIn = all.filter((n) => workable(c, n));
+    // No notes on this option: no section at all.
+    if (!all.length) return "";
     const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}${changed(m)}</div>`;
     return `<div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}${st ? ` · ${esc(st.name)}` : ""}</h3>
-      <div class="tabs" style="margin:0 0 8px">${[["open", "Open"], ["done", "Done"], ["all", "All"]].map(([k, l]) => `<button data-ws-filter="${k}" aria-pressed="${f === k}">${l} ${count(k)}</button>`).join("")}</div>
+      <div style="margin:0 0 8px">${seg("wsFilter", [["open", "Open", count("open")], ["done", "Done", count("done")], ["all", "All", count("all")]], "ws-filter", f)}</div>
       ${workIn.length > 1 ? `<div class="actions" style="margin:0 0 8px"><button class="btn small" data-work-in="${esc(workIn.map((n) => n.id).join(","))}">Work in all ${workIn.length} open comments</button></div>` : ""}
       ${notes.length ? `<ol class="notes">${notes.map((th) => {
         const [st, label] = noteState(c, th); const last = th.messages[th.messages.length - 1];
@@ -2530,7 +2538,7 @@
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
   }
   function sendPins(c, v) {
-    const pins = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector).map((n) => ({ n: n.n, selector: n.anchor.selector, state: noteState(c, n)[0] }));
+    const pins = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector).map((n) => ({ n: n.n, note: n.id, selector: n.anchor.selector, state: noteState(c, n)[0] }));
     if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
   }
@@ -2542,6 +2550,18 @@
     const d = e.data || {};
     const pickOf = (text) => ({ selector: String(d.selector || "").slice(0, 500), text: String(text || "").slice(0, 120), tag: String(d.tag || "").slice(0, 40), label: String(d.label || "").slice(0, 120), ...(d.view ? { view: String(d.view).slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) } : {}) });
     // The screen the person moved to; the next option or version opens the same one if it has it.
+    // A note's number in the design: what it says on hover, the note itself on a click.
+    if (d.type === "desk-pin-tip") {
+      const th = d.note && notesOf(S.card).find((x) => x.id === d.note), m = th?.messages?.[0];
+      if (!m) return tipHide();
+      const by = m.by?.agent ? "Design Desk" : m.by?.name || m.by?.email || "Someone";
+      const f = frame.getBoundingClientRect(), r = d.rect || {}, el = document.createElement("span");
+      el.dataset.tip = `#${th.n} · ${by}: ${String(m.text || "").replace(/\s+/g, " ").slice(0, 280)}${th.messages.length > 1 ? ` (+${th.messages.length - 1} ${th.messages.length === 2 ? "reply" : "replies"})` : ""}`;
+      el.style.cssText = `position:fixed;left:${f.left + (r.left || 0)}px;top:${f.top + (r.top || 0)}px;width:${r.width || 1}px;height:${(r.bottom || 0) - (r.top || 0)}px;pointer-events:none`;
+      document.body.append(el); tipShow(el); el.remove();
+      return;
+    }
+    if (d.type === "desk-pin-open") { tipHide(); const li = document.querySelector(`[data-ws-note="${CSS.escape(String(d.note || ""))}"]`); if (li) { li.click(); li.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
     if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
     if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
