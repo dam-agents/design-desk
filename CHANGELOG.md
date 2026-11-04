@@ -14,6 +14,12 @@ Nothing — skills and docs are re-read per run. Slack replies about a request n
 card link and a PNG where one exists; with `slack_polls: enabled`, finished options start
 their vote in that request's own thread.
 
+## 1.38.1 — 2026-11-04
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
 ## 1.38.0 — 2026-11-04
 
 **Upgrade:**
