@@ -1638,7 +1638,7 @@
   }
   function renderAgendaDetail() {
     const items = S.agenda, ideas = suggested();
-    $("#detail").innerHTML = `<h2>Presentation</h2><p class="hint">What designers chose to show at the team's next design meeting, each in its final version. Present from here, then mark each one as presented.</p>
+    $("#detail").innerHTML = `<div class="crumb"><button class="btn small" data-filter="reqFilter:open">← Requests</button></div><h2>Presentation</h2><p class="hint">What designers chose to show at the team's next design meeting, each in its final version. Present from here, then mark each one as presented.</p>
       <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length > 1 ? `<button class="btn" data-act="clear-call">Mark all as presented</button>` : ""}</div>
       ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}${num(a)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}
         <div class="actions">${markButton(a)}<button class="btn small" data-card="${esc(a.id)}">Open</button></div></div>`).join("") || `<div class="empty">Nothing is on the presentation yet.</div>`}
