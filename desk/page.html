@@ -829,7 +829,7 @@
     spec: "This option gets built. Design Desk writes the developer spec from it, then sends it to developers.",
     "handed-off": "Approved and with developers. When it ships, it appears under Changes.",
     declined: "Nobody works on this request any more and nothing goes to developers. A designer can reopen it.",
-    decided: "Closed with a decision instead of a design. The decision is under Product, Decisions.",
+    decided: "Closed with a decision instead of a design. The decision is under Product, Decisions. Nobody works on it any more; a designer can reopen it.",
   };
   const tone = (c) => c.status === "declined" && c.decided ? "decided" : TONE[c.status] || "fyi";
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
@@ -1671,7 +1671,7 @@
   // A request's own text folds the same way, for every request in this browser.
   // The request shows whole; folded, it keeps three lines and a link to the rest. It stays so in this browser.
   const briefToggle = (folded, kind) => { const what = kind === "made" ? "what Design Desk found" : kind ? "report" : "request";
-    return `<button class="brief-toggle" data-brief-toggle="${kind === "made" ? "made" : kind ? "bug" : ""}" title="Fold or unfold it; it stays so in this browser">${folded ? (kind === "made" ? `Show ${what}` : `Show the whole ${what}`) : `Hide ${kind === "made" ? what : `the ${what}`}`}</button>`; };
+    return `<button class="brief-toggle" data-brief-toggle="${kind === "made" ? "made" : kind ? "bug" : ""}" title="${kind === "made" ? "Fold or unfold what Design Desk found" : "Fold or unfold what was asked"}; it stays so in this browser">${folded ? (kind === "made" ? `Show ${what}` : `Show the whole ${what}`) : `Hide ${kind === "made" ? what : `the ${what}`}`}</button>`; };
   document.addEventListener("click", (e) => {
     const t = e.target.closest?.("[data-brief-toggle]"); if (!t) return;
     const b = t.closest(".brief"), folded = !b.classList.contains("clamped");
@@ -2571,7 +2571,7 @@
     // A closed request keeps its presentation actions; only the design actions leave.
     const size = can("size") && !closed(c) && c.status !== "spec" && !c.approved ? (c.size?.small ? `<button class="btn" data-size="designer">Send through a designer</button>` : `<button class="btn" data-size="small">Mark as small change</button>`) : "";
     const items = call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
-    const more = items ? `<details class="more"><summary class="btn" aria-label="More" title="More: the presentation, the size, redraw or close">⋯</summary><div class="menu">${items}</div></details>` : "";
+    const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${tone(c) === "decided" ? "Decided without a design" : esc(STATUS[c.status] || c.status)}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c)}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
@@ -2618,7 +2618,7 @@
     const can_ = can("vote");
     // Who voted, by role, in the pill's tooltip (it was a chip beside the pills).
     const roles = (k) => Object.entries(votes.filter((x) => x.vote === k).map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {})).map(([r, m]) => `${m} ${r}`).join(", ");
-    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${k === "prefer" ? "up" : "concern"}${n(k) ? " some" : ""}${mine === k ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
+    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${k === "prefer" ? "up" : "concern"}${n(k) ? " some" : ""}${mine === k ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
     const notes = (c.threads || []).filter((th) => th.anchor?.variant === v && th.state !== "resolved").length;
     return `<span class="votes">${pill("prefer")}${pill("concern")}${notes ? `<span class="notes">${plural(notes, "note", "notes")}</span>` : ""}</span>`;
   }
