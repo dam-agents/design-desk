@@ -53,7 +53,7 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
      bullets (at most 400 characters) and its `source: {label, url}` — where it comes from
      ("the issue #12", "the PR's decision notes", "not documented — ask <author>"):
      `what` (What changed) · `why` (Why it is like this; the page lets it fold, with `limits`
-     and `good-to-know`, and folds one only when it is long) · `limits` (What cannot change, and why) ·
+     and `good-to-know`; they show open) · `limits` (What cannot change, and why) ·
      `good-to-know` (states and edge cases that matter: empty, error, permissions, long text,
      small screens) · `questions` (open design questions you noticed: an inconsistency with
      the design system, a missing state, copy that breaks the product's words);

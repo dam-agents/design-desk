@@ -1059,7 +1059,9 @@
   }
   // The element a note is about, cut from its option: the design is moved and scaled so that
   // element fills the preview, and the rest of the design is hidden.
-  const SNIP_SCRIPT = (sel, text) => `<script>(()=>{const S=${JSON.stringify(sel)},T=${JSON.stringify(text)},b=document.body,d=document.documentElement;
+  // Text from a record goes into a script: `<` is escaped so no text can end the script early.
+  const js = (v) => JSON.stringify(v).replace(/</g, "\\u003c");
+  const SNIP_SCRIPT = (sel, text) => `<script>(()=>{const S=${js(sel)},T=${js(text)},b=document.body,d=document.documentElement;
     let e=null;try{e=S&&document.querySelector(S)}catch{}
     if(!e&&T){const w=document.createTreeWalker(b,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===T){e=n;break}}
     d.style.overflow="hidden";b.style.transformOrigin="0 0";
@@ -1696,11 +1698,11 @@
     </div>`;
   }
   // Every section says what it is and where it comes from. The ones that explain or give
-  // context can fold; they open unless they are long, so a short card reads whole.
-  const FOLDED = new Set(["why", "limits", "good-to-know", "context"]), LONG = 700;
+  // context can fold; they show open, so the card reads whole.
+  const FOLDED = new Set(["why", "limits", "good-to-know", "context"]);
   const sections = (c) => (c.sections || []).length ? `<div class="secs">${c.sections.map((s) => {
     const head = `<h4>${esc(s.title)}</h4>${s.source?.label ? `<span class="chip" title="Where this comes from">Source:${s.source.url || s.source.card ? srcLink(s.source) : ` ${esc(s.source.label)}`}</span>` : ""}`;
-    return FOLDED.has(s.key) ? `<details class="section sec"${String(s.body || "").length > LONG ? "" : " open"}><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
+    return FOLDED.has(s.key) ? `<details class="section sec" open><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
       : `<div class="section"><div class="sec-head">${head}</div>${md(s.body)}</div>`;
   }).join("")}</div>` : "";
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
@@ -2337,7 +2339,9 @@
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
       // The review bar always acts (views, Clickable, theme), and so do its clicks for a note.
-      if (Date.now() - pinPressed < 800) { e.preventDefault(); e.stopPropagation(); return; }
+      // Only the one click that ends a pin's press is swallowed, and never one on the review bar.
+      if (pinPressed && Date.now() - pinPressed < 800 && !e.target.closest("#review")) { pinPressed = 0; e.preventDefault(); e.stopPropagation(); return; }
+      pinPressed = 0;
       if (mode === "off" || !e.isTrusted || e.target.closest("#review")) return;
       if (editing && editing.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
@@ -3104,8 +3108,9 @@
       const byNum = (xs) => xs.filter((x) => x.id.startsWith(p)).sort((x, y) => n(y.id) - n(x.id));
       if (pre[1].toUpperCase() === "C") for (const c of byNum(S.cards)) card(c);
       else {
-        if (!S.decisions?.length) await loadDecisions();
-        for (const d of byNum(S.decisions || [])) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : "" });
+        // Every decision, revoked ones too: not the list the Decisions page filters.
+        const every = await api("GET", "/api/decisions?state=").then((r) => r.decisions || [], () => []);
+        for (const d of byNum(every)) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : "" });
       }
     }
     if (!byHash) ghHits();
