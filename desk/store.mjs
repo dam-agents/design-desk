@@ -133,6 +133,12 @@ const sees = (t, viewer) => Boolean(t) && (t.kind !== "private" || viewer === un
 const ASK_STEPS = ["request", "explore", "revise", "states", "build", "handoff", "figma", "catalog", "map"];
 const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
 
+// GitHub issues and pull requests the Desk's items point at, kept here with their comments
+// so previews and Design Desk's answers read them without a call to GitHub
+// (docs/desk.md → GitHub on the Desk). The agent writes them; people only read them.
+const GH_KEY = /^[\w.-]+\/[\w.-]+#\d+$/;
+const GH = { records: 3000, body: 4000, comments: 60, comment: 1500, perWrite: 100 };
+
 export class DeskError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
@@ -198,7 +204,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {} };
 }
 
 export class Store {
@@ -442,6 +448,50 @@ export class Store {
     return { thread: t, inbox: item };
   }
 
+  // ---------- GitHub on the Desk ----------
+
+  // Every issue and pull request a card points at: its source, where it came from, its
+  // spec's issue. `card` limits it to one card.
+  githubRefs(card = null) {
+    const keys = new Set();
+    for (const c of card ? [this.card(card)] : Object.values(this.db.cards).filter((x) => x.status !== "archived"))
+      for (const k of refsOf(c)) keys.add(k);
+    return [...keys];
+  }
+
+  // The agent stores what it read on GitHub; the answer names the comments new since the
+  // last read, which the watch run works through (docs/watch.md → Comments on GitHub).
+  putGithub(records) {
+    if (!Array.isArray(records) || !records.length || records.length > GH.perWrite) throw bad(`records: a list of 1 to ${GH.perWrite}`);
+    const fresh = [];
+    for (const x of records) {
+      const key = String(x?.key || "").toLowerCase();
+      if (!GH_KEY.test(key)) throw bad(`records: "${x?.key}" is not owner/repo#number`);
+      if (!["issue", "pr"].includes(x.kind)) throw bad(`${key}: kind is issue or pr`);
+      const comments = (Array.isArray(x.comments) ? x.comments : []).slice(-GH.comments).map((m) => ({
+        author: optText(m?.author, 100, "comment author"), at: optText(m?.at, 40, "comment at"),
+        url: /^https:\/\/github\.com\//.test(String(m?.url || "")) ? String(m.url).slice(0, 500) : "",
+        body: String(m?.body ?? "").slice(0, GH.comment),
+      }));
+      const was = own(this.db.github, key), seen = new Set((was?.comments || []).map((m) => `${m.at}|${m.author}`));
+      const added = was ? comments.filter((m) => !seen.has(`${m.at}|${m.author}`)) : [];
+      this.db.github[key] = {
+        key, kind: x.kind, title: clean(x.title || key, LIMITS.title, `${key} title`), state: optText(x.state, 30, "state"),
+        url: /^https:\/\/github\.com\//.test(String(x.url || "")) ? String(x.url).slice(0, 500) : "",
+        author: optText(x.author, 100, "author"), labels: (Array.isArray(x.labels) ? x.labels : []).slice(0, 20).map((l) => String(l).slice(0, 60)),
+        body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
+      };
+      if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
+    }
+    const all = Object.values(this.db.github);
+    if (all.length > GH.records) for (const x of all.sort((a, b) => a.fetched.localeCompare(b.fetched)).slice(0, all.length - GH.records)) delete this.db.github[x.key];
+    this.save();
+    return { stored: records.length, fresh };
+  }
+
+  github(keys) { return keys.map((k) => own(this.db.github, String(k).toLowerCase())).filter(Boolean); }
+  cardsOf(key) { return Object.values(this.db.cards).filter((c) => refsOf(c).includes(key)).map((c) => c.id); }
+
   // A private ask: a person's own question, about the item or the Desk page they were on.
   // It sits on no card's list of conversations; only `privateAsks` hands it back, to its
   // author (docs/desk.md → Private asks).
@@ -450,6 +500,8 @@ export class Store {
     if (!owner) throw forbidden("a private ask is a person's own question");
     if (starter !== null && !STARTERS.includes(starter)) throw bad(`starter must be one of ${STARTERS.join(", ")}`);
     const ctx = cleanContext(context, this.db.cards, this.db.decisions);
+    // The issues and pull requests the item points at go with it, for the agent to read.
+    if (ctx.card) { const refs = refsOf(this.card(ctx.card)); if (refs.length) ctx.refs = refs; }
     const mine = Object.values(this.db.threads).filter((t) => t.kind === "private" && t.owner === owner);
     if (mine.length >= LIMITS.threadsPerCard) throw bad("You have 300 private asks. Mark some as done first.");
     const id = this.next("thread", "T");
@@ -1641,6 +1693,13 @@ function cleanQuestions(list) {
 }
 
 // One issue or pull request whatever the link points into (a comment, a tab): "owner/name#12".
+// The issues and pull requests a card points at, as owner/repo#number.
+function refsOf(c) {
+  const out = [issueKey(c.source?.url), issueKey(c.origin?.url), issueKey(c.spec?.issue_url), issueKey(c.spec?.pr_url)];
+  if (c.source?.repo && (c.source.pr || c.source.issue)) out.push(`${String(c.source.repo).toLowerCase()}#${c.source.pr || c.source.issue}`);
+  return [...new Set(out.filter(Boolean))];
+}
+
 function issueKey(url) {
   const m = /^https?:\/\/[^/]+\/([^/\s]+\/[^/\s]+)\/(?:issues|pull)\/(\d+)/i.exec(String(url || ""));
   return m ? `${m[1].toLowerCase()}#${m[2]}` : null;

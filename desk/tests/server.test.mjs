@@ -210,3 +210,11 @@ test("a private ask reaches only its author over the API; another viewer cannot 
   assert.equal((await d.agent(`/agent/threads/${id}/answer`, { text: "One is a list, one a grid." })).status, 200);
   assert.deepEqual(await mine("bob@example.com"), []);
 });
+
+test("GitHub on the Desk: only the agent writes the copy, a person reads it", async (t) => {
+  const d = await desk(t);
+  const rec = { key: "acme/widgets#3", kind: "issue", title: "One account", comments: [{ author: "pat", at: "2026-11-01T10:00:00Z", body: "Hi" }] };
+  assert.equal((await d.viewer("lee@example.com", "/api/github", { records: [rec] })).status, 404, "a person cannot write it");
+  assert.equal((await d.agent("/agent/github", { records: [rec] })).status, 200);
+  assert.deepEqual((await d.viewer("alice@example.com", "/api/github?keys=acme/widgets%233")).body.records.map((x) => x.title), ["One account"]);
+});

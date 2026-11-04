@@ -177,6 +177,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2], { viewer: who.email || who.sub || null }) });
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
+  // What the Desk keeps of the issues and pull requests its items point at, for previews.
+  if (m === "GET" && p[1] === "github") return send(res, 200, { records: store.github(String(url.searchParams.get("keys") || "").split(",").filter(Boolean).slice(0, 50)) });
   // A person's own private asks, and no one else's (docs/desk.md → Private asks).
   if (m === "GET" && p[1] === "private") return send(res, 200, { asks: store.privateAsks(actor) });
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
@@ -327,6 +329,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover), heartbeat: Boolean(b.heartbeat) }));
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   // An ask to add a person carries its payload; only a lead's ask on the page makes one.
+  if (m === "GET" && p[1] === "github") { const card = url.searchParams.get("card"); const keys = url.searchParams.get("keys"); return send(res, 200, keys ? { records: store.github(keys.split(",").filter(Boolean)) } : { refs: store.githubRefs(card || null) }); }
+  if (m === "POST" && p[1] === "github") return send(res, 200, store.putGithub(b.records));
   if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from a lead on the People tab");
   if (m === "POST" && p[1] === "enqueue") return send(res, 201, (() => { store.card(String(b.card)); const it = store.enqueue(String(b.kind), String(b.card), null, { agent: true }, typeof b.note === "string" ? b.note.slice(0, 1000) : ""); store.save(); return { item: it }; })());
   throw new DeskError(404, `no route ${m} ${url.pathname}`);

@@ -1189,3 +1189,16 @@ test("a private ask keeps exactly what was open: the option, its state and part,
   assert.equal(s.openPrivate(alice, { text: "x", context: { page: "product", filter: "elements" } }).thread.context.filter, "elements");
   assert.throws(() => s.openPrivate(alice, { text: "x", context: { decision: "D-9" } }), /no decision/);
 });
+
+test("GitHub on the Desk: the agent keeps an issue with its comments, a new comment is fresh, a private ask carries the item's refs", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "change", title: "Limits", source: { repo: "Acme/Widgets", pr: 7, url: "https://github.com/acme/widgets/pull/7" } });
+  assert.deepEqual(s.githubRefs(), ["acme/widgets#7"]);
+  const rec = { key: "acme/widgets#7", kind: "pr", title: "Limits", state: "open", url: "https://github.com/acme/widgets/pull/7", body: "b", comments: [{ author: "pat", at: "2026-11-01T10:00:00Z", body: "Looks good" }] };
+  assert.deepEqual(s.putGithub([rec]).fresh, [], "a first read has nothing new");
+  const second = s.putGithub([{ ...rec, comments: [...rec.comments, { author: "lee", at: "2026-11-02T10:00:00Z", body: "Make the bar red?", url: "javascript:alert(1)" }] }]);
+  assert.deepEqual(second.fresh.map((x) => [x.key, x.cards, x.comments.map((m) => m.author)]), [["acme/widgets#7", [card.id], ["lee"]]]);
+  assert.equal(s.github(["ACME/widgets#7"])[0].comments[1].url, "", "only GitHub links are kept");
+  assert.throws(() => s.putGithub([{ ...rec, key: "not a key" }]), /owner\/repo#number/);
+  assert.deepEqual(s.openPrivate(alice, { text: "Why?", context: { card: card.id } }).thread.context.refs, ["acme/widgets#7"]);
+});

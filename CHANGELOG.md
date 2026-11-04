@@ -15,7 +15,11 @@ Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). Every page has a **🔒 Ask privately** chat in the bottom-right corner:
 questions and answers only their author and the agent see, about exactly what is open
 when asked — the item, its option, the workspace state and part, or the page and its filter
-(the chat names it, and the inbox item carries it as `context`). Each item and each page has its own chat and history. A private ask (thread kind `private`, its `owner` the asker,
+(the chat names it, and the inbox item carries it as `context`). Each item and each page has its own chat and history. The Desk keeps a copy of every issue and pull request its cards
+point at, with comments and reviews (`design desk github-sync`, every watch run); previews
+show it, private asks get the item's `refs`, and new comments are worked per
+[docs/watch.md](docs/watch.md) → **Comments on GitHub**. Nothing to install; the first
+watch run fills it. A private ask (thread kind `private`, its `owner` the asker,
 its `context` the item or page) is on no card; the server returns it only to its author
 (`GET /api/private`), its inbox item carries `private: true`, and it is answered per
 [docs/desk.md](docs/desk.md) → **Private asks** (five starters, each with its full brief),

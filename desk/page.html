@@ -1060,7 +1060,7 @@
     const what = `${ref.pr ? "Pull request" : "Issue"} #${ref.n}`, title = (text || "").replace(/^(?:issue|pr|pull request)?\s*#?\d+\s*[:·—-]?\s*/i, "");
     return `<div class="t"><b>${esc(title || what)}</b></div>
         <div class="sub"><span>${esc(what)}</span><span>${esc(ref.repo)}</span></div>
-        <p class="hint">Not on the Desk: it has no notes on its screens yet. The link opens it on GitHub.</p>`;
+        ${S.gh[ref.key] ? "" : `<p class="hint">Not on the Desk: it has no notes on its screens yet. The link opens it on GitHub.</p>`}`;
   }
   function peekIssue(c) {
     const src = c.source || {};
@@ -1074,6 +1074,25 @@
         <div class="sub">${c.in_progress ? `<span class="chip live" title="Its pull request is still open: the change is not in the product yet">● In progress — not shipped yet</span>` : src.merged_at ? `<span class="chip ok" title="The day its pull request was merged into the product">Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.pr ? `<span>PR #${esc(src.pr)}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${c.acked ? `<span class="chip ok" title="You marked it Got it">✓ Seen</span>` : ""}</div>
         ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${at ? `<h4>${at.level === "designer" ? "Needs a designer" : "Nothing to decide"}</h4>${(at.reasons || []).length ? `<ul>${at.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}` : ""}`;
   }
+  // GitHub as the Desk keeps it (docs/desk.md → GitHub on the Desk): state, labels and the
+  // latest comments, written by Design Desk's watch run.
+  S.gh = {};
+  async function ghLoad(keys) {
+    const want = keys.filter((k) => !(k in S.gh));
+    if (!want.length) return;
+    const r = await api("GET", `/api/github?keys=${encodeURIComponent(want.join(","))}`);
+    for (const k of want) S.gh[k] = null;
+    for (const x of r.records || []) S.gh[x.key] = x;
+  }
+  function ghPeek(keys) {
+    const recs = keys.map((k) => S.gh[k]).filter(Boolean);
+    return recs.map((x) => {
+      const last = (x.comments || []).slice(-2);
+      return `<h4>On GitHub · ${x.kind === "pr" ? "pull request" : "issue"} ${esc(x.key.split("#")[1] ? `#${x.key.split("#")[1]}` : "")}</h4>
+        <div class="sub"><span class="chip">${esc(x.state || "")}</span>${(x.labels || []).slice(0, 4).map((l) => `<span class="chip">${esc(l)}</span>`).join("")}<span>${plural((x.comments || []).length, "comment", "comments")}</span></div>
+        ${last.map((m) => `<p class="hint"><b>${esc(m.author)}</b>: ${esc(m.body.replace(/\s+/g, " ").slice(0, 160))}${m.body.length > 160 ? "…" : ""}</p>`).join("")}`;
+    }).join("");
+  }
   let peekTimer = null;
   const peekHide = () => { clearTimeout(peekTimer); $("#peek")?.remove(); };
   function peekShow(el) {
@@ -1081,11 +1100,15 @@
     const c = peekOf(el);
     if (!c || (c.id && S.card?.id === c.id)) return;
     clearTimeout(peekTimer);
-    peekTimer = setTimeout(() => {
+    peekTimer = setTimeout(async () => {
+      // What the Desk keeps of its issue or pull request on GitHub, read once per page load.
+      const keys = c.kind === "link" ? [c.ref.key] : refsOf(c);
+      await ghLoad(keys).catch(() => {});
+      if (!el.isConnected || !el.matches(":hover, :focus")) return;
       peekHide();
       const box = document.createElement("div");
       box.id = "peek"; box.setAttribute("role", "tooltip");
-      box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink }[c.kind] || peekIssue)(c);
+      box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink }[c.kind] || peekIssue)(c) + ghPeek(keys);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
