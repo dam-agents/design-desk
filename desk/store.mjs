@@ -208,7 +208,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {} };
 }
 
 export class Store {
@@ -303,7 +303,7 @@ export class Store {
         acked: viewer ? Boolean(c.acks?.[viewer]) : false, handled: c.handled?.at || null,
         // Closed with a decision: the list shows it in the decided ink, as the page does.
         decided: c.kind === "request" && c.status === "declined" && c.decided?.at || null,
-        triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
+        triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
@@ -356,6 +356,7 @@ export class Store {
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
       if (asks) reasons.push("Design Desk is waiting for an answer");
       else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options, decide or close it");
+      else if (!busy && c.status === "variants" && c.team_feedback?.state === "waiting") reasons.push("Options are drawn: fine-tune them, then ask the team for feedback");
       // A small change waits for a developer's approval, not a designer's.
       else if (!busy && !c.size?.small && c.status === "feedback") reasons.push(c.chosen ? "A designer picked an option: approve it or build it live" : "Options are ready: pick one or ask for changes");
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
@@ -532,6 +533,23 @@ export class Store {
     const item = this.enqueue("question", ctx.card, id, who);
     this.save();
     return { thread: t, inbox: item };
+  }
+
+  // What a person chose for themselves on the page, kept by their email (docs/desk.md → The
+  // menu): only the day or night mode; null follows their system.
+  prefsOf(who) {
+    const key = viewerKey(who);
+    return { theme: (key && own(this.db.prefs, key)?.theme) || null };
+  }
+
+  setPrefs(who, { theme } = {}) {
+    const key = viewerKey(who);
+    if (!key) throw bad("only a person has preferences");
+    if (theme !== null && theme !== "light" && theme !== "dark") throw bad("theme must be light, dark or null");
+    if (theme === null) delete this.db.prefs[key];
+    else Object.defineProperty(this.db.prefs, key, { value: { theme, at: this.clock() }, enumerable: true, writable: true, configurable: true });
+    this.save();
+    return this.prefsOf(who);
   }
 
   privateAsks(who) {
@@ -894,6 +912,21 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // A person hands the drawn options of a Desk request to the team: from here people vote and
+  // comment, as on a request from Slack (docs/desk.md → Team feedback).
+  openFeedback(cardId, who) {
+    const c = this.card(cardId);
+    if (c.kind !== "request" || c.status !== "variants" || !(c.variants || []).length) throw bad("There are no drawn options to show the team yet.");
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind)))
+      throw bad("Design Desk is still drawing the options. Ask the team once they are here.");
+    if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, developers or the person who filed it ask the team for feedback.");
+    c.status = "feedback";
+    c.team_feedback = { state: "open", by: person(who), at: this.clock() };
+    c.updated = this.clock();
+    this.save();
+    return { card: c };
+  }
+
   // A lead developer marks a request a small change, which any developer but its author
   // approves, or sends it through a designer (the default); the card keeps who and when
   // (docs/desk.md → Small changes).
@@ -1224,6 +1257,11 @@ export class Store {
       && ((next.kind === "screen" && next.path && x.path === next.path)
         || (next.kind === "element" && next.source?.file && x.source?.file === next.source.file && x.source?.export === next.source.export)));
     if (twin) throw new DeskError(409, `${twin.id} is already this ${next.kind}`);
+    // A request a person filed on the Desk waits at its drawn options until a person asks the
+    // team (docs/desk.md → Team feedback); one the agent filed for someone (Slack, chat) goes on
+    // to feedback by itself.
+    if (next.kind === "request" && next.status === "feedback" && c && ["triage", "variants"].includes(c.status) && !next.created_by?.agent && next.team_feedback?.state !== "open")
+      Object.assign(next, { status: "variants", team_feedback: { state: "waiting", since: this.clock() } });
     if (!c) { next.id = this.next("card", "C"); }
     this.keepLook(c, next);
     next.updated = this.clock();

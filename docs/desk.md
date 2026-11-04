@@ -10,7 +10,7 @@ served by the Desk server through the platform's Artifact API relay.
 - `desk/server.mjs`, started at every boot by the Login item `design-desk-server`
   (`kit.yaml` → `startupItems`, command `~/desk/serve.sh`). It listens on `127.0.0.1:5555`,
   the platform's Artifact API port, and keeps its store in `work/desk/`: `db.json` (cards,
-  threads, votes, inbox), `assets/` (screens, variants, specs, patches) and `inbox.json`
+  threads, votes, inbox, each person's day or night mode), `assets/` (screens, variants, specs, patches) and `inbox.json`
   (what the inbox pre-flight reads). It is the store's **only writer**.
 - `design desk health` says whether it answers. Not answering → `rc-service --user
   design-desk-server status`, then `restart`; the log is `~/.local/state/rc/design-desk-server.log`.
@@ -65,7 +65,10 @@ served by the Desk server through the platform's Artifact API relay.
 - **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
   answer); **Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
   with grey counts, then **Product** and **People**. **How it works** opens from the question
-  mark next to the day and night switch. The Desk opens on Requests.
+  mark next to the day and night switch. The switch keeps each person's choice on the Desk
+  (`POST /api/prefs {theme}`, `theme` in `GET /api/me`; null follows the system), so it follows
+  them to every device; the browser keeps a copy named for them only to open without a flash.
+  The Desk opens on Requests.
 - **Tab intros.** Every tab but How it works has an intro (what it shows, what you can do and,
   where a tab has a flow, step by step), `INTRO` in `desk/page.html`. It fills the pane beside
   the list while nothing is open there; People shows it above its list, beside it on a wide
@@ -308,7 +311,8 @@ A **private ask** (thread kind `private`) is a question only the person who aske
 agent see. The page asks it from the **🔒 Ask privately** chat in the bottom-right corner,
 on every Desk page, about what the person had open: an item (and the option it showed) or
 a Desk page. The thread carries that as `context` (`card` or `page`, `variant`, `label`),
-and the chat's header shows it. It is on no card's list of conversations; the server hands
+and the chat's header shows it; the button counts that chat's messages, and Enter sends
+(Shift+Enter a new line). It is on no card's list of conversations; the server hands
 it back only to its author (`GET /api/private`) and refuses everyone else any act on it.
 Its inbox item carries `private: true`, comes as `questions_due` like a question, and
 `design desk item I-<n>` returns the thread with it.
@@ -459,13 +463,22 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   as overdue.
 - **Comments on options** are pinned to an element and its view; people reply, mark them
   done or reopen them, and a designer or developer presses **Work it in** (one, or every open one) to turn
-  comments into change notes for you (`revise`, [requests.md](requests.md)). **The winner** is
+  comments into change notes for you (`revise`, [requests.md](requests.md)). The workspace's
+  **Comments** switch hides the pins from the design only (`desk-notes` in the browser's local
+  storage); a pin's click opens its comment, switching Open / Done to the tab it is on. **The winner** is
   a designer's pick (**Select as the winner**, the card's `chosen`); votes, Slack and you only
   advise, and nothing you write sets it.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person
   closed it. People's own actions set the rest through the server.
+- **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
+  `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
+  they fine-tune the options, until its author, a designer or a developer presses **Ask the team
+  for feedback** (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  to `feedback`. A request you filed for someone (Slack, chat) goes to `feedback` at once.
+  Read the status the upsert returns: a held request gets no `feedback` message (below), and
+  the channel hears nothing when a person hands it to the team.
 - When `notify` is `slack`, a request moving to `feedback`, `testing` or `handed-off` gets
   one message in the bound channel: "<title> (C-<n>) — Options ready to vote on: <link>", "— Live
   prototype ready to try: <link>" or "— Sent to developers: <link>", the link the card's
