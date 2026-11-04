@@ -354,6 +354,10 @@
   #workspace { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: grid; grid-template-rows: auto 1fr; }
   #workspace[hidden] { display: none; }
   .ws-top { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  /* The workspace's options are the same folder tabs, opening into the design below the bar. */
+  .ws-top .vtabs { align-self: flex-end; margin-bottom: -11px; }
+  .ws-top .vtabs button { background: var(--soft); }
+  .ws-top .vtabs button[aria-pressed="true"] { background: var(--bg); border-bottom-color: var(--bg); }
   .ws-top .title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ws-body { display: grid; grid-template-columns: 1fr var(--side-w); min-height: 0; }
   .ws-stage { padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
@@ -2381,7 +2385,7 @@
       <span class="title" title="${esc(c.title)}">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span><span class="grow"></span>`
       : `<button class="btn small" data-ws-close>← Back to the request</button>
       <span class="title" title="${esc(c.title)}">${esc(c.title)}</span>
-      <div class="tabs" style="margin:0">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>
+      <div class="tabs vtabs" role="group" aria-label="Design options">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>
       ${versions.length > 1 ? `<select id="ws-version" style="width:auto">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : ""}
       <span class="grow"></span>
       ${S.me?.figma && can("figma") ? `<button class="btn small" data-act="figma-import">Import from Figma</button><button class="btn small" data-act="figma-export">Send to Figma</button>` : ""}
