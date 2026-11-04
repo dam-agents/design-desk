@@ -137,7 +137,16 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   when it is the look. An option that spans several screens is one view per screen, each
   control that leads on wired to its view (the `variants` skill → Flow). A `needs-developer` request still gets variants; the parts a
   developer must add are drawn and labelled "needs a developer" in the variant.
-- **revise** — two kinds of work arrive as `revise`:
+- **One more option** (`explore` with `scope: "add"`): a designer or developer pressed the
+  **+ New option** tab and wrote what it should look like and have (`note`). `variant`, when
+  set, is the option it starts from ("like this one, changed as I describe"); none means a new
+  direction. Pick the product's parts it uses yourself, from the catalog
+  ([catalog.md](catalog.md)) where it has them. Draw **one**
+  new option for the same brief, research and boundary as the others; leave every option
+  already there as it is (each sent with its `version`, the new one without) and name it after
+  what makes it different. A wish the boundary does not allow is drawn as far as it goes and
+  said in its `rationale`. At most 6 options: the store refuses more.
+- **revise** — three kinds of work arrive as `revise`:
   - **Notes on elements** from the design workspace: threads of kind `change`, each anchored
     to one option (`anchor.variant`) and, usually, one element (`anchor.selector`, its text and
     a plain `label`; `anchor.view`/`view_name` the view it is on; `anchor.edit` is a text the
@@ -161,12 +170,29 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     before and after, the change outlined. Notes done in one rebuild share the previous asset.
     A note with `anchor.state` compares that state's previous and new file (`states[].asset` of
     that state), not the option's file.
+  - **Alternatives of a part** (`scope: "alternatives"`): a designer or developer selected a
+    part in the design workspace, pressed **Try 3 ways** and wrote how they picture it
+    (`note`); `part` is the part (`{selector, text, label, view, view_name}`), `variant` and
+    `version` the option as they saw it. Draw **three** genuinely different ways the part could
+    look that follow the note, each a self-contained copy of the whole option with only that
+    part changed (built like the option, in its style). Look at each (`design shot`), upload
+    each (`--kind variant`), and send the option unchanged (its `version`, same asset) with
+    `alternatives: [{id, name, how, part, asset, shot, selector, ask}]`: `id` short (`a`, `b`,
+    `c`), `name` what makes it different in a few words, `how` one sentence, `part` the part in
+    the product's words, `ask` the person's note. The workspace shows them above the design;
+    the person picks one with **Use this one**, and the store makes it the option's next
+    version itself (no run; the earlier version stays in its history, the other alternatives
+    go, and its states are then out of date). A later redraw of the option drops alternatives
+    drawn for an older version; `alternatives: []` removes them.
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
     what people preferred, and add one comment listing what changed per comment, with each
     option's whole view before and after (`design compare` without a selector, `design desk
     comment … --shots`). Never drop
     or merge an option on votes: only a designer's pick (the card's `chosen`, **Pick as the
-    winner**) says which option wins, and only a designer removes one.
+    winner**) says which option wins, and only a designer removes one: the ✕ on its tab takes it
+    off the card (no run; the card's `dropped_options` says who and when). The last option, and
+    the one a live prototype is built from, stay. A run reads the card again before its upsert
+    and leaves a removed option out.
 
   People wait for notes with the page open, so a note's run is short: change only what the
   notes ask, rebuild only that option, and before closing the item look at the inbox once
