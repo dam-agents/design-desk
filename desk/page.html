@@ -696,7 +696,7 @@
       revise: "Design Desk redraws the options, working in every open comment",
       close: "Design Desk stops working on it and switches off its live prototype. You confirm first and can reopen it later.",
       states: "Design Desk draws a part of this option in every state it can be in: hovered, disabled, loading, empty, with an error…",
-      "slack-share": "Posts these options to the team's Slack channel for votes; votes and replies come back here",
+      "slack-share": "Posts these options to Slack for votes — into the thread the request came from, else the team's channel; votes and replies come back here",
       "slack-send": "Posts pictures of the designs to Slack with a link back here; comments and the pick stay here",
       "figma-import": "Paste a link to a Figma frame: Design Desk adds it as a design option built from the product's real parts",
       "figma-export": "Design Desk puts this option into Figma as editable layers and links it here",
@@ -1658,7 +1658,7 @@
   }
   function renderAgendaDetail() {
     const items = S.agenda, ideas = suggested();
-    $("#detail").innerHTML = `<h2>Presentation</h2><p class="hint">What designers chose to show at the team's next design meeting, each in its final version. Present from here, then mark each one as presented.</p>
+    $("#detail").innerHTML = `<div class="crumb"><button class="btn small" data-filter="reqFilter:open">← Requests</button></div><h2>Presentation</h2><p class="hint">What designers chose to show at the team's next design meeting, each in its final version. Present from here, then mark each one as presented.</p>
       <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length > 1 ? `<button class="btn" data-act="clear-call">Mark all as presented</button>` : ""}</div>
       ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}${num(a)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}
         <div class="actions">${markButton(a)}<button class="btn small" data-card="${esc(a.id)}">Open</button></div></div>`).join("") || `<div class="empty">Nothing is on the presentation yet.</div>`}
@@ -3090,7 +3090,8 @@
     }
     if (name === "slack-share") {
       const at = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(15, 0, 0, 0); return d.toISOString(); };
-      res = await ask({ title: "Share in Slack", body: "Design Desk posts these options to the team's Slack channel, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.",
+      const thread = c.origin?.channel === "slack";
+      res = await ask({ title: "Share in Slack", body: `Design Desk posts these options ${thread ? "in the Slack thread this request came from" : "to the team's Slack channel"}, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`,
         ok: "Post to Slack", choices: [{ id: String(at(1)), name: "Close tomorrow at 15:00" }, { id: String(at(3)), name: "Close in 3 days" }, { id: String(at(7)), name: "Close in a week" }], pick: String(at(3)), note: "What should people look at? (optional)",
         send: (a) => post(JSON.stringify({ closes: a.choice, note: a.note })) });
       if (!res) return;

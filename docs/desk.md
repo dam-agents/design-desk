@@ -277,7 +277,9 @@ A `questions_due` item points at a thread: on a card, or a private ask about a D
    simple diagram when the point is a flow. Name every part and state you mean by its
    number (`C-12.3`, Links to an item) so the reader can click straight to it. A new
    picture is uploaded with `design desk asset <file> --kind screen --card C-n`.
-   Write it to a file and `design desk answer T-<n> <file>`.
+   Write it to a file and `design desk answer T-<n> <file>`. When the question came through
+   Slack, the reply also names the card and links it ([requests.md](requests.md) → Answering
+   in the thread).
 3. A question that is really a request ("can it be blue?") gets the answer *and* the
    boundary verdict in one sentence, and points to **Adjust the design**.
 4. A question you cannot answer from sources says so and names who can (the PR author, the

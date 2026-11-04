@@ -7,11 +7,25 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.38.1 — 2026-11-04
+## 1.39.1 — 2026-11-04
 
 **Upgrade:**
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). No server restart, no data change.
+
+## 1.39.0 — 2026-11-04
+
+**Upgrade:**
+Skills and docs are re-read per run. Slack replies about a request now carry its
+card link and a PNG where one exists; with `slack_polls: enabled`, finished options start
+their vote in that request's own thread, closing 48 hours later. Republish the Desk page
+(`update_artifact` on `desk_artifact` with `desk/page.html`): Share in Slack names that thread.
+
+## 1.38.1 — 2026-11-04
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**).
 
 ## 1.38.0 — 2026-11-04
 
