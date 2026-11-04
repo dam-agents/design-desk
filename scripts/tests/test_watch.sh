@@ -81,6 +81,22 @@ printf -- '- repos: acme/widgets
 ' > "$WORK_DIR/CONFIG.md"
 assert "issue_label none and watch_open_prs disabled turn both off" '(.issues_due | length) == 0 and ([.changes_due[]? | select(.state == "open")] | length) == 0' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 
+# The Desk's GitHub copies: one never read, and one GitHub changed since, open a run alone.
+printf -- '- repos: acme/widgets\n- watch_since: 2026-10-01T00:00:00Z\n- issue_label: none\n- watch_open_prs: disabled\n' > "$WORK_DIR/CONFIG.md"
+mkdir -p "$DESK_DIR"
+cat > "$DESK_DIR/github-refs.json" <<'JSON'
+{"refs":[{"key":"acme/widgets#21","updated":"2026-11-01T10:00:00Z"},{"key":"acme/widgets#22","updated":"2026-11-03T10:00:00Z"},{"key":"acme/widgets#30","updated":null}]}
+JSON
+cat > "$STUB_DIR/search.json" <<'JSON'
+{"incomplete_results":false,"items":[
+ {"number":21,"title":"Old PR","html_url":"https://github.com/acme/widgets/pull/21","user":{"login":"a"},"updated_at":"2026-11-02T10:00:00Z","pull_request":{"merged_at":"2026-09-01T10:00:00Z"}},
+ {"number":22,"title":"Quiet PR","html_url":"https://github.com/acme/widgets/pull/22","user":{"login":"a"},"updated_at":"2026-11-03T10:00:00Z","pull_request":{"merged_at":"2026-09-01T10:00:00Z"}}]}
+JSON
+outg="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "a copy behind GitHub opens a run" '.nothing_to_do == false and .github_due == ["acme/widgets#21", "acme/widgets#30"] and (.changes_due | length) == 0' "$outg"
+assert "its title says what it does" '.title == "Read new GitHub comments"' "$outg"
+rm -f "$DESK_DIR/github-refs.json"
+
 # A failed listing is never an answer.
 out4="$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" watch)"
 assert "outage → error, not quiet" '.nothing_to_do == true and (.error | test("could not list"))' "$out4"

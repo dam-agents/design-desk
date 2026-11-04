@@ -316,6 +316,37 @@
   textarea, input, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
   textarea { min-height: 64px; resize: vertical; }
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
+  .subno { font: 600 11.5px/1 var(--mono, ui-monospace, monospace); background: var(--soft); color: var(--ink); padding: 2px 6px; border-radius: 6px; text-decoration: none; margin-right: 4px; }
+  .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
+  .starters { display: flex; gap: 6px; flex-wrap: wrap; }
+  #ask { position: fixed; right: 16px; bottom: 16px; z-index: 40; }
+  .ask-fab { border: 1px solid var(--line); background: var(--ink); color: var(--panel); border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.18); display: inline-flex; gap: 8px; align-items: center; }
+  .ask-panel { width: min(560px, calc(100vw - 32px)); height: min(820px, calc(100vh - 32px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.22); overflow: hidden; }
+  .ask-panel { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
+  .ask-grip { position: absolute; left: 0; top: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 1; touch-action: none;
+    background: linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 5px, var(--muted) 5px 6px, transparent 6px) no-repeat; opacity: .5; }
+  .ask-grip:hover { opacity: 1; }
+  .ask-panel header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .ask-ctx { padding: 8px 12px; background: var(--soft); font-size: 12.5px; border-bottom: 1px solid var(--line); }
+  .ask-body { flex: 1; overflow: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .ask-body .hint { line-height: 1.5; margin: 0; }
+  .ask-about { align-self: center; font-size: 11.5px; color: var(--muted); background: var(--soft); padding: 2px 10px; border-radius: 999px; margin: 6px 0 2px; }
+  .ask-msg { padding: 8px 12px; border-radius: 14px; max-width: 85%; }
+  .ask-msg.me { align-self: flex-end; background: var(--ink); color: var(--panel); border-bottom-right-radius: 4px; }
+  .ask-msg.me a { color: inherit; }
+  .ask-row { display: flex; gap: 8px; align-items: flex-start; align-self: flex-start; max-width: 92%; }
+  .ask-row .ask-msg { max-width: none; }
+  .ask-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); display: grid; place-items: center; font: 700 10.5px/1 inherit; letter-spacing: .02em; }
+  .ask-name { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+  .ask-msg.agent { align-self: flex-start; background: var(--soft); border-bottom-left-radius: 4px; }
+  .ask-msg.pending { color: var(--warn); font-size: 12.5px; }
+  .ask-when { display: block; font-size: 10.5px; opacity: .65; margin-top: 2px; text-align: right; }
+  .ask-brief { display: block; margin: 6px 0 0 auto; font-size: 12px; }
+  .ask-msg .md p { margin: 0 0 6px; } .ask-msg .md p:last-child { margin: 0; }
+  .ask-panel footer { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 8px; }
+  .ask-panel footer .starters { margin: 0; }
+  .ask-panel footer textarea { min-height: 52px; }
+  .ask-panel footer .bar { display: flex; justify-content: flex-end; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
   /* An issue's or a pull request's preview on hover: what the Desk knows of it. */
@@ -920,7 +951,8 @@
     const a = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     return html.split(/(<a\b[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>|<[^>]*>)/).map((part, i) => i % 2 ? part : part
       // Another item on the Desk, by its number (docs/desk.md → Links to an item).
-      .replace(/(?<![\w#/.-])C-\d+\b/g, (m) => S.cards.some((x) => x.id === m) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
+      // A numbered state or picture of it, C-12.3 (docs/desk.md → Numbers of parts and states).
+      .replace(/(?<![\w#/.-])(C-\d+)(?:\.(\d+))?\b/g, (m, id) => S.cards.some((x) => x.id === id) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
       // A decision, by its number (docs/desk.md → Decisions).
       .replace(/(?<![\w#/.-])D-\d+\b/g, (m) => `<a href="#${m}" data-ref="${m}">${m}</a>`)
       .replace(/(?<![\w./-])([\w.-]+\/[\w.-]+)#(\d+)\b/g, (m, r, n) => a(`${host}/${r}/issues/${n}`, m))
@@ -1104,7 +1136,7 @@
     const what = `${ref.pr ? "Pull request" : "Issue"} #${ref.n}`, title = (text || "").replace(/^(?:issue|pr|pull request)?\s*#?\d+\s*[:·—-]?\s*/i, "");
     return `<div class="t"><b>${esc(title || what)}</b></div>
         <div class="sub"><span>${esc(what)}</span><span>${esc(ref.repo)}</span></div>
-        <p class="hint">Not on the Desk: it has no notes on its screens yet. The link opens it on GitHub.</p>`;
+        ${S.gh[ref.key] ? "" : `<p class="hint">Not on the Desk: it has no notes on its screens yet. The link opens it on GitHub.</p>`}`;
   }
   function peekItem(c) {
     return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
@@ -1128,6 +1160,25 @@
         <div class="sub">${c.in_progress ? `<span class="chip live" title="Its pull request is still open: the change is not in the product yet">● In progress — not shipped yet</span>` : src.merged_at ? `<span class="chip ok" title="The day its pull request was merged into the product">Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.pr ? `<span>PR #${esc(src.pr)}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${c.acked ? `<span class="chip ok" title="You marked it Got it">✓ Seen</span>` : ""}</div>
         ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${at ? `<h4>${at.level === "designer" ? "Needs a designer" : "Nothing to decide"}</h4>${(at.reasons || []).length ? `<ul>${at.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}` : ""}`;
   }
+  // GitHub as the Desk keeps it (docs/desk.md → GitHub on the Desk): state, labels and the
+  // latest comments, written by Design Desk's watch run.
+  S.gh = {};
+  async function ghLoad(keys) {
+    const want = keys.filter((k) => !(k in S.gh));
+    if (!want.length) return;
+    const r = await api("GET", `/api/github?keys=${encodeURIComponent(want.join(","))}`);
+    for (const k of want) S.gh[k] = null;
+    for (const x of r.records || []) S.gh[x.key] = x;
+  }
+  function ghPeek(keys) {
+    const recs = keys.map((k) => S.gh[k]).filter(Boolean);
+    return recs.map((x) => {
+      const last = (x.comments || []).slice(-2);
+      return `<h4>On GitHub · ${x.kind === "pr" ? "pull request" : "issue"} ${esc(x.key.split("#")[1] ? `#${x.key.split("#")[1]}` : "")}</h4>
+        <div class="sub"><span class="chip">${esc(x.state || "")}</span>${(x.labels || []).slice(0, 4).map((l) => `<span class="chip">${esc(l)}</span>`).join("")}<span>${plural((x.comments || []).length, "comment", "comments")}</span></div>
+        ${last.map((m) => `<p class="hint"><b>${esc(m.author)}</b>: ${esc(m.body.replace(/\s+/g, " ").slice(0, 160))}${m.body.length > 160 ? "…" : ""}</p>`).join("")}`;
+    }).join("");
+  }
   let peekTimer = null;
   const peekHide = () => { clearTimeout(peekTimer); peekFor = null; $("#peek")?.remove(); };
   let peekFor = null;
@@ -1138,6 +1189,10 @@
       // Not on the card's own page: it says the same there already.
       const c = await peekOf(el);
       if (peekFor !== el || !el.isConnected || !c || (c.id && (S.card?.id === c.id || S.decision?.id === c.id))) return;
+      // What the Desk keeps of its issue or pull request on GitHub, read once per page load.
+      const keys = c.kind === "link" ? [c.ref.key] : c.kind === "snip" || c.kind === "decision" ? [] : refsOf(c);
+      await ghLoad(keys).catch(() => {});
+      if (peekFor !== el || !el.isConnected) return;
       peekHide();
       const box = document.createElement("div");
       box.id = "peek"; box.setAttribute("role", "tooltip");
@@ -1146,7 +1201,7 @@
         box.innerHTML = `<div class="snipbox"><iframe sandbox="allow-scripts" title="The element the note is about"></iframe></div>`;
         const h = snipDoc(c.html, c.sel || "", c.text || "");
         box.querySelector("iframe").srcdoc = h;
-      } else box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c);
+      } else box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c) + ghPeek(keys);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
@@ -1657,7 +1712,8 @@
   // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
   // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
   // the two prove the same size.
-  const figure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
+  const figure = (s, label, frame) => s.no ? `<div id="no-${esc(s.no[0].id)}-${s.no[1]}">${subTag(...s.no)}${plainFigure(s, label, frame)}</div>` : plainFigure(s, label, frame);
+  const plainFigure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
   // The agent's questions as a form: each has its options and "Leave it to Design Desk",
   // which is picked until a person chooses; one button leaves all of them.
   function askForm(th) {
@@ -1686,6 +1742,15 @@
     const single = list.filter((x) => !x.stage);
     return outlineToggle(list) + rows + (single.length ? `<div class="shots" style="margin-top:${rows ? 12 : 0}px">${single.map((x) => figure(x)).join("")}</div>` : "");
   }
+
+  // Numbers of an item's states and pictures: C-12.3 is the third of C-12, to cite and to
+  // click (docs/desk.md → Numbers of parts and states). An element's situations, a screen's
+  // pictures, and a request's catalog states across its options in order, each counted once.
+  const subNo = (c, k) => `${c.id}.${k}`;
+  const subTag = (c, k) => `<a class="subno" href="#${esc(subNo(c, k))}" data-ref="${esc(subNo(c, k))}" title="Its number: cite ${esc(subNo(c, k))} anywhere on the Desk to link here">${esc(subNo(c, k))}</a>`;
+  const catalogStates = (c) => (c.variants || []).flatMap((v) => (v.states || []).map((x) => ({ v, x })));
+  // The option a request's numbered state belongs to, so its catalog tab opens on it.
+  const subVariant = (c, k) => catalogStates(c)[k - 1]?.v.id || null;
 
   // What a worked-in comment did: Design Desk's answer carries the same place before and after.
   const changed = (m) => m.shots?.length ? `<div class="changed">${shots(m.shots)}</div>` : "";
@@ -1769,7 +1834,133 @@
       <div class="composer" id="composer">
         <textarea id="composer-text" maxlength="4000" placeholder="Ask anything: why it works this way, what could change… or leave a comment for the team."></textarea>
         <div class="bar"><button class="btn primary" data-post="question">Ask Design Desk</button><button class="btn" data-post="comment">Comment for the team</button></div>
-        <p class="hint">Design Desk answers questions right here. It reads comments when it changes the design.</p></div>`;
+        <p class="hint">Everyone on the Desk sees these. Design Desk answers questions right here. It reads comments when it changes the design.</p></div>
+`;
+  }
+
+  // ---------- Private ask: a chat in the corner ----------
+  // Questions only the asker and Design Desk see, about the item or the Desk page open now.
+  // The server hands back only the person's own (GET /api/private); Design Desk explains and
+  // never changes the design from one (docs/desk.md → Private asks).
+  S.ask = { open: false, asks: [], loaded: false };
+  function askContext() {
+    // Exactly what the person is looking at: the item, the option, and in the design
+    // workspace the state and the part picked; or the page and its filter. Design Desk
+    // answers about this (docs/desk.md → Private asks).
+    if (S.card) {
+      const v = S.card.kind === "request" ? (S.card.variants || []).find((x) => x.id === S.variant) : null;
+      const st = v && S.ws.open && S.ws.state ? (v.states || []).find((x) => x.id === S.ws.state) : null;
+      const part = v && S.ws.open && S.ws.selected?.selector ? { selector: S.ws.selected.selector, label: S.ws.selected.label || S.ws.selected.text || S.ws.selected.tag || "" } : null;
+      const no = st ? catalogStates(S.card).findIndex((y) => y.x === st) + 1 : 0;
+      return { card: S.card.id, ...(v ? { variant: v.id } : {}), ...(st ? { state: st.id } : {}), ...(part ? { part } : {}),
+        label: [`${S.card.id} ${S.card.title}`, v?.name, st ? `${st.name}${no ? ` (${S.card.id}.${no})` : ""}` : null, part?.label ? `“${part.label}”` : null].filter(Boolean).join(" · ") };
+    }
+    if (S.decision?.id) return { decision: S.decision.id, label: `Decision ${S.decision.id}` };
+    const filter = { new: S.newFilter, requests: S.reqFilter, issues: S.issueFilter, product: S.productFilter }[S.tab] || "";
+    return { page: S.tab, ...(filter ? { filter } : {}), label: `${TABS[S.tab] || "The Desk"} page${filter ? ` · ${filter}` : ""}` };
+  }
+  const sameContext = (a, b) => a.card ? a.card === b.card : a.decision ? a.decision === b.decision : !b.card && !b.decision && a.page === b.page;
+  // What the buttons call the thing open: "Ask privately about this request".
+  const KIND_WORD = { change: "change", request: "request", issue: "issue", screen: "screen", element: "element", digest: "week" };
+  const askWhat = (ctx) => ctx.card ? KIND_WORD[S.card?.kind] || "item" : ctx.decision ? "decision" : "page";
+  // The short label a person sees; the agent reads the starter's full brief by its key.
+  function starters(ctx) {
+    const item = Boolean(ctx.card), options = S.card?.kind === "request" && (S.card.variants || []).length > 1;
+    return [
+      ["explain", item ? "Explain this simply" : "Explain this page simply"],
+      ["why", item ? "Why does it look like this today?" : "Why is this page set up like this?"],
+      ["fixed", "What can't change here, and why?"],
+      ["options", options ? "How do the options differ?" : "What are my options here?"],
+      ["ask-team", "What should I ask the team?"],
+    ];
+  }
+  async function loadAsks() {
+    if (!can("ask")) return;
+    const r = await api("GET", "/api/private");
+    S.ask.asks = r.asks || []; S.ask.loaded = true;
+  }
+  function renderAsk() {
+    let root = $("#ask");
+    if (!can("ask")) { root?.remove(); return; }
+    if (!root) { root = document.createElement("div"); root.id = "ask"; document.body.append(root); }
+    // Each item and each Desk page has its own chat and history.
+    const ctx = askContext(), here = S.ask.asks.filter((t) => sameContext(ctx, t.context || {}));
+    const waiting = here.some((t) => t.needs_agent);
+    if (!S.ask.open) {
+      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.">🔒 Ask privately about this ${askWhat(ctx)}${waiting ? ` <span class="spin"></span>` : ""}</button>`;
+      return;
+    }
+    const keep = $("#ask-text")?.value || "";
+    const answerOf = (th) => [...th.messages].reverse().find((m) => m.by?.agent);
+    const size = askSize();
+    root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
+      <div class="ask-grip" data-ask-grip title="Drag to resize"></div>
+      <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button class="btn small" data-ask-close title="Close; your questions stay here">✕</button></header>
+      <div class="ask-ctx" title="Design Desk answers about what you had open when you asked">About: <b>${esc(ctx.label)}</b></div>
+      <div class="ask-body">
+        ${stream(here, ctx) || `<p class="hint">Ask anything about what you have open.</p>`}
+      </div>
+      <footer>
+        <div class="starters">${starters(ctx).map(([k, l]) => `<button class="btn small" data-ask-starter="${k}" data-ask-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
+        <textarea id="ask-text" maxlength="4000" placeholder="Or write your own question about ${esc(ctx.label)}…"></textarea>
+        <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
+      </footer></section>`;
+    $("#ask-text").value = keep;
+    // Like any chat: it opens on the newest message, and again once its pictures are in.
+    const body = root.querySelector(".ask-body"), bottom = () => { body.scrollTop = body.scrollHeight; };
+    bottom();
+    for (const img of body.querySelectorAll("img")) img.addEventListener("load", bottom, { once: true });
+    loadPictures(root).then(bottom, () => {});
+  }
+  // The chat's size, dragged from its top-left corner (it sits in the bottom-right one) and
+  // kept per browser.
+  function askSize() { try { const v = JSON.parse(localStorage.getItem("desk-ask-size") || "null"); return v && v.w && v.h ? v : null; } catch { return null; } }
+  document.addEventListener("pointerdown", (e) => {
+    const grip = e.target.closest?.("[data-ask-grip]"); if (!grip) return;
+    e.preventDefault(); S.ask.dragging = true;
+    const panel = grip.parentElement, x0 = e.clientX, y0 = e.clientY, w0 = panel.offsetWidth, h0 = panel.offsetHeight;
+    const fit = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const move = (m) => {
+      panel.style.width = `${fit(w0 + x0 - m.clientX, 300, innerWidth - 32)}px`;
+      panel.style.height = `${fit(h0 + y0 - m.clientY, 320, innerHeight - 32)}px`;
+    };
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up); S.ask.dragging = false;
+      try { localStorage.setItem("desk-ask-size", JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); } catch {}
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+  // One linear chat per item or page: its questions and answers oldest first, the person's
+  // on the right and Design Desk's on the left. Each question is its own private ask; a
+  // different option, state or part starts with its label.
+  const DD_AVATAR = `<span class="ask-avatar" title="Design Desk" aria-hidden="true">DD</span>`;
+  function stream(list, ctx) {
+    let last = null;
+    return [...list].sort((a, b) => a.created.localeCompare(b.created)).map((th) => {
+      const about = th.context?.label || th.context?.card || "the Desk", head = last !== null && about !== last;
+      last = about;
+      // Only where the page has its public comments box: the brief goes there as text.
+      const brief = S.card && th.context?.card === S.card.id && Boolean($("#composer-text"));
+      return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m) => m.by?.agent
+        ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent"><span class="ask-name">Design Desk</span>${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Writes a note for Design Desk from this answer into this page's public comments box. You edit it there and send it yourself.">Make a brief for the public comments</button>` : ""}</div></div>`
+        : `<div class="ask-msg me">${md(m.text)}<span class="ask-when">${esc(when(m.at))}</span></div>`).join("")}
+        ${th.needs_agent ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent pending">Design Desk is answering…</div></div>` : ""}
+`;
+    }).join("");
+  }
+  async function sendAsk(text, starter = null) {
+    if (!text) return;
+    const ctx = askContext();
+    await api("POST", "/api/private", { text, starter, context: ctx });
+    await loadAsks(); renderAsk();
+  }
+
+  // A first draft of a public note from a private answer: the person rewrites it.
+  function briefFrom(th) {
+    const q = th.messages.find((m) => !m.by?.agent)?.text || "";
+    const a = [...th.messages].reverse().find((m) => m.by?.agent)?.text || "";
+    const gist = a.replace(/\s+/g, " ").split(/(?<=[.!?])\s/).slice(0, 3).join(" ");
+    return `Design Desk, I asked "${q.slice(0, 200)}" and understood: ${gist}\n\nWhat I would like now: `;
   }
 
   // ---------- a shipped change ----------
@@ -1893,7 +2084,7 @@
       ${renderWanted(c)}
       ${c.status === "dropped" ? "" : `<div class="actions">${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}</div>
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
-      ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
+      ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:0;list-style:none">${c.states.map((x, k) => `<li id="no-${esc(c.id)}-${k + 1}">${subTag(c, k + 1)} <b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
       ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<div class="panel hint">Not drawn yet.</div>`}`}
       ${sections(c)}${renderImpact(c.impact)}
@@ -1913,6 +2104,8 @@
   const lookName = (i) => (i === 0 ? "Now" : `${plural(i, "version", "versions")} ago`);
   const lookThumb = (c, l) => (c.kind === "element" ? l.thumb : l.screens?.[0]?.asset) || null;
   function lookPictures(c, l, label) {
+    // A screen's pictures now carry their numbers, C-7.3, in their order: before/after pairs too.
+    if (c.kind === "screen" && l.now) return shots((l.screens || []).map((x, k) => ({ ...x, no: [c, k + 1] }))) || `<p class="hint">No pictures yet.</p>`;
     if (c.kind !== "element") return shots(l.screens) || `<p class="hint">No pictures yet.</p>`;
     return `<iframe class="frame" data-sheet="${esc(l.sheet)}" sandbox="allow-scripts" title="${esc(c.title)}${label ? ` — ${esc(label)}` : ""}" style="height:80vh"></iframe>`;
   }
@@ -2281,12 +2474,14 @@
       if (told.length) return told.map((st) => `<li>${txt(st.text)}</li>`).join("");
       return x.use ? `<li>${txt(x.use)}</li>` : "";
     };
+    const all = catalogStates(c);
     const item = (x) => {
+      const k = all.findIndex((y) => y.x === x) + 1;
       const use = useOf(x), stale = (x.of || 1) < (v.version || 1);
       const pic = x.shot ? `<figure class="shot" data-zoom="${esc(x.shot)}"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
         : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}"></iframe></div>`
         : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
-      return `<li>${pic}<div><b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
+      return `<li id="no-${esc(c.id)}-${k}">${pic}<div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
         ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
     };
     // It folds like the request's own text, and stays so in this browser.
@@ -2670,7 +2865,8 @@
     }
   }
 
-  function renderDetail() {
+  function renderDetail() { renderDetailBody(); renderAsk(); }
+  function renderDetailBody() {
     const d = $("#detail");
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
@@ -2734,8 +2930,8 @@
     const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
     const d = h.match(/^D\s*-?\s*(\d+)$/i);
     if (d) return { tab: "product", id: null, decision: `D-${d[1]}` };
-    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)$/i);
-    if (m) return { tab: view(m[1]), id: `C-${m[2]}` };
+    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)(?:\.(\d+))?$/i);
+    if (m) return { tab: view(m[1]), id: `C-${m[2]}`, ...(m[3] ? { sub: Number(m[3]) } : {}) };
     return view(h) ? { tab: view(h), id: null } : null;
   }
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
@@ -2759,6 +2955,11 @@
     }
     S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners();
     await openCard(c.id);
+    // A request's numbered state sits on its option's catalog tab.
+    const v = to.sub && subVariant(S.card, to.sub);
+    if (v && v !== S.variant) { S.variant = v; await openCard(c.id); }
+    if (to.sub && S.look !== "now") { S.look = "now"; S.lookSide = false; renderDetail(); }
+    if (to.sub) { const n = document.getElementById(`no-${c.id}-${to.sub}`); if (n) { n.scrollIntoView({ block: "center" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 2000); } else toast(`${c.id} has no number ${to.sub}.`); }
     return true;
   }
   // The frame may not get the clipboard: the browser's own copy, else the link shown to copy by hand.
@@ -2985,6 +3186,17 @@
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { await post(ds.post); return; }
+    if ("askOpen" in ds) { S.ask.open = true; await loadAsks(); renderAsk(); $("#ask-text")?.focus(); return; }
+    if ("askClose" in ds) { S.ask.open = false; renderAsk(); return; }
+    if (ds.askStarter) { await sendAsk(ds.askLabel, ds.askStarter); return; }
+    if ("askSend" in ds) { const t = $("#ask-text"), text = t?.value.trim(); if (!text) return; t.value = ""; await sendAsk(text); return; }
+    if (ds.brief) {
+      const th = S.ask.asks.find((t) => t.id === ds.brief), pub = $("#composer-text");
+      if (!th || !pub) return;
+      pub.value = briefFrom(th); pub.focus(); $("#composer")?.scrollIntoView({ block: "center" });
+      toast("The brief is in this page's public comments box. Edit it; everyone sees it once you press Ask Design Desk.");
+      return;
+    }
     if (ds.sendReply) {
       // The workspace and the card both show a note's reply box: the one next to this button.
       const input = el.parentElement.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
@@ -3399,6 +3611,7 @@
     try {
       await refreshList();
       if (S.card) await openCard(S.card.id, { quiet: true });
+      if (S.ask.open || S.ask.asks.some((t) => t.needs_agent)) { await loadAsks(); if (!S.ask.dragging && !$("#ask-text")?.value && !document.activeElement?.closest?.("#ask")) renderAsk(); }
       if (S.tab === "people" && S.people?.asks?.some((a) => a.state !== "done")) { await loadPeople(); if (S.tab === "people") renderDetail(); }
       if (S.offline) { S.offline = false; renderBanners(); }
     } catch (e) {

@@ -1146,3 +1146,75 @@ test("a decision written by hand without concepts, text or date still lists and 
   assert.deepEqual(s.listDecisions({ concept: "prices" }).map((d) => d.id), ["D-1"], "a concept search skips the one without concepts");
   assert.equal(s.getDecision("D-2").decision.id, "D-2");
 });
+
+test("a private ask: only its author and the agent see it; it sits on no card, nobody else reads or acts on it", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "change", title: "Spend in the list", source: { repo: "acme/widgets", pr: 7 } });
+  const before = s.card(card.id).updated;
+  const { thread, inbox: item } = s.openPrivate(alice, { text: "Explain this simply", starter: "explain", context: { card: card.id, label: "C-1 Spend in the list" } });
+  assert.deepEqual([thread.owner, thread.needs_agent, thread.starter, thread.context.card, item.kind], ["alice@example.com", true, "explain", card.id, "question"]);
+  assert.equal(inbox(s).open.find((i) => i.id === item.id).private, true, "the agent's item says it is private");
+  assert.equal(s.claim(item.id, "run-1").thread.id, thread.id, "the agent's claim hands it the thread");
+  assert.equal(s.card(card.id).updated, before, "a private ask does not move the card's last-changed time");
+  for (const viewer of ["alice@example.com", "bob@example.com", undefined]) assert.equal(s.getCard(card.id, { viewer }).threads.length, 0, "on no card's list");
+  assert.equal(s.listCards({ viewer: "bob@example.com" })[0].open_threads, 0);
+  assert.deepEqual(s.privateAsks(alice).map((t) => t.id), [thread.id]);
+  assert.deepEqual(s.privateAsks(bob), []);
+  assert.deepEqual(s.privateAsks({ agent: true }), []);
+  for (const act of [() => s.reply(thread.id, bob, "hi"), () => s.resolve(thread.id, bob), () => s.reopenThread(thread.id, bob), () => s.proposeDecision(thread.id, bob, { message: 0 })])
+    assert.throws(act, /no thread/);
+  assert.throws(() => s.proposeDecision(thread.id, alice, { message: 0 }), /not recorded as a decision/);
+  assert.throws(() => s.openPrivate({ agent: true }, { text: "x" }), /person's own/);
+  assert.throws(() => s.openThread(card.id, alice, { kind: "private", text: "x" }), /openPrivate/);
+  assert.throws(() => s.openPrivate(alice, { text: "x", starter: "hack" }), /starter/);
+  const page = s.openPrivate(alice, { text: "What is this page for?", context: { page: "product", label: "Product page" } }).thread;
+  assert.deepEqual([page.card, page.context.page], [null, "product"]);
+  assert.equal(s.openPrivate(alice, { text: "x", context: { page: "nowhere" } }).thread.context.page, "guide");
+  s.answer(thread.id, "Think of it as a receipt.");
+  assert.equal(s.card(card.id).updated, before);
+  assert.throws(() => s.answer(thread.id, "x", { shots: [{ asset: "A-1", stage: "after" }] }), /answered in words/);
+  s.answer(page.id, "It lists the product's screens and parts.");
+  assert.equal(s.reply(page.id, alice, "And why?").inbox.kind, "question", "a follow-up goes back to the agent");
+});
+
+test("a private ask keeps exactly what was open: the option, its state and part, or the page and its filter; the agent's item carries it", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "request", title: "Limits" });
+  s.card(card.id).variants = [{ id: "v1", name: "Rows", states: [{ id: "s1", part: "Meter", name: "Stopped" }] }];
+  const ctx = { card: card.id, variant: "v1", state: "s1", part: { selector: ".meter", label: "Limit meter" }, label: "C-1 Limits · Rows · Stopped (C-1.1)" };
+  const { thread, inbox: item } = s.openPrivate(alice, { text: "Why red?", context: ctx });
+  assert.deepEqual(thread.context, { card: card.id, page: null, variant: "v1", state: "s1", part: { selector: ".meter", label: "Limit meter" }, label: ctx.label });
+  assert.deepEqual(inbox(s).open.find((i) => i.id === item.id).context, thread.context, "the agent sees the context with the item");
+  assert.deepEqual(s.openPrivate(alice, { text: "x", context: { card: card.id, variant: "v9", state: "s1" } }).thread.context, { card: card.id, page: null, label: "" }, "an unknown option or state is dropped");
+  assert.equal(s.openPrivate(alice, { text: "x", context: { page: "product", filter: "elements" } }).thread.context.filter, "elements");
+  assert.throws(() => s.openPrivate(alice, { text: "x", context: { decision: "D-9" } }), /no decision/);
+});
+
+test("GitHub on the Desk: the agent keeps an issue with its comments, a new comment is fresh, a private ask carries the item's refs", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "change", title: "Limits", source: { repo: "Acme/Widgets", pr: 7, url: "https://github.com/acme/widgets/pull/7" } });
+  assert.deepEqual(s.githubRefs(), ["acme/widgets#7"]);
+  const rec = { key: "acme/widgets#7", kind: "pr", title: "Limits", state: "open", url: "https://github.com/acme/widgets/pull/7", body: "b", comments: [{ author: "pat", at: "2026-11-01T10:00:00Z", body: "Looks good" }] };
+  assert.deepEqual(s.putGithub([rec]).fresh, [], "a first read has nothing new");
+  const second = s.putGithub([{ ...rec, comments: [...rec.comments, { author: "lee", at: "2026-11-02T10:00:00Z", body: "Make the bar red?", url: "javascript:alert(1)" }] }]);
+  assert.deepEqual(second.fresh.map((x) => [x.key, x.cards, x.comments.map((m) => m.author)]), [["acme/widgets#7", [card.id], ["lee"]]]);
+  assert.equal(s.github(["ACME/widgets#7"])[0].comments[1].url, "", "only GitHub links are kept");
+  assert.throws(() => s.putGithub([{ ...rec, key: "not a key" }]), /owner\/repo#number/);
+  assert.deepEqual(s.openPrivate(alice, { text: "Why?", context: { card: card.id } }).thread.context.refs, ["acme/widgets#7"]);
+});
+
+test("GitHub on the Desk: every new comment is fresh even past the kept 60, a long title is cut, the pre-flight's refs file follows", () => {
+  const s = fresh();
+  s.upsertCard({ kind: "change", title: "Limits", source: { repo: "acme/widgets", pr: 7 } });
+  const at = (i) => new Date(Date.UTC(2026, 10, 1) + i * 60000).toISOString();
+  const rec = { key: "acme/widgets#7", kind: "pr", title: "x".repeat(500), comments: [{ author: "a", at: at(0), body: "first" }] };
+  s.putGithub([rec]);
+  assert.equal(s.github(["acme/widgets#7"])[0].title.length, 200, "a long title is cut, not refused");
+  const many = Array.from({ length: 70 }, (_, i) => ({ author: "b", at: at(i + 1), body: `c${i}` }));
+  const { fresh: got } = s.putGithub([{ ...rec, comments: [...rec.comments, ...many], updated: at(71) }]);
+  assert.equal(got[0].comments.length, 70, "all 70 new comments are fresh");
+  assert.equal(s.github(["acme/widgets#7"])[0].comments.length, 60, "the copy keeps the newest 60");
+  assert.equal(s.putGithub([{ ...rec, comments: [...rec.comments, ...many], updated: at(71) }]).fresh.length, 0, "a read with nothing new is not fresh, the cut ones included");
+  const refs = JSON.parse(readFileSync(join(s.dir, "github-refs.json"), "utf8")).refs;
+  assert.deepEqual(refs, [{ key: "acme/widgets#7", updated: at(71) }]);
+});
