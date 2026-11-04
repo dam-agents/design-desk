@@ -1157,7 +1157,9 @@
   document.addEventListener("mouseout", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekHide(); });
   document.addEventListener("focusin", (e) => { const el = peekTarget(e); if (el) peekShow(el); });
   document.addEventListener("focusout", peekHide);
-  document.addEventListener("scroll", peekHide, true);
+  // A scroll takes a shown preview away but keeps one on its way: scrolling an element into
+  // view to point at it fires its scroll after the pointer is already there.
+  document.addEventListener("scroll", () => $("#peek")?.remove(), true);
   document.addEventListener("click", peekHide, true);
 
   // ---------- dialogs ----------
