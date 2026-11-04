@@ -16,11 +16,11 @@
     --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     /* The page grows with the window: text runs wider, the list and pictures get room. */
-    --measure: 80ch; --pad-x: 32px; --list-w: 380px; --side-w: 380px; --shot-w: 260px; --shot-h: 260px;
+    --measure: 96ch; --pad-x: 32px; --list-w: 380px; --side-w: 380px; --shot-w: 260px; --shot-h: 260px;
   }
-  @media (min-width: 1280px) { :root { --measure: 96ch; --pad-x: 40px; --list-w: 420px; --side-w: 420px; --shot-w: 300px; --shot-h: 320px; } }
-  @media (min-width: 1600px) { :root { --measure: 112ch; --pad-x: 48px; --list-w: 460px; --side-w: 460px; --shot-w: 340px; --shot-h: 380px; } }
-  @media (min-width: 2200px) { :root { --measure: 128ch; --pad-x: 64px; --list-w: 520px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
+  @media (min-width: 1280px) { :root { --measure: 112ch; --pad-x: 40px; --list-w: 420px; --side-w: 420px; --shot-w: 300px; --shot-h: 320px; } }
+  @media (min-width: 1600px) { :root { --measure: 132ch; --pad-x: 48px; --list-w: 460px; --side-w: 460px; --shot-w: 340px; --shot-h: 380px; } }
+  @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 520px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
@@ -612,14 +612,8 @@
   /* On a wide window what was asked and what Design Desk made of it stand side by side. */
   .top2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 0 28px; align-items: start; max-width: calc(2 * var(--measure)); }
   .top2 > .brief { max-width: none; }
-  .standing .status { max-width: calc(2 * var(--measure)); }
   .top2 .made-col { min-width: 0; }
-  @media (min-width: 1400px) { .top2 .made-col > h3.made:first-child { border-top: 0; padding-top: 0; margin-top: 14px; } }
-  /* Blocks run wider: the reading measure grows, the head blocks take the page's full width. */
-  :root { --measure: 96ch; }
-  @media (min-width: 1280px) { :root { --measure: 112ch; } }
-  @media (min-width: 1600px) { :root { --measure: 132ch; } }
-  @media (min-width: 2200px) { :root { --measure: 150ch; } }
+  /* The head blocks take the page's full width. */
   .top2, .standing .status { max-width: none; }
   /* Folded, the request keeps three lines that fade out; the link under it shows the rest. */
   .brief { padding-bottom: 10px; }

@@ -10,9 +10,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.42.0 — 2026-11-04
 
 **Upgrade:**
-Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**). Only the page's look changes;
-the server, recorded cards and config need nothing.
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The server's card list now carries
+`decided`, so a request closed with a decision shows as decided in the list. Recorded cards
+and config need nothing.
 
 ## 1.41.0 — 2026-11-04
 
