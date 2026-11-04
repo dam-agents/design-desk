@@ -189,23 +189,24 @@ test("a decision says whose it is: the design side or a developer, by the role n
 test("a private ask reaches only its author over the API; another viewer cannot read or act on it", async (t) => {
   const d = await desk(t);
   const card = (await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." })).body.card;
-  const asked = await d.viewer("alice@example.com", `/api/cards/${card.id}/threads`, { kind: "private", text: "How do the options differ?" });
+  const asked = await d.viewer("alice@example.com", "/api/private", { text: "How do the options differ?", starter: "options", context: { card: card.id, label: "the request" } });
   assert.equal(asked.status, 201);
   const id = asked.body.thread.id;
-  const seen = async (email) => (await d.viewer(email, `/api/cards/${card.id}`)).body.card.threads.map((x) => x.id);
-  assert.deepEqual(await seen("alice@example.com"), [id]);
-  assert.deepEqual(await seen("bob@example.com"), []);
-  assert.deepEqual(await seen("guest@example.com"), []);
-  const listed = (await d.viewer("bob@example.com", "/api/cards")).body.cards.find((c) => c.id === card.id);
-  assert.equal(listed.open_threads, 0);
-  for (const step of ["messages", "resolve", "decision"])
-    assert.equal((await d.viewer("lee@example.com", `/api/threads/${id}/${step}`, { text: "peek", message: 0 })).status, 404, step);
-  for (const step of ["reopen", "answers"])
-    assert.equal((await d.viewer("lee@example.com", `/api/threads/${id}/${step}`, { answers: [] })).status, 404, step);
+  const mine = async (email) => (await d.viewer(email, "/api/private")).body.asks.map((x) => x.id);
+  assert.deepEqual(await mine("alice@example.com"), [id]);
+  assert.deepEqual(await mine("bob@example.com"), []);
+  assert.deepEqual(await mine("guest@example.com"), []);
+  for (const email of ["alice@example.com", "bob@example.com"])
+    assert.deepEqual((await d.viewer(email, `/api/cards/${card.id}`)).body.card.threads, [], "on no card");
+  assert.equal((await d.viewer("bob@example.com", "/api/cards")).body.cards.find((c) => c.id === card.id).open_threads, 0);
+  for (const step of ["messages", "resolve", "reopen", "answers", "decision"])
+    assert.equal((await d.viewer("lee@example.com", `/api/threads/${id}/${step}`, { text: "peek", message: 0, answers: [] })).status, 404, step);
   assert.equal((await d.viewer("lee@example.com", `/api/cards/${card.id}/work-in`, { threads: [id] })).status, 404, "nobody works a private ask in");
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${card.id}/threads`, { kind: "private", text: "x" })).status, 400, "not as a card's conversation");
   assert.equal((await d.viewer("alice@example.com", `/api/cards/${card.id}`)).body.card.updated, card.updated, "the card's last-changed time does not move");
-  assert.equal((await d.agent("/agent/inbox")).body.open.find((i) => i.thread === id).private, true, "the agent's item says it is private");
-  assert.deepEqual((await d.agent(`/agent/cards/${card.id}`)).body.card.threads.map((x) => x.id), [id], "the agent sees it");
+  const item = (await d.agent("/agent/inbox")).body.open.find((i) => i.thread === id);
+  assert.equal(item.private, true, "the agent's item says it is private");
+  assert.equal((await d.agent(`/agent/items/${item.id}`)).body.thread.id, id, "the agent reads the thread with its item");
   assert.equal((await d.agent(`/agent/threads/${id}/answer`, { text: "One is a list, one a grid." })).status, 200);
-  assert.deepEqual(await seen("bob@example.com"), []);
+  assert.deepEqual(await mine("bob@example.com"), []);
 });

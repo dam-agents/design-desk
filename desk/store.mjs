@@ -120,6 +120,11 @@ const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "tes
 // ask (`private`) is a question only its author and the agent see: Design Desk explains,
 // it never changes the design from one (docs/desk.md → Private asks).
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "private"];
+// The five starters a private ask may begin with; each one's full brief for the agent is in
+// docs/desk.md → Private asks. The page shows a short label, the agent reads the key.
+const STARTERS = ["explain", "why", "fixed", "options", "ask-team"];
+// The Desk pages a private ask can be about when no item is open.
+const ASK_PAGES = ["new", "requests", "issues", "product", "people", "guide"];
 // Who a viewer is to the store: the key a private ask's `owner` holds.
 const viewerKey = (who) => (who && !who.agent ? who.email || who.sub || null : null);
 // Whether a viewer (their key, or undefined for the agent) may see a conversation.
@@ -146,6 +151,16 @@ function titleOf(title, problem) {
   if (typeof title === "string" && title.trim()) return title;
   const first = String(problem || "").trim().split(/(?<=[.!?])\s|\n/)[0] || "";
   return first.length > 90 ? `${first.slice(0, 87).replace(/\s+\S*$/, "")}…` : first;
+}
+
+// Where a private ask was asked: an item (and the option it showed), or a Desk page.
+function cleanContext(c, cards) {
+  const o = c && typeof c === "object" ? c : {};
+  const card = o.card == null || o.card === "" ? null : String(o.card);
+  if (card && !own(cards, card)) throw bad(`context: no card ${card}`);
+  const page = card ? null : ASK_PAGES.includes(o.page) ? o.page : "guide";
+  const variant = card && typeof o.variant === "string" && (own(cards, card).variants || []).some((v) => v.id === o.variant) ? o.variant : null;
+  return { card, page, ...(variant ? { variant } : {}), label: optText(o.label, 200, "context label") || "" };
 }
 
 function clean(s, max, name) {
@@ -373,7 +388,7 @@ export class Store {
     const c = this.card(cardId);
     if (!THREAD_KINDS.includes(kind)) throw bad(`kind must be one of ${THREAD_KINDS.join(", ")}`);
     if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
-    if (kind === "private" && !viewerKey(who)) throw forbidden("a private ask is a person's own question");
+    if (kind === "private") throw bad("a private ask is opened with openPrivate");
     if (kind === "asks" && !ASK_STEPS.includes(step)) throw bad(`an agent question names the step it blocks: ${ASK_STEPS.join(", ")}`);
     if (kind === "change" && !(c.variants || []).some((v) => v.id === anchor?.variant)) throw bad("a change note belongs to one of the design options");
     if (anchor?.state && !(c.variants || []).find((v) => v.id === anchor.variant)?.states?.some((x) => x.id === anchor.state)) throw bad("That state is not drawn for this option.");
@@ -419,6 +434,31 @@ export class Store {
     if (t.kind !== "private") this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t, inbox: item };
+  }
+
+  // A private ask: a person's own question, about the item or the Desk page they were on.
+  // It sits on no card's list of conversations; only `privateAsks` hands it back, to its
+  // author (docs/desk.md → Private asks).
+  openPrivate(who, { text, starter = null, context = {} } = {}) {
+    const owner = viewerKey(who);
+    if (!owner) throw forbidden("a private ask is a person's own question");
+    if (starter !== null && !STARTERS.includes(starter)) throw bad(`starter must be one of ${STARTERS.join(", ")}`);
+    const ctx = cleanContext(context, this.db.cards);
+    const mine = Object.values(this.db.threads).filter((t) => t.kind === "private" && t.owner === owner);
+    if (mine.length >= LIMITS.threadsPerCard) throw bad("You have 300 private asks. Mark some as done first.");
+    const id = this.next("thread", "T");
+    const t = { id, card: ctx.card, kind: "private", owner, context: ctx, ...(starter ? { starter } : {}), state: "open", anchor: null, needs_agent: true, created: this.clock(),
+      messages: [{ by: person(who), at: this.clock(), text: clean(text, LIMITS.text, "text") }] };
+    this.db.threads[id] = t;
+    const item = this.enqueue("question", ctx.card, id, who);
+    this.save();
+    return { thread: t, inbox: item };
+  }
+
+  privateAsks(who) {
+    const owner = viewerKey(who);
+    return Object.values(this.db.threads).filter((t) => t.kind === "private" && owner && t.owner === owner)
+      .sort((a, b) => b.created.localeCompare(a.created));
   }
 
   // A person answers the agent's form: per question one of its options, or null to leave
@@ -892,7 +932,7 @@ export class Store {
     if (!was) it.claimed_started = it.claimed_at;
     if (it.thread) it.seen = this.thread(it.thread).messages.length;
     this.save();
-    return { item: it, card: it.card ? this.getCard(it.card) : null };
+    return { item: it, card: it.card ? this.getCard(it.card) : null, thread: it.thread ? this.thread(it.thread) : null };
   }
 
   done(itemId, session, outcome = "done") {

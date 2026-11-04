@@ -1147,27 +1147,31 @@ test("a decision written by hand without concepts, text or date still lists and 
   assert.equal(s.getDecision("D-2").decision.id, "D-2");
 });
 
-test("a private ask: only its author and the agent see it; nobody else reads, counts or acts on it", () => {
+test("a private ask: only its author and the agent see it; it sits on no card, nobody else reads or acts on it", () => {
   const s = fresh();
   const { card } = s.upsertCard({ kind: "change", title: "Spend in the list", source: { repo: "acme/widgets", pr: 7 } });
   const before = s.card(card.id).updated;
-  const { thread, inbox: item } = s.openThread(card.id, alice, { kind: "private", text: "Explain this request simply" });
-  assert.deepEqual([thread.owner, thread.needs_agent, item.kind], ["alice@example.com", true, "question"]);
+  const { thread, inbox: item } = s.openPrivate(alice, { text: "Explain this simply", starter: "explain", context: { card: card.id, label: "C-1 Spend in the list" } });
+  assert.deepEqual([thread.owner, thread.needs_agent, thread.starter, thread.context.card, item.kind], ["alice@example.com", true, "explain", card.id, "question"]);
   assert.equal(inbox(s).open.find((i) => i.id === item.id).private, true, "the agent's item says it is private");
+  assert.equal(s.claim(item.id, "run-1").thread.id, thread.id, "the agent's claim hands it the thread");
   assert.equal(s.card(card.id).updated, before, "a private ask does not move the card's last-changed time");
-  const mine = s.getCard(card.id, { viewer: "alice@example.com" });
-  const theirs = s.getCard(card.id, { viewer: "bob@example.com" });
-  assert.deepEqual(mine.threads.map((t) => t.id), [thread.id]);
-  assert.deepEqual([theirs.threads.length, theirs.waiting.length], [0, 0]);
-  assert.equal(s.getCard(card.id, { viewer: null }).threads.length, 0, "a viewer without a key sees none");
-  assert.equal(s.getCard(card.id).threads.length, 1, "the agent sees it");
+  for (const viewer of ["alice@example.com", "bob@example.com", undefined]) assert.equal(s.getCard(card.id, { viewer }).threads.length, 0, "on no card's list");
   assert.equal(s.listCards({ viewer: "bob@example.com" })[0].open_threads, 0);
-  assert.equal(s.listCards({ viewer: "alice@example.com" })[0].open_threads, 1);
-  for (const act of [() => s.reply(thread.id, bob, "hi"), () => s.resolve(thread.id, bob), () => s.proposeDecision(thread.id, bob, { message: 0 })])
+  assert.deepEqual(s.privateAsks(alice).map((t) => t.id), [thread.id]);
+  assert.deepEqual(s.privateAsks(bob), []);
+  assert.deepEqual(s.privateAsks({ agent: true }), []);
+  for (const act of [() => s.reply(thread.id, bob, "hi"), () => s.resolve(thread.id, bob), () => s.reopenThread(thread.id, bob), () => s.proposeDecision(thread.id, bob, { message: 0 })])
     assert.throws(act, /no thread/);
   assert.throws(() => s.proposeDecision(thread.id, alice, { message: 0 }), /not recorded as a decision/);
-  assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "private", text: "x" }), /person's own/);
+  assert.throws(() => s.openPrivate({ agent: true }, { text: "x" }), /person's own/);
+  assert.throws(() => s.openThread(card.id, alice, { kind: "private", text: "x" }), /openPrivate/);
+  assert.throws(() => s.openPrivate(alice, { text: "x", starter: "hack" }), /starter/);
+  const page = s.openPrivate(alice, { text: "What is this page for?", context: { page: "product", label: "Product page" } }).thread;
+  assert.deepEqual([page.card, page.context.page], [null, "product"]);
+  assert.equal(s.openPrivate(alice, { text: "x", context: { page: "nowhere" } }).thread.context.page, "guide");
   s.answer(thread.id, "Think of it as a receipt.");
   assert.equal(s.card(card.id).updated, before);
-  assert.equal(s.reply(thread.id, alice, "And why?").inbox.kind, "question", "a follow-up goes back to the agent");
+  assert.throws(() => s.answer(thread.id, "x", { shots: [{ asset: "A-1", stage: "after" }] }), /answered in words/);
+  assert.equal(s.reply(page.id, alice, "And why?").inbox.kind, "question", "a follow-up goes back to the agent");
 });

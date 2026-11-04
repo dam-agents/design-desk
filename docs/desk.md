@@ -283,46 +283,67 @@ of the product in that state: the `show` action ([actions.md](actions.md)).
 
 ## Private asks
 
-A thread of kind `private` is a **private ask**: a question only the person who asked and
-the agent see. The store keeps it out of every read another viewer can reach (the card,
-its counts and its waiting list, the card's last-changed time) and refuses another viewer
-any act on it; its inbox item carries `private: true` and comes as `questions_due` like a
-question. The page offers five starter questions; any text may come instead.
+A **private ask** (thread kind `private`) is a question only the person who asked and the
+agent see. The page asks it from the **🔒 Ask privately** chat in the bottom-right corner,
+on every Desk page, about what the person had open: an item (and the option it showed) or
+a Desk page. The thread carries that as `context` (`card` or `page`, `variant`, `label`),
+and the chat's header shows it. It is on no card's list of conversations; the server hands
+it back only to its author (`GET /api/private`) and refuses everyone else any act on it.
+Its inbox item carries `private: true`, comes as `questions_due` like a question, and
+`design desk item I-<n>` returns the thread with it.
 
 Answer it as a question (above), with these differences:
 
-1. **Explain, never change.** A private ask changes no option, no variant, no card field,
-   no decision and no queue: no revise, no `--shots`, no `design desk write`. A request in
-   it ("make it blue") gets the explanation and one sentence on how to ask in public
-   (**Make a brief for Design Desk** under the answer, then send it to the comments).
-2. **It stays private.** Never quote it, name it or summarize it anywhere else: not in a
-   public thread, a card, the digest, the agenda, an issue, a pull request, a spec, a
-   decision's origin, or Slack (no post, no reply, no DM). Only `design desk answer T-<n>`
-   in its own thread. An answer that would need another person's input says who to ask and
-   leaves the asking to the person.
-3. **The answer prompt.** Write every answer to this brief:
+1. **Read its context first.** The item, its option, or the page (`page`: `new` Changes,
+   `requests`, `issues`, `product`, `people`, `guide` How it works); answer about that.
+2. **Explain, never change.** A private ask changes no option, variant, card field,
+   decision or queue: no revise, no `--shots`, no `design desk write`. A wish in it ("make
+   it blue") gets the explanation and one sentence on how to ask in public (**Make a
+   brief** under the answer, then send it from the public comments).
+3. **It stays private.** Never quote, name or summarize it anywhere else: not in a public
+   thread, a card, the digest, the agenda, an issue, a pull request, a spec, a decision's
+   origin, or Slack (no post, reply or DM). Only `design desk answer T-<n>` in its own
+   thread. Where another person's input is needed, say who and leave the asking to them.
+4. **The answer prompt.** Write every answer to this brief:
 
-   > You explain a product design to a designer who does not read code. Answer in plain,
-   > everyday words. Start with the direct answer in one or two sentences. Then a short
-   > description of what the person sees and why, with one comparison or analogy from
-   > everyday life (a shop, a car, a kitchen) when it makes the idea easier. No jargon: no
-   > file names, function names, token names or acronyms; if a term is unavoidable, explain
-   > it in the same sentence. Every "why" names its source in words a designer knows (the
-   > pull request and who opened it, a recorded decision, the design system, the product's
-   > screens), or says it is not documented and who would know (the profile's `contacts`,
-   > the PR author). Never guess a reason. Under 200 words, short paragraphs or a short
-   > list. Show as much as you can: the product's screens and element drawings
-   > (`![caption](asset:A-n)`) and a simple diagram where it helps, and name each part and
-   > state by its number (`C-12.3`) so the reader can click to it. End with one question
-   > the person could take to the team, if one helps.
+   > You explain a product design to a designer who does not read code, about what they
+   > had open (the context). Answer in plain, everyday words. Start with the direct answer
+   > in one or two sentences. Then a short description of what they see and why, with one
+   > comparison from everyday life (a shop, a car, a kitchen) when it makes the idea
+   > easier. No jargon: no file, function or token names and no acronyms; a term you
+   > cannot avoid is explained in the same sentence. Every "why" names its source in words
+   > a designer knows (the pull request and who opened it, a recorded decision `D-n`, the
+   > design system, the product's screens), or says it is not documented and who would
+   > know (the profile's `contacts`, the PR author). Never guess a reason. Show as much as
+   > you can: the product's screens and element drawings (`![caption](asset:A-n)`) and a
+   > simple diagram where it helps, and name each part and state by its number (`C-12.3`)
+   > so the reader can click to it. Under 200 words, short paragraphs or a short list. End
+   > with one question they could take to the team, if one helps.
 
-   The five starters and what each answer covers: **Explain this request simply** (the
-   problem, the goal and what the options try, in five sentences); **Why does it look like
-   this today?** (the current screen and the decisions or pull requests behind it); **What
-   can't change here, and why?** (the boundary verdict and each fixed thing's source);
-   **How do the options differ?** (each option in one line, then the trade-off between
-   them); **What should I ask the team?** (two or three questions with who would answer
-   each).
+5. **The starters.** A thread's `starter` names the one it began with; its message is the
+   short label the person saw. Answer the full brief of that starter:
+
+   - `explain` — *Explain this simply.* On an item: what it is about in five sentences at
+     most — the problem people have, what the item proposes or changed, who it is for,
+     and where it stands now (its step, what it waits for). On a page: what the page is
+     for, what each part of it shows, and the one thing a designer does there most.
+   - `why` — *Why does it look like this today?* The current look of the screen or part:
+     the shipped changes and decisions that made it so, oldest first, each with its source
+     and date; what the design system says about it; and what is not documented and who
+     would know. On a page: why the Desk shows it this way (this definition's docs).
+   - `fixed` — *What can't change here, and why?* The boundary verdict in plain words:
+     what is design and may change (colors, spacing, words, layout), what is behavior and
+     needs a developer, and what a recorded decision fixes — each item with its source.
+     End with what *can* change freely.
+   - `options` — *How do the options differ?* (on a request with options; elsewhere
+     *What are my options here?*) Each option in one line — what a person sees first and
+     what it is good at — with its picture; then the trade-off between them in two or
+     three sentences; then what the team said so far (votes, comments) without names of
+     who voted. Elsewhere: what the person can do from here, in order, with the button
+     for each.
+   - `ask-team` — *What should I ask the team?* Two or three questions that would move
+     the item on, each with why it matters and who would answer it (a role or a contact
+     from the profile, never a guess at a person).
 
 ## People
 
