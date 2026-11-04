@@ -218,3 +218,41 @@ test("GitHub on the Desk: only the agent writes the copy, a person reads it", as
   assert.equal((await d.agent("/agent/github", { records: [rec] })).status, 200);
   assert.deepEqual((await d.viewer("alice@example.com", "/api/github?keys=acme/widgets%233")).body.records.map((x) => x.title), ["One account"]);
 });
+
+test("day or night: each person's own choice, kept on the Desk", async (t) => {
+  const d = await desk(t);
+  const theme = async (email) => (await d.viewer(email, "/api/me")).body.theme;
+  assert.equal(await theme("alice@example.com"), null, "no choice: the system's mode");
+  const saved = await d.viewer("alice@example.com", "/api/prefs", { theme: "dark" });
+  assert.deepEqual([saved.status, saved.body.theme], [200, "dark"]);
+  assert.equal(await theme("alice@example.com"), "dark");
+  assert.equal(await theme("bob@example.com"), null, "not anyone else's");
+  assert.equal((await d.viewer("bob@example.com", "/api/prefs", { theme: "sepia" })).status, 400);
+  assert.equal((await d.viewer("guest@example.com", "/api/prefs", { theme: "light" })).status, 200, "a guest keeps one too");
+  assert.equal((await d.viewer("alice@example.com", "/api/prefs", { theme: null })).body.theme, null, "null follows the system again");
+  assert.equal(await theme("alice@example.com"), null);
+});
+
+test("team feedback: a Desk request waits for a person to ask the team, one from Slack goes on by itself", async (t) => {
+  const d = await desk(t);
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Save</button>", encoding: "utf8" });
+  // A redraw re-sends the option with the version the card returned.
+  const draw = (id, version) => d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: asset.id, ...(version ? { version } : {}) }] });
+
+  const mine = (await d.viewer("pat@example.com", "/api/requests", { problem: "The header shouts.", options: 1 })).body.card.id;
+  const triage = (await d.agent("/agent/inbox")).body.open.find((i) => i.card === mine).id;
+  await d.agent(`/agent/items/${triage}/claim`, { session: "s1" }); await d.agent(`/agent/items/${triage}/done`, { session: "s1" });
+  const held = await draw(mine);
+  assert.deepEqual([held.body.card.status, held.body.card.team_feedback.state], ["variants", "waiting"], "drawn, kept to its people");
+  assert.match((await d.viewer("pat@example.com", "/api/cards")).body.cards.find((c) => c.id === mine).attention.reasons.join(" "), /ask the team for feedback/);
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${mine}/feedback`, {})).status, 403, "not a viewer's");
+  const asked = await d.viewer("pat@example.com", `/api/cards/${mine}/feedback`, {});
+  assert.deepEqual([asked.status, asked.body.card.status, asked.body.card.team_feedback.by.email], [200, "feedback", "pat@example.com"], "its author asks the team");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${mine}/feedback`, {})).status, 400, "once");
+  assert.equal((await draw(mine, asked.body.card.variants[0].version)).body.card.status, "feedback", "a redraw after that stays with the team");
+
+  const slack = (await d.agent("/agent/cards", { kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } })).body.card.id;
+  assert.equal((await draw(slack)).body.card.status, "feedback", "from Slack: on to the team by itself");
+  const none = (await d.viewer("pat@example.com", "/api/requests", { problem: "Typo in the footer.", options: 0 })).body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id: none, status: "feedback", triage: { verdict: "design", reasons: ["Words only."] } })).body.card.status, "feedback", "no options to fine-tune: on by itself");
+});

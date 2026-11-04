@@ -6,13 +6,17 @@
 <title>Design Desk</title>
 <script>
   // Before the first paint, so a chosen mode never flashes the other one.
-  try { const t = localStorage.getItem("desk-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+  // Each person's copy is their own (desk-theme:<email>); before the Desk says who is viewing,
+  // the last viewer's copy is the guess, and a copy from before copies were named is theirs too.
+  try { const who = localStorage.getItem("desk-theme-last"), t = who ? localStorage.getItem("desk-theme:" + who) : localStorage.getItem("desk-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
 </script>
 <style>
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    /* What floats over the page (the private ask): a near shadow for the edge, a far one for the lift. */
+    --float: 0 2px 6px rgba(0,0,0,.10), 0 14px 32px rgba(0,0,0,.18), 0 36px 84px rgba(0,0,0,.24);
     --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     /* The page grows with the window: text runs wider, the list and pictures get room. */
@@ -25,11 +29,11 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
-      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; color-scheme: dark; }
+      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
   :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
-    --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; color-scheme: dark; }
+    --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -257,6 +261,7 @@
   label.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
   label.switch input:checked { background: var(--accent); } label.switch input:checked::after { transform: translateX(14px); }
   label.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  label.switch.ws-switch { gap: 6px; font-size: 12.5px; margin-left: 4px; } label.switch.ws-switch input { width: 28px; height: 16px; } label.switch.ws-switch input::after { width: 12px; height: 12px; } label.switch.ws-switch input:checked::after { transform: translateX(12px); }
   /* New request: how many options (none to five), and questions first. */
   .count-pick { display: grid; gap: 4px; } .count-pick .row2 { display: flex; gap: 12px; align-items: center; }
   .count-pick input[type=range] { flex: 1; accent-color: var(--accent); padding: 0; border: 0; background: none; }
@@ -320,8 +325,8 @@
   .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
   .starters { display: flex; gap: 6px; flex-wrap: wrap; }
   #ask { position: fixed; right: 16px; bottom: 16px; z-index: 40; }
-  .ask-fab { border: 1px solid var(--line); background: var(--ink); color: var(--panel); border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.18); display: inline-flex; gap: 8px; align-items: center; }
-  .ask-panel { width: min(560px, calc(100vw - 32px)); height: min(820px, calc(100vh - 32px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.22); overflow: hidden; }
+  .ask-fab { border: 1px solid var(--line); background: var(--ink); color: var(--panel); border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--float); display: inline-flex; gap: 8px; align-items: center; }
+  .ask-panel { width: min(560px, calc(100vw - 32px)); height: min(820px, calc(100vh - 32px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--float); overflow: hidden; }
   .ask-panel { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
   .ask-grip { position: absolute; left: 0; top: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 1; touch-action: none;
     background: linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 5px, var(--muted) 5px 6px, transparent 6px) no-repeat; opacity: .5; }
@@ -339,7 +344,13 @@
   .ask-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); display: grid; place-items: center; font: 700 10.5px/1 inherit; letter-spacing: .02em; }
   .ask-name { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
   .ask-msg.agent { align-self: flex-start; background: var(--soft); border-bottom-left-radius: 4px; }
-  .ask-msg.pending { color: var(--warn); font-size: 12.5px; }
+  /* Design Desk is answering: a typing bubble, three dots that rise in turn. */
+  .ask-msg.typing { display: inline-flex; gap: 4px; align-items: center; padding: 12px 14px; align-self: flex-start; }
+  .ask-msg.typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: typing 1.2s infinite ease-in-out; }
+  .ask-msg.typing i:nth-child(2) { animation-delay: .15s; } .ask-msg.typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .ask-msg.typing i { animation: none; opacity: .7; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .ask-when { display: block; font-size: 10.5px; opacity: .65; margin-top: 2px; text-align: right; }
   .ask-brief { display: block; margin: 6px 0 0 auto; font-size: 12px; }
   .ask-msg .md p { margin: 0 0 6px; } .ask-msg .md p:last-child { margin: 0; }
@@ -659,6 +670,8 @@
   /* The private ask: the primary button's shape, floating. */
   .ask-fab { border-radius: 8px; padding: 6px 14px; min-height: 36px; font-size: var(--fs-ui); font-weight: 500; gap: 7px; border-color: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.12); }
   .ask-fab:hover { opacity: .9; }
+  .ask-fab .spin { margin-top: 0; }
+  .ask-fab .ask-count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--panel); color: var(--ink); font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; box-sizing: border-box; font-variant-numeric: tabular-nums; }
   .ask-fab .ico { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   /* The design workspace: a sheet over the Desk, almost the whole screen, the Desk dimmed around it. */
   #workspace { inset: 16px 16px 0; border-radius: 14px 14px 0 0; overflow: hidden; border: 1px solid var(--line); border-bottom: 0;
@@ -827,9 +840,13 @@
     declined: "Nobody works on this request any more and nothing goes to developers. A designer can reopen it.",
     decided: "Closed with a decision instead of a design. The decision is under Product, Decisions. Nobody works on it any more; a designer can reopen it.",
   };
-  const tone = (c) => c.status === "declined" && c.decided ? "decided" : TONE[c.status] || "fyi";
+  // A request filed on the Desk keeps its drawn options to its people until one of them asks the
+  // team for feedback; one from Slack goes on by itself (docs/desk.md → Team feedback).
+  const held = (c) => c.status === "variants" && c.team_feedback?.state === "waiting";
+  STATUS_TIP.held = "The options are drawn. Fine-tune them in the design workspace; when they are ready, press Ask the team for feedback and the team votes and comments.";
+  const tone = (c) => c.status === "declined" && c.decided ? "decided" : held(c) ? "waiting" : TONE[c.status] || "fyi";
   // The state's word, the same in the list and on the page.
-  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : STATUS[c.status] || c.status;
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : STATUS[c.status] || c.status;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   const WORK = {
     request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
@@ -920,7 +937,7 @@
 <p><b>Try 3 ways</b>: select a part of an option in the workspace, press <b>Try 3 ways</b> and describe how you picture it. Design Desk draws three ways above the design; click through them and press <b>Use this one</b> on the one to keep. It becomes the option's next version; the one before stays under its versions.</p>
 <p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions. On the request, the <b>Design catalog</b> shows each state as a picture of the part alone, with the use case of the brief it covers.</p>
 <p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Select as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Select as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -1428,7 +1445,7 @@
   }
   function peekRequest(c) {
     return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
-        <div class="sub"><span class="chip" title="Where the request is now">${esc(STATUS[c.status] || c.status)}</span><span>A request on the Desk</span></div>
+        <div class="sub"><span class="chip" title="Where the request is now">${esc(stateWord(c))}</span><span>A request on the Desk</span></div>
         ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${c.triage ? `<h4>What can be done</h4><p>${esc(VERDICT.idea[c.triage]?.[1] || "")}</p>` : ""}`;
   }
   function peekLink({ ref, text }) {
@@ -1610,12 +1627,13 @@
         ["<b>Mark handled</b> once a designer has dealt with it.", "handle"], LINK],
       steps: ["Pick a change on the left.", "Read what changed and why; click a picture to see it large.", "Press Got it, or ask what is unclear.", "A designer marks it handled or adjusts the design."] },
     requests: { about: "design requests, from an idea to a live prototype and a developer spec",
-      see: ["Every request and where it stands: Checking, Options ready, Live — try it, Sent to developers.",
+      see: ["Every request and where it stands: Checking, Options drawn, Options ready, Live — try it, Sent to developers.",
         "On each request: what is already known about it, and what of your ask needs a developer or a decision, and why.",
         "<b>Presentation</b>: what designers chose to show at the team's next design meeting, each in its final version with a short brief.",
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
+        ["<b>Ask the team for feedback</b> once a request's options are fine-tuned: its author may, whatever their role, and designers, developers and leads may on any request filed here. One from Slack goes to the team by itself.", "request"],
         ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
         ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
@@ -1704,6 +1722,7 @@
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
+  S.ws.notes = store.get("desk-notes") !== "0";
 
   function visibleCards() {
     if (S.tab === "new") return newCards(S.newFilter);
@@ -2207,8 +2226,10 @@
     // Each item and each Desk page has its own chat and history.
     const ctx = askContext(), here = S.ask.asks.filter((t) => sameContext(ctx, t.context || {}));
     const waiting = here.some((t) => t.needs_agent);
+    // How many messages this item's or page's chat holds, questions and answers both.
+    const said = here.reduce((n, t) => n + (t.messages || []).length, 0);
     if (!S.ask.open) {
-      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Ask privately about this ${askWhat(ctx)}${waiting ? ` <span class="spin"></span>` : ""}</button>`;
+      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Ask privately about this ${askWhat(ctx)}${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
       return;
     }
     const keep = $("#ask-text")?.value || "";
@@ -2223,7 +2244,7 @@
       </div>
       <footer>
         <div class="starters">${starters(ctx).map(([k, l]) => `<button class="btn small" data-ask-starter="${k}" data-ask-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
-        <textarea id="ask-text" maxlength="4000" placeholder="Or write your own question about ${esc(ctx.label)}…"></textarea>
+        <textarea id="ask-text" maxlength="4000" placeholder="Or write your own question about ${esc(ctx.label)}… (Enter sends, Shift+Enter a new line)"></textarea>
         <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
       </footer></section>`;
     $("#ask-text").value = keep;
@@ -2265,7 +2286,7 @@
       return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m) => m.by?.agent
         ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent"><span class="ask-name">Design Desk</span>${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Writes a note for Design Desk from this answer into this page's public comments box. You edit it there and send it yourself.">Make a brief for the public comments</button>` : ""}</div></div>`
         : `<div class="ask-msg me">${md(m.text)}<span class="ask-when">${esc(when(m.at))}</span></div>`).join("")}
-        ${th.needs_agent ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent pending">Design Desk is answering…</div></div>` : ""}
+        ${th.needs_agent ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent typing" role="status" title="Design Desk is answering…"><i></i><i></i><i></i><span class="sr">Design Desk is answering…</span></div></div>` : ""}
 `;
     }).join("");
   }
@@ -2547,6 +2568,11 @@
       return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c),
         buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
+    if (held(c)) {
+      const mine = can("revise") || filedIt(c);
+      return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. The request's author, a designer, a developer or a lead asks the team for feedback once they are fine-tuned.",
+        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
+    }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       const shaper = can("revise");
       return { text: "Your turn: look at the options, 👍 the one you like or ⚠ what worries you, and comment on any part.",
@@ -2571,7 +2597,7 @@
     const items = call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c)}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c)}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
@@ -2997,6 +3023,7 @@
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
       ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
+      ${pinned(c, v).length ? `<label class="switch ws-switch" title="Shows or hides the comments' numbers on the design; the list beside keeps them"><input type="checkbox" role="switch" data-ws-notes ${S.ws.notes ? "checked" : ""} /><span>Comments</span></label>` : ""}
       <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
     $("#ws-states").innerHTML = wsAlts(c, v) + wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
@@ -3167,8 +3194,10 @@
       };
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
   }
+  // The comments pinned on this option's drawing; the Comments switch hides them from the design only.
+  const pinned = (c, v) => notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector);
   function sendPins(c, v) {
-    const pins = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector).map((n) => ({ n: n.n, note: n.id, selector: n.anchor.selector, state: noteState(c, n)[0] }));
+    const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: n.anchor.selector, state: noteState(c, n)[0] }));
     if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
   }
@@ -3191,7 +3220,15 @@
       document.body.append(el); tipShow(el, true); el.remove();
       return;
     }
-    if (d.type === "desk-pin-open") { tipHide(); const li = document.querySelector(`[data-ws-note="${CSS.escape(String(d.note || ""))}"]`); if (li) { li.click(); li.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
+    if (d.type === "desk-pin-open") {
+      tipHide();
+      // A pin of a comment the list's filter hides switches the list to the tab it is on.
+      const th = (S.card?.threads || []).find((x) => x.id === d.note), f = S.ws.filter || "open";
+      if (th && f !== "all" && (f === "done") !== (th.state === "resolved")) { S.ws.filter = th.state === "resolved" ? "done" : "open"; renderWorkspace(); }
+      const li = document.querySelector(`[data-ws-note="${CSS.escape(String(d.note || ""))}"]`);
+      if (li) { li.click(); li.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+      return;
+    }
     if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
     if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
@@ -3614,6 +3651,7 @@
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { S.convoOpen = true; await post(ds.post); return; }
+    if ("teamFeedback" in ds) { await api("POST", `/api/cards/${S.card.id}/feedback`); toast("The team can vote and comment on the options now."); await openCard(S.card.id); await refreshList(); return; }
     if ("askOpen" in ds) { S.ask.open = true; await loadAsks(); renderAsk(); $("#ask-text")?.focus(); return; }
     if ("askClose" in ds) { S.ask.open = false; renderAsk(); return; }
     if (ds.askStarter) { await sendAsk(ds.askLabel, ds.askStarter); return; }
@@ -3830,10 +3868,13 @@
     if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
     if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }
+    if ("wsNotes" in e.target.dataset) { S.ws.notes = e.target.checked; store.set("desk-notes", S.ws.notes ? "1" : "0"); renderWorkspace(); return; }
     if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; renderWorkspace(); }
   });
 
   document.addEventListener("keydown", (e) => {
+    // A private ask goes with Enter; Shift+Enter starts a new line.
+    if (e.target.id === "ask-text" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("[data-ask-send]")?.click(); return; }
     const z = $(".zoom");
     if (z && e.key === "Escape") { z.remove(); return; }
     if (z?.list?.length > 1 && ["ArrowRight", "ArrowLeft"].includes(e.key)) { gallery(z.list, z.index + (e.key === "ArrowRight" ? 1 : -1)).catch(fail); return; }
@@ -4009,9 +4050,48 @@
     await loadPeople(); if (S.tab === "people") renderDetail();
   }));
 
-  // Day and night: the switch remembers a choice per browser; without one, the system's mode.
+  // Day and night: the switch keeps a person's choice on the Desk, so it follows them to every
+  // device; the browser keeps a copy so the page opens in it without a flash. Without a choice,
+  // the system's mode.
   const systemDark = matchMedia("(prefers-color-scheme: dark)");
   const isDark = () => (document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light")) === "dark";
+  // The browser's copy is the viewer's own (desk-theme:<email>), and desk-theme-last says whose
+  // to paint before the Desk answers: one person's copy is never read for, or removed by, another.
+  function setTheme(t) {
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+    const me = myKey();
+    try {
+      if (me) {
+        if (t) localStorage.setItem(`desk-theme:${me}`, t);
+        else localStorage.removeItem(`desk-theme:${me}`);
+        localStorage.setItem("desk-theme-last", me);
+      }
+      localStorage.removeItem("desk-theme");
+    } catch {}
+    renderTheme();
+  }
+  // A choice the server has not taken yet stays marked unsaved (desk-theme-unsaved:<email>)
+  // until it answers; the next load sends it again. Saves go one after another, and only the
+  // answer to the newest one clears the mark: an earlier save's answer says nothing of the last choice.
+  let themeSaves = Promise.resolve(), themeSeq = 0;
+  function saveTheme(t, { quiet = false } = {}) {
+    const me = myKey();
+    if (!me) return;
+    store.set(`desk-theme-unsaved:${me}`, "1");
+    const n = ++themeSeq;
+    themeSaves = themeSaves.then(() => api("POST", "/api/prefs", { theme: t })
+      .then(() => { if (n === themeSeq) try { localStorage.removeItem(`desk-theme-unsaved:${me}`); } catch {} })
+      .catch(() => { if (!quiet) toast("Switched here only: the Desk couldn't save it for your other devices yet. It tries again the next time you open the Desk."); }));
+  }
+  // A choice this browser has not saved yet wins and is sent again; then their saved choice;
+  // then a copy this browser kept before copies were named, saved for the first person here.
+  function applyMyTheme() {
+    const me = myKey(), mine = S.me?.theme, here = me ? store.get(`desk-theme:${me}`) : null, before = store.get("desk-theme");
+    if ((here === "light" || here === "dark") && store.get(`desk-theme-unsaved:${me}`)) { setTheme(here); saveTheme(here, { quiet: true }); return; }
+    if (mine === "light" || mine === "dark") return setTheme(mine);
+    if ((before === "light" || before === "dark") && me) { setTheme(before); saveTheme(before, { quiet: true }); return; }
+    setTheme(null);
+  }
   function renderTheme() {
     const b = $("#theme"), dark = isDark();
     b.textContent = dark ? "☀" : "☾";
@@ -4020,7 +4100,7 @@
   }
   $("#theme").addEventListener("click", () => {
     const next = isDark() ? "light" : "dark";
-    document.documentElement.dataset.theme = next; store.set("desk-theme", next); renderTheme();
+    setTheme(next); saveTheme(next);
   });
   systemDark.addEventListener("change", renderTheme);
   renderTheme();
@@ -4066,6 +4146,9 @@
   async function start() {
     if (!bridge) { $("#detail").innerHTML = `<div class="panel">The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.</div>`; $("#main").classList.add("has-detail"); return; }
     S.me = await api("GET", "/api/me");
+    applyMyTheme();
+    // The ask button counts each page's messages, so the person's asks are read before it is drawn.
+    await loadAsks().catch(() => {});
     applyMe();
     await refreshList();
     // A link to an item opens it; else the Desk opens on Requests. How it works is under the
