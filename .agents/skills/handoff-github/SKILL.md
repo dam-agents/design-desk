@@ -86,5 +86,10 @@ there instead of out. The body's last line before the marker names the Desk card
     Set `spec.pr_url`.
     Never mark it ready, never merge.
 
+**Straight to implementation** (the handoff item's `implement`, [docs/handoff.md](../../../docs/handoff.md)
+step 5): add the label the coding agent's manifest names (`gh issue edit --add-label`) to the
+origin issue (`feature`) or to the issue filed above; with no issue filed (`pr-comment`,
+`draft-pr`), file one with the spec, the pictures and that label. Set `spec.issue_url` to it.
+
 Record ordering: create the issue, comment or pull request first and write its URL to the
 card right after; the marker search prevents a duplicate and finds a lost URL.

@@ -181,8 +181,20 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   CSS path in the option's file, a plain label, the `data-view` it is on). The page outlines
   them when a person picks the story. An entry without `stories` keeps the option's coverage
   from before; a revised option whose parts moved sends its new `stories`.
+- **Why it looks like this**: each option names the decisions on the Desk it follows and the
+  parts each one shaped: `reasons: [{decision, how, parts}]` — `decision` a `D-<n>` in force
+  that the design actually rests on (read them with `design desk decisions --concept <c>
+  --state active` for the request's concepts; one the research found and recorded counts too);
+  `how` one or two plain sentences on how this option follows it; `parts` the elements it
+  shaped (`{selector, label, view}`, at most 6, as for stories). At most 12 per option, each
+  decision once. The page tags those parts in the design workspace, says on a selected part
+  which decisions it rests on, and lists the option on the decision's page. Name only what
+  truly shaped a part, never a decision to decorate one; a part with no decision behind it gets
+  none. An entry without `reasons` keeps the option's from before; a revised option whose parts
+  moved or whose basis changed sends its new `reasons`. What goes against a decision is a
+  conflict (desk.md → Decisions), never a reason.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
-  `variants: [{id, version, name, rationale, fidelity, asset, stories, states}]` (rationale: one
+  `variants: [{id, version, name, rationale, fidelity, asset, stories, reasons, states}]` (rationale: one
   line on when this one wins) and `status: feedback` in one `design desk upsert`. The list is
   every option on the card: one already there goes with the `version` (and each of its states
   with its `version`) the card gave you, a new one without; one to take off goes as `{id,

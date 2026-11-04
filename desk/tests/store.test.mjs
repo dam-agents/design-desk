@@ -319,6 +319,34 @@ test("a request from an issue keeps what the issue says about the design and how
   assert.throws(() => s.upsertCard({ id: card.id, grill: { state: "later" } }), /grill state/);
 });
 
+test("an option names the decisions it rests on and the parts each shaped; the decision lists the option", () => {
+  const s = fresh();
+  const author = { name: "Alice", login: "alice" };
+  const d1 = s.addDecision({ concepts: ["billing"], text: "Prices show per month", author, origin: { kind: "chat" } }).decision.id;
+  const d2 = s.addDecision({ concepts: ["buttons"], text: "One primary button per screen", author, origin: { kind: "chat" } }).decision.id;
+  const { card } = s.createRequest(alice, { problem: "Plans page", type: "feature" });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Cards", asset, reasons: [
+    { decision: d1, how: "Every price reads per month.", parts: [{ selector: "#p1", label: "Starter price", view: "1" }] },
+    { decision: d2, how: "Only Upgrade is primary." }] }] });
+  assert.deepEqual(s.card(card.id).variants[0].reasons.map((r) => [r.decision, r.parts.length]), [[d1, 1], [d2, 0]]);
+  assert.deepEqual(s.getCard(card.id).cited[d1], { text: "Prices show per month", status: "active" }, "the card carries the words of what its options rest on");
+  assert.deepEqual(s.getDecision(d1).refs, [{ id: card.id, kind: "request", title: s.card(card.id).title, status: s.card(card.id).status, how: "shapes", options: ["Cards"] }]);
+  const asset2 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>y</b>").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Cards", asset: asset2 }] });
+  assert.equal(s.card(card.id).variants[0].reasons.length, 2, "a revise that leaves reasons out keeps them");
+  s.revokeDecision(d1, alice, { reason: "Yearly is back." });
+  assert.equal(s.getCard(card.id).cited[d1].status, "revoked", "a revoked one says so");
+  const send = (reasons) => s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 2, name: "Cards", asset: asset2, reasons }] });
+  assert.throws(() => send([{ decision: "D-99", how: "x" }]), /no decision D-99/);
+  assert.throws(() => send([{ decision: d2, how: "x" }, { decision: d2, how: "y" }]), /given twice/);
+  assert.throws(() => send([{ decision: d2, how: "x", parts: Array(7).fill({ selector: "#a", label: "a" }) }]), /6 parts/);
+  send([{ decision: d1, how: "Still per month." }, { decision: d2, how: "Only Upgrade is primary." }]);
+  assert.equal(s.card(card.id).variants[0].reasons[0].decision, d1, "a revise keeps a reason it had, revoked or not");
+  const version = s.card(card.id).variants[0].version;
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", version, name: "Cards", asset: asset2 }, { id: "v2", name: "Rows", asset: asset2, reasons: [{ decision: d1, how: "x" }] }] }), /no longer in force/, "a new reason names a decision in force");
+});
+
 test("input limits and asset size are enforced", () => {
   const s = fresh();
   assert.throws(() => s.createRequest(alice, { title: "x".repeat(201), problem: "y" }), /longer than 200/);
@@ -660,6 +688,20 @@ test("before a build the agent asks a form; the answer resumes the build with it
   const { thread: big } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "Six.", step: "build", questions: Array(6).fill({ text: long, options: opts }) });
   s.answerForm(big.id, alice, Array(6).fill({ choice: opts[0], note: "n".repeat(500) }));
   assert.equal(s.thread(big.id).state, "answered", "six full answers fit in the reply");
+});
+
+test("straight to implementation survives the handoff's questions", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "Make it nicer." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "triaged"); }
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] } });
+  const { inbox: handoff, card: approved } = s.act(card.id, { agent: true }, "approve", "Grey header.", { implement: true });
+  assert.deepEqual([handoff.kind, handoff.implement, approved.approved.implement], ["handoff", true, true]);
+  assert.equal(inbox(s).open.find((i) => i.id === handoff.id).implement, true, "the inbox file carries it too");
+  s.claim(handoff.id, "run-2"); s.done(handoff.id, "run-2", "asked");
+  const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "One thing.", step: "handoff", questions: [{ text: "Empty list?", options: ["A hint", "Nothing"] }] });
+  const { inbox: again } = s.answerForm(thread.id, alice, [{ choice: "Nothing" }]);
+  assert.deepEqual([again.kind, again.implement, again.note], ["handoff", true, "Grey header."]);
 });
 
 test("screenshots a person adds wake the agent once and keep who added them", () => {

@@ -121,7 +121,8 @@ and `D-12` in text link to it as to a card (Links to an item).
   `other` marks only a record from before decisions named their origin; never write it.
 
 - **Citing**: whatever rests on a decision names its number — a card's `decisions: ["D-3"]`,
-  `impact.decisions[].id`, a section, an answer, a spec, a Slack reply, the digest.
+  `impact.decisions[].id`, an option's `reasons[].decision` with the parts it shaped
+  ([requests.md](requests.md) → Variants), a section, an answer, a spec, a Slack reply, the digest.
 - **Conflicts**: before writing a triage verdict, options, a change card, an issue's sketch or
   a decision, read the ones in force for its concepts (`design desk decisions --concept <c>
   --state active`). Each one it goes against goes in `conflicts: [{decision, why, variant}]`
@@ -175,7 +176,7 @@ the same way while it is open and not approved. A small change is approved by a 
 by any `developer` or `lead-developer` except the person who filed it (`created_by`, or
 `origin.email` when you filed it for them); the store refuses the author. A request whose
 `origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A small change
-that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card; the
+that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card (`implement: true` when the approver ticked **Straight to implementation**, [handoff.md](handoff.md) step 5); the
 page shows who marked it and who approved it, and a reopen clears `approved`. A small change
 is not in **Needs a designer** for its options or its prototype. The `handoff` item it makes is
 worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.

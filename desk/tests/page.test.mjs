@@ -862,6 +862,56 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
 }));
 
+// An option that names the decisions it rests on, one of them revoked.
+const BRIDGE_WHY = BRIDGE_STORIES
+  .replace('{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };', `{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }],
+  cited: { "D-3": { text: "Spend always shows per week", status: "active" }, "D-4": { text: "Totals in bold", status: "revoked" } } };
+request.variants[0].reasons = [{ decision: "D-3", how: "The column reads per week.", parts: [{ selector: "#spend", label: "Spend column" }] }, { decision: "D-4", how: "The total is bold.", parts: [] }];`);
+
+test("an option says why it looks as it does: its decisions on the request and in the workspace panel", (t) => open(t, BRIDGE_WHY, async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.waitForSelector(".why-strip");
+  assert.match(await desk.textContent(".why-strip"), /Why it looks like this.*D-3.*Spend always shows per week.*D-4.*Totals in bold/);
+  assert.equal(await desk.locator('.why-strip [data-why="D-4"] .dtag.gone').count(), 1, "a revoked decision is crossed out");
+  await desk.click('.why-strip [data-why="D-3"]');
+  await desk.waitForSelector("#ws-side .why");
+  assert.equal(await desk.getAttribute('.reason[data-reason="D-3"]', "aria-current"), "true", "the decision clicked is picked in the workspace");
+  assert.match(await desk.textContent("#ws-side .why"), /2 decisions[\s\S]*1 decision no longer in force[\s\S]*The column reads per week[\s\S]*Spend column/);
+  assert.match(await desk.textContent('.reason[data-reason="D-4"]'), /no longer holds/);
+  await desk.click('.reason[data-reason="D-3"]');
+  assert.equal(await desk.getAttribute('.reason[data-reason="D-3"]', "aria-current"), "false", "a second click lets it go");
+  await desk.click("[data-ws-why]");
+  assert.match(await desk.textContent("#ws-side"), /2 decisions shaped this option/, "hidden, the panel keeps one line to bring it back");
+  await desk.click("#ws-side [data-ws-why]");
+  assert.equal(await desk.locator("#ws-side .why").count(), 1);
+}));
+
+// The same option with nested parts: D-3 shaped the table and its Spend cell, the revoked D-4 its row.
+const BRIDGE_WHY_NESTED = BRIDGE_WHY.replace('parts: [{ selector: "#spend", label: "Spend column" }] }, { decision: "D-4", how: "The total is bold.", parts: [] }',
+  'parts: [{ selector: "#spend", label: "Spend column" }, { selector: "table", label: "Table" }] }, { decision: "D-4", how: "The total is bold.", parts: [{ selector: "tr", label: "Row" }] }');
+
+test("the design tags the parts a decision shaped: the picked one framed solid, a nested part without a repeat, a revoked one red; a selected part names every decision it sits in", (t) => open(t, BRIDGE_WHY_NESTED, async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.click('.why-strip [data-why="D-3"]');
+  const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+  await frame.waitForSelector("#spend");
+  const tags = () => frame.evaluate(() => [...document.querySelectorAll("div")].filter((d) => /^rgb\((13, 125, 120|179, 38, 30)\)/.test(d.style.borderColor))
+    .map((d) => ({ red: d.style.borderColor.startsWith("rgb(179"), solid: d.style.borderStyle === "solid", faint: d.style.opacity === "0.3", label: d.textContent })));
+  await frame.waitForFunction(() => [...document.querySelectorAll("div")].filter((d) => /^rgb\((13, 125, 120|179, 38, 30)\)/.test(d.style.borderColor)).length === 3);
+  assert.deepEqual(await tags(), [
+    { red: false, solid: true, faint: false, label: "" },
+    { red: false, solid: true, faint: false, label: "◆ D-3" },
+    { red: true, solid: false, faint: true, label: "" },
+  ], "D-3 picked: its table framed solid with its number, the Spend cell inside without a repeat, the revoked row red and faint");
+  await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+  await frame.click("#spend");
+  await desk.waitForSelector("#ws-side .why-sel");
+  assert.match(await desk.textContent("#ws-side .why-sel"), /Why it is like this[\s\S]*D-3[\s\S]*Spend always shows per week[\s\S]*D-4[\s\S]*Totals in bold/,
+    "the Spend cell names D-3 and the D-4 of the row it sits in");
+}));
+
 test("Draw design options asks how many, starting at the request's own count, and sends the one picked", async (t) => {
   const bridge = BRIDGE_STORIES.replace('status: "feedback"', 'status: "triage"').replace("can: { vote: true, comment: true }", "can: { vote: true, comment: true, explore: true }")
     .replace("calls.push({ method, path });", "calls.push({ method, path, body });").replace("async request({ method, path })", "async request({ method, path, body })");
@@ -1203,11 +1253,12 @@ const cards = [
   { id: "C-3", kind: "request", title: "Failed", status: "prototype", prototype: { state: "failed" }, triage, variants, created_by: bob },
   { id: "C-4", kind: "request", title: "Expired", status: "testing", prototype: { state: "expired" }, triage, variants, created_by: bob },
   { id: "C-5", kind: "request", title: "Against", status: "triage", triage, created_by: bob, conflicts: [{ decision: "D-1", why: "x", text: "Rows stay roomy", status: "active" }] },
+  { id: "C-6", kind: "request", title: "Adjust", status: "triage", triage, created_by: bob, request: { type: "adjustment" } },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { ...lou, can: { size: true, explore: true, skip: true, build: true, revise: true } }
+  const answer = path === "/api/me" ? { ...lou, can: { size: true, explore: true, skip: true, build: true, revise: true }, handoff: { idea: "desk", adjustment: "coding-agent" } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
@@ -1235,6 +1286,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   await desk.click('#detail .next [data-act="approve"]');
   assert.match(await desk.textContent("#cf-body"), /Bold\*?\*?, version 2/, "the dialog names the prototype's option and version");
   assert.equal(await desk.locator("#cf-choices input").count(), 0, "and offers no other");
+  assert.equal(await desk.locator("#cf-check2-wrap").isHidden(), true, "an idea's spec stays on the Desk: no straight to implementation");
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-2/actions"));
   assert.equal(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-2/actions").body)).note, "v2");
@@ -1247,6 +1299,13 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   await card("C-5");
   assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a lead developer does not send it");
   assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1);
+  await card("C-6");
+  await desk.click('#detail [data-act="approve"]');
+  assert.equal(await desk.locator("#cf-check2-wrap").isVisible(), true, "an adjustment reaches the coding agent: the box is offered");
+  await desk.check("#confirm-form [name=check2]");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-6/actions"));
+  assert.equal(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-6/actions").body)).implement, true);
 }));
 
 test("the Desk opens on Requests, a first visit too", (t) => open(t, SKIP.replace(`try { localStorage.setItem("desk-guide-seen", "1"); } catch {}`, `try { localStorage.clear(); } catch {}`), async (desk) => {
