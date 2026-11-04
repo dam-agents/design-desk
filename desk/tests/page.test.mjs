@@ -202,12 +202,16 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await sh.close();
     await settled(screens, 2, "a close after an Add sends nothing");
 
-    // An open item keeps its way back on screen (the browser's Back leaves the Desk), and
-    // an issue or pull request number links to it.
-    assert.ok(await desk.isVisible(".crumb [data-back]"), "an open item shows its way back");
+    // Beside the list the list is the way back; where the list hides, an open item keeps its
+    // way back on screen (the browser's Back leaves the Desk). An issue or pull request
+    // number links to it.
+    assert.equal(await desk.isVisible(".crumb [data-back]"), false, "beside the list, no back button");
+    await desk.setViewportSize({ width: 600, height: 800 });
+    assert.ok(await desk.isVisible(".crumb [data-back]"), "an open item shows its way back where the list hides");
     assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
+    await desk.setViewportSize({ width: 1280, height: 720 });
 
     // Every row in Changes and Requests says where it came from and who started it; its
     // links go to the source, the rest of the row opens the item.
@@ -335,25 +339,37 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   }
   assert.match(await desk.textContent('#detail [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
   assert.equal(await desk.locator("#detail .with-intro > .guide").count(), 1, "People shows its list with the intro");
+  // Folding one intro folds every tab's, and it stays folded after a reload.
+  await desk.click('[data-tab="requests"]');
+  await desk.click(`${intro} > summary`);
+  await desk.reload();
+  await desk.waitForSelector(`${intro}[data-intro="requests"]`, { state: "attached" });
+  assert.equal(await desk.$eval(intro, (d) => d.open), false, "a folded intro stays folded");
+  await desk.click(`${intro} > summary`);
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
   await desk.click('[data-tab="new"]');
   await desk.click("#list .row .open");
-  await desk.waitForSelector("#detail .crumb");
+  await desk.waitForSelector("#detail .crumb", { state: "attached" });
   assert.equal(await desk.locator(intro).count(), 0, "an open item takes the pane");
 }));
 
 test("every button and label says on hover what it does or means", (t) => open(t, OPENS, async (desk) => {
-  const bare = () => desk.$$eval("button, a.btn, summary.btn, .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title).map((e) => e.outerHTML.slice(0, 120)));
+  const bare = () => desk.$$eval("button, a.btn, summary.btn, .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title && !e.dataset.tip).map((e) => e.outerHTML.slice(0, 120)));
   await desk.waitForSelector("#detail .intro");
   for (const tab of ["requests", "new", "issues", "product", "people"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`#detail [data-intro="${tab}"]`);
     assert.deepEqual(await bare(), [], `${tab}: everything has a title`);
+    if (tab === "requests") {
+      await desk.hover("#help");
+      assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows at once");
+      assert.equal(await desk.getAttribute("#help", "title"), null, "the browser's slow one does not");
+    }
     if (await desk.locator("#list .row .open").count()) {
       await desk.click("#list .row .open");
-      await desk.waitForSelector("#detail .crumb");
+      await desk.waitForSelector("#detail .crumb", { state: "attached" });
       assert.deepEqual(await bare(), [], `${tab}, an open item: everything has a title`);
     }
   }
@@ -479,8 +495,10 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.click("[data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
   assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#presentation/C-2"]);
+  await desk.setViewportSize({ width: 600, height: 800 });
   await desk.click("[data-back]");
   await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent === "Presentation");
+  await desk.setViewportSize({ width: 1280, height: 720 });
 
   await desk.goto(`${base}#call/C-3`);
   assert.equal(await shown("requests", "Closed one"), "C-3", "an older #call link still works; an item that is not on the presentation opens in its own tab");
@@ -756,6 +774,14 @@ test("a pull request link previews its change", async (t) => {
     assert.match(await desk.textContent("#peek"), /A new header[\s\S]*PR #45[\s\S]*by dana[\s\S]*From PR #45\./);
     await desk.hover("#detail h2");
     await desk.waitForSelector("#peek", { state: "detached" });
+
+    // Any link to it previews it, whatever follows the number; one the Desk does not know says so.
+    await desk.evaluate(() => document.querySelector("#detail h2").insertAdjacentHTML("afterend", '<p><a id="files" href="https://github.com/acme/widgets/pull/45/files">the diff</a> <a id="other" href="https://github.com/acme/widgets/issues/77">issue #77: a calmer list</a></p>'));
+    await desk.hover("#files");
+    await desk.waitForSelector("#peek");
+    assert.match(await desk.textContent("#peek"), /A new header/, "a link past the number previews the change");
+    await desk.hover("#other");
+    await desk.waitForFunction(() => /a calmer list[\s\S]*Issue #77[\s\S]*acme\/widgets[\s\S]*Not on the Desk/.test(document.querySelector("#peek")?.textContent || ""));
 
     await desk.click('[data-tab="new"]');
     await desk.hover('.row.item [data-card="ch1"]');
@@ -1044,7 +1070,7 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
 });
 
 test("a decision: what goes against it warns with a link to it; a designer revokes it with a reason", async (t) => {
-  const decision = `const decision = { id: "D-1", concepts: ["header"], text: "The header stays one line", why: "", author: { name: "Dana", login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" }, at: "2026-10-01T00:00:00Z", status: "active" };`;
+  const decision = `const decision = { id: "D-1", concepts: ["header"], text: "The header stays one line", why: "", author: { name: "Dana", login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" }, at: "2026-10-01T00:00:00Z", status: "active", side: "developer" };`;
   const bridge = BRIDGE.replace("const digest =", `${decision}\nchange.conflicts = [{ decision: "D-1", why: "It wraps the header to two lines.", text: decision.text, status: "active" }];\nchange.decisions = ["D-2"]; change.cited = { "D-2": { text: "Headers use the brand colour", status: "revoked" } };\nchange.impact = { concept: "the header", places: [], decisions: [{ id: "D-2", when: "2026-09-01" }] };\nconst digest =`)
     .replace("can: { request: true,", "can: { decide: true, request: true,")
     .replace(': path === "/api/cards/ch1"', ': path === "/api/decisions/D-1" ? { decision, refs: [{ id: "ch1", kind: "change", title: "A new header", how: "conflicts" }] }\n    : path.startsWith("/api/decisions?") ? { decisions: [decision] }\n    : path === "/api/cards/ch1"');
@@ -1061,7 +1087,8 @@ test("a decision: what goes against it warns with a link to it; a designer revok
     assert.equal(await desk.locator('#detail .impact [data-ref="D-2"]').count(), 1, "the impact cites a decision by its number");
     await desk.click('#detail .against [data-ref="D-1"]');
     await desk.waitForSelector("text=Who decided");
-    assert.match(await desk.textContent("#detail"), /Dana[\s\S]*PR #40[\s\S]*A new header ch1[\s\S]*goes against it/);
+    assert.match(await desk.textContent("#detail"), /Developer Dana[\s\S]*PR #40[\s\S]*A new header ch1[\s\S]*goes against it/, "it says a developer decided it");
+    assert.match(await desk.textContent("#list"), /From developers 1[\s\S]*The header stays one line/, "the list keeps developers' decisions apart");
     await desk.click('[data-revoke="D-1"]');
     await desk.fill("#confirm-form [name=note]", "Two lines are fine now");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Revoke it" }).click();
@@ -1140,8 +1167,9 @@ test("a small change: the lead developer marks it, a developer but its author ap
   const count = (sel) => desk.locator(`#detail ${sel}`).count();
 
   await card("lou", "C-1");
-  assert.equal(await count('[data-size="small"]'), 1, "the lead developer marks an open request");
+  assert.equal(await count('details.more [data-size="small"]'), 1, "the lead developer marks an open request, under More");
   assert.equal(await count('[data-act="approve"]'), 0, "and approves no request that is not a small change");
+  await desk.click("#detail details.more > summary");
   await desk.click('#detail [data-size="small"]');
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-1/size"));

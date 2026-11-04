@@ -58,6 +58,20 @@ function roleOf(caller) {
 
 const roster = () => rosterOf(cfgTable("Desk people"));
 
+// Who a decision came from (docs/desk.md → Decisions → Who decided): the design side
+// (a designer, a PM, a lead) or a developer. The role the record names, else the author's
+// on the roster, else where it was decided: a pull request, a commit or an architecture page
+// is a developer's. Unknown stays null.
+const DESIGN_SIDE = ["lead", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
+function sideOf(d) {
+  const email = String(d.author?.email || "").toLowerCase();
+  const role = readRole(d.author?.role) || (email ? readRole(cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === email)?.role) : null);
+  if (DESIGN_SIDE.includes(role)) return "design";
+  if (DEVELOPER_SIDE.includes(role)) return "developer";
+  return ["pr", "commit", "doc"].includes(d.origin?.kind) ? "developer" : null;
+}
+const withSide = (d) => ({ ...d, side: sideOf(d) });
+
 // The skills New request offers, from `request_skills` (toolkit/lib/actions.mjs).
 const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact, brand, walkthrough, figma"),
   { figma, warn: (m) => log("warn", "request_skills", m) });
@@ -165,8 +179,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
-  if (m === "GET" && p[1] === "decisions" && !p[2]) return send(res, 200, { decisions: store.listDecisions(decisionQuery(url)).slice(0, 200) });
-  if (m === "GET" && p[1] === "decisions" && p[2]) return send(res, 200, store.getDecision(p[2]));
+  if (m === "GET" && p[1] === "decisions" && !p[2]) return send(res, 200, { decisions: store.listDecisions(decisionQuery(url)).slice(0, 200).map(withSide) });
+  if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2]); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
   const b = m === "GET" ? {} : await body(req);
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);

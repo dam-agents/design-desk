@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.34.0 — 2026-11-04
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Tooltips show at once in the Desk's
+own box; a tab's intro folds again, kept per browser; buttons carry icons; More closes on a
+click outside it and holds Mark as small change; beside the list an open item has no back
+button; a request's text blocks share one width; the Needs a developer label is gone. Every
+GitHub issue or pull request link previews what the Desk knows of it. Product → Decisions
+keeps the design side's decisions (designers, PMs, leads) apart from developers', so also
+restart the Desk server (`rc-service --user design-desk-server restart`): it now tells the
+page whose each decision is, and a decision's `author` may name a `role`. Recorded decisions
+need no change.
+
 ## 1.33.0 — 2026-11-04
 
 **Upgrade:**

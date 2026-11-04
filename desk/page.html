@@ -63,11 +63,15 @@
   .ideas-list .row { color: var(--muted); } .ideas-list .row .t { font-weight: 500; }
   .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
   .banner.warn { background: var(--warn-soft); }
-  /* A tab's intro: what it shows, what you can do, the steps; in the empty pane beside the list. */
+  /* A tab's intro: what it shows, what you can do, the steps; in the empty pane beside the list, folded per browser. */
   .intro { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-size: 13px; padding: 14px 18px; max-width: 900px; margin: 0 auto; }
-  .intro > h3 { margin: 0 0 8px; text-transform: none; letter-spacing: 0; display: flex; gap: 8px; align-items: baseline; font-size: 14px; font-weight: 400; color: var(--muted); }
-  .intro > h3 b { color: var(--ink); }
-  .intro > h3 .i { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--info-soft); color: var(--accent); font-weight: 700; font-size: 11px; flex: none; align-self: center; }
+  .intro > summary { list-style: none; cursor: pointer; margin: 0; display: flex; gap: 8px; align-items: baseline; font-size: 14px; color: var(--muted); }
+  .intro > summary::-webkit-details-marker { display: none; }
+  .intro[open] > summary { margin-bottom: 8px; }
+  .intro > summary b { color: var(--ink); }
+  .intro > summary .tog { margin-left: auto; color: var(--accent); font-size: 13px; white-space: nowrap; }
+  .intro > summary .tog::after { content: "Show ▸"; } .intro[open] > summary .tog::after { content: "Hide ▾"; }
+  .intro > summary .i { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--info-soft); color: var(--accent); font-weight: 700; font-size: 11px; flex: none; align-self: center; }
   .intro .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 4px 28px; }
   .intro h5 { margin: 4px 0 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .intro ul, .intro ol { margin: 0; padding-left: 18px; } .intro li { margin-bottom: 3px; }
@@ -77,6 +81,10 @@
   .with-intro > .intro { margin: 0; }
   @media (min-width: 1280px) { .with-intro { grid-template-columns: minmax(0, var(--measure)) minmax(280px, 380px); } .with-intro > .intro { order: 2; } }
   .intro li.off { color: var(--muted); } .intro li .chip { font-size: 10.5px; padding: 0 6px; margin-left: 4px; }
+  .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.small > .ico { width: 13px; height: 13px; }
+  /* What a button or label does, the moment the pointer is on it (docs/desk.md → Tooltips). */
+  #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
   .btn:hover { background: var(--soft); }
   .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
@@ -113,6 +121,11 @@
   .prov .anchor { font-size: 12px; max-width: 32ch; }
   .sub + .prov { margin-top: 8px; }
   .row.overdue { border-left: 3px solid var(--bad); }
+  /* Whose decision it is: the design side (designers, PMs, leads) blue, developers amber. */
+  .row.side-design { border-left: 3px solid var(--accent); } .row.side-developer { border-left: 3px solid var(--warn); }
+  .chip.side-design { background: var(--info-soft); color: var(--accent); } .chip.side-developer { background: var(--warn-soft); color: var(--warn); }
+  .side-head { display: flex; gap: 8px; align-items: baseline; margin: 14px 4px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .side-head .n { font-weight: 400; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
@@ -129,7 +142,7 @@
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
   .section { margin: 0 0 14px; max-width: var(--measure); }
   /* A request's brief, what a person asked for, apart from what Design Desk made of it. */
-  .brief { border: 1px solid var(--line); border-left: 3px solid var(--ink); border-radius: var(--radius); background: var(--panel); padding: 12px 16px 4px; margin: 14px 0 0; max-width: calc(var(--measure) + 34px); }
+  .brief { border: 1px solid var(--line); border-left: 3px solid var(--ink); border-radius: var(--radius); background: var(--panel); padding: 12px 16px 4px; margin: 14px 0 0; }
   .brief-k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 0 0 8px; }
   .brief .shots { margin-bottom: 12px; }
   h3.made { border-top: 1px solid var(--line); padding-top: 18px; }
@@ -216,6 +229,8 @@
   .verdict b { display: block; margin-bottom: 4px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
   .two ul { margin: 4px 0 0; padding-left: 18px; }
+  /* An open item's text blocks share one width, the reading measure; only the designs run wider. */
+  details.fold, .brief { max-width: var(--measure); }
   details.fold > summary { cursor: pointer; color: var(--muted); font-size: 13px; margin: 18px 0 8px; }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
   .tabs button { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
@@ -270,6 +285,8 @@
   /* The browser's Back leaves the Desk (docs/desk.md → Where it works): every view keeps a way back on screen. */
   .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px calc(-1 * var(--pad-x)) 14px; padding: 10px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
   .crumb [data-copy-link] { margin-left: auto; }
+  /* Beside the list the list is the way back: the back button shows only where the list hides. */
+  @media (min-width: 861px) { .crumb [data-back] { display: none; } .crumb:not(:has([data-copy-link])) { display: none; } }
   .pbar { position: sticky; top: -28px; z-index: 5; margin: -28px -48px 0; padding: 12px 48px; background: var(--bg); border-bottom: 1px solid var(--line); }
   /* the design workspace */
   #workspace { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: grid; grid-template-rows: auto 1fr; }
@@ -566,6 +583,7 @@
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows", "issueFilter:designed": "Issues already designed here and sent to developers",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
       "productFilter:decisions": "Every decision the team made, searchable", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback" }[v]),
+    dside: (v) => ({ "": "Every decision, kept apart by who made it", design: "Only what designers, PMs and leads decided", developer: "Only what developers decided: in code, a pull request or on the Desk" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
     decision: (v) => `Opens decision ${v}`,
@@ -631,13 +649,97 @@
     return TIP_ID[el.id] || el.getAttribute("aria-label") || "";
   }
   const TIPPED = "button, a.btn, summary.btn, [data-zoom]";
+  // A button's icon, by its data- action (or id), drawn before its words; a button whose
+  // words start with a sign of their own (▶, ✓, 👍, +…) keeps that sign instead.
+  const ICON_PATH = {
+    pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    spark: '<path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6Z"/><path d="M19 17v4M17 19h4"/>',
+    screen: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 7 5 3-5 3Z"/>',
+    check: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+    flag: '<path d="M5 22V4h12l-2 4 2 4H5"/>',
+    undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+    redo: '<path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>',
+    x: '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/>',
+    layers: '<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
+    chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12Z"/>',
+    image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    bolt: '<path d="M13 2 3 14h9l-1 8 10-12h-9Z"/>',
+    person: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    minus: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+    off: '<path d="M18 8a6 6 0 0 0-9.3-5M6 8c0 7-3 9-3 9h14M13.7 21a2 2 0 0 1-3.4 0M2 2l20 20"/>',
+    down: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+    up: '<path d="M12 15V3M7 8l5-5 5 5M5 21h14"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  };
+  const BTN_ICON = {
+    act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: (el) => /Send to developers/.test(textOf(el)) ? "send" : "check",
+      decide: "flag", reopen: "undo", revise: "redo", close: "x", states: "layers", "slack-share": "chat", "slack-send": "send", unqueue: "minus", "not-now": "off",
+      draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
+    size: { small: "bolt", designer: "person" },
+    adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: "send",
+  };
+  const OWN_SIGN = /^[^\p{L}\p{N}]/u;
+  function iconFor(el) {
+    for (const [k, v] of Object.entries(el.dataset)) {
+      const i = BTN_ICON[k];
+      const name = typeof i === "object" ? i[v] : i;
+      const out = typeof name === "function" ? name(el) : name;
+      if (out) return out;
+    }
+    return "";
+  }
+  function decorate(el) {
+    if (!el.matches(".btn:not(summary)") || el.querySelector(".ico") || OWN_SIGN.test(textOf(el))) return;
+    const name = iconFor(el);
+    if (name) el.insertAdjacentHTML("afterbegin", `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH[name]}</svg>`);
+  }
+  // Tooltips are the Desk's own box, shown the moment the pointer is on it: a title becomes a
+  // data-tip, so the browser's own slow one never shows.
   function tip(root) {
     if (root.nodeType !== 1) return;
-    for (const el of [root, ...root.querySelectorAll(TIPPED)])
-      if (el.matches(TIPPED) && !el.title) { const t = tipFor(el); if (t) el.title = t; }
+    for (const el of [root, ...root.querySelectorAll(`${TIPPED}, [title]`)]) {
+      if (el.matches("iframe")) continue;
+      if (el.title) { el.dataset.tip = el.title; el.removeAttribute("title"); }
+      else if (el.matches(TIPPED) && !el.dataset.tip) { const t = tipFor(el); if (t) el.dataset.tip = t; }
+      if (el.matches(TIPPED)) decorate(el);
+    }
   }
+  const tipHide = () => $("#tip")?.remove();
+  function tipShow(el) {
+    if (el.title) { el.dataset.tip = el.title; el.removeAttribute("title"); }
+    const t = el.dataset.tip;
+    if (!t || el.closest("details.more[open] > summary") || $("#peek")) return tipHide();
+    let box = $("#tip");
+    if (!box) { box = document.createElement("div"); box.id = "tip"; box.setAttribute("role", "tooltip"); document.body.append(box); }
+    box.textContent = t;
+    const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
+    const below = r.top - 6 - h < 0;
+    box.style.left = `${Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8))}px`;
+    box.style.top = `${below ? r.bottom + 6 : r.top - 6 - h}px`;
+  }
+  const tipTarget = (e) => e.target.closest?.("[data-tip], [title]:not(iframe)");
+  // A link that previews its issue or pull request shows the preview, not a line.
+  const previews = (el) => el.matches("a[href*='/issues/'], a[href*='/pull/']") && ghRef(el.getAttribute("href"));
+  document.addEventListener("mouseover", (e) => { const el = tipTarget(e); if (el && !previews(el)) tipShow(el); else tipHide(); });
+  document.addEventListener("mouseout", (e) => { const el = tipTarget(e); if (el && !el.contains(e.relatedTarget)) tipHide(); });
+  document.addEventListener("focusin", (e) => { const el = tipTarget(e); if (el?.matches(":focus-visible")) tipShow(el); });
+  document.addEventListener("focusout", tipHide);
+  document.addEventListener("scroll", tipHide, true);
+  document.addEventListener("pointerdown", tipHide, true);
   new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) tip(n); }).observe(document.body, { childList: true, subtree: true });
   tip(document.body);
+
+  // An open More closes on a click anywhere outside it, on Escape, and once something in it is picked.
+  document.addEventListener("click", (e) => {
+    for (const d of document.querySelectorAll("details.more[open]"))
+      if (!d.contains(e.target) || e.target.closest(".menu button")) d.open = false;
+  }, true);
+  const moreClose = () => { for (const d of document.querySelectorAll("details.more[open]")) d.open = false; };
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") moreClose(); });
+  // A click into a design's frame never reaches this page; the page loses focus instead.
+  addEventListener("blur", () => { moreClose(); tipHide(); });
 
   // ---------- bridge ----------
   const bridge = window.platform;
@@ -657,7 +759,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set(), askFirst: true } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -810,18 +912,44 @@
   }
 
   // ---------- an issue's or a pull request's preview ----------
-  // A link to an issue or a change on the Desk, or to its GitHub page, shows what the Desk
-  // knows of it on hover or focus. An issue: its title, where it is planned, the problem and
-  // what the UI will need. A change (its pull request): whether it shipped, who made it, what
-  // it changes and whether it needs a designer.
+  // A link to an issue or a change on the Desk, or any link to a GitHub issue or pull request
+  // anywhere on the Desk, shows what the Desk knows of it on hover or focus. An issue: its
+  // title, where it is planned, the problem and what the UI will need. A change (its pull
+  // request): whether it shipped, who made it, what it changes and whether it needs a designer.
+  // A request that came from it: where it stands and what can be done. One the Desk does not
+  // know says so (docs/desk.md → Previews).
   const PEEKED = ["issue", "change"];
+  // A GitHub issue or pull request link, whatever follows its number (/files, a comment's #…);
+  // an issue and a pull request share their repository's numbers.
+  const ghRef = (href) => {
+    const m = /^https?:\/\/(?:www\.)?github\.com\/([^/?#]+\/[^/?#]+)\/(issues|pull)\/(\d+)(?:[/?#]|$)/i.exec(String(href || ""));
+    return m ? { key: `${m[1].toLowerCase()}#${m[3]}`, repo: m[1], n: m[3], pr: m[2].toLowerCase() === "pull" } : null;
+  };
+  const refsOf = (c) => {
+    const src = c.source || {}, out = [ghRef(src.url), ghRef(c.origin?.url)];
+    if (src.repo && (src.pr || src.issue)) out.push({ key: `${String(src.repo).toLowerCase()}#${src.pr || src.issue}` });
+    return out.filter(Boolean).map((r) => r.key);
+  };
   function peekOf(el) {
     const id = el.dataset.card || el.dataset.ref;
     if (id) { const c = S.cards.find((x) => x.id === id); return PEEKED.includes(c?.kind) ? c : null; }
-    const href = (el.getAttribute("href") || "").replace(/[?#].*$/, "");
-    const kind = /\/issues\/\d+$/.test(href) ? "issue" : /\/pull\/\d+$/.test(href) ? "change" : null;
-    if (!kind) return null;
-    return S.cards.find((x) => x.kind === kind && String(x.source?.url || "").replace(/[?#].*$/, "") === href) || null;
+    const ref = ghRef(el.getAttribute("href"));
+    if (!ref) return null;
+    // Its issue or change first, then a request that came from it; else only the link.
+    const hits = S.cards.filter((x) => refsOf(x).includes(ref.key));
+    return hits.find((x) => PEEKED.includes(x.kind)) || hits.find((x) => x.kind === "request") || { kind: "link", ref, text: textOf(el).replace(/\s*↗$/, "") };
+  }
+  function peekRequest(c) {
+    return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
+        <div class="sub"><span class="chip" title="Where the request is now">${esc(STATUS[c.status] || c.status)}</span><span>A request on the Desk</span></div>
+        ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${c.triage ? `<h4>What can be done</h4><p>${esc(VERDICT.idea[c.triage]?.[1] || "")}</p>` : ""}`;
+  }
+  function peekLink({ ref, text }) {
+    // The link's words name it, less the number they start with: "issue #3853: one account".
+    const what = `${ref.pr ? "Pull request" : "Issue"} #${ref.n}`, title = (text || "").replace(/^(?:issue|pr|pull request)?\s*#?\d+\s*[:·—-]?\s*/i, "");
+    return `<div class="t"><b>${esc(title || what)}</b></div>
+        <div class="sub"><span>${esc(what)}</span><span>${esc(ref.repo)}</span></div>
+        <p class="hint">Not on the Desk: it has no notes on its screens yet. The link opens it on GitHub.</p>`;
   }
   function peekIssue(c) {
     const src = c.source || {};
@@ -840,19 +968,19 @@
   function peekShow(el) {
     // Not on the card's own page: it says the same there already.
     const c = peekOf(el);
-    if (!c || S.card?.id === c.id) return;
+    if (!c || (c.id && S.card?.id === c.id)) return;
     clearTimeout(peekTimer);
     peekTimer = setTimeout(() => {
       peekHide();
       const box = document.createElement("div");
       box.id = "peek"; box.setAttribute("role", "tooltip");
-      box.innerHTML = c.kind === "change" ? peekChange(c) : peekIssue(c);
+      box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink }[c.kind] || peekIssue)(c);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
       box.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
       box.style.top = `${below ? r.bottom + 8 : r.top - 8 - h}px`;
-    }, 250);
+    }, 120);
   }
   const peekTarget = (e) => e.target.closest?.("[data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']");
   document.addEventListener("mouseover", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekShow(el); });
@@ -993,12 +1121,14 @@
     const it = INTRO()[S.tab];
     if (!it) return "";
     const li = ([words, act]) => act && !can(act) ? `<li class="off">${words}<span class="chip" title="Your role may not do this; People says which roles may">not with your role</span></li>` : `<li>${words}</li>`;
-    return `<aside class="intro" data-intro="${S.tab}">
-      <h3><span class="i">i</span><span><b>${esc(TABS[S.tab])}</b> — ${esc(it.about)}</span></h3>
+    return `<details class="intro" data-intro="${S.tab}"${store.get("desk-intro") === "hidden" ? "" : " open"}>
+      <summary title="Shows or hides this tab's help; it stays as you leave it"><span class="i">i</span><span><b>${esc(TABS[S.tab])}</b> — ${esc(it.about)}</span><span class="tog"></span></summary>
       <div class="cols"><div><h5>What you see here</h5><ul>${it.see.map((s) => `<li>${s}</li>`).join("")}</ul></div>
         <div><h5>What you can do</h5><ul>${it.can.map(li).join("")}</ul></div>
-        ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div></aside>`;
+        ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div></details>`;
   }
+  // Folding one intro folds every tab's, and it stays so in this browser.
+  document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.intro")) store.set("desk-intro", e.target.open ? "shown" : "hidden"); }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
@@ -1081,7 +1211,7 @@
       // Options waiting for a pick is the usual state: no chip for it.
       else if (c.busy || c.status !== "feedback") out.push(`<span class="chip ${c.busy ? "info" : ""}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${c.busy ? "● " : ""}${esc(STATUS[c.status] || c.status)}</span>`);
       if (c.type === "bug") out.push(`<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>`);
-      else if (c.triage) out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
+      else if (c.triage && c.triage !== "needs-developer") out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
     if (c.conflicts) out.push(`<span class="chip bad" title="Open it to see which decision and why">⚠ Goes against a decision</span>`);
     return out.join("");
@@ -1170,13 +1300,23 @@
   // ---------- decisions (docs/desk.md → Decisions) ----------
   const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The presentation", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
   const named = (a) => a ? esc(a.name || a.login || a.email || "someone") : "";
+  // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
+  const SIDE = { design: ["Designer or PM", "Decided by a designer, a PM or a lead"], developer: ["Developer", "Decided by a developer: in code, a pull request or on the Desk"], "": ["Not known who", "The Desk does not know this person's role"] };
+  const sideChip = (d) => { const [l, t] = SIDE[d.side || ""]; return `<span class="chip side-${esc(d.side || "none")}" title="${esc(t)}">${esc(l)}</span>`; };
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
     const list = $("#list");
     const states = `<div class="filters">${[["active", "In force"], ["revoked", "Revoked"], ["", "All"]].map(([k, l]) => `<button class="btn small ${S.decisionState === k ? "on" : ""}" data-dstate="${k}">${esc(l)}</button>`).join("")}</div>`;
-    const rows = S.decisions.map((d) => `<button class="row" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}</div>
-      <div class="meta"><span class="chip" title="The day it was decided">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad" title="It no longer holds; it stays here crossed out, with the reason">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip bad" title="It contradicts these decisions; a designer settles which holds">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip" title="Who made the decision">by ${named(d.author)}</span>` : ""}${(d.concepts || []).slice(0, 2).map((x) => `<span class="chip" title="What it is about">${esc(x)}</span>`).join("")}</div></button>`).join("");
-    list.innerHTML = `${filters}${states}<input id="decision-q" placeholder="Search decisions, or D-3…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    const sides = `<div class="filters">${[["", "Everyone"], ["design", "Designers and PMs"], ["developer", "Developers"]].map(([k, l]) => `<button class="btn small ${S.decisionSide === k ? "on" : ""}" data-dside="${k}">${esc(l)}</button>`).join("")}</div>`;
+    const row = (d) => `<button class="row side-${esc(d.side || "none")}" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}</div>
+      <div class="meta">${sideChip(d)}<span class="chip" title="The day it was decided">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad" title="It no longer holds; it stays here crossed out, with the reason">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip bad" title="It contradicts these decisions; a designer settles which holds">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip" title="Who made the decision">by ${named(d.author)}</span>` : ""}${(d.concepts || []).slice(0, 2).map((x) => `<span class="chip" title="What it is about">${esc(x)}</span>`).join("")}</div></button>`;
+    // Kept apart: the design side's decisions, then developers', then those whose author's role is unknown.
+    const shown = S.decisions.filter((d) => !S.decisionSide || (d.side || "") === S.decisionSide);
+    const rows = ["design", "developer", ""].map((k) => {
+      const xs = shown.filter((d) => (d.side || "") === k);
+      return xs.length ? `<div class="side-head">${esc(k === "design" ? "From designers and PMs" : k === "developer" ? "From developers" : "Not known who")} <span class="n">${xs.length}</span></div>${xs.map(row).join("")}` : "";
+    }).join("");
+    list.innerHTML = `${filters}${states}${sides}<input id="decision-q" placeholder="Search decisions, or D-3…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery || (S.decisionSide && S.decisions.length) ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
     try { S.decisions = (await api("GET", `/api/decisions?q=${encodeURIComponent(S.decisionQuery)}&state=${encodeURIComponent(S.decisionState)}`)).decisions || []; } catch { S.decisions = []; }
@@ -1209,7 +1349,7 @@
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
       <div class="actions">${can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : ""}</div>
-      <h3>Who decided</h3><p>${d.author ? `<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` <span class="sub" style="display:inline">(${esc(d.author.login)})</span>` : ""}` : `<span class="hint">Not recorded.</span>`}</p>
+      <h3>Who decided</h3><p>${sideChip(d)} ${d.author ? `<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` <span class="sub" style="display:inline">(${esc(d.author.login)})</span>` : ""}` : `<span class="hint">Not recorded.</span>`}</p>
       <h3>Where it was decided</h3>${originLine(d.origin)}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
       ${(d.replaces || []).length ? `<h3>It replaces</h3><ul>${d.replaces.map((id) => `<li>${decRef(id)}</li>`).join("")}</ul>` : ""}
@@ -1686,26 +1826,25 @@
     const call = queued ? (can("close") ? `<button class="btn" data-presented="${esc(c.id)}">✓ Mark as presented</button>` : "") + ((c.agenda.by?.email && c.agenda.by.email === S.me?.email) || can("close") ? `<button class="btn" data-act="unqueue">Take off the presentation</button>` : "")
       : undo + (can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>${c.call_suggestion ? `<button class="btn" data-act="not-now" title="Design Desk suggested it for the presentation; it will not suggest it again">Not now: don't suggest it for the presentation</button>` : ""}` : "");
     // A closed request keeps its presentation actions; only the design actions leave.
-    const items = call + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
+    const size = can("size") && !closed(c) && c.status !== "spec" && !c.approved ? (c.size?.small ? `<button class="btn" data-size="designer">Send through a designer</button>` : `<button class="btn" data-size="small">Mark as small change</button>`) : "";
+    const items = call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn">More ▾</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status">
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${sizeLine(c)}
-      ${c.status === "handed-off" ? sentBox(c, more) : nx.text || nx.buttons ? `<div class="next">${nx.text ? `<b>${esc(nx.text)}</b>` : ""}${nx.sub ? `<span class="hint">${esc(nx.sub)}</span>` : ""}<div class="actions">${nx.buttons}${more}</div></div>` : ""}
+      ${c.status === "handed-off" ? sentBox(c, more) : nx.text || nx.buttons || more ? `<div class="next">${nx.text ? `<b>${esc(nx.text)}</b>` : ""}${nx.sub ? `<span class="hint">${esc(nx.sub)}</span>` : ""}<div class="actions">${nx.buttons}${more}</div></div>` : ""}
     </div>`;
   }
 
   // Small change or through a designer, who said so, and who approved (docs/desk.md → Small changes).
-  // The lead developer's button shows only while the request is open and not yet approved.
+  // The lead developer's button sits under More, while the request is open and not yet approved.
   function sizeLine(c) {
     const sz = c.size, ap = c.approved;
     const said = sz ? `<span class="chip ${sz.small ? "info" : ""}" title="${sz.small ? "Any developer but the person who filed it approves it, without a designer" : "A designer or a lead developer approves it"}">${sz.small ? "Small change — a developer approves" : "Goes through a designer"}</span> <span class="hint">${who(sz.by)} decided · ${esc(when(sz.at))}</span>` : "";
     const approved = ap && c.status !== "declined" ? `<span class="chip ok" title="Approved: Design Desk writes the developer spec from it">✓ Approved</span> <span class="hint">${ap.variant ? `${esc(optionName(c, ap.variant))} · ` : ""}by ${who(ap.by)}${ap.small ? " as a small change" : ""} · ${esc(when(ap.at))}</span>` : c.decided && c.status === "declined" ? `<span class="chip ok" title="Closed with a decision, recorded under Product → Decisions">✓ Decided</span> <span class="hint">by ${who(c.decided.by)} · ${esc(when(c.decided.at))}: ${esc(c.decided.text)}</span>` : "";
-    const open = !closed(c) && c.status !== "spec" && !ap;
-    const btn = can("size") && open ? (sz?.small ? `<button class="btn small" data-size="designer">Send through a designer</button>` : `<button class="btn small" data-size="small">Mark as small change</button>`) : "";
-    return said || approved || btn ? `<div class="hint size">${said}${btn}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
+    return said || approved ? `<div class="hint size">${said}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
   }
 
   function renderVerdict(c) {
@@ -1715,7 +1854,8 @@
     const list = (xs) => xs?.length ? `<ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : "";
     // Folded: only what the person asked for and design cannot do (docs/requests.md → Triage).
     const cannot = tr.cannot || [];
-    return `<details class="fold"><summary>What can be done: <span class="chip ${tr.verdict === "design" ? "ok" : "warn"}" title="${esc(text)}">${esc(title)}</span>${cannot.length ? ` <span class="hint">${plural(cannot.length, "part needs a developer", "parts need a developer")}</span>` : ""}</summary>
+    const label = tr.verdict === "needs-developer" ? "" : `<span class="chip ${tr.verdict === "design" ? "ok" : "warn"}" title="${esc(text)}">${esc(title)}</span>`;
+    return `<details class="fold"><summary>What can be done: ${label}${cannot.length ? ` <span class="hint">${plural(cannot.length, "part needs a developer", "parts need a developer")}</span>` : ""}</summary>
       <div class="verdict ${esc(tr.verdict)}">${esc(text)}${list(tr.reasons)}${cannot.length ? `<b>What you asked for that a design change cannot do, and why</b>${list(cannot)}` : ""}</div></details>`;
   }
 
@@ -2479,6 +2619,7 @@
     if (ds.unpresent) { await markPresented(ds.unpresent, false); return; }
     if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
+    if (ds.dside !== undefined) { S.decisionSide = ds.dside; renderList(); return; }
     if (ds.dstate !== undefined) { S.decisionState = ds.dstate; S.decision = null; await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decide) {
       const [th, i] = ds.decide.split(":");
