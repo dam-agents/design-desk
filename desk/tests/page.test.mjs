@@ -368,7 +368,9 @@ test("every button and label says on hover what it does or means", (t) => open(t
     assert.deepEqual(await unnamed(), [], `${tab}: a button with no words keeps a name`);
     if (tab === "requests") {
       await desk.hover("#help");
-      assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows at once");
+      assert.equal(await desk.$("#tip"), null, "not at once");
+      await desk.waitForSelector("#tip");
+      assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows after half a second");
       assert.equal(await desk.getAttribute("#help", "title"), null, "the browser's slow one does not");
     }
     if (await desk.locator("#list .row .open").count()) {
@@ -631,7 +633,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector("[data-handle]");
     assert.equal(await desk.getAttribute(".sec-head .chip a", "href"), "https://github.com/acme/widgets/pull/11", "a section links its source");
-    assert.equal(await desk.locator("details.sec").count(), 1, "the explaining section is folded, what changed is not");
+    assert.equal(await desk.locator("details.sec").count(), 1, "the explaining section can fold, what changed cannot");
+    assert.equal(await desk.locator("details.sec[open]").count(), 1, "a short explaining section shows open");
     assert.match(await desk.textContent("details.sec summary"), /Why it is like this[\s\S]*Source: not documented/);
     assert.deepEqual(await desk.$$eval(".detail .secs", (ss) => ss.map((s) => [...s.children].map((c) => c.textContent.match(/What changed|Why it is like this/)?.[0]))),
       [["What changed", "Why it is like this"]], "one grid holds the card's sections, so they stand side by side on a wide window");
@@ -735,6 +738,74 @@ test("a change shows its age and gets handled, pictures step through, the form a
 
 // A request's page: what was asked, with the pictures a person pasted, boxed apart from
 // what Design Desk made; a link to an issue shows its preview on hover, on its row too.
+// A request with a note on an element, a change citing it, and decisions in force and revoked.
+const PEEKS = `<script>
+const cards = [
+  { id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows C-2 and D-1.", source: { repo: "acme/widgets", pr: 45 } },
+  { id: "C-2", kind: "request", title: "Calmer empty list", status: "feedback", summary: "The list is too loud.", request: { problem: "Too loud." },
+    variants: [{ id: "v1", name: "Quiet", asset: "A-1", version: 1 }],
+    threads: [{ id: "t1", card: "C-2", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#kit", text: "Kit <\\/script> update", label: "Text" },
+      messages: [{ by: { name: "Pat" }, at: "2026-11-01T10:00:00Z", text: "Too bright here." }] }] },
+];
+const decisions = [{ id: "D-1", text: "Search sits in the header", status: "active", side: "design", at: "2026-10-01T00:00:00Z", concepts: [] },
+  { id: "D-2", text: "One primary button", status: "revoked", side: "design", at: "2026-10-02T00:00:00Z", concepts: [] }];
+window.platform = { async request({ path }) {
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { vote: true, change: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] }
+    : path.startsWith("/api/decisions/") ? { decision: decisions.find((d) => d.id === path.slice(15)) }
+    // The Decisions page asks for those in force; a prefix search asks for every one.
+    : path.startsWith("/api/decisions") ? { decisions: /state=(&|$)/.test(path) ? decisions : decisions.filter((d) => d.status === "active") }
+    : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: '<body><h1>List</h1><button id="kit">Kit</button></body>' }
+    : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("numbers, notes and pins preview what they name; the search lists every number as typed; the request's text folds", (t) => open(t, PEEKS, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#C-1`);
+  await desk.waitForSelector('#detail a[data-ref="D-1"]');
+  await desk.hover('#detail a[data-ref="C-2"]');
+  assert.equal(await desk.$("#peek"), null, "not at once");
+  await desk.waitForSelector("#peek");
+  assert.match(await desk.textContent("#peek"), /Calmer empty list[\s\S]*The list is too loud/, "an item's number previews the item");
+  await desk.mouse.move(0, 0);
+  await desk.hover('#detail a[data-ref="D-1"]');
+  await desk.waitForFunction(() => /Search sits in the header/.test(document.querySelector("#peek")?.textContent || ""));
+  assert.match(await desk.textContent("#peek"), /In force/, "a decision's number previews the decision");
+  await desk.mouse.move(0, 0);
+
+  await desk.fill("#goto", "D-");
+  await desk.waitForFunction(() => document.querySelectorAll("#hits .hit").length === 2);
+  assert.match(await desk.textContent("#hits"), /One primary button/, "the prefix search lists revoked decisions too");
+  await desk.fill("#goto", "C-");
+  await desk.waitForFunction(() => document.querySelectorAll("#hits .hit").length === 2);
+  await desk.fill("#goto", "");
+
+  await desk.goto(`${base}#C-2`);
+  await desk.waitForSelector("details.brief[open]");
+  await desk.click("details.brief > summary");
+  assert.equal(await desk.evaluate(() => localStorage.getItem("desk-brief")), "folded", "the request's text folds and stays so");
+
+  await desk.hover('[data-snip="A-1"]');
+  await desk.waitForSelector("#peek.snip iframe");
+  const doc = await desk.$eval("#peek.snip iframe", (f) => f.srcdoc);
+  assert.match(doc, /"#kit"/, "the note's element is cut from its option by its path");
+  assert.equal(doc.match(/<\/script>/g).length, 1, "a note's text cannot end the preview's script");
+  await desk.mouse.move(0, 0);
+
+  await desk.click('[data-act="workspace"]');
+  await desk.waitForSelector("#ws-frame");
+  const pin = (data) => desk.evaluate((d) => { const f = document.querySelector("#ws-frame"); dispatchEvent(new MessageEvent("message", { data: d, source: f.contentWindow })); }, data);
+  await pin({ type: "desk-pin-tip", note: "t1", rect: { left: 40, top: 60, bottom: 72, width: 0 } });
+  await desk.waitForSelector("#tip");
+  assert.match(await desk.textContent("#tip"), /#1 · Pat: Too bright here\./, "a note's pin shows what the note says");
+  await pin({ type: "desk-pin-open", note: "t1" });
+  await desk.waitForSelector('[data-ws-note="t1"][aria-current="true"]');
+}));
+
 test("a request's brief sits apart from Design Desk's part; an issue link previews the issue", async (t) => {
   const cards = `const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", summary: "Nobody knows what an agent costs.", needs: ["A spend column in the agents list"],
     source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41" } };
@@ -1044,7 +1115,7 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
     await desk.waitForSelector('[data-act="workspace"]');
-    assert.doesNotMatch(await desk.textContent("#detail"), /Votes and comments help/, "no line on who picks: Pick as the winner says it");
+    assert.doesNotMatch(await desk.textContent("#detail"), /Votes and comments help/, "no line on who picks: Select as the winner says it");
     assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
     assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
 

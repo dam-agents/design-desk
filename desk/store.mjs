@@ -1860,7 +1860,7 @@ function cleanOptionStates(list, assets, n) {
     const stories = x.stories == null ? [] : x.stories;
     if (!Array.isArray(stories) || stories.length > LIMITS.stories || stories.some((s) => !STORY_ID.test(String(s)))) throw bad(`variant ${n}, state ${i + 1}: stories is a list of user story ids`);
     return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset,
-      shot: x.shot ?? null, stories: [...new Set(stories.map(String))], use: optText(x.use, 300, "use"), ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
+      shot: x.shot ?? null, selector: typeof x.selector === "string" && x.selector ? x.selector.slice(0, 500) : null, stories: [...new Set(stories.map(String))], use: optText(x.use, 300, "use"), ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
   });
 }
 

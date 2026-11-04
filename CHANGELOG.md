@@ -12,21 +12,16 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
 Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**). Every page has a **🔒 Ask privately** chat in the bottom-right corner:
-questions and answers only their author and the agent see, about exactly what is open
-when asked — the item, its option, the workspace state and part, or the page and its filter
-(the chat names it, and the inbox item carries it as `context`). Each item and each page has its own chat and history. The Desk keeps a copy of every issue and pull request its cards
-point at, with comments and reviews (`design desk github-sync`, every watch run); previews
-show it, private asks get the item's `refs`, and new comments are worked per
-[docs/watch.md](docs/watch.md) → **Comments on GitHub**. Nothing to install; the first
-watch run fills it. A private ask (thread kind `private`, its `owner` the asker,
-its `context` the item or page) is on no card; the server returns it only to its author
-(`GET /api/private`), its inbox item carries `private: true`, and it is answered per
-[docs/desk.md](docs/desk.md) → **Private asks** (five starters, each with its full brief),
-never shared anywhere else. Every element situation, screen picture and request catalog
-state shows a sub-number (`C-12.3`) that links to it, and answers cite them and carry the
-product's pictures. Recorded
-threads need no change.
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Recorded threads and cards need no
+change; the store's GitHub copy starts empty and the next watch run fills it.
+
+## 1.37.1 — 2026-11-04
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Tooltips and previews now show half
+a second after the pointer rests on them; an item's or a decision's number in text (`C-11`,
+`D-26`) previews it. A request's own text (The request, The report) folds, kept per browser; who sized and who approved a request sit on rows with room between them; Pick as the winner reads Select as the winner; the design options are folder tabs over one panel that holds everything about the picked option; a note's ◎ label previews the element it is about; search lists every item or decision whose number starts as typed (`C-`, `D-1`); in the workspace a note's number on the design shows the note on hover and opens it on a click, the notes' filters are the Desk's segmented control and hide with no notes, and Just comment has its own icon; the note is written inside the Selected box; a change's sections show open; the workspace's options are the same folder tabs on their own row, with the version picker beside the design's tools; a note pin's tooltip shows under the pointer; the picked option tab no longer turns bold; the roles in Add a person read as a table. In a design's review bar, Clickable and Light / Dark sit on the right (designs built from now on). The design catalog folds, and a state with no picture of its part is drawn live from its page, cut to the part by the state's new optional `selector`; a change's "Where else this shows up" is three folding sections, and an earlier decision found in a pull request links to the Desk's own decision. Restart the Desk server (`rc-service --user design-desk-server restart`): it now keeps a state's `selector`.
 
 ## 1.37.0 — 2026-11-04
 
