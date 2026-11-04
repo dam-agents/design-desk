@@ -304,6 +304,10 @@
   #ask { position: fixed; right: 16px; bottom: 16px; z-index: 40; }
   .ask-fab { border: 1px solid var(--line); background: var(--ink); color: var(--panel); border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.18); display: inline-flex; gap: 8px; align-items: center; }
   .ask-panel { width: min(400px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.22); overflow: hidden; }
+  .ask-panel { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
+  .ask-grip { position: absolute; left: 0; top: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 1; touch-action: none;
+    background: linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 5px, var(--muted) 5px 6px, transparent 6px) no-repeat; opacity: .5; }
+  .ask-grip:hover { opacity: 1; }
   .ask-panel header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
   .ask-ctx { padding: 8px 12px; background: var(--soft); font-size: 12.5px; border-bottom: 1px solid var(--line); }
   .ask-body { flex: 1; overflow: auto; padding: 10px 12px; display: grid; gap: 12px; align-content: start; }
@@ -1730,7 +1734,9 @@
     const keep = $("#ask-text")?.value || "";
     const shown = S.ask.all ? S.ask.asks : here;
     const answerOf = (th) => [...th.messages].reverse().find((m) => m.by?.agent);
-    root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask">
+    const size = askSize();
+    root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
+      <div class="ask-grip" data-ask-grip title="Drag to resize"></div>
       <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers">🔒 only you</span></div><button class="btn small" data-ask-close title="Close; your questions stay here">✕</button></header>
       <div class="ask-ctx" title="Design Desk answers about what you had open when you asked">About: <b>${esc(ctx.label)}</b></div>
       <div class="ask-body">
@@ -1754,6 +1760,24 @@
     const body = root.querySelector(".ask-body"); body.scrollTop = body.scrollHeight;
     loadPictures(root).catch(() => {});
   }
+  // The chat's size, dragged from its top-left corner (it sits in the bottom-right one) and
+  // kept per browser.
+  function askSize() { try { const v = JSON.parse(localStorage.getItem("desk-ask-size") || "null"); return v && v.w && v.h ? v : null; } catch { return null; } }
+  document.addEventListener("pointerdown", (e) => {
+    const grip = e.target.closest?.("[data-ask-grip]"); if (!grip) return;
+    e.preventDefault(); S.ask.dragging = true;
+    const panel = grip.parentElement, x0 = e.clientX, y0 = e.clientY, w0 = panel.offsetWidth, h0 = panel.offsetHeight;
+    const fit = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const move = (m) => {
+      panel.style.width = `${fit(w0 + x0 - m.clientX, 300, innerWidth - 32)}px`;
+      panel.style.height = `${fit(h0 + y0 - m.clientY, 320, innerHeight - 32)}px`;
+    };
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up); S.ask.dragging = false;
+      try { localStorage.setItem("desk-ask-size", JSON.stringify({ w: panel.offsetWidth, h: panel.offsetHeight })); } catch {}
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
   async function sendAsk(text, starter = null) {
     if (!text) return;
     const ctx = askContext();
@@ -3383,7 +3407,7 @@
     try {
       await refreshList();
       if (S.card) await openCard(S.card.id, { quiet: true });
-      if (S.ask.open || S.ask.asks.some((t) => t.needs_agent)) { await loadAsks(); if (!$("#ask-text")?.value && !document.activeElement?.closest?.("#ask")) renderAsk(); }
+      if (S.ask.open || S.ask.asks.some((t) => t.needs_agent)) { await loadAsks(); if (!S.ask.dragging && !$("#ask-text")?.value && !document.activeElement?.closest?.("#ask")) renderAsk(); }
       if (S.tab === "people" && S.people?.asks?.some((a) => a.state !== "done")) { await loadPeople(); if (S.tab === "people") renderDetail(); }
       if (S.offline) { S.offline = false; renderBanners(); }
     } catch (e) {
