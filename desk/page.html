@@ -292,7 +292,7 @@
      everything in the panel (votes, the winner, the picture) is about that option only. */
   .tabs.vtabs { gap: 4px; margin: 0; align-items: flex-end; position: relative; z-index: 1; }
   .tabs.vtabs button { border-radius: 8px 8px 0 0; border-bottom-color: transparent; background: var(--bg); color: var(--muted); margin-bottom: -1px; }
-  .tabs.vtabs button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; border-color: var(--line); border-top: 2px solid var(--ink); border-bottom-color: var(--panel); box-shadow: none; }
+  .tabs.vtabs button[aria-pressed="true"] { background: var(--panel); color: var(--ink); border-color: var(--line); border-bottom-color: var(--panel); box-shadow: inset 0 2px 0 var(--ink); }
   .vpanel { border: 1px solid var(--line); border-radius: 0 var(--radius) var(--radius) var(--radius); background: var(--panel); padding: 12px 14px 14px; }
   .vpanel .vbar:first-child { margin-top: 0; }
   .vbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
@@ -355,7 +355,7 @@
   #workspace[hidden] { display: none; }
   .ws-top { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   /* The workspace's options are the same folder tabs, opening into the design below the bar. */
-  .ws-top .vtabs { align-self: flex-end; margin-bottom: -11px; }
+  .ws-top .vtabs { flex-basis: 100%; order: 1; margin: 0 0 -11px; }
   .ws-top .vtabs button { background: var(--soft); }
   .ws-top .vtabs button[aria-pressed="true"] { background: var(--bg); border-bottom-color: var(--bg); }
   .ws-top .title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2387,16 +2387,18 @@
       : `<button class="btn small" data-ws-close>← Back to the request</button>
       <span class="title" title="${esc(c.title)}">${esc(c.title)}</span>
       <div class="tabs vtabs" role="group" aria-label="Design options">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>
-      ${versions.length > 1 ? `<select id="ws-version" style="width:auto">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : ""}
       <span class="grow"></span>
       ${S.me?.figma && can("figma") ? `<button class="btn small" data-act="figma-import">Import from Figma</button><button class="btn small" data-act="figma-export">Send to Figma</button>` : ""}
       ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}`;
+    // The version picker sits with the design's own tools, so the bar above keeps its height.
+    const versionPick = versions.length > 1 ? `<select id="ws-version" style="width:auto;padding:3px 8px;font-size:12px">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : "";
     $("#ws-tools").innerHTML = S.ws.check ? `<span class="hint">Click through it as people will use it: every screen, and every state above. This is exactly what goes live.</span>`
-      : old ? `<span class="chip warn" title="Pick the latest version above to comment or change it">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `
+      : old ? `${versionPick}<span class="chip warn" title="Pick the latest version beside to comment or change it">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `
       <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
       ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
+      ${versionPick}
       <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
     $("#ws-states").innerHTML = wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
