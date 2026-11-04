@@ -296,7 +296,8 @@ text reply per step, in the words the Desk shows:
 
 - after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.";
 - options on the card (`feedback`): run `share-options` with the request's thread as its
-  destination when `slack_polls: enabled`; it opens the vote and posts each option with its
+  destination when `slack_polls: enabled`; it opens the vote, closing 48 hours later
+  (`slack-polls` → Share), and posts each option with its
   PNG still (`design shot`). With polls off, send "Options ready to vote on: <link>", one
   line per option (its name and when it wins), then one reply per option with its PNG still;
 - live (`testing`): "Live prototype ready to try: <link>"; handed off: "Sent to developers:

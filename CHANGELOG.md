@@ -10,9 +10,10 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.39.0 — 2026-11-04
 
 **Upgrade:**
-Nothing — skills and docs are re-read per run. Slack replies about a request now carry its
+Skills and docs are re-read per run. Slack replies about a request now carry its
 card link and a PNG where one exists; with `slack_polls: enabled`, finished options start
-their vote in that request's own thread.
+their vote in that request's own thread, closing 48 hours later. Republish the Desk page
+(`update_artifact` on `desk_artifact` with `desk/page.html`): Share in Slack names that thread.
 
 ## 1.38.1 — 2026-11-04
 
