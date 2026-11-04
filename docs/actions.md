@@ -69,7 +69,9 @@ A skill that replaces a bundled one keeps the action's contract:
 - **Output on the Desk**, through `design desk`:
   - `options`: one self-contained HTML file per option, uploaded with `--kind variant`, with
     a name, one line on when it wins, and `fidelity`; for a request with an `issue_brief`, also
-    how it meets each user story (`stories`, [requests.md](requests.md) → Variants); a skill
+    how it meets each user story (`stories`); when it follows a decision on the Desk, the
+    decisions in force it rests on and the parts each one shaped (`reasons`, both
+    [requests.md](requests.md) → Variants); a skill
     that draws several approaches in one page is run once per approach, or its views are split
     into one file each;
   - every upsert of options sends every option on the card with the `version` it read, and

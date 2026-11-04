@@ -868,7 +868,7 @@ const BRIDGE_WHY = BRIDGE_STORIES
   cited: { "D-3": { text: "Spend always shows per week", status: "active" }, "D-4": { text: "Totals in bold", status: "revoked" } } };
 request.variants[0].reasons = [{ decision: "D-3", how: "The column reads per week.", parts: [{ selector: "#spend", label: "Spend column" }] }, { decision: "D-4", how: "The total is bold.", parts: [] }];`);
 
-test("an option says why it looks as it does: its decisions on the request, tagged in the workspace, and the ones a selected part rests on", (t) => open(t, BRIDGE_WHY, async (desk) => {
+test("an option says why it looks as it does: its decisions on the request and in the workspace panel", (t) => open(t, BRIDGE_WHY, async (desk) => {
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
   await desk.waitForSelector(".why-strip");
@@ -885,6 +885,31 @@ test("an option says why it looks as it does: its decisions on the request, tagg
   assert.match(await desk.textContent("#ws-side"), /2 decisions shaped this option/, "hidden, the panel keeps one line to bring it back");
   await desk.click("#ws-side [data-ws-why]");
   assert.equal(await desk.locator("#ws-side .why").count(), 1);
+}));
+
+// The same option with nested parts: D-3 shaped the table and its Spend cell, the revoked D-4 its row.
+const BRIDGE_WHY_NESTED = BRIDGE_WHY.replace('parts: [{ selector: "#spend", label: "Spend column" }] }, { decision: "D-4", how: "The total is bold.", parts: [] }',
+  'parts: [{ selector: "#spend", label: "Spend column" }, { selector: "table", label: "Table" }] }, { decision: "D-4", how: "The total is bold.", parts: [{ selector: "tr", label: "Row" }] }');
+
+test("the design tags the parts a decision shaped: the picked one framed solid, a nested part without a repeat, a revoked one red; a selected part names every decision it sits in", (t) => open(t, BRIDGE_WHY_NESTED, async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.click('.why-strip [data-why="D-3"]');
+  const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+  await frame.waitForSelector("#spend");
+  const tags = () => frame.evaluate(() => [...document.querySelectorAll("div")].filter((d) => /^rgb\((13, 125, 120|179, 38, 30)\)/.test(d.style.borderColor))
+    .map((d) => ({ red: d.style.borderColor.startsWith("rgb(179"), solid: d.style.borderStyle === "solid", faint: d.style.opacity === "0.3", label: d.textContent })));
+  await frame.waitForFunction(() => [...document.querySelectorAll("div")].filter((d) => /^rgb\((13, 125, 120|179, 38, 30)\)/.test(d.style.borderColor)).length === 3);
+  assert.deepEqual(await tags(), [
+    { red: false, solid: true, faint: false, label: "" },
+    { red: false, solid: true, faint: false, label: "◆ D-3" },
+    { red: true, solid: false, faint: true, label: "" },
+  ], "D-3 picked: its table framed solid with its number, the Spend cell inside without a repeat, the revoked row red and faint");
+  await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+  await frame.click("#spend");
+  await desk.waitForSelector("#ws-side .why-sel");
+  assert.match(await desk.textContent("#ws-side .why-sel"), /Why it is like this[\s\S]*D-3[\s\S]*Spend always shows per week[\s\S]*D-4[\s\S]*Totals in bold/,
+    "the Spend cell names D-3 and the D-4 of the row it sits in");
 }));
 
 test("Draw design options asks how many, starting at the request's own count, and sends the one picked", async (t) => {

@@ -971,7 +971,7 @@ export class Store {
       } else if (k === "sections") next.sections = cleanSections(fields.sections, next.kind === "change" ? brief : null, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") {
-        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions), c?.variants || [], this.clock());
+        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || []), c?.variants || [], this.clock());
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
         // Nor does an option taken off go live, nor a build still waiting to build it.
@@ -1681,21 +1681,24 @@ function cleanShotlist(list) {
   return list.slice(0, 12).map((x) => ({ name: clean(x.name, 120, "shot name"), how: optText(x.how, 600, "how"), path: optText(x.path, 300, "path") }));
 }
 
-function cleanVariants(list, assets, decisions = {}) {
+function cleanVariants(list, assets, decisions = {}, before = []) {
   if (!Array.isArray(list)) throw bad("variants must be a list");
   return list.slice(0, 12).map((v, i) => {
     // An option the run takes off the card on purpose: `{id, drop: true}`.
     if (v?.drop === true) return { id: String(v.id || "").replace(/[^a-z0-9-]/gi, "").slice(0, 20), drop: true };
     if (!own(assets, v.asset)) throw bad(`variant ${i + 1}: no asset ${v.asset}`);
+    const id = String(v.id || `v${i + 1}`).replace(/[^a-z0-9-]/gi, "").slice(0, 20);
+    // A revise may keep a reason its option already had after the decision was revoked.
+    const had = new Set((before.find((o) => o.id === id)?.reasons || []).map((r) => r.decision));
     return {
-      id: String(v.id || `v${i + 1}`).replace(/[^a-z0-9-]/gi, "").slice(0, 20),
+      id,
       name: clean(v.name, 80, "variant name"),
       rationale: optText(v.rationale, 1000, "rationale"),
       fidelity: ["wireframe", "mockup", "figma"].includes(v.fidelity) ? v.fidelity : "mockup",
       asset: v.asset,
       figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
       stories: v.stories == null ? null : cleanCoverage(v.stories, i + 1),
-      reasons: v.reasons == null ? null : cleanReasons(v.reasons, decisions, i + 1),
+      reasons: v.reasons == null ? null : cleanReasons(v.reasons, decisions, i + 1, had),
       // The version the run read (`version` as the card gave it): an older one is refused.
       ...(Number.isInteger(v.version) ? { read: v.version } : {}),
       // Leaving `states` out keeps the option's states from before; [] removes them.
@@ -1760,12 +1763,13 @@ const cleanOptionPart = (p) => ({ selector: clean(String(p?.selector || ""), 500
 
 // Why an option's parts are as they are: each decision on the Desk it follows, in one or two
 // plain sentences on how, and the parts it shaped, which the page tags in the design.
-function cleanReasons(list, decisions, n) {
+function cleanReasons(list, decisions, n, had = new Set()) {
   if (!Array.isArray(list) || list.length > LIMITS.reasons) throw bad(`variant ${n}: reasons is a list of at most ${LIMITS.reasons}`);
   const seen = new Set();
   return list.map((x) => {
     const id = String(x?.decision || "");
     if (!own(decisions, id)) throw bad(`variant ${n}: no decision ${id || "named"} on the Desk`);
+    if (decisions[id].status !== "active" && !had.has(id)) throw bad(`variant ${n}: ${id} is no longer in force; a new reason names a decision in force`);
     if (seen.has(id)) throw bad(`variant ${n}: ${id} is given twice; one reason names all the parts it shaped`);
     seen.add(id);
     const parts = x.parts === undefined ? [] : x.parts;

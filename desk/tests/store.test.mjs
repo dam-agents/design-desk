@@ -341,6 +341,10 @@ test("an option names the decisions it rests on and the parts each shaped; the d
   assert.throws(() => send([{ decision: "D-99", how: "x" }]), /no decision D-99/);
   assert.throws(() => send([{ decision: d2, how: "x" }, { decision: d2, how: "y" }]), /given twice/);
   assert.throws(() => send([{ decision: d2, how: "x", parts: Array(7).fill({ selector: "#a", label: "a" }) }]), /6 parts/);
+  send([{ decision: d1, how: "Still per month." }, { decision: d2, how: "Only Upgrade is primary." }]);
+  assert.equal(s.card(card.id).variants[0].reasons[0].decision, d1, "a revise keeps a reason it had, revoked or not");
+  const version = s.card(card.id).variants[0].version;
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", version, name: "Cards", asset: asset2 }, { id: "v2", name: "Rows", asset: asset2, reasons: [{ decision: d1, how: "x" }] }] }), /no longer in force/, "a new reason names a decision in force");
 });
 
 test("input limits and asset size are enforced", () => {
