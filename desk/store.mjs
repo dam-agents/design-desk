@@ -1547,7 +1547,9 @@ function versionedStates(states, before, at, now, was) {
     const old = before.find((x) => x.id === given.id);
     if (!old) return { ...given, of: now, version: given.version || 1, history: given.history || [], drawn: given.drawn || at };
     if (old.asset === given.asset) return { ...given, of: old.of || was, version: old.version || 1, history: old.history || [], drawn: old.drawn || at };
-    return { ...given, of: now, version: (old.version || 1) + 1, drawn: at,
+    // A redrawn state sent with its old picture of the part: that picture shows the state as it
+    // was, so the catalog shows none until the run sends a new one.
+    return { ...given, ...(given.shot && given.shot === old.shot ? { shot: null } : {}), of: now, version: (old.version || 1) + 1, drawn: at,
       history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
   });
 }

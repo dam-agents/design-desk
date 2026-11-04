@@ -232,7 +232,9 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
    version; the Desk keeps the earlier one.
 5. A state is a copy of the whole option, so a later `revise` of the option redraws every one
-   of its states in the same run (the same ids), whatever part the notes touched. The store
+   of its states in the same run (the same ids), whatever part the notes touched, and shoots
+   each part alone again (`design shot --element`, step 4) for its new `shot`: a redrawn
+   state sent with its old `shot` loses it, and the catalog shows no picture of it. The store
    records the option version each state was drawn for (`of`); a build refuses an option whose
    states are older than it, and the final check says which.
    **Two runs on one card** (a `states` and a `revise` dispatched to two sessions): just before

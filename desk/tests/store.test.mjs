@@ -585,8 +585,11 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   assert.deepEqual([v1.version, v1.states.map((x) => x.of)], [2, [1, 1]]);
   assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 2, states: { hover: 1, error: 2 } }), (x) => x.status === 409 && /drawn for an earlier version/.test(x.message));
   const h2 = page("hover 2"), e3 = page("error 3");
-  s.upsertCard({ id: card.id, variants: [{ ...v1, states: [{ ...v1.states[0], asset: h2 }, { ...v1.states[1], asset: e3 }] }, now[1]] });
-  assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.version, x.of]), [[2, 2], [3, 2]]);
+  // Redrawn, Hovered comes back with its old picture of the part, Failed with a new one: an old
+  // picture shows the state as it was, so the catalog shows none until a new one comes.
+  const pic2 = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png2").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, variants: [{ ...v1, states: [{ ...v1.states[0], asset: h2 }, { ...v1.states[1], asset: e3, shot: pic2 }] }, now[1]] });
+  assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.version, x.of, x.shot]), [[2, 2, null], [3, 2, pic2]]);
   assert.equal(s.act(card.id, alice, "build", "v1", { variant: "v1", version: 2, states: { hover: 2, error: 3 } }).card.live_pick.version, 2);
   // Two runs on one card: the one that read an older version is refused, not saved over.
   const fresh2 = s.getCard(card.id).variants;
