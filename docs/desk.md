@@ -201,11 +201,11 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | everyone | read, mark reviewed, ask, comment |
 | `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
 | `pm`, `developer`, `lead-developer`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
-| `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | `developer`, `lead-developer` | approve a small change they did not file ([Small changes](#small-changes)) |
 | `lead-developer`, `lead` | mark a request a small change, or send it through a designer |
 | `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
-| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, pick the winning option, record a decision |
+| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, pick the winning option, remove an option, record a decision |
 | roles in `prototype_requesters` | start a live prototype |
 | `lead` | also ask you to add a person to the list ([People](#people)) |
 

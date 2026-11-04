@@ -705,7 +705,8 @@ export class Store {
     if (c.live_pick?.variant === v.id && (["building", "live"].includes(c.prototype?.state) || Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "build"))) throw bad(`The live prototype is built from ${v.name}. Build another option first.`);
     // An approval or the presentation that names the option would point at nothing.
     if (c.approved?.variant === v.id) throw bad(`${v.name} is the approved option. Reopen the request first.`);
-    if (c.agenda?.status === "queued" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation. Take it off the presentation first.`);
+    // A presented one too: the record says which design the meeting saw, and Undo queues it again.
+    if (c.agenda?.status !== "removed" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation${c.agenda.status === "presented" ? " the team saw" : ""}. Take it off the presentation first.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind))) throw bad(BUSY);
     c.variants = c.variants.filter((x) => x.id !== v.id);
     if (c.chosen?.variant === v.id) delete c.chosen;

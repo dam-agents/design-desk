@@ -25,8 +25,8 @@ its `SKILL.md` is; read it before doing the action.
 | `grill` | questions before the design, one at a time, until its decisions are clear | a request whose New request switched questions first on; chat "grill me" | `grill-me`, [requests.md](requests.md) → Questions first |
 | `triage` | what can be done as a design change | every new request; chat "can we…?" | [boundary.md](boundary.md), [requests.md](requests.md) → Triage |
 | `impact` | where else the same thing shows up, what a change touches | every change card; every request, unless its New request switched `impact` off; chat "what would this affect?" | `impact` |
-| `options` | the request's number of design options (one to five), each with how it meets the issue's user stories and the decisions its parts rest on | Draw design options; right after triage when its New request asked; chat "show me options for…" | `variants` |
-| `revise` | apply notes on elements as a new version | notes in the design workspace; Redraw; chat "make the button secondary in option 1" | `variants` |
+| `options` | the request's number of design options (one to five), each with how it meets the issue's user stories and the decisions its parts rest on; one more option from a person's description | Draw design options; + New option; right after triage when its New request asked; chat "show me options for…" | `variants` |
+| `revise` | apply notes on elements as a new version; three ways of one part to pick from | notes in the design workspace; Redraw; Try 3 ways; chat "make the button secondary in option 1" | `variants` |
 | `states` | one part of an option in every state it can be in, one picture per state, and the request's design catalog: the part alone in each state with the use case it covers | Draw every state of this part (a part selected in the design workspace); chat "show every state of the upload button in option 1" | `variants` |
 | `prototype` | a live prototype in an Environment | Build a live prototype; chat | [prototype.md](prototype.md) |
 | `spec` | the developer spec of an approved design | Approve; chat | [handoff.md](handoff.md) |

@@ -1262,10 +1262,19 @@ test("drop-option: a designer closes an option's tab; the last, approved and pre
   assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v9" }), /not on this request/);
   s.queueForCall(id, alice, "", "v2");
   assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v2" }), /on the presentation/);
+  // A presentation the team already saw keeps its option too.
+  s.db.cards[id].agenda.status = "presented";
+  assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v2" }), /presentation the team saw/);
   const read = s.getCard(id).variants;
   s.act(id, alice, "drop-option", "", { variant: "v1" });
   assert.deepEqual(s.getCard(id).variants.map((v) => v.id), ["v2"]);
   assert.equal(s.getCard(id).dropped_options[0].id, "v1");
   assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v2" }), /only option/);
   assert.throws(() => s.upsertCard({ id, variants: read.map((v) => ({ id: v.id, version: v.version, name: v.name, asset: v.asset })) }), /was removed/);
+});
+
+test("the new actions' roles: drawing is a designer's or developer's, removing an option a designer's", () => {
+  for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("pm", a), false, a); }
+  assert.equal(can("designer", "choose"), true);
+  assert.equal(can("developer", "choose"), false);
 });

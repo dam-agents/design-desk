@@ -191,7 +191,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     or merge an option on votes: only a designer's pick (the card's `chosen`, **Pick as the
     winner**) says which option wins, and only a designer removes one: the ✕ on its tab takes it
     off the card (no run; the card's `dropped_options` says who and when). The last option, the
-    one a live prototype is built from, the approved one and one on the presentation stay. The
+    one a live prototype is built from, the approved one and one on the presentation (queued or presented) stay. The
     store refuses (409) an upsert that sends a removed option's id again: leave it out, or
     draw a new option under a new id.
 
