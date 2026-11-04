@@ -1362,7 +1362,8 @@ test("the Desk opens on Requests, a first visit too", (t) => open(t, SKIP.replac
 const PRIVATE = `<script>
 const card = { id: "C-5", kind: "request", title: "Show limits", status: "variants", variants: [], threads: [
   { id: "T-1", kind: "comment", state: "open", messages: [{ by: { email: "d@example.com" }, at: "2026-11-04T10:00:00Z", text: "A public note." }] }] };
-const asks = [{ id: "T-2", kind: "private", owner: "d@example.com", state: "answered", context: { card: "C-5", label: "C-5 Show limits" },
+const asks = [{ id: "T-9", kind: "private", owner: "d@example.com", state: "answered", context: { page: "product", label: "Product page" }, created: "2026-11-04T09:00:00Z",
+  messages: [{ by: { email: "d@example.com" }, at: "2026-11-04T09:00:00Z", text: "Asked on another page" }] }, { id: "T-2", kind: "private", created: "2026-11-04T10:00:00Z", owner: "d@example.com", state: "answered", context: { card: "C-5", label: "C-5 Show limits" },
   messages: [{ by: { email: "d@example.com" }, at: "2026-11-04T10:00:00Z", text: "Why does it look like this today?" }, { by: { agent: true }, at: "2026-11-04T10:01:00Z", text: "Like a fuel gauge. It shows one total." }] }];
 const posted = [];
 window.platform = { async request({ path, method, body }) {
@@ -1381,6 +1382,7 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click("[data-ask-open]");
   await desk.waitForSelector('.ask-panel [data-brief="T-2"]');
   assert.deepEqual(await desk.$$eval(".ask-msg", (x) => x.map((n) => [...n.classList].pop())), ["me", "agent"], "one chat: the question on the right, the answer on the left");
+  assert.doesNotMatch(await desk.textContent(".ask-body"), /Asked on another page/, "each item has its own chat");
   assert.equal(await desk.$$eval("#ask [data-reply]", (x) => x.length), 0, "no follow-up box: the chat is one line");
   assert.match(await desk.textContent(".ask-ctx"), /About: C-5 Show limits/, "the chat says what it is about");
   assert.match(await desk.getAttribute(".ask-panel header .chip", "title"), /Only you and Design Desk see these.*nothing goes to Slack/, "it says only you see it");

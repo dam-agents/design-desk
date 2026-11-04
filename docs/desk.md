@@ -300,8 +300,8 @@ Answer it as a question (above), with these differences:
    `label`); or the `page` (`new` Changes, `requests`, `issues`, `product`, `people`,
    `guide` How it works) and its `filter`. Read exactly that before writing — the card and
    that option, state and part, or that page — and answer about it: "this", "here" and
-   "it" mean that. The chat shows every private ask in one line, but each question is its
-   own: never carry the context of an earlier one over. Start the answer by naming what it
+   "it" mean that. Each item and each Desk page has its own chat and history; within one,
+   each question is still its own: never carry an earlier one's option, state or part over. Start the answer by naming what it
    is about in a few words ("The limit meter in option B, state Stopped (C-3.4): …"). A
    question about something else gets a short answer and the suggestion to ask it from
    that item's page.

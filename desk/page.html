@@ -1736,8 +1736,9 @@
     let root = $("#ask");
     if (!can("ask")) { root?.remove(); return; }
     if (!root) { root = document.createElement("div"); root.id = "ask"; document.body.append(root); }
-    const ctx = askContext();
-    const waiting = S.ask.asks.some((t) => t.needs_agent);
+    // Each item and each Desk page has its own chat and history.
+    const ctx = askContext(), here = S.ask.asks.filter((t) => sameContext(ctx, t.context || {}));
+    const waiting = here.some((t) => t.needs_agent);
     if (!S.ask.open) {
       root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.">🔒 Ask privately${waiting ? ` <span class="spin"></span>` : ""}</button>`;
       return;
@@ -1750,7 +1751,7 @@
       <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button class="btn small" data-ask-close title="Close; your questions stay here">✕</button></header>
       <div class="ask-ctx" title="Design Desk answers about what you had open when you asked">About: <b>${esc(ctx.label)}</b></div>
       <div class="ask-body">
-        ${stream(S.ask.asks, ctx) || `<p class="hint">Ask anything about what you have open.</p>`}
+        ${stream(here, ctx) || `<p class="hint">Ask anything about what you have open.</p>`}
       </div>
       <footer>
         <div class="starters">${starters(ctx).map(([k, l]) => `<button class="btn small" data-ask-starter="${k}" data-ask-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
@@ -1782,13 +1783,13 @@
     };
     addEventListener("pointermove", move); addEventListener("pointerup", up);
   });
-  // One linear chat: every question and answer of the shown asks, oldest first, the
-  // person's on the right and Design Desk's on the left. Each question is its own private
-  // ask; a new context starts with its label.
+  // One linear chat per item or page: its questions and answers oldest first, the person's
+  // on the right and Design Desk's on the left. Each question is its own private ask; a
+  // different option, state or part starts with its label.
   function stream(list, ctx) {
     let last = null;
     return [...list].sort((a, b) => a.created.localeCompare(b.created)).map((th) => {
-      const about = th.context?.label || th.context?.card || "the Desk", head = about !== last;
+      const about = th.context?.label || th.context?.card || "the Desk", head = last !== null && about !== last;
       last = about;
       const brief = S.card && th.context?.card === S.card.id;
       return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m) => m.by?.agent
