@@ -208,7 +208,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.isVisible(".crumb [data-back]"), false, "beside the list, no back button");
     const frameWidth = (w) => top.evaluate((px) => { document.querySelector("iframe").style.width = px; }, w);
     await frameWidth("600px");
-    assert.ok(await desk.isVisible(".crumb [data-back]"), "an open item shows its way back where the list hides");
+    await desk.waitForSelector(".crumb [data-back]", { state: "visible" }); // an open item shows its way back where the list hides
     assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
@@ -391,7 +391,7 @@ test("Needs a designer filters Changes and Requests, and Changes opens on All", 
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-filter="reqFilter:designer"]');
   assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
-  assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /Needs a designer \(2\)/);
+  assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /^Needs a designer\s*2$/);
   await desk.reload();
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
@@ -492,7 +492,7 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.goto(`${base}#presentation/C-2`);
   await desk.reload();
   assert.equal(await shown("requests", "Calmer empty list"), "C-2", "a link to the presentation opens it there, also on a fresh load");
-  assert.match(await desk.textContent("#list .subtabs .on"), /Presentation \(1\)/, "on the Presentation page, a tab of Requests");
+  assert.match(await desk.textContent("#list .subtabs .on"), /^Presentation\s*1$/, "on the Presentation page, a tab of Requests");
   assert.equal(await desk.locator("#list .filters").count(), 0, "the presentation has no filter of its own");
   await desk.click("[data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
