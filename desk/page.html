@@ -731,18 +731,24 @@
   }
   // Tooltips are the Desk's own box, shown the moment the pointer is on it: a title becomes a
   // data-tip, so the browser's own slow one never shows.
+  // A title moves to data-tip; an element with no name of its own in words (an icon, ‹ ›)
+  // keeps it as its aria-label, so a screen reader still names it.
+  function toTip(el) {
+    if (!el.hasAttribute("aria-label") && !el.hasAttribute("aria-labelledby") && !/[\p{L}\p{N}]/u.test(textOf(el))) el.setAttribute("aria-label", el.title);
+    el.dataset.tip = el.title; el.removeAttribute("title");
+  }
   function tip(root) {
     if (root.nodeType !== 1) return;
     for (const el of [root, ...root.querySelectorAll(`${TIPPED}, [title]`)]) {
       if (el.matches("iframe")) continue;
-      if (el.title) { el.dataset.tip = el.title; el.removeAttribute("title"); }
+      if (el.title) toTip(el);
       else if (el.matches(TIPPED) && !el.dataset.tip) { const t = tipFor(el); if (t) el.dataset.tip = t; }
       if (el.matches(TIPPED)) decorate(el);
     }
   }
   const tipHide = () => $("#tip")?.remove();
   function tipShow(el) {
-    if (el.title) { el.dataset.tip = el.title; el.removeAttribute("title"); }
+    if (el.title) toTip(el);
     const t = el.dataset.tip;
     // Not over an open menu, a preview or the search's hits.
     if (!t || el.closest("details.more[open] > summary") || $("#peek") || $("#hits")?.hidden === false) return tipHide();

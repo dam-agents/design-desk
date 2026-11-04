@@ -357,12 +357,15 @@ test("every tab but How it works shows its intro in the empty pane; People besid
 }));
 
 test("every button and label says on hover what it does or means", (t) => open(t, OPENS, async (desk) => {
+  // A tooltip takes the title away: a button with no words in it keeps it as its aria-label.
+  const unnamed = () => desk.$$eval("button", (els) => els.filter((e) => e.getClientRects().length && !/[\p{L}\p{N}]/u.test(e.textContent) && !e.getAttribute("aria-label")).map((e) => e.outerHTML.slice(0, 120)));
   const bare = () => desk.$$eval("button, a.btn, summary.btn, .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title && !e.dataset.tip).map((e) => e.outerHTML.slice(0, 120)));
   await desk.waitForSelector("#detail .intro");
   for (const tab of ["requests", "new", "issues", "product", "people"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`#detail [data-intro="${tab}"]`);
     assert.deepEqual(await bare(), [], `${tab}: everything has a title`);
+    assert.deepEqual(await unnamed(), [], `${tab}: a button with no words keeps a name`);
     if (tab === "requests") {
       await desk.hover("#help");
       assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows at once");
@@ -372,6 +375,7 @@ test("every button and label says on hover what it does or means", (t) => open(t
       await desk.click("#list .row .open");
       await desk.waitForSelector("#detail .crumb", { state: "attached" });
       assert.deepEqual(await bare(), [], `${tab}, an open item: everything has a title`);
+      assert.deepEqual(await unnamed(), [], `${tab}, an open item: a button with no words keeps a name`);
     }
   }
 }));
