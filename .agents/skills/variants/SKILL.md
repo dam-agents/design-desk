@@ -219,7 +219,10 @@ Self-check:
 - **Every state of a part** (the `states` action) — docs/requests.md → Every state of a part:
   one built page per state of the part, each the whole option with only that part changed,
   uploaded with `--kind variant` but sent as the option's `states` (`{id, version, name, how,
-  part, asset}`), never as new options. Every upsert sends every option and state already on
+  part, asset, shot, stories, use}`), never as new options. For the request's design catalog,
+  each state also carries a picture of the part alone (`design shot <state.html> <dir>
+  --element <selector>`, uploaded `--kind image`, as `shot`) and the use case of the brief it
+  covers: the `issue_brief` story ids (`stories`), or one plain sentence (`use`). Every upsert sends every option and state already on
   the card with the `version` the card gave it; the Desk refuses one left out or sent
   without it (docs/requests.md → Variants).
 - **Chat or Slack** — docs/requests.md → Chat and Slack: a private artifact and a reply with

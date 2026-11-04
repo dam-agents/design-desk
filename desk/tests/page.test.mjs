@@ -560,7 +560,7 @@ const change = { id: "ch2", kind: "change", title: "See which agents stopped", s
   sections: [{ key: "what", title: "What changed", body: "- A red dot.", source: { label: "PR #11", url: "https://github.com/acme/widgets/pull/11" } },
     { key: "why", title: "Why it is like this", body: "- Owners missed stopped agents.", source: { label: "not documented" } }] };
 const request = { id: "r2", kind: "request", title: "Bigger send button", status: "feedback", created, triage: { verdict: "design", reasons: [] },
-  variants: [{ id: "v1", name: "Calm", asset: "A-3", version: 1, states: [{ id: "error", name: "Failed", how: "The message did not go.", part: "Send button", asset: "A-3", version: 1 }] }], prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Calm", asset: "A-3", version: 1, states: [{ id: "error", name: "Failed", how: "The message did not go.", part: "Send button", asset: "A-3", shot: "A-1", use: "Someone sends a message while offline.", version: 1 }] }], prototype: { state: "none" },
   threads: [{ id: "t1", kind: "asks", state: "open", step: "build", messages: [{ by: { agent: true }, at: created, text: "Two things." }],
     questions: [{ text: "Empty list?", options: ["A hint", "Nothing"], suggested: "A hint" }, { text: "Button words?", options: ["Send", "Send message"] }] }] };
 window.platform = { async request({ method, path, body }) {
@@ -663,12 +663,12 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-skip-form="t1"]');
     assert.deepEqual(await sent("/api/threads/t1/answers", 2), { answers: [{ choice: null, note: "" }, { choice: null, note: "" }] });
 
-    // Every state of a part: asked for by name from the card, stepped through in the workspace.
+    // Every state of a part: drawn from the workspace only; the card shows each in its design
+    // catalog, a picture of the part alone with the use case it covers.
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
-    await desk.click('[data-act="states"]');
-    await desk.fill("#confirm-form [name=note]", "the send button");
-    await cf("Draw the states").click();
-    assert.deepEqual(await sent("/api/cards/r2/actions", 1), { action: "states", note: "the send button", variant: "v1" });
+    assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
+    assert.match(await desk.textContent(".catalog"), /Send button · 1 state[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
+    assert.equal(await desk.getAttribute('.catalog [data-zoom] img', "data-asset"), "A-1");
     await desk.waitForSelector('.vbar [data-act="workspace"]');
     await desk.click('.vbar [data-act="workspace"]');
     await desk.click('[data-ws-state="error"]');
@@ -684,7 +684,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.match(await desk.textContent("#ws-top"), /Final check: Calm goes live[\s\S]*version 1/);
     assert.equal(await desk.isChecked("#ws-ask-first"), true, "Ask me first is ticked");
     await desk.click("[data-ws-build]");
-    assert.deepEqual(await sent("/api/cards/r2/actions", 2), { action: "build", note: "v1", variant: "v1", version: 1, states: { error: 1 }, ask_first: true });
+    assert.deepEqual(await sent("/api/cards/r2/actions", 1), { action: "build", note: "v1", variant: "v1", version: 1, states: { error: 1 }, ask_first: true });
     await desk.waitForSelector('[data-act="build"]');
     assert.equal(await desk.isVisible("#workspace"), false, "the check closes once it is sent");
     await desk.click('[data-act="build"]');
@@ -692,7 +692,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-ws-state="error"]');
     assert.equal(await desk.isChecked("#ws-ask-first"), false, "a step to a state keeps the unticked box");
     await desk.click("[data-ws-build]");
-    assert.equal((await sent("/api/cards/r2/actions", 3)).ask_first, false);
+    assert.equal((await sent("/api/cards/r2/actions", 2)).ask_first, false);
   } finally {
     await run.close();
   }

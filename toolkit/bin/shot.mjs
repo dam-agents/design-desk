@@ -1,19 +1,24 @@
 // design shot <page.html> <outdir> [--width 1440] [--height 900] [--views] [--dark] [--click <selector>]...
+//             [--element <selector> [--pad 16]]
 // Full-length screenshots. With --views (or when the page has a review bar) it shoots
 // every view in light and dark, plus the empty state where the view has one, plus each
-// menu or dialog whose trigger --click names. Prints one path per line.
+// menu or dialog whose trigger --click names. With --element, only that element, padded,
+// light and dark (`element-<light|dark>.png`): a part's state for the request's design
+// catalog (docs/requests.md → Every state of a part). Prints one path per line.
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ensureDir, fail, launch } from "../lib/core.mjs";
 
 export async function main(_cmd, argv) {
-  const pos = [], clicks = []; let width = 1440, height = 900, dark = false;
+  const pos = [], clicks = []; let width = 1440, height = 900, dark = false, element = "", pad = 16;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--width") width = Number(argv[++i]);
     else if (a === "--height") height = Number(argv[++i]);
     else if (a === "--click") clicks.push(argv[++i]);
     else if (a === "--dark") dark = true;
+    else if (a === "--element") element = argv[++i];
+    else if (a === "--pad") pad = Number(argv[++i]);
     else if (a === "--views") {}
     else pos.push(a);
   }
@@ -46,6 +51,28 @@ export async function main(_cmd, argv) {
     await pg.setViewportSize({ width, height });
   };
   const themes = dark ? ["dark"] : ["light", "dark"];
+  if (element) { // one part alone: shown on its view, the review bar hidden, cropped around it
+    const el = pg.locator(element).first();
+    if (!(await el.count())) { await browser.close(); fail(`--element: nothing matches ${element}`); }
+    const view = await el.evaluate((e) => e.closest("[data-view]")?.dataset.view || null);
+    if (view) await pg.locator(`[data-review-view="${view}"]`).first().click().catch(() => {});
+    await pg.evaluate(() => { document.documentElement.classList.remove("review-hot"); const r = document.querySelector("#review"); if (r) r.style.display = "none"; });
+    for (const t of themes) {
+      await pg.evaluate((d) => document.documentElement.classList.toggle("dark", d), t === "dark");
+      await pg.waitForTimeout(250);
+      await el.scrollIntoViewIfNeeded().catch(() => {});
+      const b = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, w: r.width, h: r.height }; });
+      if (!b.w || !b.h) { await browser.close(); fail(`--element: ${element} is not visible`); }
+      const size = await pg.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }));
+      const x = Math.max(0, b.x - pad), y = Math.max(0, b.y - pad);
+      const p = `${out}/element-${t}.png`;
+      await pg.screenshot({ path: p, fullPage: true, clip: { x, y, width: Math.min(size.w - x, b.w + 2 * pad), height: Math.min(size.h - y, b.h + 2 * pad) } });
+      console.log(p);
+    }
+    await browser.close();
+    if (errors.length) { console.error(`page errors:\n  ${[...new Set(errors)].join("\n  ")}`); process.exitCode = 1; }
+    return;
+  }
   if (steps) { // a walkthrough: every step, light and dark
     for (let i = 0; i < steps; i++) {
       await pg.locator("#tour-steps button").nth(i).click();
