@@ -25,7 +25,7 @@ its `SKILL.md` is; read it before doing the action.
 | `grill` | questions before the design, one at a time, until its decisions are clear | a request whose New request switched questions first on; chat "grill me" | `grill-me`, [requests.md](requests.md) → Questions first |
 | `triage` | what can be done as a design change | every new request; chat "can we…?" | [boundary.md](boundary.md), [requests.md](requests.md) → Triage |
 | `impact` | where else the same thing shows up, what a change touches | every change card; every request, unless its New request switched `impact` off; chat "what would this affect?" | `impact` |
-| `options` | the request's number of design options (one to five), each with how it meets the issue's user stories | Draw design options; right after triage when its New request asked; chat "show me options for…" | `variants` |
+| `options` | the request's number of design options (one to five), each with how it meets the issue's user stories and the decisions its parts rest on | Draw design options; right after triage when its New request asked; chat "show me options for…" | `variants` |
 | `revise` | apply notes on elements as a new version | notes in the design workspace; Redraw; chat "make the button secondary in option 1" | `variants` |
 | `states` | one part of an option in every state it can be in, one picture per state | Draw every state (a part selected in the workspace, or named); chat "show every state of the upload button in option 1" | `variants` |
 | `prototype` | a live prototype in an Environment | Build a live prototype; chat | [prototype.md](prototype.md) |
@@ -69,7 +69,9 @@ A skill that replaces a bundled one keeps the action's contract:
 - **Output on the Desk**, through `design desk`:
   - `options`: one self-contained HTML file per option, uploaded with `--kind variant`, with
     a name, one line on when it wins, and `fidelity`; for a request with an `issue_brief`, also
-    how it meets each user story (`stories`, [requests.md](requests.md) → Variants); a skill
+    how it meets each user story (`stories`); when it follows a decision on the Desk, the
+    decisions in force it rests on and the parts each one shaped (`reasons`, both
+    [requests.md](requests.md) → Variants); a skill
     that draws several approaches in one page is run once per approach, or its views are split
     into one file each;
   - every upsert of options sends every option on the card with the `version` it read, and

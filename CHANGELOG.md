@@ -23,6 +23,26 @@ need no change. A tab's pages are now tabs and its filters one segmented control
 Decisions search box is gone: the header's search finds items, decisions and GitHub issue or
 pull request numbers.
 
+## 1.35.0 — 2026-11-04
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Approve can tick **Straight to
+implementation**: the handoff puts the coding agent's label, named in its manifest, on the
+spec's issue ([docs/handoff.md](docs/handoff.md) step 5).
+
+## 1.34.0 — 2026-11-04
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A design option may now carry
+`reasons: [{decision, how, parts}]`: the decisions it follows and the parts each shaped
+([docs/requests.md](docs/requests.md) → Variants). The request shows them under its options,
+the design workspace tags them on the design (**◆ Why it looks like this**), and a decision's
+page lists the options that follow it. Options drawn before have none and need no migration.
+
 ## 1.33.0 — 2026-11-04
 
 **Upgrade:**
