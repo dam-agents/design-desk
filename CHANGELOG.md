@@ -13,7 +13,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). Tooltips and previews now show half
 a second after the pointer rests on them; an item's or a decision's number in text (`C-11`,
-`D-26`) previews it. A request's own text (The request, The report) folds, kept per browser; who sized and who approved a request sit on rows with room between them; Pick as the winner reads Select as the winner. No server restart.
+`D-26`) previews it. A request's own text (The request, The report) folds, kept per browser; who sized and who approved a request sit on rows with room between them; Pick as the winner reads Select as the winner; the design options are folder tabs over one panel that holds everything about the picked option. No server restart.
 
 ## 1.37.0 — 2026-11-04
 
