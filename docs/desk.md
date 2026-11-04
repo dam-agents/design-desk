@@ -364,7 +364,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - **Comments on options** are pinned to an element and its view; people reply, mark them
   done or reopen them, and a designer or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). **The winner** is
-  a designer's pick (**Pick as the winner**, the card's `chosen`); votes, Slack and you only
+  a designer's pick (**Select as the winner**, the card's `chosen`); votes, Slack and you only
   advise, and nothing you write sets it.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →

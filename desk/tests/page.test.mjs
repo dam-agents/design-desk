@@ -1046,7 +1046,7 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
     await desk.waitForSelector('[data-act="workspace"]');
-    assert.doesNotMatch(await desk.textContent("#detail"), /Votes and comments help/, "no line on who picks: Pick as the winner says it");
+    assert.doesNotMatch(await desk.textContent("#detail"), /Votes and comments help/, "no line on who picks: Select as the winner says it");
     assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
     assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
 
