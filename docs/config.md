@@ -34,7 +34,8 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   a UI bug go on the Desk's queue; `notify` — `disabled` (default) | `slack`:
   announce new cards and request steps in the bound channel.
 - `run_model` (`default`), `dispatch` (`enabled`), `work_repo` (`none`; env
-  `GITHUB_REPO_WORK` wins), `audit_report` (`enabled`), `log_level` (`info` | `debug`).
+  `GITHUB_REPO_WORK` wins), `audit_report` (`enabled`), `agent_manifest` (`dam`: publish the
+  public agent manifest in `docs/manifest.md`; `off`: keep it local), `log_level` (`info` | `debug`).
 - `screens` (`disabled`) — `enabled`: the agent keeps its own install of the product for
   screenshots and for people to try ([screens.md](screens.md)); `max_screen_prs` (`2`) — open pull
   requests with an install of their own.

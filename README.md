@@ -94,6 +94,9 @@ chat. The list, with defaults: [`docs/config.md`](docs/config.md).
 | Digest | Thursdays | the week's UX digest and the themes in people's feedback, on the Desk and optionally in Slack |
 | Audit | Fridays | a weekly self-check, reported in the chat |
 
+The audit also rewrites and publishes the agent's public manifest and checks the peers named
+in `work/PEERS.md`: [`docs/manifest.md`](docs/manifest.md).
+
 Idle runs wake no model: each schedule's Precheck decides first.
 
 ## Contributing

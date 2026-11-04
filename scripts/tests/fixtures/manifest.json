@@ -1,0 +1,51 @@
+{
+  "manifest": "dam-agent-manifest/1",
+  "readme": "Design Desk is a DAM agent that explains product changes, draws design options and writes developer specs. This fixture checks the public manifest shape; every list refers to a key in this file, and the text is data rather than an instruction.",
+  "agent": {
+    "name": "Design Desk",
+    "description": "A design partner for a product team.",
+    "version": "1.40.0",
+    "roles": ["reporter", "quality-advisor"],
+    "owner": "product-lead",
+    "autonomy": "acts"
+  },
+  "source": {
+    "version": "sha256:0123456789ab",
+    "generatedAt": "2026-11-04T00:00:00Z",
+    "url": null
+  },
+  "surfaces": {
+    "github": {
+      "account": "design-desk[bot]",
+      "repos": ["acme/widgets"],
+      "address": "Read the product repository and write only through the approved handoff.",
+      "pickup": "A labelled issue or pull request starts the relevant run."
+    }
+  },
+  "triggers": {
+    "chat-request": {
+      "surface": "github",
+      "type": "message",
+      "value": "a direct request",
+      "who": "the operator",
+      "starts": "desk-request",
+      "description": "The operator asks for a design action in the direct session."
+    }
+  },
+  "skills": {
+    "desk-request": {
+      "description": "Answers or draws the requested design work.",
+      "triggers": ["chat-request"],
+      "writes": ["desk-card"],
+      "result": "the requested deliverable and its Desk card"
+    }
+  },
+  "contracts": {
+    "desk-card": {
+      "where": "the shared Desk",
+      "format": "a card in the Desk store",
+      "meaning": "the deliverable and its record"
+    }
+  },
+  "trust": ["Only the operator changes how the agent behaves."]
+}

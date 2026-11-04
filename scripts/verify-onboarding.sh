@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
+KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -94,6 +94,12 @@ if [ "$STRUCTURE" = 1 ]; then
   [ -f "$WORK/AGENTS.md" ] && ok work_agents "pointer present" || fail work_agents "work/AGENTS.md missing" "ONBOARDING.md → Step 2c"
   for d in desk output profiles brand logs prototypes; do [ -d "$WORK/$d" ] || fail "work_$d" "work/$d/ missing" "ONBOARDING.md → Step 2b"; done
   ok work_dirs "desk output profiles brand logs prototypes"
+  if [ -f "$WORK/manifest.json" ]; then
+    if out="$(bash "$SCRIPT_DIR/manifest-check.sh" check "$WORK/manifest.json" 2>&1)"; then ok manifest "work/manifest.json passes manifest-check.sh"
+    else fail manifest "$(printf '%s\n' "$out" | grep -m1 '^FAIL')" "follow docs/manifest.md → Write, check, publish"; fi
+  else fail manifest "work/manifest.json missing" "write the card per docs/manifest.md (ONBOARDING Step 6)"; fi
+  [ -f "$WORK/PEERS.md" ] && ok peers "work/PEERS.md present" \
+    || fail peers "work/PEERS.md missing" "create it with the header from docs/manifest.md → Peers (an empty table is fine)"
   [ "$(cat "$WORK/VERSION" 2>/dev/null)" = "$(head -1 "$HOME_DIR/VERSION" 2>/dev/null)" ] && ok version "work/VERSION matches" \
     || fail version "work/VERSION ($(cat "$WORK/VERSION" 2>/dev/null || echo none)) differs from the checkout ($(head -1 "$HOME_DIR/VERSION"))" "docs/persistence.md → Definition version & upgrade"
   if [ -f "$WORK/CHANGES.tsv" ]; then
@@ -127,6 +133,7 @@ else
   enum notify disabled slack
   enum dispatch enabled disabled
   enum audit_report enabled disabled
+  enum agent_manifest dam off
   enum log_level info debug
   enum figma enabled disabled
   enum screens enabled disabled
