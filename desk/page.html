@@ -1095,9 +1095,13 @@
   // element fills the preview, and the rest of the design is hidden.
   // Text from a record goes into a script: `<` is escaped so no text can end the script early.
   const js = (v) => JSON.stringify(v).replace(/</g, "\\u003c");
-  const SNIP_SCRIPT = (sel, text) => `<script>(()=>{const S=${js(sel)},T=${js(text)},b=document.body,d=document.documentElement;
+  // grow: a part found by comparing pages may be one word; show it with enough around it to read.
+  const SNIP_SCRIPT = (sel, text, grow) => `<script>(()=>{const S=${js(sel)},T=${js(text)},G=${grow ? 1 : 0},b=document.body,d=document.documentElement;
     let e=null;try{e=S&&document.querySelector(S)}catch{}
     if(!e&&T){const w=document.createTreeWalker(b,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===T){e=n;break}}
+    // A preview never shows the review bar; a part on another view opens that view first.
+    const rv=document.getElementById("review");if(rv)rv.style.display="none";
+    const vw=e&&e.closest("[data-view]");if(vw){const t=document.querySelector('[data-review-view="'+vw.dataset.view+'"]');t&&t.click()}
     d.style.overflow="hidden";b.style.transformOrigin="0 0";
     // Nothing named: the whole page, scaled to the frame's width from the top.
     if(!S&&!T){const whole=()=>{if(!innerWidth)return;b.style.transform="none";const k=Math.min(1,innerWidth/Math.max(d.scrollWidth,1200));b.style.width=(innerWidth/k)+"px";b.style.transform="scale("+k+")"};whole();addEventListener("load",whole);addEventListener("resize",whole);return}
@@ -1105,10 +1109,26 @@
     b.style.visibility="hidden";e.style.visibility="visible";
     // Measured afresh each time, with the design back in place: the frame may not have its size yet.
     const fit=()=>{const W=innerWidth,H=innerHeight;if(!W||!H)return;b.style.transform="none";scrollTo(0,0);
+      if(G){b.style.visibility="visible";while(e.parentElement&&e.parentElement!==b){const q=e.getBoundingClientRect();if(q.width>=320&&q.height>=90)break;e=e.parentElement}b.style.visibility="hidden";e.style.visibility="visible"}
       const r=e.getBoundingClientRect(),p=12;if(!r.width&&!r.height)return;const k=Math.min(W/(r.width+2*p),H/(r.height+2*p),2.5);
       const x=r.left-(W/k-r.width)/2,y=r.top-(H/k-r.height)/2;b.style.transform="scale("+k+") translate("+(-x)+"px,"+(-y)+"px)"};
     fit();addEventListener("load",fit);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
-  const snipDoc = (html, sel, text) => { const sc = SNIP_SCRIPT(sel, text); return html.includes("</body>") ? html.replace("</body>", `${sc}</body>`) : html + sc; };
+  // Where a state's page differs from its option's: the smallest element holding every change, as a
+  // path from <body>. The review bar (it names the state) and scripts do not count; "" = no one place.
+  function diffPath(base, page) {
+    const P = new DOMParser(), A = P.parseFromString(base, "text/html").body, B = P.parseFromString(page, "text/html").body;
+    const skip = (x) => x.matches("#review, script, style, template");
+    let a = A, b = B; const path = [];
+    for (;;) {
+      const ka = [...a.children], kb = [...b.children];
+      if (ka.length !== kb.length) break;
+      const diff = kb.map((x, i) => i).filter((i) => !skip(kb[i]) && ka[i].outerHTML !== kb[i].outerHTML);
+      if (diff.length !== 1) break;
+      a = ka[diff[0]]; b = kb[diff[0]]; path.push(`:nth-child(${diff[0] + 1})`);
+    }
+    return b === B ? "" : `body > ${path.join(" > ")}`;
+  }
+  const snipDoc = (html, sel, text, grow) => { const sc = SNIP_SCRIPT(sel, text, grow); return html.includes("</body>") ? html.replace("</body>", `${sc}</body>`) : html + sc; };
   async function peekOf(el) {
     if (el.dataset.snip !== undefined) {
       if (!el.dataset.snip) return null;
@@ -2479,7 +2499,7 @@
       const k = all.findIndex((y) => y.x === x) + 1;
       const use = useOf(x), stale = (x.of || 1) < (v.version || 1);
       const pic = x.shot ? `<figure class="shot" data-zoom="${esc(x.shot)}"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
-        : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}"></iframe></div>`
+        : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : v.asset || "")}"></iframe></div>`
         : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
       return `<li id="no-${esc(c.id)}-${k}">${pic}<div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
         ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
@@ -2828,7 +2848,12 @@
     // A state with no picture of its part: drawn live from the state's page, cut to the part when its path is known.
     for (const f of root.querySelectorAll("iframe[data-snip-asset]")) {
       if (f.srcdoc) continue;
-      try { f.srcdoc = snipDoc(decode(await asset(f.dataset.snipAsset)), f.dataset.snipSel || "", ""); } catch {}
+      // No path given: the part is where the state's page differs from its option's.
+      try {
+        const html = decode(await asset(f.dataset.snipAsset)), base = f.dataset.snipBase;
+        const sel = f.dataset.snipSel || (base ? diffPath(decode(await asset(base)), html) : "");
+        f.srcdoc = snipDoc(html, sel, "", !f.dataset.snipSel && !!sel);
+      } catch {}
     }
     for (const img of root.querySelectorAll("img[data-asset]")) {
       if (img.src) continue;
