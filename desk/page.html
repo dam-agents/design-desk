@@ -1613,7 +1613,8 @@
   // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
   // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
   // the two prove the same size.
-  const figure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
+  const figure = (s, label, frame) => s.no ? `<div id="no-${esc(s.no[0].id)}-${s.no[1]}">${subTag(...s.no)}${plainFigure(s, label, frame)}</div>` : plainFigure(s, label, frame);
+  const plainFigure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
   // The agent's questions as a form: each has its options and "Leave it to Design Desk",
   // which is picked until a person chooses; one button leaves all of them.
   function askForm(th) {
@@ -1985,8 +1986,8 @@
   const lookName = (i) => (i === 0 ? "Now" : `${plural(i, "version", "versions")} ago`);
   const lookThumb = (c, l) => (c.kind === "element" ? l.thumb : l.screens?.[0]?.asset) || null;
   function lookPictures(c, l, label) {
-    if (c.kind === "screen" && l.now && (l.screens || []).length && !l.screens.some((x) => x.stage))
-      return `<div class="shots">${l.screens.map((x, k) => `<div id="no-${esc(c.id)}-${k + 1}">${subTag(c, k + 1)}${figure(x)}</div>`).join("")}</div>`;
+    // A screen's pictures now carry their numbers, C-7.3, in their order: before/after pairs too.
+    if (c.kind === "screen" && l.now) return shots((l.screens || []).map((x, k) => ({ ...x, no: [c, k + 1] }))) || `<p class="hint">No pictures yet.</p>`;
     if (c.kind !== "element") return shots(l.screens) || `<p class="hint">No pictures yet.</p>`;
     return `<iframe class="frame" data-sheet="${esc(l.sheet)}" sandbox="allow-scripts" title="${esc(c.title)}${label ? ` — ${esc(label)}` : ""}" style="height:80vh"></iframe>`;
   }
@@ -2807,6 +2808,7 @@
     // A request's numbered state sits on its option's catalog tab.
     const v = to.sub && subVariant(S.card, to.sub);
     if (v && v !== S.variant) { S.variant = v; await openCard(c.id); }
+    if (to.sub && S.look !== "now") { S.look = "now"; S.lookSide = false; renderDetail(); }
     if (to.sub) { const n = document.getElementById(`no-${c.id}-${to.sub}`); if (n) { n.scrollIntoView({ block: "center" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 2000); } else toast(`${c.id} has no number ${to.sub}.`); }
     return true;
   }

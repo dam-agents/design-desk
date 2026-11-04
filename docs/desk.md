@@ -101,7 +101,9 @@ served by the Desk server through the platform's Artifact API relay.
   Desk links to that item.
 - **Numbers of parts and states.** Inside an item, each thing a person may point at has a
   sub-number after a dot: `C-12.3` is an element's third situation, a screen's third
-  picture, or a request's third catalog state, counted across its options in order. Each
+  picture as it is now (its before and after pictures included, in their order), or a
+  request's third catalog state, counted across its options in order; an older look of a
+  screen is cited by its date. Each
   shows its number by it; `#C-12.3` and a `C-12.3` in text open the item and scroll to it.
   Cite parts and states by these numbers in every answer.
 - **Text from Slack**: a Slack mention reads as the person's name. A relayed reply carries
@@ -257,8 +259,8 @@ never do one item twice.
 
 ## Questions
 
-A `questions_due` item points at a thread on a card. Read the card and the whole thread
-(`design desk item I-<n>`), then:
+A `questions_due` item points at a thread: on a card, or a private ask about a Desk page
+(`card: null`, below). Read the thread and its card, if any (`design desk item I-<n>`), then:
 
 1. Find the answer in the product: the card's sources first, then the profile's
    architecture pages and the code at the default branch (`scripts/checkout.sh`).
@@ -327,21 +329,11 @@ Answer it as a question (above), with these differences:
    thread, a card, the digest, the agenda, an issue, a pull request, a spec, a decision's
    origin, or Slack (no post, reply or DM). Only `design desk answer T-<n>` in its own
    thread. Where another person's input is needed, say who and leave the asking to them.
-4. **The answer prompt.** Write every answer to this brief:
-
-   > You explain a product design to a designer who does not read code, about what they
-   > had open (the context). Answer in plain, everyday words. Start with the direct answer
-   > in one or two sentences. Then a short description of what they see and why, with one
-   > comparison from everyday life (a shop, a car, a kitchen) when it makes the idea
-   > easier. No jargon: no file, function or token names and no acronyms; a term you
-   > cannot avoid is explained in the same sentence. Every "why" names its source in words
-   > a designer knows (the pull request and who opened it, a recorded decision `D-n`, the
-   > design system, the product's screens), or says it is not documented and who would
-   > know (the profile's `contacts`, the PR author). Never guess a reason. Show as much as
-   > you can: the product's screens and element drawings (`![caption](asset:A-n)`) and a
-   > simple diagram where it helps, and name each part and state by its number (`C-12.3`)
-   > so the reader can click to it. Under 200 words, short paragraphs or a short list. End
-   > with one question they could take to the team, if one helps.
+4. **How it reads.** The answer's shape is the `explain` skill's (Questions, step 2:
+   the direct answer first, the layers that help, one offer to go deeper), with its
+   pictures and part numbers. A private ask adds only: one comparison from everyday life
+   (a shop, a car, a kitchen) where it makes the idea easier, and no file, function or
+   token names — a term that cannot be avoided is explained in the same sentence.
 
 5. **The starters.** A thread's `starter` names the one it began with; its message is the
    short label the person saw. Answer the full brief of that starter:
