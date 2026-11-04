@@ -332,6 +332,10 @@
   .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: 12.5px; color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: 6px; border: 1px solid var(--line); }
   .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 14px; } .choices input { width: auto; } .choices .rn { white-space: nowrap; flex: none; }
+  /* The roles read as a table: the radio, the role's name, then its description in one column. */
+  #pe-roles { grid-template-columns: auto max-content 1fr; column-gap: 10px; }
+  #pe-roles label { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
+  #pe-roles label .sub { margin: 0; }
   .guide { max-width: var(--measure); } .guide li { margin-bottom: 6px; } .guide ol { padding-left: 20px; }
   .people { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 6px 0 4px; }
   .people th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
