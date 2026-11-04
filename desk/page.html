@@ -205,6 +205,8 @@
   .catalog ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--shot-w) * 1.6)), 1fr)); gap: 12px; }
   .catalog li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 10px; }
   .catalog .shot img { min-height: 0; max-height: 220px; object-fit: contain; object-position: center; padding: 8px; box-sizing: border-box; }
+  .catalog .snipbox { height: 160px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+  .catalog .snipbox iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .catalog .nopic { border: 1px dashed var(--line); border-radius: var(--radius); padding: 12px; margin: 0; }
   .catalog .k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 8px 0 2px; }
   .catalog ul { margin: 0; padding-left: 18px; font-size: 13px; }
@@ -1060,13 +1062,17 @@
   const SNIP_SCRIPT = (sel, text) => `<script>(()=>{const S=${JSON.stringify(sel)},T=${JSON.stringify(text)},b=document.body,d=document.documentElement;
     let e=null;try{e=S&&document.querySelector(S)}catch{}
     if(!e&&T){const w=document.createTreeWalker(b,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===T){e=n;break}}
-    d.style.overflow="hidden";if(!e){d.style.visibility="hidden";return}
-    b.style.visibility="hidden";e.style.visibility="visible";b.style.transformOrigin="0 0";
+    d.style.overflow="hidden";b.style.transformOrigin="0 0";
+    // Nothing named: the whole page, scaled to the frame's width from the top.
+    if(!S&&!T){const whole=()=>{if(!innerWidth)return;b.style.transform="none";const k=Math.min(1,innerWidth/Math.max(d.scrollWidth,1200));b.style.width=(innerWidth/k)+"px";b.style.transform="scale("+k+")"};whole();addEventListener("load",whole);addEventListener("resize",whole);return}
+    if(!e){d.style.visibility="hidden";return}
+    b.style.visibility="hidden";e.style.visibility="visible";
     // Measured afresh each time, with the design back in place: the frame may not have its size yet.
     const fit=()=>{const W=innerWidth,H=innerHeight;if(!W||!H)return;b.style.transform="none";scrollTo(0,0);
       const r=e.getBoundingClientRect(),p=12;if(!r.width&&!r.height)return;const k=Math.min(W/(r.width+2*p),H/(r.height+2*p),2.5);
       const x=r.left-(W/k-r.width)/2,y=r.top-(H/k-r.height)/2;b.style.transform="scale("+k+") translate("+(-x)+"px,"+(-y)+"px)"};
     fit();addEventListener("load",fit);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
+  const snipDoc = (html, sel, text) => { const sc = SNIP_SCRIPT(sel, text); return html.includes("</body>") ? html.replace("</body>", `${sc}</body>`) : html + sc; };
   async function peekOf(el) {
     if (el.dataset.snip !== undefined) {
       if (!el.dataset.snip) return null;
@@ -1134,7 +1140,7 @@
       if (c.kind === "snip") {
         box.className = "snip";
         box.innerHTML = `<div class="snipbox"><iframe sandbox="allow-scripts" title="The element the note is about"></iframe></div>`;
-        const sc = SNIP_SCRIPT(c.sel || "", c.text || ""), h = c.html.includes("</body>") ? c.html.replace("</body>", `${sc}</body>`) : c.html + sc;
+        const h = snipDoc(c.html, c.sel || "", c.text || "");
         box.querySelector("iframe").srcdoc = h;
       } else box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c);
       document.body.append(box);
@@ -1295,6 +1301,7 @@
   document.addEventListener("click", (e) => { const d = e.target.closest?.("details.intro > summary")?.parentElement; if (d) store.set("desk-intro", d.open ? "hidden" : "shown"); }, true);
   // A request's own text folds the same way, for every request in this browser.
   document.addEventListener("click", (e) => { const d = e.target.closest?.("details.brief > summary")?.parentElement; if (d) store.set("desk-brief", d.open ? "folded" : "open"); }, true);
+  document.addEventListener("click", (e) => { const d = e.target.closest?.("details.catalog-fold > summary")?.parentElement; if (d) store.set("desk-catalog", d.open ? "folded" : "open"); }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
@@ -1708,13 +1715,26 @@
     return to ? `<button class="link" data-card="${esc(to.id)}" title="Open ${esc(to.title)} in Product">${esc(p.where)} →</button>` : `<b>${esc(p.where)}</b>`;
   }
   // Where else the same thing shows up, what a change touches, what was decided before.
+  // The Desk's own decisions, all of them, read once, so an earlier decision the agent found in
+  // a pull request or an issue links to the one recorded here.
+  let allDecs = null;
+  function deskDecisionFor(d) {
+    if (d.id) return d.id;
+    if (!allDecs) { allDecs = []; api("GET", "/api/decisions?state=").then((r) => { allDecs = r.decisions || []; if (allDecs.length) renderDetail(); }, () => {}); return null; }
+    const words = (t) => new Set(String(t || "").toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) || []);
+    const mine = words(d.text), url = d.source?.url;
+    const close = (x) => { const w = words(x.text); let n = 0; for (const k of mine) if (w.has(k)) n++; return n / Math.max(1, Math.min(mine.size, w.size)); };
+    const hit = allDecs.map((x) => [x, close(x) + (url && x.origin?.url === url ? .3 : 0)]).sort((a, b) => b[1] - a[1])[0];
+    return hit && hit[1] >= .6 ? hit[0].id : null;
+  }
+  // Where else it shows up, what a change touches, and the earlier decisions: each folds on its own.
   function renderImpact(im) {
     if (!im) return "";
     const li = (xs, f) => xs?.length ? `<ul>${xs.map(f).join("")}</ul>` : "";
-    return `<details class="fold"><summary><b>Where else this shows up, and what it touches</b></summary><div class="impact section">
-      <p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li>${productLink(p)}${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}
-      ${im.affects?.length ? `<p><b>What a change here touches</b></p>${li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${txt(a.why)}` : ""}${srcLink(a.source)}</li>`)}` : ""}
-      ${im.decisions?.length ? `<p><b>Earlier decisions about it</b></p>${li(im.decisions, (d) => `<li>${d.id ? `${citeRef(S.card, d.id)} ` : ""}${txt(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`)}` : ""}</div></details>`;
+    const fold = (title, body) => `<details class="fold" open><summary><b>${title}</b></summary><div class="impact section">${body}</div></details>`;
+    return fold("Where else this shows up", `<p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li>${productLink(p)}${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}`)
+      + (im.affects?.length ? fold("What a change here touches", li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${txt(a.why)}` : ""}${srcLink(a.source)}</li>`)) : "")
+      + (im.decisions?.length ? fold("Earlier decisions about it", li(im.decisions, (d) => { const id = deskDecisionFor(d); return `<li>${id ? `${citeRef(S.card, id)} ` : ""}${txt(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`; })) : "");
   }
 
   function renderThreads(c, { skipAsks = false } = {}) {
@@ -2253,14 +2273,16 @@
     const item = (x) => {
       const use = useOf(x), stale = (x.of || 1) < (v.version || 1);
       const pic = x.shot ? `<figure class="shot" data-zoom="${esc(x.shot)}"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
+        : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}"></iframe></div>`
         : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
       return `<li>${pic}<div><b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
         ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
     };
-    return `<h3>Design catalog</h3>
+    // It folds like the request's own text, and stays so in this browser.
+    return `<details class="fold catalog-fold"${store.get("desk-catalog") === "folded" ? "" : " open"}><summary><h3 style="display:inline">Design catalog</h3></summary>
       <p class="hint" style="max-width:var(--measure)">Every state Design Desk drew of a part of ${esc(v.name)}, each on its own, with the use case of the brief it covers. To draw more, select a part in the design workspace and press Draw every state of this part.</p>
       ${vs.length > 1 ? `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>` : ""}
-      ${parts.map((p) => `<div class="catalog"><h4>${esc(p)} · ${plural(v.states.filter((x) => x.part === p).length, "state", "states")}</h4><ol>${v.states.filter((x) => x.part === p).map(item).join("")}</ol></div>`).join("")}`;
+      ${parts.map((p) => `<div class="catalog"><h4>${esc(p)} · ${plural(v.states.filter((x) => x.part === p).length, "state", "states")}</h4><ol>${v.states.filter((x) => x.part === p).map(item).join("")}</ol></div>`).join("")}</details>`;
   }
   // The story's parts, outlined in the option and the first one scrolled into view.
   function storyPins() {
@@ -2595,6 +2617,11 @@
 
   // ---------- rendering the detail ----------
   async function loadPictures(root) {
+    // A state with no picture of its part: drawn live from the state's page, cut to the part when its path is known.
+    for (const f of root.querySelectorAll("iframe[data-snip-asset]")) {
+      if (f.srcdoc) continue;
+      try { f.srcdoc = snipDoc(decode(await asset(f.dataset.snipAsset)), f.dataset.snipSel || "", ""); } catch {}
+    }
     for (const img of root.querySelectorAll("img[data-asset]")) {
       if (img.src) continue;
       try { img.src = dataUrl(await asset(img.dataset.asset)); } catch {}
