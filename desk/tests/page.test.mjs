@@ -1379,6 +1379,7 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.goto(desk.url().replace(/#.*$/, "") + "#C-5");
   await desk.waitForSelector("#detail h2");
   assert.equal(await desk.$$eval("#detail .thread", (x) => x.length), 1, "the card shows only the public comment");
+  assert.match(await desk.textContent("[data-ask-open]"), /Ask privately about this request/, "the button names what is open");
   await desk.click("[data-ask-open]");
   await desk.waitForSelector('.ask-panel [data-brief="T-2"]');
   assert.deepEqual(await desk.$$eval(".ask-msg", (x) => x.map((n) => [...n.classList].pop())), ["me", "agent"], "one chat: the question on the right, the answer on the left");

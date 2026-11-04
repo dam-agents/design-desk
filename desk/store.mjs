@@ -154,10 +154,13 @@ function titleOf(title, problem) {
 }
 
 // Where a private ask was asked: an item (and the option it showed), or a Desk page.
-function cleanContext(c, cards) {
+function cleanContext(c, cards, decisions) {
   const o = c && typeof c === "object" ? c : {};
   const card = o.card == null || o.card === "" ? null : String(o.card);
   if (card && !own(cards, card)) throw bad(`context: no card ${card}`);
+  const decision = !card && o.decision ? String(o.decision) : null;
+  if (decision && !own(decisions, decision)) throw bad(`context: no decision ${decision}`);
+  if (decision) return { card: null, page: null, decision, label: optText(o.label, 300, "context label") || "" };
   const page = card ? null : ASK_PAGES.includes(o.page) ? o.page : "guide";
   const v = card && typeof o.variant === "string" ? (own(cards, card).variants || []).find((x) => x.id === o.variant) : null;
   const state = v && typeof o.state === "string" && (v.states || []).some((x) => x.id === o.state) ? o.state : null;
@@ -446,7 +449,7 @@ export class Store {
     const owner = viewerKey(who);
     if (!owner) throw forbidden("a private ask is a person's own question");
     if (starter !== null && !STARTERS.includes(starter)) throw bad(`starter must be one of ${STARTERS.join(", ")}`);
-    const ctx = cleanContext(context, this.db.cards);
+    const ctx = cleanContext(context, this.db.cards, this.db.decisions);
     const mine = Object.values(this.db.threads).filter((t) => t.kind === "private" && t.owner === owner);
     if (mine.length >= LIMITS.threadsPerCard) throw bad("You have 300 private asks. Mark some as done first.");
     const id = this.next("thread", "T");

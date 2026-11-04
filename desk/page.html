@@ -1712,10 +1712,14 @@
       return { card: S.card.id, ...(v ? { variant: v.id } : {}), ...(st ? { state: st.id } : {}), ...(part ? { part } : {}),
         label: [`${S.card.id} ${S.card.title}`, v?.name, st ? `${st.name}${no ? ` (${S.card.id}.${no})` : ""}` : null, part?.label ? `“${part.label}”` : null].filter(Boolean).join(" · ") };
     }
+    if (S.decision?.id) return { decision: S.decision.id, label: `Decision ${S.decision.id}` };
     const filter = { new: S.newFilter, requests: S.reqFilter, issues: S.issueFilter, product: S.productFilter }[S.tab] || "";
     return { page: S.tab, ...(filter ? { filter } : {}), label: `${TABS[S.tab] || "The Desk"} page${filter ? ` · ${filter}` : ""}` };
   }
-  const sameContext = (a, b) => a.card ? a.card === b.card : !b.card && a.page === b.page;
+  const sameContext = (a, b) => a.card ? a.card === b.card : a.decision ? a.decision === b.decision : !b.card && !b.decision && a.page === b.page;
+  // What the buttons call the thing open: "Ask privately about this request".
+  const KIND_WORD = { change: "change", request: "request", issue: "issue", screen: "screen", element: "element", digest: "week" };
+  const askWhat = (ctx) => ctx.card ? KIND_WORD[S.card?.kind] || "item" : ctx.decision ? "decision" : "page";
   // The short label a person sees; the agent reads the starter's full brief by its key.
   function starters(ctx) {
     const item = Boolean(ctx.card), options = S.card?.kind === "request" && (S.card.variants || []).length > 1;
@@ -1740,7 +1744,7 @@
     const ctx = askContext(), here = S.ask.asks.filter((t) => sameContext(ctx, t.context || {}));
     const waiting = here.some((t) => t.needs_agent);
     if (!S.ask.open) {
-      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.">🔒 Ask privately${waiting ? ` <span class="spin"></span>` : ""}</button>`;
+      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.">🔒 Ask privately about this ${askWhat(ctx)}${waiting ? ` <span class="spin"></span>` : ""}</button>`;
       return;
     }
     const keep = $("#ask-text")?.value || "";
@@ -1756,7 +1760,7 @@
       <footer>
         <div class="starters">${starters(ctx).map(([k, l]) => `<button class="btn small" data-ask-starter="${k}" data-ask-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
         <textarea id="ask-text" maxlength="4000" placeholder="Or write your own question about ${esc(ctx.label)}…"></textarea>
-        <div class="bar"><button class="btn primary" data-ask-send>Ask privately</button></div>
+        <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
       </footer></section>`;
     $("#ask-text").value = keep;
     // Like any chat: it opens on the newest message, and again once its pictures are in.
