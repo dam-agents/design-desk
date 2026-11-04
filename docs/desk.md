@@ -74,8 +74,9 @@ served by the Desk server through the platform's Artifact API relay.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
   works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a
   label by its own `title`. A new button or label gets its line in the same change. The Desk
-  shows them in its own box the moment the pointer is on one: the page turns each `title`
-  into `data-tip`, so the browser's slow tooltip never shows.
+  shows them in its own box half a second after the pointer rests on one, and at once while another
+  is up or just closed: the page turns each `title` into `data-tip`, so the browser's own
+  tooltip never shows.
 - **Buttons.** A button's icon comes from `BTN_ICON` in `desk/page.html`, by its `data-`
   action; one whose words start with a sign of their own (▶, ✓, 👍, +) keeps that sign.
   **More** closes on a click anywhere outside it, on Escape, and once something in it is picked.
@@ -111,7 +112,10 @@ served by the Desk server through the platform's Artifact API relay.
   `#…`), matched by repository and number: its issue or change card first, then a request that
   came from it (`origin.url`; its status and what can be done); a link the Desk has no card for
   shows its number and repository and says it is not on the Desk. The GitHub text is not on the
-  Desk. A link that previews shows no one-line tooltip.
+  Desk. An item's or a decision's number in text (`C-11`, `D-26`) previews it the same way:
+  a request its status, any other item its kind and `summary`, a decision its text, who made
+  it, its day and whether it is in force. A preview shows half a second after the pointer rests on
+  it. A link that previews shows no one-line tooltip.
 - **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
   in a channel message (the platform turns it into the share link and keeps `#C-<n>`),
   `<desk_link>#C-<n>` anywhere else (GitHub). The access note: it opens only for people on

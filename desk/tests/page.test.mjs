@@ -368,7 +368,9 @@ test("every button and label says on hover what it does or means", (t) => open(t
     assert.deepEqual(await unnamed(), [], `${tab}: a button with no words keeps a name`);
     if (tab === "requests") {
       await desk.hover("#help");
-      assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows at once");
+      assert.equal(await desk.$("#tip"), null, "not at once");
+      await desk.waitForSelector("#tip");
+      assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows after half a second");
       assert.equal(await desk.getAttribute("#help", "title"), null, "the browser's slow one does not");
     }
     if (await desk.locator("#list .row .open").count()) {

@@ -767,8 +767,9 @@
     const name = iconFor(el);
     if (name) el.insertAdjacentHTML("afterbegin", `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH[name]}</svg>`);
   }
-  // Tooltips are the Desk's own box, shown the moment the pointer is on it: a title becomes a
-  // data-tip, so the browser's own slow one never shows.
+  // Tooltips are the Desk's own box, shown half a second after the pointer rests on it: a title
+  // becomes a data-tip, so the browser's own one never shows. While one is up, or just after,
+  // the next one shows at once.
   // A title moves to data-tip; an element with no name of its own in words (an icon, ‹ ›)
   // keeps it as its aria-label, so a screen reader still names it.
   function toTip(el) {
@@ -784,8 +785,16 @@
       if (el.matches(TIPPED)) decorate(el);
     }
   }
-  const tipHide = () => $("#tip")?.remove();
+  const TIP_DELAY = 500, TIP_WARM = 400;
+  let tipTimer = null, tipLast = 0;
+  const tipHide = () => { clearTimeout(tipTimer); if ($("#tip")) { tipLast = Date.now(); $("#tip").remove(); } };
+  function tipLater(el) {
+    clearTimeout(tipTimer);
+    if ($("#tip") || Date.now() - tipLast < TIP_WARM) return tipShow(el);
+    tipTimer = setTimeout(() => el.isConnected && tipShow(el), TIP_DELAY);
+  }
   function tipShow(el) {
+    clearTimeout(tipTimer);
     if (el.title) toTip(el);
     const t = el.dataset.tip;
     // Not over an open menu, a preview or the search's hits.
@@ -800,8 +809,8 @@
   }
   const tipTarget = (e) => e.target.closest?.("[data-tip], [title]:not(iframe)");
   // A link that previews its issue or pull request shows the preview, not a line.
-  const previews = (el) => el.matches("a[href*='/issues/'], a[href*='/pull/']") && ghRef(el.getAttribute("href"));
-  document.addEventListener("mouseover", (e) => { const el = tipTarget(e); if (el && !previews(el)) tipShow(el); else tipHide(); });
+  const previews = (el) => el.matches("[data-ref]") || (el.matches("a[href*='/issues/'], a[href*='/pull/']") && ghRef(el.getAttribute("href")));
+  document.addEventListener("mouseover", (e) => { const el = tipTarget(e); if (el && !previews(el)) tipLater(el); else tipHide(); });
   document.addEventListener("mouseout", (e) => { const el = tipTarget(e); if (el && !el.contains(e.relatedTarget)) tipHide(); });
   document.addEventListener("focusin", (e) => { const el = tipTarget(e); if (el?.matches(":focus-visible")) tipShow(el); });
   document.addEventListener("focusout", tipHide);
@@ -1009,8 +1018,19 @@
     if (src.repo && (src.pr || src.issue)) out.push({ key: `${String(src.repo).toLowerCase()}#${src.pr || src.issue}` });
     return out.filter(Boolean).map((r) => r.key);
   };
-  function peekOf(el) {
-    const id = el.dataset.card || el.dataset.ref;
+  // A decision's own text, fetched once when it is not in the list already.
+  const decSeen = new Map();
+  async function decisionOf(id) {
+    const d = S.decisions?.find((x) => x.id === id) || decSeen.get(id);
+    if (d) return d;
+    try { const r = await api("GET", `/api/decisions/${encodeURIComponent(id)}`); decSeen.set(id, r.decision); return r.decision; } catch { return null; }
+  }
+  async function peekOf(el) {
+    // A number in text (C-11, D-26) previews whatever it names; a card's button only an issue or a change.
+    const own = el.dataset.ref;
+    if (own && /^D-\d+$/.test(own)) { const d = await decisionOf(own); return d ? { ...d, kind: "decision" } : null; }
+    if (own) return S.cards.find((x) => x.id === own) || null;
+    const id = el.dataset.card;
     if (id) { const c = S.cards.find((x) => x.id === id); return PEEKED.includes(c?.kind) ? c : null; }
     const ref = ghRef(el.getAttribute("href"));
     if (!ref) return null;
@@ -1030,6 +1050,16 @@
         <div class="sub"><span>${esc(what)}</span><span>${esc(ref.repo)}</span></div>
         <p class="hint">Not on the Desk: it has no notes on its screens yet. The link opens it on GitHub.</p>`;
   }
+  function peekItem(c) {
+    return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
+        <div class="sub"><span>${esc(KIND_NAME[c.kind] || "An item")} on the Desk</span></div>
+        ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}`;
+  }
+  function peekDecision(d) {
+    return `<div class="t"><b class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text || d.id)}</b>${num(d)}</div>
+        <div class="sub">${sideChip(d)}${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.author ? `<span>by ${named(d.author)}</span>` : ""}</div>
+        ${(d.concepts || []).length ? `<p class="hint">About: ${esc(d.concepts.join(", "))}</p>` : ""}`;
+  }
   function peekIssue(c) {
     const src = c.source || {};
     return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
@@ -1043,23 +1073,25 @@
         ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${at ? `<h4>${at.level === "designer" ? "Needs a designer" : "Nothing to decide"}</h4>${(at.reasons || []).length ? `<ul>${at.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}` : ""}`;
   }
   let peekTimer = null;
-  const peekHide = () => { clearTimeout(peekTimer); $("#peek")?.remove(); };
+  const peekHide = () => { clearTimeout(peekTimer); peekFor = null; $("#peek")?.remove(); };
+  let peekFor = null;
   function peekShow(el) {
-    // Not on the card's own page: it says the same there already.
-    const c = peekOf(el);
-    if (!c || (c.id && S.card?.id === c.id)) return;
     clearTimeout(peekTimer);
-    peekTimer = setTimeout(() => {
+    peekFor = el;
+    peekTimer = setTimeout(async () => {
+      // Not on the card's own page: it says the same there already.
+      const c = await peekOf(el);
+      if (peekFor !== el || !el.isConnected || !c || (c.id && (S.card?.id === c.id || S.decision?.id === c.id))) return;
       peekHide();
       const box = document.createElement("div");
       box.id = "peek"; box.setAttribute("role", "tooltip");
-      box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink }[c.kind] || peekIssue)(c);
+      box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
       box.style.left = `${Math.max(8, Math.min(r.left, innerWidth - w - 8))}px`;
       box.style.top = `${below ? r.bottom + 8 : r.top - 8 - h}px`;
-    }, 120);
+    }, TIP_DELAY);
   }
   const peekTarget = (e) => e.target.closest?.("[data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']");
   document.addEventListener("mouseover", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekShow(el); });
