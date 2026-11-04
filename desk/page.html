@@ -3035,6 +3035,18 @@
       const d = await api("GET", `/api/decisions/${encodeURIComponent(to.decision)}`).then((r) => r.decision, () => null);
       if (d) push({ id: d.id, kind: "Decision", title: d.text, why: "Its number" });
     }
+    // A number being typed (C-, C-1, D-2): every item or decision whose number starts so,
+    // newest first, so the list fills while typing.
+    const pre = /^([CD])-?(\d*)$/i.exec(q);
+    if (pre) {
+      const p = `${pre[1].toUpperCase()}-${pre[2]}`, n = (id) => Number(id.split("-")[1]);
+      const byNum = (xs) => xs.filter((x) => x.id.startsWith(p)).sort((x, y) => n(y.id) - n(x.id));
+      if (pre[1].toUpperCase() === "C") for (const c of byNum(S.cards)) card(c);
+      else {
+        if (!S.decisions?.length) await loadDecisions();
+        for (const d of byNum(S.decisions || [])) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : "" });
+      }
+    }
     if (!byHash) ghHits();
     // A GitHub number the Desk has no card for still opens on GitHub, in the product's repository.
     const n = gh?.n || num?.[1];
@@ -3046,7 +3058,7 @@
     if (to && !to.id && !to.decision && to.tab) push({ id: `#${to.tab}`, kind: "Page", title: to.tab === "presentation" ? "The presentation" : TABS[to.tab] || to.tab, why: "" });
     // Words: every word in the item's text.
     const words = q.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
-    if (words.length && !gh) {
+    if (words.length && !gh && !pre) {
       for (const c of S.cards) { const h = hay(c); if (words.every((w) => h.includes(w))) card(c); }
       try {
         const ds = (await api("GET", `/api/decisions?q=${encodeURIComponent(q)}`)).decisions || [];

@@ -57,7 +57,8 @@ served by the Desk server through the platform's Artifact API relay.
   scrolls sideways and fades at its edge. A list has no search box of its own.
 - **Search.** The header's one search finds words in every item's title, summary and source
   and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
-  decision's (`D-3`); a GitHub issue or pull request by its number (`#4512`, `PR 4512`) or link,
+  decision's (`D-3`), and while one is typed (`C-`, `C-1`, `D-`) every item or decision whose
+  number starts so, newest first; a GitHub issue or pull request by its number (`#4512`, `PR 4512`) or link,
   matched to the card it is or came from; and a Desk link. Hits show as you type; Enter or a
   click opens one; ↑ ↓ pick, Escape closes. A GitHub number with no card offers its page on
   GitHub, in the profile's repository (`repos`); a Desk number with no item says so.
