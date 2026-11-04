@@ -3257,8 +3257,12 @@
   }
 
   function renderDetail() { renderDetailBody(); renderAsk(); }
+  // Another item, decision or tab opens at its top; a redraw of the same one keeps the place.
+  let shown = null;
   function renderDetailBody() {
     const d = $("#detail");
+    const now = [S.tab, S.card?.id || "", S.decision?.id || "", presenting() ? "p" : ""].join("|");
+    if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
     if (S.tab === "people") { d.innerHTML = `<div class="with-intro">${renderIntro()}<div class="guide">${renderPeople()}</div></div>`; return; }
