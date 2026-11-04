@@ -331,7 +331,7 @@
   dialog h2 { font-size: 18px; } label { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
   .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: 12.5px; color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: 6px; border: 1px solid var(--line); }
-  .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 14px; } .choices input { width: auto; }
+  .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 14px; } .choices input { width: auto; } .choices .rn { white-space: nowrap; flex: none; }
   .guide { max-width: var(--measure); } .guide li { margin-bottom: 6px; } .guide ol { padding-left: 20px; }
   .people { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 6px 0 4px; }
   .people th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
@@ -3296,7 +3296,7 @@
   // ---------- the Add a person dialog ----------
   function openPersonDialog() {
     $("#person-form").reset();
-    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> ${esc(roleName(r))} <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
+    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> <span class="rn">${esc(roleName(r))}</span> <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
     const dlg = $("#person-dialog"); dlg.returnValue = ""; dlg.showModal();
   }
   $("#person-dialog").addEventListener("close", guard(async (e) => {
