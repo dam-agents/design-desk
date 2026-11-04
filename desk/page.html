@@ -368,6 +368,7 @@
   .ws-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; }
   .sel { padding: 10px 12px; border-radius: var(--radius); border: 2px solid var(--accent); background: var(--info-soft); }
   .sel.none { border-style: dashed; border-color: var(--line); background: transparent; }
+  .sel textarea { background: var(--panel); }
   .sel .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   /* Why an option looks as it does: the decisions it rests on, tagged on the parts they shaped. */
   .dtag { display: inline-flex; align-items: center; gap: 3px; flex: none; padding: 0 7px; border-radius: 999px; border: 1px solid var(--why); color: var(--why); background: var(--panel); font: 600 11.5px/18px var(--font); white-space: nowrap; }
@@ -2446,18 +2447,19 @@
     const shaper = can("change");
     const sel = S.ws.selected;
     const busy = working(c).filter((k) => ["revise", "states", "figma", "explore"].includes(k));
+    // The note is written inside the box of what it is about: the part selected, or the whole option.
     side.innerHTML = `<div class="sel ${sel ? "" : "none"}">
         <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
         <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
         ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
         ${whyOfSelected(c, v, sel)}
         ${sel ? `<div class="actions" style="margin:6px 0 0">${can("revise") && !S.ws.state ? `<button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button>` : ""}<button class="btn small" data-ws-clear>Clear selection</button></div>` : ""}
-      </div>
-      ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
-      ${old ? "" : `<div class="composer" style="margin:0">
-        <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
+        ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
+        ${old ? "" : `<div class="composer" style="margin:10px 0 0">
+        <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change in this part? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
         <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button>` : ""}</div>
       </div>`}
+      </div>
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
       ${renderWsNotes(c, v, sel)}
       ${renderWhy(c, v)}`;
