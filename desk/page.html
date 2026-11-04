@@ -744,7 +744,8 @@
   function tipShow(el) {
     if (el.title) { el.dataset.tip = el.title; el.removeAttribute("title"); }
     const t = el.dataset.tip;
-    if (!t || el.closest("details.more[open] > summary") || $("#peek")) return tipHide();
+    // Not over an open menu, a preview or the search's hits.
+    if (!t || el.closest("details.more[open] > summary") || $("#peek") || $("#hits")?.hidden === false) return tipHide();
     let box = $("#tip");
     if (!box) { box = document.createElement("div"); box.id = "tip"; box.setAttribute("role", "tooltip"); document.body.append(box); }
     box.textContent = t;
@@ -2847,7 +2848,7 @@
     box.innerHTML = hits.length ? hits.map((h, i) => h.url ? `<a class="hit" role="option" href="${safeUrl(h.url)}" target="_blank" rel="noopener noreferrer" aria-selected="${i === 0}">${inner(h)}</a>`
       : `<button class="hit" role="option" data-hit="${esc(h.id)}" aria-selected="${i === 0}">${inner(h)}</button>`).join("")
       : `<div class="none">Nothing on the Desk matches “${esc(q.trim())}”.</div>`;
-    box.hidden = false; input.setAttribute("aria-expanded", "true");
+    box.hidden = false; input.setAttribute("aria-expanded", "true"); tipHide();
     // Under the field, inside the window on a narrow screen too.
     const r = input.getBoundingClientRect();
     box.style.top = `${r.bottom + 4}px`;
