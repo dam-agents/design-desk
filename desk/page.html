@@ -1045,12 +1045,16 @@
   }
   // The element a note is about, cut from its option: the design is moved and scaled so that
   // element fills the preview, and the rest of the design is hidden.
-  const SNIP_SCRIPT = (sel, text) => `<script>(function fit(){if(!innerWidth||!innerHeight)return requestAnimationFrame(fit);let e=null;try{e=${JSON.stringify(sel)}&&document.querySelector(${JSON.stringify(sel)})}catch{}
-    if(!e&&${JSON.stringify(text)}){const w=document.createTreeWalker(document.body,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===${JSON.stringify(text)}){e=n;break}}
-    const d=document.documentElement;d.style.overflow="hidden";if(!e){d.style.visibility="hidden";return}
-    const r=e.getBoundingClientRect(),p=12,W=innerWidth,H=innerHeight,k=Math.min(W/(r.width+2*p),H/(r.height+2*p),2.5);
-    const x=r.left+scrollX-p-(W/k-r.width-2*p)/2,y=r.top+scrollY-p-(H/k-r.height-2*p)/2;
-    scrollTo(0,0);document.body.style.visibility="hidden";e.style.visibility="visible";document.body.style.transformOrigin="0 0";document.body.style.transform="scale("+k+") translate("+(-x)+"px,"+(-y)+"px)"})();<\/script>`;
+  const SNIP_SCRIPT = (sel, text) => `<script>(()=>{const S=${JSON.stringify(sel)},T=${JSON.stringify(text)},b=document.body,d=document.documentElement;
+    let e=null;try{e=S&&document.querySelector(S)}catch{}
+    if(!e&&T){const w=document.createTreeWalker(b,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===T){e=n;break}}
+    d.style.overflow="hidden";if(!e){d.style.visibility="hidden";return}
+    b.style.visibility="hidden";e.style.visibility="visible";b.style.transformOrigin="0 0";
+    // Measured afresh each time, with the design back in place: the frame may not have its size yet.
+    const fit=()=>{const W=innerWidth,H=innerHeight;if(!W||!H)return;b.style.transform="none";scrollTo(0,0);
+      const r=e.getBoundingClientRect(),p=12;if(!r.width&&!r.height)return;const k=Math.min(W/(r.width+2*p),H/(r.height+2*p),2.5);
+      const x=r.left-(W/k-r.width)/2,y=r.top-(H/k-r.height)/2;b.style.transform="scale("+k+") translate("+(-x)+"px,"+(-y)+"px)"};
+    fit();addEventListener("load",fit);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
   async function peekOf(el) {
     if (el.dataset.snip !== undefined) {
       if (!el.dataset.snip) return null;
