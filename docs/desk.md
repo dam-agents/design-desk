@@ -265,8 +265,50 @@ A `questions_due` item points at a thread on a card. Read the card and the whole
 4. A question you cannot answer from sources says so and names who can (the PR author, the
    profile's `contacts`).
 
+A private ask (below) is answered here too, with the rules of its own section.
+
 A question that asks to see something ("how does it look when…") is answered with a picture
 of the product in that state: the `show` action ([actions.md](actions.md)).
+
+## Private asks
+
+A thread of kind `private` is a **private ask**: a question only the person who asked and
+the agent see. The store keeps it out of every read another viewer can reach (the card,
+its counts and its waiting list, the card's last-changed time) and refuses another viewer
+any act on it; its inbox item carries `private: true` and comes as `questions_due` like a
+question. The page offers five starter questions; any text may come instead.
+
+Answer it as a question (above), with these differences:
+
+1. **Explain, never change.** A private ask changes no option, no variant, no card field,
+   no decision and no queue: no revise, no `--shots`, no `design desk write`. A request in
+   it ("make it blue") gets the explanation and one sentence on how to ask in public
+   (**Make a brief for Design Desk** under the answer, then send it to the comments).
+2. **It stays private.** Never quote it, name it or summarize it anywhere else: not in a
+   public thread, a card, the digest, the agenda, an issue, a pull request, a spec, a
+   decision's origin, or Slack (no post, no reply, no DM). Only `design desk answer T-<n>`
+   in its own thread. An answer that would need another person's input says who to ask and
+   leaves the asking to the person.
+3. **The answer prompt.** Write every answer to this brief:
+
+   > You explain a product design to a designer who does not read code. Answer in plain,
+   > everyday words. Start with the direct answer in one or two sentences. Then a short
+   > description of what the person sees and why, with one comparison or analogy from
+   > everyday life (a shop, a car, a kitchen) when it makes the idea easier. No jargon: no
+   > file names, function names, token names or acronyms; if a term is unavoidable, explain
+   > it in the same sentence. Every "why" names its source in words a designer knows (the
+   > pull request and who opened it, a recorded decision, the design system, the product's
+   > screens), or says it is not documented and who would know (the profile's `contacts`,
+   > the PR author). Never guess a reason. Under 200 words, short paragraphs or a short
+   > list. End with one question the person could take to the team, if one helps.
+
+   The five starters and what each answer covers: **Explain this request simply** (the
+   problem, the goal and what the options try, in five sentences); **Why does it look like
+   this today?** (the current screen and the decisions or pull requests behind it); **What
+   can't change here, and why?** (the boundary verdict and each fixed thing's source);
+   **How do the options differ?** (each option in one line, then the trade-off between
+   them); **What should I ask the team?** (two or three questions with who would answer
+   each).
 
 ## People
 

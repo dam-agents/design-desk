@@ -1146,3 +1146,28 @@ test("a decision written by hand without concepts, text or date still lists and 
   assert.deepEqual(s.listDecisions({ concept: "prices" }).map((d) => d.id), ["D-1"], "a concept search skips the one without concepts");
   assert.equal(s.getDecision("D-2").decision.id, "D-2");
 });
+
+test("a private ask: only its author and the agent see it; nobody else reads, counts or acts on it", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "change", title: "Spend in the list", source: { repo: "acme/widgets", pr: 7 } });
+  const before = s.card(card.id).updated;
+  const { thread, inbox: item } = s.openThread(card.id, alice, { kind: "private", text: "Explain this request simply" });
+  assert.deepEqual([thread.owner, thread.needs_agent, item.kind], ["alice@example.com", true, "question"]);
+  assert.equal(inbox(s).open.find((i) => i.id === item.id).private, true, "the agent's item says it is private");
+  assert.equal(s.card(card.id).updated, before, "a private ask does not move the card's last-changed time");
+  const mine = s.getCard(card.id, { viewer: "alice@example.com" });
+  const theirs = s.getCard(card.id, { viewer: "bob@example.com" });
+  assert.deepEqual(mine.threads.map((t) => t.id), [thread.id]);
+  assert.deepEqual([theirs.threads.length, theirs.waiting.length], [0, 0]);
+  assert.equal(s.getCard(card.id, { viewer: null }).threads.length, 0, "a viewer without a key sees none");
+  assert.equal(s.getCard(card.id).threads.length, 1, "the agent sees it");
+  assert.equal(s.listCards({ viewer: "bob@example.com" })[0].open_threads, 0);
+  assert.equal(s.listCards({ viewer: "alice@example.com" })[0].open_threads, 1);
+  for (const act of [() => s.reply(thread.id, bob, "hi"), () => s.resolve(thread.id, bob), () => s.proposeDecision(thread.id, bob, { message: 0 })])
+    assert.throws(act, /no thread/);
+  assert.throws(() => s.proposeDecision(thread.id, alice, { message: 0 }), /not recorded as a decision/);
+  assert.throws(() => s.openThread(card.id, { agent: true }, { kind: "private", text: "x" }), /person's own/);
+  s.answer(thread.id, "Think of it as a receipt.");
+  assert.equal(s.card(card.id).updated, before);
+  assert.equal(s.reply(thread.id, alice, "And why?").inbox.kind, "question", "a follow-up goes back to the agent");
+});

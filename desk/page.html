@@ -298,6 +298,10 @@
   textarea, input, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
   textarea { min-height: 64px; resize: vertical; }
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
+  .starters { display: flex; gap: 6px; flex-wrap: wrap; max-width: var(--measure); margin-bottom: 10px; }
+  .thread.private { border-style: dashed; }
+  .brief { display: grid; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
+  .brief .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
   /* An issue's or a pull request's preview on hover: what the Desk knows of it. */
@@ -1633,7 +1637,7 @@
   }
 
   function renderThreads(c, { skipAsks = false } = {}) {
-    const threads = (c.threads || []).filter((th) => !(skipAsks && th.kind === "asks" && th.state === "open"));
+    const threads = (c.threads || []).filter((th) => th.kind !== "private" && !(skipAsks && th.kind === "asks" && th.state === "open"));
     const label = { question: ["Question", "info"], comment: ["Comment", ""], concern: ["Concern", "warn"], change: ["Change", "info"], asks: ["Design Desk asks", "warn"] };
     const KIND_TIP = { question: "A question to Design Desk; it answers right here", comment: "A comment for the team; Design Desk does not act on it", concern: "Someone is worried about an option", change: "A note asking Design Desk to change the design", asks: "Design Desk needs an answer before it can go on" };
     const rows = threads.map((th) => {
@@ -1651,7 +1655,41 @@
       <div class="composer" id="composer">
         <textarea id="composer-text" maxlength="4000" placeholder="Ask anything: why it works this way, what could change… or leave a comment for the team."></textarea>
         <div class="bar"><button class="btn primary" data-post="question">Ask Design Desk</button><button class="btn" data-post="comment">Comment for the team</button></div>
-        <p class="hint">Design Desk answers questions right here. It reads comments when it changes the design.</p></div>`;
+        <p class="hint">Everyone on the Desk sees these. Design Desk answers questions right here. It reads comments when it changes the design.</p></div>
+      ${renderPrivate(c)}`;
+  }
+
+  // Private ask: questions only the asker sees (the server keeps them from everyone else).
+  // Design Desk explains here and changes nothing; an answer becomes public only when the
+  // person edits a brief from it and sends it from the public composer (docs/desk.md → Private asks).
+  const STARTERS = ["Explain this request simply", "Why does it look like this today?", "What can't change here, and why?", "How do the options differ?", "What should I ask the team?"];
+  function renderPrivate(c) {
+    if (!can("ask")) return "";
+    const mine = (c.threads || []).filter((th) => th.kind === "private");
+    const rows = mine.map((th) => {
+      const last = [...th.messages].reverse().find((m) => m.by?.agent);
+      return `<article class="thread private" id="th-${esc(th.id)}">
+        <div class="head"><span class="chip" title="Only you and Design Desk see this">🔒 Private ask</span>${th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : ""}</div>
+        ${th.messages.map((m) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${m.by?.agent ? who(m.by) : "You"} · ${esc(when(m.at))}</div>${md(m.text)}</div>`).join("")}
+        ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
+        <div class="reply"><input placeholder="Ask a follow-up, privately…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Ask</button>${last ? `<button class="btn small" data-brief="${esc(th.id)}" title="Drafts a note for Design Desk from this answer. You edit it, then send it to the public comments yourself.">Make a brief for Design Desk</button>` : ""}</div>
+        <div class="brief" data-brief-box="${esc(th.id)}" hidden><textarea maxlength="4000"></textarea>
+          <div class="bar"><button class="btn small primary" data-brief-public="${esc(th.id)}" title="Puts your edited brief into the public comments box. Nothing is sent until you press Ask Design Desk there.">Move to the public comments</button><span class="hint">Nothing leaves this box until you send it there.</span></div></div>
+      </article>`;
+    }).join("");
+    return `<h3>Private ask <span class="chip" title="Only you and Design Desk see these questions and answers">🔒 only you</span></h3>
+      <p class="hint">Only you see what you ask here, and Design Desk's answers. Nobody else on the Desk, and nothing goes to Slack. Design Desk explains in plain words and never changes the design from a private ask.</p>
+      <div class="starters">${STARTERS.map((q) => `<button class="btn small" data-private="${esc(q)}">${esc(q)}</button>`).join("")}</div>
+      <div class="threads">${rows}</div>
+      <div class="composer"><textarea id="private-text" maxlength="4000" placeholder="Ask anything you would rather ask privately…"></textarea>
+        <div class="bar"><button class="btn primary" data-private="">Ask privately</button></div></div>`;
+  }
+  // A first draft of a public note from a private answer: the person rewrites it.
+  function briefFrom(th) {
+    const q = th.messages.find((m) => !m.by?.agent)?.text || "";
+    const a = [...th.messages].reverse().find((m) => m.by?.agent)?.text || "";
+    const gist = a.replace(/\s+/g, " ").split(/(?<=[.!?])\s/).slice(0, 3).join(" ");
+    return `Design Desk, I asked "${q.slice(0, 200)}" and understood: ${gist}\n\nWhat I would like now: `;
   }
 
   // ---------- a shipped change ----------
@@ -2835,6 +2873,25 @@
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { await post(ds.post); return; }
+    if (ds.private !== undefined) {
+      const box = $("#private-text"), text = ds.private || box?.value.trim(); if (!text) return;
+      const r = await api("POST", `/api/cards/${S.card.id}/threads`, { kind: "private", text });
+      if (box && !ds.private) box.value = "";
+      if (r.inbox) toast("Asked privately. Only you see it; Design Desk answers here.");
+      await openCard(S.card.id); return;
+    }
+    if (ds.brief) {
+      const box = $(`[data-brief-box="${CSS.escape(ds.brief)}"]`), th = (S.card.threads || []).find((t) => t.id === ds.brief);
+      if (!box || !th) return;
+      box.hidden = false; const ta = box.querySelector("textarea"); if (!ta.value) ta.value = briefFrom(th); ta.focus(); return;
+    }
+    if (ds.briefPublic) {
+      const text = $(`[data-brief-box="${CSS.escape(ds.briefPublic)}"] textarea`)?.value.trim(); if (!text) return;
+      const pub = $("#composer-text"); if (!pub) return;
+      pub.value = text; pub.focus(); $("#composer")?.scrollIntoView({ block: "center" });
+      toast("In the public comments box. Everyone will see it once you press Ask Design Desk.");
+      return;
+    }
     if (ds.sendReply) {
       // The workspace and the card both show a note's reply box: the one next to this button.
       const input = el.parentElement.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;

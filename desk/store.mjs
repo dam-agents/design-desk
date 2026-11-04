@@ -116,8 +116,14 @@ const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "buil
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
 // Thread kinds: people ask, comment, raise a concern or note a change to one element;
-// the agent asks (`asks`) when a step cannot go on without a person's answer.
-const THREAD_KINDS = ["question", "comment", "concern", "change", "asks"];
+// the agent asks (`asks`) when a step cannot go on without a person's answer. A private
+// ask (`private`) is a question only its author and the agent see: Design Desk explains,
+// it never changes the design from one (docs/desk.md → Private asks).
+const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "private"];
+// Who a viewer is to the store: the key a private ask's `owner` holds.
+const viewerKey = (who) => (who && !who.agent ? who.email || who.sub || null : null);
+// Whether a viewer (their key, or undefined for the agent) may see a conversation.
+const sees = (t, viewer) => Boolean(t) && (t.kind !== "private" || viewer === undefined || t.owner === viewer);
 // The step an agent's question blocks, which a person's answer resumes.
 const ASK_STEPS = ["request", "explore", "revise", "states", "build", "handoff", "figma", "catalog", "map"];
 const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
@@ -217,6 +223,8 @@ export class Store {
   // never wakes the model and never needs the server to answer.
   writeInbox() {
     const open = [], claimed = [];
+    // A private ask's item says so: the agent answers it in its thread and changes nothing.
+    const priv = new Set(Object.values(this.db.threads).filter((t) => t.kind === "private").map((t) => t.id));
     for (const it of Object.values(this.db.inbox)) {
       if (it.state === "open") open.push(pick(it));
       else if (it.state === "claimed") claimed.push({ ...pick(it), claimed_by: it.claimed_by, claimed_at: it.claimed_at, claimed_started: it.claimed_started || it.claimed_at });
@@ -225,13 +233,15 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
 
   card(id) { const c = own(this.db.cards, id); if (!c) throw missing(`no card ${id}`); return c; }
   thread(id) { const t = own(this.db.threads, id); if (!t) throw missing(`no thread ${id}`); return t; }
+  // A conversation a viewer acts on: another person's private ask is not there for them.
+  threadFor(id, who) { const t = this.thread(id); if (!sees(t, who?.agent ? undefined : viewerKey(who))) throw missing(`no thread ${id}`); return t; }
   item(id) { const i = own(this.db.inbox, id); if (!i) throw missing(`no inbox item ${id}`); return i; }
   decision(id) { const d = own(this.db.decisions, id); if (!d) throw missing(`no decision ${id}`); return d; }
   // A card's warnings: the decisions it goes against that are still in force.
@@ -247,7 +257,7 @@ export class Store {
         id: c.id, kind: c.kind, title: c.title, status: c.status, summary: c.summary || "",
         created: c.created, updated: c.updated, source: c.source || null,
         screens: (c.screens || []).length, variants: (c.variants || []).length,
-        open_threads: (c.threads || []).filter((t) => this.db.threads[t]?.state !== "resolved").length,
+        open_threads: (c.threads || []).filter((t) => sees(this.db.threads[t], viewer) && this.db.threads[t]?.state !== "resolved").length,
         acked: viewer ? Boolean(c.acks?.[viewer]) : false, handled: c.handled?.at || null,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
@@ -311,19 +321,21 @@ export class Store {
     return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
   }
 
-  getCard(id) {
+  // `viewer` is the reading person's key; the agent reads without one and sees every
+  // conversation, a person sees no one else's private ask.
+  getCard(id, { viewer } = {}) {
     const c = this.card(id);
     // A conflict carries the decision's words and where it stands, so the page warns without another read.
     const conflicts = (c.conflicts || []).map((x) => { const d = own(this.db.decisions, x.decision); return { ...x, text: d?.text || "", status: d?.status || "revoked", replaced_by: d?.revoked?.replaced_by || null }; });
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), designed: this.designedOf(c), sent_card: this.sentCardOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), designed: this.designedOf(c), sent_card: this.sentCardOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
-  waitingFor(cardId) {
-    return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done")
+  waitingFor(cardId, viewer) {
+    return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done" && (!i.thread || sees(this.db.threads[i.thread], viewer)))
       .sort((a, b) => a.created.localeCompare(b.created))
       .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}) }));
   }
@@ -361,6 +373,7 @@ export class Store {
     const c = this.card(cardId);
     if (!THREAD_KINDS.includes(kind)) throw bad(`kind must be one of ${THREAD_KINDS.join(", ")}`);
     if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
+    if (kind === "private" && !viewerKey(who)) throw forbidden("a private ask is a person's own question");
     if (kind === "asks" && !ASK_STEPS.includes(step)) throw bad(`an agent question names the step it blocks: ${ASK_STEPS.join(", ")}`);
     if (kind === "change" && !(c.variants || []).some((v) => v.id === anchor?.variant)) throw bad("a change note belongs to one of the design options");
     if (anchor?.state && !(c.variants || []).find((v) => v.id === anchor.variant)?.states?.some((x) => x.id === anchor.state)) throw bad("That state is not drawn for this option.");
@@ -369,16 +382,17 @@ export class Store {
     const pictures = this.changeShots(shots, who);
     const id = this.next("thread", "T");
     const t = {
-      id, card: cardId, kind, state: "open", anchor: anchor ? cleanAnchor(anchor) : null,
-      needs_agent: kind === "question" || kind === "change", created: this.clock(),
+      id, card: cardId, kind, state: "open", anchor: anchor && kind !== "private" ? cleanAnchor(anchor) : null,
+      needs_agent: kind === "question" || kind === "change" || kind === "private", created: this.clock(),
+      ...(kind === "private" ? { owner: viewerKey(who) } : {}),
       messages: [{ by: person(who), at: this.clock(), text: body, ...pictures }],
       // The agent's questions can come as a form; the answer resumes the step with its note.
       ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...resumeOf(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
     };
     this.db.threads[id] = t;
     c.threads = [...(c.threads || []), id];
-    c.updated = this.clock();
-    const item = kind === "question" ? this.enqueue("question", cardId, id, who)
+    if (kind !== "private") c.updated = this.clock();
+    const item = kind === "question" || kind === "private" ? this.enqueue("question", cardId, id, who)
       : kind === "change" ? this.pendingOrNew("revise", cardId, who)
       : null;
     this.save();
@@ -386,7 +400,7 @@ export class Store {
   }
 
   reply(threadId, who, text, max = LIMITS.text) {
-    const t = this.thread(threadId);
+    const t = this.threadFor(threadId, who);
     if (t.messages.length >= LIMITS.messagesPerThread) throw bad("This conversation is full. Start a new one below.");
     const body = clean(text, max, "text");
     t.messages.push({ by: person(who), at: this.clock(), text: body });
@@ -394,7 +408,7 @@ export class Store {
     // A follow-up to a question goes back to the agent; a comment stays between people.
     // An item already claimed is being answered from what it saw, so a new message gets
     // an item of its own unless one is still open.
-    if (t.kind === "question") {
+    if (t.kind === "question" || t.kind === "private") {
       t.state = "open"; t.needs_agent = true;
       if (!this.openItemFor(threadId)) item = this.enqueue("question", t.card, threadId, who);
     }
@@ -402,7 +416,7 @@ export class Store {
     // on a change note goes back to the agent with the other notes.
     if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); const { implement, ...was } = t.resume || {}; if (was.variant && !item.variant) Object.assign(item, structuredClone(was)); if (implement) item.implement = true; }
     if (t.kind === "change" && !who?.agent) { t.state = "open"; t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
-    this.card(t.card).updated = this.clock();
+    if (t.kind !== "private") this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t, inbox: item };
   }
@@ -410,7 +424,7 @@ export class Store {
   // A person answers the agent's form: per question one of its options, or null to leave
   // it to Design Desk, and an optional note. The answers become the reply's text too.
   answerForm(threadId, who, answers) {
-    const t = this.thread(threadId);
+    const t = this.threadFor(threadId, who);
     if (t.kind !== "asks" || !t.questions) throw bad("this conversation has no questions to fill in");
     if (t.state !== "open") throw bad("These questions are already answered.");
     if (!Array.isArray(answers) || answers.length !== t.questions.length) throw bad("answer every question, or leave it to Design Desk");
@@ -429,7 +443,7 @@ export class Store {
   }
 
   resolve(threadId, who) {
-    const t = this.thread(threadId);
+    const t = this.threadFor(threadId, who);
     t.state = "resolved"; t.needs_agent = false;
     t.resolved = { by: person(who), at: this.clock() };
     this.save();
@@ -438,13 +452,13 @@ export class Store {
 
   // A conversation marked done opens again; a change note goes back to the agent.
   reopenThread(threadId, who) {
-    const t = this.thread(threadId);
+    const t = this.threadFor(threadId, who);
     if (t.state !== "resolved") throw bad("This conversation is still open.");
     delete t.resolved;
     t.state = "open";
     let item = null;
     if (t.kind === "change") { t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
-    this.card(t.card).updated = this.clock();
+    if (t.kind !== "private") this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t, inbox: item };
   }
@@ -458,7 +472,7 @@ export class Store {
     if (!Array.isArray(threadIds) || !threadIds.length) throw bad("Pick the comments to work in.");
     const ts = [...new Set(threadIds.map(String))].slice(0, LIMITS.threadsPerCard).map((id) => {
       const t = own(this.db.threads, id);
-      if (!t || t.card !== cardId) throw missing(`no conversation ${id} on this request`);
+      if (!t || t.card !== cardId || t.kind === "private") throw missing(`no conversation ${id} on this request`);
       if (t.kind === "asks") throw bad("Design Desk's own questions are answered, not worked in.");
       if (!(c.variants || []).some((v) => v.id === t.anchor?.variant)) throw bad("Only a comment on one of the design options can be worked in.");
       return t;
@@ -897,6 +911,7 @@ export class Store {
   answer(threadId, text, { resolve = false, shots = null } = {}) {
     const t = this.thread(threadId);
     const body = clean(text, LIMITS.text, "text");
+    if (t.kind === "private" && shots?.length) throw bad("A private ask is answered in words: Design Desk changes nothing from one.");
     const pictures = this.changeShots(shots, { agent: true });
     // The answer closes the items it could have read: the claimed ones, and open ones
     // whose message was already there when a claim read the thread. A message that came
@@ -912,7 +927,8 @@ export class Store {
     }
     t.state = waiting ? "open" : resolve ? "resolved" : "answered";
     t.needs_agent = waiting;
-    this.card(t.card).updated = this.clock();
+    // A private ask leaves no trace others see, not even the card's last-changed time.
+    if (t.kind !== "private") this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t };
   }
@@ -1323,7 +1339,8 @@ export class Store {
 
   // A designer asks Design Desk to record what a person said in a comment as a decision.
   proposeDecision(threadId, who, { message, note = "" } = {}) {
-    const t = this.thread(threadId);
+    const t = this.threadFor(threadId, who);
+    if (t.kind === "private") throw bad("A private ask is not recorded as a decision: send it to the comments first.");
     const i = Number(message);
     if (!Number.isInteger(i) || !t.messages[i]) throw bad("pick a message of this conversation");
     if (t.messages[i].by?.agent) throw bad("Design Desk does not decide: record what a person said");
@@ -1642,6 +1659,7 @@ function cleanDecisionOrigin(o, cards, threads) {
   if (card && !own(cards, card)) throw bad(`origin: no card ${card}`);
   const thread = o.thread == null || o.thread === "" ? null : String(o.thread);
   if (thread && own(threads, thread)?.card !== card) throw bad(`origin: ${thread} is not a conversation on ${card || "a card"}`);
+  if (thread && own(threads, thread).kind === "private") throw bad("origin: a private ask is not a decision's source");
   const message = o.message == null ? null : Number(o.message);
   if (message !== null && (!thread || !Number.isInteger(message) || !own(threads, thread).messages[message])) throw bad("origin.message is a message of origin.thread");
   if (!url && !card && o.kind !== "chat") throw bad("origin needs a link: url, or the card it was decided on");
