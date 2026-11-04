@@ -1823,11 +1823,12 @@
     const hit = allDecs.map((x) => [x, close(x) + (url && x.origin?.url === url ? .3 : 0)]).sort((a, b) => b[1] - a[1])[0];
     return hit && hit[1] >= .6 ? hit[0].id : null;
   }
-  // Where else it shows up, what a change touches, and the earlier decisions: each folds on its own.
+  // Where else it shows up, what a change touches, and the earlier decisions: each folds on its
+  // own, and all start folded.
   function renderImpact(im) {
     if (!im) return "";
     const li = (xs, f) => xs?.length ? `<ul>${xs.map(f).join("")}</ul>` : "";
-    const fold = (title, body) => `<details class="fold" open><summary><b>${title}</b></summary><div class="impact section">${body}</div></details>`;
+    const fold = (title, body) => `<details class="fold"><summary><b>${title}</b></summary><div class="impact section">${body}</div></details>`;
     return fold("Where else this shows up", `<p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li>${productLink(p)}${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}`)
       + (im.affects?.length ? fold("What a change here touches", li(im.affects, (a) => `<li><b>${esc(a.what)}</b>${a.why ? ` — ${txt(a.why)}` : ""}${srcLink(a.source)}</li>`)) : "")
       + (im.decisions?.length ? fold("Earlier decisions about it", li(im.decisions, (d) => { const id = deskDecisionFor(d); return `<li>${id ? `${citeRef(S.card, id)} ` : ""}${txt(d.text)}${d.when ? ` <span class="sub" style="display:inline">(${esc(day(d.when) || d.when)})</span>` : ""}${srcLink(d.source)}</li>`; })) : "");
