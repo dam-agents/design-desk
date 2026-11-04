@@ -834,6 +834,8 @@
     decided: "Closed with a decision instead of a design. The decision is under Product, Decisions. Nobody works on it any more; a designer can reopen it.",
   };
   const tone = (c) => c.status === "declined" && c.decided ? "decided" : TONE[c.status] || "fyi";
+  // The state's word, the same in the list and on the page.
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : STATUS[c.status] || c.status;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   const WORK = {
     request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
@@ -913,7 +915,7 @@
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of Requests and Changes, shows only what waits for a designer's decision.</p>
-<p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Search</b> at the top finds an item by its words, its number, its link, or the number of its GitHub issue or pull request.</p>
+<p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; the link icon beside its number (<b>Copy link</b> on a narrow screen) gives a link that opens it; <b>Search</b> at the top finds an item by its words, its number, its link, or the number of its GitHub issue or pull request.</p>
 <p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
 <p>Each row in Requests and Changes shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
 <h3>Changing a design</h3>
@@ -1600,7 +1602,7 @@
   // Each tab opens with a short intro for first use; How it works is all intro. An action
   // names what the server must allow (`can`), so a role that may not do it sees so.
   // Every list's items have a number and a link (docs/desk.md → Links to an item).
-  const LINK = ["Each item has its number in grey by its title, like C-12: <b>🔗 Copy link</b> sends someone straight to it, and <b>Search</b> at the top finds one by its words, its number or its GitHub issue or pull request number."];
+  const LINK = ["Each item has its number in grey by its title, like C-12: the link icon beside it sends someone straight to it, and <b>Search</b> at the top finds one by its words, its number or its GitHub issue or pull request number."];
   const INTRO = () => ({
     new: { about: "what changed in the product's screens, and what a designer should look at",
       see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
@@ -1620,7 +1622,7 @@
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
-        ["<b>Open the design workspace</b>: click a part of an option and say what should change.", "revise"],
+        ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
         ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
         ["<b>Draw every state</b> of a part in the design workspace, step through and change each state on its own; the request's <b>Design catalog</b> shows each with the use case it covers.", "revise"],
@@ -1763,7 +1765,7 @@
     } else {
       if (c.asks && !closed(c)) out.push(`<span class="chip warn" title="Design Desk asked a question and cannot go on until someone answers it">Waiting for your answer</span>`);
       // Options waiting for a pick is the usual state: no chip for it.
-      else if (c.busy || c.status !== "feedback") out.push(`<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${esc(STATUS[c.status] || c.status)}</span>`);
+      else if (c.busy || c.status !== "feedback") out.push(`<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${esc(stateWord(c))}</span>`);
       if (c.type === "bug") out.push(`<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>`);
       else if (c.triage && c.triage !== "needs-developer") out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
@@ -2575,7 +2577,7 @@
     const items = call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${tone(c) === "decided" ? "Decided without a design" : esc(STATUS[c.status] || c.status)}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c)}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c)}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
