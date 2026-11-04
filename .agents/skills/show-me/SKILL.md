@@ -26,7 +26,9 @@ the picture needs `screens: enabled`.
 5. **Answer** with it:
    - on the Desk: `design desk asset <file> --kind screen --card C-<n>`, then answer the
      question with the picture in the text: `![<what it shows>](asset:<A-n>)`;
-   - in Slack: `reply` with the picture attached;
+   - in Slack: `reply` with the picture attached; when the question is on a request's
+     thread, also name its card and link it ([docs/desk.md](../../../docs/desk.md) → Links to
+     an item);
    - in chat: the picture inline, or an artifact when there are several.
 
    Always say where it comes from: "Design Desk's copy of the product at <ref> (<commit>),

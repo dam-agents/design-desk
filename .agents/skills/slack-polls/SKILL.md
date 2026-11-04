@@ -20,18 +20,21 @@ stop).
 
 ## Share (`slack_due`, no `scope`; `slack_polls: enabled`)
 
-The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`.
+The item's note is `{"closes": "<ISO time>", "note": "<what to look at>"}`. A request with a
+Slack `origin` shares in its thread: every message in steps 2 and 3 is a `reply` with
+`chatId` = `origin.chat` and `threadTs` = `origin.thread_ts`. Otherwise use
+`send_channel_message` in the channel above.
 
 1. Claim the item; read the card. For each option, its latest version:
    `design desk fetch <asset> <dir>/<id>.html`, then `design shot <dir>/<id>.html <dir>/<id>
    --width 1280`; the first view in light (`1-light.png`) is its picture.
-2. **The opening message** (`send_channel_message`), in these words:
+2. **The opening message**, in these words:
    "🗳️ *<request title>* — which design should we take? <the note, when there is one>
    Vote on each option below with 👍 (I like it) or ⚠️ (I have a concern), and reply in its
    thread to say why. Voting closes <closes, in the reader's words: "Friday at 15:00">.
    Details on the Design Desk (C-<n>): <link>". The link is the card's
    ([docs/desk.md](../../../docs/desk.md) → Links to an item).
-3. **One message per option** (`send_channel_message` with its picture), in order:
+3. **One message per option** with its picture, in order:
    "*Option <A/B/C>: <name>* — <its one line on when it wins>". When the request has a live
    prototype, one more message: "Try it live: the link and the demo account are on the Desk".
    Never a password in Slack.
@@ -91,7 +94,7 @@ On its date, or when the request moved on (approved, closed):
    vote advises; the winner is the one a designer picks on the Desk (the card's `chosen`).
 3. Post it (`send_channel_message`, or `reply` into the opening message's thread where the
    platform allows it): "🗳️ *<request title>* — the vote is closed. <result>. A designer picks
-   the winner on the Design Desk."
+   the winner on the Design Desk (C-<n>): <link>."
 4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. Without a designer's
    pick yet, suggest it for the presentation (`design desk agenda C-<n> --note "Slack vote: <result>"`).
 
@@ -99,5 +102,6 @@ On its date, or when the request moved on (approved, closed):
 
 Someone tags you in an option's thread: `design desk find-poll <thread ts>` names the card,
 poll and option. Relay their reply as a comment (Sync → 3), and answer in one line: "Added to
-the Desk." A vote written in words ("I'd take B") is a comment; votes are the reactions, and
-you say so: "React with 👍 on the option to vote."
+the Desk (C-<n>): <link>." Attach the option's current PNG still when it is available. A vote
+written in words ("I'd take B") is a comment; votes are the reactions, and you say so: "React
+with 👍 on the option to vote."
