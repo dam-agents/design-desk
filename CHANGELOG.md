@@ -17,6 +17,12 @@ Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 `revise` item with `scope: "alternatives"`), and a ✕ on an option's tab that takes it off, all in [docs/requests.md](docs/requests.md) → Variants.
 Recorded cards need no change.
 
+## 1.39.3 — 2026-11-04
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). In the design workspace the design's scrollbar always shows, so pointing at the whole page no longer makes it jump. No server restart, no data change.
+
 ## 1.39.2 — 2026-11-04
 
 **Upgrade:**

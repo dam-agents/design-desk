@@ -2565,6 +2565,8 @@
     const layer = document.createElement("div");
     layer.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483647";
     document.documentElement.appendChild(layer);
+    // The scrollbar always shows: a frame round the whole page would otherwise add one and the design would jump.
+    document.documentElement.style.overflowY = "scroll";
     const css = (el) => { const p = []; while (el && el.nodeType === 1 && p.length < 7) { let s = el.tagName.toLowerCase(); if (el.id) { p.unshift(s + "#" + el.id); break; } const dv = el.getAttribute("data-view"); if (dv) { p.unshift(s + '[data-view="' + dv + '"]'); break; } const sib = [...(el.parentElement?.children || [])].filter((x) => x.tagName === el.tagName); if (sib.length > 1) s += ":nth-of-type(" + (sib.indexOf(el) + 1) + ")"; p.unshift(s); el = el.parentElement; } return p.join(" > "); };
     const kind = (el) => { const t = el.tagName.toLowerCase(), r = el.getAttribute("role"); if (t === "button" || r === "button") return "Button"; if (t === "a") return "Link"; if (/^h[1-6]$/.test(t)) return "Heading"; if (["input", "textarea", "select"].includes(t)) return "Field"; if (["img", "svg", "path"].includes(t)) return "Image"; if (t === "li") return "List item"; if (t === "label") return "Label"; if (["p", "span", "small", "strong", "em", "b"].includes(t)) return "Text"; if (t === "nav") return "Navigation"; if (t === "header") return "Header"; if (["table", "tr", "td"].includes(t)) return "Table"; return "Area"; };
     const textOf = (el) => (el.innerText || el.getAttribute("aria-label") || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ").slice(0, 120);
