@@ -866,6 +866,8 @@
   // A refusal the server explains is shown as it is; anything else gets one plain line.
   class Said extends Error {}
   async function api(method, path, body) {
+    // A decision written, revoked or restored: the Desk's own list is read again when next needed.
+    if (method !== "GET" && /decision/.test(path)) allDecs = null;
     if (!bridge) throw new Said("The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.");
     let res;
     try { res = await bridge.request({ method, path, body: body === undefined ? undefined : JSON.stringify(body), contentType: body === undefined ? undefined : "application/json" }); }
@@ -1507,6 +1509,7 @@
     list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionSide && S.decisions.length ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
+    allDecs = null;
     try { S.decisions = (await api("GET", `/api/decisions?state=${encodeURIComponent(S.decisionState)}`)).decisions || []; } catch { S.decisions = []; }
   }
   // One decision, read with everything that cites it or goes against it.
@@ -1721,10 +1724,14 @@
   // Where else the same thing shows up, what a change touches, what was decided before.
   // The Desk's own decisions, all of them, read once, so an earlier decision the agent found in
   // a pull request or an issue links to the one recorded here.
-  let allDecs = null;
+  // Kept only after a read that worked, and dropped whenever the decisions are read again.
+  let allDecs = null, allDecsAsked = false;
   function deskDecisionFor(d) {
     if (d.id) return d.id;
-    if (!allDecs) { allDecs = []; api("GET", "/api/decisions?state=").then((r) => { allDecs = r.decisions || []; if (allDecs.length) renderDetail(); }, () => {}); return null; }
+    if (!allDecs) {
+      if (!allDecsAsked) { allDecsAsked = true; api("GET", "/api/decisions?state=").then((r) => { allDecs = r.decisions || []; if (allDecs.length) renderDetail(); }, () => {}).finally(() => { allDecsAsked = false; }); }
+      return null;
+    }
     const words = (t) => new Set(String(t || "").toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) || []);
     const mine = words(d.text), url = d.source?.url;
     const close = (x) => { const w = words(x.text); let n = 0; for (const k of mine) if (w.has(k)) n++; return n / Math.max(1, Math.min(mine.size, w.size)); };
