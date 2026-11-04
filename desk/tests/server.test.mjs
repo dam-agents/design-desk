@@ -239,6 +239,8 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   const draw = (id) => d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: asset.id }] });
 
   const mine = (await d.viewer("pat@example.com", "/api/requests", { problem: "The header shouts.", options: 1 })).body.card.id;
+  const triage = (await d.agent("/agent/inbox")).body.open.find((i) => i.card === mine).id;
+  await d.agent(`/agent/items/${triage}/claim`, { session: "s1" }); await d.agent(`/agent/items/${triage}/done`, { session: "s1" });
   const held = await draw(mine);
   assert.deepEqual([held.body.card.status, held.body.card.team_feedback.state], ["variants", "waiting"], "drawn, kept to its people");
   assert.match((await d.viewer("pat@example.com", "/api/cards")).body.cards.find((c) => c.id === mine).attention.reasons.join(" "), /ask the team for feedback/);
@@ -250,4 +252,6 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
 
   const slack = (await d.agent("/agent/cards", { kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } })).body.card.id;
   assert.equal((await draw(slack)).body.card.status, "feedback", "from Slack: on to the team by itself");
+  const none = (await d.viewer("pat@example.com", "/api/requests", { problem: "Typo in the footer.", options: 0 })).body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id: none, status: "feedback", triage: { verdict: "design", reasons: ["Words only."] } })).body.card.status, "feedback", "no options to fine-tune: on by itself");
 });

@@ -1259,8 +1259,8 @@ export class Store {
     if (twin) throw new DeskError(409, `${twin.id} is already this ${next.kind}`);
     // A request a person filed on the Desk waits at its drawn options until a person asks the
     // team (docs/desk.md → Team feedback); one the agent filed for someone (Slack, chat) goes on
-    // to feedback by itself.
-    if (next.kind === "request" && next.status === "feedback" && c && ["triage", "variants"].includes(c.status) && !next.created_by?.agent && next.team_feedback?.state !== "open")
+    // to feedback by itself, and so does one with no options to fine-tune.
+    if (next.kind === "request" && next.status === "feedback" && c && ["triage", "variants"].includes(c.status) && !next.created_by?.agent && next.team_feedback?.state !== "open" && (next.variants || []).length)
       Object.assign(next, { status: "variants", team_feedback: { state: "waiting", since: this.clock() } });
     if (!c) { next.id = this.next("card", "C"); }
     this.keepLook(c, next);
