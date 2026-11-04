@@ -1623,6 +1623,12 @@ function cleanAuthor(a) {
   if (!a || typeof a !== "object" || Array.isArray(a)) throw bad("a decision names who decided it: author {name, login, email}");
   const x = { name: optText(a.name, 120, "author name") || null, login: optText(a.login, 80, "author login") || null, email: optText(a.email, 200, "author email") || null };
   if (!x.name && !x.login && !x.email) throw bad("author names the person: name, login or email");
+  // Their role, where it is known (docs/desk.md → Decisions → Who decided).
+  if (a.role != null && a.role !== "") {
+    const role = readRole(a.role);
+    if (!ADDABLE_ROLES.includes(role) && role !== "lead") throw bad(`author.role must be one of lead, ${ADDABLE_ROLES.join(", ")}`);
+    x.role = role;
+  }
   return x;
 }
 

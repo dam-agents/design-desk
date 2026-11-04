@@ -44,7 +44,7 @@ const USAGE = `usage: design desk <command>
                                            JSON {text, questions: [{text, why, options, suggested}]},
                                            a form
   decision <decision.json|->               record a decision (docs/desk.md → Decisions): {concepts, text,
-                                           why, author: {name, login, email}, origin: {kind, label, url,
+                                           why, author: {name, login, email, role}, origin: {kind, label, url,
                                            card, thread, message}, at, replaces: [D-n], conflicts:
                                            [{decision, why}]}
   decision-show <D-n>                      one decision with what cites it or goes against it

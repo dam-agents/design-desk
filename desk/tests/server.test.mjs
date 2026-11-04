@@ -168,3 +168,20 @@ test("the page gets the Desk's share link to build an item's link from, and noth
   const unset = await desk(t);
   assert.equal((await unset.viewer("guest@example.com", "/api/me")).body.link, null);
 });
+
+test("a decision says whose it is: the design side or a developer, by the role named, the roster, or where it was decided", async (t) => {
+  const d = await desk(t);
+  const add = (author, origin) => d.agent("/agent/decisions", { concepts: ["rows"], text: "Rows stay roomy", author, origin });
+  const ids = [];
+  for (const [author, origin] of [
+    [{ email: "alice@example.com" }, { kind: "slack", url: "https://acme.slack.com/x" }],
+    [{ email: "lou@example.com" }, { kind: "slack", url: "https://acme.slack.com/x" }],
+    [{ name: "Pat", role: "PM" }, { kind: "chat" }],
+    [{ login: "dana" }, { kind: "pr", url: "https://github.com/acme/widgets/pull/4" }],
+    [{ name: "Someone" }, { kind: "slack", url: "https://acme.slack.com/x" }],
+  ]) { const r = await add(author, origin); assert.equal(r.status, 201, JSON.stringify(r.body)); ids.push(r.body.decision.id); }
+  assert.equal((await add({ name: "X", role: "owner" }, { kind: "chat" })).status, 400, "a role the roster does not know is refused");
+  const sides = Object.fromEntries((await d.viewer("alice@example.com", "/api/decisions")).body.decisions.map((x) => [x.id, x.side]));
+  assert.deepEqual(ids.map((id) => sides[id]), ["design", "developer", "design", "developer", null]);
+  assert.equal((await d.viewer("alice@example.com", `/api/decisions/${ids[1]}`)).body.decision.side, "developer", "one decision says it too");
+});
