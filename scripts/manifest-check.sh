@@ -16,8 +16,9 @@
 #   warn <check> — <detail>
 #   FAIL <check> — <problem> — fix: <instruction>
 #
-# Exit 0 iff nothing FAILed. Needs bash and jq; with python3 + jsonschema
-# present it also runs the full JSON Schema.
+# Exit 0 iff nothing FAILed. Needs bash, jq and a python3 with jsonschema
+# (MANIFEST_PYTHON, else the venv scripts/install-toolkit.sh makes, else python3):
+# without it `publish` and `peer` fail, and `check` warns.
 
 set -u
 export LC_ALL=C
@@ -26,10 +27,11 @@ HOME_DIR="${AGENT_HOME:-$HOME}"
 SCHEMA="${MANIFEST_SCHEMA:-$HOME_DIR/docs/manifest.schema.json}"
 CONFIG="${WORK_DIR:-$HOME_DIR/work}/CONFIG.md"
 SPEC="dam-agent-manifest/1"
+PY="${MANIFEST_PYTHON:-${DESIGN_DESK_DATA:-$HOME_DIR/.local/share/design-desk}/pyenv/bin/python3}"
+[ -x "$PY" ] || PY=python3
 # Config keys whose values may appear in the public card (labels, logins, the
 # target repo). Every other CONFIG.md value is private.
-# MANIFEST_PUBLIC_KEYS overrides the list for a one-time run (references/manifest.md
-# → Existing agents).
+# MANIFEST_PUBLIC_KEYS overrides the list for a one-time run (docs/manifest.md).
 PUBLIC_KEYS="${MANIFEST_PUBLIC_KEYS:-display_name repos issue_label handoff implementer prototype_requesters digest}"
 
 mode="${1:-}"; card="${2:-}"
@@ -120,13 +122,18 @@ refs="$(jq -r '
 if [ -z "$refs" ]; then ok references "every trigger, skill and contract reference resolves"
 else while IFS= read -r r; do fail references "$r" "fix the name or add the entry"; done <<< "$refs"; fi
 
-# Optional full schema pass: `ok` only when the validator ran and found nothing.
+# Full schema pass: `ok` only when the validator ran and found nothing. A gate
+# (publish, peer) fails when it cannot run; `check` only warns.
+noschema() {
+  if [ "$mode" = check ]; then warn schema "$1; full JSON Schema pass skipped"
+  else fail schema "$1" "run bash scripts/install-toolkit.sh (it makes the jsonschema venv), or set MANIFEST_PYTHON"; fi
+}
 if [ ! -r "$SCHEMA" ]; then
-  warn schema "$SCHEMA not readable; full JSON Schema pass skipped"
-elif ! python3 -I -c 'import jsonschema' 2>/dev/null; then
-  warn schema "full JSON Schema pass skipped (python3 -I cannot import jsonschema); shape checks above still ran"
+  noschema "$SCHEMA not readable"
+elif ! "$PY" -I -c 'import jsonschema' 2>/dev/null; then
+  noschema "$PY -I cannot import jsonschema"
 else
-  out="$(python3 -I -c '
+  out="$("$PY" -I -c '
 import json, sys, jsonschema
 s = json.load(open(sys.argv[1])); c = json.load(open(sys.argv[2]))
 v = jsonschema.Draft202012Validator(s, format_checker=jsonschema.Draft202012Validator.FORMAT_CHECKER)
@@ -136,7 +143,7 @@ sys.exit(3 if errs else 0)' "$SCHEMA" "$card" 2>&1)"; rc=$?
   case "$rc" in
     (0) ok schema "valid against $(basename "$SCHEMA")";;
     (3) while IFS= read -r r; do fail schema "$r" "match docs/manifest.schema.json"; done <<< "$out";;
-    (*) warn schema "validator did not run: $(printf '%s\n' "$out" | tail -1)";;
+    (*) noschema "validator did not run: $(printf '%s\n' "$out" | tail -1)";;
   esac
 fi
 
@@ -158,17 +165,23 @@ else warn size "$size bytes; keep the card under 32 KB"; fi
 if [ ! -r "$CONFIG" ] && [ "$mode" = publish ]; then
   fail privacy-config "$CONFIG not readable; the card cannot be published unscanned" "run from the agent's home, or set WORK_DIR to the directory that holds CONFIG.md"
 elif [ -r "$CONFIG" ]; then
+  # Values are read with the runtime's own reader (scripts/lib/config.sh cfg()), and
+  # each comma-separated item is matched literally as one string: never word-split
+  # or glob-expanded.
+  . "$(cd "$(dirname "$0")" && pwd)/lib/config.sh"
   leaks=""
-  while IFS= read -r line; do
-    key="${line%%:*}"; key="${key#- }"; val="${line#*: }"; val="${val%%  #*}"; val="${val//\`/}"
+  while IFS= read -r key; do
     case " $PUBLIC_KEYS " in (*" $key "*) continue;; esac
     case "$key" in (*_*) grep -qwF -- "$key" "$card" && leaks="$leaks $key";; esac
-    for part in $(echo "$val" | tr ',' ' '); do
+    val="$(cfg "$key")"
+    IFS=',' read -r -a items <<< "$val"
+    for part in "${items[@]+"${items[@]}"}"; do
+      part="${part#"${part%%[![:space:]]*}"}"; part="${part%"${part##*[![:space:]]}"}"
       [ "${#part}" -ge 4 ] || continue
       case "$part" in (enabled|disabled|true|false|none|off|on|dam|both|label|chat) continue;; esac
       grep -qwF -- "$part" "$card" && leaks="$leaks $key"
     done
-  done < <(grep -E '^- [a-z_]+:' "$CONFIG")
+  done < <(sed -n 's/^- \([a-z_]*\):.*/\1/p' "$CONFIG" | sort -u)
   leaks="$(echo $leaks | tr ' ' '\n' | sort -u | tr '\n' ' ')"
   [ -z "${leaks// /}" ] && ok privacy-config "no private CONFIG.md key or value in the card" \
     || fail privacy-config "private config keys or their values appear: $leaks" "remove them, or add the key to PUBLIC_KEYS only when the design marks it public"

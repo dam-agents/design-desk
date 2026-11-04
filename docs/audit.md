@@ -2,7 +2,8 @@
 
 Weekly, ungated: `bash "$HOME/scripts/preflight.sh" audit` prints the deterministic checks;
 this run adds the judgment checks and sends one report. It is **read-only toward everything
-outside `work/`** and repairs nothing: a finding is reported, the fix is the operator's or the
+outside `work/`**, save one write: under `agent_manifest: dam` it republishes the public agent
+manifest (step 7). It repairs nothing: a finding is reported, the fix is the operator's or the
 next run's.
 
 The pass checks, among others, the GitHub login, the Desk server, the toolchain
@@ -52,7 +53,7 @@ and `audit_report` is `enabled`):
 *Week in numbers*
 • Changes carded <n> · questions answered <n> · requests <open>/<handed off> · live prototypes <n>
 • Spend: $<actual> · model <busiest>
-• Manifest: <version> · <published | unchanged | local only | FAIL> · peers <ok>/<total>
+• Manifest: <version> · <published | unchanged | local only | FAIL> · peers <ok + info>/<total>
 
 *Checks*
 🔴 <id> — <detail>

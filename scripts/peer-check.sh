@@ -4,7 +4,8 @@
 #
 #   bash scripts/peer-check.sh [work/PEERS.md]
 #
-# Prints one JSON object: {ok, warn, fail, peers:[...]}. Exit 0 unless a peer's
+# Prints one JSON object: {ok, info, warn, fail, total, peers:[...]}; total counts
+# every peer row, info is a new published version whose used ids did not change. Exit 0 unless a peer's
 # published manifest is invalid. A changed used id is a failure for the audit to
 # report; adopting it stays the operator's call (docs/manifest.md → Pin a peer).
 
@@ -20,7 +21,7 @@ SCHEMA="$HOME_DIR/docs/manifest.schema.json"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/design-desk-peers.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-ok=0; warn=0; fail=0; peers='[]'
+ok=0; info=0; warn=0; fail=0; peers='[]'
 emit_peer() {
   peers="$(jq -c --argjson p "$1" '. + [$p]' <<<"$peers")"
 }
@@ -28,7 +29,7 @@ emit_peer() {
 if [ ! -f "$TABLE" ]; then
   warn=$((warn + 1))
   jq -n --arg detail "PEERS.md missing at $TABLE" \
-    '{ok:0, warn:1, fail:0, peers:[], errors:[{status:"warn", peer:null, detail:$detail}]}'
+    '{ok:0, info:0, warn:1, fail:0, total:0, peers:[], errors:[{status:"warn", peer:null, detail:$detail}]}'
   exit 0
 fi
 
@@ -64,10 +65,10 @@ while IFS= read -r row; do
       if [ -n "$changed" ]; then status=fail; detail="$detail; used ids changed:${changed} (pin again: docs/manifest.md → Pin a peer)"; fi
     fi
   fi
-  case "$status" in ok) ok=$((ok + 1));; warn) warn=$((warn + 1));; fail) fail=$((fail + 1));; esac
+  case "$status" in ok) ok=$((ok + 1));; info) info=$((info + 1));; warn) warn=$((warn + 1));; fail) fail=$((fail + 1));; esac
   emit_peer "$(jq -nc --arg name "$name" --arg role "$role" --arg status "$status" --arg detail "$detail" '{name:$name, role:$role, status:$status, detail:$detail}')"
 done < <(grep -E '^\|' "$TABLE" || true)
 
-jq -n --argjson ok "$ok" --argjson warn "$warn" --argjson fail "$fail" --argjson peers "$peers" \
-  '{ok:$ok, warn:$warn, fail:$fail, peers:$peers}'
+jq -n --argjson ok "$ok" --argjson info "$info" --argjson warn "$warn" --argjson fail "$fail" --argjson peers "$peers" \
+  '{ok:$ok, info:$info, warn:$warn, fail:$fail, total:($peers | length), peers:$peers}'
 [ "$fail" -eq 0 ]

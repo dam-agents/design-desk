@@ -24,4 +24,21 @@ mv "$SANDBOX/new.json" "$SANDBOX/live.json"
 bash "$ROOT/scripts/manifest-check.sh" stamp "$SANDBOX/live.json" >/dev/null
 out="$(PATH="$SANDBOX/bin:$PATH" WORK_DIR="$WORK_DIR" AGENT_HOME="$ROOT" bash "$ROOT/scripts/peer-check.sh" "$WORK_DIR/PEERS.md")" && { echo "  x a changed used id must fail: $out"; FAILS=$((FAILS+1)); }
 printf '%s' "$out" | jq -e '.fail == 1 and .peers[0].status == "fail"' >/dev/null || { echo "  x the failure must name the peer: $out"; FAILS=$((FAILS+1)); }
+
+# A new published version whose used ids did not change: info, counted, in the total.
+jq '.readme += " Updated."' "$WORK_DIR/peers/karel.json" > "$SANDBOX/live.json"
+bash "$ROOT/scripts/manifest-check.sh" stamp "$SANDBOX/live.json" >/dev/null
+out="$(PATH="$SANDBOX/bin:$PATH" WORK_DIR="$WORK_DIR" AGENT_HOME="$ROOT" bash "$ROOT/scripts/peer-check.sh" "$WORK_DIR/PEERS.md")" || { echo "  x an info peer must not fail: $out"; FAILS=$((FAILS+1)); }
+printf '%s' "$out" | jq -e '.info == 1 and .total == 1 and .peers[0].status == "info"' >/dev/null || { echo "  x info peer uncounted: $out"; FAILS=$((FAILS+1)); }
+# A malformed published card: warn.
+echo '{' > "$SANDBOX/live.json"
+out="$(PATH="$SANDBOX/bin:$PATH" WORK_DIR="$WORK_DIR" AGENT_HOME="$ROOT" bash "$ROOT/scripts/peer-check.sh" "$WORK_DIR/PEERS.md")" || true
+printf '%s' "$out" | jq -e '.warn == 1 and .total == 1 and .peers[0].status == "warn"' >/dev/null || { echo "  x malformed peer is a warn: $out"; FAILS=$((FAILS+1)); }
+# No pinned copy: fail.
+cp "$WORK_DIR/peers/karel.json" "$SANDBOX/live.json"; rm "$WORK_DIR/peers/karel.json"
+out="$(PATH="$SANDBOX/bin:$PATH" WORK_DIR="$WORK_DIR" AGENT_HOME="$ROOT" bash "$ROOT/scripts/peer-check.sh" "$WORK_DIR/PEERS.md")" && { echo "  x a missing pinned copy must fail: $out"; FAILS=$((FAILS+1)); }
+printf '%s' "$out" | jq -e '.fail == 1 and .peers[0].status == "fail"' >/dev/null || { echo "  x missing pin: $out"; FAILS=$((FAILS+1)); }
+# No PEERS.md: warn.
+out="$(WORK_DIR="$WORK_DIR" AGENT_HOME="$ROOT" bash "$ROOT/scripts/peer-check.sh" "$SANDBOX/nopeers.md")"
+printf '%s' "$out" | jq -e '.warn == 1 and .total == 0' >/dev/null || { echo "  x missing PEERS.md: $out"; FAILS=$((FAILS+1)); }
 finish

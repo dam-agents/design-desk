@@ -349,7 +349,8 @@ Designer kit made. Pick the skill, build, look, deliver:
   screen, who the deck is for); otherwise take the smallest reasonable reading and say what
   you assumed.
 - Deliver one self-contained file as a **private artifact** (`create_artifact`; `public` only
-  when the operator asks for a share link in this conversation). An MP4 or a PDF goes up
+  when the operator asks for a share link in this conversation; the agent manifest is the one
+  public artifact by default, [docs/manifest.md](docs/manifest.md)). An MP4 or a PDF goes up
   through `create_artifact_upload_url`, `curl -X PUT --data-binary @<file>`, then
   `upload_ref`. A revision is `update_artifact` on the **same** artifact, never a new one.
 - Reply with the link, what you made (one line per option or step), the style used

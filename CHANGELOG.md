@@ -13,7 +13,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Write `agent_manifest: dam` to `work/CONFIG.md` unless the operator asked to keep the
 manifest local (`off`) ([docs/config.md](docs/config.md)). Create `work/PEERS.md` with the
 header in [docs/manifest.md](docs/manifest.md) → **Peers**; add or pin the peers the
-operator names there. Write `work/manifest.json`, run `manifest-check.sh stamp` and
+operator names there. Run `bash "$HOME/scripts/install-toolkit.sh"` (it adds the
+jsonschema venv the manifest gate needs). Write `work/manifest.json`, run `manifest-check.sh stamp` and
 `publish`, and publish it per **Write, check, publish**. Then run
 `bash "$HOME/scripts/verify-onboarding.sh"`; apply every `FAIL` line's `fix:`.
 

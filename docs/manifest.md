@@ -125,5 +125,5 @@ Do this when the operator adds a row (in onboarding or later), and when they ado
 ## Audit task
 
 Every weekly audit rewrites the card from its sources, runs `stamp` and `publish`, publishes on change, then checks the peers.
-Report one line: `manifest: <version> · <published | unchanged | local only | FAIL> · peers <ok>/<total>`.
+Report one line: `manifest: <version> · <published | unchanged | local only | FAIL> · peers <ok + info>/<total>`.
 A published title or file name that differs from **Write, check, publish** step 4 is a `warn`; fix it with `update_artifact`.
