@@ -24,6 +24,8 @@ export const LIMITS = {
   issue: { title: 90, summary: 180, needs: 3, need: 200, sketches: 2 },
   // The user stories of the issue a request came from, and how each option meets them.
   stories: 12,
+  // The decisions one option rests on, each pointing at the parts it shaped.
+  reasons: 12,
   // Earlier looks of one element or screen kept on its card; the oldest go first.
   looks: 30,
   // The whole store is one file rewritten on every change; past this people's writes
@@ -314,7 +316,7 @@ export class Store {
     // A conflict carries the decision's words and where it stands, so the page warns without another read.
     const conflicts = (c.conflicts || []).map((x) => { const d = own(this.db.decisions, x.decision); return { ...x, text: d?.text || "", status: d?.status || "revoked", replaced_by: d?.revoked?.replaced_by || null }; });
     // Each decision the card cites, with its words and whether it is still in force.
-    const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean)]
+    const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
     return { ...c, conflicts, cited, attention: this.attentionOf(c), designed: this.designedOf(c), sent_card: this.sentCardOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter(Boolean), waiting: this.waitingFor(c.id) };
   }
@@ -969,7 +971,7 @@ export class Store {
       } else if (k === "sections") next.sections = cleanSections(fields.sections, next.kind === "change" ? brief : null, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") {
-        next.variants = versioned(cleanVariants(fields.variants, this.db.assets), c?.variants || [], this.clock());
+        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions), c?.variants || [], this.clock());
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
         // Nor does an option taken off go live, nor a build still waiting to build it.
@@ -1346,8 +1348,11 @@ export class Store {
     const d = this.decision(id), refs = [];
     for (const c of Object.values(this.db.cards)) {
       const how = (c.conflicts || []).some((x) => x.decision === d.id) ? "conflicts"
-        : (c.decisions || []).includes(d.id) || (c.impact?.decisions || []).some((x) => x.id === d.id) ? "cites" : null;
-      if (how) refs.push({ id: c.id, kind: c.kind, title: c.title, status: c.status, how });
+        : (c.decisions || []).includes(d.id) || (c.impact?.decisions || []).some((x) => x.id === d.id) ? "cites"
+        : shapedBy(c).includes(d.id) ? "shapes" : null;
+      // An option it shaped is named, so the decision's page says which design follows it.
+      const options = (c.variants || []).filter((v) => (v.reasons || []).some((r) => r.decision === d.id)).map((v) => v.name);
+      if (how) refs.push({ id: c.id, kind: c.kind, title: c.title, status: c.status, how, ...(options.length ? { options } : {}) });
     }
     for (const o of Object.values(this.db.decisions)) {
       const how = (o.replaces || []).includes(d.id) ? "replaces" : (o.conflicts || []).some((x) => x.decision === d.id) ? "conflicts" : null;
@@ -1492,12 +1497,16 @@ function cleanMarks(list) {
 
 // Dates are compared as instants: an agent's date can carry an offset (`git log %cI`).
 const instant = (iso) => Date.parse(iso) || 0;
+// The decisions a card's options rest on (variants[].reasons).
+const shapedBy = (c) => [...new Set((c.variants || []).flatMap((v) => (v.reasons || []).map((r) => r.decision)))];
+
 // Earlier looks, newest first; past the limit the oldest go.
 const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).slice(0, LIMITS.looks);
 
 // A variant the agent redraws keeps its id; its earlier drawings stay as history, so the
 // page can show what changed and people's pinned notes still find their option.
-// An entry that leaves `stories` out keeps the option's coverage from before.
+// An entry that leaves `stories` out keeps the option's coverage from before, and one that
+// leaves `reasons` out the decisions it rests on.
 // Two runs on one card each send the whole list: a run that read an option or a state at a
 // version older than the card's would put back the drawing it replaced, so it is refused.
 // An option or a state already on the card is sent with the `version` the run read; one
@@ -1527,7 +1536,7 @@ function versioned(list, before, at) {
     if (given.states) given.states = given.states.map(({ read: _, ...x }) => x);
     const old = before.find((x) => x.id === given.id);
     const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
-    const v = { ...given, stories: given.stories || old?.stories || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was) };
+    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was) };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -1672,7 +1681,7 @@ function cleanShotlist(list) {
   return list.slice(0, 12).map((x) => ({ name: clean(x.name, 120, "shot name"), how: optText(x.how, 600, "how"), path: optText(x.path, 300, "path") }));
 }
 
-function cleanVariants(list, assets) {
+function cleanVariants(list, assets, decisions = {}) {
   if (!Array.isArray(list)) throw bad("variants must be a list");
   return list.slice(0, 12).map((v, i) => {
     // An option the run takes off the card on purpose: `{id, drop: true}`.
@@ -1686,6 +1695,7 @@ function cleanVariants(list, assets) {
       asset: v.asset,
       figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
       stories: v.stories == null ? null : cleanCoverage(v.stories, i + 1),
+      reasons: v.reasons == null ? null : cleanReasons(v.reasons, decisions, i + 1),
       // The version the run read (`version` as the card gave it): an older one is refused.
       ...(Number.isInteger(v.version) ? { read: v.version } : {}),
       // Leaving `states` out keeps the option's states from before; [] removes them.
@@ -1741,9 +1751,26 @@ function cleanCoverage(list, n) {
     if (!["yes", "partly", "no"].includes(x.met)) throw bad(`variant ${n}: met must be yes, partly or no`);
     const parts = x.parts === undefined ? [] : x.parts;
     if (!Array.isArray(parts) || parts.length > 6) throw bad(`variant ${n}: a story points at 6 parts at most`);
-    return { story: String(x.story), met: x.met, how: clean(x.how, 600, "how"),
-      parts: parts.map((p) => ({ selector: clean(String(p?.selector || ""), 500, "selector"), label: clean(String(p?.label || ""), 120, "label"),
-        ...(p?.view ? { view: String(p.view).slice(0, 40) } : {}) })) };
+    return { story: String(x.story), met: x.met, how: clean(x.how, 600, "how"), parts: parts.map(cleanOptionPart) };
+  });
+}
+// A part of an option a story or a reason points at: a CSS path, a plain label, the view it is on.
+const cleanOptionPart = (p) => ({ selector: clean(String(p?.selector || ""), 500, "selector"), label: clean(String(p?.label || ""), 120, "label"),
+  ...(p?.view ? { view: String(p.view).slice(0, 40) } : {}) });
+
+// Why an option's parts are as they are: each decision on the Desk it follows, in one or two
+// plain sentences on how, and the parts it shaped, which the page tags in the design.
+function cleanReasons(list, decisions, n) {
+  if (!Array.isArray(list) || list.length > LIMITS.reasons) throw bad(`variant ${n}: reasons is a list of at most ${LIMITS.reasons}`);
+  const seen = new Set();
+  return list.map((x) => {
+    const id = String(x?.decision || "");
+    if (!own(decisions, id)) throw bad(`variant ${n}: no decision ${id || "named"} on the Desk`);
+    if (seen.has(id)) throw bad(`variant ${n}: ${id} is given twice; one reason names all the parts it shaped`);
+    seen.add(id);
+    const parts = x.parts === undefined ? [] : x.parts;
+    if (!Array.isArray(parts) || parts.length > 6) throw bad(`variant ${n}: a reason points at 6 parts at most`);
+    return { decision: id, how: clean(x.how, 600, "how"), parts: parts.map(cleanOptionPart) };
   });
 }
 

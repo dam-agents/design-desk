@@ -12,7 +12,7 @@
   :root {
     --bg: #f7f7f5; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
-    --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
     --font: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     /* The page grows with the window: text runs wider, the list and pictures get room. */
@@ -25,11 +25,11 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
       --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
-      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --shadow: none; color-scheme: dark; }
+      --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; color-scheme: dark; }
   }
   :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
     --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
-    --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --shadow: none; color-scheme: dark; }
+    --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -291,6 +291,31 @@
   .sel { padding: 10px 12px; border-radius: var(--radius); border: 2px solid var(--accent); background: var(--info-soft); }
   .sel.none { border-style: dashed; border-color: var(--line); background: transparent; }
   .sel .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  /* Why an option looks as it does: the decisions it rests on, tagged on the parts they shaped. */
+  .dtag { display: inline-flex; align-items: center; gap: 3px; flex: none; padding: 0 7px; border-radius: 999px; border: 1px solid var(--why); color: var(--why); background: var(--panel); font: 600 11.5px/18px var(--font); white-space: nowrap; }
+  .dtag.gone { border-color: var(--bad); color: var(--bad); text-decoration: line-through; }
+  .why-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0; max-width: var(--measure); }
+  .why-strip .k, .why .k, .why-sel .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .why-strip button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 2px 10px 2px 3px; cursor: pointer; font-size: 12.5px; }
+  .why-strip button:hover { border-color: var(--why); background: var(--why-soft); }
+  .why-strip button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34ch; }
+  .why { display: grid; gap: 8px; }
+  .why .head { display: flex; align-items: baseline; gap: 8px; } .why .head h3 { margin: 0; }
+  .reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .reason { border: 1px solid var(--line); border-left: 3px solid var(--why); border-radius: var(--radius); padding: 9px 11px; cursor: pointer; background: var(--panel); }
+  .reason:hover { background: var(--soft); }
+  .reason[aria-current="true"] { background: var(--why-soft); border-color: var(--why); }
+  .reason.gone { border-left-color: var(--bad); }
+  .reason .rh { display: flex; gap: 8px; align-items: flex-start; } .reason .rh b { font-weight: 600; }
+  .reason .how { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .reason .parts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .reason .parts .btn::before { content: "◆"; color: var(--why); margin-right: 4px; font-size: 9px; }
+  .reason .more { display: inline-block; margin-top: 6px; font-size: 12.5px; }
+  .reason .gone-note { margin: 6px 0 0; font-size: 12.5px; color: var(--bad); }
+  .ws-side .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; } .ws-side .link:hover { text-decoration: underline; }
+  .why-sel { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+  .why-sel button { display: flex; gap: 6px; align-items: flex-start; text-align: left; border: 0; background: none; padding: 2px 0; cursor: pointer; font-size: 13px; }
+  .why-sel button:hover span:last-child { text-decoration: underline; }
   .edit { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--soft); }
   .notes { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
   .note { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; }
@@ -574,6 +599,10 @@
     wsVariant: "Shows this design option",
     story: "Shows how each option meets this user story",
     storyPart: "Shows this part in the design",
+    why: "Opens the design workspace with the parts this decision shaped tagged",
+    wsWhy: (v, el) => el.classList.contains("on") ? "Hides the decision tags on the design" : "Tags each part of the design with the decisions that shaped it",
+    reason: "Highlights the parts this decision shaped",
+    reasonPart: "Shows this part in the design",
     look: (v, el) => v === "now" ? "Goes back to how it looks today" : /Older/.test(textOf(el)) ? "Shows the version before this one" : /Newer/.test(textOf(el)) ? "Shows the version after this one" : "Shows how it looked then",
     lookSide: (v, el) => /alone/.test(textOf(el)) ? "Shows the older version on its own" : "Puts the older version next to how it looks today",
     copyLink: "Copies a link that opens this item: paste it in Slack, an issue or a message",
@@ -658,7 +687,7 @@
 
   // ---------- state ----------
   const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
-    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set(), askFirst: true } };
+    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
@@ -1024,6 +1053,7 @@
   const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
+  S.ws.why = store.get("desk-why") !== "0";
 
   function visibleCards() {
     if (S.tab === "new") return newCards(S.newFilter);
@@ -1200,8 +1230,8 @@
     return `<p><b>${esc(ORIGIN_KIND[o.kind] || "Source")}</b>${where ? ` — ${where}` : ""}${o.url && card ? ` · on <button class="anchor" data-card="${esc(card.id)}">${esc(card.id)}</button>` : ""}</p>`;
   }
   function renderDecision(d) {
-    const HOW = { conflicts: "goes against it", cites: "follows it", replaces: "replaces it" };
-    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, r.title, r.status === "revoked") : `<button class="anchor" data-card="${esc(r.id)}">${esc(r.title)} ${esc(r.id)}</button>`} — <span class="${r.how === "conflicts" ? "chip warn" : "chip"}">${esc(HOW[r.how] || r.how)}</span></li>`).join("");
+    const HOW = { conflicts: "goes against it", cites: "follows it", replaces: "replaces it", shapes: "a design option follows it" };
+    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, r.title, r.status === "revoked") : `<button class="anchor" data-card="${esc(r.id)}">${esc(r.title)} ${esc(r.id)}</button>`} — <span class="${r.how === "conflicts" ? "chip warn" : "chip"}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
     const against = (d.conflicts || []).filter((x) => x.status === "active");
     const rv = d.revoked;
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}</h2>
@@ -1223,6 +1253,15 @@
   function againstBox(c, variant = null) {
     const xs = (c.conflicts || []).filter((x) => x.status === "active" && (variant ? x.variant === variant : !x.variant));
     return xs.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("");
+  }
+  // Why an option looks as it does (docs/requests.md → Variants): the decisions it rests on,
+  // each with the parts of the design it shaped. One no longer in force is crossed out.
+  const gone = (c, id) => c.cited?.[id]?.status === "revoked";
+  const dtag = (c, id) => `<span class="dtag ${gone(c, id) ? "gone" : ""}">◆ ${esc(id)}</span>`;
+  function whyStrip(c, v) {
+    const rs = v.reasons || [];
+    if (!rs.length) return "";
+    return `<div class="why-strip"><span class="k">Why it looks like this</span>${rs.map((r) => `<button data-why="${esc(r.decision)}" title="${esc(c.cited?.[r.decision]?.text || r.decision)} — opens the design with the parts it shaped tagged">${dtag(c, r.decision)}<span class="${gone(c, r.decision) ? "revoked-text" : ""}">${esc(c.cited?.[r.decision]?.text || "")}</span></button>`).join("")}</div>`;
   }
 
   // ---------- the presentation ----------
@@ -1742,7 +1781,7 @@
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
       <div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}</button>`).join("")}</div>
-      ${againstBox(c, v.id)}
+      ${againstBox(c, v.id)}${whyStrip(c, v)}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="A designer picked this option as the winner">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : ""}
       <div class="vbar">
         ${can("vote") ? `<button class="btn small ${mine === "prefer" ? "on" : ""}" data-vote="prefer">👍 I like this one</button><button class="btn small ${mine === "concern" ? "on" : ""}" data-vote="concern">⚠ I have a concern</button>` : ""}
@@ -1921,7 +1960,7 @@
   // people click, edits text in place, draws numbered pins for notes, and posts back a
   // CSS path, the text and a plain label.
   function frameScript() {
-    let mode = "off", selected = null, hover = null, pins = [], editing = null;
+    let mode = "off", selected = null, hover = null, pins = [], editing = null, under = null;
     const layer = document.createElement("div");
     layer.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483647";
     document.documentElement.appendChild(layer);
@@ -1934,7 +1973,15 @@
     // A note on another view of the design opens that view first, through the review bar.
     const reveal = (el) => { const v = el?.closest("[data-view]"); if (v && !v.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(v.dataset.view) + '"]')?.click(); };
     const box = (el, color, label, solid) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; d.appendChild(b); } layer.appendChild(d); };
-    const draw = () => { layer.textContent = ""; for (const p of pins) { const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story"); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
+    // A part a decision shaped: a dashed frame with a small mark in its corner; the decisions'
+    // numbers show on the part under the pointer and, framed solid, on the decision picked,
+    // while the others keep only a faint frame. A decision no longer in force is red.
+    const tag = (el, text, focus, quiet, gone, full) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const c = gone ? "#b3261e" : "#0d7d78"; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border-radius:5px;box-sizing:border-box;" + (focus ? "border:2px solid " + c + ";background:" + (gone ? "rgba(179,38,30,.07)" : "rgba(13,125,120,.08)") : "border:1px dashed " + c + (quiet ? ";opacity:.3" : "")); layer.appendChild(d); if (quiet || !text) return; const b = document.createElement("span"); if (!full) { b.textContent = "◆"; b.style.cssText = "position:absolute;right:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#fff;color:" + c + ";border:1px solid " + c + ";font:9px/13px system-ui,sans-serif;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.18)"; d.appendChild(b); return; } b.textContent = "◆ " + text; b.style.cssText = "position:absolute;right:-2px;" + (r.top + scrollY < 22 ? "bottom:-20px" : "top:-20px") + ";background:" + (focus ? c : "#fff") + ";color:" + (focus ? "#fff" : c) + ";border:1px solid " + c + ";font:600 11px/17px system-ui,sans-serif;padding:0 6px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.18)" + (gone ? ";text-decoration:line-through" : ""); d.appendChild(b); };
+    const shaped = (el) => [...new Set(pins.filter((p) => p.why && find(p.selector)?.contains(el)).map((p) => p.why))];
+    const draw = () => { layer.textContent = ""; const why = new Map(); for (const p of pins) { if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story"); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
+      // A part inside another part the same decision shaped does not repeat its number.
+      const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
+      for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
     addEventListener("scroll", draw, true); addEventListener("resize", draw); setInterval(draw, 700);
     // The screen shown is kept across options: the Desk names the one to open when the frame
     // loads, and from then on hears of each screen the person moves to.
@@ -1944,7 +1991,7 @@
     const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
     new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
-    addEventListener("mouseover", (e) => { if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
+    addEventListener("mouseover", (e) => { if (pins.some((p) => p.why) && under !== e.target) { under = e.target; draw(); } if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
       // The review bar always acts (views, Clickable, theme), and so do its clicks for a note.
@@ -1952,7 +1999,7 @@
       if (editing && editing.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
       const el = e.target; selected = el; hover = null; draw();
-      parent.postMessage({ type: "desk-picked", selector: css(el), tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), ...viewOf(el) }, "*");
+      parent.postMessage({ type: "desk-picked", selector: css(el), tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), ...viewOf(el) }, "*");
       if (mode === "edit") startEdit(el);
     }, true);
     function startEdit(el) {
@@ -2033,6 +2080,7 @@
       <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
+      ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
       <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
     $("#ws-states").innerHTML = wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
@@ -2093,6 +2141,7 @@
         <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
         <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
         ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
+        ${whyOfSelected(c, v, sel)}
         ${sel && can("revise") && !S.ws.state ? `<div class="actions" style="margin:6px 0 0"><button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button></div>` : ""}
       </div>
       ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
@@ -2102,10 +2151,39 @@
         ${shaper ? `<p class="hint">Design Desk changes the design and the new version appears here by itself. Notes sent in a row are done together.</p>` : ""}
       </div>`}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
-      ${renderWsNotes(c, v, sel)}`;
+      ${renderWsNotes(c, v, sel)}
+      ${renderWhy(c, v)}`;
     loadPictures(side);
     const nt = $("#ws-text");
     if (nt) { nt.value = keep; if (focused) { nt.focus(); if (caret) nt.setSelectionRange(caret[0], caret[1]); } }
+  }
+
+  const showReason = () => $('.reason[aria-current="true"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  // The decisions that shaped the selected part: the reasons naming it, or a part it sits in.
+  function whyOfSelected(c, v, sel) {
+    if (!sel?.selector) return "";
+    const rs = (v.reasons || []).filter((r) => (sel.why || []).includes(r.decision) || r.parts.some((p) => p.selector === sel.selector));
+    if (!rs.length) return "";
+    return `<div class="why-sel"><span class="k">Why it is like this</span>${rs.map((r) => `<button data-reason="${esc(r.decision)}">${dtag(c, r.decision)}<span class="${gone(c, r.decision) ? "revoked-text" : ""}">${esc(c.cited?.[r.decision]?.text || r.how)}</span></button>`).join("")}</div>`;
+  }
+  // Every decision the option rests on: what it says, how the option follows it, the parts it
+  // shaped (each shown in the design on a click) and a link to who decided it and why.
+  function renderWhy(c, v) {
+    const rs = v.reasons || [];
+    if (!rs.length) return "";
+    if (!S.ws.why) return `<p class="hint">◆ ${plural(rs.length, "decision", "decisions")} shaped this option. <button class="link" data-ws-why>Show why it looks like this</button></p>`;
+    const off = rs.filter((r) => gone(c, r.decision)).length;
+    return `<section class="why"><div class="head"><h3>Why it looks like this</h3><span class="hint">${plural(rs.length, "decision", "decisions")}</span></div>
+      <p class="hint" style="margin:0">The team's decisions this option follows. Each one is tagged <span class="dtag">◆ D-…</span> on the parts it shaped; pick one to see them.</p>
+      ${off ? `<p><span class="chip bad" title="A decision this option follows no longer holds">⚠ ${plural(off, "decision", "decisions")} no longer in force</span></p>` : ""}
+      <ol class="reasons">${rs.map((r) => {
+        const d = c.cited?.[r.decision] || {}, x = gone(c, r.decision);
+        return `<li class="reason ${x ? "gone" : ""}" data-reason="${esc(r.decision)}" aria-current="${S.ws.reason === r.decision}">
+          <div class="rh">${dtag(c, r.decision)}<b class="${x ? "revoked-text" : ""}">${esc(d.text || r.decision)}</b></div>
+          ${x ? `<p class="gone-note">⚠ This decision no longer holds, so the parts it shaped may need another look.</p>` : ""}
+          <p class="how">${esc(r.how)}</p>
+          ${r.parts.length ? `<div class="parts">${r.parts.map((p, i) => `<button class="btn small" data-reason-part="${esc(r.decision)}|${i}">${esc(p.label)}</button>`).join("")}</div>` : ""}
+          <a class="more" href="#${esc(r.decision)}" data-ref="${esc(r.decision)}">Who decided it and why →</a></li>`; }).join("")}</ol></section>`;
   }
 
   // Notes on this option: open first, each with its whole conversation once picked, a reply,
@@ -2145,11 +2223,13 @@
         frame.contentWindow?.postMessage({ type: "desk-view", ...(S.ws.view || {}) }, "*");
         sendPins(S.card, v);
         if (S.ws.selected?.selector) frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*");
+        else { const r = (v.reasons || []).find((x) => x.decision === S.ws.reason); if (r?.parts[0]) frame.contentWindow?.postMessage({ type: "desk-show", selector: r.parts[0].selector }, "*"); }
       };
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
   }
   function sendPins(c, v) {
     const pins = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector).map((n) => ({ n: n.n, selector: n.anchor.selector, state: noteState(c, n)[0] }));
+    if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
   }
   const frameSay = (msg) => $("#ws-frame")?.contentWindow?.postMessage(msg, "*");
@@ -2162,7 +2242,7 @@
     // The screen the person moved to; the next option or version opens the same one if it has it.
     if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
-    if (d.type === "desk-picked") { S.ws.selected = pickOf(d.text); S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
+    if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
     if (d.type === "desk-edited") {
       S.ws.selected = pickOf(d.to); S.ws.edit = { from: String(d.from || ""), to: String(d.to || "") };
       renderWorkspace();
@@ -2174,7 +2254,7 @@
   // What the workspace shows; a refresh that changes none of it leaves it alone.
   function wsFingerprint(c) {
     const v = (c.variants || []).find((x) => x.id === S.variant);
-    return JSON.stringify([v?.asset, v?.version, (v?.states || []).map((x) => x.asset), (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
+    return JSON.stringify([v?.asset, v?.version, (v?.states || []).map((x) => x.asset), v?.reasons, c.cited, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
   }
 
   // ---------- rendering the detail ----------
@@ -2249,7 +2329,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, check: false }; }
+    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -2469,7 +2549,7 @@
   }
 
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note]");
+    const el = e.target.closest("button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note], [data-reason]");
     if (!el) return;
     const ds = el.dataset;
     if (ds.tab) { e.preventDefault(); await showTab(ds.tab); return; }
@@ -2556,6 +2636,7 @@
     }
     if (ds.choose !== undefined) { await api("POST", `/api/cards/${S.card.id}/chosen`, { variant: ds.choose || null }); toast(ds.choose ? "Picked as the winner." : "No winner picked."); await refreshList(); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
+    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
     if (ds.story) { S.story = ds.story; renderDetail(); return; }
     if (ds.storyPart) { const pin = storyPins()[Number(ds.storyPart)]; if (pin) $("#story-frame")?.contentWindow?.postMessage({ type: "desk-show", selector: pin.selector }, "*"); return; }
     if (ds.vote) {
@@ -2588,6 +2669,21 @@
     if ("wsBuild" in ds) { await buildChecked(); return; }
     if ("wsEdit" in ds) { S.ws.check = false; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); frameSay({ type: "desk-mode", mode: S.ws.mode }); return; }
     if (ds.wsMode) { S.ws.mode = ds.wsMode; renderWorkspace(); frameSay({ type: "desk-mode", mode: ds.wsMode }); return; }
+    // Why it looks like this: the tags on the design, one decision's parts, one part of it.
+    if ("wsWhy" in ds) { S.ws.why = !S.ws.why; if (!S.ws.why) S.ws.reason = null; store.set("desk-why", S.ws.why ? "1" : "0"); renderWorkspace(); return; }
+    if (ds.reasonPart) {
+      const [id, i] = ds.reasonPart.split("|"), r = (wsVariant(S.card)?.reasons || []).find((x) => x.decision === id), p = r?.parts[Number(i)];
+      if (!p) return;
+      S.ws.reason = id; renderWorkspace(); frameSay({ type: "desk-show", selector: p.selector }); return;
+    }
+    if (ds.reason) {
+      if (e.target.closest("input")) return;
+      const r = (wsVariant(S.card)?.reasons || []).find((x) => x.decision === ds.reason);
+      S.ws.reason = S.ws.reason === ds.reason ? null : ds.reason; S.ws.why = true;
+      renderWorkspace(); showReason();
+      if (S.ws.reason && r?.parts[0]) frameSay({ type: "desk-show", selector: r.parts[0].selector });
+      return;
+    }
     if ("wsSend" in ds) { await wsSend(ds.wsSend); return; }
     if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }
     if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
