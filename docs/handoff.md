@@ -62,7 +62,8 @@ sent; the developer or coding agent gets only answers.
    - `idea` and `proposal` — per `handoff`: `desk` (nothing more), `issue` or `draft-pr`.
 
    **Straight to implementation** — the item has `implement` (the approver ticked it on
-   Approve; the page offers it only where the spec reaches GitHub): the spec also reaches the
+   Approve; the Desk refuses it where the spec stays on the Desk, and a route that is `desk`
+   at delivery ignores it): the spec also reaches the
    coding agent as an issue with the label its manifest names for work to implement — the
    origin issue for a `feature`, the issue `implementer: issue` or `handoff: issue` files, else
    a new issue with the spec. No manifest or no label → deliver without it and say so on the

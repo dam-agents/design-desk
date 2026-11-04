@@ -398,7 +398,7 @@ export class Store {
     }
     // A person's answer to the agent's question resumes the step it blocked; a follow-up
     // on a change note goes back to the agent with the other notes.
-    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); if (t.resume && !item.variant) Object.assign(item, structuredClone(t.resume)); }
+    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); const { implement, ...was } = t.resume || {}; if (was.variant && !item.variant) Object.assign(item, structuredClone(was)); if (implement) item.implement = true; }
     if (t.kind === "change" && !who?.agent) { t.state = "open"; t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
     this.card(t.card).updated = this.clock();
     this.save();
@@ -1574,10 +1574,12 @@ function issueKey(url) {
 
 // What else the step's last item named (the option and the part whose states are drawn),
 // so an answer resumes the same work.
+// A handoff straight to implementation stays so after its questions (docs/handoff.md, step 5).
 function resumeOf(inbox, card, kind) {
-  const xs = Object.values(inbox).filter((i) => i.card === card && i.kind === kind && i.variant).sort((a, b) => a.created.localeCompare(b.created));
-  const last = xs[xs.length - 1];
-  return last ? { resume: { variant: last.variant, ...(last.part ? { part: last.part } : {}) } } : {};
+  const xs = Object.values(inbox).filter((i) => i.card === card && i.kind === kind).sort((a, b) => a.created.localeCompare(b.created));
+  const last = xs.filter((i) => i.variant).pop(), now = xs[xs.length - 1];
+  const resume = { ...(last ? { variant: last.variant, ...(last.part ? { part: last.part } : {}) } : {}), ...(now?.implement ? { implement: true } : {}) };
+  return Object.keys(resume).length ? { resume } : {};
 }
 
 function lastNote(inbox, card, kind) {

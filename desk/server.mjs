@@ -249,6 +249,8 @@ async function viewerRoute(req, res, url, who) {
     if (action !== "approve" || !(store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : action === "states" ? "revise" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
+    // Straight to implementation labels an issue: only where the approved spec reaches GitHub (docs/handoff.md, step 5).
+    if (action === "approve" && b.implement === true && (s.handoff[store.card(p[2]).request?.type || "idea"] || "desk") === "desk") throw new DeskError(400, "This request's spec stays on the Desk, so it cannot go straight to the coding agent.");
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
     return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true, implement: b.implement === true,
       variant: typeof b.variant === "string" ? b.variant : null, version: Number.isInteger(b.version) ? b.version : null,

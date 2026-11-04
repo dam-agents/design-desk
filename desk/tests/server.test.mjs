@@ -130,10 +130,10 @@ test("deciding straight away: a lead developer approves or decides and closes, a
   assert.equal(me.body.can.skip, true);
   assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/actions`, { action: "approve" })).status, 403, "a developer approves only a small change");
   assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/decide`, { text: "No." })).status, 403);
-  const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header.", implement: true });
+  assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header.", implement: true })).status, 400, "an idea's spec stays on the Desk: not straight to the coding agent");
+  const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header." });
   assert.equal(ok.status, 200);
-  assert.deepEqual([ok.body.inbox.kind, ok.body.card.approved.by.email], ["handoff", "lou@example.com"]);
-  assert.deepEqual([ok.body.card.approved.implement, ok.body.inbox.implement], [true, true], "straight to implementation: the handoff labels its issue");
+  assert.deepEqual([ok.body.inbox.kind, ok.body.card.approved.by.email, ok.body.card.approved.implement], ["handoff", "lou@example.com", undefined]);
 
   const other = (await d.viewer("bob@example.com", "/api/requests", { problem: "The badge is hard to see.", options: 0 })).body.card.id;
   assert.equal((await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Too early." })).status, 400, "not before Design Desk checked it");
@@ -141,6 +141,15 @@ test("deciding straight away: a lead developer approves or decides and closes, a
   const decided = await d.viewer("lou@example.com", `/api/cards/${other}/decide`, { text: "Badges stay: colour is for errors only." });
   assert.equal(decided.status, 201);
   assert.deepEqual([decided.body.card.status, decided.body.inbox.kind], ["declined", "decision"]);
+});
+
+test("straight to implementation where the spec reaches GitHub: the approval and its handoff carry it", async (t) => {
+  const d = await desk(t, "- handoff: issue\n\n");
+  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 })).body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
+  const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header.", implement: true });
+  assert.equal(ok.status, 200);
+  assert.deepEqual([ok.body.card.approved.implement, ok.body.inbox.implement], [true, true]);
 });
 
 test("prototype_requesters reads a role as the roster does: `Lead developer` is lead-developer", async (t) => {
