@@ -9,6 +9,8 @@
 #      otherwise a self-contained one from @sparticuz/chromium is unpacked into
 #      ~/.local/share/design-desk/chromium (its own libs and fonts, no root needed).
 #   3. ~/bin/design, the one command every skill calls.
+#   4. A Python venv with jsonschema in ~/.local/share/design-desk/pyenv: the full
+#      JSON Schema pass that manifest-check.sh publish needs (docs/manifest.md).
 #
 # Prints one line per step and exits non-zero only when a step that the skills
 # cannot work without failed.
@@ -63,4 +65,13 @@ WRAP
 chmod +x "$HOME_DIR/bin/design"
 echo "ok   command — $HOME_DIR/bin/design (run \`design\` for usage)"
 case ":$PATH:" in (*":$HOME_DIR/bin:"*) ;; (*) echo "note PATH — $HOME_DIR/bin is not on PATH; call it as ~/bin/design";; esac
+# 4. The manifest's JSON Schema validator (scripts/manifest-check.sh publish needs it).
+PYENV="$DATA/pyenv"
+if [ -x "$PYENV/bin/python3" ] && "$PYENV/bin/python3" -I -c 'import jsonschema' 2>/dev/null; then
+  echo "ok   jsonschema — $PYENV"
+elif python3 -m venv "$PYENV" >/dev/null 2>&1 && "$PYENV/bin/pip" install -q --disable-pip-version-check jsonschema >/dev/null 2>&1; then
+  echo "ok   jsonschema — $PYENV"
+else
+  echo "FAIL jsonschema — could not create $PYENV with jsonschema (is pypi.org reachable?); the agent manifest cannot be published"; fail=1
+fi
 exit "$fail"

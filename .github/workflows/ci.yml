@@ -89,6 +89,12 @@ jobs:
           done
           echo "checked $n cross-file section references"
           exit $rc
+      # The manifest gate runs the full JSON Schema pass (scripts/manifest-check.sh).
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: jsonschema for the manifest gate
+        run: python3 -m pip install --disable-pip-version-check jsonschema
       - name: offline test suite
         run: |
           if [ -x scripts/tests/run.sh ] || [ -f scripts/tests/run.sh ]; then
