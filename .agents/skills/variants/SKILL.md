@@ -215,7 +215,9 @@ Self-check:
   structure: the Desk pins a comment to an element by its position and text. With the card's
   `issue_brief`, each variant also says how it meets every user story, pointing at the
   elements that do it (`stories`, docs/requests.md → Variants): give those elements an `id`
-  so their CSS path stays short and survives a redraw.
+  so their CSS path stays short and survives a redraw. Each variant also names the Desk
+  decisions in force it follows and the elements each one shaped (`reasons`, same section),
+  so people see why a part is there and looks as it does; the same `id` rule holds.
 - **Every state of a part** (the `states` action) — docs/requests.md → Every state of a part:
   one built page per state of the part, each the whole option with only that part changed,
   uploaded with `--kind variant` but sent as the option's `states` (`{id, version, name, how,

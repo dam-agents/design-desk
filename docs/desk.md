@@ -121,7 +121,8 @@ and `D-12` in text link to it as to a card (Links to an item).
   `other` marks only a record from before decisions named their origin; never write it.
 
 - **Citing**: whatever rests on a decision names its number — a card's `decisions: ["D-3"]`,
-  `impact.decisions[].id`, a section, an answer, a spec, a Slack reply, the digest.
+  `impact.decisions[].id`, an option's `reasons[].decision` with the parts it shaped
+  ([requests.md](requests.md) → Variants), a section, an answer, a spec, a Slack reply, the digest.
 - **Conflicts**: before writing a triage verdict, options, a change card, an issue's sketch or
   a decision, read the ones in force for its concepts (`design desk decisions --concept <c>
   --state active`). Each one it goes against goes in `conflicts: [{decision, why, variant}]`
