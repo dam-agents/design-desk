@@ -793,8 +793,9 @@ test("numbers, notes and pins preview what they name; the search lists every num
   await desk.fill("#goto", "");
 
   await desk.goto(`${base}#C-2`);
-  await desk.waitForSelector("details.brief[open]");
-  await desk.click("details.brief > summary");
+  await desk.waitForSelector(".brief:not(.clamped) [data-brief-toggle]");
+  await desk.click("[data-brief-toggle]");
+  await desk.waitForSelector(".brief.clamped");
   assert.equal(await desk.evaluate(() => localStorage.getItem("desk-brief")), "folded", "the request's text folds and stays so");
 
   await desk.hover('[data-snip="A-1"]');
@@ -831,7 +832,7 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r9"]');
     await desk.waitForSelector("#detail .brief");
-    assert.match(await desk.textContent("#detail .brief"), /The request[\s\S]*Show the spend\./);
+    assert.match(await desk.textContent("#detail .brief"), /asked[\s\S]*Show the spend\./);
     assert.deepEqual(await desk.locator("#detail .brief figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a1"], "the pasted picture belongs to the request");
     assert.deepEqual(await desk.locator("#detail h3.made ~ * figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
     assert.doesNotMatch(await desk.textContent("#detail"), /Screen: Agents/, "the screen line is gone");
@@ -1096,6 +1097,7 @@ test("a worked-in note shows the place before and after, outlined, in the thread
   try {
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
+    await desk.click("[data-convo] > summary");
     await desk.waitForSelector("#th-t3 .changed");
     await loaded("#th-t3");
     assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");

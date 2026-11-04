@@ -98,7 +98,7 @@ served by the Desk server through the platform's Artifact API relay.
   `design desk card C-12` reads it.
 - **An item's link** is the Desk's link with the number: `#C-12` opens it in its own tab,
   `#presentation/C-12` on the presentation while it is on it (`#call/C-12`, its older form,
-  still opens there), `#requests` a tab, `#presentation` the presentation. The page's **🔗 Copy link** builds it from
+  still opens there), `#requests` a tab, `#presentation` the presentation. The link icon beside an item's number (**Copy link** on a narrow screen) builds it from
   `desk_link`; the header's **Search** takes a number or such a link; a `C-12` in text on the
   Desk links to that item.
 - **Numbers of parts and states.** Inside an item, each thing a person may point at has a
