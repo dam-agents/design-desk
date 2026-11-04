@@ -236,10 +236,12 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    case in one plain sentence from the request's own words. A state no use case of the brief
    asks for says so with neither. Then one `design desk upsert` with every option (each with
    its `version`, Variants above) and, on this one, `states: [{id, version, name, how, part,
-   asset, shot, stories, use}]` (`version` only for a state already there): `id` short and
+   asset, shot, selector, stories, use}]` (`version` only for a state already there): `id` short and
    stable (`hover`, `error`), `name` the state in plain words, `how` when it happens in one
    sentence, `part` the part in the product's words (states of several parts are grouped by
-   it), `shot` the picture of the part alone, `stories` the story ids, `use` the sentence.
+   it), `shot` the picture of the part alone, `selector` the part's CSS path in the state's page
+   (the inbox item's `part.selector`; the page cuts the part from the state while `shot` is
+   missing), `stories` the story ids, `use` the sentence.
    The request's page shows them as its **Design catalog**, grouped by part. Keep the option's earlier states of other parts in the list; leaving
    `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
    version; the Desk keeps the earlier one.

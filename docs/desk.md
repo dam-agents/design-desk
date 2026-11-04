@@ -57,7 +57,8 @@ served by the Desk server through the platform's Artifact API relay.
   scrolls sideways and fades at its edge. A list has no search box of its own.
 - **Search.** The header's one search finds words in every item's title, summary and source
   and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
-  decision's (`D-3`); a GitHub issue or pull request by its number (`#4512`, `PR 4512`) or link,
+  decision's (`D-3`), and while one is typed (`C-`, `C-1`, `D-`) every item or decision whose
+  number starts so, newest first; a GitHub issue or pull request by its number (`#4512`, `PR 4512`) or link,
   matched to the card it is or came from; and a Desk link. Hits show as you type; Enter or a
   click opens one; ↑ ↓ pick, Escape closes. A GitHub number with no card offers its page on
   GitHub, in the profile's repository (`repos`); a Desk number with no item says so.
@@ -74,8 +75,9 @@ served by the Desk server through the platform's Artifact API relay.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
   works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a
   label by its own `title`. A new button or label gets its line in the same change. The Desk
-  shows them in its own box the moment the pointer is on one: the page turns each `title`
-  into `data-tip`, so the browser's slow tooltip never shows.
+  shows them in its own box half a second after the pointer rests on one, and at once while another
+  is up or just closed: the page turns each `title` into `data-tip`, so the browser's own
+  tooltip never shows.
 - **Buttons.** A button's icon comes from `BTN_ICON` in `desk/page.html`, by its `data-`
   action; one whose words start with a sign of their own (▶, ✓, 👍, +) keeps that sign.
   **More** closes on a click anywhere outside it, on Escape, and once something in it is picked.
@@ -111,7 +113,10 @@ served by the Desk server through the platform's Artifact API relay.
   `#…`), matched by repository and number: its issue or change card first, then a request that
   came from it (`origin.url`; its status and what can be done); a link the Desk has no card for
   shows its number and repository and says it is not on the Desk. The GitHub text is not on the
-  Desk. A link that previews shows no one-line tooltip.
+  Desk. An item's or a decision's number in text (`C-11`, `D-26`) previews it the same way:
+  a request its status, any other item its kind and `summary`, a decision its text, who made
+  it, its day and whether it is in force. A note's label on an element (◎ …) previews that element alone, cut from its option. A preview shows half a second after the pointer rests on
+  it. A link that previews shows no one-line tooltip.
 - **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
   in a channel message (the platform turns it into the share link and keeps `#C-<n>`),
   `<desk_link>#C-<n>` anywhere else (GitHub). The access note: it opens only for people on
@@ -360,7 +365,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - **Comments on options** are pinned to an element and its view; people reply, mark them
   done or reopen them, and a designer or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). **The winner** is
-  a designer's pick (**Pick as the winner**, the card's `chosen`); votes, Slack and you only
+  a designer's pick (**Select as the winner**, the card's `chosen`); votes, Slack and you only
   advise, and nothing you write sets it.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
