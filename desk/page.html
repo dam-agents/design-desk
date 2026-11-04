@@ -817,7 +817,8 @@
     if ($("#tip") || Date.now() - tipLast < TIP_WARM) return tipShow(el);
     tipTimer = setTimeout(() => el.isConnected && tipShow(el), TIP_DELAY);
   }
-  function tipShow(el) {
+  // Under the element when `under` (a note's pin: under the pointer), else above it where it fits.
+  function tipShow(el, under = false) {
     clearTimeout(tipTimer);
     if (el.title) toTip(el);
     const t = el.dataset.tip;
@@ -827,7 +828,7 @@
     if (!box) { box = document.createElement("div"); box.id = "tip"; box.setAttribute("role", "tooltip"); document.body.append(box); }
     box.textContent = t;
     const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
-    const below = r.top - 6 - h < 0;
+    const below = (under && r.bottom + 6 + h <= innerHeight) || r.top - 6 - h < 0;
     box.style.left = `${Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8))}px`;
     box.style.top = `${below ? r.bottom + 6 : r.top - 6 - h}px`;
   }
@@ -2286,7 +2287,7 @@
     // Opened on the press: the pin is redrawn before a click could land on it, and that click is not a pick.
     let pinTip = false, pinPressed = 0;
     addEventListener("mousemove", (e) => { if (pinTip && !e.target.closest?.("[data-note-pin]")) { pinTip = false; say({ type: "desk-pin-tip", note: null }); } }, true);
-    const box = (el, color, label, solid, note) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; if (note) { b.dataset.notePin = note; b.style.pointerEvents = "auto"; b.style.cursor = "pointer"; b.onmouseenter = () => { pinTip = true; const q = b.getBoundingClientRect(); say({ type: "desk-pin-tip", note, rect: { left: q.left, top: q.top, bottom: q.bottom, width: q.width } }); }; b.onpointerdown = (e) => { e.stopPropagation(); e.preventDefault(); pinPressed = Date.now(); say({ type: "desk-pin-open", note }); }; } d.appendChild(b); } layer.appendChild(d); };
+    const box = (el, color, label, solid, note) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; if (note) { b.dataset.notePin = note; b.style.pointerEvents = "auto"; b.style.cursor = "pointer"; b.onmouseenter = (e) => { pinTip = true; say({ type: "desk-pin-tip", note, rect: { left: e.clientX, top: e.clientY, bottom: e.clientY + 12, width: 0 } }); }; b.onpointerdown = (e) => { e.stopPropagation(); e.preventDefault(); pinPressed = Date.now(); say({ type: "desk-pin-open", note }); }; } d.appendChild(b); } layer.appendChild(d); };
     // A part a decision shaped: a dashed frame with a small mark in its corner; the decisions'
     // numbers show on the part under the pointer and, framed solid, on the decision picked,
     // while the others keep only a faint frame. A decision no longer in force is red.
@@ -2565,7 +2566,7 @@
       const f = frame.getBoundingClientRect(), r = d.rect || {}, el = document.createElement("span");
       el.dataset.tip = `#${th.n} · ${by}: ${String(m.text || "").replace(/\s+/g, " ").slice(0, 280)}${th.messages.length > 1 ? ` (+${th.messages.length - 1} ${th.messages.length === 2 ? "reply" : "replies"})` : ""}`;
       el.style.cssText = `position:fixed;left:${f.left + (r.left || 0)}px;top:${f.top + (r.top || 0)}px;width:${r.width || 1}px;height:${(r.bottom || 0) - (r.top || 0)}px;pointer-events:none`;
-      document.body.append(el); tipShow(el); el.remove();
+      document.body.append(el); tipShow(el, true); el.remove();
       return;
     }
     if (d.type === "desk-pin-open") { tipHide(); const li = document.querySelector(`[data-ws-note="${CSS.escape(String(d.note || ""))}"]`); if (li) { li.click(); li.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
