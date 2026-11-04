@@ -159,8 +159,11 @@ function cleanContext(c, cards) {
   const card = o.card == null || o.card === "" ? null : String(o.card);
   if (card && !own(cards, card)) throw bad(`context: no card ${card}`);
   const page = card ? null : ASK_PAGES.includes(o.page) ? o.page : "guide";
-  const variant = card && typeof o.variant === "string" && (own(cards, card).variants || []).some((v) => v.id === o.variant) ? o.variant : null;
-  return { card, page, ...(variant ? { variant } : {}), label: optText(o.label, 200, "context label") || "" };
+  const v = card && typeof o.variant === "string" ? (own(cards, card).variants || []).find((x) => x.id === o.variant) : null;
+  const state = v && typeof o.state === "string" && (v.states || []).some((x) => x.id === o.state) ? o.state : null;
+  const part = v && o.part && typeof o.part === "object" && o.part.selector ? { selector: clean(o.part.selector, 500, "context part"), label: optText(o.part.label, 120, "context part label") } : null;
+  const filter = page && typeof o.filter === "string" ? optText(o.filter, 40, "context filter") : "";
+  return { card, page, ...(v ? { variant: v.id } : {}), ...(state ? { state } : {}), ...(part ? { part } : {}), ...(filter ? { filter } : {}), label: optText(o.label, 300, "context label") || "" };
 }
 
 function clean(s, max, name) {
@@ -239,7 +242,7 @@ export class Store {
   writeInbox() {
     const open = [], claimed = [];
     // A private ask's item says so: the agent answers it in its thread and changes nothing.
-    const priv = new Set(Object.values(this.db.threads).filter((t) => t.kind === "private").map((t) => t.id));
+    const priv = new Map(Object.values(this.db.threads).filter((t) => t.kind === "private").map((t) => [t.id, t.context || {}]));
     for (const it of Object.values(this.db.inbox)) {
       if (it.state === "open") open.push(pick(it));
       else if (it.state === "claimed") claimed.push({ ...pick(it), claimed_by: it.claimed_by, claimed_at: it.claimed_at, claimed_started: it.claimed_started || it.claimed_at });
@@ -248,7 +251,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }

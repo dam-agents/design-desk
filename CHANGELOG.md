@@ -13,8 +13,9 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
 Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). Every page has a **🔒 Ask privately** chat in the bottom-right corner:
-questions and answers only their author and the agent see, about the item or page open
-when asked (the chat names it). A private ask (thread kind `private`, its `owner` the asker,
+questions and answers only their author and the agent see, about exactly what is open
+when asked — the item, its option, the workspace state and part, or the page and its filter
+(the chat names it, and the inbox item carries it as `context`). A private ask (thread kind `private`, its `owner` the asker,
 its `context` the item or page) is on no card; the server returns it only to its author
 (`GET /api/private`), its inbox item carries `private: true`, and it is answered per
 [docs/desk.md](docs/desk.md) → **Private asks** (five starters, each with its full brief),

@@ -1175,3 +1175,14 @@ test("a private ask: only its author and the agent see it; it sits on no card, n
   assert.throws(() => s.answer(thread.id, "x", { shots: [{ asset: "A-1", stage: "after" }] }), /answered in words/);
   assert.equal(s.reply(page.id, alice, "And why?").inbox.kind, "question", "a follow-up goes back to the agent");
 });
+
+test("a private ask keeps exactly what was open: the option, its state and part, or the page and its filter; the agent's item carries it", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "request", title: "Limits", variants: [{ id: "v1", name: "Rows", states: [{ id: "s1", part: "Meter", name: "Stopped" }] }] });
+  const ctx = { card: card.id, variant: "v1", state: "s1", part: { selector: ".meter", label: "Limit meter" }, label: "C-1 Limits · Rows · Stopped (C-1.1)" };
+  const { thread, inbox: item } = s.openPrivate(alice, { text: "Why red?", context: ctx });
+  assert.deepEqual(thread.context, { card: card.id, page: null, variant: "v1", state: "s1", part: { selector: ".meter", label: "Limit meter" }, label: ctx.label });
+  assert.deepEqual(inbox(s).open.find((i) => i.id === item.id).context, thread.context, "the agent sees the context with the item");
+  assert.deepEqual(s.openPrivate(alice, { text: "x", context: { card: card.id, variant: "v9", state: "s1" } }).thread.context, { card: card.id, page: null, label: "" }, "an unknown option or state is dropped");
+  assert.equal(s.openPrivate(alice, { text: "x", context: { page: "product", filter: "elements" } }).thread.context.filter, "elements");
+});

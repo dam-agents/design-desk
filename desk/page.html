@@ -1701,11 +1701,19 @@
   // never changes the design from one (docs/desk.md → Private asks).
   S.ask = { open: false, asks: [], loaded: false };
   function askContext() {
+    // Exactly what the person is looking at: the item, the option, and in the design
+    // workspace the state and the part picked; or the page and its filter. Design Desk
+    // answers about this (docs/desk.md → Private asks).
     if (S.card) {
       const v = S.card.kind === "request" ? (S.card.variants || []).find((x) => x.id === S.variant) : null;
-      return { card: S.card.id, ...(v ? { variant: v.id } : {}), label: `${S.card.id} ${S.card.title}${v ? ` · ${v.name}` : ""}` };
+      const st = v && S.ws.open && S.ws.state ? (v.states || []).find((x) => x.id === S.ws.state) : null;
+      const part = v && S.ws.open && S.ws.selected?.selector ? { selector: S.ws.selected.selector, label: S.ws.selected.label || S.ws.selected.text || S.ws.selected.tag || "" } : null;
+      const no = st ? catalogStates(S.card).findIndex((y) => y.x === st) + 1 : 0;
+      return { card: S.card.id, ...(v ? { variant: v.id } : {}), ...(st ? { state: st.id } : {}), ...(part ? { part } : {}),
+        label: [`${S.card.id} ${S.card.title}`, v?.name, st ? `${st.name}${no ? ` (${S.card.id}.${no})` : ""}` : null, part?.label ? `“${part.label}”` : null].filter(Boolean).join(" · ") };
     }
-    return { page: S.tab, label: `${TABS[S.tab] || "The Desk"} page` };
+    const filter = { new: S.newFilter, requests: S.reqFilter, issues: S.issueFilter, product: S.productFilter }[S.tab] || "";
+    return { page: S.tab, ...(filter ? { filter } : {}), label: `${TABS[S.tab] || "The Desk"} page${filter ? ` · ${filter}` : ""}` };
   }
   const sameContext = (a, b) => a.card ? a.card === b.card : !b.card && a.page === b.page;
   // The short label a person sees; the agent reads the starter's full brief by its key.

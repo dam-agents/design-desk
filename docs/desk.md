@@ -294,8 +294,17 @@ Its inbox item carries `private: true`, comes as `questions_due` like a question
 
 Answer it as a question (above), with these differences:
 
-1. **Read its context first.** The item, its option, or the page (`page`: `new` Changes,
-   `requests`, `issues`, `product`, `people`, `guide` How it works); answer about that.
+1. **Answer about its context, and only that.** The thread's `context` (also on the inbox
+   item) is what the person had open when they asked: the item `card`, its option
+   `variant`, in the design workspace the `state` and the `part` picked (`selector`,
+   `label`); or the `page` (`new` Changes, `requests`, `issues`, `product`, `people`,
+   `guide` How it works) and its `filter`. Read exactly that before writing — the card and
+   that option, state and part, or that page — and answer about it: "this", "here" and
+   "it" mean that. The chat shows every private ask in one line, but each question is its
+   own: never carry the context of an earlier one over. Start the answer by naming what it
+   is about in a few words ("The limit meter in option B, state Stopped (C-3.4): …"). A
+   question about something else gets a short answer and the suggestion to ask it from
+   that item's page.
 2. **Explain, never change.** A private ask changes no option, variant, card field,
    decision or queue: no revise, no `--shots`, no `design desk write`. A wish in it ("make
    it blue") gets the explanation and one sentence on how to ask in public (**Make a
