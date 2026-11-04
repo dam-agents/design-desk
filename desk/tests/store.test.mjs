@@ -222,6 +222,7 @@ test("deciding straight away: a designer or lead developer approves without opti
   assert.equal(decided.card.status, "declined");
   assert.deepEqual([decided.inbox.kind, decided.inbox.thread, decided.inbox.note, decided.inbox.why], ["decision", null, "Badges stay as they are: colour is for errors only.", "Agreed at the meeting."]);
   assert.equal(decided.card.decided.by.email, "lee@example.com");
+  assert.equal(s.listCards({ kind: "request" }).find((x) => x.id === other.id).decided, decided.card.decided.at, "the list knows it was decided");
   assert.throws(() => s.decideAndClose(other.id, lee, { text: "Again" }), /closed/);
   s.act(other.id, alice, "reopen");
   assert.equal(s.card(other.id).decided, undefined, "a reopened request waits for a new decision");

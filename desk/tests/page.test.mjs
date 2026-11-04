@@ -398,7 +398,7 @@ test("Needs a designer filters Changes and Requests, and Changes opens on All", 
   assert.match(await desk.textContent('[data-tab="new"]'), /^Changes/);
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on All");
-  assert.match(await desk.textContent("#list .filters .on"), /^All$/);
+  assert.match(await desk.textContent("#list .filters .on"), /^All \d+$/, "All carries its count");
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
   assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
@@ -491,7 +491,7 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   assert.match(await desk.textContent("#list .filters .on"), /Closed/, "with a filter that shows it");
   const [num, title] = await desk.$eval("#detail h2", (h) => [getComputedStyle(h.querySelector(".num")).color, getComputedStyle(h).color]);
   assert.notEqual(num, title, "the number is grey, not the title's colour");
-  await desk.click("[data-copy-link]");
+  await desk.click("#detail h2 [data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
   assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#C-3"]);
 
@@ -508,7 +508,7 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   assert.equal(await shown("requests", "Calmer empty list"), "C-2", "a link to the presentation opens it there, also on a fresh load");
   assert.match(await desk.textContent("#list .subtabs .on"), /^Presentation\s*1$/, "on the Presentation page, a tab of Requests");
   assert.equal(await desk.locator("#list .filters").count(), 0, "the presentation has no filter of its own");
-  await desk.click("[data-copy-link]");
+  await desk.click("#detail h2 [data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
   assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#presentation/C-2"]);
   await desk.setViewportSize({ width: 600, height: 800 });
@@ -793,10 +793,12 @@ test("numbers, notes and pins preview what they name; the search lists every num
   await desk.fill("#goto", "");
 
   await desk.goto(`${base}#C-2`);
-  await desk.waitForSelector("details.brief[open]");
-  await desk.click("details.brief > summary");
+  await desk.waitForSelector(".brief:not(.clamped) [data-brief-toggle]");
+  await desk.click("[data-brief-toggle]");
+  await desk.waitForSelector(".brief.clamped");
   assert.equal(await desk.evaluate(() => localStorage.getItem("desk-brief")), "folded", "the request's text folds and stays so");
 
+  await desk.click("[data-convo] > summary");
   await desk.hover('[data-snip="A-1"]');
   await desk.waitForSelector("#peek.snip iframe");
   const doc = await desk.$eval("#peek.snip iframe", (f) => f.srcdoc);
@@ -831,9 +833,9 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r9"]');
     await desk.waitForSelector("#detail .brief");
-    assert.match(await desk.textContent("#detail .brief"), /The request[\s\S]*Show the spend\./);
-    assert.deepEqual(await desk.locator("#detail .brief figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a1"], "the pasted picture belongs to the request");
-    assert.deepEqual(await desk.locator("#detail h3.made ~ * figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
+    assert.match(await desk.textContent("#detail .brief"), /asked[\s\S]*Show the spend\./);
+    assert.deepEqual(await desk.locator("#detail .brief:not(.made-col) figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a1"], "the pasted picture belongs to the request");
+    assert.deepEqual(await desk.locator("#detail .made-col figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
     assert.doesNotMatch(await desk.textContent("#detail"), /Screen: Agents/, "the screen line is gone");
 
     await desk.hover("#detail .linked .anchor");
@@ -1096,6 +1098,7 @@ test("a worked-in note shows the place before and after, outlined, in the thread
   try {
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
+    await desk.click("[data-convo] > summary");
     await desk.waitForSelector("#th-t3 .changed");
     await loaded("#th-t3");
     assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");
