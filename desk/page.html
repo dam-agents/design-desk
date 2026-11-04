@@ -562,7 +562,7 @@
     <label>What should it look like, and what should it have?<textarea name="note" maxlength="2000" required placeholder="e.g. Like the compact table, but with the filters on top as chips and a summary above the list"></textarea></label>
     <div><div class="k" style="font-size:12.5px;color:var(--muted);margin-bottom:4px">Start from</div><div class="choices" id="of-base"></div></div>
     <p class="hint" id="of-error" style="color:var(--bad, #b42318);margin:0" hidden></p>
-    <div class="actions"><button type="submit" class="btn primary" value="ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -2990,7 +2990,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, check: false, reason: null }; }
+    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -3109,7 +3109,7 @@
     if (name === "build" && options.length) {
       const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : favourite(c)?.id || options[0].id, send: async (a) => a.choice || options[0].id }) : options[0].id;
       if (!pick) return;
-      S.variant = pick; S.ws.state = null; S.ws.version = null; S.ws.selected = null; S.ws.edit = null; S.ws.note = null;
+      S.variant = pick; S.ws.state = null; S.ws.alt = null; S.ws.version = null; S.ws.selected = null; S.ws.edit = null; S.ws.note = null;
       S.ws.open = true; S.ws.check = true; S.ws.mode = "off"; S.ws.looked = new Set(); S.ws.askFirst = true;
       renderWorkspace(); frameSay({ type: "desk-mode", mode: "off" });
       return;
@@ -3201,16 +3201,14 @@
     $("#of-base").innerHTML = [...vs.map((v) => ({ id: v.id, name: `Like ${v.name}, changed as I describe` })), { id: "", name: "Something new, from scratch" }]
       .map((o) => `<label><input type="radio" name="base" value="${esc(o.id)}" ${o.id === (from || "") ? "checked" : ""} /> ${esc(o.name)}</label>`).join("");
     dlg.returnValue = ""; dlg.showModal();
+    // The page's frame has no allow-forms: the send runs on the dialog's close, as #confirm-form's.
     return new Promise((resolve) => {
-      f.onsubmit = async (e) => {
-        e.preventDefault();
-        const note = f.note.value.trim();
-        if (!note) { $("#of-error").textContent = "Say what the new option should look like and have."; $("#of-error").hidden = false; return; }
-        const base = f.querySelector("input[name=base]:checked")?.value || "";
-        try { const r = await api("POST", `/api/cards/${c.id}/actions`, { action: "add-option", note, ...(base ? { variant: base } : {}) }); dlg.close(); resolve(r); }
+      dlg.onclose = async () => {
+        if (dlg.returnValue !== "ok") { resolve(null); return; }
+        const note = f.note.value.trim(), base = f.querySelector("input[name=base]:checked")?.value || "";
+        try { resolve(await sendOrReopen(dlg, () => api("POST", `/api/cards/${c.id}/actions`, { action: "add-option", note, ...(base ? { variant: base } : {}) }))); }
         catch (err) { $("#of-error").textContent = err.message || String(err); $("#of-error").hidden = false; }
       };
-      dlg.onclose = () => resolve(null);
     });
   }
 
@@ -3353,7 +3351,7 @@
     }
     if (ds.choose !== undefined) { await api("POST", `/api/cards/${S.card.id}/chosen`, { variant: ds.choose || null }); toast(ds.choose ? "Picked as the winner." : "No winner picked."); await refreshList(); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
-    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
+    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
     if (ds.story) { S.story = ds.story; renderDetail(); return; }
     if (ds.storyPart) { const pin = storyPins()[Number(ds.storyPart)]; if (pin) $("#story-frame")?.contentWindow?.postMessage({ type: "desk-show", selector: pin.selector }, "*"); return; }
     if (ds.vote) {
@@ -3373,7 +3371,7 @@
     }
     if (ds.act) { await act(ds.act); return; }
     // the workspace
-    if ("wsClose" in ds) { S.ws.open = false; S.ws.check = false; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
+    if ("wsClose" in ds) { S.ws.open = false; S.ws.check = false; S.ws.alt = null; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
     if (ds.dropOption) {
       const c = S.card, v = (c.variants || []).find((x) => x.id === ds.dropOption);
       if (!v) return;

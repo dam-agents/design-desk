@@ -703,7 +703,10 @@ export class Store {
     if (!v) throw bad("That design option is not on this request.");
     if (c.variants.length < 2) throw bad(`${v.name} is the only option. Close the request instead.`);
     if (c.live_pick?.variant === v.id && (["building", "live"].includes(c.prototype?.state) || Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "build"))) throw bad(`The live prototype is built from ${v.name}. Build another option first.`);
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states"].includes(i.kind))) throw bad(BUSY);
+    // An approval or the presentation that names the option would point at nothing.
+    if (c.approved?.variant === v.id) throw bad(`${v.name} is the approved option. Reopen the request first.`);
+    if (c.agenda?.status === "queued" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation. Take it off the presentation first.`);
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind))) throw bad(BUSY);
     c.variants = c.variants.filter((x) => x.id !== v.id);
     if (c.chosen?.variant === v.id) delete c.chosen;
     if (c.live_pick?.variant === v.id) delete c.live_pick;
@@ -1162,7 +1165,7 @@ export class Store {
       } else if (k === "sections") next.sections = cleanSections(fields.sections, next.kind === "change" ? brief : null, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") {
-        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || []), c?.variants || [], this.clock());
+        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || []), c?.variants || [], this.clock(), (c?.dropped_options || []).map((x) => x.id));
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
         // Nor does an option taken off go live, nor a build still waiting to build it.
@@ -1703,8 +1706,10 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 // version older than the card's would put back the drawing it replaced, so it is refused.
 // An option or a state already on the card is sent with the `version` the run read; one
 // it leaves out is gone only when it says so (`drop: true`, or `states: []`).
-function versioned(list, before, at) {
+function versioned(list, before, at, removed = []) {
   const stale = (m) => new DeskError(409, `${m} Read the card again and send what is there now.`);
+  // A designer took this option off (its tab's ✕): a run that read the card before sends it back.
+  for (const x of list) if (!x.drop && removed.includes(x.id) && !before.some((o) => o.id === x.id)) throw stale(`${x.name || x.id} was removed from the request; leave it out, or draw a new option under a new id.`);
   const dropped = new Set(list.filter((x) => x.drop).map((x) => x.id));
   for (const id of dropped) if (!before.some((x) => x.id === id)) throw bad(`there is no option ${id} to drop`);
   const variants = list.filter((x) => !x.drop);
