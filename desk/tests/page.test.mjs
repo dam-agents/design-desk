@@ -1010,10 +1010,10 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks", async (t) => {
-  const run = await launch(t, BRIDGE_BAR);
+test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks; the part picked has every state drawn", async (t) => {
+  const run = await launch(t, BRIDGE_BAR.replace("can: { comment: true,", "can: { revise: true, comment: true,"));
   if (!run) return;
-  const { top, desk } = run;
+  const { top, desk, posts } = run;
   try {
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r6"]');
@@ -1038,6 +1038,16 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await frame.click('[data-view="2"] button');
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
     assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
+
+    // Draw every state is the workspace's: it sends the option and the part picked.
+    await desk.click('#ws-side [data-act="states"]');
+    await desk.fill("#confirm-form [name=note]", "The error first.");
+    await desk.locator("#confirm-dialog .actions button", { hasText: "Draw the states" }).click();
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r6/actions"));
+    const body = JSON.parse((await posts("/api/cards/r6/actions"))[0].body);
+    assert.deepEqual([body.action, body.note, body.variant, body.part.text, body.part.view, body.part.view_name], ["states", "The error first.", "v1", "Save", "2", "Billing"]);
+    assert.match(body.part.label, /Save/);
+    assert.ok(body.part.selector, "the part's CSS path goes with it");
   } finally {
     await run.close();
   }

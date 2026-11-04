@@ -77,7 +77,9 @@ A skill that replaces a bundled one keeps the action's contract:
   - `revise`: the same option id with its new file (the Desk keeps the earlier version), and
     an answer on every note it applied or could not apply, an applied one with its before and
     after pictures ([requests.md](requests.md) → Variants);
-  - `states`: the option's `states`, one self-contained HTML file per state
+  - `states`: the option's `states`, one self-contained HTML file per state, each with a
+    picture of the part alone (`shot`) and the use case of the brief it covers (`stories`, the
+    `issue_brief` story ids, or `use`, one sentence), which the request's design catalog shows
     ([requests.md](requests.md) → Every state of a part);
   - `deliver`: the routing by request type, the pictures, the hidden card marker and the
     record ordering of `handoff-github`; the Approve (a designer's, or a developer's on a small change) is the approval a skill asks

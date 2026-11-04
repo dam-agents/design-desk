@@ -19,7 +19,7 @@ export const ACTIONS = {
   impact: { skill: "impact", does: "where else the same thing shows up and what a change touches, from earlier decisions" },
   options: { skill: "variants", doc: "docs/requests.md", does: "as many design options as the request asks (one to five) in the product's look, on sample data, with how each meets the issue's user stories" },
   revise: { skill: "variants", fallback: "options", doc: "docs/requests.md", does: "apply people's notes on elements to an option, as a new version" },
-  states: { skill: "variants", fallback: "options", doc: "docs/requests.md", does: "draw one part of an option in every state it can be in, one picture per state" },
+  states: { skill: "variants", fallback: "options", doc: "docs/requests.md", does: "draw one part of an option in every state it can be in, one picture per state, each with the part alone and the use case it covers" },
   prototype: { doc: "docs/prototype.md", does: "a live prototype: the product with the design change, in an Environment" },
   spec: { doc: "docs/handoff.md", does: "the developer spec of an approved design" },
   deliver: { skill: "handoff-github", doc: "docs/handoff.md", does: "send the spec on: the origin issue, a coding agent, an issue or a draft pull request" },

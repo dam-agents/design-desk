@@ -3,9 +3,10 @@
 // Full-length screenshots. With --views (or when the page has a review bar) it shoots
 // every view in light and dark, plus the empty state where the view has one, plus each
 // menu or dialog whose trigger --click names. With --element, only that element, padded,
-// light and dark (`element-<light|dark>.png`): a part's state for the request's design
+// light and dark (`<page>-element-<light|dark>.png`, named after the page so the states of a
+// part shot into one directory keep each their own): a part's state for the request's design
 // catalog (docs/requests.md → Every state of a part). Prints one path per line.
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ensureDir, fail, launch } from "../lib/core.mjs";
 
@@ -65,7 +66,7 @@ export async function main(_cmd, argv) {
       if (!b.w || !b.h) { await browser.close(); fail(`--element: ${element} is not visible`); }
       const size = await pg.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }));
       const x = Math.max(0, b.x - pad), y = Math.max(0, b.y - pad);
-      const p = `${out}/element-${t}.png`;
+      const p = `${out}/${basename(page).replace(/(\.src)?\.html?$/i, "")}-element-${t}.png`;
       await pg.screenshot({ path: p, fullPage: true, clip: { x, y, width: Math.min(size.w - x, b.w + 2 * pad), height: Math.min(size.h - y, b.h + 2 * pad) } });
       console.log(p);
     }

@@ -1935,7 +1935,7 @@
       const pic = x.shot ? `<figure class="shot" data-zoom="${esc(x.shot)}"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
         : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
       return `<li>${pic}<div><b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
-        ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
+        ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
     };
     return `<h3>Design catalog</h3>
       <p class="hint" style="max-width:var(--measure)">Every state Design Desk drew of a part of ${esc(v.name)}, each on its own, with the use case of the brief it covers. To draw more, select a part in the design workspace and press Draw every state of this part.</p>
