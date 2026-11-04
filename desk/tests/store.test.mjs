@@ -570,8 +570,12 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   // The states: one page each, kept when an upsert leaves them out, versioned under their id.
   const h = page("hover"), e = page("error");
   assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "x", name: "X", asset: "A-99" }] }] }), /no asset/);
-  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "x", name: "X", asset: h }, { id: "x", name: "Y", asset: e }] }] }), /its own/);
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states: [{ id: "hover", name: "Hovered", how: "The pointer is over it.", part: "Upload button", asset: h }, { id: "error", name: "Failed", part: "Upload button", asset: e }] }, { id: "v2", version: 1, name: "Small", asset: b }] });
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Big", asset: a, states: [{ id: "x", name: "X", asset: h, selector: "button" }, { id: "x", name: "Y", asset: e, selector: "button" }] }] }), /its own/);
+  // A state with no picture of the part — no shot and no selector — cannot be read in the catalog:
+  // the page would show the whole state page in a small box, so it is refused, not stored.
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states: [{ id: "hover", name: "Hovered", part: "Upload button", asset: h }] }, { id: "v2", version: 1, name: "Small", asset: b }] }), /catalog needs a picture of the part/);
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states: [{ id: "hover", name: "Hovered", how: "The pointer is over it.", part: "Upload button", asset: h, selector: "main > article:nth-child(1)" }, { id: "error", name: "Failed", part: "Upload button", asset: e, selector: "main > article:nth-child(1)" }] }, { id: "v2", version: 1, name: "Small", asset: b }] });
+  assert.equal(s.getCard(card.id).variants[0].states[0].selector, "main > article:nth-child(1)", "a selector of its own is a picture the page can cut");
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a }, { id: "v2", version: 1, name: "Small", asset: b }] });
   assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.id, x.version]), [["hover", 1], ["error", 1]], "leaving states out keeps them");
   // The design catalog: a picture of the part alone and the use case of the brief it serves.

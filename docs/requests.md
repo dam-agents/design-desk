@@ -268,7 +268,9 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    sentence, `part` the part in the product's words (states of several parts are grouped by
    it), `shot` the picture of the part alone, `selector` the part's CSS path in the state's page
    (the inbox item's `part.selector`; the page cuts the part from the state while `shot` is
-   missing), `stories` the story ids, `use` the sentence.
+   missing), `stories` the story ids, `use` the sentence. **A state needs one of the two:** the
+   Desk refuses a state with neither a `shot` nor a `selector`, because the catalog would show
+   its whole page in a small box instead of the part.
    The request's page shows them as its **Design catalog**, grouped by part. Keep the option's earlier states of other parts in the list; leaving
    `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
    version; the Desk keeps the earlier one.

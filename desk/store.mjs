@@ -1944,10 +1944,15 @@ function cleanOptionStates(list, assets, n) {
     // The design catalog on the request: a picture of the part alone in this state (`shot`), and
     // the use case of the brief it serves, as the issue's user stories (`stories`) or in words (`use`).
     if (x.shot != null && !own(assets, x.shot)?.contentType?.startsWith("image/")) throw bad(`variant ${n}, state ${i + 1}: shot must be an uploaded picture`);
+    // The catalog shows the part alone: its picture, or the part cut out of its page by `selector`.
+    // With neither it shows the whole page in a 160 px box — the item unreadably small in white —
+    // so a state without one is refused rather than stored broken (2026-11-04, C-34).
+    const selector = typeof x.selector === "string" && x.selector ? x.selector.slice(0, 500) : null;
+    if (x.shot == null && !selector) throw bad(`variant ${n}, state ${i + 1}: the catalog needs a picture of the part — shoot it (design shot <state.html> <dir> --element <selector>) or send its selector`);
     const stories = x.stories == null ? [] : x.stories;
     if (!Array.isArray(stories) || stories.length > LIMITS.stories || stories.some((s) => !STORY_ID.test(String(s)))) throw bad(`variant ${n}, state ${i + 1}: stories is a list of user story ids`);
     return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset,
-      shot: x.shot ?? null, selector: typeof x.selector === "string" && x.selector ? x.selector.slice(0, 500) : null, stories: [...new Set(stories.map(String))], use: optText(x.use, 300, "use"), ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
+      shot: x.shot ?? null, selector, stories: [...new Set(stories.map(String))], use: optText(x.use, 300, "use"), ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
   });
 }
 
