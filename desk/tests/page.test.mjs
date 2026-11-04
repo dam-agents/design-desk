@@ -116,7 +116,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await rq.button("Send").click();
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r1"));
     assert.equal(await rq.open(), false, "Send closes the dialog");
-    assert.equal(await desk.getAttribute("#banners details.intro", "data-intro"), "requests", "a sent request opens Requests with its intro");
+    assert.equal(await desk.getAttribute('[data-tab="requests"]', "aria-current"), "true", "a sent request opens Requests");
     const sent = await posts("/api/requests");
     assert.equal(sent.length, 1);
     assert.equal(JSON.parse(sent[0].body).problem, "Make the send button bigger");
@@ -320,44 +320,43 @@ async function open(t, bridge, fn) {
   }
 }
 
-// LIST with a stand-in server that keeps the person's prefs where the page never looks
-// (sessionStorage), so a reload with the page's own storage cleared shows what the server kept.
-const KEPT = LIST.replace(/<\/script>$/, `
-const listed = window.platform.request;
-window.platform = { async request(r) {
-  if (r.path === "/api/me/prefs") { sessionStorage.setItem("server-prefs", r.body); return { status: 200, contentType: "application/json", body: JSON.stringify({ prefs: JSON.parse(r.body) }) }; }
-  const res = await listed(r);
-  if (r.path === "/api/me") res.body = JSON.stringify({ ...JSON.parse(res.body), prefs: JSON.parse(sessionStorage.getItem("server-prefs") || "{}") });
-  return res;
-} };
-</script>`);
+// LIST, and each of its cards opens.
+const OPENS = LIST.replace('path === "/api/cards" ? { cards }', 'path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === path.split("/")[3]) }');
 
-test("every tab but How it works opens with its intro; folding one folds them all, and the server keeps it", (t) => open(t, KEPT, async (desk) => {
-  const intro = '#banners details.intro';
-  await desk.waitForSelector(`${intro}[data-intro="requests"][open]`);
+test("every tab but How it works shows its intro in the empty pane; People beside its list", (t) => open(t, OPENS, async (desk) => {
+  const intro = "#detail .intro";
+  await desk.waitForSelector(`${intro}[data-intro="requests"]`);
+  assert.equal(await desk.locator("#banners .intro").count(), 0, "no intro under the menu");
   assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
   assert.match(await desk.textContent(`${intro} li.off`), /Vote on the options[\s\S]*not with your role/, "an action the role may not do says so");
   for (const tab of ["new", "issues", "product", "people"]) {
     await desk.click(`[data-tab="${tab}"]`);
-    await desk.waitForSelector(`${intro}[data-intro="${tab}"][open]`);
+    await desk.waitForSelector(`${intro}[data-intro="${tab}"]`);
   }
-  assert.match(await desk.textContent('#banners [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
+  assert.match(await desk.textContent('#detail [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
+  assert.equal(await desk.locator("#detail .with-intro > .guide").count(), 1, "People shows its list with the intro");
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
   await desk.click('[data-tab="new"]');
-  await desk.click(`${intro} > summary`);
-  await desk.click('[data-tab="requests"]');
-  await desk.waitForSelector(`${intro}[data-intro="requests"]`);
-  assert.equal(await desk.locator(`${intro}[open]`).count(), 0, "folding one tab's intro folds the others");
-  await desk.evaluate(() => localStorage.clear());
-  await desk.reload();
-  await desk.click('[data-tab="product"]');
-  await desk.waitForSelector(`${intro}[data-intro="product"]`);
-  assert.equal(await desk.locator(`${intro}[open]`).count(), 0, "it stays folded after a reload, without this browser's storage");
-  await desk.click(`${intro} > summary`);
-  await desk.click('[data-tab="new"]');
-  await desk.waitForSelector(`${intro}[data-intro="new"][open]`);
+  await desk.click("#list .row .open");
+  await desk.waitForSelector("#detail .crumb");
+  assert.equal(await desk.locator(intro).count(), 0, "an open item takes the pane");
+}));
+
+test("every button and label says on hover what it does or means", (t) => open(t, OPENS, async (desk) => {
+  const bare = () => desk.$$eval("button, a.btn, summary.btn, .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title).map((e) => e.outerHTML.slice(0, 120)));
+  await desk.waitForSelector("#detail .intro");
+  for (const tab of ["requests", "new", "issues", "product", "people"]) {
+    await desk.click(`[data-tab="${tab}"]`);
+    await desk.waitForSelector(`#detail [data-intro="${tab}"]`);
+    assert.deepEqual(await bare(), [], `${tab}: everything has a title`);
+    if (await desk.locator("#list .row .open").count()) {
+      await desk.click("#list .row .open");
+      await desk.waitForSelector("#detail .crumb");
+      assert.deepEqual(await bare(), [], `${tab}, an open item: everything has a title`);
+    }
+  }
 }));
 
 test("Needs a designer filters Changes and Requests, and Changes opens on All", (t) => open(t, LIST, async (desk) => {

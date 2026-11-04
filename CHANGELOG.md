@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.33.0 — 2026-11-04
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). An option's tab in the design
+workspace now shows only its version; the style and state-count labels are gone. Every button
+and label says on hover what it does; a tab's intro moved from under the menu into the empty
+pane beside the list and no longer folds, so the server stops keeping that choice: the
+`prefs` an older `db.json` holds is ignored and can stay. What Design Desk only suggests for
+the presentation is greyed.
+
 ## 1.32.1 — 2026-11-03
 
 **Upgrade:**
