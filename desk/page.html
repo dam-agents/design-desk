@@ -358,6 +358,7 @@
   .ws-top .vtabs { flex-basis: 100%; order: 1; margin: 0 0 -11px; }
   .ws-top .vtabs button { background: var(--soft); }
   .ws-top .vtabs button[aria-pressed="true"] { background: var(--bg); border-bottom-color: var(--bg); }
+  .vsep { width: 1px; align-self: stretch; margin: 2px 2px; background: var(--line); }
   .ws-top .title { font-weight: 600; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ws-body { display: grid; grid-template-columns: 1fr var(--side-w); min-height: 0; }
   .ws-stage { padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
@@ -2393,7 +2394,7 @@
     // The version picker sits with the design's own tools, so the bar above keeps its height.
     const versionPick = versions.length > 1 ? `<select id="ws-version" style="width:auto;padding:3px 8px;font-size:12px">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : "";
     $("#ws-tools").innerHTML = S.ws.check ? `<span class="hint">Click through it as people will use it: every screen, and every state above. This is exactly what goes live.</span>`
-      : old ? `${versionPick}<span class="chip warn" title="Pick the latest version beside to comment or change it">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `${versionPick}
+      : old ? `${versionPick}<span class="chip warn" title="Pick the latest version beside to comment or change it">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `${versionPick ? `${versionPick}<span class="vsep" aria-hidden="true"></span>` : ""}
       <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
