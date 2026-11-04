@@ -1678,12 +1678,12 @@
       ${list.length ? `<p style="margin:12px 0 4px"><b>What to capture</b></p><ol class="md" style="padding-left:20px;margin:0">${list.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — ${esc(x.how)}` : ""}${x.path && i?.url ? ` <a href="${safeUrl(link(x.path))}" target="_blank" rel="noopener noreferrer">open ↗</a>` : ""}</li>`).join("")}</ol>` : ""}
     </div>`;
   }
-  // Every section says what it is and where it comes from; the ones that explain or give
-  // context are folded, so the card shows what changed and what is open first.
-  const FOLDED = new Set(["why", "limits", "good-to-know", "context"]);
+  // Every section says what it is and where it comes from. The ones that explain or give
+  // context can fold; they open unless they are long, so a short card reads whole.
+  const FOLDED = new Set(["why", "limits", "good-to-know", "context"]), LONG = 700;
   const sections = (c) => (c.sections || []).length ? `<div class="secs">${c.sections.map((s) => {
     const head = `<h4>${esc(s.title)}</h4>${s.source?.label ? `<span class="chip" title="Where this comes from">Source:${s.source.url || s.source.card ? srcLink(s.source) : ` ${esc(s.source.label)}`}</span>` : ""}`;
-    return FOLDED.has(s.key) ? `<details class="section sec"><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
+    return FOLDED.has(s.key) ? `<details class="section sec"${String(s.body || "").length > LONG ? "" : " open"}><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
       : `<div class="section"><div class="sec-head">${head}</div>${md(s.body)}</div>`;
   }).join("")}</div>` : "";
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";

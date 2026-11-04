@@ -633,7 +633,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector("[data-handle]");
     assert.equal(await desk.getAttribute(".sec-head .chip a", "href"), "https://github.com/acme/widgets/pull/11", "a section links its source");
-    assert.equal(await desk.locator("details.sec").count(), 1, "the explaining section is folded, what changed is not");
+    assert.equal(await desk.locator("details.sec").count(), 1, "the explaining section can fold, what changed cannot");
+    assert.equal(await desk.locator("details.sec[open]").count(), 1, "a short explaining section shows open");
     assert.match(await desk.textContent("details.sec summary"), /Why it is like this[\s\S]*Source: not documented/);
     assert.deepEqual(await desk.$$eval(".detail .secs", (ss) => ss.map((s) => [...s.children].map((c) => c.textContent.match(/What changed|Why it is like this/)?.[0]))),
       [["What changed", "Why it is like this"]], "one grid holds the card's sections, so they stand side by side on a wide window");
