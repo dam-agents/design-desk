@@ -207,8 +207,9 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
 
 ## Every state of a part (`variants_due`: `states`)
 
-A designer or developer selects a part of an option in the workspace (a button, a list, a form) and presses
-**Draw every state**, or names the part. The item names the option (`variant`), the part they
+A designer or developer selects a part of an option in the design workspace (a button, a list,
+a form) and presses **Draw every state of this part**; the request's page has no such button.
+A chat request names the part instead. The item names the option (`variant`), the part they
 selected (`part`: `{selector, text, label, view, view_name}`; none when they only named it) and
 their words (`note`). Make it with the `states` action's skill (`design skill states --repo <repo>`).
 
@@ -226,16 +227,26 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    the part in that state, built like the option (`design build`, the same style), so a person
    compares states one by one. A state that needs a developer (new data, a new rule) is drawn
    and labelled "needs a developer", as in the options.
-4. Look at every state's shot (`design shot`), upload each (`--kind variant`), then one `design
-   desk upsert` with every option (each with its `version`, Variants above) and, on this one,
-   `states: [{id, version, name, how, part, asset}]` (`version` only for a state already there):
-   `id` short and stable (`hover`, `error`), `name` the state in plain words, `how` when it
-   happens in one sentence, `part` the part in the product's words (states of several parts
-   are grouped by it). Keep the option's earlier states of other parts in the list; leaving
+4. Look at every state's shot (`design shot`), upload each (`--kind variant`). **The design
+   catalog:** shoot the part alone in each state (`design shot <state.html> <dir> --element
+   <selector>`, the part's CSS path in that page; the light picture, `<state>-element-light.png`,
+   named after the state's page so the states share one directory) and upload it (`--kind
+   image`); and say which use case of the brief the state serves: the ids of the card's
+   `issue_brief.stories` it covers, or, where the brief has no stories or none fits, the use
+   case in one plain sentence from the request's own words. A state no use case of the brief
+   asks for says so with neither. Then one `design desk upsert` with every option (each with
+   its `version`, Variants above) and, on this one, `states: [{id, version, name, how, part,
+   asset, shot, stories, use}]` (`version` only for a state already there): `id` short and
+   stable (`hover`, `error`), `name` the state in plain words, `how` when it happens in one
+   sentence, `part` the part in the product's words (states of several parts are grouped by
+   it), `shot` the picture of the part alone, `stories` the story ids, `use` the sentence.
+   The request's page shows them as its **Design catalog**, grouped by part. Keep the option's earlier states of other parts in the list; leaving
    `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
    version; the Desk keeps the earlier one.
 5. A state is a copy of the whole option, so a later `revise` of the option redraws every one
-   of its states in the same run (the same ids), whatever part the notes touched. The store
+   of its states in the same run (the same ids), whatever part the notes touched, and shoots
+   each part alone again (`design shot --element`, step 4) for its new `shot`: a redrawn
+   state sent with its old `shot` loses it, and the catalog shows no picture of it. The store
    records the option version each state was drawn for (`of`); a build refuses an option whose
    states are older than it, and the final check says which.
    **Two runs on one card** (a `states` and a `revise` dispatched to two sessions): just before

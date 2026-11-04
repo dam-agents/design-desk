@@ -1558,7 +1558,9 @@ function versionedStates(states, before, at, now, was) {
     const old = before.find((x) => x.id === given.id);
     if (!old) return { ...given, of: now, version: given.version || 1, history: given.history || [], drawn: given.drawn || at };
     if (old.asset === given.asset) return { ...given, of: old.of || was, version: old.version || 1, history: old.history || [], drawn: old.drawn || at };
-    return { ...given, of: now, version: (old.version || 1) + 1, drawn: at,
+    // A redrawn state sent with its old picture of the part: that picture shows the state as it
+    // was, so the catalog shows none until the run sends a new one.
+    return { ...given, ...(given.shot && given.shot === old.shot ? { shot: null } : {}), of: now, version: (old.version || 1) + 1, drawn: at,
       history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
   });
 }
@@ -1723,7 +1725,13 @@ function cleanOptionStates(list, assets, n) {
     if (!STATE_ID.test(id) || ids.has(id)) throw bad(`variant ${n}, state ${i + 1}: its id must be short and its own`);
     ids.add(id);
     if (!own(assets, x.asset)) throw bad(`variant ${n}, state ${i + 1}: no asset ${x.asset}`);
-    return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset, ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
+    // The design catalog on the request: a picture of the part alone in this state (`shot`), and
+    // the use case of the brief it serves, as the issue's user stories (`stories`) or in words (`use`).
+    if (x.shot != null && !own(assets, x.shot)?.contentType?.startsWith("image/")) throw bad(`variant ${n}, state ${i + 1}: shot must be an uploaded picture`);
+    const stories = x.stories == null ? [] : x.stories;
+    if (!Array.isArray(stories) || stories.length > LIMITS.stories || stories.some((s) => !STORY_ID.test(String(s)))) throw bad(`variant ${n}, state ${i + 1}: stories is a list of user story ids`);
+    return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset,
+      shot: x.shot ?? null, stories: [...new Set(stories.map(String))], use: optText(x.use, 300, "use"), ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
   });
 }
 

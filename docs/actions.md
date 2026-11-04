@@ -27,7 +27,7 @@ its `SKILL.md` is; read it before doing the action.
 | `impact` | where else the same thing shows up, what a change touches | every change card; every request, unless its New request switched `impact` off; chat "what would this affect?" | `impact` |
 | `options` | the request's number of design options (one to five), each with how it meets the issue's user stories and the decisions its parts rest on | Draw design options; right after triage when its New request asked; chat "show me options for…" | `variants` |
 | `revise` | apply notes on elements as a new version | notes in the design workspace; Redraw; chat "make the button secondary in option 1" | `variants` |
-| `states` | one part of an option in every state it can be in, one picture per state | Draw every state (a part selected in the workspace, or named); chat "show every state of the upload button in option 1" | `variants` |
+| `states` | one part of an option in every state it can be in, one picture per state, and the request's design catalog: the part alone in each state with the use case it covers | Draw every state of this part (a part selected in the design workspace); chat "show every state of the upload button in option 1" | `variants` |
 | `prototype` | a live prototype in an Environment | Build a live prototype; chat | [prototype.md](prototype.md) |
 | `spec` | the developer spec of an approved design | Approve; chat | [handoff.md](handoff.md) |
 | `deliver` | send the spec to the issue, a coding agent, an issue or a draft pull request | after the spec | `handoff-github` |
@@ -79,7 +79,9 @@ A skill that replaces a bundled one keeps the action's contract:
   - `revise`: the same option id with its new file (the Desk keeps the earlier version), and
     an answer on every note it applied or could not apply, an applied one with its before and
     after pictures ([requests.md](requests.md) → Variants);
-  - `states`: the option's `states`, one self-contained HTML file per state
+  - `states`: the option's `states`, one self-contained HTML file per state, each with a
+    picture of the part alone (`shot`) and the use case of the brief it covers (`stories`, the
+    `issue_brief` story ids, or `use`, one sentence), which the request's design catalog shows
     ([requests.md](requests.md) → Every state of a part);
   - `deliver`: the routing by request type, the pictures, the hidden card marker and the
     record ordering of `handoff-github`; the Approve (a designer's, or a developer's on a small change) is the approval a skill asks

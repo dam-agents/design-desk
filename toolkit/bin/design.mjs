@@ -21,7 +21,7 @@ const USAGE = `usage: design <command> [args]
                                        --anchor: a note's anchor as JSON (a person's text stays off the command line)
   build <src.html> <out.html> [--style repo:<owner/name>|brand|carbon|wireframe] [--ref <ref>]
                                        compile a variant, mockup or walkthrough source
-  shot <page.html|url> <outdir> [--width 1440] [--views] [--dark] [--click <selector>]...
+  shot <page.html|url> <outdir> [--width 1440] [--views] [--dark] [--click <selector>]... [--element <selector>]
                                        full-length screenshots (light, dark, each view)
   capture <base-url> <outdir> --routes <routes.json> [--login <profile.json>]
                                        screens of a running app, signed in as the profile's demo account

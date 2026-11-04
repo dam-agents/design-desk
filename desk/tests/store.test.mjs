@@ -573,6 +573,14 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a, states: [{ id: "hover", name: "Hovered", how: "The pointer is over it.", part: "Upload button", asset: h }, { id: "error", name: "Failed", part: "Upload button", asset: e }] }, { id: "v2", version: 1, name: "Small", asset: b }] });
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Big", asset: a }, { id: "v2", version: 1, name: "Small", asset: b }] });
   assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.id, x.version]), [["hover", 1], ["error", 1]], "leaving states out keeps them");
+  // The design catalog: a picture of the part alone and the use case of the brief it serves.
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const st = (x) => ({ id: "v1", version: 1, name: "Big", asset: a, states: s.getCard(card.id).variants[0].states.map((o) => (o.id === "hover" ? { ...o, ...x } : o)) });
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [st({ shot: h }), { id: "v2", version: 1, name: "Small", asset: b }] }), /shot must be an uploaded picture/);
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [st({ stories: ["not a story id!"] }), { id: "v2", version: 1, name: "Small", asset: b }] }), /user story ids/);
+  s.upsertCard({ id: card.id, variants: [st({ shot: pic, stories: ["s1", "s1"], use: "Someone points at it before uploading." }), { id: "v2", version: 1, name: "Small", asset: b }] });
+  const hov = s.getCard(card.id).variants[0].states[0];
+  assert.deepEqual([hov.shot, hov.stories, hov.use, hov.version], [pic, ["s1"], "Someone points at it before uploading.", 1], "a new picture of the part alone is not a new version of the state");
   // A note on one state names it; a state the option does not have is refused.
   assert.throws(() => s.openThread(card.id, alice, { kind: "change", text: "Red.", anchor: { variant: "v1", state: "loading" } }), /not drawn/);
   const { thread: note } = s.openThread(card.id, alice, { kind: "change", text: "Make it red.", anchor: { variant: "v1", state: "error", label: "the whole state" } });
@@ -605,8 +613,11 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   assert.deepEqual([v1.version, v1.states.map((x) => x.of)], [2, [1, 1]]);
   assert.throws(() => s.act(card.id, alice, "build", "v1", { variant: "v1", version: 2, states: { hover: 1, error: 2 } }), (x) => x.status === 409 && /drawn for an earlier version/.test(x.message));
   const h2 = page("hover 2"), e3 = page("error 3");
-  s.upsertCard({ id: card.id, variants: [{ ...v1, states: [{ ...v1.states[0], asset: h2 }, { ...v1.states[1], asset: e3 }] }, now[1]] });
-  assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.version, x.of]), [[2, 2], [3, 2]]);
+  // Redrawn, Hovered comes back with its old picture of the part, Failed with a new one: an old
+  // picture shows the state as it was, so the catalog shows none until a new one comes.
+  const pic2 = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png2").toString("base64") }).asset.id;
+  s.upsertCard({ id: card.id, variants: [{ ...v1, states: [{ ...v1.states[0], asset: h2 }, { ...v1.states[1], asset: e3, shot: pic2 }] }, now[1]] });
+  assert.deepEqual(s.getCard(card.id).variants[0].states.map((x) => [x.version, x.of, x.shot]), [[2, 2, null], [3, 2, pic2]]);
   assert.equal(s.act(card.id, alice, "build", "v1", { variant: "v1", version: 2, states: { hover: 2, error: 3 } }).card.live_pick.version, 2);
   // Two runs on one card: the one that read an older version is refused, not saved over.
   const fresh2 = s.getCard(card.id).variants;
