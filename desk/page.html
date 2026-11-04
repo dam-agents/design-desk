@@ -1047,7 +1047,7 @@
   const waited = (c) => Math.max(0, Math.floor(((Date.parse(handledAt(c)) || Date.now()) - Date.parse(c.created)) / 864e5)) || 0;
   const overdue = (c) => c.kind === "change" && !handledAt(c) && S.me?.due_days > 0 && waited(c) >= S.me.due_days;
   const ageChip = (c) => handledAt(c) ? `<span class="chip ok" title="A designer marked it handled: design has nothing more to do with it">✓ Handled</span>`
-    : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" ${S.me?.due_days ? `title="To be handled within ${esc(S.me.due_days)} days"` : ""}>${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
+    : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" title="Days since it appeared, until a designer marks it handled${S.me?.due_days ? `; to be handled within ${esc(S.me.due_days)} days` : ""}">${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
   function chipsFor(c) {
     const out = [];
     // A screen or part a designer or developer added, before Design Desk made it.
