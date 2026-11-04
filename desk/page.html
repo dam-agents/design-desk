@@ -694,6 +694,8 @@
   .ws-top .ws-close { order: 0; gap: 10px; padding: 6px 10px 6px 14px; font-weight: 600; border-radius: 9px; }
   .ws-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   kbd { font: var(--fs-meta) var(--font); padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); font-weight: 400; }
+  /* Design Desk working on it now: the tag's dot pulses. */
+  .tag.busy::before { background: currentColor; box-shadow: none; animation: pulse 1.2s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -1761,7 +1763,7 @@
     } else {
       if (c.asks && !closed(c)) out.push(`<span class="chip warn" title="Design Desk asked a question and cannot go on until someone answers it">Waiting for your answer</span>`);
       // Options waiting for a pick is the usual state: no chip for it.
-      else if (c.busy || c.status !== "feedback") out.push(`<span class="chip tag t-${tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${esc(STATUS[c.status] || c.status)}</span>`);
+      else if (c.busy || c.status !== "feedback") out.push(`<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${esc(STATUS[c.status] || c.status)}</span>`);
       if (c.type === "bug") out.push(`<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>`);
       else if (c.triage && c.triage !== "needs-developer") out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
