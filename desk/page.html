@@ -298,6 +298,8 @@
   textarea, input, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%; }
   textarea { min-height: 64px; resize: vertical; }
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
+  .subno { font: 600 11.5px/1 var(--mono, ui-monospace, monospace); background: var(--soft); color: var(--ink); padding: 2px 6px; border-radius: 6px; text-decoration: none; margin-right: 4px; }
+  .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
   .starters { display: flex; gap: 6px; flex-wrap: wrap; max-width: var(--measure); margin-bottom: 10px; }
   .thread.private { border-style: dashed; }
   .brief { display: grid; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
@@ -881,7 +883,8 @@
     const a = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     return html.split(/(<a\b[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>|<[^>]*>)/).map((part, i) => i % 2 ? part : part
       // Another item on the Desk, by its number (docs/desk.md → Links to an item).
-      .replace(/(?<![\w#/.-])C-\d+\b/g, (m) => S.cards.some((x) => x.id === m) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
+      // A numbered state or picture of it, C-12.3 (docs/desk.md → Numbers of parts and states).
+      .replace(/(?<![\w#/.-])(C-\d+)(?:\.(\d+))?\b/g, (m, id) => S.cards.some((x) => x.id === id) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
       // A decision, by its number (docs/desk.md → Decisions).
       .replace(/(?<![\w#/.-])D-\d+\b/g, (m) => `<a href="#${m}" data-ref="${m}">${m}</a>`)
       .replace(/(?<![\w./-])([\w.-]+\/[\w.-]+)#(\d+)\b/g, (m, r, n) => a(`${host}/${r}/issues/${n}`, m))
@@ -1592,6 +1595,15 @@
     return outlineToggle(list) + rows + (single.length ? `<div class="shots" style="margin-top:${rows ? 12 : 0}px">${single.map((x) => figure(x)).join("")}</div>` : "");
   }
 
+  // Numbers of an item's states and pictures: C-12.3 is the third of C-12, to cite and to
+  // click (docs/desk.md → Numbers of parts and states). An element's situations, a screen's
+  // pictures, and a request's catalog states across its options in order, each counted once.
+  const subNo = (c, k) => `${c.id}.${k}`;
+  const subTag = (c, k) => `<a class="subno" href="#${esc(subNo(c, k))}" data-ref="${esc(subNo(c, k))}" title="Its number: cite ${esc(subNo(c, k))} anywhere on the Desk to link here">${esc(subNo(c, k))}</a>`;
+  const catalogStates = (c) => (c.variants || []).flatMap((v) => (v.states || []).map((x) => ({ v, x })));
+  // The option a request's numbered state belongs to, so its catalog tab opens on it.
+  const subVariant = (c, k) => catalogStates(c)[k - 1]?.v.id || null;
+
   // What a worked-in comment did: Design Desk's answer carries the same place before and after.
   const changed = (m) => m.shots?.length ? `<div class="changed">${shots(m.shots)}</div>` : "";
 
@@ -1813,7 +1825,7 @@
       ${renderWanted(c)}
       ${c.status === "dropped" ? "" : `<div class="actions">${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}</div>
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
-      ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:20px">${c.states.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
+      ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:0;list-style:none">${c.states.map((x, k) => `<li id="no-${esc(c.id)}-${k + 1}">${subTag(c, k + 1)} <b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
       ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<div class="panel hint">Not drawn yet.</div>`}`}
       ${sections(c)}${renderImpact(c.impact)}
@@ -1833,6 +1845,8 @@
   const lookName = (i) => (i === 0 ? "Now" : `${plural(i, "version", "versions")} ago`);
   const lookThumb = (c, l) => (c.kind === "element" ? l.thumb : l.screens?.[0]?.asset) || null;
   function lookPictures(c, l, label) {
+    if (c.kind === "screen" && l.now && (l.screens || []).length && !l.screens.some((x) => x.stage))
+      return `<div class="shots">${l.screens.map((x, k) => `<div id="no-${esc(c.id)}-${k + 1}">${subTag(c, k + 1)}${figure(x)}</div>`).join("")}</div>`;
     if (c.kind !== "element") return shots(l.screens) || `<p class="hint">No pictures yet.</p>`;
     return `<iframe class="frame" data-sheet="${esc(l.sheet)}" sandbox="allow-scripts" title="${esc(c.title)}${label ? ` — ${esc(label)}` : ""}" style="height:80vh"></iframe>`;
   }
@@ -2200,11 +2214,13 @@
       if (told.length) return told.map((st) => `<li>${txt(st.text)}</li>`).join("");
       return x.use ? `<li>${txt(x.use)}</li>` : "";
     };
+    const all = catalogStates(c);
     const item = (x) => {
+      const k = all.findIndex((y) => y.x === x) + 1;
       const use = useOf(x), stale = (x.of || 1) < (v.version || 1);
       const pic = x.shot ? `<figure class="shot" data-zoom="${esc(x.shot)}"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
         : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
-      return `<li>${pic}<div><b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
+      return `<li id="no-${esc(c.id)}-${k}">${pic}<div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
         ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
     };
     return `<h3>Design catalog</h3>
@@ -2622,8 +2638,8 @@
     const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
     const d = h.match(/^D\s*-?\s*(\d+)$/i);
     if (d) return { tab: "product", id: null, decision: `D-${d[1]}` };
-    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)$/i);
-    if (m) return { tab: view(m[1]), id: `C-${m[2]}` };
+    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)(?:\.(\d+))?$/i);
+    if (m) return { tab: view(m[1]), id: `C-${m[2]}`, ...(m[3] ? { sub: Number(m[3]) } : {}) };
     return view(h) ? { tab: view(h), id: null } : null;
   }
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
@@ -2647,6 +2663,10 @@
     }
     S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners();
     await openCard(c.id);
+    // A request's numbered state sits on its option's catalog tab.
+    const v = to.sub && subVariant(S.card, to.sub);
+    if (v && v !== S.variant) { S.variant = v; await openCard(c.id); }
+    if (to.sub) { const n = document.getElementById(`no-${c.id}-${to.sub}`); if (n) { n.scrollIntoView({ block: "center" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 2000); } else toast(`${c.id} has no number ${to.sub}.`); }
     return true;
   }
   // The frame may not get the clipboard: the browser's own copy, else the link shown to copy by hand.

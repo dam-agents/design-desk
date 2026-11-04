@@ -99,6 +99,11 @@ served by the Desk server through the platform's Artifact API relay.
   still opens there), `#requests` a tab, `#presentation` the presentation. The page's **🔗 Copy link** builds it from
   `desk_link`; the header's **Search** takes a number or such a link; a `C-12` in text on the
   Desk links to that item.
+- **Numbers of parts and states.** Inside an item, each thing a person may point at has a
+  sub-number after a dot: `C-12.3` is an element's third situation, a screen's third
+  picture, or a request's third catalog state, counted across its options in order. Each
+  shows its number by it; `#C-12.3` and a `C-12.3` in text open the item and scroll to it.
+  Cite parts and states by these numbers in every answer.
 - **Text from Slack**: a Slack mention reads as the person's name. A relayed reply carries
   `mentions` (Slack user id → name), so the server writes `@Name`; a mention with no name
   is left out. The page does the same for text already on the Desk: `<@U…|name>` shows
@@ -259,6 +264,12 @@ A `questions_due` item points at a thread on a card. Read the card and the whole
    architecture pages and the code at the default branch (`scripts/checkout.sh`).
 2. Answer with the `explain` skill: the direct answer in the first
    sentence, then only what the person needs; under 200 words; one offer to go deeper.
+   **Show, don't only tell:** put in the pictures that make the answer obvious, as
+   `![caption](asset:A-n)` lines: the product's own screens and element drawings already
+   on the Desk first, a fresh shot of the product (the `show` action) when none fits, a
+   simple diagram when the point is a flow. Name every part and state you mean by its
+   number (`C-12.3`, Links to an item) so the reader can click straight to it. A new
+   picture is uploaded with `design desk asset <file> --kind screen --card C-n`.
    Write it to a file and `design desk answer T-<n> <file>`.
 3. A question that is really a request ("can it be blue?") gets the answer *and* the
    boundary verdict in one sentence, and points to **Adjust the design**.
@@ -300,7 +311,10 @@ Answer it as a question (above), with these differences:
    > pull request and who opened it, a recorded decision, the design system, the product's
    > screens), or says it is not documented and who would know (the profile's `contacts`,
    > the PR author). Never guess a reason. Under 200 words, short paragraphs or a short
-   > list. End with one question the person could take to the team, if one helps.
+   > list. Show as much as you can: the product's screens and element drawings
+   > (`![caption](asset:A-n)`) and a simple diagram where it helps, and name each part and
+   > state by its number (`C-12.3`) so the reader can click to it. End with one question
+   > the person could take to the team, if one helps.
 
    The five starters and what each answer covers: **Explain this request simply** (the
    problem, the goal and what the options try, in five sentences); **Why does it look like

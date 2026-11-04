@@ -13,7 +13,9 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
 Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A card has a **Private ask** box
-beside the public comments: questions and answers only their author and the agent see. The
+beside the public comments: questions and answers only their author and the agent see. Every
+element situation, screen picture and request catalog state shows a sub-number (`C-12.3`)
+that links to it, and answers cite them and carry the product's pictures. The
 server keeps a private ask (thread kind `private`, its `owner` the asker) out of every other
 viewer's reads and acts; its inbox item carries `private: true` and is answered per
 [docs/desk.md](docs/desk.md) → **Private asks**, never shared anywhere else. Recorded
