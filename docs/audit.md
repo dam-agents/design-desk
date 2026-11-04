@@ -32,6 +32,14 @@ last backup (failed, missing, or older than two days), and the version.
    no issue on its own definition repository).
 6. **Spend** — `mcp__platform-outbound__get_metrics` (`days: 7`, `granularity: summary`):
    the week's attributed spend and its busiest model against `run_model`.
+7. **Agent manifest and peers** — rewrite `work/manifest.json` from its sources, then run
+   `scripts/manifest-check.sh stamp` and `publish` until both pass. Under `agent_manifest:
+   dam`, publish it on change with the artifact rules in `docs/manifest.md` → **Write, check,
+   publish**; a failed check keeps the old card and is a fail. Run
+   `bash "$HOME/scripts/peer-check.sh"`: an unreachable or malformed peer is a warn, and a
+   used trigger or contract whose value changed since its pin is a fail under **Action
+   needed** (`pin <name> again`, `docs/manifest.md` → **Pin a peer**). Never pin or change
+   `CONFIG.md` during the audit.
 
 ## Report
 
@@ -44,6 +52,7 @@ and `audit_report` is `enabled`):
 *Week in numbers*
 • Changes carded <n> · questions answered <n> · requests <open>/<handed off> · live prototypes <n>
 • Spend: $<actual> · model <busiest>
+• Manifest: <version> · <published | unchanged | local only | FAIL> · peers <ok>/<total>
 
 *Checks*
 🔴 <id> — <detail>

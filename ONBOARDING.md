@@ -183,6 +183,12 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    server (`https://mcp.figma.com/mcp`) as a Custom MCP connection with OAuth and grant it to
    this agent, then set `figma: enabled`; ask for a file the exports should go to
    (`figma_file`, may stay empty). No → `figma: disabled`.
+10. **Public manifest and peers** (`agent_manifest`) — not a question: write `dam` and tell the
+    operator: "I publish my public interface (triggers, skills, blocks I read and write,
+    channels, public pages) as a public manifest that people and other agents can read. It
+    holds only what I already show in public; a script blocks private values. Say so if you
+    want it kept local (`off`)." Then ask which agents this one works with, and put each
+    manifest link into `work/PEERS.md` (`docs/manifest.md` → **Peers**); none is a fine answer.
 
 Write the file in exactly this shape with `design config write` (a restored file included;
 [docs/config.md](docs/config.md) → Writing the file), then `bash "$HOME/scripts/verify-onboarding.sh"
@@ -218,6 +224,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - dispatch: enabled
 - work_repo: none
 - audit_report: enabled
+- agent_manifest: dam
 - log_level: info
 - figma: disabled
 - figma_file:
@@ -362,6 +369,15 @@ Only after all previous steps succeeded:
 ```bash
 head -1 "$HOME/VERSION" > "$HOME/work/VERSION"
 date -u +%Y-%m-%dT%H:%M:%SZ > "$HOME/.design-desk-onboarded"
+```
+
+The sentinel goes first so a failed verification does not re-run the whole runbook. Before
+verification, write `work/manifest.json` and pin every peer: follow `docs/manifest.md` →
+**Write, check, publish** and **Pin a peer**.
+
+Then run the structural and live verification:
+
+```bash
 bash "$HOME/scripts/verify-onboarding.sh" --live
 ```
 
