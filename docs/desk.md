@@ -114,7 +114,7 @@ served by the Desk server through the platform's Artifact API relay.
   shows its number and repository and says it is not on the Desk. The GitHub text is not on the
   Desk. An item's or a decision's number in text (`C-11`, `D-26`) previews it the same way:
   a request its status, any other item its kind and `summary`, a decision its text, who made
-  it, its day and whether it is in force. A preview shows half a second after the pointer rests on
+  it, its day and whether it is in force. A note's label on an element (◎ …) previews that element alone, cut from its option. A preview shows half a second after the pointer rests on
   it. A link that previews shows no one-line tooltip.
 - **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
   in a channel message (the platform turns it into the share link and keeps `#C-<n>`),

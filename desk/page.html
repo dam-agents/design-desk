@@ -293,7 +293,6 @@
   .tabs.vtabs button { border-radius: 8px 8px 0 0; border-bottom-color: transparent; background: var(--bg); color: var(--muted); margin-bottom: -1px; }
   .tabs.vtabs button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; border-color: var(--line); border-top: 2px solid var(--ink); border-bottom-color: var(--panel); box-shadow: none; }
   .vpanel { border: 1px solid var(--line); border-radius: 0 var(--radius) var(--radius) var(--radius); background: var(--panel); padding: 12px 14px 14px; }
-  .vpanel .vhead { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
   .vpanel .vbar:first-child { margin-top: 0; }
   .vbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
   .looks { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; }
@@ -318,6 +317,9 @@
   .pending { color: var(--warn); font-size: 12px; }
   /* An issue's or a pull request's preview on hover: what the Desk knows of it. */
   #peek { position: fixed; z-index: 80; width: min(380px, calc(100vw - 16px)); padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); pointer-events: none; font-size: 13.5px; }
+  #peek.snip { width: min(400px, calc(100vw - 16px)); padding: 6px; }
+  #peek.snip .snipbox { width: 100%; height: 140px; overflow: hidden; border-radius: 6px; background: #fff; }
+  #peek.snip iframe { width: 100%; height: 100%; border: 0; display: block; }
   #peek .t { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
   #peek .sub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; color: var(--muted); font-size: 12px; }
   #peek p { margin: 8px 0 0; } #peek h4 { margin: 10px 0 2px; font-size: 12.5px; } #peek ul { margin: 0; padding-left: 18px; }
@@ -825,7 +827,7 @@
   }
   const tipTarget = (e) => e.target.closest?.("[data-tip], [title]:not(iframe)");
   // A link that previews its issue or pull request shows the preview, not a line.
-  const previews = (el) => el.matches("[data-ref]") || (el.matches("a[href*='/issues/'], a[href*='/pull/']") && ghRef(el.getAttribute("href")));
+  const previews = (el) => el.matches("[data-ref], [data-snip]:not([data-snip=''])") || (el.matches("a[href*='/issues/'], a[href*='/pull/']") && ghRef(el.getAttribute("href")));
   document.addEventListener("mouseover", (e) => { const el = tipTarget(e); if (el && !previews(el)) tipLater(el); else tipHide(); });
   document.addEventListener("mouseout", (e) => { const el = tipTarget(e); if (el && !el.contains(e.relatedTarget)) tipHide(); });
   document.addEventListener("focusin", (e) => { const el = tipTarget(e); if (el?.matches(":focus-visible")) tipShow(el); });
@@ -1041,7 +1043,19 @@
     if (d) return d;
     try { const r = await api("GET", `/api/decisions/${encodeURIComponent(id)}`); decSeen.set(id, r.decision); return r.decision; } catch { return null; }
   }
+  // The element a note is about, cut from its option: the design is moved and scaled so that
+  // element fills the preview, and the rest of the design is hidden.
+  const SNIP_SCRIPT = (sel, text) => `<script>(function fit(){if(!innerWidth||!innerHeight)return requestAnimationFrame(fit);let e=null;try{e=${JSON.stringify(sel)}&&document.querySelector(${JSON.stringify(sel)})}catch{}
+    if(!e&&${JSON.stringify(text)}){const w=document.createTreeWalker(document.body,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===${JSON.stringify(text)}){e=n;break}}
+    const d=document.documentElement;d.style.overflow="hidden";if(!e){d.style.visibility="hidden";return}
+    const r=e.getBoundingClientRect(),p=12,W=innerWidth,H=innerHeight,k=Math.min(W/(r.width+2*p),H/(r.height+2*p),2.5);
+    const x=r.left+scrollX-p-(W/k-r.width-2*p)/2,y=r.top+scrollY-p-(H/k-r.height-2*p)/2;
+    scrollTo(0,0);document.body.style.visibility="hidden";e.style.visibility="visible";document.body.style.transformOrigin="0 0";document.body.style.transform="scale("+k+") translate("+(-x)+"px,"+(-y)+"px)"})();<\/script>`;
   async function peekOf(el) {
+    if (el.dataset.snip !== undefined) {
+      if (!el.dataset.snip) return null;
+      try { const a = await asset(el.dataset.snip); return { kind: "snip", html: decode(a), sel: el.dataset.snipSel, text: el.dataset.snipText }; } catch { return null; }
+    }
     // A number in text (C-11, D-26) previews whatever it names; a card's button only an issue or a change.
     const own = el.dataset.ref;
     if (own && /^D-\d+$/.test(own)) { const d = await decisionOf(own); return d ? { ...d, kind: "decision" } : null; }
@@ -1101,7 +1115,12 @@
       peekHide();
       const box = document.createElement("div");
       box.id = "peek"; box.setAttribute("role", "tooltip");
-      box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c);
+      if (c.kind === "snip") {
+        box.className = "snip";
+        box.innerHTML = `<div class="snipbox"><iframe sandbox="allow-scripts" title="The element the note is about"></iframe></div>`;
+        const sc = SNIP_SCRIPT(c.sel || "", c.text || ""), h = c.html.includes("</body>") ? c.html.replace("</body>", `${sc}</body>`) : c.html + sc;
+        box.querySelector("iframe").srcdoc = h;
+      } else box.innerHTML = ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
@@ -1109,7 +1128,7 @@
       box.style.top = `${below ? r.bottom + 8 : r.top - 8 - h}px`;
     }, TIP_DELAY);
   }
-  const peekTarget = (e) => e.target.closest?.("[data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']");
+  const peekTarget = (e) => e.target.closest?.("[data-snip], [data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']");
   document.addEventListener("mouseover", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekShow(el); });
   document.addEventListener("mouseout", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekHide(); });
   document.addEventListener("focusin", (e) => { const el = peekTarget(e); if (el) peekShow(el); });
@@ -1688,7 +1707,9 @@
     const KIND_TIP = { question: "A question to Design Desk; it answers right here", comment: "A comment for the team; Design Desk does not act on it", concern: "Someone is worried about an option", change: "A note asking Design Desk to change the design", asks: "Design Desk needs an answer before it can go on" };
     const rows = threads.map((th) => {
       const [name, tone] = label[th.kind] || [th.kind, ""];
-      const anchor = th.anchor?.variant ? `<button class="anchor" data-goto="${esc(th.id)}">◎ ${esc(th.anchor.label || th.anchor.text || "an element")} in ${esc(optionName(c, th.anchor.variant))}${th.anchor.view_name ? ` · ${esc(th.anchor.view_name)}` : ""}</button>` : "";
+      const an = th.anchor, av = an?.variant && (c.variants || []).find((x) => x.id === an.variant);
+      const snipAsset = an?.asset || (av && ((an.state && (av.states || []).find((x) => x.id === an.state)?.asset) || av.asset)) || "";
+      const anchor = an?.variant ? `<button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(th.anchor.label || th.anchor.text || "an element")} in ${esc(optionName(c, th.anchor.variant))}${th.anchor.view_name ? ` · ${esc(th.anchor.view_name)}` : ""}</button>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}" title="${esc(KIND_TIP[th.kind] || "")}">${esc(name)}</span>${anchor}${state}</div>
@@ -2033,7 +2054,7 @@
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}</button>`).join("")}</div>
-      <div class="vpanel"><p class="vhead">Option ${vs.indexOf(v) + 1} of ${vs.length} · everything below is about <b>${esc(v.name)}</b></p>
+      <div class="vpanel">
       ${againstBox(c, v.id)}${whyStrip(c, v)}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="A designer picked this option as the winner">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : ""}
       <div class="vbar">
