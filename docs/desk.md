@@ -48,6 +48,19 @@ served by the Desk server through the platform's Artifact API relay.
   on a narrow screen; the presentation's Exit, a picture's Close).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
+- **Pages and filters.** A tab's pages are tabs at the top of its list: Requests and
+  **Presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
+  Product. What narrows a page's list is one segmented filter under them (Changes: All, Not
+  seen yet, Not handled, Needs a designer; Requests: Open, Needs a designer, Closed; Issues:
+  the buckets; Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
+  counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
+  scrolls sideways and fades at its edge. A list has no search box of its own.
+- **Search.** The header's one search finds words in every item's title, summary and source
+  and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
+  decision's (`D-3`); a GitHub issue or pull request by its number (`#4512`, `PR 4512`) or link,
+  matched to the card it is or came from; and a Desk link. Hits show as you type; Enter or a
+  click opens one; ↑ ↓ pick, Escape closes. A GitHub number with no card offers its page on
+  GitHub, in the profile's repository (`repos`); a Desk number with no item says so.
 - **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
   answer); **Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
   with grey counts, then **Product** and **People**. **How it works** opens from the question
@@ -84,7 +97,7 @@ served by the Desk server through the platform's Artifact API relay.
 - **An item's link** is the Desk's link with the number: `#C-12` opens it in its own tab,
   `#presentation/C-12` on the presentation while it is on it (`#call/C-12`, its older form,
   still opens there), `#requests` a tab, `#presentation` the presentation. The page's **🔗 Copy link** builds it from
-  `desk_link`; **Go to** in the header takes a number or such a link; a `C-12` in text on the
+  `desk_link`; the header's **Search** takes a number or such a link; a `C-12` in text on the
   Desk links to that item.
 - **Text from Slack**: a Slack mention reads as the person's name. A relayed reply carries
   `mentions` (Slack user id → name), so the server writes `@Name`; a mention with no name
@@ -271,7 +284,7 @@ with a role; it has no card. This is the one roster change that comes from the D
 ## The presentation
 
 The team meets regularly; the Desk keeps the list of what to show at the next design meeting,
-the **Presentation** filter on Requests. (The store and the CLI keep its older name, `agenda`.)
+the **Presentation** page of Requests. (The store and the CLI keep its older name, `agenda`.)
 
 - Only a designer or the lead puts a card on it (**Add to presentation**), with a note and,
   for a request with options, its final version. The agent never adds one: it
@@ -284,7 +297,7 @@ the **Presentation** filter on Requests. (The store and the CLI keep its older n
 - **The brief** (`agenda_due`): for every card on the presentation, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
-- The **Presentation** filter lists what is to present, in order, with the briefs, and what
+- The **Presentation** page lists what is to present, in order, with the briefs, and what
   was presented lately; **▶ Present** shows one item at a time, full screen, with the version
   the designer picked (sheet or screens otherwise); comments go in the card's threads.
 - In or after the meeting a designer marks each item **presented** (`POST

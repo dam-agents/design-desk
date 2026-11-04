@@ -19,7 +19,9 @@ GitHub issue or pull request link previews what the Desk knows of it. Product â†
 keeps the design side's decisions (designers, PMs, leads) apart from developers', so also
 restart the Desk server (`rc-service --user design-desk-server restart`): it now tells the
 page whose each decision is, and a decision's `author` may name a `role`. Recorded decisions
-need no change.
+need no change. A tab's pages are now tabs and its filters one segmented control; the
+Decisions search box is gone: the header's search finds items, decisions and GitHub issue or
+pull request numbers.
 
 ## 1.33.0 â€” 2026-11-04
 

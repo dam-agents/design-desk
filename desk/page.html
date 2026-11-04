@@ -53,7 +53,18 @@
   /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
   .num { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: .7em; white-space: nowrap; margin-left: .45em; }
   .row .t .num { margin-left: auto; font-size: 11px; flex: none; }
-  header .goto { width: 15ch; padding: 4px 9px; font-size: 12.5px; }
+  /* Search across the Desk: items, decisions, numbers and GitHub issues and pull requests. */
+  header .search { position: relative; }
+  header .goto { width: clamp(15ch, 16vw, 28ch); padding: 5px 10px; font-size: 13px; transition: width .15s; }
+  header .goto:focus { width: min(36ch, 60vw); }
+  #hits { position: fixed; z-index: 60; width: min(440px, calc(100vw - 24px)); max-height: 70vh; overflow: auto; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  #hits .hit { text-decoration: none; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: baseline; width: 100%; text-align: left; padding: 7px 9px; border: 0; background: none; border-radius: 6px; font: inherit; color: inherit; cursor: pointer; }
+  #hits .hit:hover, #hits .hit[aria-selected="true"] { background: var(--soft); }
+  #hits .hit .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  #hits .hit .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #hits .hit .num { font-size: 11px; }
+  #hits .hit .why { grid-column: 2 / 4; font-size: 12px; color: var(--muted); }
+  #hits .none { padding: 8px 10px; color: var(--muted); font-size: 13px; }
   .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
   .theme.help { font-size: 18px; font-weight: 700; }
   .theme svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
@@ -131,8 +142,31 @@
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
   .chip.live { background: var(--live-soft); color: var(--live); }
   .empty { color: var(--muted); padding: 24px 12px; text-align: center; max-width: 60ch; margin: 0 auto; }
-  .filters { display: flex; gap: 4px; margin: 0 0 10px; overflow-x: auto; scrollbar-width: none; }
-  .filters::-webkit-scrollbar { display: none; } .filters .btn { flex: none; white-space: nowrap; padding: 3px 8px; }
+  /* A list's head, kept on top while the list scrolls: the tab's pages as tabs, then what
+     narrows the page's list as a segmented filter (docs/desk.md → Pages and filters). */
+  .listhead { position: sticky; top: -12px; z-index: 3; margin: -12px -12px 8px; padding: 12px 12px 0; background: var(--bg); }
+  .listhead:has(.subtabs) { padding-top: 2px; }
+  .listhead:not(:has(.filterbar)) { padding-bottom: 4px; }
+  .subtabs { display: flex; gap: 4px; align-items: stretch; margin: 0 -12px; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .subtabs::-webkit-scrollbar { display: none; }
+  .subtabs > button[data-filter] { position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; background: none; border: 0; padding: 11px 8px 10px; font: inherit; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+  .subtabs > button[data-filter]::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: -1px; height: 2px; border-radius: 2px 2px 0 0; background: transparent; transition: background .12s; }
+  .subtabs > button[data-filter]:hover { color: var(--ink); } .subtabs > button[data-filter]:hover::after { background: var(--line); }
+  .subtabs > button.on { color: var(--ink); font-weight: 600; } .subtabs > button.on::after, .subtabs > button.on:hover::after { background: var(--ink); }
+  .subtabs > button[data-filter]:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: 8px; }
+  .subtabs > .btn { align-self: center; margin-left: auto; flex: none; }
+  .listhead .n { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--soft); color: var(--muted); font-size: 11px; line-height: 17px; text-align: center; font-weight: 500; }
+  .filterbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0; }
+  .filters { position: relative; display: inline-flex; max-width: 100%; padding: 3px; gap: 2px; border-radius: 9px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); overflow-x: auto; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
+  /* A filter wider than the list scrolls sideways; its edge fades so the rest shows it is there. */
+  .filters.scrolls { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .filters .btn { flex: none; gap: 5px; white-space: nowrap; height: 26px; padding: 0 10px; border: 0; background: none; color: var(--muted); border-radius: 7px; font-size: 12.5px; font-weight: 500; }
+  .filters .btn:hover { color: var(--ink); background: color-mix(in srgb, var(--panel) 55%, transparent); }
+  .filters .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .filters .btn.on { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.08); }
+  .filters .btn .n { background: transparent; padding: 0; min-width: 0; color: inherit; opacity: .7; font-weight: 500; }
+  .filters .btn.on .n { opacity: 1; }
   h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
   .lead { font-size: 16px; margin: 10px 0 18px; max-width: var(--measure); }
@@ -333,7 +367,7 @@
   <header>
     <nav id="nav" aria-label="Desk"></nav>
     <div class="grow"></div>
-    <input class="goto" id="goto" placeholder="Go to C-12" aria-label="Go to an item: its number, like C-12 or D-3, or its link" title="Type an item's number, like C-12, a decision's, like D-3, or paste its link, and press Enter" autocomplete="off" spellcheck="false" />
+    <div class="search"><input class="goto" id="goto" type="search" placeholder="Search, or C-12, D-3, #4512" role="combobox" aria-expanded="false" aria-controls="hits" aria-label="Search the Desk: words, an item's number like C-12, a decision's like D-3, a GitHub issue or pull request number, or a link" title="Search requests, changes, issues, screens, elements and decisions. A number opens its item: C-12, D-3, or a GitHub issue or pull request like #4512" autocomplete="off" spellcheck="false" /><div id="hits" role="listbox" hidden></div></div>
     <span class="me" id="me"></span>
     <button class="btn theme help" id="help" type="button" data-tab="guide" aria-label="How it works" title="How it works">?</button>
     <button class="btn theme" id="theme" type="button"></button>
@@ -514,7 +548,7 @@
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of Requests and Changes, shows only what waits for a designer's decision.</p>
-<p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Go to</b> at the top opens an item by its number or its link.</p>
+<p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; <b>🔗 Copy link</b> gives a link that opens it; <b>Search</b> at the top finds an item by its words, its number, its link, or the number of its GitHub issue or pull request.</p>
 <p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
 <p>Each row in Requests and Changes shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
 <h3>Changing a design</h3>
@@ -582,7 +616,7 @@
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows", "issueFilter:designed": "Issues already designed here and sent to developers",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
-      "productFilter:decisions": "Every decision the team made, searchable", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback" }[v]),
+      "productFilter:decisions": "Every decision the team made, kept apart by who made it", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback" }[v]),
     dside: (v) => ({ "": "Every decision, kept apart by who made it", design: "Only what designers, PMs and leads decided", developer: "Only what developers decided: in code, a pull request or on the Desk" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
@@ -759,7 +793,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionQuery: "", decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, check: false, looked: new Set(), askFirst: true } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1062,7 +1096,7 @@
   // Each tab opens with a short intro for first use; How it works is all intro. An action
   // names what the server must allow (`can`), so a role that may not do it sees so.
   // Every list's items have a number and a link (docs/desk.md → Links to an item).
-  const LINK = ["Each item has its number in grey by its title, like C-12: <b>🔗 Copy link</b> sends someone straight to it, and <b>Go to</b> at the top opens one by its number."];
+  const LINK = ["Each item has its number in grey by its title, like C-12: <b>🔗 Copy link</b> sends someone straight to it, and <b>Search</b> at the top finds one by its words, its number or its GitHub issue or pull request number."];
   const INTRO = () => ({
     new: { about: "what changed in the product's screens, and what a designer should look at",
       see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
@@ -1089,7 +1123,7 @@
         ["Skip the vote and the live prototype: <b>Send to developers now</b>, or <b>Decide and close</b> with what you decided.", "skip"],
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
-        ["Filter by <b>Open</b>, <b>Presentation</b>, <b>Closed</b> or <b>Needs a designer</b>."], LINK],
+        ["Switch between the <b>Requests</b> and the <b>Presentation</b>; filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>."], LINK],
       steps: ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer or developer refines one, and a designer adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
     issues: { about: "what the team plans that will change the screens",
       see: ["The open issues that change the screens: the current sprint's (with its epics' issues) first, then the next sprint's, the ones someone has taken and the ones labelled for design.",
@@ -1218,21 +1252,32 @@
     return out.join("");
   }
 
+  // One filter: a segmented control, its choice marked; the key is S's, or a data- action.
+  // A tab's or a filter's words, with its count in a quiet pill.
+  const counted = (l, n) => `${esc(l)}${n ? ` <span class="n">${n}</span>` : ""}`;
+  const seg = (key, opts, attr = "filter", value = S[key]) => `<div class="filters" role="group">${opts.map(([k, l, n]) => `<button class="btn small ${value === k ? "on" : ""}" data-${attr}="${attr === "filter" ? `${key}:${k}` : k}" aria-pressed="${value === k}">${counted(l, n)}</button>`).join("")}</div>`;
+  // A filter too wide for the list fades at its edge.
+  const markScrolls = (root) => root.querySelectorAll(".filters").forEach((f) => f.classList.toggle("scrolls", f.scrollWidth > f.clientWidth + 1 && f.scrollLeft + f.clientWidth < f.scrollWidth - 1));
+  document.addEventListener("scroll", (e) => { if (e.target.matches?.(".filters")) markScrolls(e.target.parentElement); }, true);
   function renderList() {
     const list = $("#list");
     const main = $("#main");
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     const cards = visibleCards();
-    const f = (key, opts) => `<div class="filters">${opts.map(([k, l]) => `<button class="btn small ${S[key] === k ? "on" : ""}" data-filter="${key}:${k}">${esc(l)}</button>`).join("")}</div>`;
-    const designer = (n) => `Needs a designer${n ? ` (${n})` : ""}`;
-    let filters = S.tab === "new" ? f("newFilter", [["all", "All"], ["new", "Not seen yet"], ["open", "Not handled"], ["designer", designer(newCards("designer").length)]])
-      : S.tab === "requests" ? f("reqFilter", [["open", "Open"], ["presentation", `Presentation${S.agenda.length ? ` (${S.agenda.length})` : ""}`], ["closed", "Closed"], ["designer", designer(requestCards("designer").length)]])
-      : S.tab === "issues" ? f("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, `${l}${k === "all" ? "" : ` (${issueCards(k).length})`}`]))
-      : S.tab === "product" ? f("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]]) : "";
-    const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product style="margin-left:auto">+ Add</button>` : "";
-    if (add) filters = filters.replace(/<\/div>$/, `${add}</div>`);
-    if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(filters); return; }
+
+    // A tab's pages (Product's four, Requests and its presentation) are tabs; filters narrow the page's list.
+    const pages = (key, opts, on, extra = "") => `<nav class="subtabs" aria-label="Pages">${opts.map(([k, l, n]) => `<button class="${on(k) ? "on" : ""}" data-filter="${key}:${k}" aria-current="${on(k) ? "page" : "false"}">${counted(l, n)}</button>`).join("")}${extra}</nav>`;
+    const reqList = S.reqFilter !== "presentation";
+    const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>` : "";
+    const head = S.tab === "requests" ? pages("reqFilter", [["open", "Requests"], ["presentation", "Presentation", S.agenda.length]], (k) => (k === "presentation") !== reqList)
+      : S.tab === "product" ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
+    const filter = S.tab === "new" ? seg("newFilter", [["all", "All"], ["new", "Not seen yet"], ["open", "Not handled"], ["designer", "Needs a designer", newCards("designer").length]])
+      : S.tab === "requests" && reqList ? seg("reqFilter", [["open", "Open"], ["designer", "Needs a designer", requestCards("designer").length], ["closed", "Closed"]])
+      : S.tab === "issues" ? seg("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, l, k === "all" ? 0 : issueCards(k).length])) : "";
+    const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
+    requestAnimationFrame(() => markScrolls(list));
+    if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(head); return; }
     if (presenting()) { renderAgendaList(filters); return; }
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
@@ -1307,8 +1352,7 @@
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
     const list = $("#list");
-    const states = `<div class="filters">${[["active", "In force"], ["revoked", "Revoked"], ["", "All"]].map(([k, l]) => `<button class="btn small ${S.decisionState === k ? "on" : ""}" data-dstate="${k}">${esc(l)}</button>`).join("")}</div>`;
-    const sides = `<div class="filters">${[["", "Everyone"], ["design", "Designers and PMs"], ["developer", "Developers"]].map(([k, l]) => `<button class="btn small ${S.decisionSide === k ? "on" : ""}" data-dside="${k}">${esc(l)}</button>`).join("")}</div>`;
+    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["revoked", "Revoked"], ["", "All"]], "dstate")}${seg("decisionSide", [["", "Everyone"], ["design", "Design and PM"], ["developer", "Developers"]], "dside")}</div></div>`;
     const row = (d) => `<button class="row side-${esc(d.side || "none")}" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}</div>
       <div class="meta">${sideChip(d)}<span class="chip" title="The day it was decided">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad" title="It no longer holds; it stays here crossed out, with the reason">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip bad" title="It contradicts these decisions; a designer settles which holds">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip" title="Who made the decision">by ${named(d.author)}</span>` : ""}${(d.concepts || []).slice(0, 2).map((x) => `<span class="chip" title="What it is about">${esc(x)}</span>`).join("")}</div></button>`;
     // Kept apart: the design side's decisions, then developers', then those whose author's role is unknown.
@@ -1317,10 +1361,10 @@
       const xs = shown.filter((d) => (d.side || "") === k);
       return xs.length ? `<div class="side-head">${esc(k === "design" ? "From designers and PMs" : k === "developer" ? "From developers" : "Not known who")} <span class="n">${xs.length}</span></div>${xs.map(row).join("")}` : "";
     }).join("");
-    list.innerHTML = `${filters}${states}${sides}<input id="decision-q" placeholder="Search decisions, or D-3…" value="${esc(S.decisionQuery)}" style="margin-bottom:10px" />${rows || `<div class="empty">${S.decisionQuery || (S.decisionSide && S.decisions.length) ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionSide && S.decisions.length ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
-    try { S.decisions = (await api("GET", `/api/decisions?q=${encodeURIComponent(S.decisionQuery)}&state=${encodeURIComponent(S.decisionState)}`)).decisions || []; } catch { S.decisions = []; }
+    try { S.decisions = (await api("GET", `/api/decisions?state=${encodeURIComponent(S.decisionState)}`)).decisions || []; } catch { S.decisions = []; }
   }
   // One decision, read with everything that cites it or goes against it.
   async function openDecision(id) {
@@ -1328,7 +1372,7 @@
     try { r = await api("GET", `/api/decisions/${encodeURIComponent(id)}`); } catch { toast(`There is no decision numbered ${id} on the Desk.`); return false; }
     S.tab = "product"; S.productFilter = "decisions"; S.card = null; S.ws.open = false;
     S.decision = { ...r.decision, refs: r.refs || [] };
-    if (!S.decisions.some((x) => x.id === id)) { S.decisionState = ""; S.decisionQuery = ""; }
+    if (!S.decisions.some((x) => x.id === id)) { S.decisionState = ""; S.decisionSide = ""; }
     await loadDecisions();
     renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
     return true;
@@ -2362,7 +2406,7 @@
     if (S.tab === "people") { d.innerHTML = `<div class="with-intro">${renderIntro()}<div class="guide">${renderPeople()}</div></div>`; return; }
     if (presenting() && !S.card) { renderAgendaDetail(); return; }
     if (S.tab === "product" && S.productFilter === "decisions") {
-      d.innerHTML = S.decision ? renderDecision(S.decision) : `<p class="pick">Every decision the team made about the product, with where it was made. Pick one, or search.</p>${renderIntro()}`;
+      d.innerHTML = S.decision ? renderDecision(S.decision) : `<p class="pick">Every decision the team made about the product, with where it was made. Pick one, or search for one at the top.</p>${renderIntro()}`;
       $("#main").classList.toggle("has-detail", Boolean(S.decision));
       return;
     }
@@ -2613,6 +2657,7 @@
     const el = e.target.closest("button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note]");
     if (!el) return;
     const ds = el.dataset;
+    if (ds.hit) { await openHit(ds.hit); return; }
     if (ds.tab) { e.preventDefault(); await showTab(ds.tab); return; }
     if (ds.ref) { e.preventDefault(); await goTo(target(ds.ref)); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
@@ -2747,13 +2792,80 @@
     }
   }));
 
-  let searchTimer = null;
+  // ---------- search (docs/desk.md → Search) ----------
+  // The header's one search: words over every item's title, summary and source and over the
+  // decisions; an item's number (C-12, 12), a decision's (D-3), a GitHub issue or pull request
+  // number (#4512, PR 4512) or link, or a Desk link. Enter opens the first hit.
+  const KIND_NAME = { request: "Request", change: "Change", issue: "Issue", screen: "Screen", element: "Element", digest: "Week", decision: "Decision" };
+  // The GitHub numbers a card stands for: its pull request or issue, and where it came from.
+  const ghNums = (c) => [c.source?.pr, c.source?.issue, c.origin?.number, ghRef(c.source?.url)?.n, ghRef(c.origin?.url)?.n].filter(Boolean).map(String);
+  const hay = (c) => [c.title, c.summary, c.reporter, c.source?.author, c.source?.repo, c.path, c.period, c.origin?.reporter].filter(Boolean).join(" ").toLowerCase();
+  let searchTimer = null, searchSeq = 0, hitsShown = [], hitsFor = null, hitAt = 0;
+  async function search(text) {
+    const q = text.trim(), seq = ++searchSeq;
+    if (!q) return [];
+    const out = [], seen = new Set(), push = (h) => { if (!seen.has(h.id)) { seen.add(h.id); out.push(h); } };
+    const card = (c, why = "") => push({ id: c.id, kind: KIND_NAME[c.kind] || "Item", title: c.title, why });
+    const gh = ghRef(q), num = q.match(/^(?:#|(?:pr|pull|issue)\s*#?\s*)?(\d+)$/i), byHash = /^(?:#|pr|pull|issue)/i.test(q) || gh;
+    // A GitHub number or link first when it says so (#4512, PR 4512, a github.com link), else the Desk's own number.
+    const ghHits = () => {
+      const n = gh?.n || num?.[1];
+      if (n) for (const c of S.cards) if ((gh ? refsOf(c).includes(gh.key) : ghNums(c).includes(n))) card(c, `${c.source?.pr || ghRef(c.source?.url)?.pr || ghRef(c.origin?.url)?.pr ? "Pull request" : "Issue"} #${n} on GitHub`);
+    };
+    const to = gh ? null : target(q);
+    if (byHash) ghHits();
+    if (to?.id) { const c = S.cards.find((x) => x.id === to.id); if (c) card(c, "Its number"); }
+    if (to?.decision) {
+      const d = await api("GET", `/api/decisions/${encodeURIComponent(to.decision)}`).then((r) => r.decision, () => null);
+      if (d) push({ id: d.id, kind: "Decision", title: d.text, why: "Its number" });
+    }
+    if (!byHash) ghHits();
+    // A GitHub number the Desk has no card for still opens on GitHub, in the product's repository.
+    const n = gh?.n || num?.[1];
+    const home = repoUrl(S.me?.repo);
+    if (n && !out.some((h) => h.why.includes(`#${n} on GitHub`)) && (gh || home)) {
+      const url = gh ? q : `${home}/issues/${n}`;
+      push({ id: `gh:${n}`, kind: "GitHub", title: `#${n} on GitHub`, why: "Not on the Desk: opens on GitHub", url });
+    }
+    if (to && !to.id && !to.decision && to.tab) push({ id: `#${to.tab}`, kind: "Page", title: to.tab === "presentation" ? "The presentation" : TABS[to.tab] || to.tab, why: "" });
+    // Words: every word in the item's text.
+    const words = q.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
+    if (words.length && !gh) {
+      for (const c of S.cards) { const h = hay(c); if (words.every((w) => h.includes(w))) card(c); }
+      try {
+        const ds = (await api("GET", `/api/decisions?q=${encodeURIComponent(q)}`)).decisions || [];
+        for (const d of ds) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : "" });
+      } catch {}
+    }
+    return seq === searchSeq ? out.slice(0, 30) : null;
+  }
+  function showHits(hits, q) {
+    const box = $("#hits"), input = $("#goto");
+    hitsShown = hits; hitsFor = q; hitAt = 0;
+    if (!q.trim()) { box.hidden = true; input.setAttribute("aria-expanded", "false"); return; }
+    const inner = (h) => `<span class="k">${esc(h.kind)}</span><span class="t">${esc(h.title || h.id)}</span>${/^[#g]/.test(h.id) ? "<span></span>" : `<span class="num">${esc(h.id)}</span>`}${h.why ? `<span class="why">${esc(h.why)}</span>` : ""}`;
+    box.innerHTML = hits.length ? hits.map((h, i) => h.url ? `<a class="hit" role="option" href="${safeUrl(h.url)}" target="_blank" rel="noopener noreferrer" aria-selected="${i === 0}">${inner(h)}</a>`
+      : `<button class="hit" role="option" data-hit="${esc(h.id)}" aria-selected="${i === 0}">${inner(h)}</button>`).join("")
+      : `<div class="none">Nothing on the Desk matches “${esc(q.trim())}”.</div>`;
+    box.hidden = false; input.setAttribute("aria-expanded", "true");
+    // Under the field, inside the window on a narrow screen too.
+    const r = input.getBoundingClientRect();
+    box.style.top = `${r.bottom + 4}px`;
+    box.style.left = `${Math.max(8, Math.min(r.right - box.offsetWidth, innerWidth - box.offsetWidth - 8))}px`;
+  }
+  const hitsClose = () => { const box = $("#hits"); if (box) box.hidden = true; $("#goto")?.setAttribute("aria-expanded", "false"); };
+  async function openHit(id) {
+    const ok = await goTo(id.startsWith("#") ? target(id) : /^D-/.test(id) ? { decision: id } : target(id));
+    if (ok !== false) { $("#goto").value = ""; hitsClose(); $("#goto").blur(); }
+  }
   document.addEventListener("input", (e) => {
-    if (e.target.id !== "decision-q") return;
-    S.decisionQuery = e.target.value;
+    if (e.target.id !== "goto") return;
+    const q = e.target.value;
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(async () => { await loadDecisions(); const pos = e.target.selectionStart; renderList(); const q = $("#decision-q"); if (q) { q.focus(); q.setSelectionRange(pos, pos); } }, 300);
+    // Numbers and links answer at once; words wait for a pause in typing.
+    searchTimer = setTimeout(async () => { const hits = await search(q); if (hits) showHits(hits, q); }, /^[#\w-]*\d+$|^https?:/i.test(q.trim()) ? 0 : 200);
   });
+  document.addEventListener("click", (e) => { if (!e.target.closest?.("header .search")) hitsClose(); }, true);
 
   document.addEventListener("change", (e) => {
     if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
@@ -2778,11 +2890,30 @@
       if (k >= 0 && k < looks.length) { e.preventDefault(); S.look = lookKey(looks[k]); S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); }
       return;
     }
-    if (e.key === "Enter" && !e.isComposing && e.target.id === "goto") {
-      const to = target(e.target.value);
-      if (!to) { toast("Type an item's number, like C-12, or paste its link."); return; }
-      goTo(to).then((ok) => { if (ok) e.target.value = ""; }).catch(fail);
-      return;
+    if (e.target.id === "goto" && !e.isComposing) {
+      const pick = (i) => { hitAt = (i + hitsShown.length) % hitsShown.length; const bs = [...document.querySelectorAll("#hits .hit")]; bs.forEach((b, j) => b.setAttribute("aria-selected", String(j === hitAt))); bs[hitAt]?.scrollIntoView({ block: "nearest" }); };
+      if (e.key === "ArrowDown" && hitsShown.length) { e.preventDefault(); pick(hitAt + 1); return; }
+      if (e.key === "ArrowUp" && hitsShown.length) { e.preventDefault(); pick(hitAt - 1); return; }
+      if (e.key === "Escape") { hitsClose(); return; }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const q = e.target.value;
+        clearTimeout(searchTimer);
+        (async () => {
+          // The hits shown for these very words, else a fresh search.
+          const fresh = hitsFor === q && !$("#hits").hidden;
+          const hits = fresh ? hitsShown : await search(q);
+          if (!hits) return;
+          if (!fresh) showHits(hits, q);
+          const h = hits[fresh ? hitAt : 0];
+          if (h?.url) { document.querySelectorAll("#hits .hit")[fresh ? hitAt : 0]?.click(); hitsClose(); return; }
+          if (h) return openHit(h.id);
+          // A number the Desk does not have says so, as a link to it does.
+          const to = target(q);
+          if (to) { hitsClose(); await goTo(to); }
+        })().catch(fail);
+        return;
+      }
     }
     // Enter in a dialog's field would submit its form (docs/desk.md → Where it works): it presses the dialog's own button.
     if (e.key === "Enter" && !e.isComposing && e.target.matches("dialog input")) { e.preventDefault(); e.target.closest("dialog").querySelector("[data-close]:not([data-close=cancel])")?.click(); return; }

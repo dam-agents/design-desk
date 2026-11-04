@@ -448,7 +448,7 @@ const LINKS = `<script>
 window.copied = [];
 Object.defineProperty(navigator, "clipboard", { value: { async writeText(t) { copied.push(t); } } });
 const cards = [
-  { id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows C-2; nothing to do with C-99." },
+  { id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows C-2; nothing to do with C-99.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45" } },
   { id: "C-2", kind: "request", title: "Calmer empty list", status: "feedback" },
   { id: "C-3", kind: "request", title: "Closed one", status: "declined" },
 ];
@@ -492,7 +492,8 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.goto(`${base}#presentation/C-2`);
   await desk.reload();
   assert.equal(await shown("requests", "Calmer empty list"), "C-2", "a link to the presentation opens it there, also on a fresh load");
-  assert.match(await desk.textContent("#list .filters .on"), /Presentation \(1\)/, "on the Presentation filter");
+  assert.match(await desk.textContent("#list .subtabs .on"), /Presentation \(1\)/, "on the Presentation page, a tab of Requests");
+  assert.equal(await desk.locator("#list .filters").count(), 0, "the presentation has no filter of its own");
   await desk.click("[data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
   assert.deepEqual(await desk.evaluate(() => copied), ["https://share.example.com/a/xY12#presentation/C-2"]);
@@ -507,6 +508,17 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.fill("#goto", "https://share.example.com/a/xY12#C-99");
   await desk.press("#goto", "Enter");
   await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => /nothing numbered C-99/.test(t.textContent)));
+
+  // The header's search: words over every item, a GitHub number, and a number the Desk has no card for.
+  await desk.fill("#goto", "calmer");
+  await desk.waitForSelector('#hits .hit[data-hit="C-2"]');
+  await desk.press("#goto", "Enter");
+  assert.equal(await shown("requests", "Calmer empty list"), "C-2", "Enter opens the first hit");
+  await desk.fill("#goto", "#45");
+  await desk.waitForFunction(() => /Pull request #45 on GitHub/.test(document.querySelector('#hits .hit[data-hit="C-1"]')?.textContent || ""));
+  await desk.click('#hits .hit[data-hit="C-1"]');
+  assert.equal(await shown("new", "A new header"), "C-1", "a GitHub pull request number finds its change");
+  assert.equal(await desk.isHidden("#hits"), true, "the hits close once one opens");
 }));
 
 // The presentation (docs/desk.md → The presentation): a designer marks an item presented in
