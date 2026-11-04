@@ -191,6 +191,15 @@
   .shot { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); cursor: zoom-in; }
   .shot img { display: block; width: 100%; min-height: 120px; background: var(--soft); object-fit: cover; object-position: top; max-height: var(--shot-h); }
   .shot figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); }
+  /* The design catalog: one part in each state, a picture of it alone beside what it covers. */
+  .catalog { margin: 0 0 14px; } .catalog h4 { margin: 8px 0; font-size: 14px; }
+  .catalog ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--shot-w) * 1.6)), 1fr)); gap: 12px; }
+  .catalog li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 10px; }
+  .catalog .shot img { min-height: 0; max-height: 220px; object-fit: contain; object-position: center; padding: 8px; box-sizing: border-box; }
+  .catalog .nopic { border: 1px dashed var(--line); border-radius: var(--radius); padding: 12px; margin: 0; }
+  .catalog .k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 8px 0 2px; }
+  .catalog ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  @media (max-width: 560px) { .catalog li { grid-template-columns: 1fr; } }
   /* Where the change is on a picture: boxes the agent measured, shown while "Outline what changed" is on. */
   .shot .pic { max-height: var(--shot-h); overflow: hidden; background: var(--soft); }
   .shot .pic img, .zoom .canvas img { min-height: 0; max-height: none; height: auto; object-fit: initial; }
@@ -503,7 +512,7 @@
     explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     revise: "Changing the design as you asked.",
-    states: "Drawing every state of the part you picked. Each state appears in the design workspace as it is drawn.",
+    states: "Drawing every state of the part you picked. Each state appears in the design workspace as it is drawn, and in the request's design catalog with the use case it covers.",
     build: "Building the live prototype: a private copy of the product with this design. The first one can take up to an hour; you can close this page.",
     handoff: "Writing the developer spec and sending it on.",
     teardown: "Switching off the live prototype.",
@@ -581,7 +590,7 @@
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
 <p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
-<p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
+<p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions. On the request, the <b>Design catalog</b> shows each state as a picture of the part alone, with the use case of the brief it covers.</p>
 <p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
 <p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Pick as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
@@ -1154,7 +1163,7 @@
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
         ["<b>Open the design workspace</b>: click a part of an option and say what should change.", "revise"],
-        ["<b>Draw every state</b> of a part of an option, then step through and change each state on its own.", "revise"],
+        ["<b>Draw every state</b> of a part in the design workspace, step through and change each state on its own; the request's <b>Design catalog</b> shows each with the use case it covers.", "revise"],
         ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
         ["Skip the vote and the live prototype: <b>Send to developers now</b>, or <b>Decide and close</b> with what you decided.", "skip"],
@@ -1979,7 +1988,6 @@
       <div class="vbar">
         ${can("vote") ? `<button class="btn small ${mine === "prefer" ? "on" : ""}" data-vote="prefer">👍 I like this one</button><button class="btn small ${mine === "concern" ? "on" : ""}" data-vote="concern">⚠ I have a concern</button>` : ""}
         <button class="btn small" data-act="workspace">Open in the design workspace</button>
-        ${can("revise") && !closed(c) ? `<button class="btn small" data-act="states" title="Design Desk draws a part of this option in every state it can be in">Draw every state…</button>` : ""}
         ${vs.length > 1 && can("choose") ? (c.chosen?.variant === v.id ? `<button class="btn small on" data-choose="">★ The winner — undo</button>` : `<button class="btn small" data-choose="${esc(v.id)}">★ Pick as the winner</button>`) : ""}
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
         ${S.me?.slack && can("share") && !(c.polls || []).some((x) => x.state === "open") && !working(c).some((k) => k.startsWith("slack")) ? `<button class="btn small" data-act="slack-share">Share in Slack</button>` : ""}
@@ -2060,8 +2068,8 @@
       ${renderGrill(c)}
       ${shots(found)}
       ${renderVerdict(c)}
-      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}`
-        : `${renderOptions(c)}${renderStories(c)}${renderPrototype(c)}`}
+      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}${renderCatalog(c)}`
+        : `${renderOptions(c)}${renderStories(c)}${renderCatalog(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
       ${c.spec?.asset ? `<details class="fold"${c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? " open" : ""}><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>` : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
@@ -2140,6 +2148,31 @@
       ${vs.length > 1 ? `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v?.id}">${esc(x.name)}</button>`).join("")}</div>` : ""}
       <div class="stories"><ol>${ss.map((x) => `<li><button data-story="${esc(x.id)}" aria-pressed="${x.id === st.id}">${v ? mark(x) : ""}<span>${txt(x.text)}</span></button></li>`).join("")}</ol>
         <div><p class="story">${txt(st.text)}${st.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</p>${detail}</div></div>`;
+  }
+  // The design catalog: every state drawn of a part of an option, each as a picture of the part
+  // alone, with what it is, when it happens and the use case of the brief it serves
+  // (docs/requests.md → Every state of a part). States are drawn from the design workspace.
+  function renderCatalog(c) {
+    const vs = (c.variants || []).filter((x) => (x.states || []).length);
+    if (!vs.length) return "";
+    const v = vs.find((x) => x.id === S.variant) || vs[0], ss = c.issue_brief?.stories || [];
+    const parts = [...new Set(v.states.map((x) => x.part))];
+    const useOf = (x) => {
+      const told = (x.stories || []).map((id) => ss.find((st) => st.id === id)).filter(Boolean);
+      if (told.length) return told.map((st) => `<li>${txt(st.text)}</li>`).join("");
+      return x.use ? `<li>${txt(x.use)}</li>` : "";
+    };
+    const item = (x) => {
+      const use = useOf(x), stale = (x.of || 1) < (v.version || 1);
+      const pic = x.shot ? `<figure class="shot" data-zoom="${esc(x.shot)}"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
+        : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
+      return `<li>${pic}<div><b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
+        ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
+    };
+    return `<h3>Design catalog</h3>
+      <p class="hint" style="max-width:var(--measure)">Every state Design Desk drew of a part of ${esc(v.name)}, each on its own, with the use case of the brief it covers. To draw more, select a part in the design workspace and press Draw every state of this part.</p>
+      ${vs.length > 1 ? `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}">${esc(x.name)}</button>`).join("")}</div>` : ""}
+      ${parts.map((p) => `<div class="catalog"><h4>${esc(p)} · ${plural(v.states.filter((x) => x.part === p).length, "state", "states")}</h4><ol>${v.states.filter((x) => x.part === p).map(item).join("")}</ol></div>`).join("")}`;
   }
   // The story's parts, outlined in the option and the first one scrolled into view.
   function storyPins() {
@@ -2447,7 +2480,7 @@
   // What the workspace shows; a refresh that changes none of it leaves it alone.
   function wsFingerprint(c) {
     const v = (c.variants || []).find((x) => x.id === S.variant);
-    return JSON.stringify([v?.asset, v?.version, (v?.states || []).map((x) => x.asset), v?.reasons, c.cited, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
+    return JSON.stringify([v?.asset, v?.version, (v?.states || []).map((x) => x.asset + (x.shot || "")), v?.reasons, c.cited, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
   }
 
   // ---------- rendering the detail ----------

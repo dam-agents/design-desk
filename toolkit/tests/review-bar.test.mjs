@@ -1,5 +1,6 @@
 // node --test toolkit/tests/review-bar.test.mjs — a design walks its flow: a control wired
 // to another view opens it, Back retraces it, and what can be clicked shows.
+import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -100,4 +101,36 @@ test("design shot takes no picture with the dead-click flash", async (t) => {
     }, [url("plain"), url("clicked")]);
     assert.ok(changed < 20, `view 2 is pictured without the flash (${changed} pixels differ)`);
   } finally { await chrome.close(); }
+});
+
+test("design shot --element pictures one part alone, on its view, named after its page", async (t) => {
+  const browser = chromium();
+  if (!browser) return t.skip("no browser here");
+  try { req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  const { main } = await import("../bin/shot.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "dd-element-"));
+  // Two states of one part, shot into one directory: each keeps its own picture.
+  const css = `<style>#edit{display:inline-block;width:120px;height:40px}</style>`;
+  writeFileSync(join(dir, "hover.html"), PAGE.replace("<body>", `<body>${css}`));
+  writeFileSync(join(dir, "error.html"), PAGE.replace("<body>", `<body>${css}`).replace(">Edit<", " style=\"background:red\">Edit<"));
+  const out = join(dir, "shots"), printed = [];
+  const log = console.log; console.log = (p) => printed.push(p);
+  try {
+    // The part is on view 2, which is not shown when the page opens.
+    for (const p of ["hover", "error"]) await main("shot", [join(dir, `${p}.html`), out, "--width", "600", "--height", "400", "--element", "#edit", "--pad", "10"]);
+  } finally { console.log = log; }
+  assert.deepEqual(printed, ["hover", "error"].flatMap((p) => ["light", "dark"].map((th) => join(out, `${p}-element-${th}.png`))));
+  // A PNG names its width and height at bytes 16 and 20: the part and its padding, not the page.
+  const size = (f) => { const b = readFileSync(f); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
+  for (const f of printed) {
+    const [w, h] = size(f);
+    assert.ok(w >= 140 && w <= 150 && h >= 60 && h <= 70, `${f} is the part alone (${w}×${h})`);
+  }
+  assert.notDeepEqual(readFileSync(printed[0]), readFileSync(printed[2]), "two states keep two pictures");
+  // A part the page does not have, or one that is not shown, is said, not pictured.
+  const run = (sel) => spawnSync(process.execPath, [join(TOOLKIT, "bin/design.mjs"), "shot", join(dir, "hover.html"), out, "--element", sel], { encoding: "utf8" });
+  assert.match(run("#nothing").stderr, /--element: nothing matches #nothing/);
+  writeFileSync(join(dir, "hidden.html"), `<!doctype html><html><body><button id="gone" style="display:none">Hidden</button></body></html>`);
+  const hidden = spawnSync(process.execPath, [join(TOOLKIT, "bin/design.mjs"), "shot", join(dir, "hidden.html"), out, "--element", "#gone"], { encoding: "utf8" });
+  assert.match(hidden.stderr, /--element: #gone is not visible/);
 });
