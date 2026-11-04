@@ -300,7 +300,8 @@
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
   .subno { font: 600 11.5px/1 var(--mono, ui-monospace, monospace); background: var(--soft); color: var(--ink); padding: 2px 6px; border-radius: 6px; text-decoration: none; margin-right: 4px; }
   .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
-  .starters { display: flex; gap: 6px; flex-wrap: wrap; max-width: var(--measure); margin-bottom: 10px; }
+  .private-note { max-width: var(--measure); line-height: 1.5; margin: 0 0 12px; }
+  .starters { display: flex; gap: 8px; flex-wrap: wrap; max-width: var(--measure); margin: 0 0 14px; }
   .thread.private { border-style: dashed; }
   .brief { display: grid; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
   .brief .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -1690,7 +1691,7 @@
       </article>`;
     }).join("");
     return `<h3>Private ask <span class="chip" title="Only you and Design Desk see these questions and answers">🔒 only you</span></h3>
-      <p class="hint">Only you see what you ask here, and Design Desk's answers. Nobody else on the Desk, and nothing goes to Slack. Design Desk explains in plain words and never changes the design from a private ask.</p>
+      <p class="hint private-note">Only you see what you ask here, and Design Desk's answers. Nobody else on the Desk, and nothing goes to Slack. Design Desk explains in plain words and never changes the design from a private ask.</p>
       <div class="starters">${STARTERS.map((q) => `<button class="btn small" data-private="${esc(q)}">${esc(q)}</button>`).join("")}</div>
       <div class="threads">${rows}</div>
       <div class="composer"><textarea id="private-text" maxlength="4000" placeholder="Ask anything you would rather ask privately…"></textarea>
