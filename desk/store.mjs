@@ -10,6 +10,10 @@ export const LIMITS = {
   threadsPerCard: 300,
   // The states drawn of one option (docs/requests.md → Every state of a part).
   optionStates: 24,
+  // The ways of one part a person picks from (docs/requests.md → Alternatives of a part).
+  alternatives: 4,
+  // What a person writes a new option should look like and have.
+  optionAsk: 2000,
   messagesPerThread: 200,
   // An answer to a change shows before and after pictures: a pair or two (light, dark), each with its diff.
   changeShots: 6,
@@ -691,6 +695,47 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // A designer takes an option off the request, as a tab is closed: its votes and notes stay
+  // in the record; the last option, and the one a live prototype is built from, stay
+  // (docs/requests.md → Taking an option off).
+  dropOption(c, who, variant) {
+    const v = (c.variants || []).find((x) => x.id === variant);
+    if (!v) throw bad("That design option is not on this request.");
+    if (c.variants.length < 2) throw bad(`${v.name} is the only option. Close the request instead.`);
+    if (c.live_pick?.variant === v.id && (["building", "live"].includes(c.prototype?.state) || Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "build"))) throw bad(`The live prototype is built from ${v.name}. Build another option first.`);
+    // An approval or the presentation that names the option would point at nothing.
+    if (c.approved?.variant === v.id) throw bad(`${v.name} is the approved option. Reopen the request first.`);
+    // A presented one too: the record says which design the meeting saw, and Undo queues it again.
+    if (c.agenda?.status !== "removed" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation${c.agenda.status === "presented" ? " the team saw" : ""}. Take it off the presentation first.`);
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind))) throw bad(BUSY);
+    c.variants = c.variants.filter((x) => x.id !== v.id);
+    if (c.chosen?.variant === v.id) delete c.chosen;
+    if (c.live_pick?.variant === v.id) delete c.live_pick;
+    c.dropped_options = [...(c.dropped_options || []), { id: v.id, name: v.name, version: v.version || 1, by: person(who), at: this.clock() }].slice(-20);
+    c.updated = this.clock();
+    this.save();
+    return { card: c };
+  }
+
+  // The alternative a person picked becomes the option's next version; the earlier one stays
+  // in its history and the other alternatives go (docs/requests.md → Alternatives of a part).
+  pickAlternative(c, who, variant, altId) {
+    const v = (c.variants || []).find((x) => x.id === variant);
+    if (!v) throw bad("Pick the design option.");
+    const alt = (v.alternatives || []).find((x) => x.id === altId);
+    if (!alt) throw bad("That alternative is not drawn for this option.");
+    if ((alt.of || 1) < (v.version || 1)) throw new DeskError(409, `${v.name} changed after this alternative was drawn. Have the alternatives drawn again.`);
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "revise")) throw bad(BUSY);
+    const at = this.clock();
+    v.history = [{ asset: v.asset, version: v.version || 1, drawn: v.drawn || null }, ...(v.history || [])].slice(0, 10);
+    v.asset = alt.asset; v.version = (v.version || 1) + 1; v.drawn = at;
+    v.picked = { alternative: alt.name, part: alt.part, by: person(who), at };
+    v.alternatives = [];
+    c.updated = at;
+    this.save();
+    return { card: c };
+  }
+
   // A lead asks Design Desk to put a person on the Desk's list with a role; the agent
   // writes the row (docs/desk.md → People). `roster` is the list the server reads now.
   askForPerson(who, { email, role }, roster = [], { owner = false } = {}) {
@@ -739,12 +784,26 @@ export class Store {
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
     if (closed && action !== "reopen") throw bad("This request is closed. Press Reopen first.");
-    const kinds = { explore: "explore", revise: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
+    // A person picks one of the ways a part could look: it becomes the option's next version.
+    if (action === "pick-alternative") return this.pickAlternative(c, who, variant, note);
+    if (action === "drop-option") return this.dropOption(c, who, variant);
+    const kinds = { explore: "explore", "add-option": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
     // Every state of one part of an option: the option and the part a person picked.
     const stateOf = action === "states" ? (c.variants || []).find((v) => v.id === variant) : null;
     if (action === "states" && !stateOf) throw bad("Pick the design option whose states to draw.");
     if (action === "states" && !part?.label && !String(note || "").trim()) throw bad("Select the part of the design, or say which part, whose states to draw.");
+    // Ways one part could look, from what a person wrote: the option and the part they picked.
+    const altOf = action === "alternatives" ? (c.variants || []).find((v) => v.id === variant) : null;
+    if (action === "alternatives" && !altOf) throw bad("Pick the design option whose part to try other ways.");
+    if (action === "alternatives" && !part?.label) throw bad("Select the part of the design to try other ways.");
+    if (action === "alternatives" && !String(note || "").trim()) throw bad("Say how you picture this part.");
+    // One more option, from what a person wrote it should look like and have.
+    const base = action === "add-option" && variant ? (c.variants || []).find((v) => v.id === variant) : null;
+    if (action === "add-option" && variant && !base) throw bad("That design option is not on this request.");
+    if (action === "add-option" && !String(note || "").trim()) throw bad("Say what the new option should look like and have.");
+    if (action === "add-option" && (c.variants || []).length >= 6) throw bad("A request has at most 6 options. Close one first.");
+    if (action === "add-option" && !(c.variants || []).length) throw bad("Wait for the first design options, then add one.");
     // What goes live is the option a person checked, at the version they looked at: a newer
     // one that arrived meanwhile is looked at first (docs/prototype.md → Build).
     const live = action === "build" ? (c.variants || []).find((v) => v.id === (variant || note)) : null;
@@ -810,7 +869,12 @@ export class Store {
     if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...(implement ? { implement: true } : {}),
       ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     c.updated = this.clock();
-    const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
+    const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
+    if (action === "add-option") {
+      item.scope = "add";
+      if (base) item.variant = base.id;
+    }
+    if (altOf) { item.scope = "alternatives"; item.variant = altOf.id; item.version = altOf.version || 1; item.part = cleanPart(part); }
     // The designer wants questions before the build when something is unclear.
     if (action === "build" && askFirst) item.ask_first = true;
     // Straight to the coding agent: the handoff labels its issue (docs/handoff.md, step 5).
@@ -1102,7 +1166,7 @@ export class Store {
       } else if (k === "sections") next.sections = cleanSections(fields.sections, next.kind === "change" ? brief : null, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") {
-        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || []), c?.variants || [], this.clock());
+        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || []), c?.variants || [], this.clock(), (c?.dropped_options || []).map((x) => x.id));
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
         // Nor does an option taken off go live, nor a build still waiting to build it.
@@ -1643,8 +1707,10 @@ const byDate = (looks) => looks.sort((a, b) => instant(b.at) - instant(a.at)).sl
 // version older than the card's would put back the drawing it replaced, so it is refused.
 // An option or a state already on the card is sent with the `version` the run read; one
 // it leaves out is gone only when it says so (`drop: true`, or `states: []`).
-function versioned(list, before, at) {
+function versioned(list, before, at, removed = []) {
   const stale = (m) => new DeskError(409, `${m} Read the card again and send what is there now.`);
+  // A designer took this option off (its tab's ✕): a run that read the card before sends it back.
+  for (const x of list) if (!x.drop && removed.includes(x.id) && !before.some((o) => o.id === x.id)) throw stale(`${x.name || x.id} was removed from the request; leave it out, or draw a new option under a new id.`);
   const dropped = new Set(list.filter((x) => x.drop).map((x) => x.id));
   for (const id of dropped) if (!before.some((x) => x.id === id)) throw bad(`there is no option ${id} to drop`);
   const variants = list.filter((x) => !x.drop);
@@ -1668,7 +1734,9 @@ function versioned(list, before, at) {
     if (given.states) given.states = given.states.map(({ read: _, ...x }) => x);
     const old = before.find((x) => x.id === given.id);
     const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
-    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was) };
+    // Alternatives are of the option at one version: a redrawn option drops the ones it had.
+    const alternatives = given.alternatives ? given.alternatives.map((x) => ({ ...x, of: now, drawn: at })) : old && old.asset === given.asset ? old.alternatives || [] : [];
+    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was), alternatives };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -1853,6 +1921,8 @@ function cleanVariants(list, assets, decisions = {}, before = []) {
       ...(Number.isInteger(v.version) ? { read: v.version } : {}),
       // Leaving `states` out keeps the option's states from before; [] removes them.
       ...(v.states === undefined ? {} : { states: cleanOptionStates(v.states, assets, i + 1) }),
+      // Leaving `alternatives` out keeps the ones from before while the option is unchanged.
+      ...(v.alternatives === undefined ? {} : { alternatives: cleanAlternatives(v.alternatives, assets, i + 1) }),
     };
   });
 }
@@ -2011,6 +2081,23 @@ function cleanDraw(d) {
 }
 
 // A catalog element's states: what each tile shows and what makes it happen.
+// Ways one part of an option could look, each a copy of the whole option with only that
+// part drawn differently (docs/requests.md → Alternatives of a part); a person picks one.
+function cleanAlternatives(list, assets, n) {
+  if (list === null) return [];
+  if (!Array.isArray(list) || list.length > LIMITS.alternatives) throw bad(`variant ${n}: alternatives is a list of at most ${LIMITS.alternatives}`);
+  const ids = new Set();
+  return list.map((x, i) => {
+    const id = String(x?.id || `a${i + 1}`);
+    if (!STATE_ID.test(id) || ids.has(id)) throw bad(`variant ${n}, alternative ${i + 1}: its id must be short and its own`);
+    ids.add(id);
+    if (!own(assets, x.asset)) throw bad(`variant ${n}, alternative ${i + 1}: no asset ${x.asset}`);
+    if (x.shot != null && !own(assets, x.shot)?.contentType?.startsWith("image/")) throw bad(`variant ${n}, alternative ${i + 1}: shot must be an uploaded picture`);
+    return { id, name: clean(x.name, 80, "alternative name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset,
+      shot: x.shot ?? null, selector: typeof x.selector === "string" && x.selector ? x.selector.slice(0, 500) : null, ask: optText(x.ask, 1000, "ask") };
+  });
+}
+
 function cleanStates(list) {
   if (!Array.isArray(list)) throw bad("states must be a list");
   return list.slice(0, 60).map((x, i) => ({ name: clean(x.name, 80, `state ${i + 1} name`), how: optText(x.how, 300, `state ${i + 1} how`) }));

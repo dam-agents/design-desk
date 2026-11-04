@@ -1218,3 +1218,63 @@ test("GitHub on the Desk: every new comment is fresh even past the kept 60, a lo
   const refs = JSON.parse(readFileSync(join(s.dir, "github-refs.json"), "utf8")).refs;
   assert.deepEqual(refs, [{ key: "acme/widgets#7", updated: at(71) }]);
 });
+
+// One more option, three ways of a part, and an option's tab closed (docs/requests.md → Variants).
+const withOptions = () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "Filters are hard to find." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "triaged"); }
+  const page = (t) => s.addAsset({ kind: "variant", name: t, contentType: "text/html", data: `<p>${t}</p>`, encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Table", asset: page("A") }, { id: "v2", name: "Cards", asset: page("B") }] });
+  const finish = () => { for (const i of Object.values(s.db.inbox)) if (i.state !== "done") { s.claim(i.id, "run-2"); s.done(i.id, "run-2", "done"); } };
+  return { s, id: card.id, page, finish };
+};
+
+test("add-option: one explore item with the person's words and the option it starts from", () => {
+  const { s, id } = withOptions();
+  assert.throws(() => s.act(id, alice, "add-option", " "), /what the new option should look like/);
+  assert.throws(() => s.act(id, alice, "add-option", "Chips", { variant: "v9" }), /not on this request/);
+  const { inbox: item } = s.act(id, bob, "add-option", "Chips on top", { variant: "v1" });
+  assert.deepEqual([item.kind, item.scope, item.variant, item.note], ["explore", "add", "v1", "Chips on top"]);
+  assert.throws(() => s.act(id, alice, "add-option", "Again"), /already working/);
+});
+
+test("alternatives and pick-alternative: three ways of a part, the one picked is the next version", () => {
+  const { s, id, page, finish } = withOptions();
+  assert.throws(() => s.act(id, alice, "alternatives", "Chips", { variant: "v1" }), /Select the part/);
+  assert.throws(() => s.act(id, alice, "alternatives", " ", { variant: "v1", part: { label: "Filters" } }), /how you picture/);
+  const { inbox: item } = s.act(id, alice, "alternatives", "Chips", { variant: "v1", part: { selector: "#f", label: "Filters" } });
+  assert.deepEqual([item.kind, item.scope, item.variant, item.version, item.part.label], ["revise", "alternatives", "v1", 1, "Filters"]);
+  const [x, y] = [page("X"), page("Y")];
+  const v1 = s.getCard(id).variants[0];
+  s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: v1.asset, alternatives: [{ id: "a", name: "Chips", part: "Filters", asset: x }, { id: "b", name: "Menu", part: "Filters", asset: y }] }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
+  assert.equal(s.getCard(id).variants[0].alternatives.length, 2);
+  assert.throws(() => s.act(id, alice, "pick-alternative", "a", { variant: "v1" }), /already working/);
+  finish();
+  assert.throws(() => s.act(id, alice, "pick-alternative", "z", { variant: "v1" }), /not drawn/);
+  s.act(id, alice, "pick-alternative", "b", { variant: "v1" });
+  const after = s.getCard(id).variants[0];
+  assert.deepEqual([after.version, after.asset, after.history[0].asset, after.alternatives.length], [2, y, v1.asset, 0]);
+});
+
+test("drop-option: a designer closes an option's tab; the last, approved and presented ones stay, a stale run cannot bring it back", () => {
+  const { s, id } = withOptions();
+  assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v9" }), /not on this request/);
+  s.queueForCall(id, alice, "", "v2");
+  assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v2" }), /on the presentation/);
+  // A presentation the team already saw keeps its option too.
+  s.db.cards[id].agenda.status = "presented";
+  assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v2" }), /presentation the team saw/);
+  const read = s.getCard(id).variants;
+  s.act(id, alice, "drop-option", "", { variant: "v1" });
+  assert.deepEqual(s.getCard(id).variants.map((v) => v.id), ["v2"]);
+  assert.equal(s.getCard(id).dropped_options[0].id, "v1");
+  assert.throws(() => s.act(id, alice, "drop-option", "", { variant: "v2" }), /only option/);
+  assert.throws(() => s.upsertCard({ id, variants: read.map((v) => ({ id: v.id, version: v.version, name: v.name, asset: v.asset })) }), /was removed/);
+});
+
+test("the new actions' roles: drawing is a designer's or developer's, removing an option a designer's", () => {
+  for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("pm", a), false, a); }
+  assert.equal(can("designer", "choose"), true);
+  assert.equal(can("developer", "choose"), false);
+});

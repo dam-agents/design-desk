@@ -23,6 +23,14 @@ test("nothing on the page submits a form", () => {
   assert.doesNotMatch(page, /addEventListener\("submit",\s*guard\(/);
 });
 
+test("the new option dialog sends on its close, as the page's other dialogs do", () => {
+  const f = page.match(/<dialog id="option-dialog">[\s\S]*?<\/dialog>/)?.[0];
+  assert.ok(f, "the page has the option-dialog");
+  assert.match(f, /<button type="button" class="btn primary" data-close="ok">/);
+  assert.match(page, /dlg\.onclose = async \(\) => \{\s*if \(dlg\.returnValue !== "ok"\) \{ resolve\(null\); return; \}\s*const note = f\.note\.value\.trim\(\), base/);
+  assert.match(page, /action: "add-option"/);
+});
+
 // A stand-in bridge records every call; the server answers just enough for a lead's Desk
 // with one shipped change, two weekly digests and two open requests, one of them waiting for
 // an answer.
