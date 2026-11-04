@@ -320,7 +320,10 @@ async function open(t, bridge, fn) {
   }
 }
 
-test("every tab but How it works shows its intro in the empty pane; People beside its list", (t) => open(t, LIST, async (desk) => {
+// LIST, and each of its cards opens.
+const OPENS = LIST.replace('path === "/api/cards" ? { cards }', 'path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === path.split("/")[3]) }');
+
+test("every tab but How it works shows its intro in the empty pane; People beside its list", (t) => open(t, OPENS, async (desk) => {
   const intro = "#detail .intro";
   await desk.waitForSelector(`${intro}[data-intro="requests"]`);
   assert.equal(await desk.locator("#banners .intro").count(), 0, "no intro under the menu");
@@ -341,7 +344,7 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   assert.equal(await desk.locator(intro).count(), 0, "an open item takes the pane");
 }));
 
-test("every button and label says on hover what it does or means", (t) => open(t, LIST, async (desk) => {
+test("every button and label says on hover what it does or means", (t) => open(t, OPENS, async (desk) => {
   const bare = () => desk.$$eval("button, a.btn, summary.btn, .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title).map((e) => e.outerHTML.slice(0, 120)));
   await desk.waitForSelector("#detail .intro");
   for (const tab of ["requests", "new", "issues", "product", "people"]) {
