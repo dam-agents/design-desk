@@ -1202,3 +1202,19 @@ test("GitHub on the Desk: the agent keeps an issue with its comments, a new comm
   assert.throws(() => s.putGithub([{ ...rec, key: "not a key" }]), /owner\/repo#number/);
   assert.deepEqual(s.openPrivate(alice, { text: "Why?", context: { card: card.id } }).thread.context.refs, ["acme/widgets#7"]);
 });
+
+test("GitHub on the Desk: every new comment is fresh even past the kept 60, a long title is cut, the pre-flight's refs file follows", () => {
+  const s = fresh();
+  s.upsertCard({ kind: "change", title: "Limits", source: { repo: "acme/widgets", pr: 7 } });
+  const at = (i) => new Date(Date.UTC(2026, 10, 1) + i * 60000).toISOString();
+  const rec = { key: "acme/widgets#7", kind: "pr", title: "x".repeat(500), comments: [{ author: "a", at: at(0), body: "first" }] };
+  s.putGithub([rec]);
+  assert.equal(s.github(["acme/widgets#7"])[0].title.length, 200, "a long title is cut, not refused");
+  const many = Array.from({ length: 70 }, (_, i) => ({ author: "b", at: at(i + 1), body: `c${i}` }));
+  const { fresh: got } = s.putGithub([{ ...rec, comments: [...rec.comments, ...many], updated: at(71) }]);
+  assert.equal(got[0].comments.length, 70, "all 70 new comments are fresh");
+  assert.equal(s.github(["acme/widgets#7"])[0].comments.length, 60, "the copy keeps the newest 60");
+  assert.equal(s.putGithub([{ ...rec, comments: [...rec.comments, ...many], updated: at(71) }]).fresh.length, 0, "a read with nothing new is not fresh, the cut ones included");
+  const refs = JSON.parse(readFileSync(join(s.dir, "github-refs.json"), "utf8")).refs;
+  assert.deepEqual(refs, [{ key: "acme/widgets#7", updated: at(71) }]);
+});

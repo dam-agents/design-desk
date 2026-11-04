@@ -174,9 +174,9 @@ async function person(id, session) {
 
 // One issue or pull request as GitHub has it now: its text, labels and every comment, a
 // pull request's reviews among them (docs/desk.md → GitHub on the Desk).
-function ghRecord(key) {
+export function ghRecord(key, gh = (args) => run("gh", args)) {
   const [repo, n] = key.split("#");
-  const api = (path) => { const r = run("gh", ["api", "--paginate", "--slurp", path]); if (r.status !== 0) throw new Error((r.stderr || "").trim().split("\n")[0] || `gh api ${path} failed`); return JSON.parse(r.stdout).flat(); };
+  const api = (path) => { const r = gh(["api", "--paginate", "--slurp", path]); if (r.status !== 0) throw new Error((r.stderr || "").trim().split("\n")[0] || `gh api ${path} failed`); return JSON.parse(r.stdout).flat(); };
   const [it] = api(`repos/${repo}/issues/${n}`);
   const pr = Boolean(it.pull_request);
   const said = api(`repos/${repo}/issues/${n}/comments`).map((c) => ({ author: c.user?.login || "", at: c.created_at, url: c.html_url, body: c.body || "" }));
@@ -184,14 +184,15 @@ function ghRecord(key) {
   return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",
     labels: (it.labels || []).map((l) => l.name), body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
 }
-async function githubSync(card) {
-  const { refs } = await call("GET", `/agent/github${card ? `?card=${encodeURIComponent(card)}` : ""}`);
+// `io` stands in for the Desk server and gh in a test.
+export async function githubSync(card, io = { call, gh: undefined }) {
+  const { refs } = await io.call("GET", `/agent/github${card ? `?card=${encodeURIComponent(card)}` : ""}`);
   const done = [], failed = [], fresh = [];
   for (let i = 0; i < refs.length; i += 5) {
     const batch = [];
-    for (const key of refs.slice(i, i + 5)) { try { batch.push(ghRecord(key)); } catch (e) { failed.push({ key, error: e.message }); } }
+    for (const key of refs.slice(i, i + 5)) { try { batch.push(ghRecord(key, io.gh)); } catch (e) { failed.push({ key, error: e.message }); } }
     if (!batch.length) continue;
-    const r = await call("POST", "/agent/github", { records: batch });
+    const r = await io.call("POST", "/agent/github", { records: batch });
     done.push(...batch.map((x) => x.key)); fresh.push(...r.fresh);
   }
   return { synced: done.length, failed, fresh };

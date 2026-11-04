@@ -22,6 +22,7 @@ Two layers, both under `work/`, both append-only.
 | `change_claim`, `change_done`, `change_skip`, `change_fail` | info / warn | `ledger.sh` | a change card's ledger row |
 | `issue_claim`, `issue_done`, `issue_skip`, `issue_fail` | info / warn | `ledger.sh --issues` | an issue's row for the Issues page |
 | `ledger_lock` | warn | `ledger.sh` | a dead writer's lock was removed |
+| `github_sync` | warn | the agent (watch run) | an issue or pull request `design desk github-sync` could not read |
 | `card_written` | info | the agent | after `design desk upsert`: `C-<n> <kind> <status>` |
 | `item_done` | info | the agent | after `design desk done`: `I-<n> <outcome>` |
 | `guard` | info / warn | the agent | `C-<n> ok=<bool> files=<n> refused=<n>` |

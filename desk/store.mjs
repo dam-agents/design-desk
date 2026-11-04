@@ -248,7 +248,18 @@ export class Store {
 
   // inbox.json is what the inbox pre-flight reads: a local file, so an idle tick
   // never wakes the model and never needs the server to answer.
+  // github-refs.json is what the watch pre-flight reads: every issue and pull request the
+  // cards point at, with when GitHub last changed the copy kept of it (docs/watch.md →
+  // Comments on GitHub). A local file, like inbox.json.
+  writeGithubRefs() {
+    const refs = this.githubRefs().map((key) => ({ key, updated: own(this.db.github, key)?.updated || null }));
+    const p = join(this.dir, "github-refs.json"), tmp = `${p}.tmp-${process.pid}`;
+    writeFileSync(tmp, JSON.stringify({ updated: this.clock(), refs }));
+    renameSync(tmp, p);
+  }
+
   writeInbox() {
+    this.writeGithubRefs();
     const open = [], claimed = [];
     // A private ask's item says so: the agent answers it in its thread and changes nothing.
     const priv = new Map(Object.values(this.db.threads).filter((t) => t.kind === "private").map((t) => [t.id, t.context || {}]));
@@ -468,15 +479,19 @@ export class Store {
       const key = String(x?.key || "").toLowerCase();
       if (!GH_KEY.test(key)) throw bad(`records: "${x?.key}" is not owner/repo#number`);
       if (!["issue", "pr"].includes(x.kind)) throw bad(`${key}: kind is issue or pr`);
-      const comments = (Array.isArray(x.comments) ? x.comments : []).slice(-GH.comments).map((m) => ({
+      const all = (Array.isArray(x.comments) ? x.comments : []).map((m) => ({
         author: optText(m?.author, 100, "comment author"), at: optText(m?.at, 40, "comment at"),
         url: /^https:\/\/github\.com\//.test(String(m?.url || "")) ? String(m.url).slice(0, 500) : "",
         body: String(m?.body ?? "").slice(0, GH.comment),
       }));
+      // Every fetched comment is compared with the copy, so none new is missed; the copy
+      // keeps the newest ones. The first read of an item has nothing new.
       const was = own(this.db.github, key), seen = new Set((was?.comments || []).map((m) => `${m.at}|${m.author}`));
-      const added = was ? comments.filter((m) => !seen.has(`${m.at}|${m.author}`)) : [];
+      const known = was?.comments?.length ? was.comments[0].at : null;
+      const added = was ? all.filter((m) => !seen.has(`${m.at}|${m.author}`) && (!known || m.at >= known)) : [];
+      const comments = all.slice(-GH.comments);
       this.db.github[key] = {
-        key, kind: x.kind, title: clean(x.title || key, LIMITS.title, `${key} title`), state: optText(x.state, 30, "state"),
+        key, kind: x.kind, title: String(x.title || key).replace(/\s+/g, " ").trim().slice(0, LIMITS.title) || key, state: optText(x.state, 30, "state"),
         url: /^https:\/\/github\.com\//.test(String(x.url || "")) ? String(x.url).slice(0, 500) : "",
         author: optText(x.author, 100, "author"), labels: (Array.isArray(x.labels) ? x.labels : []).slice(0, 20).map((l) => String(l).slice(0, 60)),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),

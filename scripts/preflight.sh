@@ -287,15 +287,31 @@ watch_mode() {
       done < <(jq -r '.items[] | [.number, (.title | gsub("[\t\n]"; " ")), .html_url, .user.login] | @tsv' <<<"$found")
     fi
   done
+  # The issues and pull requests the Desk's cards point at whose copy on the Desk is behind
+  # GitHub: never read, or changed since (a comment changes it). One search per repository
+  # (docs/watch.md → Comments on GitHub).
+  local gh_due='[]' REFS="$DESK_DIR/github-refs.json" r since hits
+  if [ -f "$REFS" ]; then
+    gh_due="$(jq -c '[.refs[] | select(.updated == null) | .key]' "$REFS")"
+    for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' "$REFS"); do
+      since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' "$REFS")"
+      local hostargs=()
+      hits="$(search "$r" "repo:$r updated:>=${since%%T*}")" || { log "$r: could not check its issues and pull requests for new comments — next run"; continue; }
+      gh_due="$(jq -c --arg r "$r" --slurpfile refs "$REFS" --argjson due "$gh_due" \
+        '$due + [.items[] as $i | $refs[0].refs[] | select(.key == ($r + "#" + ($i.number | tostring)) and .updated != null and $i.updated_at > .updated) | .key] | unique' <<<"$hits")"
+    done
+  fi
+  local ngh; ngh="$(jq length <<<"$gh_due")"
+  [ "$ngh" -gt 0 ] && log "$ngh issues or pull requests on the Desk changed on GitHub — github_due"
   [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
   [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
   local arr iss; arr="$(jq -s '.' "$DUE")"; iss="$(jq -s '.' "$ISSUES")"; rm -f "$DUE" "$ISSUES"
-  [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || quiet_out
-  logev info preflight "watch: $ndue changes, $nissues issues due"
-  jq -n --argjson due "$arr" --argjson issues "$iss" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+  [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || [ "$ngh" -gt 0 ] || quiet_out
+  logev info preflight "watch: $ndue changes, $nissues issues, $ngh GitHub copies due"
+  jq -n --argjson due "$arr" --argjson issues "$iss" --argjson gh "$gh_due" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     --arg title "$( { jq -r '.[].pr | "#\(.)"' <<<"$arr"; jq -r '.[].issue | "#\(.)"' <<<"$iss"; } | title_for Explain "")" \
-    '{mode:"watch", nothing_to_do:false, title:($title | sub("Explain  "; "Explain ")),
+    '{mode:"watch", nothing_to_do:false, title:(if ($due | length) + ($issues | length) == 0 then "Read new GitHub comments" else ($title | sub("Explain  "; "Explain ")) end), github_due:$gh,
       read_set: (["docs/watch.md", ".agents/skills/explain/SKILL.md"] + (if ($issues | length) > 0 then ["docs/requests.md"] else [] end)),
       changes_due:$due, issues_due:$issues, config:$config, logs:$logs}'
 }
