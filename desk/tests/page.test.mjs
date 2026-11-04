@@ -1386,7 +1386,7 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.doesNotMatch(await desk.textContent(".ask-body"), /Asked on another page/, "each item has its own chat");
   assert.equal(await desk.$$eval("#ask [data-reply]", (x) => x.length), 0, "no follow-up box: the chat is one line");
   assert.match(await desk.textContent(".ask-ctx"), /About: C-5 Show limits/, "the chat says what it is about");
-  assert.match(await desk.getAttribute(".ask-panel header .chip", "title"), /Only you and Design Desk see these.*nothing goes to Slack/, "it says only you see it");
+  assert.match(await desk.$eval(".ask-panel header .chip", (c) => c.title || c.dataset.tip || ""), /Only you and Design Desk see these.*nothing goes to Slack/, "it says only you see it");
   assert.equal(await desk.$eval(".ask-body", (b) => Math.round(b.scrollTop + b.clientHeight) >= b.scrollHeight - 1), true, "it opens on the newest message");
   assert.equal(await desk.$$eval("[data-ask-starter]", (x) => x.length), 5, "five starters");
   await desk.click('[data-ask-starter="fixed"]');
