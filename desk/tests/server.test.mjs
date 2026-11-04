@@ -236,7 +236,8 @@ test("day or night: each person's own choice, kept on the Desk", async (t) => {
 test("team feedback: a Desk request waits for a person to ask the team, one from Slack goes on by itself", async (t) => {
   const d = await desk(t);
   const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Save</button>", encoding: "utf8" });
-  const draw = (id) => d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: asset.id }] });
+  // A redraw re-sends the option with the version the card returned.
+  const draw = (id, version) => d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: asset.id, ...(version ? { version } : {}) }] });
 
   const mine = (await d.viewer("pat@example.com", "/api/requests", { problem: "The header shouts.", options: 1 })).body.card.id;
   const triage = (await d.agent("/agent/inbox")).body.open.find((i) => i.card === mine).id;
@@ -248,7 +249,7 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   const asked = await d.viewer("pat@example.com", `/api/cards/${mine}/feedback`, {});
   assert.deepEqual([asked.status, asked.body.card.status, asked.body.card.team_feedback.by.email], [200, "feedback", "pat@example.com"], "its author asks the team");
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${mine}/feedback`, {})).status, 400, "once");
-  assert.equal((await draw(mine)).body.card.status, "feedback", "a redraw after that stays with the team");
+  assert.equal((await draw(mine, asked.body.card.variants[0].version)).body.card.status, "feedback", "a redraw after that stays with the team");
 
   const slack = (await d.agent("/agent/cards", { kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } })).body.card.id;
   assert.equal((await draw(slack)).body.card.status, "feedback", "from Slack: on to the team by itself");

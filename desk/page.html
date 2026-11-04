@@ -6,7 +6,9 @@
 <title>Design Desk</title>
 <script>
   // Before the first paint, so a chosen mode never flashes the other one.
-  try { const t = localStorage.getItem("desk-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+  // Each person's copy is their own (desk-theme:<email>); before the Desk says who is viewing,
+  // the last viewer's copy is the guess, and a copy from before copies were named is theirs too.
+  try { const who = localStorage.getItem("desk-theme-last"), t = who ? localStorage.getItem("desk-theme:" + who) : localStorage.getItem("desk-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
 </script>
 <style>
   :root {
@@ -1631,7 +1633,7 @@
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
-        ["<b>Ask the team for feedback</b> on a request you filed here, once you have fine-tuned its options; one from Slack goes to the team by itself.", "revise"],
+        ["<b>Ask the team for feedback</b> once a request's options are fine-tuned: its author may, whatever their role, and designers and developers may on any request filed here. One from Slack goes to the team by itself.", "request"],
         ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
         ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
@@ -2568,8 +2570,8 @@
     }
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
-      return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. They go to the team for feedback once they are fine-tuned.",
-        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team can vote and comment on the options from now on">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
+      return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. The request's author, a designer or a developer asks the team for feedback once they are fine-tuned.",
+        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers and developers may on any request"}.">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       const shaper = can("revise");
@@ -4053,22 +4055,23 @@
   // the system's mode.
   const systemDark = matchMedia("(prefers-color-scheme: dark)");
   const isDark = () => (document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light")) === "dark";
-  // The copy names whose it is (desk-theme-of), so a shared browser never hands one person's mode to another.
+  // The browser's copy is the viewer's own (desk-theme:<email>), and desk-theme-last says whose
+  // to paint before the Desk answers: one person's copy is never read for, or removed by, another.
   function setTheme(t) {
     if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+    const me = myKey();
     try {
-      if (t) { localStorage.setItem("desk-theme", t); localStorage.setItem("desk-theme-of", myKey()); }
-      else { localStorage.removeItem("desk-theme"); localStorage.removeItem("desk-theme-of"); }
+      if (me) { if (t) localStorage.setItem(`desk-theme:${me}`, t); else localStorage.removeItem(`desk-theme:${me}`); localStorage.setItem("desk-theme-last", me); }
+      localStorage.removeItem("desk-theme");
     } catch {}
     renderTheme();
   }
-  // Their saved choice wins; a choice this browser kept before the Desk saved them (no owner) becomes theirs.
+  // Their saved choice wins; a copy this browser kept before copies were named is saved for
+  // the first person who opens the Desk here.
   function applyMyTheme() {
-    const mine = S.me?.theme, here = store.get("desk-theme");
+    const mine = S.me?.theme, before = store.get("desk-theme");
     if (mine === "light" || mine === "dark") return setTheme(mine);
-    if ((here === "light" || here === "dark") && !store.get("desk-theme-of") && myKey()) {
-      setTheme(here); api("POST", "/api/prefs", { theme: here }).catch(() => {}); return;
-    }
+    if ((before === "light" || before === "dark") && myKey()) { setTheme(before); api("POST", "/api/prefs", { theme: before }).catch(() => {}); return; }
     setTheme(null);
   }
   function renderTheme() {
