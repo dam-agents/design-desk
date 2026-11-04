@@ -2451,12 +2451,12 @@
         <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
         ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
         ${whyOfSelected(c, v, sel)}
-        ${sel && can("revise") && !S.ws.state ? `<div class="actions" style="margin:6px 0 0"><button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button></div>` : ""}
+        ${sel ? `<div class="actions" style="margin:6px 0 0">${can("revise") && !S.ws.state ? `<button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button>` : ""}<button class="btn small" data-ws-clear>Clear selection</button></div>` : ""}
       </div>
       ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
       ${old ? "" : `<div class="composer" style="margin:0">
         <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
-        <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button>` : ""}${sel ? `<button class="btn small" data-ws-clear>Clear selection</button>` : ""}</div>
+        <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button>` : ""}</div>
       </div>`}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
       ${renderWsNotes(c, v, sel)}
