@@ -61,6 +61,14 @@ sent; the developer or coding agent gets only answers.
      `implementer_mention`), which builds it into the product;
    - `idea` and `proposal` — per `handoff`: `desk` (nothing more), `issue` or `draft-pr`.
 
+   **Straight to implementation** — the item has `implement` (the approver ticked it on
+   Approve; the Desk refuses it where the spec stays on the Desk, and a route that is `desk`
+   at delivery ignores it): the spec also reaches the
+   coding agent as an issue with the label its manifest names for work to implement — the
+   origin issue for a `feature`, the issue `implementer: issue` or `handoff: issue` files, else
+   a new issue with the spec. No manifest or no label → deliver without it and say so on the
+   card and to the operator.
+
    The skill sets `spec.issue_url` or `spec.pr_url`; the request then shows a card linking
    it, and the issue's own card on the Issues page once the issues run read it, filed under
    **✓ Designed** ([issues.md](issues.md) → On the Desk). What it sends asks nothing of its reader:

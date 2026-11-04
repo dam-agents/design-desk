@@ -225,7 +225,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -400,7 +400,7 @@ export class Store {
     }
     // A person's answer to the agent's question resumes the step it blocked; a follow-up
     // on a change note goes back to the agent with the other notes.
-    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); if (t.resume && !item.variant) Object.assign(item, structuredClone(t.resume)); }
+    if (t.kind === "asks" && !who?.agent) { t.state = "answered"; item = this.pendingOrNew(t.step, t.card, who, t.resume_note || ""); const { implement, ...was } = t.resume || {}; if (was.variant && !item.variant) Object.assign(item, structuredClone(was)); if (implement) item.implement = true; }
     if (t.kind === "change" && !who?.agent) { t.state = "open"; t.needs_agent = true; item = this.pendingOrNew("revise", t.card, who); }
     this.card(t.card).updated = this.clock();
     this.save();
@@ -590,7 +590,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, variant = null, version = null, states = null, part = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, variant = null, version = null, states = null, part = null } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
@@ -680,12 +680,14 @@ export class Store {
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
     // Who approved, shown on the card; a small change's approval says so.
-    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small),
+    if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...(implement ? { implement: true } : {}),
       ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, 1000, "note"));
     // The designer wants questions before the build when something is unclear.
     if (action === "build" && askFirst) item.ask_first = true;
+    // Straight to the coding agent: the handoff labels its issue (docs/handoff.md, step 5).
+    if (action === "approve" && implement) item.implement = true;
     if (stateOf) { item.variant = stateOf.id; if (part?.label) item.part = cleanPart(part); }
     if (live) {
       item.variant = live.id; item.version = live.version || 1;
@@ -1581,10 +1583,12 @@ function issueKey(url) {
 
 // What else the step's last item named (the option and the part whose states are drawn),
 // so an answer resumes the same work.
+// A handoff straight to implementation stays so after its questions (docs/handoff.md, step 5).
 function resumeOf(inbox, card, kind) {
-  const xs = Object.values(inbox).filter((i) => i.card === card && i.kind === kind && i.variant).sort((a, b) => a.created.localeCompare(b.created));
-  const last = xs[xs.length - 1];
-  return last ? { resume: { variant: last.variant, ...(last.part ? { part: last.part } : {}) } } : {};
+  const xs = Object.values(inbox).filter((i) => i.card === card && i.kind === kind).sort((a, b) => a.created.localeCompare(b.created));
+  const last = xs.filter((i) => i.variant).pop(), now = xs[xs.length - 1];
+  const resume = { ...(last ? { variant: last.variant, ...(last.part ? { part: last.part } : {}) } : {}), ...(now?.implement ? { implement: true } : {}) };
+  return Object.keys(resume).length ? { resume } : {};
 }
 
 function lastNote(inbox, card, kind) {

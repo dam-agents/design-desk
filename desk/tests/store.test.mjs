@@ -679,6 +679,20 @@ test("before a build the agent asks a form; the answer resumes the build with it
   assert.equal(s.thread(big.id).state, "answered", "six full answers fit in the reply");
 });
 
+test("straight to implementation survives the handoff's questions", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "Make it nicer." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "triaged"); }
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] } });
+  const { inbox: handoff, card: approved } = s.act(card.id, { agent: true }, "approve", "Grey header.", { implement: true });
+  assert.deepEqual([handoff.kind, handoff.implement, approved.approved.implement], ["handoff", true, true]);
+  assert.equal(inbox(s).open.find((i) => i.id === handoff.id).implement, true, "the inbox file carries it too");
+  s.claim(handoff.id, "run-2"); s.done(handoff.id, "run-2", "asked");
+  const { thread } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "One thing.", step: "handoff", questions: [{ text: "Empty list?", options: ["A hint", "Nothing"] }] });
+  const { inbox: again } = s.answerForm(thread.id, alice, [{ choice: "Nothing" }]);
+  assert.deepEqual([again.kind, again.implement, again.note], ["handoff", true, "Grey header."]);
+});
+
 test("screenshots a person adds wake the agent once and keep who added them", () => {
   const s = fresh();
   const { card } = s.upsertCard({ kind: "change", title: "Spend in the list", source: { repo: "acme/widgets", pr: 9 } });

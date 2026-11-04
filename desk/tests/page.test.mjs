@@ -1243,11 +1243,12 @@ const cards = [
   { id: "C-3", kind: "request", title: "Failed", status: "prototype", prototype: { state: "failed" }, triage, variants, created_by: bob },
   { id: "C-4", kind: "request", title: "Expired", status: "testing", prototype: { state: "expired" }, triage, variants, created_by: bob },
   { id: "C-5", kind: "request", title: "Against", status: "triage", triage, created_by: bob, conflicts: [{ decision: "D-1", why: "x", text: "Rows stay roomy", status: "active" }] },
+  { id: "C-6", kind: "request", title: "Adjust", status: "triage", triage, created_by: bob, request: { type: "adjustment" } },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { ...lou, can: { size: true, explore: true, skip: true, build: true, revise: true } }
+  const answer = path === "/api/me" ? { ...lou, can: { size: true, explore: true, skip: true, build: true, revise: true }, handoff: { idea: "desk", adjustment: "coding-agent" } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
@@ -1275,6 +1276,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   await desk.click('#detail .next [data-act="approve"]');
   assert.match(await desk.textContent("#cf-body"), /Bold\*?\*?, version 2/, "the dialog names the prototype's option and version");
   assert.equal(await desk.locator("#cf-choices input").count(), 0, "and offers no other");
+  assert.equal(await desk.locator("#cf-check2-wrap").isHidden(), true, "an idea's spec stays on the Desk: no straight to implementation");
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-2/actions"));
   assert.equal(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-2/actions").body)).note, "v2");
@@ -1287,6 +1289,13 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   await card("C-5");
   assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a lead developer does not send it");
   assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1);
+  await card("C-6");
+  await desk.click('#detail [data-act="approve"]');
+  assert.equal(await desk.locator("#cf-check2-wrap").isVisible(), true, "an adjustment reaches the coding agent: the box is offered");
+  await desk.check("#confirm-form [name=check2]");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-6/actions"));
+  assert.equal(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-6/actions").body)).implement, true);
 }));
 
 test("the Desk opens on Requests, a first visit too", (t) => open(t, SKIP.replace(`try { localStorage.setItem("desk-guide-seen", "1"); } catch {}`, `try { localStorage.clear(); } catch {}`), async (desk) => {
