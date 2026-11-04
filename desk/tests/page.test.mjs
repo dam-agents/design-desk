@@ -835,7 +835,7 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     await desk.waitForSelector("#detail .brief");
     assert.match(await desk.textContent("#detail .brief"), /asked[\s\S]*Show the spend\./);
     assert.deepEqual(await desk.locator("#detail .brief:not(.made-col) figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a1"], "the pasted picture belongs to the request");
-    assert.deepEqual(await desk.locator("#detail h3.made ~ * figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
+    assert.deepEqual(await desk.locator("#detail .made-col figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
     assert.doesNotMatch(await desk.textContent("#detail"), /Screen: Agents/, "the screen line is gone");
 
     await desk.hover("#detail .linked .anchor");
