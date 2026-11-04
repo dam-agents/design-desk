@@ -29,7 +29,8 @@ In that Slack turn:
 3. **Same bug already queued?** `design desk cards --kind request`, look at the open ones of
    type `bug`. The same problem → add the report to that card instead
    (`design desk comment C-<n> <file>`: who reported it in Slack and their words, as data) and
-   upload their screenshots with `--card C-<n>`.
+   upload their screenshots with `--card C-<n>`, then reply in the thread with the card's
+   link as in step 5.
 4. **Queue it.** Upload each picture (`design desk asset <file> --kind screen`), then
    `design desk report <bug.json>` with `title` (what is wrong where, in the product's words),
    `problem` (what happens), `goal` (what should happen, when they said), `steps`, `screen`,
@@ -83,7 +84,7 @@ stays a one-off ([docs/requests.md](../../../docs/requests.md) → Chat and Slac
    assets) and the `origin` of step 4 of *In that Slack turn*. Research, triage and the options
    follow in the inbox run.
 3. **Answer in the thread** as step 5 of *In that Slack turn*, with `react` `art` and the reply
-   ending "I'll reply here with the design options."
+   ending "I'll reply here with the design options and their vote."
 4. With `slack_council: enabled`, open the thread's council (`slack-council` → Start, step 3).
 
 When a request with a Slack origin has news, answer in its thread:
