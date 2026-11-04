@@ -316,6 +316,10 @@
   .ask-msg { padding: 8px 12px; border-radius: 14px; max-width: 85%; }
   .ask-msg.me { align-self: flex-end; background: var(--ink); color: var(--panel); border-bottom-right-radius: 4px; }
   .ask-msg.me a { color: inherit; }
+  .ask-row { display: flex; gap: 8px; align-items: flex-end; align-self: flex-start; max-width: 92%; }
+  .ask-row .ask-msg { max-width: none; }
+  .ask-avatar { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); display: grid; place-items: center; font: 700 10.5px/1 inherit; letter-spacing: .02em; }
+  .ask-name { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
   .ask-msg.agent { align-self: flex-start; background: var(--soft); border-bottom-left-radius: 4px; }
   .ask-msg.pending { color: var(--warn); font-size: 12.5px; }
   .ask-when { display: block; font-size: 10.5px; opacity: .65; margin-top: 2px; text-align: right; }
@@ -1790,6 +1794,7 @@
   // One linear chat per item or page: its questions and answers oldest first, the person's
   // on the right and Design Desk's on the left. Each question is its own private ask; a
   // different option, state or part starts with its label.
+  const DD_AVATAR = `<span class="ask-avatar" title="Design Desk" aria-hidden="true">DD</span>`;
   function stream(list, ctx) {
     let last = null;
     return [...list].sort((a, b) => a.created.localeCompare(b.created)).map((th) => {
@@ -1797,9 +1802,9 @@
       last = about;
       const brief = S.card && th.context?.card === S.card.id;
       return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m) => m.by?.agent
-        ? `<div class="ask-msg agent">${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Drafts a note for Design Desk from this answer. You edit it, then send it to the public comments yourself.">Make a brief for the public comments</button>` : ""}</div>`
+        ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent"><span class="ask-name">Design Desk</span>${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Drafts a note for Design Desk from this answer. You edit it, then send it to the public comments yourself.">Make a brief for the public comments</button>` : ""}</div></div>`
         : `<div class="ask-msg me">${md(m.text)}<span class="ask-when">${esc(when(m.at))}</span></div>`).join("")}
-        ${th.needs_agent ? `<div class="ask-msg agent pending">Design Desk is answering…</div>` : ""}
+        ${th.needs_agent ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent pending">Design Desk is answering…</div></div>` : ""}
         <div class="brief" data-brief-box="${esc(th.id)}" hidden><textarea maxlength="4000"></textarea>
           <div class="bar"><button class="btn small primary" data-brief-public="${esc(th.id)}" title="Puts your edited brief into the public comments box. Nothing is sent until you press Ask Design Desk there.">Move to the public comments</button><span class="hint">Everyone sees it once you send it there.</span></div></div>`;
     }).join("");
