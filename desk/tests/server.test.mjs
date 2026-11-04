@@ -200,6 +200,11 @@ test("a private ask reaches only its author over the API; another viewer cannot 
   assert.equal(listed.open_threads, 0);
   for (const step of ["messages", "resolve", "decision"])
     assert.equal((await d.viewer("lee@example.com", `/api/threads/${id}/${step}`, { text: "peek", message: 0 })).status, 404, step);
+  for (const step of ["reopen", "answers"])
+    assert.equal((await d.viewer("lee@example.com", `/api/threads/${id}/${step}`, { answers: [] })).status, 404, step);
+  assert.equal((await d.viewer("lee@example.com", `/api/cards/${card.id}/work-in`, { threads: [id] })).status, 404, "nobody works a private ask in");
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${card.id}`)).body.card.updated, card.updated, "the card's last-changed time does not move");
+  assert.equal((await d.agent("/agent/inbox")).body.open.find((i) => i.thread === id).private, true, "the agent's item says it is private");
   assert.deepEqual((await d.agent(`/agent/cards/${card.id}`)).body.card.threads.map((x) => x.id), [id], "the agent sees it");
   assert.equal((await d.agent(`/agent/threads/${id}/answer`, { text: "One is a list, one a grid." })).status, 200);
   assert.deepEqual(await seen("bob@example.com"), []);

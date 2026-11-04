@@ -1357,3 +1357,37 @@ test("the Desk opens on Requests, a first visit too", (t) => open(t, SKIP.replac
   await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
   assert.equal(await desk.getAttribute("#help", "aria-current"), "false", "How it works waits under the question mark");
 }));
+
+// One request with a public comment and the viewer's own answered private ask.
+const PRIVATE = `<script>
+const card = { id: "C-5", kind: "request", title: "Show limits", status: "variants", variants: [], threads: [
+  { id: "T-1", kind: "comment", state: "open", messages: [{ by: { email: "d@example.com" }, at: "2026-11-04T10:00:00Z", text: "A public note." }] },
+  { id: "T-2", kind: "private", owner: "d@example.com", state: "answered", messages: [{ by: { email: "d@example.com" }, at: "2026-11-04T10:00:00Z", text: "Why does it look like this today?" }, { by: { agent: true }, at: "2026-11-04T10:01:00Z", text: "Like a fuel gauge. It shows one total." }] }] };
+const posted = [];
+window.platform = { async request({ path, method, body }) {
+  if (method === "POST") posted.push({ path, body: JSON.parse(body || "{}") });
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { ask: true, comment: true } }
+    : path === "/api/cards" ? { cards: [card] } : path.startsWith("/api/cards/C-5") && method !== "POST" ? { card } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE} : { inbox: { id: "I-1" } };
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a private ask: kept out of the public comments, says only you see it, starters send, a brief goes public only by hand", (t) => open(t, PRIVATE, async (desk) => {
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#C-5");
+  await desk.waitForSelector(".thread.private");
+  assert.deepEqual(await desk.$$eval(".threads .thread:not(.private)", (x) => x.map((n) => n.id)), ["th-T-1"], "the public list holds no private ask");
+  assert.match(await desk.textContent("#detail"), /Only you see what you ask here/);
+  assert.match(await desk.textContent("#detail"), /nothing goes to Slack/);
+  assert.equal(await desk.$$eval("[data-private]:not([data-private=''])", (x) => x.length), 5, "five starters");
+  await desk.click('[data-private="How do the options differ?"]');
+  await desk.waitForFunction(() => posted.length === 1);
+  assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/cards/C-5/threads", body: { kind: "private", text: "How do the options differ?" } });
+  await desk.click('[data-brief="T-2"]');
+  const draft = await desk.inputValue('[data-brief-box="T-2"] textarea');
+  assert.match(draft, /fuel gauge/, "the brief starts from the answer");
+  await desk.fill('[data-brief-box="T-2"] textarea', "Design Desk, show the limit per provider.");
+  await desk.click('[data-brief-public="T-2"]');
+  assert.equal(await desk.inputValue("#composer-text"), "Design Desk, show the limit per provider.");
+  assert.equal(await desk.evaluate(() => posted.length), 1, "nothing is sent until the person sends it from the public box");
+}));
