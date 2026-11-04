@@ -1397,9 +1397,6 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.waitForFunction(() => posted.length === 2);
   assert.deepEqual(await desk.evaluate(() => [posted[1].body.text, posted[1].body.starter]), ["Is the bar too thin?", null], "a question of their own");
   await desk.click('[data-brief="T-2"]');
-  assert.match(await desk.inputValue('[data-brief-box="T-2"] textarea'), /fuel gauge/, "the brief starts from the answer");
-  await desk.fill('[data-brief-box="T-2"] textarea', "Design Desk, show the limit per provider.");
-  await desk.click('[data-brief-public="T-2"]');
-  assert.equal(await desk.inputValue("#composer-text"), "Design Desk, show the limit per provider.");
+  assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
 }));
