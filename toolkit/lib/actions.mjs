@@ -17,7 +17,7 @@ export const ACTIONS = {
   grill: { skill: "grill-me", doc: "docs/requests.md", does: "questions before the design, one at a time, until the request's decisions are clear" },
   triage: { doc: "docs/boundary.md", does: "what can be done as a design change, what needs a developer or a decision" },
   impact: { skill: "impact", does: "where else the same thing shows up and what a change touches, from earlier decisions" },
-  options: { skill: "variants", doc: "docs/requests.md", does: "as many design options as the request asks (one to five) in the product's look, on sample data, with how each meets the issue's user stories" },
+  options: { skill: "variants", doc: "docs/requests.md", does: "as many design options as the request asks (one to five) in the product's look, on sample data, with how each meets the issue's user stories and the decisions each part rests on" },
   revise: { skill: "variants", fallback: "options", doc: "docs/requests.md", does: "apply people's notes on elements to an option, as a new version" },
   states: { skill: "variants", fallback: "options", doc: "docs/requests.md", does: "draw one part of an option in every state it can be in, one picture per state" },
   prototype: { doc: "docs/prototype.md", does: "a live prototype: the product with the design change, in an Environment" },
