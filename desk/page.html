@@ -1127,8 +1127,9 @@
         <div><h5>What you can do</h5><ul>${it.can.map(li).join("")}</ul></div>
         ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div></details>`;
   }
-  // Folding one intro folds every tab's, and it stays so in this browser.
-  document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.intro")) store.set("desk-intro", e.target.open ? "shown" : "hidden"); }, true);
+  // Folding one intro folds every tab's, and it stays so in this browser. Kept on the person's
+  // click, not on toggle: a freshly drawn open intro fires a toggle of its own.
+  document.addEventListener("click", (e) => { const d = e.target.closest?.("details.intro > summary")?.parentElement; if (d) store.set("desk-intro", d.open ? "hidden" : "shown"); }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.

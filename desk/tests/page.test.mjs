@@ -206,12 +206,13 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // way back on screen (the browser's Back leaves the Desk). An issue or pull request
     // number links to it.
     assert.equal(await desk.isVisible(".crumb [data-back]"), false, "beside the list, no back button");
-    await desk.setViewportSize({ width: 600, height: 800 });
+    const frameWidth = (w) => top.evaluate((px) => { document.querySelector("iframe").style.width = px; }, w);
+    await frameWidth("600px");
     assert.ok(await desk.isVisible(".crumb [data-back]"), "an open item shows its way back where the list hides");
     assert.equal(await desk.getAttribute(".lead a", "href"), "https://github.com/acme/widgets/pull/45", "PR #45 links to its pull request");
     await desk.click(".crumb [data-back]");
     assert.equal(await desk.locator(".crumb").count(), 0, "Back closes the item");
-    await desk.setViewportSize({ width: 1280, height: 720 });
+    await frameWidth("1000px");
 
     // Every row in Changes and Requests says where it came from and who started it; its
     // links go to the source, the rest of the row opens the item.
@@ -548,13 +549,13 @@ test("the presentation: mark an item presented, in the list and while presenting
   await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/C-4/presented"));
   assert.deepEqual(await sent("/api/cards/C-4/presented"), [{ presented: false }], "Undo sends presented: false");
 
-  await desk.click("[data-back]");
+  // Beside the list, the list is the way back.
   await desk.click('#list [data-card="C-5"]');
   await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent.startsWith("Presented last week"));
   assert.equal(await desk.locator("#detail [data-unpresent]").count(), 0, "no Undo for an earlier meeting's item");
   assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 1, "it can go on again, once");
 
-  await desk.click("[data-back]");
+  await desk.click('[data-filter="reqFilter:presentation"]');
   await desk.click('#detail [data-present="0"]');
   await desk.click('#present [data-presented="C-2"]');
   await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/cards/C-2/presented").length === 2);
