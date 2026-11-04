@@ -180,8 +180,9 @@
   details.brief:not([open]) { padding-bottom: 12px; }
   details.brief:not([open]) > .brief-k { margin: 0; }
   .brief-k::marker { content: ""; } .brief-k::-webkit-details-marker { display: none; }
-  details.brief > .brief-k::before { content: "▸"; display: inline-block; width: 1.2em; transition: transform .15s; }
-  details.brief[open] > .brief-k::before { transform: rotate(90deg); }
+  details.brief > .brief-k { display: flex; align-items: baseline; }
+  details.brief > .brief-k::after { content: "Show ▸"; margin-left: auto; color: var(--accent); font-size: 13px; font-weight: 400; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+  details.brief[open] > .brief-k::after { content: "Hide ▾"; }
   /* Who sized a request and who approved it: a row each, with room between them. */
   .hint.size { display: grid; gap: 8px; line-height: 1.5; }
   .hint.size > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
