@@ -849,7 +849,7 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     await desk.click("#detail h2");
     assert.equal(await stepsOpen(), false, "a click outside closes the steps");
     await desk.click("#detail details.stepper > summary");
-    await desk.keyboard.press("Escape");
+    await desk.press("body", "Escape");
     assert.equal(await stepsOpen(), false, "Escape closes the steps");
 
     await desk.hover("#detail .linked .anchor");
