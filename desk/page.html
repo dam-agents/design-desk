@@ -1697,7 +1697,7 @@
   // view to point at it fires its scroll after the pointer is already there.
   document.addEventListener("scroll", () => $("#peek")?.remove(), true);
   document.addEventListener("click", peekHide, true);
-  document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; }, true);
+  document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; if (e.target.matches?.("[data-stories]")) S.storiesOpen = e.target.open; }, true);
 
   // ---------- dialogs ----------
   // A form never submits here (docs/desk.md → Where it works): a dialog's buttons check
@@ -3113,10 +3113,10 @@
       : !k ? `<p class="hint">Design Desk has not said yet how ${esc(v.name)} meets this story.</p>`
       : `${k.parts.length ? `<div class="actions" style="margin:0 0 8px">${k.parts.map((x, i) => `<button class="btn small" data-story-part="${i}" title="Show it in the design">${esc(x.label)}</button>`).join("")}</div><iframe class="frame" id="story-frame" sandbox="allow-scripts" title="${esc(v.name)}: ${esc(st.text)}"></iframe>` : ""}
         <div class="panel how"><b>${esc(MET[k.met][1])} — ${esc(v.name)}</b>${md(k.how)}</div>`;
-    return `<h3>User stories</h3>
+    return `<details class="fold big" data-stories${S.storiesOpen === false ? "" : " open"}><summary><h3>User stories · ${plural(ss.length, "story", "stories")}</h3></summary>
       ${vs.length > 1 ? `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v?.id}">${esc(x.name)}</button>`).join("")}</div>` : ""}
       <div class="stories"><ol>${ss.map((x) => `<li><button data-story="${esc(x.id)}" aria-pressed="${x.id === st.id}">${v ? mark(x) : ""}<span>${txt(x.text)}</span></button></li>`).join("")}</ol>
-        <div><p class="story">${txt(st.text)}${st.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</p>${detail}</div></div>`;
+        <div><p class="story">${txt(st.text)}${st.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</p>${detail}</div></div></details>`;
   }
   // One state of an element, as the design catalog shows it: a picture of the part alone, what
   // it is, when it happens and the use case of the brief it serves (docs/requests.md → Every

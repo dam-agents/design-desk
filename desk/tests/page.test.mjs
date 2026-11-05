@@ -1005,6 +1005,7 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
   await desk.waitForSelector("text=User stories");
+  assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), true, "user stories start open");
   assert.match(await desk.textContent("#detail .linked"), /Designs the issue.*See what each agent spends.*Issue #41/, "the request names the issue it designs");
   assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design · 2 user stories/);
   assert.match(await desk.textContent("#detail"), /Asked for: 2 options · questions first/);
@@ -1014,6 +1015,7 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.waitForFunction(() => document.querySelector("#story-frame")?.srcdoc.includes('id="spend"'));
   assert.equal(await desk.textContent('[data-story-part="0"]'), "Spend column", "the story's parts, to show in the design");
   await desk.click('[data-story="s2"]');
+  assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), true, "picking a story keeps the section open");
   assert.match(await desk.textContent(".stories .story"), /I can sort by spend.*from the issue's text/);
   assert.match(await desk.textContent(".stories .how"), /Meets part of it — Column[\s\S]*needs a developer/);
   await desk.click('.tabs:has(+ .stories) [data-variant="v2"]');
