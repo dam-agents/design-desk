@@ -12,7 +12,7 @@
 </script>
 <style>
   :root {
-    --bg: #f7f7f5; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
+    --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
     --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
     /* What floats over the page (the private ask): a near shadow for the edge, a far one for the lift. */
@@ -109,7 +109,7 @@
   .btn.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   main { display: grid; grid-template-columns: minmax(280px, var(--list-w)) 1fr; min-height: 0; }
   main.wide { grid-template-columns: 1fr; } main.wide .list { display: none; }
-  .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; }
+  .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; background: var(--panel); }
   .detail { overflow: auto; padding: 24px var(--pad-x) 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
   .row:hover { background: var(--soft); }
@@ -118,14 +118,21 @@
   .row .t .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; transform: translateY(-1px); }
   .row .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .row .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  /* A label in the list sits above the card's button, so its own line shows on it alone; a click on it still opens the card. */
+  .row.item > .meta { position: relative; z-index: 1; pointer-events: none; }
+  .row.item > .meta [data-tip] { pointer-events: auto; cursor: pointer; }
   /* A card row: its button covers the row, so the source line can hold links of its own. */
   .row.item { position: relative; }
   .row.item > .open { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 12px; color: var(--muted); }
-  .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; }
+  .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta, 12.5px); }
   .row .prov a, .row .prov button { pointer-events: auto; }
+  /* In the list a card's title is the one black line; where it came from and who asked are grey and plain under it. */
+  .row .prov .src { padding: 0; border: 0; background: none; color: var(--muted); font-weight: 400; gap: 0; }
+  .row .prov .src > svg { display: none; }
+  .row .prov b { color: var(--muted); font-weight: 400; }
   .prov .src { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font-weight: 500; white-space: nowrap; }
   .prov .src a { color: inherit; }
   .prov svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -148,7 +155,7 @@
   .empty { color: var(--muted); padding: 24px 12px; text-align: center; max-width: 60ch; margin: 0 auto; }
   /* A list's head, kept on top while the list scrolls: the tab's pages as tabs, then what
      narrows the page's list as a segmented filter (docs/desk.md → Pages and filters). */
-  .listhead { position: sticky; top: -12px; z-index: 3; margin: -12px -12px 8px; padding: 12px 12px 0; background: var(--bg); }
+  .listhead { position: sticky; top: -12px; z-index: 3; margin: -12px -12px 8px; padding: 12px 12px 0; background: var(--panel); }
   .listhead:has(.subtabs) { padding-top: 2px; }
   .listhead:not(:has(.filterbar)) { padding-bottom: 4px; }
   .subtabs { display: flex; gap: 4px; align-items: stretch; margin: 0 -12px; padding: 0 12px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
@@ -477,7 +484,7 @@
      waits, green approved, slate decided, red closed, blue while Design Desk checks. */
   :root { --approved: #1f6b45; --approved-soft: #e2f1e8; --waiting: #9c5c00; --waiting-soft: #fbefd6;
     --decided: #33557f; --decided-soft: #e4ebf5; --closed: #8a2a22; --closed-soft: #f8e4e1;
-    --canvas: #ecebe6; --dot: #d6d4cd;
+    --canvas: #edebe7; --dot: #d6d4cd;
     --fs-title: 26px; --fs-head: 17px; --fs-read: 15px; --fs-ui: 14px; --fs-meta: 12.5px; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --approved: #74d3a2; --approved-soft: #1b2e23; --waiting: #f0c060; --waiting-soft: #33291a;
     --decided: #9bb8e0; --decided-soft: #1d2633; --closed: #ff8f85; --closed-soft: #3a1f1d; --canvas: #232321; --dot: #383835; } }
@@ -1061,6 +1068,9 @@
     return TIP_ID[el.id] || el.getAttribute("aria-label") || "";
   }
   const TIPPED = "button, a.btn, summary.btn, [data-zoom]";
+  // A list row's button covers the whole card: it shows no line and no preview of its own; its
+  // labels and its issue or pull request link show theirs (docs/desk.md → Tooltips).
+  const ROW_OPEN = ".row.item > .open";
   // A button's icon, by its data- action (or id), drawn before its words; a button whose
   // words start with a sign of their own (▶, ✓, 👍, +…) keeps that sign instead.
   const ICON_PATH = {
@@ -1121,7 +1131,7 @@
     for (const el of [root, ...root.querySelectorAll(`${TIPPED}, [title]`)]) {
       if (el.matches("iframe")) continue;
       if (el.title) toTip(el);
-      else if (el.matches(TIPPED) && !el.dataset.tip) { const t = tipFor(el); if (t) el.dataset.tip = t; }
+      else if (el.matches(TIPPED) && !el.dataset.tip && !el.matches(ROW_OPEN)) { const t = tipFor(el); if (t) el.dataset.tip = t; }
       if (el.matches(TIPPED)) decorate(el);
     }
   }
@@ -1160,12 +1170,14 @@
   new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) tip(n); }).observe(document.body, { childList: true, subtree: true });
   tip(document.body);
 
-  // An open More closes on a click anywhere outside it, on Escape, and once something in it is picked.
+  // An open More, or a request's steps, closes on a click anywhere outside it and on Escape;
+  // a More also once something in it is picked.
+  const FOLDS = "details.more[open], details.stepper[open]";
   document.addEventListener("click", (e) => {
-    for (const d of document.querySelectorAll("details.more[open]"))
+    for (const d of document.querySelectorAll(FOLDS))
       if (!d.contains(e.target) || e.target.closest(".menu button")) d.open = false;
   }, true);
-  const moreClose = () => { for (const d of document.querySelectorAll("details.more[open]")) d.open = false; };
+  const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") moreClose(); });
   // A click into a design's frame never reaches this page; the page loses focus instead.
   addEventListener("blur", () => { moreClose(); tipHide(); });
@@ -1530,7 +1542,7 @@
       box.style.top = `${below ? r.bottom + 8 : r.top - 8 - h}px`;
     }, TIP_DELAY);
   }
-  const peekTarget = (e) => e.target.closest?.("[data-snip], [data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']");
+  const peekTarget = (e) => { const el = e.target.closest?.("[data-snip], [data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']"); return el?.matches(ROW_OPEN) ? null : el; };
   document.addEventListener("mouseover", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekShow(el); });
   document.addEventListener("mouseout", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekHide(); });
   document.addEventListener("focusin", (e) => { const el = peekTarget(e); if (el) peekShow(el); });
@@ -3603,7 +3615,8 @@
   }
 
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note], [data-reason]");
+    const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note], [data-reason]")
+      || e.target.closest(".row.item > .meta")?.parentElement.querySelector(":scope > .open");
     if (!el) return;
     const ds = el.dataset;
     if (ds.hit) { await openHit(ds.hit); return; }
