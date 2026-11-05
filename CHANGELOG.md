@@ -13,7 +13,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
 Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A request's User stories fold like
-the other sections under it; they start folded, and the Clickable switch of a design's review bar starts on. No state to migrate, no config change.
+the other sections under it; they start folded, and the Clickable switch of a design's review bar starts on in designs built from now on (a design built
+before keeps its old bar, switch off). Desk previews hide the outline with the bar. No state to migrate, no config change.
 
 ## 1.46.0 — 2026-11-05
 
