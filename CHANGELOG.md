@@ -33,11 +33,12 @@ in the design above, the pointer going through its `parts` in their order
 ([docs/requests.md](docs/requests.md) → User stories). Send to Slack… opens on Ask for a vote,
 which closes in 1, 5 or 24 hours (24 picked). While a story plays, a bar at the bottom of the window pauses,
 resumes or stops it, and only the design scrolls, never the Desk. A played story's numbered frames show only while
-the design's Clickable switch is on. A request at `feedback` reads **Team feedback**, as its
+the design's Show hotspots switch is on. A request at `feedback` reads **Team feedback**, as its
 step does, not Options ready.
-The Clickable switch of a design's review bar starts on in designs built from now on (a design
+The review bar's switch that outlines hotspots starts on in designs built from now on (a design
 built before keeps its old bar, switch off), so a played story shows its numbered frames from the
-start; the Desk's previews of a part hide the outline with the bar (from #68, closed).
+start; the Desk's previews of a part hide the outline with the bar (from #68, closed). The switch is
+renamed **Show hotspots** (was Clickable) in designs built from now on.
 
 ## 1.46.0 — 2026-11-05
 

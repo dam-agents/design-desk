@@ -49,8 +49,8 @@ test("a click walks the flow, Back retraces it, a dead spot flashes what is clic
     assert.equal(await shown(), "1");
     assert.equal(await pg.isVisible("#review-back"), false);
     const hot = () => pg.evaluate(() => document.documentElement.classList.contains("review-hot"));
-    // Clickable starts on; the rest of the flow is checked with it switched off.
-    assert.equal(await hot(), true, "Clickable starts on");
+    // Show hotspots starts on; the rest of the flow is checked with it switched off.
+    assert.equal(await hot(), true, "Show hotspots starts on");
     assert.equal(await pg.getAttribute("#review [data-hot]", "aria-checked"), "true");
     await pg.click("#review [data-hot]");
     assert.equal(await hot(), false);

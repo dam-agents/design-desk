@@ -1026,7 +1026,7 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.match(await desk.textContent(".stories .how"), /Meets it[\s\S]*A spend column on every row/);
   await desk.waitForFunction(() => document.querySelector("#variant-frame")?.srcdoc.includes('id="spend"'));
   // A story pressed plays in the design above: the pointer names its parts there, in order
-  // (their numbered frames show only with the design's Clickable switch on).
+  // (their numbered frames show only with the design's Show hotspots switch on).
   await desk.click('[data-story="s1"]');
   const design = desk.frameLocator("#variant-frame");
   await design.locator("text=1. Spend column").first().waitFor();
@@ -1607,8 +1607,8 @@ test("lists show the newest first; a folded box stays folded on another option; 
 }));
 
 // A preview of a part (the hover peek, All elements, the enlarged part) hides the review bar,
-// and with it the outline its Clickable switch draws from the start.
-test("a preview of a design shows neither the review bar nor the Clickable outline", async (t) => {
+// and with it the outline its Show hotspots switch draws from the start.
+test("a preview of a design shows neither the review bar nor the hotspots' outline", async (t) => {
   const browser = chromium();
   if (!browser) return t.skip("no browser here");
   let pw;
@@ -1627,7 +1627,7 @@ test("a preview of a design shows neither the review bar nor the Clickable outli
       hot: document.documentElement.classList.contains("review-hot"), checked: document.querySelector("#review [data-hot]").getAttribute("aria-checked") }));
     await pg.setContent(WITH_BAR);
     const own = await state();
-    assert.deepEqual([own.hot, own.checked], [true, "true"], "the design itself starts with Clickable on");
+    assert.deepEqual([own.hot, own.checked], [true, "true"], "the design itself starts with Show hotspots on");
     for (const [name, sc] of [["a part's preview", SNIP_SCRIPT(sel, "", false)], ["the whole design's preview", SNIP_SCRIPT("", "", false)], ["an enlarged part", ZOOM_SCRIPT(sel)]]) {
       await pg.setContent(WITH_BAR.replace("</body>", `${sc}</body>`));
       assert.deepEqual(await state(), { bar: "none", hot: false, checked: "false" }, name);
