@@ -1798,7 +1798,7 @@
       // Options waiting for a pick is the usual state: no chip for it.
       else if (c.busy || c.status !== "feedback") out.push(`<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${esc(stateWord(c))}</span>`);
       if (c.type === "bug") out.push(`<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>`);
-      else if (c.triage && c.triage !== "needs-developer") out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
+      else if (c.triage === "product") out.push(`<span class="chip warn" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
     if (c.conflicts) out.push(`<span class="chip bad" title="Open it to see which decision and why">⚠ Goes against a decision</span>`);
     return out.join("");
@@ -2523,7 +2523,7 @@
   function renderSteps(c) {
     if (c.status === "declined") return "";
     const v = c.triage?.verdict, n = (c.variants || []).length;
-    const steps = [["check", "Checked", "by Design Desk"], ["options", "Options drawn", n ? plural(n, "option", "options") : "a few options"], ["feedback", "Team feedback", "votes and comments"],
+    const steps = [["check", "Checked", (v && VERDICT[typeOf(c)][v]?.[0]) || "by Design Desk"], ["options", "Options drawn", n ? plural(n, "option", "options") : "a few options"], ["feedback", "Team feedback", "votes and comments"],
       ...(v && v !== "design" ? [] : [["live", "Tried live", "optional"]]), ["approved", "Approved", "by a designer or a lead developer", true], ["sent", "To developers", "after approval"]];
     const at = { triage: "check", variants: "options", feedback: "feedback", prototype: "live", testing: "live", spec: "sent", "handed-off": "sent" }[c.status];
     let i = steps.findIndex(([k]) => k === at);
@@ -2633,14 +2633,15 @@
     return said || approved ? `<div class="hint size">${said ? `<div>${said}</div>` : ""}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
   }
 
-  // The verdict sits as a label beside the title; its words and reasons are in its tooltip
+  // A verdict other than design sits as a label beside the title; its words and reasons are in
+  // its tooltip. Design, the usual case, has no label: the request's steps name it
   // (docs/requests.md → Triage). What a design change cannot do folds under the status.
   function verdictChip(c) {
     const tr = c.triage;
     if (!tr) return "";
     const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
-    if (!title) return "";
-    return `<span class="chip ${tr.verdict === "design" ? "ok" : "warn"}" title="${esc([text, ...(tr.reasons || [])].join(" "))}">${esc(title)}</span>`;
+    if (!title || tr.verdict === "design") return "";
+    return `<span class="chip warn" title="${esc([text, ...(tr.reasons || [])].join(" "))}">${esc(title)}</span>`;
   }
   function cannotFold(c) {
     const xs = c.triage?.cannot || [];

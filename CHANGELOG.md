@@ -13,9 +13,10 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A folded box now stays folded when
 the page draws again, for example on another design tab. Every list on the left shows the
-newest item first. A request shows its triage verdict as a label beside its title, and what a
-design change cannot do folds under the status; the "What can be done" section and the label
-on "What's already known" are gone. No server restart, no data change.
+newest item first. A request's steps name its triage verdict; a verdict other than design is
+also a label beside its title, and what a design change cannot do folds under the status. The
+"Design only" label, the "What can be done" section and the label on "What's already known"
+are gone. No server restart, no data change.
 
 ## 1.43.2 — 2026-11-05
 

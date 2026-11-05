@@ -104,8 +104,9 @@ The person deciding should know it before a single variant exists.
 4. Write `triage` on the card: `verdict`, `reasons` (one plain sentence, only when the verdict
    needs it) and `cannot`: only what the person asked for — in the issue, the request or
    their answers — that a design change cannot do, each with its reason in their terms; never
-   a part nobody asked for. The Desk shows the verdict as a label beside the request's title,
-   with its words and `reasons` on hover, and folds `cannot` under the status. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+   a part nobody asked for. The Desk names every verdict in the request's steps, shows one
+   other than `design` as a label beside the title, with its words and `reasons` on hover,
+   and folds `cannot` under the status. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request
