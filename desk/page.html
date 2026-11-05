@@ -131,8 +131,6 @@
   .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
   /* A title is bold until this person first opens the item (docs/desk.md → Read and unread). */
   .row .t { font-weight: 400; display: flex; gap: 8px; align-items: baseline; } .row.unread .t { font-weight: 600; }
-  /* A change not seen yet: a dot where a request shows its state, as large, in the row's top-right corner. */
-  .row .t .sdot .dot { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
   .row .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .row .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
   /* A label in the list sits above the card's button, so its own line shows on it alone; a click on it still opens the card. */
@@ -620,6 +618,9 @@
   .sdot[data-s="held"] .tag { --t: var(--waiting); } .sdot[data-s="feedback"] .tag { --t: #e0701a; }
   .sdot[data-s="prototype"] .tag { --t: var(--live); } .sdot[data-s="testing"] .tag { --t: #c43d8f; }
   .sdot[data-s="spec"] .tag { --t: #3fa35f; } .sdot[data-s="handed-off"] .tag { --t: var(--approved); }
+  /* A PR's and an issue's state, in GitHub's colours: draft grey, open green, merged and done purple. */
+  .sdot[data-s="pr-draft"] .tag { --t: #8c959f; } .sdot[data-s="pr-open"] .tag, .sdot[data-s="issue-open"] .tag { --t: #2da44e; }
+  .sdot[data-s="pr-merged"] .tag, .sdot[data-s="issue-designed"] .tag { --t: #8957e5; }
   .sdot[data-s="decided"] .tag { --t: var(--decided); } .sdot[data-s="declined"] .tag { --t: var(--closed); }
   @media (prefers-reduced-motion: reduce) { .sdot .tag, .sdot .tag::before, .sdot .tag .w { transition: none; } }
   .chip.ok { background: var(--approved-soft); color: var(--approved); } .chip.warn { background: var(--waiting-soft); color: var(--waiting); }
@@ -1111,7 +1112,7 @@
     guest: "Follows along. Anyone the Desk is shared with who has no role on the list.",
   };
   const ABILITIES = [
-    [["ack", "ask", "comment"], "Read everything, mark changes as seen, ask and comment"],
+    [["ack", "ask", "comment"], "Read everything, ask and comment"],
     [["vote", "request", "follow-up", "screens"], "Vote on options, send requests and bug reports, add screenshots"],
     [["explore", "revise", "refresh"], "Start design options and change them in the workspace"],
     [["approve", "close", "reopen"], "Approve designs, close and reopen requests"],
@@ -1166,12 +1167,12 @@
   <path class="f-e" d="M750 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="758" y="158">Design this</text>
   <path class="f-e" d="M660 226 H613" marker-end="url(#fl-issue)"/><text class="f-lbl" x="636" y="218">sent</text>`,
     "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue moves to <b>✓ Designed</b>.");
-  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes${full(" and updates Product")}; each person marks Got it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
+  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes${full(" and updates Product")}; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
   <rect class="f-n" x="10" y="92" width="140" height="56" rx="10"/><text x="80" y="116">A change ships</text><text class="f-sub" x="80" y="134">a merged pull request</text>
   <rect class="f-n f-checking" x="200" y="92" width="160" height="56" rx="10"/><text x="280" y="116">Design Desk explains</text><text class="f-sub" x="280" y="134">what, why, screenshots</text>
   <rect class="f-n f-waiting" x="410" y="92" width="130" height="56" rx="10"/><text x="475" y="116">PR Changes</text><text class="f-sub" x="475" y="134">days are counted</text>
   ${full(`<rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>`)}
-  <rect class="f-n" x="590" y="16" width="160" height="48" rx="10"/><text x="670" y="36">Got it</text><text class="f-sub" x="670" y="53">each of you: seen</text>
+  <rect class="f-n" x="590" y="16" width="160" height="48" rx="10"/><text x="670" y="36">Opened</text><text class="f-sub" x="670" y="53">each of you: no longer bold</text>
   <rect class="f-n f-approved" x="590" y="96" width="160" height="48" rx="10"/><text x="670" y="116">Handled</text><text class="f-sub" x="670" y="133">a designer; the count stops</text>
   <rect class="f-n f-checking" x="590" y="176" width="160" height="48" rx="10"/><text x="670" y="196">Adjust the design</text><text class="f-sub" x="670" y="213">it becomes a request</text>
   <path class="f-e" d="M150 120 H197" marker-end="url(#fl-change)"/><text class="f-lbl" x="174" y="112">hourly</text>
@@ -1251,7 +1252,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     tab: (v) => ({ requests: "Requests: problems and ideas, their design options and live prototypes", new: "PR Changes: what changed in the product's screens, explained, and what a designer should look at",
       issues: "Issues: what the team plans that will change the screens, with sketches", product: "Product: its screens, its parts in every situation, the team's decisions and the weekly history",
       people: "People: who is on the Desk, their roles and what each role can do", guide: "How Design Desk works" }[v]),
-    filter: (v) => ({ "newFilter:all": "Every change", "newFilter:new": "Only changes you have not marked Got it", "newFilter:open": "Only changes no designer marked handled",
+    filter: (v) => ({ "newFilter:open": "Changes no designer marked handled yet", "newFilter:handled": "Changes a designer marked handled",
       "newFilter:designer": "Only changes that wait for a designer", "reqFilter:open": "Requests still being worked on", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
       "reqFor:designers": "Requests a designer or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
       "reqFilter:closed": "Requests sent to developers or closed", "reqFilter:designer": "Only requests that wait for a designer's decision",
@@ -1279,7 +1280,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     unpresent: "Puts it back on the presentation, as not presented yet",
     present: (v, el) => /Present/.test(textOf(el)) ? "Shows the presentation full screen, one item at a time; the arrow keys step through it" : /‹|←|Previous/.test(textOf(el)) ? "The item before" : "The item after",
     exitPresent: "Leaves the presentation (Esc)",
-    ack: "Marks it seen for you: it leaves Not seen yet and Needs a designer; nobody else is told",
+    ack: "Marks it seen for you: it leaves Needs a designer; nobody else is told",
     handle: (v) => v === "1" ? "Design has nothing more to do with this change; the team sees it" : "Counts its days again",
     focusComposer: "Jumps to the question box below; Design Desk answers right there",
     adjust: "Starts a new request from this, to change its design",
@@ -1475,7 +1476,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   // ---------- state ----------
-  const S = { me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1649,6 +1650,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // Filed with no person asking: by one of Design Desk's runs, or from an automated test.
     // With no person behind it, the run that filed it is its author: `by: hourly check`.
     const machine = !author && run && !o.automated;
+    // A change's row names its PR's author and nothing more: no Automatic line under it.
+    if (c.kind === "change" && !machine) run = "";
     if (machine) author = JOB[run] || run;
     const what = [run && !machine && esc(JOB[run] || run), event].filter(Boolean).join(" · ");
     const auto = machine ? event : run || o.automated ? `<span class="auto" title="Filed on its own, not by a person">${icon("auto")}<span>Automatic${what ? ` · ${what}` : ""}</span></span>` : event;
@@ -1952,7 +1955,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // Requests leads; PR Changes and Issues follow smaller with grey counts, then Product and People.
   // How it works sits under the question mark next to the day and night switch.
   function renderNav() {
-    const unseen = S.cards.filter((c) => c.kind === "change" && !c.acked).length;
+    // PR Changes counts the changes this person has not opened yet, the ones shown bold.
+    const unseen = S.cards.filter((c) => c.kind === "change" && c.read === false).length;
     // Requests counts the open ones; it turns amber while one waits for an answer.
     const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
     const asks = open.filter((c) => c.asks).length;
@@ -1979,14 +1983,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     new: { about: "what changed in the product's screens, and what a designer should look at",
       see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
         "On each row: where it came from and who made it, how long it has been open (red when overdue), and whether it needs a designer."],
-      can: [[`Filter by <b>All</b>, <b>Not seen yet</b>${simple() ? " or" : ","} <b>Not handled</b>${full(" or <b>Needs a designer</b>")}.`],
-        ["Press <b>Got it</b> once you have read a change.", "ack"],
+      can: [[`Filter by <b>Open</b>${simple() ? " or" : ","} <b>Handled</b>${full(" or <b>Needs a designer</b>")}. A title is bold until you open it; the dot in its corner is its pull request: Draft, Open or Merged.`],
+        ["A change's title is bold until you open it, for you alone.", "ack"],
         ["<b>Ask a question</b> about a change; the answer appears below it.", "ask"],
         ["<b>Add screenshots</b> when a change has none.", "screens"],
         ["<b>Adjust the design</b>: start a request from a change.", "follow-up"],
         ["<b>Add to presentation</b>: show it at the next design meeting.", "queue"],
         ["<b>Mark handled</b> once a designer has dealt with it.", "handle"], LINK],
-      steps: ["Pick a change on the left.", "Read what changed and why; click a picture to see it large.", "Press Got it, or ask what is unclear.", "A designer marks it handled or adjusts the design."] },
+      steps: ["Pick a change on the left.", "Read what changed and why; click a picture to see it large.", "Ask what is unclear.", "A designer marks it handled or adjusts the design."] },
     requests: { about: simple() ? "design requests, from an idea to design options and a developer spec" : "design requests, from an idea to a live prototype and a developer spec",
       see: ["Every request and where it stands: Checking, Options drawn, Team feedback, Live — try it, Sent to developers.",
         "On each request: what is already known about it, and what of your ask needs a developer or a decision, and why.",
@@ -2076,7 +2080,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
   const designerReasons = (c) => {
     if (c.attention?.level !== "designer") return [];
-    if (!(c.kind === "change" && (c.acked || c.handled)) && !closed(c)) return c.attention.reasons;
+    // A change you opened, or one a designer handled, leaves your Needs a designer.
+    if (!(c.kind === "change" && (c.read || c.acked || c.handled)) && !closed(c)) return c.attention.reasons;
     return c.suggested ? ["Suggested for the presentation"] : [];
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
@@ -2086,7 +2091,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const dateOf = (c) => String(c.source?.merged_at || c.created || c.updated || c.at || "");
   const newestFirst = (xs) => [...xs].sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
   const newCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "change"
-    && (filter === "all" || (filter === "designer" ? forDesigner(c) : filter === "open" ? c.kind === "change" && !c.handled : !c.acked))));
+    && (filter === "designer" ? forDesigner(c) : filter === "handled" ? Boolean(c.handled) : !c.handled)));
   // Requests sit in two tabs, For Designers and For Developers (docs/desk.md → For Developers or
   // For Designers); with none picked yet, a developer starts on theirs, everyone else on the designers'.
   const reqFor = () => S.reqFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
@@ -2099,7 +2104,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // open lists, All too, for its own (docs/issues.md → On the Desk).
   const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
       && (filter === "designed" ? c.designed : !c.designed && (filter === "all" || c.bucket === filter))));
-  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], reqFor: ["designers", "developers"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"], elFilter: ["all", "product", "design"] };
+  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], reqFor: ["designers", "developers"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"], elFilter: ["all", "product", "design"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
@@ -2138,6 +2143,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // Each state's own key for the dot in the list: options drawn and a decision without a design
   // are states of their own; every other is the request's status.
   const stateKey = (c) => tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status;
+  // A change's PR or an issue as GitHub shows it: Draft, Open or Merged; an issue Open, or Designed
+  // once it went through Design Desk. A dot in the row's corner that unfolds into its word.
+  function ghDot(c) {
+    const s = c.source || {};
+    const [k, word, tip] = c.kind === "issue" ? (c.designed ? ["issue-designed", "Designed", "It went through Design Desk: its design was sent to developers"] : ["issue-open", "Open", "Open on GitHub"])
+      : s.merged_at ? ["pr-merged", "Merged", "Its pull request is merged: the change is in the product"]
+      : s.draft ? ["pr-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"]
+      : ["pr-open", "Open", "Its pull request is open: not in the product yet"];
+    return `<span class="sdot" data-s="${k}"><span class="chip tag" title="${esc(tip)}"><span class="w">${esc(word)}</span></span></span>`;
+  }
   const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
   function chipsFor(c) {
     const out = [];
@@ -2172,8 +2187,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       if (c.looks) out.push(`<span class="chip" title="How many earlier looks are drawn, today's included">${plural(c.looks + 1, "version", "versions")}</span>`);
     } else if (c.kind === "change") {
       out.push(ageChip(c));
-      if (c.in_progress) out.push(`<span class="chip live" title="Its pull request is still open: the change is not in the product yet">● In progress — not shipped yet</span>`);
-      if (c.acked) out.push(`<span class="chip ok" title="You marked it Got it">✓ Seen</span>`);
       if (c.open_threads) out.push(`<span class="chip" title="Questions and comments on it that are not done yet">💬 ${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
       if (c.asks && !closed(c)) out.push(`<span class="chip warn" title="Design Desk asked a question and cannot go on until someone answers it">Waiting for your answer</span>`);
@@ -2208,7 +2221,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "Presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
-    const filter = S.tab === "new" ? seg("newFilter", [["all", "All", newCards("all").length], ["new", "Not seen yet", newCards("new").length], ["open", "Not handled", newCards("open").length], ...full([["designer", "Needs a designer", newCards("designer").length]])])
+    const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length]])])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["open", "Open", requestCards("open").length], ...full([["designer", "Needs a designer", requestCards("designer").length]]), ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
@@ -2218,7 +2231,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (presenting()) { renderAgendaList(filters); return; }
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
-      new: S.newFilter === "designer" ? waiting : S.newFilter === "new" ? "Nothing new. Changes to the product's screens appear here soon after they ship." : S.newFilter === "open" ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
+      new: S.newFilter === "designer" ? waiting : S.newFilter === "handled" ? "No change is marked handled yet." : newCards("handled").length ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
         : S.issueFilter === "designed" ? "No issue has gone through Design Desk yet. One lands here once its request is sent to developers."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
@@ -2231,7 +2244,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // PR Changes, Requests and Issues say where each came from, without a description; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${c.kind === "change" && !c.acked ? '<span class="sdot"><span class="dot" title="Not seen yet"></span></span>' : ""}${c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : ""}</div></button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${c.kind === "change" || c.kind === "issue" ? ghDot(c) : ""}${c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : ""}</div></button>
       ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
@@ -2767,7 +2780,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // ---------- a shipped change ----------
   function renderChange(c) {
     const src = c.source || {};
-    const seen = Boolean(c.acks && S.me && c.acks[myKey()]);
     const inProgress = src.pr && !src.merged_at;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
@@ -2778,8 +2790,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${attentionLine(c)}
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
       <div class="actions">
-        <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Marks it seen for you: it leaves Not seen yet and Needs a designer; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
-        ${can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : ""}
+        ${can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : ""}
         <button class="btn" data-focus-composer>Ask a question</button>
         ${can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : ""}
         ${agendaButton(c)}
@@ -4122,7 +4133,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (to.tab === "presentation" && onCall) S.reqFilter = "presentation";
     if (S.tab === "product") S.productFilter = { element: "elements", digest: "history" }[c.kind] || "screens";
     if (!visibleCards().some((x) => x.id === c.id)) {
-      if (S.tab === "new") S.newFilter = "all";
+      if (S.tab === "new") S.newFilter = c.handled ? "handled" : "open";
       if (S.tab === "requests") { S.reqFilter = closed(c) ? "closed" : "open"; S.reqFor = forOf(c); }
       if (S.tab === "issues") S.issueFilter = "all";
     }
@@ -4975,7 +4986,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (!simple()) return;
     if (SIMPLE_HIDES.includes(S.tab) && !S.decision) { S.tab = "requests"; S.card = null; S.decision = null; }
     if (S.reqFilter === "presentation" || S.reqFilter === "designer") S.reqFilter = "open";
-    if (S.newFilter === "designer") S.newFilter = "all";
+    if (S.newFilter === "designer") S.newFilter = "open";
   }
   $("#simple").addEventListener("click", () => {
     const on = !simple();

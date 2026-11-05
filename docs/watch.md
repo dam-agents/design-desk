@@ -57,7 +57,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
      `good-to-know` (states and edge cases that matter: empty, error, permissions, long text,
      small screens) · `questions` (open design questions you noticed: an inconsistency with
      the design system, a missing state, copy that breaks the product's words);
-   - `source` — `{repo, pr, url, merged_at, author}`.
+   - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: the due entry's, true for a
+     draft pull request; the Desk shows it as the row's Draft dot).
    Every "why" names its source in the text ("the issue says…", "the PR's decision notes
    say…"); a reason you cannot find is written as not documented, with the PR author as
    the person to ask.

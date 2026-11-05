@@ -246,7 +246,7 @@ watch_mode() {
       items="$(jq -c --argjson more "$(jq -c '.items | map(. + {state: "open"})' <<<"$more")" '.items += $more' <<<"$items")"
     fi
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
-    while IFS=$'\t' read -r num state merged title url author; do
+    while IFS=$'\t' read -r num state merged title url author draft; do
       [ -n "$num" ] || continue
       seen=$((seen + 1))
       [ "$state" = open ] || [ "$(iso2epoch "$merged")" -ge "$(iso2epoch "$SINCE")" ] || continue
@@ -267,11 +267,11 @@ watch_mode() {
       printf '%s\t%s\t%s\tdue\t\t%s\t0\t%s, %s UI files\n' "$repo" "$num" "$merged" "$NOW_ISO" "$state" "$n" >> "$LEDGER"
       ndue=$((ndue + 1))
       jq -cn --arg id "$repo#$num" --arg repo "$repo" --argjson pr "$num" --arg state "$state" --arg title "$title" --arg url "$url" \
-        --arg merged "$merged" --arg author "$author" --arg kind "$kind" --argjson n "$n" \
+        --arg merged "$merged" --arg author "$author" --arg kind "$kind" --argjson n "$n" --argjson draft "${draft:-false}" \
         --argjson files "$(printf '%s\n' "$ui" | head -40 | jq -R . | jq -s '[.[] | select(length>0)]')" \
-        '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, kind:$kind, ui_file_count:$n, ui_files:$files}' >> "$DUE"
+        '{id:$id, repo:$repo, pr:$pr, state:$state, title:$title, url:$url, merged_at:(if $merged == "" then null else $merged end), author:$author, draft:$draft, kind:$kind, ui_file_count:$n, ui_files:$files}' >> "$DUE"
       log "$repo#$num: $state${merged:+ $merged}, $n UI files — due ($kind)"
-    done < <(jq -r '.items[] | [.number, .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n]"; " ")), .html_url, .user.login] | @tsv' <<<"$items")
+    done < <(jq -r '.items[] | [.number, .state, (.pull_request.merged_at // ""), (.title | gsub("[\t\n]"; " ")), .html_url, .user.login, (.draft // false | tostring)] | @tsv' <<<"$items")
     # Issues that ask for design work: a label the team puts on them.
     if [ "$LABEL" != none ]; then
       found="$(search "$repo" "repo:$slug is:issue is:open label:\"$LABEL\"")" || fail_out "could not list the issues labelled $LABEL in $repo"

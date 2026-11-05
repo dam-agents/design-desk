@@ -25,7 +25,13 @@ picked there; a part with states drawn offers **See every state**, to look throu
 both modes a request's state in the list is a dot in the row's top-right corner, as large as the
 dot on its page, pulsing while Design Desk works; pointing at the dot unfolds the label over the title. A row's provenance
 starts with `created:` Today, Yesterday or the date; with no person behind it, `by:` names the run
-(hourly check, daily issue read), and a change from today has no New today chip.
+(hourly check, daily issue read), and a change from today has no New today chip. PR Changes filters are
+**Open** (the default) and **Handled**, with no All and no Not seen yet; a change has no Got it
+button any more: opening it is what marks it read. A change's and an issue's row show their GitHub
+state as the same corner dot: a PR Draft, Open or Merged, an issue Open or Designed. The watch
+pre-flight now puts `draft` on each due pull request, and a change card keeps it in
+`source.draft` ([docs/watch.md](docs/watch.md) step 7); cards written before stay Open until their
+next update.
 
 ## 1.49.0 — 2026-11-05
 

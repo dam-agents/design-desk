@@ -48,10 +48,10 @@ served by the Desk server through the platform's Artifact API relay.
   on a narrow screen; the presentation's Exit, a picture's Close).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
-- **Pages and filters.** A tab's pages are tabs at the top of its list: Requests and
-  **Presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
-  Product. What narrows a page's list is one segmented filter under them (Changes: All, Not
-  seen yet, Not handled, Needs a designer; Requests: Open, Needs a designer, Closed; Issues:
+- **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
+  Developers** and **Presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
+  Product. What narrows a page's list is one segmented filter under them (Changes: **Open** (not
+  handled, the default) and **Handled**, Needs a designer; Requests: Open, Needs a designer, Closed; Issues:
   the buckets; Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
@@ -307,7 +307,10 @@ In both modes, each request in the list shows its state as a dot in the row's to
 as large as the dot on the request's page and level with the title's first line, each state in a colour of
 its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
-A PR change not seen yet shows its blue dot in the same place, as large.
+A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull
+request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
+an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
+person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
 
 ## Read and unread
 
