@@ -526,7 +526,8 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - **Where a card came from.** Every row in PR Changes and Requests shows its source, its author and,
   for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:
   <card>` (`<when>`: Today, Yesterday or the date it came, the exact time on hover; with no person behind it,
-  the run that filed it is the author: `by: hourly check`, `by: daily issue read`), the joining words grey and what they name in ink; Slack and the Desk (a desk with a
+  the run that filed it is the author: `by: hourly check`, `by: daily issue read`; an issue not yet
+  designed adds where the team planned it: `in: This sprint`, or the sprint's milestone, `in: Sprint 12`), the joining words grey and what they name in ink; Slack and the Desk (a desk with a
   screen) show their icon beside their name. A change card shows its `source` (the PR,
   without an arrow, and its author; when it shipped is on its page); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`

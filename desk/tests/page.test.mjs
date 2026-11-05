@@ -982,6 +982,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     const row = '.row.item:has([data-card="is1"])';
     assert.match(await desk.textContent(`${row} .prov`), /from: Issue #41.*by: alice.*assigned to bob/);
     assert.equal(await desk.locator(`${row} .s`).count(), 0, "an issue's row carries no description; its page and its preview do");
+    assert.match(await desk.textContent(`${row} .prov`), /in: Sprint 12/, "where the team planned it is a word of the line");
     await desk.click('[data-filter="issueFilter:label"]');
     assert.deepEqual(await desk.locator(".row.item [data-card]").evaluateAll((xs) => xs.map((x) => x.dataset.card)), ["is2"]);
     await desk.click('[data-filter="issueFilter:sprint"]');

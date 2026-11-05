@@ -31,7 +31,8 @@ button any more: opening it is what marks it read. A change's and an issue's row
 state as the same corner dot: a PR Draft, Open or Merged, an issue Open or Designed. The watch
 pre-flight now puts `draft` on each due pull request, and a change card keeps it in
 `source.draft` ([docs/watch.md](docs/watch.md) step 7); cards written before stay Open until their
-next update. Every row in every list is its title and one line under it, with no chips.
+next update. Every row in every list is its title and one line under it, with no chips; an issue's line
+ends with where it is planned (`in: This sprint`).
 
 ## 1.49.0 — 2026-11-05
 

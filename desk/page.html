@@ -1659,9 +1659,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // Named by its kind and number, its title on hover: a title can be long or the agent's own.
     const parent = S.cards.find((x) => x.id === (o.event?.card || from));
     const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
+    // Where the team planned an issue, as one more word of the line: `in: This sprint`.
+    const planned = c.kind === "issue" && !c.designed && c.bucket ? `<span title="Where the team planned this issue"><span class="k">in:</span> <b>${esc(c.bucket === "sprint" && c.source?.milestone ? c.source.milestone : BUCKET[c.bucket] || c.bucket)}</b></span>` : "";
     if (parts) return { kind, src, author, auto, parent: from_ };
     // When it came: Today, Yesterday, or its date (docs/desk.md → Where a card came from).
-    return `<div class="prov">${c.created ? `<span><span class="k">created:</span> <span class="when" title="${esc(new Date(c.created).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }))}">${esc(dayWord(c.created))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b${machine ? ' title="Filed on its own by Design Desk, not by a person"' : ""}>${machine ? icon("auto") : ""}${esc(author === "you" ? "You" : author)}</b></span>` : ""}${auto}${from_}</div>`;
+    return `<div class="prov">${c.created ? `<span><span class="k">created:</span> <span class="when" title="${esc(new Date(c.created).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }))}">${esc(dayWord(c.created))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b${machine ? ' title="Filed on its own by Design Desk, not by a person"' : ""}>${machine ? icon("auto") : ""}${esc(author === "you" ? "You" : author)}</b></span>` : ""}${planned}${auto}${from_}</div>`;
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
