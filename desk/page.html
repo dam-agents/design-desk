@@ -2783,7 +2783,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${attentionLine(c)}
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
-      <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : `<p class="hint">No screenshots yet.${can("screens") && !c.instance ? " Have one? Add it." : ""}</p>`}
+      <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : ""}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
       ${renderInstance(c)}
       ${(c.elements || []).length ? `<h3>Parts it changed</h3><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div>` : ""}
