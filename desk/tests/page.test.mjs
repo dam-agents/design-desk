@@ -810,8 +810,9 @@ test("numbers, notes and pins preview what they name; the search lists every num
   await desk.click("[data-brief-toggle]");
   await desk.waitForSelector(".brief.clamped");
   assert.deepEqual(await desk.evaluate(() => JSON.parse(localStorage.getItem("desk-seen-requests"))), ["C-2"], "the browser keeps that it was seen");
-  await desk.click("[data-back]");
-  await desk.evaluate(() => { location.hash = ""; location.hash = "#C-2"; });
+  await desk.goto(`${base}#C-1`);
+  await desk.waitForSelector('#detail a[data-ref="D-1"]');
+  await desk.goto(`${base}#C-2`);
   await desk.waitForFunction(() => document.querySelectorAll(".top2 > .brief").length === 2 && document.querySelectorAll(".top2 > .brief.clamped").length === 2);
   await desk.click(".top2 > .brief:not(.made-col) [data-brief-toggle]");
   await desk.waitForSelector(".top2 > .brief:not(.made-col):not(.clamped)");
