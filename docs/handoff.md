@@ -11,7 +11,7 @@ sent; the developer or coding agent gets only answers.
 1. Claim; set `status: spec`. Read the card whole: the request, triage, the impact, the
    variants and their votes, every thread and note, the prototype and its guard report. The
    approved option is the one the item's note names (picked on Approve). While the card is at
-   Building prototype or Live — try it, or its prototype is live (back at Options ready after a
+   Building prototype or Live — try it, or its prototype is live (back at Team feedback after a
    revise), it is what the prototype shows: the card's `live_pick` — its option, `version` and
    assets (`live_pick.asset`, `states[].asset`), which `approved.variant` and `approved.version`
    repeat; write the spec from those, not from a newer version drawn since.

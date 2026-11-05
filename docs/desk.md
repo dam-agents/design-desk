@@ -261,7 +261,7 @@ prototype once Design Desk has checked a request:
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.
 - **While the live prototype is up**, the page folds the options (and building again) under it,
   and Approve approves what it was built from — `live_pick`'s option and version (set on Build
-  it live), whatever the note, also back at Options ready after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
+  it live), whatever the note, also back at Team feedback after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
   spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
 
 ## Claims
@@ -460,7 +460,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   thread id (`I-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
   Environment name: refer to things by their title, another card by its title and number
   ([Links to an item](#links-to-an-item)), and to steps with the words the Desk
-  shows ("Checking", "Options ready", "Live — try it", "Sent to developers"). An issue or
+  shows ("Checking", "Team feedback", "Live — try it", "Sent to developers"). An issue or
   pull request is written `#12` / `PR #12` (the card's repository, else the first of `repos`)
   or `owner/name#12`; the page links it to GitHub.
 - When a step cannot go on without a person, ask once, with a suggested answer:
