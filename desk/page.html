@@ -635,6 +635,9 @@
   .status .s-meta .k { color: var(--muted); } .status .s-meta b { font-weight: 500; color: var(--ink); } .status .s-meta b.late { color: var(--closed); }
   .ai-tag { display: inline-grid; place-items: center; margin-left: 5px; padding: 0 4px; border-radius: 4px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; line-height: 14px; color: var(--accent); background: var(--info-soft); vertical-align: 1px; }
   /* The presentation's items: a heading with its buttons, the facts line, what the meeting decides. */
+  .agenda-item { scroll-margin-top: 16px; border-radius: 8px; transition: background .4s ease; }
+  .agenda-item.hit { animation: ag-hit 1.6s ease-out; } @keyframes ag-hit { 0%, 30% { background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 14%, transparent); } 100% { background: transparent; box-shadow: 0 0 0 8px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .agenda-item.hit { animation: none; outline: 2px solid var(--accent); outline-offset: 6px; } }
   .agenda-item { padding: 14px 0; border-bottom: 1px solid var(--line); max-width: var(--measure); } .agenda-item:last-child { border-bottom: 0; }
   .agenda-item .ai-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; } .agenda-item .ai-head h3 { margin: 0; font-size: var(--fs-head); text-transform: none; letter-spacing: -.01em; color: var(--ink); }
   .agenda-item .ai-head .actions { margin: 0 0 0 auto; } .agenda-item .prov { margin: 4px 0 8px; } .agenda-item .k-head { margin: 8px 0 2px; font-weight: 600; }
@@ -2356,14 +2359,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // The presentation in the other lists' style: a row is its title and one line of facts, grey
   // words and values in ink, no chips (docs/desk.md → The presentation).
   const pkv = (k, v) => `<span><span class="k">${k}:</span> <b>${v}</b></span>`;
-  const agendaRow = (c, title, facts) => `<div class="row item"><button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${title}</span>${num(c)}</div></button>${facts ? `<div class="prov">${facts}</div>` : ""}</div>`;
+  // A row of what is to present or suggested stays on the presentation page and jumps to its item;
+  // a presented one opens its card.
+  const agendaRow = (c, title, facts, jump = false) => `<div class="row item"><button class="open" ${jump ? `data-jump="${esc(c.id)}" aria-current="${S.jump === c.id}"` : `data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"`}><div class="t"><span>${title}</span>${num(c)}</div></button>${facts ? `<div class="prov">${facts}</div>` : ""}</div>`;
   const addedBy = (a) => a.agenda.by?.email ? (a.agenda.by.email === S.me?.email ? "You" : a.agenda.by.email) : "Design Desk";
   function renderAgendaList(filters = "") {
     const items = S.agenda, ideas = suggested(), done = S.presented || [];
     $("#list").innerHTML = filters + (items.length ? `<div class="side-head">To present · in this order</div>${items.map((a, i) => agendaRow(a, `${i + 1}. ${esc(a.title)}`,
-        (a.option ? pkv("presenting", esc(a.option)) : "") + pkv("added by", esc(addedBy(a))))).join("")}`
+        (a.option ? pkv("presenting", esc(a.option)) : "") + pkv("added by", esc(addedBy(a))), true)).join("")}`
       : `<div class="empty">The presentation is what the team shows at its next design meeting. A designer puts things on it: open a request and choose Add to presentation.</div>`)
-      + (ideas.length ? `<div class="side-head">Suggested by Design Desk</div>${ideas.map((c) => agendaRow(c, esc(c.title), pkv("suggested by", "Design Desk") + (c.suggested.note ? `<span>${esc(c.suggested.note)}</span>` : ""))).join("")}` : "")
+      + (ideas.length ? `<div class="side-head">Suggested by Design Desk</div>${ideas.map((c) => agendaRow(c, esc(c.title), pkv("suggested by", "Design Desk") + (c.suggested.note ? `<span>${esc(c.suggested.note)}</span>` : ""), true)).join("")}` : "")
       + (done.length ? `<div class="side-head">Presented</div>${done.map((a) => agendaRow(a, esc(a.title), pkv("presented", esc(dayWord(a.agenda.call))) + (a.option ? pkv("option", esc(a.option)) : ""))).join("")}` : "");
   }
   function renderAgendaDetail() {
@@ -2373,12 +2378,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       (items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : "") + (can("close") && items.length > 1 ? `<button class="btn" data-act="clear-call">Mark all as presented</button>` : ""), "");
     $("#detail").innerHTML = `<div class="crumb"><button class="btn small" data-filter="reqFilter:open">← Requests</button></div><h2>Presentation</h2>
       ${box}
-      ${items.map((a, i) => `<div class="agenda-item"><div class="ai-head"><h3>${i + 1}. ${esc(a.title)}${num(a)}</h3><div class="actions">${markButton(a)}<button class="btn small" data-card="${esc(a.id)}">Open</button></div></div>
+      ${items.map((a, i) => `<div class="agenda-item" id="ag-${esc(a.id)}"><div class="ai-head"><h3>${i + 1}. ${esc(a.title)}${num(a)}</h3><div class="actions">${markButton(a)}<button class="btn small" data-card="${esc(a.id)}">Open</button></div></div>
         <div class="prov">${a.option ? pkv("presenting", esc(a.option)) : ""}${pkv("added by", esc(addedBy(a)))}</div>
         ${a.agenda.note ? `<p class="hint">“${esc(a.agenda.note)}”</p>` : ""}
         <p class="k-head">What we decide</p>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("")}
       ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the presentation until a designer adds it: open it and choose Add to presentation (on a request, under More), or Not now here.</p>
-        ${ideas.map((c) => `<div class="agenda-item"><div class="ai-head"><h3>${esc(c.title)}${num(c)}</h3><div class="actions">${can("queue") ? `<button class="btn small" data-not-now="${esc(c.id)}" title="Design Desk stops suggesting it for the presentation">Not now</button>` : ""}<button class="btn small" data-card="${esc(c.id)}">Open</button></div></div>${c.suggested.note ? `<div class="prov"><span>${esc(c.suggested.note)}</span></div>` : ""}</div>`).join("")}` : ""}`;
+        ${ideas.map((c) => `<div class="agenda-item" id="ag-${esc(c.id)}"><div class="ai-head"><h3>${esc(c.title)}${num(c)}</h3><div class="actions">${can("queue") ? `<button class="btn small" data-not-now="${esc(c.id)}" title="Design Desk stops suggesting it for the presentation">Not now</button>` : ""}<button class="btn small" data-card="${esc(c.id)}">Open</button></div></div>${c.suggested.note ? `<div class="prov"><span>${esc(c.suggested.note)}</span></div>` : ""}</div>`).join("")}` : ""}`;
   }
   // Mark one item presented (or put it back with Undo); the presentation steps on to the next.
   async function markPresented(id, presented = true) {
@@ -4421,6 +4426,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (ds.presented) { await markPresented(ds.presented); return; }
     if (ds.notNow) { await api("DELETE", `/api/cards/${encodeURIComponent(ds.notNow)}/suggestion`); await refreshList(); renderDetail(); return; }
     if (ds.unpresent) { await markPresented(ds.unpresent, false); return; }
+    // A presentation row: the page stays, scrolls to the item and marks it a moment.
+    if (ds.jump) {
+      S.jump = ds.jump;
+      if (S.card) { S.card = null; S.ws.open = false; renderWorkspace(); renderDetail(); }
+      renderList();
+      const el = document.getElementById(`ag-${ds.jump}`);
+      if (el) { el.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); }
+      return;
+    }
     if (ds.filter) {
       // Presentation sits beside For Designers and For Developers; either of those leaves it.
       const [k, v] = ds.filter === "reqFor:presentation" ? ["reqFilter", "presentation"] : ds.filter.split(":");

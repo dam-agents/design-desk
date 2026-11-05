@@ -483,7 +483,9 @@ the **Presentation** page of Requests. (The store and the CLI keep its older nam
 The page shows it in the other pages' style: in the list, each item is its title and one line of
 facts (`presenting:`, `added by:`; `suggested by:`; `presented:`), with no chips; the page opens
 with a status box (To present · N items, **▶ Present**, **Mark all as presented**), then each item
-with its buttons, its facts and what the meeting decides.
+with its buttons, its facts and what the meeting decides. A row of what is to present or suggested keeps the page
+and jumps to its item, marked a moment; **Open** on the item opens its card, and a presented row
+opens its card.
 
 - Only a designer or the lead puts a card on it (**Add to presentation**), with a note and,
   for a request with options, its final version. The agent never adds one: it

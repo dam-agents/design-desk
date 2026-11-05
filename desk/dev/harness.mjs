@@ -35,10 +35,17 @@ createServer(async (req, res) => {
     const chunks = [];
     for await (const c of req) chunks.push(c);
     const as = String(req.headers["x-as"] || ""), role = String(req.headers["x-role"] || "viewer");
-    const r = await fetch(`http://127.0.0.1:${deskPort}${req.url.slice("/relay".length)}`, {
-      method: req.method, body: chunks.length ? Buffer.concat(chunks) : undefined,
-      headers: { "content-type": "application/json", "x-platform-caller-role": role, "x-platform-caller-email": as, "x-platform-caller-sub": `dev-${as}` },
-    });
+    // The Desk server restarting or down is a 502 for this call, never the harness's own exit.
+    let r;
+    try {
+      r = await fetch(`http://127.0.0.1:${deskPort}${req.url.slice("/relay".length)}`, {
+        method: req.method, body: chunks.length ? Buffer.concat(chunks) : undefined,
+        headers: { "content-type": "application/json", "x-platform-caller-role": role, "x-platform-caller-email": as, "x-platform-caller-sub": `dev-${as}` },
+      });
+    } catch (e) {
+      res.writeHead(502, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ error: `The Desk server on port ${deskPort} does not answer (${e.cause?.code || e.message}). Start it, then reload.` }));
+    }
     res.writeHead(r.status, { "content-type": r.headers.get("content-type") || "application/json" });
     return res.end(Buffer.from(await r.arrayBuffer()));
   }
