@@ -718,6 +718,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.press("body", "Escape");
 
     // A before picture keeps the after picture's marks only when the two are the same size.
+    // ch4 is handled: it is listed under Handled.
+    await desk.click('[data-filter="newFilter:handled"]');
     await desk.click('[data-card="ch4"]');
     await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-7"] img')?.naturalHeight);
     assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
@@ -730,6 +732,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.waitForSelector(".zoom img");
     assert.equal(await desk.locator(".zoom .mark").count(), 0);
     await desk.press("body", "Escape");
+    await desk.click('[data-filter="newFilter:open"]');
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector(".impact", { state: "attached" });
 
