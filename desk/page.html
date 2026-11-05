@@ -280,6 +280,8 @@
   .catalog li.addstate > button:hover { background: var(--info-soft); }
   .catalog li.addstate > button .hint { font-weight: 400; margin: 0; }
   .catalog li.addstate > .working { margin: 12px; align-self: center; }
+  .catalog li.addstate.done { border-style: solid; border-color: color-mix(in srgb, var(--approved) 35%, var(--line)); background: color-mix(in srgb, var(--approved-soft) 50%, var(--panel)); align-items: center; }
+  .catalog li.addstate.done > div { padding: 16px; text-align: center; } .catalog li.addstate.done b { color: var(--approved); }
   .catalog li[data-zoom]:hover, .catalog li[data-zoom-snip]:hover { border-color: var(--accent); }
   .steps { display: flex; gap: 0; margin: 14px 0 6px; flex-wrap: wrap; }
   .step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; padding: 4px 10px 4px 0; }
@@ -618,6 +620,8 @@
   .btn.vote.some.concern { background: color-mix(in srgb, var(--waiting-soft) 70%, var(--panel)); border-color: color-mix(in srgb, var(--waiting) 25%, var(--line)); color: var(--waiting); }
   .btn.vote.on.up { border-color: var(--approved); box-shadow: inset 0 0 0 1px var(--approved); color: var(--approved); }
   .btn.vote.on.concern { border-color: var(--waiting); box-shadow: inset 0 0 0 1px var(--waiting); color: var(--waiting); }
+  .btn.vote.some.down { background: color-mix(in srgb, var(--bad-soft) 70%, var(--panel)); border-color: color-mix(in srgb, var(--bad) 25%, var(--line)); color: var(--bad); }
+  .btn.vote.on.down { border-color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); color: var(--bad); }
   /* The conversation: newest first, folded under the box until opened. */
   .composer { max-width: var(--measure); }
   details.convo { margin-top: 14px; max-width: var(--measure); }
@@ -953,7 +957,7 @@
   // A request filed on the Desk keeps its drawn options to its people until one of them asks the
   // team for feedback; one from Slack goes on by itself (docs/desk.md → Team feedback).
   const held = (c) => c.status === "variants" && c.team_feedback?.state === "waiting";
-  STATUS_TIP.held = "The options are drawn. Fine-tune them in the design workspace; when they are ready, press Ask the team for feedback and the team votes and comments.";
+  STATUS_TIP.held = "The options are drawn. Fine-tune them in the design workspace; when they are ready, press Ask for feedback and the team votes and comments.";
   const tone = (c) => c.status === "declined" && c.decided ? "decided" : held(c) ? "waiting" : TONE[c.status] || "fyi";
   // The state's word, the same in the list and on the page.
   const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : STATUS[c.status] || c.status;
@@ -1040,7 +1044,7 @@
   <rect class="f-n f-waiting" x="390" y="194" width="120" height="56" rx="10"/><text x="450" y="218">Team feedback</text><text class="f-sub" x="450" y="236">votes, comments</text>
   <path class="f-n f-approved" d="M690 188 L742 222 L690 256 L638 222 Z"/><text x="690" y="226">Approve</text><text class="f-sub" x="690" y="276">a designer or a lead developer</text>
   <path class="f-e" d="M230 80 H257" marker-end="url(#fl-req)"/>
-  <path class="f-e" d="M380 80 H450 V191" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="444" y="140">Ask the team</text>
+  <path class="f-e" d="M380 80 H450 V191" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="444" y="140">Ask for feedback</text>
   <path class="f-e" d="M390 222 H320 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="314" y="170">Work it in</text>
   <path class="f-e f-dash" d="M490 194 V80 H527" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="498" y="140">Build it live</text>
   <path class="f-e" d="M510 222 H635" marker-end="url(#fl-req)"/><text class="f-lbl" x="573" y="214">or right away</text>
@@ -1191,7 +1195,7 @@
     sendForm: "Sends your answers; Design Desk goes on with them",
     skipForm: "Design Desk takes its suggested answer for every question",
     size: (v) => v === "small" ? "Any developer but the person who filed it can then approve it, without a designer" : "A designer or a lead developer approves it",
-    vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : "Says this option worries you, and opens a comment to say why; press again to take it back",
+    vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : v === "dislike" ? "Your vote against this option; press again to take it back" : "Says this option worries you, and opens a comment to say why; press again to take it back",
     goto: "Opens the design workspace at the part this note is about",
     revoke: "Write why it no longer holds: it stays on the Desk, crossed out, and what refers to it stops warning",
     restore: "Puts this decision in force again",
@@ -1231,6 +1235,7 @@
   // words start with a sign of their own (▶, ✓, 👍, +…) keeps that sign instead.
   const ICON_PATH = {
     pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    cross: '<path d="M6 6l12 12M18 6L6 18"/>',
     spark: '<path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6Z"/><path d="M19 17v4M17 19h4"/>',
     screen: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 7 5 3-5 3Z"/>',
     check: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
@@ -1254,7 +1259,7 @@
   };
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: (el) => /Send to developers/.test(textOf(el)) ? "send" : "check",
-      reopen: "undo", revise: "redo", close: "archive", states: "layers", slack: "send", unqueue: "minus", "not-now": "off",
+      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus", "not-now": "off",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
     notNow: "off", adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
@@ -1826,7 +1831,7 @@
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
-        ["<b>Ask the team for feedback</b>, beside the request's step, once its options are fine-tuned: its author may, whatever their role, and designers, developers and leads may on any request filed here. One from Slack goes to the team by itself.", "request"],
+        ["<b>Ask for feedback</b>, beside the request's step, once its options are fine-tuned: its author may, whatever their role, and designers, developers and leads may on any request filed here. One from Slack goes to the team by itself.", "request"],
         ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
         ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
@@ -2328,6 +2333,8 @@
     }
     return out;
   }
+  // Every state of the element is drawn, all of them for the option's latest version.
+  const statesComplete = (v, e) => e.states.length > 0 && e.states.every((x) => (x.of || 1) >= (v.version || 1));
   // Whether Design Desk is drawing the states of this element now.
   const drawingStates = (c, v, e) => (c.waiting || []).some((w) => w.kind === "states" && w.variant === v.id && (w.scope === "redraw" || (w.element ? w.element === e.key : partKey(w.part) === partKey(e.name))));
   // The change that shipped a request's approved design, as Design Desk compared them (docs/watch.md → Approved design).
@@ -2880,8 +2887,8 @@
     }
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
-      return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. The request's author, a designer, a developer or a lead asks the team for feedback once they are fine-tuned.",
-        step: mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask the team for feedback</button>` : "",
+      return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, press Ask for feedback." : "The options are drawn. The request's author, a designer, a developer or a lead asks the team for feedback once they are fine-tuned.",
+        step: mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask for feedback</button>` : "",
         buttons: (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
@@ -2950,18 +2957,23 @@
     return `<section class="made-sec"><h4>What's already known</h4><div>${md(r.summary)}${(r.links || []).length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${r.links.map((l) => `<li><a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a></li>`).join("")}</ul>` : ""}</div></section>`;
   }
 
-  // 👍 and ⚠ as pills with their count: grey until someone votes, then green or amber.
+  // 👍, 👎 and ⚠ as pills with their count: grey until someone votes, then green, red or amber.
+  // People vote only while the team gives feedback (the Team feedback step); before and after,
+  // the option shows only its open notes.
   function voteButtons(c, v, mine) {
+    const notes = (c.threads || []).filter((th) => th.anchor?.variant === v && th.state !== "resolved").length;
+    const noteLine = notes ? `<span class="notes">${plural(notes, "note", "notes")}</span>` : "";
+    if (c.status !== "feedback") return noteLine ? `<span class="votes">${noteLine}</span>` : "";
     const votes = Object.values(c.votes?.[v] || {}), n = (k) => votes.filter((x) => x.vote === k).length;
     const ICO = { prefer: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H4V10h3zm0 0l4-7c1.7 0 2.7 1.3 2.3 3L13 9h6a2 2 0 0 1 2 2.3l-1.3 7.5A2.5 2.5 0 0 1 17.2 21H7"/></svg>`,
+      dislike: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V3h3v11h-3zm0 0l-4 7c-1.7 0-2.7-1.3-2.3-3L11 15H5a2 2 0 0 1-2-2.3l1.3-7.5A2.5 2.5 0 0 1 6.8 3H17"/></svg>`,
       concern: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>` };
-    const label = { prefer: "I like this one", concern: "I have a concern" };
+    const label = { prefer: "I like this one", dislike: "I don't like this one", concern: "I have a concern" };
     const can_ = can("vote");
     // Who voted, by role, in the pill's tooltip (it was a chip beside the pills).
     const roles = (k) => Object.entries(votes.filter((x) => x.vote === k).map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {})).map(([r, m]) => `${m} ${r}`).join(", ");
-    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${k === "prefer" ? "up" : "concern"}${n(k) ? " some" : ""}${mine === k ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
-    const notes = (c.threads || []).filter((th) => th.anchor?.variant === v && th.state !== "resolved").length;
-    return `<span class="votes">${pill("prefer")}${pill("concern")}${notes ? `<span class="notes">${plural(notes, "note", "notes")}</span>` : ""}</span>`;
+    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${mine === k ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
+    return `<span class="votes">${pill("prefer")}${pill("dislike")}${pill("concern")}${noteLine}</span>`;
   }
 
 
@@ -3235,7 +3247,7 @@
       const busy = drawingStates(c, v, e), ch = CHANGE[e.change];
       const cat = catalogButton(c, v, e);
       return `<div class="eltile"><button class="elopen" data-el="${esc(e.key)}" title="Open ${esc(e.name)}: every state of it and the use case each covers"><span class="elpic">${elementPic(v, e)}</span><span class="elname">${esc(e.name)}</span>
-        <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
+        <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : statesComplete(v, e) ? `<span class="chip ok" title="Every state of it is drawn for the option's latest version; nothing is left to draw">✓ All ${plural(e.states.length, "state", "states")}</span>` : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
     };
     return `<section class="elements">${head}<div class="elgrid">${els.map(tile).join("")}</div></section>`;
   }
@@ -3261,8 +3273,12 @@
     const lookPic = look.shot ? `<figure class="shot"><img alt="${esc(e.name)}" data-asset="${esc(look.shot)}" /></figure>`
       : `<div class="snipbox"><iframe sandbox="allow-scripts" title="${esc(e.name)}" data-snip-asset="${esc(look.asset)}" data-snip-sel="${esc(look.selector || "")}" data-snip-base="${esc(look.selector ? "" : v.asset || "")}"></iframe></div>`;
     const first = `<li${zoomAttrs(look, v.asset, `${e.name}: in the design`)}>${lookPic}<div><b>In the design</b><p class="hint">As the option draws it now.</p></div></li>`;
+    // Every state drawn for the option's latest version: nothing is left to draw, so the
+    // card says so and offers no button. A change to the option makes them stale and the
+    // button comes back to redraw them.
     const more = busy ? `<li class="addstate"><div class="working"><span class="spin"></span><div>${esc(WORK.states)}</div></div></li>`
-      : may ? `<li class="addstate"><button data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">+ ${e.states.length ? "Draw the states again" : "Draw every state"}<span class="hint">hovered, disabled, loading, empty, an error, a long text…</span></button></li>` : "";
+      : statesComplete(v, e) ? `<li class="addstate done"><div><b>✓ Every state is drawn</b><p class="hint">${plural(e.states.length, "state", "states")} of ${esc(e.name)} for version ${esc(v.version || 1)}: there is nothing more to draw. To change one, comment on it in the design workspace.</p></div></li>`
+      : may ? `<li class="addstate"><button data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">+ ${e.states.length ? "Draw the states again" : "Draw every state"}<span class="hint">${e.states.length ? "for the option's latest version" : "hovered, disabled, loading, empty, an error, a long text…"}</span></button></li>` : "";
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
         <button class="btn small" data-el-close aria-label="Close">✕ Close</button></div>
@@ -3877,7 +3893,7 @@
     // Every state of one element of an option, from its dialog (docs/requests.md → Every state of a part).
     if (name === "states") {
       const v = (c.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
-      if (!e) return;
+      if (!e || statesComplete(v, e)) return;
       res = await ask({ title: `Draw every state of ${e.name}`, body: `Design Desk draws **${e.name}** of **${v.name}** in every state it can be in — such as hovered, pressed, disabled, loading, empty, with an error or with a long text — each as its own picture, with the use case it covers. You can step through them, comment on and change each in the design workspace. It takes a few minutes.`,
         ok: "Draw the states", note: "Anything to add? e.g. which states matter most (optional)",
         send: (a) => post(a.note || "", { variant: v.id, element: e.key, part: { selector: e.selector || "", text: e.name, label: e.name, view: e.view || null, view_name: e.view_name || null } }) });
@@ -4022,9 +4038,8 @@
   }
 
   function tallyText(c, id) {
-    const votes = Object.values(c.votes?.[id] || {});
-    const up = votes.filter((x) => x.vote === "prefer").length, down = votes.filter((x) => x.vote === "concern").length;
-    return [up ? `👍 ${up}` : "", down ? `⚠ ${down}` : ""].filter(Boolean).join(" · ");
+    const votes = Object.values(c.votes?.[id] || {}), n = (k) => votes.filter((x) => x.vote === k).length;
+    return [n("prefer") ? `👍 ${n("prefer")}` : "", n("dislike") ? `👎 ${n("dislike")}` : "", n("concern") ? `⚠ ${n("concern")}` : ""].filter(Boolean).join(" · ");
   }
 
   async function post(kind) {

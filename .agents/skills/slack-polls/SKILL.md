@@ -2,7 +2,7 @@
 name: slack-polls
 description: >-
   Post a design request's options to Slack for the team to vote on and discuss: one message
-  per option with its picture, votes as 👍 / ⚠️ reactions, comments as thread replies, all
+  per option with its picture, votes as 👍 / 👎 / ⚠️ reactions, comments as thread replies, all
   brought back to the Desk; the result is posted when the vote closes. Use when someone
   picks Ask for a vote under Send to Slack… (`slack_due`), when an open vote is due to sync or close
   (`polls_due`), when someone picks Send the designs under Send to Slack… (`slack_due` with `scope:
@@ -35,7 +35,7 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
    --width 1280`; the first view in light (`1-light.png`) is its picture.
 2. **The opening message**, in these words:
    "🗳️ *<request title>* — which design should we take? <the note, when there is one>
-   Vote on each option below with 👍 (I like it) or ⚠️ (I have a concern), and reply in its
+   Vote on each option below with 👍 (I like it), 👎 (I don't) or ⚠️ (I have a concern), and reply in its
    thread to say why. Voting closes <closes, in the reader's words: "Friday at 15:00">.
    Details on the Design Desk (C-<n>): <link>". The link is the card's
    ([docs/desk.md](../../../docs/desk.md) → Links to an item).
@@ -43,7 +43,7 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
    "*Option <A/B/C>: <name>* — <its one line on when it wins>". When the request has a live
    prototype, one more message: "Try it live: the link and the demo account are on the Desk".
    Never a password in Slack.
-4. Where the platform lets you react to your own post, add 👍 and ⚠️ to each option's message
+4. Where the platform lets you react to your own post, add 👍, 👎 and ⚠️ to each option's message
    so a vote is one click.
 5. Record the poll: `design desk poll-open C-<n> <poll.json>` with `{chat, root_ts, posts:
    [{variant, ts}], closes, channel}` — `root_ts` is the opening message's `ts`, each post's
@@ -73,11 +73,11 @@ from an older page is one option).
 Every 30 minutes while a vote is open, in the inbox run:
 
 1. For each option's post: `describe_message_reactions` → 👍 (`+1`, `thumbsup`) is `prefer`,
-   ⚠️ (`warning`) is `concern`; any other emoji is ignored. `describe_channel_users` turns the
+   👎 (`-1`, `thumbsdown`) is `dislike`, ⚠️ (`warning`) is `concern`; any other emoji is ignored. `describe_channel_users` turns the
    ids into people (name, and email where the workspace discloses it).
 2. `design desk slack-votes C-<n> <votes.json>` per option with `{variant, voters: [{email,
    slack_id, name, vote, is_bot}]}`: the reactions as they are now, and `is_bot` from
-   `describe_channel_users`. The 👍 and ⚠️ the agent itself put on each post as the legend
+   `describe_channel_users`. The 👍, 👎 and ⚠️ the agent itself put on each post as the legend
    (Share step 4) come back among the reactions — they are a bot's, so they are marked and
    the Desk drops them; a bot never votes. The server gives a voter the role the Desk's
    member list gives their email, else "in Slack"; a person's own vote on the Desk wins
@@ -95,7 +95,7 @@ Every 30 minutes while a vote is open, in the inbox run:
 On its date, or when the request moved on (approved, closed):
 
 1. Sync once more (above).
-2. The result per option, all votes counted (the Desk's and Slack's): "B: 7 👍, 1 ⚠️". The
+2. The result per option, all votes counted (the Desk's and Slack's): "B: 7 👍, 2 👎, 1 ⚠️". The
    vote advises; no option is the winner: the person who approves on the Desk picks one.
 3. Post it as a `reply` under the poll's `chat` and `root_ts` (**Where it posts**): "🗳️ *<request title>* — the vote is closed. <result>. The team decides
    on the Design Desk (C-<n>): <link>."

@@ -487,15 +487,17 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   **Comments** switch hides the pins from the design only (`desk-notes` in the browser's local
   storage); a pin's click opens its comment, switching Open / Done to the tab it is on. No option is
   **the winner**: Approve, Build a live prototype and Add to presentation each ask the person
-  which option; votes, Slack and you only advise. A card's old `chosen` is ignored.
+  which option; votes, Slack and you only advise. A card's old `chosen` is ignored. People vote
+  👍 (`prefer`), 👎 (`dislike`) or ⚠ (`concern`), and the page offers the vote only while the
+  request is at `feedback` (the Team feedback step).
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person
   closed it. People's own actions set the rest through the server.
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
-  they fine-tune the options, until its author, a designer, a developer or a lead presses **Ask the team
-  for feedback**, inside the request's step pill (**Step n/m** opens every step) (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  they fine-tune the options, until its author, a designer, a developer or a lead presses **Ask for
+  feedback**, inside the request's step pill (**Step n/m** opens every step) (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and

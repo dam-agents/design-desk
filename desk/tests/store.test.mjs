@@ -534,6 +534,8 @@ test("no option is the winner; votes only suggest one, and the presentation show
   s.openFeedback(card.id, alice);
   s.vote(card.id, alice, { variant: "v1", vote: "prefer" });
   assert.equal("choose" in s, false, "nobody picks a winner");
+  assert.equal(s.vote(card.id, alice, { variant: "v2", vote: "dislike" }).votes.v2[alice.email].vote, "dislike", "a person may vote against an option");
+  assert.throws(() => s.vote(card.id, alice, { variant: "v2", vote: "love" }), /prefer, dislike, concern or none/);
   assert.match(s.getCard(card.id).attention.reasons.join(), /Options are ready/);
   // The agent's card writes never carry a pick.
   s.upsertCard({ id: card.id, chosen: { variant: "v1" } });

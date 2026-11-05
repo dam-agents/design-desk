@@ -23,7 +23,11 @@ just closes or closes with a decision. Ask the team for feedback sits in the req
 whose **Step n/m** alone opens the steps. All elements sit above the option's design, twice as
 large; Open in the design workspace is the request's main button. A request's text and From
 Design Desk show whole on a person's first visit, folded after (`desk-seen-requests` in the
-browser).
+browser). People vote 👍, 👎 or ⚠ and only at the Team feedback step; a vote's kind may now be
+`dislike` (the Desk's own and a Slack 👎, [`slack-polls`](.agents/skills/slack-polls/SKILL.md)
+adds 👎 to its legend and counts it). Ask the team for feedback reads **Ask for feedback**, and
+Close… shows a cross. An element whose every state is drawn for the option's latest version
+says so in its dialog instead of a button to draw them again.
 
 ## 1.46.0 — 2026-11-05
 

@@ -1173,6 +1173,7 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.click('[data-card="r5"]');
     await desk.waitForSelector('[data-act="workspace"]');
     assert.equal(await desk.locator("[data-choose]").count(), 0, "no option is picked as the winner");
+    assert.deepEqual(await desk.locator(".vbar [data-vote]").evaluateAll((xs) => xs.map((x) => x.dataset.vote)), ["prefer", "dislike", "concern"], "at Team feedback people vote for, against or with a concern");
     assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
     assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
 

@@ -652,7 +652,7 @@ export class Store {
   vote(cardId, who, { variant, vote, note = "" }) {
     const c = this.card(cardId);
     if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no variant ${variant}`);
-    if (!["prefer", "concern", "none"].includes(vote)) throw bad("vote must be prefer, concern or none");
+    if (!["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
     c.votes = c.votes || {};
     c.votes[variant] = c.votes[variant] || {};
     const key = who.email || who.sub;
@@ -1574,7 +1574,7 @@ export class Store {
     const box = (c.votes[variant] = c.votes[variant] || {});
     for (const [k, x] of Object.entries(box)) if (x.via === "slack") delete box[k];
     for (const v of voters.slice(0, 500)) {
-      if (!["prefer", "concern"].includes(v.vote)) continue;
+      if (!["prefer", "dislike", "concern"].includes(v.vote)) continue;
       // The agent's own 👍 and ⚠️ are the legend it puts on each post so a vote is one
       // click (slack-polls → Share 4), not votes: a bot's reaction never counts.
       if (v.is_bot === true) continue;
