@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.43.1 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`): it refuses a new or
+redrawn state of a design option that it would store with neither a picture of the part
+(`shot`) nor the part's `selector`, so the Design catalog can no longer store a state it would
+show as a whole page in a small box. A state sent unchanged keeps the `shot` and `selector` it
+has; states already stored without either stay as they are. Nothing else changes.
+
 ## 1.43.0 — 2026-11-04
 
 **Upgrade:**
