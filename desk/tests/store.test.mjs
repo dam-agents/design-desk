@@ -1144,9 +1144,12 @@ test("decisions: conflicts warn, wait for a designer and gate approval; revoking
   assert.throws(() => s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "x", variant: "v9" }] }), /no option v9/);
   s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "It drops the tax." }], decisions: [d.id] });
   assert.equal(s.listCards().find((x) => x.id === c.id).conflicts, 1);
+  assert.deepEqual(s.listCards().find((x) => x.id === c.id).against, [d.id], "the list's red ! names it");
   assert.deepEqual(s.attentionOf(s.card(c.id)).reasons, [`Goes against ${d.id}`]);
   assert.equal(s.getCard(c.id).conflicts[0].text, "Prices show tax");
   assert.deepEqual(s.getDecision(d.id).refs.map((r) => [r.id, r.how]), [[c.id, "conflicts"]]);
+  const later = s.addDecision({ concepts: ["prices"], text: "Net prices", author: { login: "bob" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/5" }, conflicts: [{ decision: d.id, why: "No tax." }] }).decision;
+  assert.equal(s.listDecisions().find((x) => x.id === later.id).conflicts[0].status, "active");
   s.db.cards[c.id].status = "feedback";
   assert.throws(() => s.act(c.id, alice, "approve"), (e) => e instanceof DeskError && e.status === 409 && /goes against D-1/.test(e.message));
   assert.deepEqual(s.act(c.id, alice, "approve", "", { overrule: true }).card.overruled.decisions, [d.id]);
@@ -1154,6 +1157,9 @@ test("decisions: conflicts warn, wait for a designer and gate approval; revoking
   s.revokeDecision(d.id, alice, { reason: "We show net prices now." });
   assert.deepEqual([s.db.decisions[d.id].status, s.db.decisions[d.id].revoked.by.email], ["revoked", alice.email]);
   assert.equal(s.listCards().find((x) => x.id === c.id).conflicts, 0);
+  assert.deepEqual(s.listCards().find((x) => x.id === c.id).against, []);
+  assert.equal(s.listDecisions().find((x) => x.id === later.id).conflicts[0].status, "revoked", "a revoked one no longer warns in the list");
+  assert.equal(s.db.decisions[later.id].conflicts[0].status, undefined, "the list does not write into the store");
   assert.equal(s.getCard(c.id).conflicts[0].status, "revoked");
   assert.throws(() => s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "x" }] }), /no longer in force/);
   assert.throws(() => s.revokeDecision(d.id, alice, { reason: "again" }), /already revoked/);
