@@ -3923,13 +3923,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
 
   function renderDetail() { renderDetailBody(); renderAsk(); if (S.el) renderElementDialog(); }
   // Another item, decision or tab opens at its top; a redraw of the same one keeps the place.
-  let shown = null;
+  // A newly opened item rises in once: the class leaves once the rise is over, so a redraw of
+  // the same item (a poll, a vote, a fold) puts its new content in place without it.
+  let shown = null, entered = 0;
   function renderDetailBody() {
     const d = $("#detail");
     // A request fills the pane: every part of it is as wide as the page (`.fill`).
     d.classList.toggle("fill", S.card?.kind === "request" && !(S.tab === "product" && S.productFilter === "decisions"));
     const now = [S.tab, S.card?.id || "", S.decision?.id || "", presenting() ? "p" : ""].join("|");
-    if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); d.classList.remove("enter"); void d.offsetWidth; d.classList.add("enter"); }
+    if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); d.classList.remove("enter"); void d.offsetWidth; d.classList.add("enter"); clearTimeout(entered); entered = setTimeout(() => d.classList.remove("enter"), 400); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
     if (S.tab === "people") { d.innerHTML = `<div class="with-intro">${renderIntro()}<div class="guide">${renderPeople()}</div></div>`; return; }
