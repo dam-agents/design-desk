@@ -524,7 +524,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   <card>` (`<when>`: Today, Yesterday or the date it came, the exact time on hover; with no person behind it,
   the run that filed it is the author: `by: hourly check`, `by: daily issue read`), the joining words grey and what they name in ink; Slack and the Desk (a desk with a
   screen) show their icon beside their name. A change card shows its `source` (the PR,
-  its author, merged or open); a request filed on the Desk, the person who filed it. A
+  without an arrow, and its author; when it shipped is on its page); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`
   (an issue or PR), `chat` (the operator asked you in the direct session) or `agent` (your own);
   `reporter` (the person's name or login, required on every channel but `agent`, shown as

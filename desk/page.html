@@ -160,7 +160,7 @@
   .prov svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   .prov .auto { display: inline-flex; align-items: flex-start; gap: 4px; min-width: 0; } .prov .auto svg { margin-top: 3px; }
   .prov .auto svg { color: var(--accent); }
-  .prov b > svg { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; color: var(--accent); }
+  .prov b > svg { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; color: inherit; }
   .prov b { color: var(--ink); font-weight: 600; }
   .prov a { color: var(--accent); text-decoration: none; } .prov a:hover { text-decoration: underline; }
   .prov .anchor { font-size: 12px; max-width: 32ch; }
@@ -1629,8 +1629,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // The person behind it is the reporter, whatever the channel (docs/desk.md → Where a card came from).
     if (c.kind === "change") {
       const s = c.source || {};
-      [kind, src, author, run] = ["pr", out(s.url, num("PR", s.pr)), s.author, "watch"];
-      event = s.pr && !s.merged_at ? "PR opened" : s.merged_at ? `shipped ${esc(day(s.merged_at))}` : "";
+      // The PR as a plain link and no shipped date: the row stays short; the change's page has both.
+      [kind, src, author, run] = ["pr", s.url ? `<a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${num("PR", s.pr)}</a>` : num("PR", s.pr), s.author, "watch"];
+      event = "";
     } else if (c.kind === "digest") [kind, src, run, event] = ["digest", "Design Desk", "digest", esc(c.period || "")];
     else if (c.kind === "issue") {
       const s = c.source || {};
