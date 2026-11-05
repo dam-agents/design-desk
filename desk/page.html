@@ -326,7 +326,13 @@
   #story-player { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; max-width: min(720px, calc(100% - 32px)); padding: 8px 10px 8px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(0,0,0,.18); font-size: var(--fs-ui); }
   #story-player .pl-k { font-weight: 600; color: var(--accent); white-space: nowrap; }
   #story-player .pl-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-  .stories { margin: 16px 0 4px; } details.stories > summary .hint { margin: 0; } details.stories[open] { padding-bottom: 8px; }
+  .stories { margin: 16px 0 4px; } details.stories > summary .hint { margin: 0; }
+  /* Its heading is the size of All elements and the design's above it. */
+  details.fold.big.stories { border-top: 0; margin-top: 16px; }
+  details.fold.big.stories > summary { padding: 0 0 8px; gap: 12px; align-items: baseline; }
+  details.fold.big.stories > summary h3 { font-size: 14px; font-weight: 700; letter-spacing: 0; }
+  details.fold.big.stories > summary h3 .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  details.fold.big.stories > summary::after { font-size: 16px; } details.stories[open] { padding-bottom: 8px; }
   .stories ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px; }
   .stories li { display: flex; }
   .stories ol button { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 12px 34px 12px 14px; cursor: pointer; font: inherit; font-size: 14px; line-height: 1.5; color: var(--ink); display: flex; gap: 10px; align-items: flex-start; }
@@ -3190,7 +3196,7 @@
     };
     // The stories are cards side by side; how the option meets the one picked shows under them.
     // The section folds like the sections below it: folded at first, then as the person left it.
-    return `<details class="fold big stories" id="stories" data-stories${S.storiesOpen ? " open" : ""}><summary><h3>User stories · ${plural(ss.length, "story", "stories")}</h3><span class="hint">Press one to play it in ${esc(v.name)} above.</span></summary><ol>${ss.map(item).join("")}</ol>${how(cov(st.id))}</details>`;
+    return `<details class="fold big stories" id="stories" data-stories${S.storiesOpen ? " open" : ""}><summary><h3>User stories<span class="n">${ss.length}</span></h3><span class="hint">Press one to play it in ${esc(v.name)} above.</span></summary><ol>${ss.map(item).join("")}</ol>${how(cov(st.id))}</details>`;
   }
   // While a story plays, a bar at the bottom of the window pauses, resumes or stops it; the
   // design says where it is (desk-play-state), and the bar goes when the story ends or stops.
