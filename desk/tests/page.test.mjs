@@ -1005,11 +1005,12 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
   await desk.waitForSelector("text=User stories");
-  assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), true, "user stories start open");
+  assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), false, "user stories start folded");
   assert.match(await desk.textContent("#detail .linked"), /Designs the issue.*See what each agent spends.*Issue #41/, "the request names the issue it designs");
   assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design · 2 user stories/);
   assert.match(await desk.textContent("#detail"), /Asked for: 2 options · questions first/);
   assert.match(await desk.textContent("#detail"), /What we agreed before the design · 2 questions/);
+  await desk.click("details[data-stories] > summary");
   assert.equal(await desk.textContent('[data-story="s1"] .met'), "✓");
   assert.match(await desk.textContent(".stories .how"), /Meets it — Column[\s\S]*A spend column on every row/);
   await desk.waitForFunction(() => document.querySelector("#story-frame")?.srcdoc.includes('id="spend"'));
