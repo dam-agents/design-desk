@@ -2774,9 +2774,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : hb?.email && hb.email === S.me?.email ? "You" : hb?.name || hb?.email || "someone";
         const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : "", src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
         const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
-        const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
-        const adjust = can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "";
-        return ghStatus(o, word, tip, meta, handle + adjust, agendaButton(c), { pill, inline: true });
+        const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
+        // As on an issue: the design action first and primary, Mark handled after it.
+        const adjust = can("follow-up") && !handledAt(c) ? `<button class="btn primary" data-adjust>Adjust the design</button>` : can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "";
+        return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c), { pill, inline: true });
       })()}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${requestsFrom(c)}
