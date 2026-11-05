@@ -480,6 +480,11 @@ with a role; it has no card. This is the one roster change that comes from the D
 The team meets regularly; the Desk keeps the list of what to show at the next design meeting,
 the **Presentation** page of Requests. (The store and the CLI keep its older name, `agenda`.)
 
+The page shows it in the other pages' style: in the list, each item is its title and one line of
+facts (`presenting:`, `added by:`; `suggested by:`; `presented:`), with no chips; the page opens
+with a status box (To present · N items, **▶ Present**, **Mark all as presented**), then each item
+with its buttons, its facts and what the meeting decides.
+
 - Only a designer or the lead puts a card on it (**Add to presentation**), with a note and,
   for a request with options, its final version. The agent never adds one: it
   **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for

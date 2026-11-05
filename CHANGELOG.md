@@ -40,7 +40,7 @@ designed issues included), This sprint, Next sprint, Assigned and For design; th
 could look. Unread keeps an item just opened until the filter or tab changes. A designer marks an issue
 **Handled** (it leaves the other lists for its own filter, and the issues pre-flight no longer draws it). The menu's counts are only what is
 still open: PR Changes the changes not handled, Issues the issues neither handled nor designed. A request with a live prototype has **Open the
-prototype** as the next step in its step pill, with the demo account on the state's line.
+prototype** as the next step in its step pill, with the demo account on the state's line. The presentation's list and page follow the other pages' style.
 
 ## 1.49.0 — 2026-11-05
 

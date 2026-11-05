@@ -621,7 +621,7 @@ test("the presentation: mark an item presented, in the list and while presenting
   assert.equal(await desk.locator("#detail [data-unpresent]").count(), 0, "no Undo for an earlier meeting's item");
   assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 1, "it can go on again, once");
 
-  await desk.click('[data-filter="reqFilter:presentation"]');
+  await desk.click('[data-filter="reqFor:presentation"]');
   await desk.click('#detail [data-present="0"]');
   await desk.click('#present [data-presented="C-2"]');
   await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/cards/C-2/presented").length === 2);
