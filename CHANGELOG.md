@@ -26,6 +26,7 @@ option; a card's "from" names the card it came from by kind and number; a link's
 each issue or pull request once, a pull request's comments not at all, and an issue's only
 those the watch run marks as about the design (`design desk github-mark`,
 [docs/watch.md](docs/watch.md) → Comments on GitHub); comments kept before show once marked.
+In Screens, each stage keeps its column: an After with no Before sits under the other Afters.
 
 ## 1.45.0 — 2026-11-05
 
