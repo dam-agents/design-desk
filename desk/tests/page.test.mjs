@@ -980,7 +980,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.click('[data-tab="issues"]');
     assert.equal(await desk.locator(".row.item").count(), 1, "This sprint is the first view; a closed issue is not listed");
     const row = '.row.item:has([data-card="is1"])';
-    assert.match(await desk.textContent(`${row} .prov`), /Issue #41.*by alice.*assigned to bob/);
+    assert.match(await desk.textContent(`${row} .prov`), /from: Issue #41.*by: alice.*assigned to bob/);
     assert.equal(await desk.locator(`${row} .s`).count(), 0, "an issue's row carries no description; its page and its preview do");
     assert.match(await desk.textContent(`${row} .meta`), /Sprint 12/);
     await desk.click('[data-filter="issueFilter:label"]');
