@@ -7,6 +7,23 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.50.0 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Requests has two tabs, **For
+Designers** and **For Developers** (the former small change: `size.small`, unchanged in the
+data); New request has a switch for it, For Designers by default (`POST /api/requests
+{audience}`). A request filed by the agent takes `audience`; without it, one with a Slack
+`origin` is For Developers and any other For Designers — the `intake-slack` skill now sets it.
+Requests filed before this version keep their tab (no `size`: For Designers). An item's title
+in a list is bold until the person first opens it (`POST /api/cards/<id>/read`, the list's
+`read`, a new `reads` table the store adds by itself); every item already on the Desk starts
+unread for everyone. The private ask stays over the design workspace and asks about the part
+picked there; a part with states drawn offers **See every state**, to look through them. The
+state dot of simple mode unfolds only under the pointer on the dot.
+
 ## 1.49.0 — 2026-11-05
 
 **Upgrade:**

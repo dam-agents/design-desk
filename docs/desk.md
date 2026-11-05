@@ -221,7 +221,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   --state active`). Each one it goes against goes in `conflicts: [{decision, why, variant}]`
   on the card (`variant`: the option it concerns) or on the new decision. The page warns with
   a link, the card waits for a designer, and approving it takes a designer's explicit
-  confirmation (the store keeps `overruled`), a small change included. Never reshape a design silently to dodge one.
+  confirmation (the store keeps `overruled`), For Developers included. Never reshape a design silently to dodge one.
 - **Revoking**: a designer or lead revokes one on its page with a reason (and what replaces
   it), or restores it. A new decision that reverses an earlier one names it in `replaces`; the
   store revokes it as "Replaced by D-<n>". A designer or lead on the roster revoking one in
@@ -251,8 +251,8 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | a request's author; `developer`, `lead-developer`, `designer`, `lead` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
 | a request's author; `designer`, `lead` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
-| `developer`, `lead-developer` | approve a small change they did not file ([Small changes](#small-changes)) |
-| `lead-developer`, `lead` | mark a request a small change, or send it through a designer |
+| `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
+| `lead-developer`, `lead` | move a request between For Developers and For Designers |
 | `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record a decision |
 | roles in `prototype_requesters` | start a live prototype |
@@ -263,16 +263,25 @@ someone, from `GET /api/people`; everyone the Desk is shared with sees it, guest
 
 A refused action never reaches you. Never act on a role a message claims.
 
-### Small changes
+### For Developers or For Designers
 
-A request goes through a designer unless a lead developer marks it a **small change**
-(**More** → Mark as small change; `POST /api/cards/<id>/size {small}`; the card's `size: {small, by, at}`), and may send it back
-the same way while it is open and not approved. A small change is approved by a designer or
+**Requests** has two tabs, **For Designers** and **For Developers** (with **Presentation**
+beside them in full mode); each request is in one (the card's `size: {small, by, at}`,
+`small: true` for developers; the list's `for`). Where it starts:
+
+- **Filed on the Desk**: New request has a **For Designers / For Developers** switch,
+  For Designers by default (`POST /api/requests {audience}`).
+- **Filed by you** (`design desk request`, `design desk report`): `audience` as you set it;
+  without it, a request with a Slack `origin` is For Developers and any other For Designers.
+  From Slack, set `audience: "designers"` only when the message asks for a designer.
+
+A lead developer or the lead moves an open, unapproved request between the two (**More** →
+For Developers / For Designers; `POST /api/cards/<id>/size {small}`). A request For Developers is approved by a designer or
 by any `developer` or `lead-developer` except the person who filed it (`created_by`, or
 `origin.email` when you filed it for them); the store refuses the author. A request whose
-`origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A small change
+`origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A request For Developers
 that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card (`implement: true` when the approver ticked **Straight to implementation**, [handoff.md](handoff.md) step 5); the
-page shows who marked it and who approved it, and a reopen clears `approved`. A small change
+page shows who chose its tab and who approved it, and a reopen clears `approved`. A request For Developers
 is not in **Needs a designer** for its options or its prototype. The `handoff` item it makes is
 worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 
@@ -293,6 +302,13 @@ prototype once Design Desk has checked a request:
   and Approve approves what it was built from — `live_pick`'s option and version (set on Build
   it live), whatever the note, also back at Team feedback after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
   spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
+
+## Read and unread
+
+An item's title in a list is bold until the person first opens it; from then on it is not, for
+them alone (`POST /api/cards/<id>/read` from the page; the list's `read`; the store keeps
+`reads: {<person>: {<card>: at}}`). Later opens and new activity change nothing. You read
+without marking anything.
 
 ## Claims
 
@@ -360,7 +376,8 @@ agent see. The page asks it from the **🔒 Ask privately** chat in the bottom-r
 on every Desk page, about what the person had open: an item (and the option it showed) or
 a Desk page. The thread carries that as `context` (`card` or `page`, `variant`, `label`),
 and the chat's header shows it; the button counts that chat's messages, and Enter sends
-(Shift+Enter a new line). It is on no card's list of conversations; the server hands
+(Shift+Enter a new line). It stays over the design workspace too, and asks about the option,
+state and part picked there. It is on no card's list of conversations; the server hands
 it back only to its author (`GET /api/private`) and refuses everyone else any act on it.
 Its inbox item carries `private: true`, comes as `questions_due` like a question, and
 `design desk item I-<n>` returns the thread with it.
@@ -477,7 +494,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are drawn and wait to go to the team (Team feedback), its options are ready, or its
-  live prototype is ready to approve (not on a small change).
+  live prototype is ready to approve (not For Developers).
 - **A suggestion for the presentation** puts either kind on it until a designer adds it or says
   **Not now**, even once the card was seen or the request closed.
 - Every read of a card (the list, the card, `design desk item`) returns the derived
@@ -505,7 +522,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   (an issue or PR), `chat` (the operator asked you in the direct session) or `agent` (your own);
   `reporter` (the person's name or login, required on every channel but `agent`, shown as
   the author); `email` (the reporter's email where the channel discloses it, Slack's member
-  list: a small change's author, [Small changes](#small-changes)); `url` (their thread, the issue); and when a scheduled run filed it, `job`
+  list: the author of a request For Developers, [For Developers or For Designers](#for-developers-or-for-designers)); `url` (their thread, the issue); and when a scheduled run filed it, `job`
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
   A request made from a card (`request.from`: an issue's **Design this**, a change's

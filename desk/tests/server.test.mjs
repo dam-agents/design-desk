@@ -93,7 +93,7 @@ test("drawing every state of a part is a designer's or developer's, not a viewer
   assert.equal(again.status, 400, "one states item at a time per request");
 });
 
-test("a small change: only a lead developer marks it, any developer but its author approves it", async (t) => {
+test("For Developers: only a lead developer moves it there, any developer but its author approves it", async (t) => {
   const d = await desk(t);
   const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 });
   assert.equal(filed.status, 201);
@@ -104,7 +104,7 @@ test("a small change: only a lead developer marks it, any developer but its auth
 
   const me = await d.viewer("lou@example.com", "/api/me");
   assert.deepEqual([me.body.role, me.body.can.size, me.body.can.approve, me.body.can.explore], ["lead-developer", true, false, true], "a roster role with a space reads as lead-developer");
-  assert.equal((await approve("dana@example.com")).status, 403, "not a small change: a designer's");
+  assert.equal((await approve("dana@example.com")).status, 403, "For Designers: a designer's");
   for (const email of ["bob@example.com", "alice@example.com", "pat@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
 
   const marked = await size("lou@example.com", true);
@@ -128,7 +128,7 @@ test("deciding straight away: a lead developer approves or decides and closes, a
   assert.equal((await d.agent("/agent/cards", { id, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
   const me = await d.viewer("lou@example.com", "/api/me");
   assert.equal(me.body.can.skip, true);
-  assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/actions`, { action: "approve" })).status, 403, "a developer approves only a small change");
+  assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/actions`, { action: "approve" })).status, 403, "a developer approves only a request For Developers");
   assert.equal((await d.viewer("dana@example.com", `/api/cards/${id}/decide`, { text: "No." })).status, 403);
   assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header.", implement: true })).status, 400, "an idea's spec stays on the Desk: not straight to the coding agent");
   const ok = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header." });
@@ -246,6 +246,17 @@ test("simple mode: each person's own choice, kept on the Desk apart from day or 
   assert.equal((await d.viewer("bob@example.com", "/api/prefs", [true])).status, 400, "not an object");
   assert.equal((await d.viewer("guest@example.com", "/api/prefs", { simple: false })).body.simple, false, "a viewer may leave it");
   assert.equal((await d.viewer("alice@example.com", "/api/prefs", { simple: null })).body.simple, null, "null: the role decides again");
+});
+
+test("read and unread: the first open marks an item read for that person alone", async (t) => {
+  const d = await desk(t);
+  const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." })).body.card.id;
+  const read = async (email) => (await d.viewer(email, "/api/cards")).body.cards.find((c) => c.id === id).read;
+  assert.deepEqual([await read("alice@example.com"), await read("bob@example.com")], [false, false], "nobody opened it yet");
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${id}/read`, {})).body.read, true);
+  assert.deepEqual([await read("alice@example.com"), await read("bob@example.com")], [true, false], "only for the one who opened it");
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${id}/read`, {})).status, 200, "a guest reads too");
+  assert.equal((await d.viewer("alice@example.com", "/api/cards/C-999/read", {})).status, 404);
 });
 
 test("team feedback: a Desk request waits for a person to ask the team, one from Slack goes on by itself", async (t) => {

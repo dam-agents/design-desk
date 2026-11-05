@@ -256,7 +256,9 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
   (`C-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
-  option's design as **All elements**; one opens in a dialog with its states. A state belongs to the
+  option's design as **All elements**; one opens in a dialog with its states. A part picked in the design workspace
+  that is (or sits inside) an element with states drawn offers **See every state**: the same
+  dialog, only to look through them, with no button that draws or adds. A state belongs to the
   element its `element` names, else to the one named as its `part`. An entry without `elements`
   keeps the option's; a revise that adds, removes or moves a part sends them anew. The tiles
   are cut from the option's latest version, so they follow every change of it.

@@ -42,8 +42,10 @@ export const LIMITS = {
 };
 
 export const ROLES = ["lead", "designer", "lead-developer", "developer", "pm", "guest"];
-// The roles that approve a small change, when they did not file it (docs/desk.md → Small changes).
+// The roles that approve a request For Developers, when they did not file it (docs/desk.md → For Developers or For Designers).
 export const DEVELOPERS = ["lead-developer", "developer"];
+// The two tabs of Requests: whose call a request is (docs/desk.md → For Developers or For Designers).
+export const AUDIENCES = ["developers", "designers"];
 const BUSY = "Design Desk is already working on this. The result appears here.";
 
 // Who may do what. The operator's roster assigns roles; the owner is always `lead`.
@@ -59,7 +61,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     case "draw": return shaper || dev || role === "pm";
     // A developer starts and changes everything a designer does; deciding stays a designer's.
     case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev;
-    // Whether a request is a small change a developer approves, or goes through a designer.
+    // Whether a request is For Developers, which a developer approves, or For Designers.
     case "size": return role === "lead-developer" || role === "lead";
     // Skip the vote and the live prototype: approve straight away, or decide and close
     // (docs/desk.md → Deciding straight away).
@@ -212,7 +214,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {} };
 }
 
 export class Store {
@@ -305,10 +307,14 @@ export class Store {
         screens: (c.screens || []).length, variants: (c.variants || []).length,
         open_threads: (c.threads || []).filter((t) => sees(this.db.threads[t], viewer) && this.db.threads[t]?.state !== "resolved").length,
         acked: viewer ? Boolean(c.acks?.[viewer]) : false, handled: c.handled?.at || null,
+        // Whether this person has opened it: the list shows an unopened item's title bold (docs/desk.md → Read and unread).
+        read: viewer ? Boolean(own(this.db.reads, viewer)?.[c.id]) : true,
         // Closed with a decision: the list shows it in the decided ink, as the page does.
         decided: c.kind === "request" && c.status === "declined" && c.decided?.at || null,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
+        // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
+        for: c.kind === "request" ? (c.size?.small ? "developers" : "designers") : null,
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
@@ -366,7 +372,7 @@ export class Store {
       if (asks) reasons.push("Design Desk is waiting for an answer");
       else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options, decide or close it");
       else if (!busy && c.status === "variants" && c.team_feedback?.state === "waiting") reasons.push("Options are drawn: fine-tune them, then ask the team for feedback");
-      // A small change waits for a developer's approval, not a designer's.
+      // A request For Developers waits for a developer's approval, not a designer's.
       else if (!busy && !c.size?.small && c.status === "feedback") reasons.push("Options are ready: approve one, build it live or ask for changes");
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
@@ -581,6 +587,20 @@ export class Store {
     return this.prefsOf(who);
   }
 
+  // A person opened an item: from now on its title is not bold in their list, and only theirs
+  // (docs/desk.md → Read and unread). The first open counts; later ones change nothing.
+  markRead(cardId, who) {
+    const c = this.card(cardId);
+    const key = viewerKey(who);
+    if (!key) return { read: false };
+    const mine = own(this.db.reads, key) || {};
+    if (Object.hasOwn(mine, c.id)) return { read: true };
+    Object.defineProperty(mine, c.id, { value: this.clock(), enumerable: true, writable: true, configurable: true });
+    Object.defineProperty(this.db.reads, key, { value: mine, enumerable: true, writable: true, configurable: true });
+    this.save();
+    return { read: true };
+  }
+
   privateAsks(who) {
     const owner = viewerKey(who);
     return Object.values(this.db.threads).filter((t) => t.kind === "private" && owner && t.owner === owner)
@@ -674,9 +694,10 @@ export class Store {
   // Types: an idea for the design; a UI bug; a feature (a larger piece, usually an
   // issue); an adjustment of UI a developer built (a pull request or a change card);
   // a proposal the agent made for a new feature.
-  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false }) {
+  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false, audience = null }) {
     if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
+    if (audience !== null && audience !== undefined && !AUDIENCES.includes(audience)) throw bad(`audience must be one of ${AUDIENCES.join(", ")}`);
     // The request is the asker's words (docs/requests.md): an idea's are its problem (and how they
     // picture it); what should happen and the steps belong to a bug report, and to Design Desk's
     // own proposal. Nobody fills them in for an idea, so they are not kept for one.
@@ -699,6 +720,10 @@ export class Store {
       summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {},
       triage: null, prototype: { state: "none" }, spec: null, origin: origin ? cleanOrigin(origin, this.db.cards) : null,
     };
+    // For Developers or For Designers: what the asker chose; without a choice, a request from
+    // Slack is the developers', any other the designers' (docs/desk.md → For Developers or For Designers).
+    const forWhom = audience || (c.origin?.channel === "slack" ? "developers" : "designers");
+    c.size = { small: forWhom === "developers", by: person(who), at: this.clock() };
     // The pictures a person gave with the request (filed on the Desk, or reported in a channel
     // and filed by the agent) are theirs: the page shows them with the request, apart from
     // the ones Design Desk takes.
@@ -995,7 +1020,7 @@ export class Store {
     if (action === "build" && c.triage?.verdict !== "design")
       throw forbidden(c.triage ? "This request gets no live prototype because part of it needs a developer or a decision. The developer spec covers it." : "Design Desk is still checking this request. You can build a live prototype once it says what can be done.");
     // A designer or a lead developer approves once it is checked, without a vote or a live
-    // prototype; a small change's developer, once there are options (docs/desk.md → Deciding straight away).
+    // prototype; a developer on a request For Developers, once there are options (docs/desk.md → Deciding straight away).
     const direct = who?.agent || can(who?.role, "skip");
     if (action === "approve") mustBeChecked(c, "Approve");
     // Before options are on the card, an approval does not race the drawing of them.
@@ -1004,7 +1029,7 @@ export class Store {
     if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
     if (action === "approve" && !direct && !can(who?.role, "approve")) {
-      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers and lead developers can approve designs. A lead developer can mark a request a small change, which a developer then approves.");
+      if (!c.size?.small || !DEVELOPERS.includes(who?.role)) throw forbidden("Only designers and lead developers can approve designs. A request For Developers is approved by a developer.");
       if (isAuthor(c, who)) throw forbidden("You filed this request, so another developer approves it.");
     }
     // Once a live prototype is built, approving approves what it shows: `live_pick`'s option at
@@ -1013,8 +1038,8 @@ export class Store {
     if (shown) note = shown.variant;
     // A design that goes against a decision in force is approved only knowingly (docs/desk.md → Decisions).
     const against = action === "approve" ? [...new Set(this.activeConflicts(c).map((x) => x.decision))] : [];
-    // Going against a decision in force stays a designer's call, a small change included.
-    if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even as a small change.`);
+    // Going against a decision in force stays a designer's call, For Developers included.
+    if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even For Developers.`);
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     // A closed request has nothing going live.
@@ -1027,7 +1052,7 @@ export class Store {
     }
     if (against.length) c.overruled = { by: person(who), at: this.clock(), decisions: against };
     else if (action === "approve") delete c.overruled;
-    // Who approved, shown on the card; a small change's approval says so.
+    // Who approved, shown on the card; an approval For Developers says so (`small`).
     if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...(implement ? { implement: true } : {}),
       ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     c.updated = this.clock();
@@ -1072,12 +1097,12 @@ export class Store {
     return { card: c };
   }
 
-  // A lead developer marks a request a small change, which any developer but its author
-  // approves, or sends it through a designer (the default); the card keeps who and when
-  // (docs/desk.md → Small changes).
+  // A lead developer moves a request to For Developers, which any developer but its author
+  // approves, or back to For Designers; the card keeps who and when
+  // (docs/desk.md → For Developers or For Designers).
   setSize(cardId, who, small) {
     const c = this.card(cardId);
-    if (c.kind !== "request") throw bad("only a design request is a small change or not");
+    if (c.kind !== "request") throw bad("only a design request is For Developers or For Designers");
     if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
     if (c.approved) throw bad("This request is already approved. Reopen it to change who approves it.");
     if (typeof small !== "boolean") throw bad("small must be true or false");
@@ -1798,7 +1823,7 @@ function mustBeChecked(c, verb) {
   if (c.status === "triage" && !c.triage) throw bad(`Design Desk is still checking this request. ${verb} it once it says what can be done.`);
 }
 
-// Whether a person filed the request: its author never approves it as a small change. A
+// Whether a person filed the request: its author never approves it For Developers. A
 // request the agent filed for someone carries their email in `origin.email` when the channel
 // disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
 const isAuthor = (c, who) => {

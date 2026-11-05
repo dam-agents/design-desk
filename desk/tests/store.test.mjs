@@ -141,25 +141,38 @@ test("the inbox file is refreshed when the store starts, so an upgrade writes th
   assert.equal(inbox(s).claim_ttl_min, 15);
 });
 
-test("a small change: a lead developer marks it, any developer but its author approves, the card says who", () => {
+test("For Developers or For Designers: Slack starts with developers, the Desk and the agent with designers, unless asked", () => {
+  const s = fresh();
+  const slack = { channel: "slack", chat: "C0123", thread_ts: "1.0", reporter: "Dana" };
+  const forOf = (who, body) => s.createRequest(who, { title: "x", problem: "y", ...body }).card.size.small;
+  assert.equal(forOf({ agent: true }, { origin: slack }), true, "from Slack: the developers'");
+  assert.equal(forOf({ agent: true }, { origin: slack, audience: "designers" }), false, "unless the message asks for a designer");
+  assert.equal(forOf({ agent: true }, {}), false, "the agent's own: the designers'");
+  assert.equal(forOf({ email: "bob@example.com", role: "developer" }, { audience: "developers" }), true, "the Desk's switch");
+  assert.equal(forOf({ email: "bob@example.com", role: "developer" }, {}), false);
+  assert.throws(() => forOf({ agent: true }, { audience: "pm" }), /audience must be one of/);
+  assert.equal(s.listCards().find((c) => c.title === "x").for, "designers");
+});
+
+test("For Developers: a lead developer moves it there, any developer but its author approves, the card says who", () => {
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };
   const dana = { email: "dana@example.com", role: "developer" };
   assert.equal(can("lead-developer", "size"), true);
   assert.equal(can("lead", "size"), true);
   for (const r of ["designer", "developer", "pm", "guest"]) assert.equal(can(r, "size"), false, r);
-  assert.equal(can("lead-developer", "approve"), false, "a developer approves only a small change, per card");
+  assert.equal(can("lead-developer", "approve"), false, "a developer approves only a request For Developers, per card");
   assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", role: "lead-developer" }]);
 
   const { card, inbox: item } = s.createRequest(bob, { title: "Tighter row spacing", problem: "Rows are too airy." });
   s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
   s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } });
-  assert.equal(s.attentionOf(s.card(card.id)).level, "designer", "options ready: a designer's, until it is a small change");
-  assert.throws(() => s.act(card.id, dana, "approve"), (e) => e.status === 403 && /Only designers/.test(e.message), "not a small change yet: a designer's");
+  assert.equal(s.attentionOf(s.card(card.id)).level, "designer", "options ready: a designer's, until it is For Developers");
+  assert.throws(() => s.act(card.id, dana, "approve"), (e) => e.status === 403 && /Only designers/.test(e.message), "not For Developers yet: a designer's");
   assert.throws(() => s.setSize(card.id, lee, "yes"), /true or false/);
   const marked = s.setSize(card.id, lee, true).card;
   assert.deepEqual(marked.size, { small: true, by: { email: "lee@example.com", role: "lead-developer" }, at: marked.size.at });
-  assert.equal(s.attentionOf(marked), null, "a small change waits for a developer, not a designer");
+  assert.equal(s.attentionOf(marked), null, "a request For Developers waits for a developer, not a designer");
   assert.throws(() => s.act(card.id, bob, "approve"), (e) => e.status === 403 && /You filed this request/.test(e.message));
   assert.throws(() => s.act(card.id, { email: "pat@example.com", role: "pm" }, "approve"), (e) => e.status === 403);
   const ok = s.act(card.id, dana, "approve");
@@ -173,7 +186,7 @@ test("a small change: a lead developer marks it, any developer but its author ap
   assert.equal(s.setSize(card.id, lee, false).card.size.small, false);
 });
 
-test("a small change: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
+test("For Developers: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };
   const dana = { email: "dana@example.com", role: "developer" };
@@ -205,7 +218,7 @@ test("deciding straight away: a designer or lead developer approves without opti
   assert.throws(() => s.decideAndClose(card.id, lee, { text: "No." }), /Decide it once/, "nor decided");
   assert.throws(() => s.decideAndClose(card.id, { agent: true }, { text: "No." }), (e) => e.status === 403 && e.message === "Design Desk does not decide: a person does");
   s.claim(item.id, "s1"); s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Only the look."] } }); s.done(item.id, "s1", "triaged");
-  assert.throws(() => s.act(card.id, dana, "approve"), /nothing to approve yet/, "a developer waits for options, small change or not");
+  assert.throws(() => s.act(card.id, dana, "approve"), /nothing to approve yet/, "a developer waits for options, For Developers or not");
   const drawing = s.act(card.id, alice, "explore").inbox;
   assert.throws(() => s.act(card.id, lee, "approve"), /still drawing the options/, "no approval while the options are drawn");
   s.claim(drawing.id, "s2"); s.done(drawing.id, "s2", "drawn");

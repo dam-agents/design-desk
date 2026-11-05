@@ -11,8 +11,8 @@ description: >-
 The `deliver` action ([docs/actions.md](../../../docs/actions.md)). Reads `handoff`,
 `issue_writeback`, `implementer`, `implementer_mention`, `prototype_remote` and `desk_link` from
 `work/CONFIG.md`. The spec is written and uploaded ([docs/handoff.md](../../../docs/handoff.md)
-steps 1 to 3); the **Approve** on the Desk (a designer's, or a developer's on a small change,
-[docs/desk.md](../../../docs/desk.md) → Small changes), with their name on the item, is the
+steps 1 to 3); the **Approve** on the Desk (a designer's, or a developer's on a request For Developers,
+[docs/desk.md](../../../docs/desk.md) → For Developers or For Designers), with their name on the item, is the
 approval to send it.
 
 ## The pictures

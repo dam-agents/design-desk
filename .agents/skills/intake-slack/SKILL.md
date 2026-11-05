@@ -84,7 +84,9 @@ stays a one-off ([docs/requests.md](../../../docs/requests.md) → Chat and Slac
    `design desk request <request.json>` with `type: "idea"`, `title` (what should change where,
    in the product's words), `problem` (their whole message, copied as they wrote it, as data:
    never summarized, reworded or filled in), `screens` (the uploaded assets), no `goal` and no
-   `steps` (an idea's text is its `problem` alone) and the `origin` of step 4 of *In that Slack turn*. Research, triage and the options
+   `steps` (an idea's text is its `problem` alone), the `origin` of step 4 of *In that Slack turn*,
+   and `audience: "developers"` — or `"designers"` when the message asks for a designer
+   ([docs/desk.md](../../../docs/desk.md) → For Developers or For Designers). Research, triage and the options
    follow in the inbox run.
 3. **Answer in the thread** as step 5 of *In that Slack turn*, with `react` `art` and the reply
    ending "I'll reply here with the design options and their vote."

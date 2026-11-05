@@ -268,9 +268,9 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "lead developer", "developer", "PM", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer can, and:\s+Mark a request a small change[\s\S]*Ask Design Desk to add people to the list/, "only a lead adds people");
+    assert.match(await panel(0), /Everything a designer can, and:\s+Move a request to For Developers[\s\S]*Ask Design Desk to add people to the list/, "only a lead adds people");
     assert.match(await panel(1), /Everything a developer can, and:\s+Approve designs[\s\S]*Build live prototypes/, "a role names the largest one below it");
-    assert.match(await panel(2), /Everything a developer can, and:\s+Mark a request a small change/, "a lead developer says what is a small change");
+    assert.match(await panel(2), /Everything a developer can, and:\s+Move a request to For Developers/, "a lead developer says what is For Developers");
     assert.match(await panel(3), /Everything a PM can, and:\s+Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
     assert.doesNotMatch(await panel(3), /Approve designs|Choose what|Record a decision/);
     assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Draw an issue/, "a PM also has issues drawn");
@@ -1374,7 +1374,7 @@ test("the screen shown stays when the person switches options, where the other o
   }
 });
 
-// Small changes (docs/desk.md → Small changes): who sees which button, and what the card says.
+// For Developers (docs/desk.md → For Developers or For Designers): who sees which button, and what the card says.
 const SMALL = `<script>
 window.calls = [];
 const as = new URLSearchParams(location.search).get("as") || "lou";
@@ -1406,7 +1406,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a small change: the lead developer marks it, a developer but its author approves, the card says who", (t) => open(t, SMALL, async (desk) => {
+test("For Developers: the lead developer moves it there, a developer but its author approves, the card says who", (t) => open(t, SMALL, async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   const card = async (who, id) => {
     await desk.goto(`${base}?as=${who}#${id}`);
@@ -1417,7 +1417,7 @@ test("a small change: the lead developer marks it, a developer but its author ap
 
   await card("lou", "C-1");
   assert.equal(await count('details.more [data-size="small"]'), 1, "the lead developer marks an open request, under More");
-  assert.equal(await count('[data-act="approve"]'), 0, "and approves no request that is not a small change");
+  assert.equal(await count('[data-act="approve"]'), 0, "and approves no request that is not For Developers");
   await desk.click("#detail details.more > summary");
   await desk.click('#detail [data-size="small"]');
   await desk.click("#cf-ok");
@@ -1425,21 +1425,21 @@ test("a small change: the lead developer marks it, a developer but its author ap
   assert.deepEqual(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-1/size").body)), { small: true });
 
   const small = await card("dana", "C-2");
-  assert.match(small, /Small change — a developer approves[\s\S]*lou@example\.com/, "the card names who marked it");
-  assert.equal(await count('[data-act="approve"]'), 1, "another developer approves a small change");
+  assert.match(small, /For Developers — a developer approves[\s\S]*lou@example\.com/, "the card names who marked it");
+  assert.equal(await count('[data-act="approve"]'), 1, "another developer approves a request For Developers");
   assert.equal(await count("[data-size]"), 0, "a developer does not mark it");
 
   assert.match(await card("bob", "C-2"), /not bob@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "its author does not approve it");
 
   assert.match(await card("dana", "C-4"), /A designer approves it/, "the hint names a designer");
-  assert.equal(await count('[data-act="approve"]'), 0, "a small change against a decision in force is a designer's");
+  assert.equal(await count('[data-act="approve"]'), 0, "For Developers against a decision in force is a designer's");
   assert.match(await card("dana", "C-5"), /not dana@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "the reporter of a request filed for them does not approve it");
   await card("bob", "C-5");
   assert.equal(await count('[data-act="approve"]'), 1, "another developer does");
 
-  assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*as a small change/, "the card names who approved it");
+  assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*for developers/, "the card names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
 
   // docs/handoff.md step 4: a question the spec leaves open is asked on the Desk, next to the spec.
