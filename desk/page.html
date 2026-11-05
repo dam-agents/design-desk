@@ -337,8 +337,9 @@
   .stories ol button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .stories ol button .txt { flex: 1; }
   .stories ol button .play { position: absolute; right: 12px; top: 13px; color: var(--accent); font-size: 11px; }
-  .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--muted); }
+  .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--bad); }
   .stories .how { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+  .stories .how.partly { color: var(--warn); } .stories .how.no { color: var(--bad); }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -3188,8 +3189,10 @@
     const st = storyOf(c);
     const cov = (id) => (v.stories || []).find((x) => x.story === id) || null;
     const mark = (x) => { const m = MET[cov(x.id)?.met]; return `<span class="met ${esc(cov(x.id)?.met || "")}" title="${esc(m?.[1] || "Not said yet")}">${m?.[0] || "·"}</span>`; };
-    // How the option meets the story, in Design Desk's words, grey in the story's own card.
-    const how = (k) => `<span class="how">${k ? txt(k.how) : `Design Desk has not said yet how ${esc(v.name)} meets this story.`}</span>`;
+    // Why the option falls short of the story, in Design Desk's words, in the story's own card:
+    // amber when it meets part of it, red when it does not; nothing when it meets it.
+    const how = (k) => !k ? `<span class="how">Design Desk has not said yet how ${esc(v.name)} meets this story.</span>`
+      : k.met === "yes" ? "" : `<span class="how ${k.met === "no" ? "no" : "partly"}">${txt(k.how)}</span>`;
     const item = (x) => {
       const k = cov(x.id), on = x.id === st.id, plays = (k?.parts || []).length > 0;
       return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}${how(k)}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;

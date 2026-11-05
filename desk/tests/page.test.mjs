@@ -1023,7 +1023,7 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.equal(await desk.locator(".vpanel #stories").count(), 1, "the stories are the option's");
   assert.equal(await desk.locator("#story-frame").count(), 0, "no second picture of the design");
   assert.equal(await desk.locator("#detail .tabs [data-variant]").count(), 2, "one switch of options, the tabs over the panel");
-  assert.equal(await desk.textContent('[data-story="s1"] .how'), "A spend column on every row.", "each story's card says how the option meets it");
+  assert.equal(await desk.locator('[data-story="s1"] .how').count(), 0, "a story the option meets needs no word on it");
   await desk.waitForFunction(() => document.querySelector("#variant-frame")?.srcdoc.includes('id="spend"'));
   // A story pressed plays in the design above: the pointer names its parts there, in order
   // (their numbered frames show only with the design's Show hotspots switch on).
@@ -1033,7 +1033,7 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.click('[data-story="s2"]');
   assert.match(await desk.textContent('[data-story="s2"]'), /I can sort by spend.*from the issue's text/);
   assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), true, "picking a story keeps the section open");
-  assert.match(await desk.textContent('[data-story="s2"] .how'), /needs a developer/);
+  assert.match(await desk.textContent('[data-story="s2"] .how.partly'), /needs a developer/, "one it meets in part says why, in amber");
   await desk.click('.vtabs [data-variant="v2"]');
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
 }));
