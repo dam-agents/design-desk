@@ -52,7 +52,11 @@ Wireframe, Mockup, From Figma or Pictures) and User stories — share one headin
 half-line hint, and each folds with +/− (elements and the design open at first, the stories
 folded); playing a story opens a folded design first. A story's card says why the option falls short of it (its
 `how`): amber when it meets part of it, red when not at all, nothing when it meets it; the
-verdict's words and the panel under the cards are gone, its ✓ ◐ ○ stays.
+verdict's words and the panel under the cards are gone, its ✓ ◐ ○ stays. From Design Desk shows without a box: a
+heading per part, and what folds as a quiet line with its count in a grey pill. Your name at the
+top opens a menu as wide as it, with How it works and day or night mode (the ? and ☾ buttons are
+gone); each tab's help draws its own flow from How it works (Requests the request's, Changes a
+shipped change's, Issues an issue's).
 
 ## 1.46.0 — 2026-11-05
 

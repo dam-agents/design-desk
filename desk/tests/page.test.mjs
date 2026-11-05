@@ -355,9 +355,10 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   await desk.waitForSelector(`${intro}[data-intro="requests"]`, { state: "attached" });
   assert.equal(await desk.$eval(intro, (d) => d.open), false, "a folded intro stays folded");
   await desk.click(`${intro} > summary`);
-  await desk.click('[data-tab="guide"]');
+  await desk.click("#me");
+  await desk.click('#help');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
-  assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
+  assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the menu under your name");
   assert.equal(await desk.locator('#detail .guide figure.flow svg[role="img"][aria-label] title').count(), 3, "How it works draws a request, an issue and a shipped change");
   await desk.click('[data-tab="new"]');
   await desk.click("#list .row .open");
@@ -379,11 +380,13 @@ test("every button and label says on hover what it does or means", (t) => open(t
     assert.deepEqual(await rowSays(), [], `${tab}: a card's own button in the list shows no line over the whole card`);
     assert.deepEqual(await unnamed(), [], `${tab}: a button with no words keeps a name`);
     if (tab === "requests") {
+      await desk.click("#me");
       await desk.hover("#help");
       assert.equal(await desk.$("#tip"), null, "not at once");
       await desk.waitForSelector("#tip");
-      assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows after half a second");
+      assert.equal(await desk.textContent("#tip"), "How Design Desk works, with a picture of each flow", "the Desk's own tooltip shows after half a second");
       assert.equal(await desk.getAttribute("#help", "title"), null, "the browser's slow one does not");
+      await desk.press("body", "Escape");
     }
     if (await desk.locator("#list .row .open").count()) {
       await desk.click("#list .row .open");
@@ -1013,9 +1016,9 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.click('[data-card="r7"]');
   await desk.waitForSelector("text=User stories");
   assert.match(await desk.textContent("#detail .linked"), /Designs the issue.*See what each agent spends.*Issue #41/, "the request names the issue it designs");
-  assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design · 2 user stories/);
+  assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design\s*2 user stories/);
   assert.doesNotMatch(await desk.textContent("#detail"), /Asked for:/, "the request does not repeat how many options it asked for");
-  assert.match(await desk.textContent("#detail"), /What we agreed before the design · 2 questions/);
+  assert.match(await desk.textContent("#detail"), /What we agreed before the design\s*2 questions/);
   assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), false, "user stories start folded");
   await desk.click("details[data-stories] > summary");
   assert.equal(await desk.textContent('[data-story="s1"] .met'), "✓");

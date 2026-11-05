@@ -54,6 +54,13 @@
   nav .main .count.warn { background: var(--warn); color: var(--bg); }
   .grow { flex: 1; }
   .me { color: var(--muted); font-size: 12px; }
+  /* Your name opens your menu: How it works, day or night mode. */
+  details.me-menu > summary.me { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; }
+  details.me-menu > summary.me:hover, details.me-menu[open] > summary.me { background: var(--soft); color: var(--ink); }
+  details.me-menu > summary.me::after { content: "▾"; font-size: 10px; }
+  details.me-menu .menu { left: auto; right: 0; min-width: 100%; box-sizing: border-box; }
+  details.me-menu .menu .btn[aria-current="true"] { background: var(--soft); font-weight: 600; }
+  .intro figure.flow { margin: 14px 0 4px; }
   /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
   .num { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: .7em; white-space: nowrap; margin-left: .45em; }
   .row .t .num { margin-left: auto; font-size: 11px; flex: none; }
@@ -443,8 +450,8 @@
   /* How it works draws how a request, an issue and a shipped change move, in the Desk's own inks:
      blue Design Desk at work, amber waits on the team, violet live, green approved, red closed. */
   .guide figure.flow { margin: 12px 0 20px; }
-  .guide figure.flow svg { display: block; width: 100%; max-width: 860px; height: auto; color: var(--muted); }
-  .guide figure.flow figcaption { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  .guide figure.flow svg, .intro figure.flow svg { display: block; width: 100%; max-width: 860px; height: auto; color: var(--muted); }
+  .guide figure.flow figcaption, .intro figure.flow figcaption { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
   .flow text { fill: var(--ink); font: 600 13px var(--font); text-anchor: middle; }
   .flow .f-sub { fill: var(--muted); font-weight: 400; font-size: 11.5px; }
   .flow .f-lbl { fill: var(--muted); font-weight: 400; font-size: 11px; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
@@ -728,10 +735,15 @@
   .btn.vote .vi { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   span.btn.vote { cursor: default; }
   .vbar .notes { color: var(--muted); font-size: var(--fs-meta); margin-left: 2px; }
-  /* What Design Desk found, in a box like the request's: its sections, then Show or Hide. */
-  .made-col.brief { margin-top: 14px; border-left-color: var(--accent); }
-  .brief-k .face.agent { background: var(--ink); }
-  .made-sec + .made-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  /* What Design Desk found, without a box: each part a heading and its text, what folds a quiet
+     line with its count in a grey pill; then Show or Hide. */
+  .made-col.brief { margin-top: 14px; border: 0; border-radius: 0; background: none; padding: 0; }
+  .made-col .made-sec h4 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+  .made-col details.fold { max-width: none; }
+  .made-col details.fold > summary { font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+  .made-col details.fold > summary .cnt { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); font-size: 12px; line-height: 18px; }
+  .brief-k .face.agent { background: var(--ink); color: var(--panel); }
+  .made-sec + .made-sec { margin-top: 16px; }
   .made-sec h4 { margin: 0 0 6px; font-size: var(--fs-ui); font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
   .made-sec ul { margin: 6px 0 8px; padding-left: 20px; }
   .made-sec p { margin: 0 0 6px; }
@@ -800,9 +812,7 @@
     <nav id="nav" aria-label="Desk"></nav>
     <div class="grow"></div>
     <div class="search"><input class="goto" id="goto" type="search" placeholder="Search, or C-12, D-3, #4512" role="combobox" aria-expanded="false" aria-controls="hits" aria-label="Search the Desk: words, an item's number like C-12, a decision's like D-3, a GitHub issue or pull request number, or a link" title="Search requests, changes, issues, screens, elements and decisions. A number opens its item: C-12, D-3, or a GitHub issue or pull request like #4512" autocomplete="off" spellcheck="false" /><div id="hits" role="listbox" hidden></div></div>
-    <span class="me" id="me"></span>
-    <button class="btn theme help" id="help" type="button" data-tab="guide" aria-label="How it works" title="How it works">?</button>
-    <button class="btn theme" id="theme" type="button"></button>
+    <details class="more me-menu"><summary class="me" id="me" aria-label="Your menu"></summary><div class="menu"><button class="btn" id="help" type="button" data-tab="guide" title="How Design Desk works, with a picture of each flow">? How it works</button><button class="btn" id="theme" type="button"></button></div></details>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
   </header>
   <div class="banners" id="banners"></div>
@@ -1881,6 +1891,8 @@
       can: [["<b>+ Add a person</b>: Design Desk puts them on the list as a designer, lead developer, developer or PM.", "people"],
         [`To get another role, or to make someone a lead, ask ${esc(contact())}.`]] },
   });
+  // Each tab's help draws its own flow from How it works: a request, a shipped change, an issue.
+  const FLOW_OF = { requests: FLOW_REQUEST, new: FLOW_CHANGE, issues: FLOW_ISSUE };
   function renderIntro() {
     const it = INTRO()[S.tab];
     if (!it) return "";
@@ -1889,7 +1901,7 @@
       <summary title="Shows or hides this tab's help; it stays as you leave it"><span class="i">i</span><span><b>${esc(TABS[S.tab])}</b> — ${esc(it.about)}</span><span class="tog"></span></summary>
       <div class="cols"><div><h5>What you see here</h5><ul>${it.see.map((s) => `<li>${s}</li>`).join("")}</ul></div>
         <div><h5>What you can do</h5><ul>${it.can.map(li).join("")}</ul></div>
-        ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div></details>`;
+        ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div>${FLOW_OF[S.tab] ? FLOW_OF[S.tab]() : ""}</details>`;
   }
   // Folding one intro folds every tab's, and it stays so in this browser. Kept on the person's
   // click, not on toggle: a freshly drawn open intro fires a toggle of its own.
@@ -3160,7 +3172,7 @@
     const b = c.issue_brief;
     if (!b || (!b.text && !(b.stories || []).length)) return "";
     const p = S.cards.find((x) => x.id === c.request?.from), url = p?.source?.url || b.url || c.origin?.url;
-    return `<details class="fold"><summary>What the issue says about the design${(b.stories || []).length ? ` · ${plural(b.stories.length, "user story", "user stories")}` : ""}</summary><div class="panel">
+    return `<details class="fold"><summary>What the issue says about the design${(b.stories || []).length ? `<span class="cnt">${plural(b.stories.length, "user story", "user stories")}</span>` : ""}</summary><div class="panel">
       ${b.text ? md(b.text) : ""}${(b.stories || []).length ? `<h4>User stories</h4><ul>${b.stories.map((x) => `<li>${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the text</span>` : ""}</li>`).join("")}</ul>` : ""}
       ${url ? `<p class="hint"><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">The whole issue on GitHub ↗</a></p>` : ""}</div></details>`;
   }
@@ -3170,7 +3182,7 @@
     if (!c.request?.grill) return "";
     const g = c.grill || {};
     if (g.state !== "done") return `<p class="hint">💬 Design Desk asks its questions here first, one at a time${g.asked ? ` (${plural(g.asked, "question", "questions")} so far)` : ""}; your answers shape the options.</p>`;
-    return `<details class="fold"><summary>What we agreed before the design${g.asked ? ` · ${plural(g.asked, "question", "questions")}` : ""}</summary><div class="panel">${md(g.summary || "Nothing to add.")}</div></details>`;
+    return `<details class="fold"><summary>What we agreed before the design${g.asked ? `<span class="cnt">${plural(g.asked, "question", "questions")}</span>` : ""}</summary><div class="panel">${md(g.summary || "Nothing to add.")}</div></details>`;
   }
 
   // How each option meets the issue's user stories: pick a story, see the parts that do it.
@@ -4705,9 +4717,8 @@
   }
   function renderTheme() {
     const b = $("#theme"), dark = isDark();
-    b.textContent = dark ? "☀" : "☾";
-    const label = dark ? "Switch to day mode" : "Switch to night mode";
-    b.title = label; b.setAttribute("aria-label", label);
+    b.textContent = dark ? "☀ Day mode" : "☾ Night mode";
+    b.title = dark ? "Switch to day mode" : "Switch to night mode";
   }
   $("#theme").addEventListener("click", () => {
     const next = isDark() ? "light" : "dark";
