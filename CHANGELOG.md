@@ -22,8 +22,8 @@ in a list is bold until the person first opens it (`POST /api/cards/<id>/read`, 
 `read`, a new `reads` table the store adds by itself); every item already on the Desk starts
 unread for everyone. The private ask stays over the design workspace and asks about the part
 picked there; a part with states drawn offers **See every state**, to look through them. In
-both modes a request's state in the list is a dot in the row's top-right corner, as tall as its
-label, pulsing while Design Desk works; pointing at the dot unfolds the label over the title.
+both modes a request's state in the list is a dot in the row's top-right corner, as large as the
+dot on its page, pulsing while Design Desk works; pointing at the dot unfolds the label over the title.
 
 ## 1.49.0 — 2026-11-05
 

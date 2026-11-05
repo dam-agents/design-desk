@@ -304,9 +304,10 @@ prototype once Design Desk has checked a request:
 ## A request's state in the list
 
 In both modes, each request in the list shows its state as a dot in the row's top-right corner,
-as tall as the state's label and level with the title's first line, each state in a colour of
+as large as the dot on the request's page and level with the title's first line, each state in a colour of
 its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
+A PR change not seen yet shows its blue dot in the same place, as large.
 
 ## Read and unread
 
