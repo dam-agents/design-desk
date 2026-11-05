@@ -230,7 +230,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   CSS path in the option's file, a plain label, the `data-view` it is on), in the order the
   story goes through them. The stories sit under the option's design; a person who presses one
   plays it there: a pointer goes to each part in that order, outlines it and clicks it when it
-  is a button, a link to its own page or a box to tick. An entry without `stories` keeps the option's coverage
+  is a button, a link to its own page or a box to tick. A bar at the bottom of the window pauses, resumes or
+  stops it. An entry without `stories` keeps the option's coverage
   from before; a revised option whose parts moved sends its new `stories`.
 - **Why it looks like this**: each option names the decisions on the Desk it follows and the
   parts each one shaped: `reasons: [{decision, how, parts}]` — `decision` a `D-<n>` in force

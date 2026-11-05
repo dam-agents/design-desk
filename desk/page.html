@@ -322,6 +322,10 @@
   .linked .k { color: var(--muted); }
   /* The issue's user stories: pick one, see the parts of the option that meet it and how. */
   /* The issue's user stories under the option's design: one pressed plays in the design above. */
+  /* The story player: a bar at the bottom of the window while a story plays in the design. */
+  #story-player { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; max-width: min(720px, calc(100% - 32px)); padding: 8px 10px 8px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(0,0,0,.18); font-size: var(--fs-ui); }
+  #story-player .pl-k { font-weight: 600; color: var(--accent); white-space: nowrap; }
+  #story-player .pl-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
   .stories { margin: 16px 0 4px; } details.stories > summary .hint { margin: 0; } details.stories[open] { padding-bottom: 8px; }
   .stories ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px; }
   .stories li { display: flex; }
@@ -3180,11 +3184,26 @@
     // The section folds like the sections below it: folded at first, then as the person left it.
     return `<details class="fold big stories" id="stories" data-stories${S.storiesOpen ? " open" : ""}><summary><h3>User stories · ${plural(ss.length, "story", "stories")}</h3><span class="hint">Press one to play it in ${esc(v.name)} above.</span></summary><ol>${ss.map(item).join("")}</ol>${how(cov(st.id))}</details>`;
   }
+  // While a story plays, a bar at the bottom of the window pauses, resumes or stops it; the
+  // design says where it is (desk-play-state), and the bar goes when the story ends or stops.
+  function storyPlayer(d) {
+    let bar = $("#story-player");
+    if (!d || ["done", "stopped"].includes(d.state)) { bar?.remove(); return; }
+    if (!bar) { bar = document.createElement("div"); bar.id = "story-player"; bar.setAttribute("role", "status"); document.body.append(bar); }
+    if (d.step) S.playStep = { step: d.step, of: d.of };
+    const at = S.playStep ? `step ${S.playStep.step} of ${S.playStep.of}` : "";
+    const st = (S.card?.issue_brief?.stories || []).find((x) => x.id === S.story);
+    bar.innerHTML = `<span class="pl-k">${d.state === "paused" ? "❚❚ Paused" : "▶ Playing"}${at ? ` · ${esc(at)}` : ""}</span><span class="pl-t">${esc(st?.text || "")}</span>
+      ${d.state === "paused" ? `<button class="btn small" data-play-ctl="resume">▶ Resume</button>` : `<button class="btn small" data-play-ctl="pause">❚❚ Pause</button>`}<button class="btn small" data-play-ctl="stop">■ Stop</button>`;
+  }
+  addEventListener("message", (e) => { const vf = $("#variant-frame"); if (vf && e.source === vf.contentWindow && e.data?.type === "desk-play-state") storyPlayer(e.data); });
+  document.addEventListener("click", (e) => { const b = e.target.closest?.("[data-play-ctl]"); if (!b) return; $("#variant-frame")?.contentWindow?.postMessage({ type: `desk-play-${b.dataset.playCtl}` }, "*"); if (b.dataset.playCtl === "stop") storyPlayer(null); });
   // Plays the picked story in the option's design: the frame moves a pointer part by part.
   function playStory() {
     const vf = $("#variant-frame"), pins = storyPins();
     if (!vf || !pins.length) return;
     vf.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    S.playStep = null;
     vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
   }
   // One state of an element, as the design catalog shows it: a picture of the part alone, what
@@ -3359,36 +3378,43 @@
     new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     // A user story played: a pointer goes to each part that does it, in order, outlines it and
-    // clicks it when it is something to press; a new story stops the one playing.
-    let playing = 0;
+    // clicks it when it is something to press; a new story stops the one playing. The Desk can
+    // pause, resume and stop it, and hears each step; only the design scrolls, never the Desk.
+    let playing = 0, paused = false;
     const pointer = document.createElement("div");
     pointer.style.cssText = "position:fixed;left:50%;top:35%;z-index:2147483647;pointer-events:none;opacity:0;transition:left .7s cubic-bezier(.4,0,.2,1),top .7s cubic-bezier(.4,0,.2,1),opacity .3s";
     pointer.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><path d="M5 3l14 8-6 1.6L10 19z" fill="#1b1b1a" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg><span style="position:absolute;left:22px;top:20px;background:#2f5bd3;color:#fff;font:600 12px/20px system-ui,sans-serif;padding:0 8px;border-radius:10px;white-space:nowrap"></span>';
     document.documentElement.appendChild(pointer);
     const caption = pointer.lastChild;
-    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    // A wait that stands still while paused and ends early once the story is stopped.
+    const wait = async (ms, id) => { for (let t = 0; t < ms && id === playing; ) { await sleep(50); if (!paused) t += 50; } };
+    const tell = (state, step, of) => say({ type: "desk-play-state", state, step, of });
+    const stopStory = () => { playing++; paused = false; pins = []; draw(); caption.textContent = ""; pointer.style.opacity = "0"; tell("stopped"); };
     const ripple = (x, y) => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:" + (x - 14) + "px;top:" + (y - 14) + "px;width:28px;height:28px;border-radius:50%;border:2px solid #2f5bd3;z-index:2147483646;pointer-events:none;transition:transform .5s,opacity .5s"; document.documentElement.appendChild(d); requestAnimationFrame(() => { d.style.transform = "scale(1.9)"; d.style.opacity = "0"; }); setTimeout(() => d.remove(), 650); };
     const pressable = (el) => el.closest('button, [role="button"], summary, label, input[type="checkbox"], input[type="radio"], a:not([href]), a[href^="#"]');
     async function playStory(steps) {
-      const id = ++playing; pins = []; draw();
+      const id = ++playing; paused = false; pins = []; draw();
       caption.textContent = ""; pointer.style.opacity = "1";
       for (let i = 0; i < steps.length; i++) {
         const st = steps[i], el = find(st.selector);
         if (!el) continue;
-        reveal(el); await wait(300); if (id !== playing) return;
-        el.scrollIntoView({ block: "center", behavior: "smooth" }); await wait(550); if (id !== playing) return;
+        tell("playing", i + 1, steps.length);
+        reveal(el); await wait(300, id); if (id !== playing) return;
+        const b = el.getBoundingClientRect(); scrollTo({ top: b.top + scrollY - innerHeight / 3, behavior: "smooth" }); await wait(550, id); if (id !== playing) return;
         const r = el.getBoundingClientRect(), x = r.left + Math.min(r.width / 2, 48), y = r.top + Math.min(r.height / 2, 24);
         caption.textContent = (i + 1) + ". " + (st.label || "");
         pointer.style.left = x + "px"; pointer.style.top = y + "px";
-        await wait(850); if (id !== playing) return;
+        await wait(850, id); if (id !== playing) return;
         ripple(x, y);
         pins = steps.slice(0, i + 1).map((p, k) => ({ n: k + 1, selector: p.selector, label: (k + 1) + ". " + (p.label || ""), state: "story" })); draw();
         pressable(el)?.click();
-        await wait(1000); if (id !== playing) return;
+        await wait(1000, id); if (id !== playing) return;
       }
-      caption.textContent = ""; await wait(500); if (id === playing) pointer.style.opacity = "0";
+      caption.textContent = ""; await wait(500, id); if (id === playing) { pointer.style.opacity = "0"; tell("done"); }
     }
-    addEventListener("message", (e) => { if (e.data?.type === "desk-play") playStory(e.data.steps || []); });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-play") playStory(d.steps || []);
+      if (d.type === "desk-play-pause") { paused = true; tell("paused"); } if (d.type === "desk-play-resume") { paused = false; tell("playing"); } if (d.type === "desk-play-stop") stopStory(); });
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-hot]")) setTimeout(draw, 0); });
     addEventListener("mouseover", (e) => { if (pins.some((p) => p.why) && under !== e.target) { under = e.target; draw(); } if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
@@ -3744,7 +3770,7 @@
     if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
-    if (vf && v) { try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
+    if (vf && v) { storyPlayer(null); try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 

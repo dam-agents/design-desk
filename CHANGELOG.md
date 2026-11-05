@@ -31,7 +31,8 @@ says so in its dialog instead of a button to draw them again. The user stories s
 option's design as cards side by side, in a section that folds like the others (folded at first), with no switch of their own and no second picture of it: a story pressed plays
 in the design above, the pointer going through its `parts` in their order
 ([docs/requests.md](docs/requests.md) → User stories). Send to Slack… opens on Ask for a vote,
-which closes in 1, 5 or 24 hours (24 picked). A played story's numbered frames show only while
+which closes in 1, 5 or 24 hours (24 picked). While a story plays, a bar at the bottom of the window pauses,
+resumes or stops it, and only the design scrolls, never the Desk. A played story's numbered frames show only while
 the design's Clickable switch is on. A request at `feedback` reads **Team feedback**, as its
 step does, not Options ready.
 The Clickable switch of a design's review bar starts on in designs built from now on (a design
