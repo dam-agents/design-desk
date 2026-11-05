@@ -47,8 +47,10 @@ leaves out its title (the option tab names it) and the product's own style line 
 sideways when the design is narrow. A request's text is only the asker's words: the store keeps no
 `goal` or `steps` for an idea (a bug report and Design Desk's own proposal keep theirs), the page
 shows an idea's problem and how they picture it only, so a goal written for an idea before is no
-longer shown, and the `intake-slack` skill copies a Slack message as it is, filling nothing in. The option's design has a heading like All elements (Wireframe,
-Mockup, From Figma or Pictures) with a half-line hint.
+longer shown, and the `intake-slack` skill copies a Slack message as it is, filling nothing in. The option's three sections — All elements, its design (headed
+Wireframe, Mockup, From Figma or Pictures) and User stories — share one heading with a count and a
+half-line hint, and each folds with +/− (elements and the design open at first, the stories
+folded); playing a story opens a folded design first.
 
 ## 1.46.0 — 2026-11-05
 

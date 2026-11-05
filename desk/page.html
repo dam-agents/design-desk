@@ -227,10 +227,6 @@
   .catalog ul { margin: 0; padding-left: 18px; font-size: 13px; }
   @media (max-width: 560px) { .catalog li { grid-template-columns: 1fr; } }
   /* All elements of an option, above its design: a picture of each part it changes or adds; one opens its states. */
-  .elements { margin: 4px 0 16px; }
-  .elhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin: 0 0 8px; }
-  .elhead h4 { margin: 0; font-size: 14px; } .elhead h4 .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
-  .elhead .hint { margin: 0; flex: 1 1 220px; } .elhead .btn { flex: none; }
   .elgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 336px), 1fr)); gap: 12px; }
   .eltile { display: grid; grid-template-rows: 1fr auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); min-width: 0; overflow: hidden; }
   .eltile:hover { border-color: var(--accent); }
@@ -326,13 +322,14 @@
   #story-player { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; max-width: min(720px, calc(100% - 32px)); padding: 8px 10px 8px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(0,0,0,.18); font-size: var(--fs-ui); }
   #story-player .pl-k { font-weight: 600; color: var(--accent); white-space: nowrap; }
   #story-player .pl-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-  .stories { margin: 16px 0 4px; } details.stories > summary .hint { margin: 0; }
-  /* Its heading is the size of All elements and the design's above it. */
-  details.fold.big.stories { border-top: 0; margin-top: 16px; }
-  details.fold.big.stories > summary { padding: 0 0 8px; gap: 12px; align-items: baseline; }
-  details.fold.big.stories > summary h3 { font-size: 14px; font-weight: 700; letter-spacing: 0; }
-  details.fold.big.stories > summary h3 .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
-  details.fold.big.stories > summary::after { font-size: 16px; } details.stories[open] { padding-bottom: 8px; }
+  /* The option's sections — All elements, its design, User stories — share one heading and fold with +/−. */
+  details.fold.big.sect { border-top: 0; max-width: none; margin: 14px 0 0; }
+  details.fold.big.sect > summary { padding: 0 0 8px; gap: 12px; align-items: baseline; }
+  details.fold.big.sect > summary h3 { font-size: 14px; font-weight: 700; letter-spacing: 0; }
+  details.fold.big.sect > summary h3 .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  details.fold.big.sect > summary .hint { margin: 0; }
+  details.fold.big.sect > summary::after { font-size: 16px; }
+  details.fold.big.sect[open] { padding-bottom: 4px; }
   .stories ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px; }
   .stories li { display: flex; }
   .stories ol button { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 12px 34px 12px 14px; cursor: pointer; font: inherit; font-size: 14px; line-height: 1.5; color: var(--ink); display: flex; gap: 10px; align-items: flex-start; }
@@ -1389,7 +1386,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1737,7 +1734,7 @@
   // view to point at it fires its scroll after the pointer is already there.
   document.addEventListener("scroll", () => $("#peek")?.remove(), true);
   document.addEventListener("click", peekHide, true);
-  document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; if (e.target.matches?.("[data-stories]")) S.storiesOpen = e.target.open; }, true);
+  document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; if (e.target.matches?.("[data-sect]")) S.sect[e.target.dataset.sect] = e.target.open; }, true);
 
   // ---------- dialogs ----------
   // A form never submits here (docs/desk.md → Where it works): a dialog's buttons check
@@ -3013,9 +3010,13 @@
     return [S.me?.slack && !(c.polls || []).some((x) => x.state === "open") && "vote", (S.me?.slack_send || c.origin?.channel === "slack") && "send"].filter(Boolean);
   }
 
-  // The option's design, named as All elements is: what it is, in half a line.
+  // A section of the option's panel — All elements, its design, User stories: one heading with
+  // its count and half a line, folding with +/−; how a person leaves it holds while the page is
+  // open. Elements and the design start open, the stories folded.
+  const SECT_OPEN = { elements: true, design: true, stories: false };
+  const sect = (key, title, n, hint, body) => `<details class="fold big sect ${key}" data-sect="${key}"${key === "stories" ? ' id="stories" data-stories' : ""}${(S.sect[key] ?? SECT_OPEN[key]) ? " open" : ""}><summary><h3>${title}${n != null ? `<span class="n">${n}</span>` : ""}</h3>${hint ? `<span class="hint">${hint}</span>` : ""}</summary>${body}</details>`;
+  // The option's design, named for what it is.
   const DRAWN = { wireframe: "Wireframe", mockup: "Mockup", figma: "From Figma", picture: "Pictures" };
-  const designHead = (v) => `<div class="elhead"><h4>${esc(DRAWN[v.fidelity] || "Design")}</h4><span class="hint">${v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product."}</span></div>`;
 
   function renderOptions(c) {
     const vs = c.variants || [];
@@ -3037,8 +3038,7 @@
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
       ${renderOptionElements(c, v)}
-      ${designHead(v)}
-      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>
+      ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`)}
       ${renderStories(c, v)}</div>`;
   }
 
@@ -3196,7 +3196,7 @@
     };
     // The stories are cards side by side; how the option meets the one picked shows under them.
     // The section folds like the sections below it: folded at first, then as the person left it.
-    return `<details class="fold big stories" id="stories" data-stories${S.storiesOpen ? " open" : ""}><summary><h3>User stories<span class="n">${ss.length}</span></h3><span class="hint">Press one to play it in ${esc(v.name)} above.</span></summary><ol>${ss.map(item).join("")}</ol>${how(cov(st.id))}</details>`;
+    return sect("stories", "User stories", ss.length, `Press one to play it in ${esc(v.name)} above.`, `<ol>${ss.map(item).join("")}</ol>${how(cov(st.id))}`);
   }
   // While a story plays, a bar at the bottom of the window pauses, resumes or stops it; the
   // design says where it is (desk-play-state), and the bar goes when the story ends or stops.
@@ -3216,9 +3216,12 @@
   function playStory() {
     const vf = $("#variant-frame"), pins = storyPins();
     if (!vf || !pins.length) return;
+    // A folded design opens first; a design not loaded yet plays once it is.
+    const box = vf.closest("details"); if (box && !box.open) box.open = true;
     vf.scrollIntoView({ behavior: "smooth", block: "nearest" });
     S.playStep = null;
-    vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
+    const go = () => vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
+    if (vf.dataset.ready) go(); else vf.addEventListener("load", () => setTimeout(go, 50), { once: true });
   }
   // One state of an element, as the design catalog shows it: a picture of the part alone, what
   // it is, when it happens and the use case of the brief it serves (docs/requests.md → Every
@@ -3288,7 +3291,6 @@
   }
   function renderOptionElements(c, v) {
     const els = elementsOf(v);
-    const head = `<div class="elhead"><h4>All elements${els.length ? `<span class="n">${els.length}</span>` : ""}</h4><span class="hint">The parts this option changes or adds, each on its own. Open one to see it in every state.</span></div>`;
     // Nothing listed yet: no section, there is nothing to do with it.
     if (!els.length) return "";
     const tile = (e) => {
@@ -3297,7 +3299,7 @@
       return `<div class="eltile"><button class="elopen" data-el="${esc(e.key)}" title="Open ${esc(e.name)}: every state of it and the use case each covers"><span class="elpic">${elementPic(v, e)}</span><span class="elname">${esc(e.name)}</span>
         <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : statesComplete(v, e) ? `<span class="chip ok" title="Every state of it is drawn for the option's latest version; nothing is left to draw">✓ All ${plural(e.states.length, "state", "states")}</span>` : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
     };
-    return `<section class="elements">${head}<div class="elgrid">${els.map(tile).join("")}</div></section>`;
+    return sect("elements", "All elements", els.length, "The parts this option changes or adds, each on its own. Open one to see it in every state.", `<div class="elgrid">${els.map(tile).join("")}</div>`);
   }
 
   // The element dialog: which design it is of, what it is, and every state drawn of it; without
@@ -3797,7 +3799,7 @@
     if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
-    if (vf && v) { storyPlayer(null); try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
+    if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
