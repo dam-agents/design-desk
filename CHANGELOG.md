@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.44.0 — 2026-11-05
+## 1.45.0 — 2026-11-05
 
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
@@ -20,6 +20,24 @@ and the watch run compares a shipped change with the approved design it builds
 ([docs/watch.md](docs/watch.md) step 11). An answer to a worked-in note may carry `warns`
 (`design desk answer … --warns`): what the note goes against, shown as a box under the answer.
 New fields are optional; no state to migrate, no config change.
+
+## 1.44.0 — 2026-11-05
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A folded box now stays folded when
+the page draws again, for example on another design tab. Every list on the left shows the
+newest item first. A request's steps name its triage verdict; a verdict other than design is
+also a label beside its title, and what a design change cannot do folds under the status. The
+"Design only" label, the "What can be done" section and the label on "What's already known"
+are gone. No server restart, no data change.
+
+## 1.43.3 — 2026-11-05
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). How it works draws how a request, an
+issue and a shipped pull request move. No server restart, no data change.
 
 ## 1.43.2 — 2026-11-05
 

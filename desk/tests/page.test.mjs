@@ -357,6 +357,7 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
+  assert.equal(await desk.locator('#detail .guide figure.flow svg[role="img"][aria-label] title').count(), 3, "How it works draws a request, an issue and a shipped change");
   await desk.click('[data-tab="new"]');
   await desk.click("#list .row .open");
   await desk.waitForSelector("#detail .crumb", { state: "attached" });
@@ -1521,4 +1522,65 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click('[data-brief="T-2"]');
   assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
+}));
+
+// docs/desk.md → Lists and Folds stay folded; docs/requests.md → Triage. The page runs where local
+// storage throws, as in its sandboxed frame.
+const FOLD = `<script>
+Object.defineProperty(window, "localStorage", { get() { throw new DOMException("denied", "SecurityError"); } });
+window.calls = [];
+const at = (d) => "2026-11-0" + d + "T10:00:00Z";
+const triage = { verdict: "needs-developer", reasons: ["The price per seat is not in the data."], cannot: ["Show the price per seat: the screen has no such number."] };
+const full = { id: "C-2", kind: "request", title: "Clearer plan cards", status: "feedback", created: at(2), updated: at(9), triage, prototype: { state: "none" }, threads: [],
+  request: { type: "idea", problem: "The plan cards are hard to compare." },
+  research: { verdict: "deliberate", summary: "The cards were made so on purpose.", links: [] },
+  variants: [{ id: "v1", name: "Quiet", asset: "A-1" }, { id: "v2", name: "Bold", asset: "A-1" }] };
+const plain = { id: "C-6", kind: "request", title: "Softer colours", status: "feedback", created: "2026-10-31T10:00:00Z", updated: at(7), triage: { verdict: "design", reasons: [] },
+  prototype: { state: "none" }, threads: [], request: { type: "idea", problem: "Softer colours." } };
+const cards = [
+  { id: "C-1", kind: "request", title: "Oldest", status: "feedback", created: at(1), updated: at(8) },
+  { ...full, triage: "needs-developer", variants: 2 },
+  { id: "C-3", kind: "request", title: "Newest", status: "feedback", created: at(3), updated: at(4) },
+  { ...plain, triage: "design" },
+  { id: "C-4", kind: "change", title: "Shipped first", created: at(6), updated: at(6), source: { pr: 1, merged_at: at(1) } },
+  { id: "C-5", kind: "change", title: "Shipped last", created: at(5), updated: at(5), source: { pr: 2, merged_at: at(4) } },
+];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { explore: true, choose: true, vote: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/cards/C-2" ? { card: full } : path === "/api/cards/C-6" ? { card: plain }
+    : path.startsWith("/api/assets/") ? { id: "A-1", kind: "variant", content: "<p>An option</p>" } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+</script>`;
+
+test("lists show the newest first; a folded box stays folded on another option; a verdict other than design is a label by the title, every verdict is in the steps", (t) => open(t, FOLD, async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  await desk.goto(`${base}#C-2`);
+  await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-2");
+  const rows = () => desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card));
+  assert.deepEqual(await rows(), ["C-3", "C-2", "C-1", "C-6"], "requests by the day they came, not by their last update");
+  assert.equal(await desk.locator("#list .chip", { hasText: "Design only" }).count(), 0, "no Design only label in the list");
+
+  const chip = desk.locator("#detail .sub .chip", { hasText: "Needs a developer" });
+  assert.equal(await chip.count(), 1, "the verdict is a label beside the title");
+  assert.match(await chip.evaluate((x) => x.title || x.dataset.tip || ""), /price per seat is not in the data/, "its reasons are on hover");
+  assert.equal(await desk.locator(".made-col h4", { hasText: "What can be done" }).count(), 0, "no What can be done in the box");
+  assert.doesNotMatch(await desk.textContent(".made-col"), /deliberate decision/, "no label on what is already known");
+  assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");
+
+  await desk.click('[data-brief-toggle="made"]');
+  assert.equal(await desk.locator(".made-col.clamped").count(), 1, "folded");
+  await desk.click('[data-variant="v2"]');
+  await desk.waitForFunction(() => document.querySelector('[data-variant="v2"]')?.getAttribute("aria-pressed") === "true");
+  assert.equal(await desk.locator(".made-col.clamped").count(), 1, "still folded on another option");
+
+  await desk.goto(`${base}#C-6`);
+  await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-6");
+  assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Design only" }).count(), 0, "no Design only label by the title");
+  assert.match(await desk.textContent("#detail details.stepper ol"), /Checked\s*Design only/, "the steps name the verdict");
+
+  await desk.click('[data-tab="new"]');
+  await desk.click('[data-filter="newFilter:all"]');
+  assert.deepEqual(await rows(), ["C-5", "C-4"], "changes by the day they shipped");
 }));

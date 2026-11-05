@@ -40,8 +40,8 @@ The person deciding sees it on the card, and every later step builds on it.
    accidental.
 6. **Record it on the card** with the `explain` skill, in plain words: `research: {verdict,
    summary, links}`. `verdict`: `clear`, `duplicate`, `deliberate`, `collision` (someone is
-   changing it now) or `unclear`. The Desk shows it open near the top, so the summary is this
-   short report, one line each, every source linked in `links`:
+   changing it now) or `unclear`. The Desk shows only the summary, with no label for the
+   verdict, open near the top, so the summary says the verdict in words; it is this short report, one line each, every source linked in `links`:
    - **Already asked for**: duplicates and close issues with their state, or "none found";
    - **Where it lives**: the screen, in plain words; the code files go in `links` only;
    - **History**: who added it and why, the last change and what it did;
@@ -104,7 +104,9 @@ The person deciding should know it before a single variant exists.
 4. Write `triage` on the card: `verdict`, `reasons` (one plain sentence, only when the verdict
    needs it) and `cannot`: only what the person asked for — in the issue, the request or
    their answers — that a design change cannot do, each with its reason in their terms; never
-   a part nobody asked for. The Desk folds it. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+   a part nobody asked for. The Desk names every verdict in the request's steps, shows one
+   other than `design` as a label beside the title, with its words and `reasons` on hover,
+   and folds `cannot` under the status. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request

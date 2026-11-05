@@ -55,6 +55,12 @@ served by the Desk server through the platform's Artifact API relay.
   the buckets; Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
+- **Lists.** Every list on the left shows the newest item first: a change by the day it
+  shipped, a decision by the day it was made, any other item by the day it came onto the Desk.
+  The Presentation keeps the order a designer set.
+- **Folds stay folded.** A folded box (the request, From Design Desk, an intro) stays folded
+  when the page draws again, for example on another design tab. The page runs in a sandboxed
+  frame where local storage can fail, so the page also keeps the choice in memory.
 - **Search.** The header's one search finds words in every item's title, summary and source
   and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
   decision's (`D-3`), and while one is typed (`C-`, `C-1`, `D-`) every item or decision whose
@@ -65,7 +71,8 @@ served by the Desk server through the platform's Artifact API relay.
 - **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
   answer); **Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
   with grey counts, then **Product** and **People**. **How it works** opens from the question
-  mark next to the day and night switch. The switch keeps each person's choice on the Desk
+  mark next to the day and night switch, with a picture each of how a request, an issue and a
+  shipped pull request move. The switch keeps each person's choice on the Desk
   (`POST /api/prefs {theme}`, `theme` in `GET /api/me`; null follows the system), so it follows
   them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
   the server takes it, and sent again on the next load.
@@ -89,7 +96,7 @@ served by the Desk server through the platform's Artifact API relay.
   **More** closes on a click anywhere outside it, on Escape, and once something in it is picked;
   a request's steps (`Step 2/4`) close on a click outside them and on Escape too.
 - **One width.** An open item's text blocks (the request, what happens next, what is known,
-  what can be done, the threads) share the reading measure; only the designs run wider.
+  the threads) share the reading measure; only the designs run wider.
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
   same emails go in `## Desk people` with a role. The owner needs the Interactive artifacts
   feature on (Settings → five taps on the version → Experimental features). Never set the
