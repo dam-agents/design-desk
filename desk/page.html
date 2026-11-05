@@ -3007,6 +3007,10 @@
     return [S.me?.slack && !(c.polls || []).some((x) => x.state === "open") && "vote", (S.me?.slack_send || c.origin?.channel === "slack") && "send"].filter(Boolean);
   }
 
+  // The option's design, named as All elements is: what it is, in half a line.
+  const DRAWN = { wireframe: "Wireframe", mockup: "Mockup", figma: "From Figma", picture: "Pictures" };
+  const designHead = (v) => `<div class="elhead"><h4>${esc(DRAWN[v.fidelity] || "Design")}</h4><span class="hint">${v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product."}</span></div>`;
+
   function renderOptions(c) {
     const vs = c.variants || [];
     // A request that asked for no options: once checked, its first one is added by hand.
@@ -3027,6 +3031,7 @@
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
       ${renderOptionElements(c, v)}
+      ${designHead(v)}
       <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>
       ${renderStories(c, v)}</div>`;
   }
