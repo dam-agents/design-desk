@@ -311,7 +311,8 @@ as large as the dot on the request's page and level with the title's first line,
 its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A change's and an issue's page open with the same box as a request's status: the state's dot and
-word (an issue's word is where it is planned, `This sprint`), a line of facts, the buttons (**Mark
+word (an issue's word is where it is planned, `This sprint`), a line of facts (a change's on the
+same line, after its PR as a pill that opens it on GitHub), the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
 under an issue's How it could look. A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);

@@ -631,6 +631,7 @@
   /* A change's PR and an issue, in GitHub's colours, the same as their dots in the list. */
   .status[data-o="gh-open"] { --o: #2da44e; --os: color-mix(in srgb, #2da44e 16%, transparent); } .status[data-o="gh-draft"] { --o: #8c959f; --os: color-mix(in srgb, #8c959f 16%, transparent); }
   .status[data-o="gh-merged"] { --o: #8957e5; --os: color-mix(in srgb, #8957e5 16%, transparent); }
+  .s-pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: var(--o); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; text-decoration: none; white-space: nowrap; } a.s-pill:hover { opacity: .88; }
   .status .s-meta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
   .status[data-o="checking"] { --o: var(--accent); --os: var(--info-soft); } .status[data-o="live"] { --o: var(--live); --os: var(--live-soft); }
   .s-word { display: flex; align-items: center; gap: 9px; font-size: var(--fs-head); font-weight: 650; color: var(--o); letter-spacing: -.01em; }
@@ -2749,28 +2750,28 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // The box under a change's or an issue's title, as on a request: its state's word and dot on the
   // left, a line of facts under it, its buttons on the right and the rest under ⋯ (docs/desk.md →
   // A request's state in the list).
-  function ghStatus(o, word, tip, meta, buttons, more) {
+  // `inline`: the facts sit on the state's line, after its pill (`pill`, a link shaped like a request's step).
+  function ghStatus(o, word, tip, meta, buttons, more, { pill = "", inline = false } = {}) {
     const info = tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : "";
     const menu = more ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${more}</div></details>` : "";
     return `<div class="status" data-o="${o}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(word)}${info}</div></div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(word)}${info}</div>${pill}${inline && meta ? `<span class="hint s-meta">${meta}</span>` : ""}</div>
       ${buttons || menu ? `<div class="next"><div class="actions">${buttons}${menu}</div></div>` : ""}
-      ${meta ? `<p class="hint s-meta">${meta}</p>` : ""}
+      ${!inline && meta ? `<p class="hint s-meta">${meta}</p>` : ""}
     </div>`;
   }
   function renderChange(c) {
     const src = c.source || {};
-    const inProgress = src.pr && !src.merged_at;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${(() => {
         const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
-        const meta = [ageChip(c), c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : "", src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : "", src.author ? `<span>by ${esc(src.author)}</span>` : "", src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""].join("");
+        const meta = [ageChip(c), c.handled?.at ? `<span>handled by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : "", src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : "", src.author ? `<span>by ${esc(src.author)}</span>` : ""].join("");
+        const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
         const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
         const adjust = can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "";
-        return ghStatus(o, word, tip, meta, handle + adjust, agendaButton(c));
+        return ghStatus(o, word, tip, meta, handle + adjust, agendaButton(c), { pill, inline: true });
       })()}
-      ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${requestsFrom(c)}
       ${attentionLine(c)}
@@ -2782,7 +2783,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${(c.elements || []).length ? `<h3>Parts it changed</h3><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div>` : ""}
       ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
       ${renderImpact(c.impact)}
-      ${src.url ? `<p class="hint"><a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">See it on GitHub ↗</a></p>` : ""}
       ${renderThreads(c)}`;
   }
 
