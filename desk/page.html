@@ -1157,7 +1157,7 @@
   <rect class="f-n f-checking" x="440" y="56" width="170" height="60" rx="10"/><text x="525" y="80">Sketches it</text><text class="f-sub" x="525" y="98">now, and how it could be</text>
   <rect class="f-n f-waiting" x="660" y="56" width="180" height="60" rx="10"/><text x="750" y="80">On Issues</text><text class="f-sub" x="750" y="98">what the UI will need</text>
   <rect class="f-n f-skip" x="230" y="196" width="160" height="60" rx="10"/><text x="310" y="220">Left out</text><text class="f-sub" x="310" y="238">back end, tests, chores</text>
-  <rect class="f-n f-approved" x="440" y="196" width="170" height="60" rx="10"/><text x="525" y="220">✓ Designed</text><text class="f-sub" x="525" y="238">out of the open lists</text>
+  <rect class="f-n f-approved" x="440" y="196" width="170" height="60" rx="10"/><text x="525" y="220">Designed</text><text class="f-sub" x="525" y="238">a purple dot, in All</text>
   <rect class="f-n f-checking" x="660" y="196" width="180" height="60" rx="10"/><text x="750" y="220">A request</text><text class="f-sub" x="750" y="238">options, votes, a prototype</text>
   <path class="f-e" d="M170 86 H227" marker-end="url(#fl-issue)"/><text class="f-lbl" x="200" y="78">daily</text>
   <path class="f-e" d="M390 86 H437" marker-end="url(#fl-issue)"/><text class="f-lbl" x="414" y="78">yes</text>
@@ -1166,7 +1166,7 @@
   <path class="f-e" d="M720 56 C720 22 560 22 560 53" marker-end="url(#fl-issue)"/><text class="f-lbl" x="640" y="24">Draw it</text>
   <path class="f-e" d="M750 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="758" y="158">Design this</text>
   <path class="f-e" d="M660 226 H613" marker-end="url(#fl-issue)"/><text class="f-lbl" x="636" y="218">sent</text>`,
-    "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue moves to <b>✓ Designed</b>.");
+    "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue leaves the plan's filters and stays in <b>All</b> with a purple Designed dot.");
   const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes${full(" and updates Product")}; its title is bold until each person opens it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
   <rect class="f-n" x="10" y="92" width="140" height="56" rx="10"/><text x="80" y="116">A change ships</text><text class="f-sub" x="80" y="134">a merged pull request</text>
   <rect class="f-n f-checking" x="200" y="92" width="160" height="56" rx="10"/><text x="280" y="116">Design Desk explains</text><text class="f-sub" x="280" y="134">what, why, screenshots</text>
@@ -1257,7 +1257,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       "reqFor:designers": "Requests a designer or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
       "reqFilter:closed": "Requests sent to developers or closed",
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
-      "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows", "issueFilter:designed": "Issues already designed here and sent to developers",
+      "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
       "productFilter:decisions": "Every decision the team made, kept apart by who made it", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
@@ -1476,7 +1476,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   // ---------- state ----------
-  const S = { me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -2110,10 +2110,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // The list filter a person picked last is kept in their browser.
   const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
   // An issue that already went through Design Desk is done on the design side: it leaves the
-  // open lists, All too, for its own (docs/issues.md → On the Desk).
+  // plan's filters and stays in All with its Designed dot (docs/issues.md → On the Desk).
   const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
-      && (filter === "designed" ? c.designed : !c.designed && (filter === "all" || c.bucket === filter))));
-  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"], elFilter: ["all", "product", "design"] };
+      && (filter === "all" || (!c.designed && c.bucket === filter))));
+  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label"], elFilter: ["all", "product", "design"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
@@ -2188,7 +2188,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length]])])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["ready", "Ready", requestCards("ready").length], ["closed", "Closed", requestCards("closed").length]])
-      : S.tab === "issues" ? seg("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, l, issueCards(k).length]))
+      : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
     const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
@@ -2198,7 +2198,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const empty = {
       new: S.newFilter === "designer" ? waiting : S.newFilter === "handled" ? "No change is marked handled yet." : newCards("handled").length ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
-        : S.issueFilter === "designed" ? "No issue has gone through Design Desk yet. One lands here once its request is sent to developers."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "ready" ? "Nothing waits for anyone to act right now." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."

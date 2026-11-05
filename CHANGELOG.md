@@ -34,7 +34,8 @@ pre-flight now puts `draft` on each due pull request, and a change card keeps it
 next update. Every row in every list is its title and one line under it, with no chips; an issue's line
 ends with where it is planned (`in: This sprint`). Requests filter by **Unread**, **Open**, **Ready** and
 **Closed** (Ready: options drawn, a Slack vote ended, or a live prototype up; the list adds `voting` and
-`voted`), and the presentation tab is **For presentation**.
+`voted`), and the presentation tab is **For presentation**. Issues filter by **All** (first and the default,
+designed issues included), This sprint, Next sprint, Assigned and For design; there is no Designed filter.
 
 ## 1.49.0 — 2026-11-05
 

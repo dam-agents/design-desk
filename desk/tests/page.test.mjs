@@ -980,7 +980,9 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.waitForSelector('[data-tab="issues"] .count');
     assert.equal(await desk.textContent('[data-tab="issues"] .count'), "1", "the tab counts the open issues of the sprint");
     await desk.click('[data-tab="issues"]');
-    assert.equal(await desk.locator(".row.item").count(), 1, "This sprint is the first view; a closed issue is not listed");
+    assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["issueFilter:all", "issueFilter:sprint", "issueFilter:next", "issueFilter:assigned", "issueFilter:label"], "All first, then the plan; no Designed");
+    await desk.click('[data-filter="issueFilter:sprint"]');
+    assert.equal(await desk.locator(".row.item").count(), 1, "a closed issue is not listed");
     const row = '.row.item:has([data-card="is1"])';
     assert.match(await desk.textContent(`${row} .prov`), /from: Issue #41.*by: alice.*assigned to bob/);
     assert.equal(await desk.locator(`${row} .s`).count(), 0, "an issue's row carries no description; its page and its preview do");
@@ -1453,10 +1455,11 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   assert.match(await card("dana", "C-8"), /Already through Design Desk[\s\S]*Sent/);
   assert.equal(await count('[data-act="draw"]'), 0, "a designed issue is not drawn");
   await desk.click('[data-tab="issues"]');
+  await desk.click('[data-filter="issueFilter:sprint"]');
+  assert.deepEqual(await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card)), ["C-9"], "not among the plan's");
   await desk.click('[data-filter="issueFilter:all"]');
-  assert.deepEqual(await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card)), ["C-9"], "not among the open ones");
-  await desk.click('[data-filter="issueFilter:designed"]');
-  assert.deepEqual(await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card)), ["C-8"]);
+  assert.deepEqual((await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card))).sort(), ["C-8", "C-9"], "All keeps it, with its Designed dot");
+  assert.equal(await desk.locator('.row.item:has([data-card="C-8"]) .sdot[data-s="issue-designed"]').count(), 1);
 }));
 
 // Deciding straight away (docs/desk.md → Deciding straight away): the lead developer's buttons,
