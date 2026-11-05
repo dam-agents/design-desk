@@ -1470,7 +1470,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   assert.deepEqual(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-1/decide").body)), { text: "Headers stay as they are." });
 
   await card("C-2");
-  assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").evaluate((x) => x.open), false, "the options fold while the prototype is live");
+  assert.equal(await desk.locator("#detail details.fold:not(.sect):has(#variant-frame)").evaluate((x) => x.open), false, "the options fold while the prototype is live");
   assert.equal(await desk.locator('#detail details.fold [data-act="build"]').count(), 1, "building again sits with them");
   await desk.click('#detail .next [data-act="approve"]');
   assert.match(await desk.textContent("#cf-body"), /Bold\*?\*?, version 2/, "the dialog names the prototype's option and version");
@@ -1482,7 +1482,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
 
   for (const id of ["C-3", "C-4"]) {
     await card(id);
-    assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").count(), 0, `${id}: no live prototype, the options stay open`);
+    assert.equal(await desk.locator("#detail details.fold:not(.sect):has(#variant-frame)").count(), 0, `${id}: no live prototype, the options stay open`);
     assert.equal(await desk.locator('#detail .next [data-act="close"]').count(), 1, `${id}: close with a decision on a switched-off prototype`);
   }
   await card("C-5");
