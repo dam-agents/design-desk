@@ -1175,12 +1175,14 @@
   new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) tip(n); }).observe(document.body, { childList: true, subtree: true });
   tip(document.body);
 
-  // An open More closes on a click anywhere outside it, on Escape, and once something in it is picked.
+  // An open More, or a request's steps, closes on a click anywhere outside it and on Escape;
+  // a More also once something in it is picked.
+  const FOLDS = "details.more[open], details.stepper[open]";
   document.addEventListener("click", (e) => {
-    for (const d of document.querySelectorAll("details.more[open]"))
+    for (const d of document.querySelectorAll(FOLDS))
       if (!d.contains(e.target) || e.target.closest(".menu button")) d.open = false;
   }, true);
-  const moreClose = () => { for (const d of document.querySelectorAll("details.more[open]")) d.open = false; };
+  const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") moreClose(); });
   // A click into a design's frame never reaches this page; the page loses focus instead.
   addEventListener("blur", () => { moreClose(); tipHide(); });

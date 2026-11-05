@@ -14,7 +14,7 @@ Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.ht
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). The list is white and the page
 lighter, as on the team's design; a list card's second line is grey. In a list, an issue's or
 a pull request's preview shows on its link alone and a label's line on the label alone, not
-over the whole card. No server restart, no data change.
+over the whole card. A request's open steps close on a click outside them. No server restart, no data change.
 
 ## 1.43.0 — 2026-11-04
 

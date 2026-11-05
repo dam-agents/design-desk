@@ -841,6 +841,17 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     assert.deepEqual(await desk.locator("#detail .made-col figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
     assert.doesNotMatch(await desk.textContent("#detail"), /Screen: Agents/, "the screen line is gone");
 
+    // The request's steps close on a click outside them and on Escape; a click inside keeps them open.
+    const stepsOpen = () => desk.$eval("#detail details.stepper", (d) => d.open);
+    await desk.click("#detail details.stepper > summary");
+    await desk.click("#detail details.stepper ol");
+    assert.equal(await stepsOpen(), true, "a click inside keeps the steps open");
+    await desk.click("#detail h2");
+    assert.equal(await stepsOpen(), false, "a click outside closes the steps");
+    await desk.click("#detail details.stepper > summary");
+    await desk.keyboard.press("Escape");
+    assert.equal(await stepsOpen(), false, "Escape closes the steps");
+
     await desk.hover("#detail .linked .anchor");
     await desk.waitForSelector("#peek");
     assert.match(await desk.textContent("#peek"), /See what each agent spends[\s\S]*This sprint[\s\S]*Issue #41[\s\S]*Nobody knows what an agent costs[\s\S]*A spend column in the agents list/);

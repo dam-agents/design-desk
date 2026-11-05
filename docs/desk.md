@@ -86,7 +86,8 @@ served by the Desk server through the platform's Artifact API relay.
   issue's or a pull request's preview shows on its link alone.
 - **Buttons.** A button's icon comes from `BTN_ICON` in `desk/page.html`, by its `data-`
   action; one whose words start with a sign of their own (▶, ✓, 👍, +) keeps that sign.
-  **More** closes on a click anywhere outside it, on Escape, and once something in it is picked.
+  **More** closes on a click anywhere outside it, on Escape, and once something in it is picked;
+  a request's steps (`Step 2/4`) close on a click outside them and on Escape too.
 - **One width.** An open item's text blocks (the request, what happens next, what is known,
   what can be done, the threads) share the reading measure; only the designs run wider.
 - **Only the owner shares it**, in the app: Share → Restricted → the team's emails. The
