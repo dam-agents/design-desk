@@ -1589,3 +1589,34 @@ test("lists show the newest first; a folded box stays folded on another option; 
   await desk.click('[data-filter="newFilter:all"]');
   assert.deepEqual(await rows(), ["C-5", "C-4"], "changes by the day they shipped");
 }));
+
+// A preview of a part (the hover peek, All elements, the enlarged part) hides the review bar,
+// and with it the outline its Clickable switch draws from the start.
+test("a preview of a design shows neither the review bar nor the Clickable outline", async (t) => {
+  const browser = chromium();
+  if (!browser) return t.skip("no browser here");
+  let pw;
+  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  Object.assign(process.env, browser.env);
+  const src = (re) => { const m = page.match(re); assert.ok(m, `the page has ${re}`); return m[0]; };
+  const { SNIP_SCRIPT, ZOOM_SCRIPT } = new Function(`${src(/const js = \(v\) => [^\n]+;/)}
+    ${src(/const SNIP_SCRIPT = [\s\S]*?<\\\/script>`;/)}
+    ${src(/const ZOOM_SCRIPT = [\s\S]*?<\\\/script>`;/)}
+    return { SNIP_SCRIPT, ZOOM_SCRIPT };`)();
+  const sel = '[data-view="2"] button';
+  const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
+  try {
+    const pg = await chrome.newPage();
+    const state = () => pg.evaluate(() => ({ bar: getComputedStyle(document.getElementById("review")).display,
+      hot: document.documentElement.classList.contains("review-hot"), checked: document.querySelector("#review [data-hot]").getAttribute("aria-checked") }));
+    await pg.setContent(WITH_BAR);
+    const own = await state();
+    assert.deepEqual([own.hot, own.checked], [true, "true"], "the design itself starts with Clickable on");
+    for (const [name, sc] of [["a part's preview", SNIP_SCRIPT(sel, "", false)], ["the whole design's preview", SNIP_SCRIPT("", "", false)], ["an enlarged part", ZOOM_SCRIPT(sel)]]) {
+      await pg.setContent(WITH_BAR.replace("</body>", `${sc}</body>`));
+      assert.deepEqual(await state(), { bar: "none", hot: false, checked: "false" }, name);
+    }
+  } finally {
+    await chrome.close();
+  }
+});
