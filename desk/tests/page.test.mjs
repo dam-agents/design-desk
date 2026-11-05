@@ -355,9 +355,10 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   await desk.waitForSelector(`${intro}[data-intro="requests"]`, { state: "attached" });
   assert.equal(await desk.$eval(intro, (d) => d.open), false, "a folded intro stays folded");
   await desk.click(`${intro} > summary`);
-  await desk.click('[data-tab="guide"]');
+  await desk.click("#me");
+  await desk.click('#help');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
-  assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
+  assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the menu under your name");
   assert.equal(await desk.locator('#detail .guide figure.flow svg[role="img"][aria-label] title').count(), 3, "How it works draws a request, an issue and a shipped change");
   await desk.click('[data-tab="new"]');
   await desk.click("#list .row .open");
@@ -379,11 +380,13 @@ test("every button and label says on hover what it does or means", (t) => open(t
     assert.deepEqual(await rowSays(), [], `${tab}: a card's own button in the list shows no line over the whole card`);
     assert.deepEqual(await unnamed(), [], `${tab}: a button with no words keeps a name`);
     if (tab === "requests") {
+      await desk.click("#me");
       await desk.hover("#help");
       assert.equal(await desk.$("#tip"), null, "not at once");
       await desk.waitForSelector("#tip");
-      assert.equal(await desk.textContent("#tip"), "How it works", "the Desk's own tooltip shows after half a second");
+      assert.equal(await desk.textContent("#tip"), "How Design Desk works, with a picture of each flow", "the Desk's own tooltip shows after half a second");
       assert.equal(await desk.getAttribute("#help", "title"), null, "the browser's slow one does not");
+      await desk.press("body", "Escape");
     }
     if (await desk.locator("#list .row .open").count()) {
       await desk.click("#list .row .open");
@@ -783,7 +786,7 @@ window.platform = { async request({ path }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("numbers, notes and pins preview what they name; the search lists every number as typed; the request's text folds", (t) => open(t, PEEKS, async (desk) => {
+test("numbers, notes and pins preview what they name; the search lists every number as typed; the request's text shows whole the first time, folded after", (t) => open(t, PEEKS, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   await desk.goto(`${base}#C-1`);
   await desk.waitForSelector('#detail a[data-ref="D-1"]');
@@ -806,9 +809,16 @@ test("numbers, notes and pins preview what they name; the search lists every num
 
   await desk.goto(`${base}#C-2`);
   await desk.waitForSelector(".brief:not(.clamped) [data-brief-toggle]");
+  assert.equal(await desk.locator(".top2 > .brief.clamped").count(), 0, "the first visit shows the request and what Design Desk found whole");
   await desk.click("[data-brief-toggle]");
   await desk.waitForSelector(".brief.clamped");
-  assert.equal(await desk.evaluate(() => localStorage.getItem("desk-brief")), "folded", "the request's text folds and stays so");
+  assert.deepEqual(await desk.evaluate(() => JSON.parse(localStorage.getItem("desk-seen-requests"))), ["C-2"], "the browser keeps that it was seen");
+  await desk.goto(`${base}#C-1`);
+  await desk.waitForSelector('#detail a[data-ref="D-1"]');
+  await desk.goto(`${base}#C-2`);
+  await desk.waitForFunction(() => document.querySelectorAll(".top2 > .brief").length === 2 && document.querySelectorAll(".top2 > .brief.clamped").length === 2);
+  await desk.click(".top2 > .brief:not(.made-col) [data-brief-toggle]");
+  await desk.waitForSelector(".top2 > .brief:not(.made-col):not(.clamped)");
 
   await desk.click("[data-convo] > summary");
   await desk.hover('[data-snip="A-1"]');
@@ -1006,17 +1016,28 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.click('[data-card="r7"]');
   await desk.waitForSelector("text=User stories");
   assert.match(await desk.textContent("#detail .linked"), /Designs the issue.*See what each agent spends.*Issue #41/, "the request names the issue it designs");
-  assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design · 2 user stories/);
-  assert.match(await desk.textContent("#detail"), /Asked for: 2 options · questions first/);
-  assert.match(await desk.textContent("#detail"), /What we agreed before the design · 2 questions/);
+  assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design\s*2 user stories/);
+  assert.doesNotMatch(await desk.textContent("#detail"), /Asked for:/, "the request does not repeat how many options it asked for");
+  assert.match(await desk.textContent("#detail"), /What we agreed before the design\s*2 questions/);
+  assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), false, "user stories start folded");
+  await desk.click("details[data-stories] > summary");
   assert.equal(await desk.textContent('[data-story="s1"] .met'), "✓");
-  assert.match(await desk.textContent(".stories .how"), /Meets it — Column[\s\S]*A spend column on every row/);
-  await desk.waitForFunction(() => document.querySelector("#story-frame")?.srcdoc.includes('id="spend"'));
-  assert.equal(await desk.textContent('[data-story-part="0"]'), "Spend column", "the story's parts, to show in the design");
+  // The stories sit under the option's own design: no second switch of options, no second picture.
+  assert.equal(await desk.locator(".vpanel #stories").count(), 1, "the stories are the option's");
+  assert.equal(await desk.locator("#story-frame").count(), 0, "no second picture of the design");
+  assert.equal(await desk.locator("#detail .tabs [data-variant]").count(), 2, "one switch of options, the tabs over the panel");
+  assert.equal(await desk.locator('[data-story="s1"] .how').count(), 0, "a story the option meets needs no word on it");
+  await desk.waitForFunction(() => document.querySelector("#variant-frame")?.srcdoc.includes('id="spend"'));
+  // A story pressed plays in the design above: the pointer names its parts there, in order
+  // (their numbered frames show only with the design's Show hotspots switch on).
+  await desk.click('[data-story="s1"]');
+  const design = desk.frameLocator("#variant-frame");
+  await design.locator("text=1. Spend column").first().waitFor();
   await desk.click('[data-story="s2"]');
-  assert.match(await desk.textContent(".stories .story"), /I can sort by spend.*from the issue's text/);
-  assert.match(await desk.textContent(".stories .how"), /Meets part of it — Column[\s\S]*needs a developer/);
-  await desk.click('.tabs:has(+ .stories) [data-variant="v2"]');
+  assert.match(await desk.textContent('[data-story="s2"]'), /I can sort by spend.*from the issue's text/);
+  assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), true, "picking a story keeps the section open");
+  assert.match(await desk.textContent('[data-story="s2"] .how.partly'), /needs a developer/, "one it meets in part says why, in amber");
+  await desk.click('.vtabs [data-variant="v2"]');
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
 }));
 
@@ -1156,7 +1177,7 @@ test("a worked-in note shows the place before and after, outlined, in the thread
   }
 });
 
-test("notes in the workspace: open and done, a whole conversation, worked in together; a designer picks the winner; designs go to the Slack thread", async (t) => {
+test("notes in the workspace: open and done, a whole conversation, worked in together; no winner to pick; designs go to the Slack thread", async (t) => {
   const run = await launch(t, BRIDGE_NOTES);
   if (!run) return;
   const { desk, posts } = run;
@@ -1165,16 +1186,16 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
     await desk.waitForSelector('[data-act="workspace"]');
-    assert.doesNotMatch(await desk.textContent("#detail"), /Votes and comments help/, "no line on who picks: Select as the winner says it");
+    assert.equal(await desk.locator("[data-choose]").count(), 0, "no option is picked as the winner");
+    assert.deepEqual(await desk.locator(".vbar [data-vote]").evaluateAll((xs) => xs.map((x) => x.dataset.vote)), ["prefer", "dislike", "concern"], "at Team feedback people vote for, against or with a concern");
     assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
     assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
 
-    await desk.click('[data-choose="v1"]');
-    assert.deepEqual(await sent("/api/cards/r5/chosen", 1), { variant: "v1" });
-
-    await desk.click('[data-act="slack-send"]');
-    assert.match(await desk.textContent("#cf-body"), /Slack thread this request came from/);
-    await desk.locator("#confirm-dialog .actions button", { hasText: "Send" }).click();
+    // One Slack button; without the Slack app for votes, its dialog only sends the designs.
+    await desk.click('[data-act="slack"]');
+    assert.match(await desk.textContent("#sl-send-hint"), /Slack thread this request came from/);
+    assert.equal(await desk.locator("#sl-mode").isHidden(), true, "a vote is not offered without the Slack app");
+    await desk.locator("#slack-dialog .actions button", { hasText: "Send" }).click();
     assert.deepEqual(await sent("/api/cards/r5/actions", 1), { action: "slack-send", note: JSON.stringify({ variants: "all", note: "" }) });
 
     await desk.waitForSelector('[data-act="workspace"]');
@@ -1443,15 +1464,16 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   };
   await card("C-1");
   assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 1, "send to developers before any option");
-  assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1, "or decide and close");
-  await desk.click('#detail [data-act="decide"]');
+  assert.equal(await desk.locator('#detail [data-act="close"]').count(), 1, "or close it with a decision");
+  await desk.click('#detail [data-act="close"]');
+  assert.equal(await desk.locator("#cf-choices input").count(), 0, "a lead developer only closes with a decision");
   await desk.fill("#confirm-form [name=note]", "Headers stay as they are.");
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-1/decide"));
   assert.deepEqual(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-1/decide").body)), { text: "Headers stay as they are." });
 
   await card("C-2");
-  assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").evaluate((x) => x.open), false, "the options fold while the prototype is live");
+  assert.equal(await desk.locator("#detail details.fold:not(.sect):has(#variant-frame)").evaluate((x) => x.open), false, "the options fold while the prototype is live");
   assert.equal(await desk.locator('#detail details.fold [data-act="build"]').count(), 1, "building again sits with them");
   await desk.click('#detail .next [data-act="approve"]');
   assert.match(await desk.textContent("#cf-body"), /Bold\*?\*?, version 2/, "the dialog names the prototype's option and version");
@@ -1463,12 +1485,12 @@ test("deciding straight away: a lead developer approves or decides; a live proto
 
   for (const id of ["C-3", "C-4"]) {
     await card(id);
-    assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").count(), 0, `${id}: no live prototype, the options stay open`);
-    assert.equal(await desk.locator('#detail .next [data-act="decide"]').count(), 1, `${id}: decide and close on a switched-off prototype`);
+    assert.equal(await desk.locator("#detail details.fold:not(.sect):has(#variant-frame)").count(), 0, `${id}: no live prototype, the options stay open`);
+    assert.equal(await desk.locator('#detail .next [data-act="close"]').count(), 1, `${id}: close with a decision on a switched-off prototype`);
   }
   await card("C-5");
   assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a lead developer does not send it");
-  assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1);
+  assert.equal(await desk.locator('#detail [data-act="close"]').count(), 1);
   await card("C-6");
   await desk.click('#detail [data-act="approve"]');
   assert.equal(await desk.locator("#cf-check2-wrap").isVisible(), true, "an adjustment reaches the coding agent: the box is offered");
@@ -1586,3 +1608,34 @@ test("lists show the newest first; a folded box stays folded on another option; 
   await desk.click('[data-filter="newFilter:all"]');
   assert.deepEqual(await rows(), ["C-5", "C-4"], "changes by the day they shipped");
 }));
+
+// A preview of a part (the hover peek, All elements, the enlarged part) hides the review bar,
+// and with it the outline its Show hotspots switch draws from the start.
+test("a preview of a design shows neither the review bar nor the hotspots' outline", async (t) => {
+  const browser = chromium();
+  if (!browser) return t.skip("no browser here");
+  let pw;
+  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  Object.assign(process.env, browser.env);
+  const src = (re) => { const m = page.match(re); assert.ok(m, `the page has ${re}`); return m[0]; };
+  const { SNIP_SCRIPT, ZOOM_SCRIPT } = new Function(`${src(/const js = \(v\) => [^\n]+;/)}
+    ${src(/const SNIP_SCRIPT = [\s\S]*?<\\\/script>`;/)}
+    ${src(/const ZOOM_SCRIPT = [\s\S]*?<\\\/script>`;/)}
+    return { SNIP_SCRIPT, ZOOM_SCRIPT };`)();
+  const sel = '[data-view="2"] button';
+  const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
+  try {
+    const pg = await chrome.newPage();
+    const state = () => pg.evaluate(() => ({ bar: getComputedStyle(document.getElementById("review")).display,
+      hot: document.documentElement.classList.contains("review-hot"), checked: document.querySelector("#review [data-hot]").getAttribute("aria-checked") }));
+    await pg.setContent(WITH_BAR);
+    const own = await state();
+    assert.deepEqual([own.hot, own.checked], [true, "true"], "the design itself starts with Show hotspots on");
+    for (const [name, sc] of [["a part's preview", SNIP_SCRIPT(sel, "", false)], ["the whole design's preview", SNIP_SCRIPT("", "", false)], ["an enlarged part", ZOOM_SCRIPT(sel)]]) {
+      await pg.setContent(WITH_BAR.replace("</body>", `${sc}</body>`));
+      assert.deepEqual(await state(), { bar: "none", hot: false, checked: "false" }, name);
+    }
+  } finally {
+    await chrome.close();
+  }
+});

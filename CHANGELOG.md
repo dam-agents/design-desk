@@ -7,6 +7,59 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.47.0 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). No option is the winner any more:
+Select as the winner and `POST /api/cards/<id>/chosen` are gone, a card's old `chosen` is
+ignored, and Approve, Build a live prototype and Add to presentation each ask which option,
+none picked ahead ([docs/desk.md](docs/desk.md)); a build item without a note asks which option
+([docs/prototype.md](docs/prototype.md) step 3). Share in Slack and Send designs to Slack are one
+**Send to Slack…** whose dialog sends the designs or asks for a vote; the items are as before
+(`slack-share`, `slack-send`). Close… and Decide and close… are one **Close…** whose dialog
+just closes or closes with a decision. Ask the team for feedback sits in the request's step pill,
+whose **Step n/m** alone opens the steps. All elements sit above the option's design, twice as
+large; Open in the design workspace is the request's main button. A request's text and From
+Design Desk show whole on a person's first visit, folded after (`desk-seen-requests` in the
+browser). People vote 👍, 👎 or ⚠ and only at the Team feedback step; a vote's kind may now be
+`dislike` (the Desk's own and a Slack 👎, [`slack-polls`](.agents/skills/slack-polls/SKILL.md)
+adds 👎 to its legend and counts it). Ask the team for feedback reads **Ask for feedback**, and
+Close… shows a cross. An element whose every state is drawn for the option's latest version
+says so in its dialog instead of a button to draw them again. The user stories sit under the
+option's design as cards side by side, in a section that folds like the others (folded at first), with no switch of their own and no second picture of it: a story pressed plays
+in the design above, the pointer going through its `parts` in their order
+([docs/requests.md](docs/requests.md) → User stories). Send to Slack… opens on Ask for a vote,
+which closes in 1, 5 or 24 hours (24 picked). While a story plays, a bar at the bottom of the window pauses,
+resumes or stops it, and only the design scrolls, never the Desk. A played story's numbered frames show only while
+the design's Show hotspots switch is on. A request at `feedback` reads **Team feedback**, as its
+step does, not Options ready.
+The review bar's switch that outlines hotspots starts on in designs built from now on (a design
+built before keeps its old bar, switch off), so a played story shows its numbered frames from the
+start; the Desk's previews of a part hide the outline with the bar (from #68, closed). The switch is
+renamed **Show hotspots** (was Clickable) in designs built from now on. The step pill always offers the
+move to the next step after a grey "Next:" — Draw design options, Ask for feedback, Build a live
+prototype, Try again; Approve, Close and ⋯ stay in the row, and any other action moves under ⋯. Votes from Slack count 👎 too, and every text that names the votes
+says 👍, 👎 and ⚠. A request no longer shows its "Asked for: N options" line. On the Desk a design's review bar
+leaves out its title (the option tab names it) and the product's own style line (`Style:
+<repo>@<commit>`); a fallback style keeps its line. The bar stays one row, its screens centred in it and scrolling
+sideways when the design is narrow. A request's text is only the asker's words: the store keeps no
+`goal` or `steps` for an idea (a bug report and Design Desk's own proposal keep theirs), the page
+shows an idea's problem and how they picture it only, so a goal written for an idea before is no
+longer shown, and the `intake-slack` skill copies a Slack message as it is, filling nothing in. The option's three sections — All elements, its design (headed
+Wireframe, Mockup, From Figma or Pictures) and User stories — share one heading with a count and a
+half-line hint, and each folds with +/− (elements and the design open at first, the stories
+folded); playing a story opens a folded design first. A story's card says why the option falls short of it (its
+`how`): amber when it meets part of it, red when not at all, nothing when it meets it; the
+verdict's words and the panel under the cards are gone, its ✓ ◐ ○ stays. From Design Desk shows without a box: a
+heading per part, and what folds as a quiet line with its count in a grey pill. Your name at the
+top opens a menu as wide as it, with How it works and day or night mode (the ? and ☾ buttons are
+gone); each tab's help draws its own flow from How it works (Requests the request's, Changes a
+shipped change's, Issues an issue's). The line under Questions and comments is gone: Ask Design Desk and
+Only comment (was Comment for the team) say on hover what happens and that everyone on the Desk sees it. A request's page fills the pane: no part of
+it stops at the reading width while others run on.
+
 ## 1.46.0 — 2026-11-05
 
 **Upgrade:**

@@ -414,6 +414,10 @@ test("a bug from Slack lands on the queue with where to answer", () => {
   assert.equal(item.kind, "request");
   assert.deepEqual(s.listCards({ kind: "request" }).map((c) => [c.type, c.reporter, c.screens]), [["bug", "Alice", 1]]);
   assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /type must be one of/);
+  // The request is the asker's words: an idea keeps no goal or steps anybody wrote for it.
+  const idea = s.createRequest({ agent: true }, { type: "idea", title: "Calmer list", problem: "The list shouts at me.", goal: "A calmer list that…", steps: "1. Open it" }).card;
+  assert.deepEqual([idea.request.problem, idea.request.goal, idea.request.steps], ["The list shouts at me.", "", ""]);
+  assert.equal(card.request.goal, "It wraps or shortens.", "a bug keeps what its reporter said should happen");
 });
 
 test("the pictures a person gives with a request are marked theirs; the agent's own stay as it named them", () => {
@@ -522,7 +526,7 @@ test("a worked-in change is answered with the place before and after", () => {
   assert.deepEqual(c.messages[0].shots.map((x) => x.pair), ["screen", "screen"]);
 });
 
-test("only a designer picks the winning option; votes only suggest one", () => {
+test("no option is the winner; votes only suggest one, and the presentation shows the one picked", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });
   const triaged = Object.values(s.db.inbox).find((i) => i.card === card.id);
@@ -533,21 +537,15 @@ test("only a designer picks the winning option; votes only suggest one", () => {
   assert.equal(s.card(card.id).status, "variants");
   s.openFeedback(card.id, alice);
   s.vote(card.id, alice, { variant: "v1", vote: "prefer" });
-  assert.equal(can("designer", "choose"), true);
-  assert.equal(can("pm", "choose"), false);
-  assert.throws(() => s.choose(card.id, { agent: true }, "v2"), (e) => e.status === 403);
-  assert.throws(() => s.choose(card.id, alice, "v9"), /Pick one/);
-  assert.equal(s.choose(card.id, alice, "v2").card.chosen.variant, "v2");
-  assert.match(s.getCard(card.id).attention.reasons.join(), /picked an option/);
-  // The agent's card writes never carry the pick.
+  assert.equal("choose" in s, false, "nobody picks a winner");
+  assert.equal(s.vote(card.id, alice, { variant: "v2", vote: "dislike" }).votes.v2[alice.email].vote, "dislike", "a person may vote against an option");
+  assert.throws(() => s.vote(card.id, alice, { variant: "v2", vote: "love" }), /prefer, dislike, concern or none/);
+  assert.match(s.getCard(card.id).attention.reasons.join(), /Options are ready/);
+  // The agent's card writes never carry a pick.
   s.upsertCard({ id: card.id, chosen: { variant: "v1" } });
-  assert.equal(s.getCard(card.id).chosen.variant, "v2");
-  // The next call presents the designer's pick, not the vote's favourite.
-  assert.equal(s.queueForCall(card.id, alice).card.agenda.variant, "v2");
-  assert.equal(s.choose(card.id, alice, null).card.chosen, undefined);
-  s.choose(card.id, alice, "v2");
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Table", asset: a }, { id: "v2", drop: true }] });
-  assert.equal(s.getCard(card.id).chosen, undefined, "an option that is gone is no longer the winner");
+  assert.equal(s.getCard(card.id).chosen, undefined);
+  // The presentation shows the option the person picks in its dialog.
+  assert.equal(s.queueForCall(card.id, alice, "", "v2").card.agenda.variant, "v2");
 });
 
 test("every state of a part: drawn per option, versioned, noted on its own; a build names what goes live", () => {
@@ -657,7 +655,7 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   assert.equal(s.act(card.id, alice, "close").card.live_pick, undefined);
 });
 
-test("Send designs to Slack is one slack item scoped send, and needs options", () => {
+test("Send to Slack, Send the designs, is one slack item scoped send, and needs options", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "A new empty state." });
   assert.throws(() => s.act(card.id, alice, "slack-send", "{}"), /no design options/);
@@ -765,11 +763,12 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"].via, "slack");
   s.slackVotes(card.id, "v1", []);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"], undefined);
-  // The agent's own legend 👍/⚠️ comes back among the reactions; it is a bot's, not a vote.
-  s.slackVotes(card.id, "v1", [{ key: "slack:UBOT", vote: "prefer", is_bot: true, name: "Design Desk" },
-    { key: "slack:U2", vote: "concern", name: "Petr" }]);
+  // The agent's own legend 👍/👎/⚠️ comes back among the reactions; it is a bot's, not a vote.
+  s.slackVotes(card.id, "v1", [{ key: "slack:UBOT", vote: "prefer", is_bot: true, name: "Design Desk" }, { key: "slack:UBOT", vote: "dislike", is_bot: true, name: "Design Desk" },
+    { key: "slack:U2", vote: "concern", name: "Petr" }, { key: "slack:U3", vote: "dislike", name: "Eva" }]);
   assert.equal(s.getCard(card.id).votes.v1["slack:UBOT"], undefined, "a bot's reaction is never a vote");
   assert.equal(s.getCard(card.id).votes.v1["slack:U2"].vote, "concern");
+  assert.equal(s.getCard(card.id).votes.v1["slack:U3"].vote, "dislike", "a 👎 in Slack is a vote against the option");
   s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" });
   assert.equal(s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" }).duplicate, true);
   assert.equal(s.getCard(card.id).threads.filter((t) => t.slack_ts === "1.2")[0].messages[0].by.via, "slack");

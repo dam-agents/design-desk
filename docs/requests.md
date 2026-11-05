@@ -17,8 +17,12 @@ Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own propo
 
 **The request is the person's words.** `problem`, `goal`, `steps` and `vision` hold what the
 person who asked wrote, as they wrote it (an issue's body, a Slack message, the operator's
-chat), cut at 4000 characters, never summarized or reworded; what Design Desk makes of it
-goes in research, `issue_brief` and triage. Only a `proposal` is Design Desk's own words.
+chat), cut at 4000 characters, never summarized, reworded or filled in; what Design Desk makes
+of it goes in research, `issue_brief` and triage. An idea's text is its `problem`, their whole
+message (and `vision`, how they picture it, from the Desk's dialog); `goal` (what should
+happen) and `steps` are a bug report's, only when the reporter wrote them, and the store keeps
+neither for an idea. A field they did not write stays empty. Only a `proposal` is Design Desk's
+own words.
 
 ## Research (`requests_due`, before triage)
 
@@ -210,8 +214,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     what people preferred, and add one comment listing what changed per comment, with each
     option's whole view before and after (`design compare` without a selector, `design desk
     comment … --shots`). Never drop
-    or merge an option on votes: only a designer's pick (the card's `chosen`, **Pick as the
-    winner**) says which option wins, and only a designer removes one: the ✕ on its tab takes it
+    or merge an option on votes: no option is the winner (Approve, Build and the presentation
+    each ask the person which option), and only a designer removes one: the ✕ on its tab takes it
     off the card (no run; the card's `dropped_options` says who and when). The last option, the
     one a live prototype is built from, the approved one and one on the presentation (queued or presented) stay. The
     store refuses (409) an upsert that sends a removed option's id again: leave it out, or
@@ -227,8 +231,11 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
 - **User stories**: with an `issue_brief`, each option says how it meets every story:
   `stories: [{story, met, how, parts}]` — `met` is `yes`, `partly` or `no`; `how` one or two
   plain sentences; `parts` the elements that do it (`{selector, label, view}`, at most 6: a
-  CSS path in the option's file, a plain label, the `data-view` it is on). The page outlines
-  them when a person picks the story. An entry without `stories` keeps the option's coverage
+  CSS path in the option's file, a plain label, the `data-view` it is on), in the order the
+  story goes through them. The stories sit under the option's design; a person who presses one
+  plays it there: a pointer goes to each part in that order, outlines it and clicks it when it
+  is a button, a link to its own page or a box to tick. A bar at the bottom of the window pauses, resumes or
+  stops it. An entry without `stories` keeps the option's coverage
   from before; a revised option whose parts moved sends its new `stories`.
 - **Why it looks like this**: each option names the decisions on the Desk it follows and the
   parts each one shaped: `reasons: [{decision, how, parts}]` — `decision` a `D-<n>` in force
@@ -248,8 +255,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   part in the product's words; `change` `new` or `changed`; `how` one sentence on what is new or
   different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
-  (`C-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them under the
-  option as **All elements**; one opens in a dialog with its states. A state belongs to the
+  (`C-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
+  option's design as **All elements**; one opens in a dialog with its states. A state belongs to the
   element its `element` names, else to the one named as its `part`. An entry without `elements`
   keeps the option's; a revise that adds, removes or moves a part sends them anew. The tiles
   are cut from the option's latest version, so they follow every change of it.
@@ -268,7 +275,9 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
 ## Every state of a part (`variants_due`: `states`)
 
 A designer or developer opens an element of an option under **All elements** and presses
-**Draw every state**; the design workspace has no such button. A chat request names the part
+**Draw every state**; the design workspace has no such button. Once every state is drawn for
+the option's latest version, the dialog says so instead of the button: nothing is left to draw
+until the option changes. A chat request names the part
 instead. The item names the option (`variant`), the element (`element`: its id, or `part-…`
 for a part only its states named), the part (`part`: `{selector, text, label, view,
 view_name}`; none when they only named it) and their words (`note`). It works on a request

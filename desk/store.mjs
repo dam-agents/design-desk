@@ -64,7 +64,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     // Skip the vote and the live prototype: approve straight away, or decide and close
     // (docs/desk.md → Deciding straight away).
     case "skip": return shaper || role === "lead-developer";
-    // Deciding: approve, close and reopen, the presentation, handled, the winner.
+    // Deciding: approve, close and reopen, the presentation, handled, removing an option.
     case "queue": case "approve": case "close": case "reopen": case "handle": case "choose":
     // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
     case "decide": return shaper;
@@ -367,7 +367,7 @@ export class Store {
       else if (!busy && c.status === "triage" && c.triage) reasons.push("Checked: draw options, decide or close it");
       else if (!busy && c.status === "variants" && c.team_feedback?.state === "waiting") reasons.push("Options are drawn: fine-tune them, then ask the team for feedback");
       // A small change waits for a developer's approval, not a designer's.
-      else if (!busy && !c.size?.small && c.status === "feedback") reasons.push(c.chosen ? "A designer picked an option: approve it or build it live" : "Options are ready: pick one or ask for changes");
+      else if (!busy && !c.size?.small && c.status === "feedback") reasons.push("Options are ready: approve one, build it live or ask for changes");
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
     reasons.push(...suggested);
@@ -649,25 +649,10 @@ export class Store {
     return { threads: ts, inbox: item };
   }
 
-  // Only a designer or the lead picks the winning option; votes and the agent only advise.
-  choose(cardId, who, variant) {
-    const c = this.card(cardId);
-    if (who?.agent) throw forbidden("only a designer picks the winning option");
-    if (c.kind !== "request") throw bad("only a design request has options to pick from");
-    if (variant === null) { delete c.chosen; }
-    else {
-      if (!(c.variants || []).some((v) => v.id === variant)) throw bad("Pick one of the design options.");
-      c.chosen = { variant, by: person(who), at: this.clock() };
-    }
-    c.updated = this.clock();
-    this.save();
-    return { card: c };
-  }
-
   vote(cardId, who, { variant, vote, note = "" }) {
     const c = this.card(cardId);
     if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no variant ${variant}`);
-    if (!["prefer", "concern", "none"].includes(vote)) throw bad("vote must be prefer, concern or none");
+    if (!["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
     c.votes = c.votes || {};
     c.votes[variant] = c.votes[variant] || {};
     const key = who.email || who.sub;
@@ -686,9 +671,13 @@ export class Store {
   createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false }) {
     if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
+    // The request is the asker's words (docs/requests.md): an idea's are its problem (and how they
+    // picture it); what should happen and the steps belong to a bug report, and to Design Desk's
+    // own proposal. Nobody fills them in for an idea, so they are not kept for one.
+    const reported = type === "bug" || type === "proposal";
     const request = {
-      type, problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"),
-      screen: optText(screen, 500, "screen"), steps: optText(steps, LIMITS.text, "steps"),
+      type, problem: clean(problem, LIMITS.text, "problem"), goal: reported ? optText(goal, LIMITS.text, "goal") : "",
+      screen: optText(screen, 500, "screen"), steps: reported ? optText(steps, LIMITS.text, "steps") : "",
       from: from ? this.card(String(from)).id : null,
       figma: figma ? String(figma) : null,
       // How the person pictures it, and the skills they switched for its options (docs/requests.md).
@@ -862,7 +851,6 @@ export class Store {
     if (c.agenda?.status !== "removed" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation${c.agenda.status === "presented" ? " the team saw" : ""}. Take it off the presentation first.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind))) throw bad(BUSY);
     c.variants = c.variants.filter((x) => x.id !== v.id);
-    if (c.chosen?.variant === v.id) delete c.chosen;
     if (c.live_pick?.variant === v.id) delete c.live_pick;
     c.dropped_options = [...(c.dropped_options || []), { id: v.id, name: v.name, version: v.version || 1, by: person(who), at: this.clock() }].slice(-20);
     c.updated = this.clock();
@@ -1356,8 +1344,6 @@ export class Store {
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") {
         next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || [], this.db.cards), c?.variants || [], this.clock(), (c?.dropped_options || []).map((x) => x.id));
-        // A designer's pick of an option the redraw no longer has is no pick.
-        if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
         // Nor does an option taken off go live, nor a build still waiting to build it.
         if (next.live_pick && !next.variants.some((v) => v.id === next.live_pick.variant)) { goneLive = next.live_pick.variant; delete next.live_pick; }
       }
@@ -1592,8 +1578,8 @@ export class Store {
     const box = (c.votes[variant] = c.votes[variant] || {});
     for (const [k, x] of Object.entries(box)) if (x.via === "slack") delete box[k];
     for (const v of voters.slice(0, 500)) {
-      if (!["prefer", "concern"].includes(v.vote)) continue;
-      // The agent's own 👍 and ⚠️ are the legend it puts on each post so a vote is one
+      if (!["prefer", "dislike", "concern"].includes(v.vote)) continue;
+      // The agent's own 👍, 👎 and ⚠️ are the legend it puts on each post so a vote is one
       // click (slack-polls → Share 4), not votes: a bot's reaction never counts.
       if (v.is_bot === true) continue;
       const key = clean(String(v.key || ""), 200, "voter key");
@@ -1794,8 +1780,6 @@ export class Store {
 function favouriteOf(c) {
   const vs = c.variants || [];
   if (vs.length === 1) return vs[0];
-  const chosen = vs.find((v) => v.id === c.chosen?.variant);
-  if (chosen) return chosen;
   const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
   const s = [...vs].sort((a, b) => score(b) - score(a));
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;

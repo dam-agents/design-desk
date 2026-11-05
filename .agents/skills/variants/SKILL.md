@@ -175,7 +175,7 @@ Rules — `design build` enforces the mechanical ones:
   wizard, a dialog that opens) is one view per screen, and every control that leads on carries
   `data-goto-view="<n>"` (`"back"` to return), so a person clicks through it as in the product.
   Everything that looks clickable does something — goes to a view, opens a menu or toggles
-  state — or is not drawn as a control. The review bar's **Clickable** switch outlines only
+  state — or is not drawn as a control. The review bar's **Show hotspots** switch outlines only
   what is wired (`data-goto-view`, `data-menu-trigger`, `onclick`); a control a small script
   toggles carries `data-clickable` so it shows too. `design build` refuses a `data-goto-view`
   with no view of that number.
@@ -204,7 +204,7 @@ Self-check:
 - built into the real screen (or, without a repo, a complete plausible one), not a floating card;
 - approaches distinct and each simple; no rationale text on the page;
 - a flow walks from its first view to its last by clicking, and nothing that looks clickable is dead;
-- every control a script toggles carries `data-clickable`, so **Clickable** outlines it;
+- every control a script toggles carries `data-clickable`, so **Show hotspots** outlines it;
 - classes and copy from the source; no hand-written CSS;
 - empty state where something can be empty; light and dark both work.
 

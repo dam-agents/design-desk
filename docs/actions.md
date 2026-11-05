@@ -35,8 +35,8 @@ its `SKILL.md` is; read it before doing the action.
 | `request-intake` | put a design asked for in Slack on the queue; its options and vote go back to its thread | a Slack message | `intake-slack` |
 | `figma-import` | a Figma frame as an option rebuilt from the product's parts | Import from Figma; a Figma link in a request or chat | `figma` |
 | `figma-export` | an option or a prototype into Figma as layers | Send to Figma; a request's `figma` switch in New request; chat | `figma` |
-| `share-options` | post the options to Slack, one message each, for 👍 / ⚠️ votes and replies | Share in Slack; chat | `slack-polls` |
-| `send-designs` | post pictures of the options to Slack: the request's own thread, else the channel | Send designs to Slack (`slack_due`, `scope: send`) | `slack-polls` |
+| `share-options` | post the options to Slack, one message each, for 👍 / 👎 / ⚠️ votes and replies | Send to Slack… → Ask for a vote; chat | `slack-polls` |
+| `send-designs` | post pictures of the options to Slack: the request's own thread, else the channel | Send to Slack… → Send the designs (`slack_due`, `scope: send`) | `slack-polls` |
 | `poll-sync` | bring Slack votes and replies to the Desk; close the vote with its result | every 30 minutes while a vote is open | `slack-polls` |
 | `council` | each ask in a request's Slack thread as a new option or version, answered there before/after | an ask in a Slack thread; `councils_due` | `slack-council` |
 | `catalog` | a real element drawn in every state; its earlier versions | onboarding; Update the drawing; Draw how it looked before; + Add on the Desk; the watch | [catalog.md](catalog.md) |

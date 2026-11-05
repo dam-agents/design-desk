@@ -49,6 +49,11 @@ test("a click walks the flow, Back retraces it, a dead spot flashes what is clic
     assert.equal(await shown(), "1");
     assert.equal(await pg.isVisible("#review-back"), false);
     const hot = () => pg.evaluate(() => document.documentElement.classList.contains("review-hot"));
+    // Show hotspots starts on; the rest of the flow is checked with it switched off.
+    assert.equal(await hot(), true, "Show hotspots starts on");
+    assert.equal(await pg.getAttribute("#review [data-hot]", "aria-checked"), "true");
+    await pg.click("#review [data-hot]");
+    assert.equal(await hot(), false);
     // Every wired control acts, and so does a field: neither flashes as a dead spot.
     const fields = ["#field", "#pick", "#area", "#name", "#sum", "#note"];
     for (const s of ["#menu", "#js", "#mark", ...fields]) { await pg.click(s); assert.equal(await hot(), false, s); }
