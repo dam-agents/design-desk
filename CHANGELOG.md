@@ -21,6 +21,15 @@ and the watch run compares a shipped change with the approved design it builds
 (`design desk answer … --warns`): what the note goes against, shown as a box under the answer.
 New fields are optional; no state to migrate, no config change.
 
+## 1.43.2 — 2026-11-05
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The list is white and the page
+lighter, as on the team's design; a list card's second line is grey. In a list, an issue's or
+a pull request's preview shows on its link alone and a label's line on the label alone, not
+over the whole card. A request's open steps close on a click outside them. No server restart, no data change.
+
 ## 1.43.1 — 2026-11-05
 
 **Upgrade:**
