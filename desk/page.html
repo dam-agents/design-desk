@@ -323,14 +323,15 @@
   /* The issue's user stories: pick one, see the parts of the option that meet it and how. */
   /* The issue's user stories under the option's design: one pressed plays in the design above. */
   .stories { margin: 16px 0 4px; }
-  .stories ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-  .stories ol button { width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 9px 12px; cursor: pointer; font: inherit; font-size: 13.5px; color: var(--ink); display: flex; gap: 10px; align-items: flex-start; }
+  .stories ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px; }
+  .stories li { display: flex; }
+  .stories ol button { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 12px 34px 12px 14px; cursor: pointer; font: inherit; font-size: 14px; line-height: 1.5; color: var(--ink); display: flex; gap: 10px; align-items: flex-start; }
   .stories ol button:hover { border-color: var(--accent); }
   .stories ol button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .stories ol button .txt { flex: 1; }
-  .stories ol button .play { flex: none; color: var(--accent); font-size: 12px; line-height: 20px; }
+  .stories ol button .play { position: absolute; right: 12px; top: 13px; color: var(--accent); font-size: 11px; }
   .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--muted); }
-  .stories .how { margin: 6px 0 4px 40px; font-size: 13.5px; } .stories .how b { display: block; margin-bottom: 2px; } .stories .how p { margin: 0; }
+  .stories .how { margin: 10px 0 4px; font-size: 13.5px; max-width: var(--measure); } .stories .how b { display: block; margin-bottom: 2px; } .stories .how p { margin: 0; }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -3173,9 +3174,10 @@
       : `<div class="how"><b>${esc(MET[k.met][1])}</b>${md(k.how)}</div>`;
     const item = (x) => {
       const k = cov(x.id), on = x.id === st.id, plays = (k?.parts || []).length > 0;
-      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button>${on ? how(k) : ""}</li>`;
+      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;
     };
-    return `<section class="stories" id="stories"><div class="elhead"><h4>User stories<span class="n">${ss.length}</span></h4><span class="hint">Press one to play it in ${esc(v.name)} above.</span></div><ol>${ss.map(item).join("")}</ol></section>`;
+    // The stories are cards side by side; how the option meets the one picked shows under them.
+    return `<section class="stories" id="stories"><div class="elhead"><h4>User stories<span class="n">${ss.length}</span></h4><span class="hint">Press one to play it in ${esc(v.name)} above.</span></div><ol>${ss.map(item).join("")}</ol>${how(cov(st.id))}</section>`;
   }
   // Plays the picked story in the option's design: the frame moves a pointer part by part.
   function playStory() {
