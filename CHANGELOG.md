@@ -28,7 +28,7 @@ browser). People vote 👍, 👎 or ⚠ and only at the Team feedback step; a vo
 adds 👎 to its legend and counts it). Ask the team for feedback reads **Ask for feedback**, and
 Close… shows a cross. An element whose every state is drawn for the option's latest version
 says so in its dialog instead of a button to draw them again. The user stories sit under the
-option's design as cards side by side, with no switch of their own and no second picture of it: a story pressed plays
+option's design as cards side by side, in a section that folds like the others (folded at first), with no switch of their own and no second picture of it: a story pressed plays
 in the design above, the pointer going through its `parts` in their order
 ([docs/requests.md](docs/requests.md) → User stories). Send to Slack… opens on Ask for a vote,
 which closes in 1, 5 or 24 hours (24 picked). A played story's numbered frames show only while
