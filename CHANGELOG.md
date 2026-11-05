@@ -41,7 +41,9 @@ start; the Desk's previews of a part hide the outline with the bar (from #68, cl
 renamed **Show hotspots** (was Clickable) in designs built from now on. The step pill always offers the
 move to the next step after a grey "Next:" — Draw design options, Ask for feedback, Build a live
 prototype, Try again; Approve, Close and ⋯ stay in the row, and any other action moves under ⋯. Votes from Slack count 👎 too, and every text that names the votes
-says 👍, 👎 and ⚠. A request no longer shows its "Asked for: N options" line.
+says 👍, 👎 and ⚠. A request no longer shows its "Asked for: N options" line. On the Desk a design's review bar
+leaves out its title (the option tab names it) and the product's own style line (`Style:
+<repo>@<commit>`); a fallback style keeps its line.
 
 ## 1.46.0 — 2026-11-05
 

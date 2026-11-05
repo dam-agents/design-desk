@@ -3451,6 +3451,12 @@
     html #review .seg button { padding: 4px 11px; border-radius: 7px; color: #6b6b66; opacity: 1; font-size: 14px; }
     html #review .seg button[aria-pressed="true"] { background: #fff; color: #1b1b1a; font-weight: 600; box-shadow: 0 0 0 1px #e4e3df; }
     html #review .seg button:hover:not([aria-pressed="true"]) { color: #1b1b1a; }
+    /* The product's own style (Style: <repo>@<commit>) goes without saying on the Desk; a fallback
+       style (wireframe, Carbon, a saved brand) keeps its line, so it never passes for the product's look. */
+    html[data-review-style*="@"]:not([data-review-style^="Style: brand"]) #review .style { display: none; }
+    html #review [data-hot] { margin-left: auto; }
+    /* The design's title (number and name) repeats its option tab on the Desk. */
+    html #review #review-title { display: none; }
   </style>`;
   const withLook = (html) => (html.includes("</head>") ? html.replace("</head>", `${REVIEW_LOOK}</head>`) : html.includes("</body>") ? html.replace("</body>", `${REVIEW_LOOK}</body>`) : html + REVIEW_LOOK);
   const withScript = (html) => { html = withLook(html); return html.includes("</body>") ? html.replace("</body>", `${FRAME_SCRIPT}</body>`) : html + FRAME_SCRIPT; };
