@@ -50,7 +50,8 @@ shows an idea's problem and how they picture it only, so a goal written for an i
 longer shown, and the `intake-slack` skill copies a Slack message as it is, filling nothing in. The option's three sections — All elements, its design (headed
 Wireframe, Mockup, From Figma or Pictures) and User stories — share one heading with a count and a
 half-line hint, and each folds with +/− (elements and the design open at first, the stories
-folded); playing a story opens a folded design first.
+folded); playing a story opens a folded design first. Each story's card says, grey, how the option meets it
+(its `how`); the verdict's words and the panel under the cards are gone, its ✓ ◐ ○ stays.
 
 ## 1.46.0 — 2026-11-05
 

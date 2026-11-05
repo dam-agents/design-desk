@@ -338,7 +338,7 @@
   .stories ol button .txt { flex: 1; }
   .stories ol button .play { position: absolute; right: 12px; top: 13px; color: var(--accent); font-size: 11px; }
   .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--muted); }
-  .stories .how { margin: 10px 0 4px; font-size: 13.5px; max-width: var(--measure); } .stories .how b { display: block; margin-bottom: 2px; } .stories .how p { margin: 0; }
+  .stories .how { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.45; }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -3188,15 +3188,15 @@
     const st = storyOf(c);
     const cov = (id) => (v.stories || []).find((x) => x.story === id) || null;
     const mark = (x) => { const m = MET[cov(x.id)?.met]; return `<span class="met ${esc(cov(x.id)?.met || "")}" title="${esc(m?.[1] || "Not said yet")}">${m?.[0] || "·"}</span>`; };
-    const how = (k) => !k ? `<p class="hint how">Design Desk has not said yet how ${esc(v.name)} meets this story.</p>`
-      : `<div class="how"><b>${esc(MET[k.met][1])}</b>${md(k.how)}</div>`;
+    // How the option meets the story, in Design Desk's words, grey in the story's own card.
+    const how = (k) => `<span class="how">${k ? txt(k.how) : `Design Desk has not said yet how ${esc(v.name)} meets this story.`}</span>`;
     const item = (x) => {
       const k = cov(x.id), on = x.id === st.id, plays = (k?.parts || []).length > 0;
-      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;
+      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}${how(k)}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;
     };
-    // The stories are cards side by side; how the option meets the one picked shows under them.
+    // The stories are cards side by side, each saying how the option meets it.
     // The section folds like the sections below it: folded at first, then as the person left it.
-    return sect("stories", "User stories", ss.length, `Press one to play it in ${esc(v.name)} above.`, `<ol>${ss.map(item).join("")}</ol>${how(cov(st.id))}`);
+    return sect("stories", "User stories", ss.length, `Press one to play it in ${esc(v.name)} above.`, `<ol>${ss.map(item).join("")}</ol>`);
   }
   // While a story plays, a bar at the bottom of the window pauses, resumes or stops it; the
   // design says where it is (desk-play-state), and the bar goes when the story ends or stops.
