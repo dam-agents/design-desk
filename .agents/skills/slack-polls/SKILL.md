@@ -43,8 +43,9 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
    "*Option <A/B/C>: <name>* — <its one line on when it wins>". When the request has a live
    prototype, one more message: "Try it live: the link and the demo account are on the Desk".
    Never a password in Slack.
-4. Where the platform lets you react to your own post, add 👍, 👎 and ⚠️ to each option's message
-   so a vote is one click.
+4. Add 👍, 👎 and ⚠️ to each option's message, so a vote is one click and people see all three
+   choices (where the platform does not let you react to your own post, the opening message's
+   legend says them).
 5. Record the poll: `design desk poll-open C-<n> <poll.json>` with `{chat, root_ts, posts:
    [{variant, ts}], closes, channel}` — `root_ts` is the opening message's `ts`, each post's
    `ts` the option's. Then `design desk done I-<n> --session <id> --outcome shared`.
@@ -108,4 +109,4 @@ Someone tags you in an option's thread: `design desk find-poll <thread ts>` name
 poll and option. Relay their reply as a comment (Sync → 3), and answer in one line: "Added to
 the Desk (C-<n>): <link>." Attach the option's current PNG still when it is available. A vote
 written in words ("I'd take B") is a comment; votes are the reactions, and you say so: "React
-with 👍 on the option to vote."
+with 👍, 👎 or ⚠️ on the option to vote."

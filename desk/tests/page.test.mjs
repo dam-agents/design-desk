@@ -1014,7 +1014,7 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.waitForSelector("text=User stories");
   assert.match(await desk.textContent("#detail .linked"), /Designs the issue.*See what each agent spends.*Issue #41/, "the request names the issue it designs");
   assert.match(await desk.textContent("#detail details.fold summary >> nth=0"), /What the issue says about the design · 2 user stories/);
-  assert.match(await desk.textContent("#detail"), /Asked for: 2 options · questions first/);
+  assert.doesNotMatch(await desk.textContent("#detail"), /Asked for:/, "the request does not repeat how many options it asked for");
   assert.match(await desk.textContent("#detail"), /What we agreed before the design · 2 questions/);
   assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), false, "user stories start folded");
   await desk.click("details[data-stories] > summary");

@@ -40,7 +40,8 @@ built before keeps its old bar, switch off), so a played story shows its numbere
 start; the Desk's previews of a part hide the outline with the bar (from #68, closed). The switch is
 renamed **Show hotspots** (was Clickable) in designs built from now on. The step pill always offers the
 move to the next step after a grey "Next:" — Draw design options, Ask for feedback, Build a live
-prototype, Try again; Approve, Close and ⋯ stay in the row, and any other action moves under ⋯.
+prototype, Try again; Approve, Close and ⋯ stay in the row, and any other action moves under ⋯. Votes from Slack count 👎 too, and every text that names the votes
+says 👍, 👎 and ⚠. A request no longer shows its "Asked for: N options" line.
 
 ## 1.46.0 — 2026-11-05
 

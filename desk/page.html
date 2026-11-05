@@ -620,7 +620,7 @@
   .chip { font-size: var(--fs-meta); padding: 1px 9px; line-height: 1.5; font-weight: 500; }
   .chip.bad { background: var(--closed-soft); color: var(--closed); }
   .anchor { font-size: var(--fs-meta); }
-  /* Votes: pills with their count, grey until someone votes, then green for 👍, amber for ⚠. */
+  /* Votes: pills with their count, grey until someone votes, then green for 👍, red for 👎, amber for ⚠. */
   .btn.vote { border-radius: 999px; background: var(--panel); color: var(--muted); }
   .btn.vote .n { font-weight: 600; }
   .btn.vote.some.up { background: color-mix(in srgb, var(--approved-soft) 70%, var(--panel)); border-color: color-mix(in srgb, var(--approved) 25%, var(--line)); color: var(--approved); }
@@ -1837,7 +1837,7 @@
         "<b>Presentation</b>: what designers chose to show at the team's next design meeting, each in its final version with a short brief.",
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
-        ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
+        ["Vote on the options with <b>👍</b>, <b>👎</b> or <b>⚠</b> while the team gives feedback, and comment on any part. Votes from Slack count here too.", "vote"],
         ["<b>Ask for feedback</b>, beside the request's step, once its options are fine-tuned: its author may, whatever their role, and designers, developers and leads may on any request filed here. One from Slack goes to the team by itself.", "request"],
         ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
@@ -2903,7 +2903,7 @@
         buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
-      return { text: "Your turn: look at the options, 👍 the one you like or ⚠ what worries you, and comment on any part.",
+      return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
         step: design && can("build") ? sb("build", "Build a live prototype") : "",
         buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
@@ -3095,7 +3095,7 @@
       <div class="top2">
       <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c, bug)}</div><div class="brief-body">
       ${renderLinked(c)}
-      <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${!bug && r.goal ? md(r.goal) : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}${askedFor(r)}</div>
+      <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${!bug && r.goal ? md(r.goal) : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
       <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent" aria-hidden="true">D</span><span class="ask-who"><b>From Design Desk</b></span></div><div class="brief-body">
       ${againstBox(c)}${followsLine(c)}
@@ -3139,10 +3139,6 @@
     const rs = S.cards.filter((x) => x.kind === "request" && x.from === c.id);
     if (!rs.length) return "";
     return `<div class="linked"><span class="k">${rs.length === 1 ? "A request from this" : `${rs.length} requests from this`}</span>${rs.map((x) => `<button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>${num(x)}<span class="chip" title="Where that request is now">${esc(STATUS[x.status] || x.status)}</span>`).join("")}</div>`;
-  }
-  function askedFor(r) {
-    if (r.type === "bug" || r.options === undefined) return "";
-    return `<p class="hint">Asked for: ${r.options ? optionsSay(r.options).toLowerCase() : "no design options, only a check of what can be done"}${r.grill ? " · questions first" : ""}</p>`;
   }
 
   // What the issue says about the design: only the parts about what people see (docs/requests.md → Research).
@@ -4089,7 +4085,7 @@
     f.reset();
     const where = c.origin?.channel === "slack" ? "in the Slack thread this request came from" : "to the team's Slack channel";
     $("#sl-send-hint").textContent = `Design Desk takes a picture of each design you tick and posts them ${where}, with a link back here. Comments and the decision stay here on the Desk.`;
-    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
+    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍, 👎 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
     const vs = c.variants || [];
     $("#sl-options").innerHTML = vs.map((v) => `<label><input type="checkbox" name="option" value="${esc(v.id)}" checked /> ${esc(v.name)}${tallyText(c, v.id) ? ` <span class="sub">${esc(tallyText(c, v.id))}</span>` : ""}</label>`).join("");
     const at = (hours) => new Date(Date.now() + hours * 3600e3).toISOString();

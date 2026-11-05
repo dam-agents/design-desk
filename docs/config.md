@@ -47,7 +47,7 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   `max_issue_drawings` (`5`) — issues drawn a day.
 - `digest` (`desk`) — where the weekly UX digest goes: `desk` | `slack` (the Desk and the
   bound channel) | `disabled`.
-- `slack_polls` (`disabled`) — `enabled`: designers and developers share options in Slack for 👍 / ⚠️ votes
+- `slack_polls` (`disabled`) — `enabled`: designers and developers share options in Slack for 👍 / 👎 / ⚠️ votes
   and replies (the `slack-polls` skill); `slack_poll_channel` — where (empty: the bound channel); a request from Slack votes in its own thread.
 - `slack_send` (`disabled`) — `enabled`: **Send to Slack… → Send the designs** posts pictures of a request's
   options to `slack_poll_channel` (the `slack-polls` skill → Send); a request from Slack has the
