@@ -84,9 +84,7 @@ served by the Desk server through the platform's Artifact API relay.
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
   button). An option's design (the mockup) starts folded; it opens with a click, and a user
-  story played opens it, and All elements stays open. In the list every request shows its state
-  as a dot left of its title, in the first line's middle when the title wraps, each state in a
-  colour of its own; pointing at the row unfolds its words. Nothing names a role a request needs:
+  story played opens it, and All elements stays open. Nothing names a role a request needs:
   no **Needs a designer** filter, line or heading, no **Needs a developer** label (what a design
   change cannot do still folds under the status). A request offers no rename. Switching the mode
   starts an option's sections again as the mode has them. The tab
@@ -302,6 +300,13 @@ prototype once Design Desk has checked a request:
   and Approve approves what it was built from — `live_pick`'s option and version (set on Build
   it live), whatever the note, also back at Team feedback after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
   spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
+
+## A request's state in the list
+
+In both modes, each request in the list shows its state as a dot in the row's top-right corner,
+as tall as the state's label and level with the title's first line, each state in a colour of
+its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
+the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 
 ## Read and unread
 

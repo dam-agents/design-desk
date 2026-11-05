@@ -598,22 +598,27 @@
   .t-decided { --t: var(--decided); --ts: var(--decided-soft); } .t-closed { --t: var(--closed); --ts: var(--closed-soft); }
   .t-checking { --t: var(--accent); --ts: var(--info-soft); } .t-live { --t: var(--live); --ts: var(--live-soft); }
   .t-checking::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
-  /* Simple mode: a request's state in the list is only its dot, left of the title on every request,
-     in the first line's middle when the title wraps; each state has its own colour. Pointing at the
-     dot itself (not the row) unfolds its words rightwards over the line, so nothing moves. */
-  .row .t .sdot { position: relative; flex: none; align-self: flex-start; width: 9px; height: 1.4em; height: 1lh; }
-  .sdot .tag { position: absolute; left: -3px; top: 50%; z-index: 1; transform: translateY(-50%); padding: 1px 4px 1px 2px; gap: 0; color: var(--t); background: transparent; box-shadow: none; white-space: nowrap; transition: background .2s ease, padding .2s ease, gap .2s ease; }
-  .sdot .tag::before { width: 9px; height: 9px; }
-  .sdot .tag.busy::before { background: currentColor; box-shadow: none; }
+  /* A request's state in the list: a dot as tall as the state's label, in the top-right corner of
+     its row, level with the title's first line, in the state's own colour. It pulses while Design
+     Desk works on it and stays lit once it is done. Pointing at the dot itself (not the row)
+     unfolds it leftwards into the label with its words, over the title, so nothing moves. */
+  .row .t .sdot { --dh: 20px; position: relative; flex: none; align-self: flex-start; width: var(--dh); height: max(var(--dh), 1lh); }
+  .sdot .tag { position: absolute; right: 0; top: 50%; z-index: 1; transform: translateY(-50%); box-sizing: border-box; height: var(--dh); min-width: var(--dh); padding: 0; gap: 0; justify-content: center;
+    color: var(--t); background: var(--t); box-shadow: none; white-space: nowrap; cursor: default; transition: background .2s ease, padding .2s ease, gap .2s ease, box-shadow .2s ease; }
+  .sdot .tag::before { width: 0; height: 7px; transition: width .2s ease; }
+  .sdot .tag.busy { animation: pulse 1.2s ease-in-out infinite; }
+  .sdot .tag.busy::before, .sdot .tag.t-checking::before { background: currentColor; box-shadow: none; }
   .sdot .tag .w { display: inline-block; max-width: 0; overflow: hidden; opacity: 0; vertical-align: bottom; transition: max-width .25s ease, opacity .2s ease; }
-  .row .sdot:hover .tag, .row .open:focus-visible .sdot .tag { background: linear-gradient(color-mix(in srgb, var(--t) 14%, transparent), color-mix(in srgb, var(--t) 14%, transparent)) var(--panel); padding: 1px 9px 1px 5px; gap: 6px; box-shadow: 6px 0 6px var(--panel); }
+  .row .sdot:hover .tag, .row .open:focus-visible .sdot .tag { animation: none; background: color-mix(in srgb, var(--t) 16%, var(--panel)); padding: 0 10px 0 8px; gap: 6px; box-shadow: -8px 0 8px var(--panel); }
+  .row .sdot:hover .tag::before, .row .open:focus-visible .sdot .tag::before { width: 7px; }
+  .row .sdot:hover .tag.busy::before, .row .open:focus-visible .sdot .tag.busy::before { animation: pulse 1.2s ease-in-out infinite; }
   .row .sdot:hover .tag .w, .row .open:focus-visible .sdot .tag .w { max-width: 24ch; opacity: 1; }
   .sdot[data-s="triage"] .tag { --t: var(--accent); } .sdot[data-s="variants"] .tag { --t: var(--why); }
   .sdot[data-s="held"] .tag { --t: var(--waiting); } .sdot[data-s="feedback"] .tag { --t: #e0701a; }
   .sdot[data-s="prototype"] .tag { --t: var(--live); } .sdot[data-s="testing"] .tag { --t: #c43d8f; }
   .sdot[data-s="spec"] .tag { --t: #3fa35f; } .sdot[data-s="handed-off"] .tag { --t: var(--approved); }
   .sdot[data-s="decided"] .tag { --t: var(--decided); } .sdot[data-s="declined"] .tag { --t: var(--closed); }
-  @media (prefers-reduced-motion: reduce) { .sdot .tag, .sdot .tag .w { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .sdot .tag, .sdot .tag::before, .sdot .tag .w { transition: none; } }
   .chip.ok { background: var(--approved-soft); color: var(--approved); } .chip.warn { background: var(--waiting-soft); color: var(--waiting); }
   /* The status strip: where the request stands, its word in the state's ink, a coloured edge. */
   .status { --o: var(--muted); --os: var(--soft); padding: 12px 16px 12px 18px; border: 1px solid var(--line); border-left: 4px solid var(--o); border-radius: 8px; background: color-mix(in srgb, var(--os) 45%, var(--panel)); gap: 8px; }
@@ -2118,8 +2123,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const ageChip = (c) => handledAt(c) ? `<span class="chip ok" title="A designer marked it handled: design has nothing more to do with it">✓ Handled</span>`
     : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" title="Days since it appeared, until a designer marks it handled${S.me?.due_days ? `; to be handled within ${esc(S.me.due_days)} days` : ""}">${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
   // A request's state; options waiting for a pick, the usual state, has none.
-  const hasState = (c) => c.kind === "request" && !(c.asks && !closed(c)) && (c.busy || c.status !== "feedback");
-  // Each state's own key for the dot in simple mode: options drawn and a decision without a design
+  // Each state's own key for the dot in the list: options drawn and a decision without a design
   // are states of their own; every other is the request's status.
   const stateKey = (c) => tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status;
   const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
@@ -2161,8 +2165,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       if (c.open_threads) out.push(`<span class="chip" title="Questions and comments on it that are not done yet">💬 ${plural(c.open_threads, "open question", "open questions")}</span>`);
     } else {
       if (c.asks && !closed(c)) out.push(`<span class="chip warn" title="Design Desk asked a question and cannot go on until someone answers it">Waiting for your answer</span>`);
-      // Options waiting for a pick is the usual state: no chip for it.
-      else if (!simple() && hasState(c)) out.push(stateTag(c));
       if (c.type === "bug") out.push(`<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>`);
       else if (c.triage === "product") out.push(`<span class="chip warn" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
@@ -2217,7 +2219,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // PR Changes, Requests and Issues say where each came from, without a description; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}${simple() && c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : ""}<span>${esc(c.title)}</span>${num(c)}</div></button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span>${num(c)}${c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : ""}</div></button>
       ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
