@@ -12,7 +12,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
 Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**). A card in any list that goes against a
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A card in any list but the Presentation that goes against a
 decision in force shows a red ! under its state dot that unfolds into `Goes against D-<n>`
 (`GET /api/cards` adds `against`, the decisions' numbers; `GET /api/decisions` adds each
 conflict's `status`). Product's Screens, Elements, Decisions and History rows look like the other

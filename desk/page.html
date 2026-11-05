@@ -2223,7 +2223,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     building: ["Being drawn", "Design Desk is drawing it now"], dropped: ["Not drawn", "Design Desk could not draw it from the product"] };
   const mapDot = (c) => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return `<span class="sdot" data-s="map-${esc(c.status || "current")}"><span class="chip tag${c.status === "building" ? " busy" : ""}" title="${esc(tip)}"><span class="w">${esc(w)}</span></span></span>`; };
   // The decisions in force a card goes against, in its list row: a red ! that unfolds into their numbers.
-  const againstDot = (c) => (c.against || []).length ? `<span class="sdot vdot"><span class="chip tag" title="It goes against a decision in force: a designer approves it only knowingly"><span class="w">Goes against ${esc(c.against.join(", "))}</span></span></span>` : "";
+  // The label names at most three, then +N: it unfolds to a fixed width. The hint names them all.
+  const againstDot = (c) => { const ids = c.against || []; if (!ids.length) return "";
+    const shown = ids.length > 3 ? `${ids.slice(0, 3).join(", ")} +${ids.length - 3}` : ids.join(", ");
+    return `<span class="sdot vdot"><span class="chip tag" title="${esc(`It goes against ${ids.join(", ")}, in force: a designer approves it only knowingly`)}"><span class="w">Goes against ${esc(shown)}</span></span></span>`; };
 
   // One filter: a segmented control, its choice marked; the key is S's, or a data- action.
   // A tab's or a filter's words, with its count in a quiet pill.

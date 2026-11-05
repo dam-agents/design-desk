@@ -61,7 +61,7 @@ served by the Desk server through the platform's Artifact API relay.
 - **Counts in the menu.** Each tab counts only what is still open: Requests the open requests, PR
   Changes the changes not handled, Issues the issues neither handled nor designed.
 - **Lists.** Every row on every list is its title (one or two lines) with its corner dot, and
-  one line under it — where it came from, or a screen's or part's summary — and no chips. Every list on the left shows the newest item first: a change by the day it
+  one line under it — where it came from (`created:` or `decided:`, `from:`, `by:`) — and no chips. Every list on the left shows the newest item first: a change by the day it
   shipped, a decision by the day it was made, any other item by the day it came onto the Desk.
   The Presentation keeps the order a designer set.
 - **Folds stay folded.** A folded box (the request, From Design Desk, an intro) stays folded
@@ -318,7 +318,8 @@ as large as the dot on the request's page and level with the title's first line,
 its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
-dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`. Product's
+dot, in every list but the Presentation; pointing at it unfolds it the same way into `Goes against D-<n>`
+(at most three numbers, then `+N`; the hint names them all). Product's
 lists are drawn the same way: a screen's and an element's dot says whether its drawing is up to
 date, out of date, being drawn or not drawn, and its line says `created: <when> from: Design
 Desk by: product map` (or the person who added it; an element from an approved design is
