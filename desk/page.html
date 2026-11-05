@@ -589,6 +589,14 @@
   .t-decided { --t: var(--decided); --ts: var(--decided-soft); } .t-closed { --t: var(--closed); --ts: var(--closed-soft); }
   .t-checking { --t: var(--accent); --ts: var(--info-soft); } .t-live { --t: var(--live); --ts: var(--live-soft); }
   .t-checking::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
+  /* Simple mode: a request's state in the list is only its dot, at the end of the title's line.
+     Pointing at the row unfolds its words leftwards over the line, so nothing moves. */
+  .row .t .sdot { position: relative; flex: none; width: 15px; height: 1em; align-self: center; }
+  .sdot .tag { position: absolute; right: 0; top: 50%; transform: translateY(-50%); padding: 1px 4px; gap: 0; background: transparent; box-shadow: none; transition: background .2s ease, padding .2s ease, gap .2s ease; }
+  .sdot .tag .w { display: inline-block; max-width: 0; overflow: hidden; opacity: 0; vertical-align: bottom; transition: max-width .25s ease, opacity .2s ease; }
+  .row:hover .sdot .tag, .row .open:focus-visible .sdot .tag { background: linear-gradient(var(--ts), var(--ts)) var(--panel); padding: 1px 9px 1px 7px; gap: 6px; box-shadow: -6px 0 6px var(--panel); }
+  .row:hover .sdot .tag .w, .row .open:focus-visible .sdot .tag .w { max-width: 24ch; opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .sdot .tag, .sdot .tag .w { transition: none; } }
   .chip.ok { background: var(--approved-soft); color: var(--approved); } .chip.warn { background: var(--waiting-soft); color: var(--waiting); }
   /* The status strip: where the request stands, its word in the state's ink, a coloured edge. */
   .status { --o: var(--muted); --os: var(--soft); padding: 12px 16px 12px 18px; border: 1px solid var(--line); border-left: 4px solid var(--o); border-radius: 8px; background: color-mix(in srgb, var(--os) 45%, var(--panel)); gap: 8px; }
@@ -1441,7 +1449,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   })();
   // Simple mode (a switch in your menu, kept for you on the Desk) only hides: People, Product and
   // Issues leave the tabs, Product's pages their bar, the presentation its page and buttons,
-  // and a request its buttons that build a live prototype. A link to anything in them still opens it: a D-3 in a request opens the decision.
+  // and a request its buttons that build a live prototype and an option its Why it looks like
+  // this strip (the design workspace keeps it). A link to anything in them still opens it: a D-3 in a request opens the decision.
   const SIMPLE_HIDES = ["issues", "product", "people"];
   // A choice this browser has not saved yet wins (desk-simple-unsaved:<email>), then the person's
   // saved one; with neither, a viewer starts in simple mode and every other role in full mode.
@@ -2016,6 +2025,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const overdue = (c) => c.kind === "change" && !handledAt(c) && S.me?.due_days > 0 && waited(c) >= S.me.due_days;
   const ageChip = (c) => handledAt(c) ? `<span class="chip ok" title="A designer marked it handled: design has nothing more to do with it">✓ Handled</span>`
     : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" title="Days since it appeared, until a designer marks it handled${S.me?.due_days ? `; to be handled within ${esc(S.me.due_days)} days` : ""}">${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
+  // A request's state; options waiting for a pick, the usual state, has none.
+  const hasState = (c) => c.kind === "request" && !(c.asks && !closed(c)) && (c.busy || c.status !== "feedback");
+  const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
   function chipsFor(c) {
     const out = [];
     // A screen or part a designer or developer added, before Design Desk made it.
@@ -2055,7 +2067,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     } else {
       if (c.asks && !closed(c)) out.push(`<span class="chip warn" title="Design Desk asked a question and cannot go on until someone answers it">Waiting for your answer</span>`);
       // Options waiting for a pick is the usual state: no chip for it.
-      else if (c.busy || c.status !== "feedback") out.push(`<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${esc(stateWord(c))}</span>`);
+      else if (!simple() && hasState(c)) out.push(stateTag(c));
       if (c.type === "bug") out.push(`<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>`);
       else if (c.triage === "product") out.push(`<span class="chip warn" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
@@ -2108,7 +2120,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // Changes, Requests and Issues say where each came from, without a description; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span>${num(c)}</div></button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span>${num(c)}${simple() && hasState(c) ? `<span class="sdot">${stateTag(c, true)}</span>` : ""}</div></button>
       ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
@@ -3058,7 +3070,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // its count and half a line, folding with +/−; how a person leaves it holds while the page is
   // open. Elements and the design start open, the stories folded.
   const SECT_OPEN = { elements: true, design: true, stories: false };
-  const sect = (key, title, n, hint, body) => `<details class="fold big sect ${key}" data-sect="${key}"${key === "stories" ? ' id="stories" data-stories' : ""}${(S.sect[key] ?? SECT_OPEN[key]) ? " open" : ""}><summary><h3>${title}${n != null ? `<span class="n">${n}</span>` : ""}</h3>${hint ? `<span class="hint">${hint}</span>` : ""}</summary>${body}</details>`;
+  // Simple mode starts the option's design (the mockup) folded; a story played opens it.
+  const sectOpen = (key) => S.sect[key] ?? (key === "design" && simple() ? false : SECT_OPEN[key]);
+  const sect = (key, title, n, hint, body) => `<details class="fold big sect ${key}" data-sect="${key}"${key === "stories" ? ' id="stories" data-stories' : ""}${sectOpen(key) ? " open" : ""}><summary><h3>${title}${n != null ? `<span class="n">${n}</span>` : ""}</h3>${hint ? `<span class="hint">${hint}</span>` : ""}</summary>${body}</details>`;
   // The option's design, named for what it is.
   const DRAWN = { wireframe: "Wireframe", mockup: "Mockup", figma: "From Figma", picture: "Pictures" };
 
@@ -3073,7 +3087,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `<h3>Design options</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
-      ${againstBox(c, v.id)}${whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
+      ${againstBox(c, v.id)}${simple() ? "" : whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
         <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
@@ -3314,7 +3328,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const use = told.length ? told.map((st) => `<li>${txt(st.text)}</li>`).join("") : x.use ? `<li>${txt(x.use)}</li>` : "";
     const stale = (x.of || 1) < (v.version || 1);
     const pic = x.shot ? `<figure class="shot"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
-      : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : v.asset || "")}"></iframe></div>`
+      : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" tabindex="-1" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : v.asset || "")}"></iframe></div>`
       : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
     return `<li id="no-${esc(c.id)}-${k}"${zoomAttrs(x, v.asset, `${x.part}: ${x.name}`)}>${pic}<div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
       ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
@@ -3353,6 +3367,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   $("#element-dialog").addEventListener("close", () => { S.el = null; });
   // Escape over an enlarged picture closes the picture, not the dialog.
   $("#element-dialog").addEventListener("cancel", (e) => { const z = $("#element-dialog .zoom"); if (z) { e.preventDefault(); z.remove(); } });
+  // Escape closes it like every other dialog, also when the focus left it (a redrawn body, a
+  // click beside it) and the browser sends it no cancel of its own.
+  document.addEventListener("keydown", (e) => {
+    const d = $("#element-dialog");
+    if (e.key !== "Escape" || !d.open || d.contains(document.activeElement) || document.querySelector("dialog[open]:not(#element-dialog)")) return;
+    e.preventDefault(); const z = $("#element-dialog .zoom"); if (z) z.remove(); else d.close();
+  }, true);
   function openElement(variant, key) { S.el = { card: S.card?.id, variant, key }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
   function renderElementDialog() {
     const dlg = $("#element-dialog");
@@ -3367,7 +3388,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // shows it once they are drawn); the last card draws them.
     const look = { shot: e.shot, asset: e.shot ? null : e.derived ? e.asset : v.asset, selector: e.selector };
     const lookPic = look.shot ? `<figure class="shot"><img alt="${esc(e.name)}" data-asset="${esc(look.shot)}" /></figure>`
-      : `<div class="snipbox"><iframe sandbox="allow-scripts" title="${esc(e.name)}" data-snip-asset="${esc(look.asset)}" data-snip-sel="${esc(look.selector || "")}" data-snip-base="${esc(look.selector ? "" : v.asset || "")}"></iframe></div>`;
+      : `<div class="snipbox"><iframe sandbox="allow-scripts" tabindex="-1" title="${esc(e.name)}" data-snip-asset="${esc(look.asset)}" data-snip-sel="${esc(look.selector || "")}" data-snip-base="${esc(look.selector ? "" : v.asset || "")}"></iframe></div>`;
     const first = `<li${zoomAttrs(look, v.asset, `${e.name}: in the design`)}>${lookPic}<div><b>In the design</b><p class="hint">As the option draws it now.</p></div></li>`;
     // Every state drawn for the option's latest version: nothing is left to draw, so the
     // card says so and offers no button. A change to the option makes them stale and the

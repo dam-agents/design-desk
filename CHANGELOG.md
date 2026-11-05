@@ -13,8 +13,10 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
 Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). A **Simple mode** switch in the menu
-under a person's name hides Issues, Product, People, the presentation and Build a live
-prototype; links to what it hides, such as a decision named in a request, still open it. The
+under a person's name hides Issues, Product, People, the presentation, Build a live
+prototype and the Why it looks like this strip under an option (the design workspace keeps it),
+starts an option's design folded and shows a request's state in the list as a dot that unfolds
+its words on hover; links to what it hides, such as a decision named in a request, still open it. The
 Desk keeps each person's choice (`POST /api/prefs {simple}`, `simple` in `GET /api/me`); with
 none, a viewer starts in simple mode and every other role in full mode. `POST /api/prefs` now
 changes only the keys it is sent. No data change.

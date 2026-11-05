@@ -80,8 +80,12 @@ served by the Desk server through the platform's Artifact API relay.
   the server takes it, and sent again on the next load.
   **Simple mode**, a switch in the menu under the person's name (an on/off switch beside its
   words, in the accent when on), only hides: **Issues**, **Product** and **People** leave the menu, Product's pages their
-  bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), and a
-  request offers no **Build a live prototype** (a prototype already up still shows). The tab
+  bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
+  request offers no **Build a live prototype** (a prototype already up still shows), and an
+  option shows no **Why it looks like this** strip under it (the design workspace keeps its
+  button). An option's design (the mockup) starts folded; it opens with a click, and a user
+  story played opens it. In the list a request's state is only its coloured dot at the end of
+  its title's line; pointing at the row unfolds its words. The tab
   intros and How it works, its drawings included, leave out what it hides.
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
