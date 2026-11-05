@@ -71,7 +71,8 @@ served by the Desk server through the platform's Artifact API relay.
 - **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
   answer); **Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
   with grey counts, then **Product** and **People**. **How it works** opens from the question
-  mark next to the day and night switch. The switch keeps each person's choice on the Desk
+  mark next to the day and night switch, with a picture each of how a request, an issue and a
+  shipped pull request move. The switch keeps each person's choice on the Desk
   (`POST /api/prefs {theme}`, `theme` in `GET /api/me`; null follows the system), so it follows
   them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
   the server takes it, and sent again on the next load.

@@ -358,6 +358,7 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   await desk.click('[data-tab="guide"]');
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the question mark");
+  assert.equal(await desk.locator('#detail .guide figure.flow svg[role="img"][aria-label] title').count(), 3, "How it works draws a request, an issue and a shipped change");
   await desk.click('[data-tab="new"]');
   await desk.click("#list .row .open");
   await desk.waitForSelector("#detail .crumb", { state: "attached" });

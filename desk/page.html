@@ -385,6 +385,22 @@
   #pe-roles label { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
   #pe-roles label .sub { margin: 0; }
   .guide { max-width: var(--measure); } .guide li { margin-bottom: 6px; } .guide ol { padding-left: 20px; }
+  /* How it works draws how a request, an issue and a shipped change move, in the Desk's own inks:
+     blue Design Desk at work, amber waits on the team, violet live, green approved, red closed. */
+  .guide figure.flow { margin: 12px 0 20px; }
+  .guide figure.flow svg { display: block; width: 100%; max-width: 860px; height: auto; color: var(--muted); }
+  .guide figure.flow figcaption { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  .flow text { fill: var(--ink); font: 600 13px var(--font); text-anchor: middle; }
+  .flow .f-sub { fill: var(--muted); font-weight: 400; font-size: 11.5px; }
+  .flow .f-lbl { fill: var(--muted); font-weight: 400; font-size: 11px; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+  .flow .f-k { fill: var(--muted); font-size: 10.5px; letter-spacing: .06em; text-anchor: start; }
+  .flow .f-start { text-anchor: start; } .flow .f-end { text-anchor: end; }
+  .flow .f-n { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+  .flow .f-checking { fill: var(--info-soft); stroke: var(--accent); } .flow .f-waiting { fill: var(--warn-soft); stroke: var(--warn); }
+  .flow .f-live { fill: var(--live-soft); stroke: var(--live); } .flow .f-approved { fill: var(--ok-soft); stroke: var(--ok); }
+  .flow .f-closed { fill: var(--bad-soft); stroke: var(--bad); } .flow .f-closed, .flow .f-skip { stroke-dasharray: 4 3; }
+  .flow .f-lane { fill: var(--soft); opacity: .55; }
+  .flow .f-e { fill: none; stroke: currentColor; stroke-width: 1.5; } .flow .f-dash { stroke-dasharray: 5 4; } .flow .f-h { fill: currentColor; }
   .people { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 6px 0 4px; }
   .people th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
   .people td { padding: 8px 10px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
@@ -919,12 +935,62 @@
     [["share"], "Share options in Slack", "slack"],
     [["people"], "Ask Design Desk to add people to the list"],
   ];
+  // How it works: one picture each of how a request, an issue and a shipped pull request move.
+  const flowHead = (id) => `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="f-h" d="M0 0L10 5L0 10z"/></marker></defs>`;
+  const flow = (w, h, says, body, caption) => `<figure class="flow"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(says)}"><title>${esc(says)}</title>${body}</svg><figcaption>${caption}</figcaption></figure>`;
+  const FLOW_REQUEST = () => flow(860, 316, "A request: Design Desk checks it and draws options; the team votes and comments, Work it in sends notes back, Build it live adds an optional live prototype; a designer or a lead developer approves, and Design Desk writes the spec and sends it to developers.", `${flowHead("fl-req")}
+  <rect class="f-lane" x="0" y="12" width="860" height="132" rx="10"/><rect class="f-lane" x="0" y="156" width="860" height="148" rx="10"/>
+  <text class="f-k" x="16" y="36">DESIGN DESK</text><text class="f-k" x="16" y="180">THE TEAM</text>
+  <rect class="f-n f-checking" x="110" y="52" width="120" height="56" rx="10"/><text x="170" y="76">Checks it</text><text class="f-sub" x="170" y="94">what can change</text>
+  <rect class="f-n f-checking" x="260" y="52" width="120" height="56" rx="10"/><text x="320" y="76">Draws options</text><text class="f-sub" x="320" y="94">on sample data</text>
+  <rect class="f-n f-live" x="530" y="52" width="120" height="56" rx="10"/><text x="590" y="76">Builds it live</text><text class="f-sub" x="590" y="94">optional</text>
+  <rect class="f-n f-approved" x="720" y="52" width="124" height="56" rx="10"/><text x="782" y="76">Writes the spec</text><text class="f-sub" x="782" y="94">sends it on</text>
+  <rect class="f-n f-closed" x="110" y="194" width="120" height="56" rx="10"/><text x="170" y="218">Closed</text><text class="f-sub" x="170" y="236">or decided instead</text><text class="f-sub" x="170" y="272">from any open step</text>
+  <rect class="f-n f-waiting" x="390" y="194" width="120" height="56" rx="10"/><text x="450" y="218">Team feedback</text><text class="f-sub" x="450" y="236">votes, comments</text>
+  <path class="f-n f-approved" d="M690 188 L742 222 L690 256 L638 222 Z"/><text x="690" y="226">Approve</text><text class="f-sub" x="690" y="276">a designer or a lead developer</text>
+  <path class="f-e" d="M230 80 H257" marker-end="url(#fl-req)"/>
+  <path class="f-e" d="M380 80 H450 V191" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="444" y="140">Ask the team</text>
+  <path class="f-e" d="M390 222 H320 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-end" x="314" y="170">Work it in</text>
+  <path class="f-e f-dash" d="M490 194 V80 H527" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="498" y="140">Build it live</text>
+  <path class="f-e" d="M510 222 H635" marker-end="url(#fl-req)"/><text class="f-lbl" x="573" y="214">or right away</text>
+  <path class="f-e" d="M650 80 H690 V185" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="698" y="150">try it</text>
+  <path class="f-e" d="M742 222 H782 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="790" y="170">approved</text>`,
+    "Blue is Design Desk at work, amber waits on the team, violet is live, green is approved. <b>Work it in</b> sends the open comments back for a new version; the live prototype is optional, and only for a request that changes nothing but the look. A small change is approved by a developer instead of a designer.");
+  const FLOW_ISSUE = () => flow(860, 272, "An issue in the team's plan: once a day Design Desk reads it; if people will see a difference, it sketches how it looks now and how it could look and puts it on Issues. Draw it sketches it again, Design this starts a request, and once that request goes to developers the issue is designed.", `${flowHead("fl-issue")}
+  <rect class="f-n" x="10" y="56" width="160" height="60" rx="10"/><text x="90" y="80">A GitHub issue</text><text class="f-sub" x="90" y="98">in the team's plan</text>
+  <rect class="f-n f-checking" x="230" y="56" width="160" height="60" rx="10"/><text x="310" y="80">Reads it</text><text class="f-sub" x="310" y="98">will people see it?</text>
+  <rect class="f-n f-checking" x="440" y="56" width="170" height="60" rx="10"/><text x="525" y="80">Sketches it</text><text class="f-sub" x="525" y="98">now, and how it could be</text>
+  <rect class="f-n f-waiting" x="660" y="56" width="180" height="60" rx="10"/><text x="750" y="80">On Issues</text><text class="f-sub" x="750" y="98">what the UI will need</text>
+  <rect class="f-n f-skip" x="230" y="196" width="160" height="60" rx="10"/><text x="310" y="220">Left out</text><text class="f-sub" x="310" y="238">back end, tests, chores</text>
+  <rect class="f-n f-approved" x="440" y="196" width="170" height="60" rx="10"/><text x="525" y="220">✓ Designed</text><text class="f-sub" x="525" y="238">out of the open lists</text>
+  <rect class="f-n f-checking" x="660" y="196" width="180" height="60" rx="10"/><text x="750" y="220">A request</text><text class="f-sub" x="750" y="238">options, votes, a prototype</text>
+  <path class="f-e" d="M170 86 H227" marker-end="url(#fl-issue)"/><text class="f-lbl" x="200" y="78">daily</text>
+  <path class="f-e" d="M390 86 H437" marker-end="url(#fl-issue)"/><text class="f-lbl" x="414" y="78">yes</text>
+  <path class="f-e" d="M610 86 H657" marker-end="url(#fl-issue)"/>
+  <path class="f-e" d="M310 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="318" y="158">no</text>
+  <path class="f-e" d="M720 56 C720 22 560 22 560 53" marker-end="url(#fl-issue)"/><text class="f-lbl" x="640" y="24">Draw it</text>
+  <path class="f-e" d="M750 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="758" y="158">Design this</text>
+  <path class="f-e" d="M660 226 H613" marker-end="url(#fl-issue)"/><text class="f-lbl" x="636" y="218">sent</text>`,
+    "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue moves to <b>✓ Designed</b>.");
+  const FLOW_CHANGE = () => flow(760, 240, "A merged pull request: Design Desk explains it with screenshots, puts it under Changes and updates Product; each person marks Got it, a designer marks it Handled, and Adjust the design turns it into a request.", `${flowHead("fl-change")}
+  <rect class="f-n" x="10" y="92" width="140" height="56" rx="10"/><text x="80" y="116">A change ships</text><text class="f-sub" x="80" y="134">a merged pull request</text>
+  <rect class="f-n f-checking" x="200" y="92" width="160" height="56" rx="10"/><text x="280" y="116">Design Desk explains</text><text class="f-sub" x="280" y="134">what, why, screenshots</text>
+  <rect class="f-n f-waiting" x="410" y="92" width="130" height="56" rx="10"/><text x="475" y="116">Changes</text><text class="f-sub" x="475" y="134">days are counted</text>
+  <rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>
+  <rect class="f-n" x="590" y="16" width="160" height="48" rx="10"/><text x="670" y="36">Got it</text><text class="f-sub" x="670" y="53">each of you: seen</text>
+  <rect class="f-n f-approved" x="590" y="96" width="160" height="48" rx="10"/><text x="670" y="116">Handled</text><text class="f-sub" x="670" y="133">a designer; the count stops</text>
+  <rect class="f-n f-checking" x="590" y="176" width="160" height="48" rx="10"/><text x="670" y="196">Adjust the design</text><text class="f-sub" x="670" y="213">it becomes a request</text>
+  <path class="f-e" d="M150 120 H197" marker-end="url(#fl-change)"/><text class="f-lbl" x="174" y="112">hourly</text>
+  <path class="f-e" d="M360 120 H407" marker-end="url(#fl-change)"/><text class="f-lbl" x="384" y="112">posts</text>
+  <path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>
+  <path class="f-e" d="M540 120 C566 120 562 40 587 40" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 H587" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 C566 120 562 200 587 200" marker-end="url(#fl-change)"/>`,
+    "Every change that ships gets its card with screenshots; a designer marks it handled, or adjusts its design through a new request.");
   const GUIDE = () => `<h2>How Design Desk works</h2>
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
 <ol>
-<li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws the options you asked for (or only checks, if you asked for none), the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.</li>
-<li><b>Changes</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches (a screen or a part in Product opens from there), and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.</li>
-<li><b>Issues</b> — what the team plans that will change the screens: the current sprint (with the issues of its epics), the next sprint, issues someone has taken, and the ones labelled for design. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches them on its own, the sprint's first; press <b>Draw it</b> to have one sketched now, or <b>Design this</b> to start a request.</li>
+<li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws the options you asked for (or only checks, if you asked for none), the team votes and comments, and it builds a live prototype you can click through. Each request says what happens next and whose turn it is.${FLOW_REQUEST()}</li>
+<li><b>Changes</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches (a screen or a part in Product opens from there), and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.${FLOW_CHANGE()}</li>
+<li><b>Issues</b> — what the team plans that will change the screens: the current sprint (with the issues of its epics), the next sprint, issues someone has taken, and the ones labelled for design. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches them on its own, the sprint's first; press <b>Draw it</b> to have one sketched now, or <b>Design this</b> to start a request.${FLOW_ISSUE()}</li>
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
 <p><b>Needs a designer</b>, at the top of Requests and Changes, shows only what waits for a designer's decision.</p>
