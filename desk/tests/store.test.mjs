@@ -160,6 +160,7 @@ test("For Developers or For Designers: Slack starts with developers, the Desk an
   assert.equal(forOf({ email: "bob@example.com", role: "developer" }, {}), false);
   assert.throws(() => forOf({ agent: true }, { audience: "pm" }), /audience must be one of/);
   assert.equal(s.listCards().find((c) => c.title === "x").for, "designers");
+  assert.equal(s.createRequest({ agent: true }, { title: "y", problem: "z" }).card.size.filed, true, "chosen when filed: the page names no one");
 });
 
 test("For Developers: a lead developer moves it there, any developer but its author approves, the card says who", () => {

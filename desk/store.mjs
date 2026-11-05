@@ -728,7 +728,8 @@ export class Store {
     // For Developers or For Designers: what the asker chose; without a choice, a request from
     // Slack is the developers', any other the designers' (docs/desk.md → For Developers or For Designers).
     const forWhom = audience || (c.origin?.channel === "slack" ? "developers" : "designers");
-    c.size = { small: forWhom === "developers", by: person(who), at: this.clock() };
+    // `filed`: chosen when it was filed, so the page says nothing; a later move says who moved it.
+    c.size = { small: forWhom === "developers", by: person(who), at: this.clock(), filed: true };
     // The pictures a person gave with the request (filed on the Desk, or reported in a channel
     // and filed by the agent) are theirs: the page shows them with the request, apart from
     // the ones Design Desk takes.

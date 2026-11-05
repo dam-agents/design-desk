@@ -280,7 +280,9 @@ beside them in full mode); each request is in one (the card's `size: {small, by,
   From Slack, set `audience: "designers"` only when the message asks for a designer.
 
 A lead developer or the lead moves an open, unapproved request between the two (**More** →
-For Developers / For Designers; `POST /api/cards/<id>/size {small}`). A request For Developers is approved by a designer or
+For Developers / For Designers; `POST /api/cards/<id>/size {small}`). The tab chosen when a
+request is filed carries `size.filed` and the page names no one for it; a later move shows who
+moved it and when. A request For Developers is approved by a designer or
 by any `developer` or `lead-developer` except the person who filed it (`created_by`, or
 `origin.email` when you filed it for them); the store refuses the author. A request whose
 `origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A request For Developers
