@@ -1776,7 +1776,7 @@ function versioned(list, before, at, removed = []) {
     const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
     // Alternatives are of the option at one version: a redrawn option drops the ones it had.
     const alternatives = given.alternatives ? given.alternatives.map((x) => ({ ...x, of: now, drawn: at })) : old && old.asset === given.asset ? old.alternatives || [] : [];
-    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was), alternatives };
+    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -1791,14 +1791,23 @@ export const staleStates = (v) => (v?.states || []).filter((x) => (x.of || 1) < 
 // A state redrawn under its id gets the next version and keeps the one it replaces. `of` is
 // the option's version it was drawn for: a new or redrawn state is of the option as it is now,
 // an unchanged one keeps its own (one from before `of` was kept: the option's earlier version).
-function versionedStates(states, before, at, now, was) {
+// The catalog shows the part alone: its picture (`shot`), or the part cut out of its page by
+// `selector`. With neither it shows the whole page in a 160 px box — the item unreadably small
+// in white (2026-11-04, C-34) — so a new or redrawn state that would be stored with neither is
+// refused. An unchanged state keeps the shot and selector it has, and one stored before the
+// rule with neither is kept as it is: a run sends it back as it read it.
+function versionedStates(states, before, at, now, was, option) {
   return states.map((given) => {
     const old = before.find((x) => x.id === given.id);
-    if (!old) return { ...given, of: now, version: given.version || 1, history: given.history || [], drawn: given.drawn || at };
-    if (old.asset === given.asset) return { ...given, of: old.of || was, version: old.version || 1, history: old.history || [], drawn: old.drawn || at };
+    if (old && old.asset === given.asset) return { ...given, shot: given.shot ?? old.shot ?? null, selector: given.selector ?? old.selector ?? null, of: old.of || was, version: old.version || 1, history: old.history || [], drawn: old.drawn || at };
     // A redrawn state sent with its old picture of the part: that picture shows the state as it
-    // was, so the catalog shows none until the run sends a new one.
-    return { ...given, ...(given.shot && given.shot === old.shot ? { shot: null } : {}), of: now, version: (old.version || 1) + 1, drawn: at,
+    // was, so it is dropped — the catalog cuts the part from the new page by its selector, and
+    // one with no selector is refused until the run sends a new picture.
+    const stale = !!old && !!given.shot && given.shot === old.shot;
+    const shot = stale ? null : given.shot ?? null;
+    if (shot == null && !given.selector) throw bad(`${option}, state ${given.name || given.id}: the catalog needs a picture of the part — ${stale ? "the state is redrawn, so its old picture shows it as it was: " : ""}shoot it (design shot <state.html> <dir> --element <selector>) or send its selector`);
+    if (!old) return { ...given, of: now, version: given.version || 1, history: given.history || [], drawn: given.drawn || at };
+    return { ...given, shot, of: now, version: (old.version || 1) + 1, drawn: at,
       history: [{ asset: old.asset, version: old.version || 1, drawn: old.drawn || null }, ...(old.history || [])].slice(0, 10) };
   });
 }
