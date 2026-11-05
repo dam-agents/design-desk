@@ -146,8 +146,12 @@
   .row .prov a, .row .prov button { pointer-events: auto; }
   /* In the list a card's title is the one black line; where it came from and who asked are grey and plain under it. */
   .row .prov .src { padding: 0; border: 0; background: none; color: var(--muted); font-weight: 400; gap: 0; }
-  .row .prov .src > svg { display: none; }
-  .row .prov b { color: var(--muted); font-weight: 400; }
+  /* In the list only Slack and the Desk show their icon, beside their name. */
+  .row .prov .src { gap: 4px; } .row .prov .src:not([data-k="slack"], [data-k="desk"]) > svg { display: none; }
+  /* The provenance reads from: … by: … based on: …, the joining words grey, what they name in ink. */
+  .prov .k { color: var(--muted); }
+  .row .prov .src, .row .prov b, .row .prov .anchor { color: var(--ink); }
+  .row .prov b { font-weight: 400; }
   .prov .src { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px 0 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--ink); font-weight: 500; white-space: nowrap; }
   .prov .src a { color: inherit; }
   .prov svg { width: 12px; height: 12px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -589,13 +593,21 @@
   .t-decided { --t: var(--decided); --ts: var(--decided-soft); } .t-closed { --t: var(--closed); --ts: var(--closed-soft); }
   .t-checking { --t: var(--accent); --ts: var(--info-soft); } .t-live { --t: var(--live); --ts: var(--live-soft); }
   .t-checking::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
-  /* Simple mode: a request's state in the list is only its dot, at the end of the title's line.
-     Pointing at the row unfolds its words leftwards over the line, so nothing moves. */
-  .row .t .sdot { position: relative; flex: none; width: 15px; height: 1em; align-self: center; }
-  .sdot .tag { position: absolute; right: 0; top: 50%; transform: translateY(-50%); padding: 1px 4px; gap: 0; background: transparent; box-shadow: none; transition: background .2s ease, padding .2s ease, gap .2s ease; }
+  /* Simple mode: a request's state in the list is only its dot, left of the title on every request,
+     in the first line's middle when the title wraps; each state has its own colour. Pointing at the
+     row unfolds its words rightwards over the line, so nothing moves. */
+  .row .t .sdot { position: relative; flex: none; align-self: flex-start; width: 9px; height: 1.4em; height: 1lh; }
+  .sdot .tag { position: absolute; left: -3px; top: 50%; z-index: 1; transform: translateY(-50%); padding: 1px 4px 1px 2px; gap: 0; color: var(--t); background: transparent; box-shadow: none; white-space: nowrap; transition: background .2s ease, padding .2s ease, gap .2s ease; }
+  .sdot .tag::before { width: 9px; height: 9px; }
+  .sdot .tag.busy::before { background: currentColor; box-shadow: none; }
   .sdot .tag .w { display: inline-block; max-width: 0; overflow: hidden; opacity: 0; vertical-align: bottom; transition: max-width .25s ease, opacity .2s ease; }
-  .row:hover .sdot .tag, .row .open:focus-visible .sdot .tag { background: linear-gradient(var(--ts), var(--ts)) var(--panel); padding: 1px 9px 1px 7px; gap: 6px; box-shadow: -6px 0 6px var(--panel); }
+  .row:hover .sdot .tag, .row .open:focus-visible .sdot .tag { background: linear-gradient(color-mix(in srgb, var(--t) 14%, transparent), color-mix(in srgb, var(--t) 14%, transparent)) var(--panel); padding: 1px 9px 1px 5px; gap: 6px; box-shadow: 6px 0 6px var(--panel); }
   .row:hover .sdot .tag .w, .row .open:focus-visible .sdot .tag .w { max-width: 24ch; opacity: 1; }
+  .sdot[data-s="triage"] .tag { --t: var(--accent); } .sdot[data-s="variants"] .tag { --t: var(--why); }
+  .sdot[data-s="held"] .tag { --t: var(--waiting); } .sdot[data-s="feedback"] .tag { --t: #e0701a; }
+  .sdot[data-s="prototype"] .tag { --t: var(--live); } .sdot[data-s="testing"] .tag { --t: #c43d8f; }
+  .sdot[data-s="spec"] .tag { --t: #3fa35f; } .sdot[data-s="handed-off"] .tag { --t: var(--approved); }
+  .sdot[data-s="decided"] .tag { --t: var(--decided); } .sdot[data-s="declined"] .tag { --t: var(--closed); }
   @media (prefers-reduced-motion: reduce) { .sdot .tag, .sdot .tag .w { transition: none; } }
   .chip.ok { background: var(--approved-soft); color: var(--approved); } .chip.warn { background: var(--waiting-soft); color: var(--waiting); }
   /* The status strip: where the request stands, its word in the state's ink, a coloured edge. */
@@ -735,9 +747,9 @@
   .top2 .made-col { min-width: 0; }
   /* The head blocks take the page's full width. */
   .top2, .standing .status { max-width: none; }
-  /* Folded, the request keeps three lines that fade out; the link under it shows the rest. */
+  /* Folded, the request keeps two whole lines and a third that fades out; the link under it shows the rest. */
   .brief { padding-bottom: 10px; }
-  .brief.clamped .brief-body { max-height: calc(3 * 1.55em); overflow: hidden; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+  .brief.clamped .brief-body { max-height: calc(3 * 1.55em); overflow: hidden; -webkit-mask-image: linear-gradient(#000 calc(2 * 1.55em), transparent); mask-image: linear-gradient(#000 calc(2 * 1.55em), transparent); }
   .brief-toggle { border: 0; background: none; padding: 4px 0 0; color: var(--accent); cursor: pointer; font-size: var(--fs-ui); }
   .brief-toggle:hover { text-decoration: underline; }
   .brief-body { font-size: var(--fs-read); line-height: 1.55; }
@@ -834,9 +846,7 @@
       dialog[open] { opacity: 0; transform: translateY(10px) scale(.985); }
       dialog[open]::backdrop { background-color: rgba(0,0,0,0); }
     }
-    /* Folds slide; the popovers (More, the menu under a name, a request's steps) pop instead. */
-    details:not(.more):not(.stepper)::details-content { block-size: 0; overflow: clip; opacity: 0; transition: block-size .24s var(--ease-out), opacity .2s ease, content-visibility .24s allow-discrete; }
-    details:not(.more):not(.stepper)[open]::details-content { block-size: auto; opacity: 1; }
+    /* Folds slide by script (foldTo), in every browser; the popovers (More, the menu under a name, a request's steps) pop instead. */
     details.more[open] > .menu, details.stepper[open] > ol { animation: dd-pop .16s var(--ease-out); transform-origin: top; }
     .btn, nav button, .row, .row.item, .subtabs > button, .chip, .tabs button { transition: background-color .15s ease, border-color .15s ease, box-shadow .2s ease, color .15s ease, transform .12s ease; }
     .btn:active:not([disabled]) { transform: scale(.97); }
@@ -1019,7 +1029,7 @@
     prototype: "Design Desk is building a live prototype of the option: the product with only its look changed.",
     testing: "A live prototype runs with the option's design. Try it and comment; a designer or a lead developer approves it when the team is happy.",
     spec: "This option gets built. Design Desk writes the developer spec from it, then sends it to developers.",
-    "handed-off": "Approved and with developers. When it ships, it appears under Changes.",
+    "handed-off": "Approved and with developers. When it ships, it appears under PR Changes.",
     declined: "Nobody works on this request any more and nothing goes to developers. A designer can reopen it.",
     decided: "Closed with a decision instead of a design. The decision is under Product, Decisions. Nobody works on it any more; a designer can reopen it.",
   };
@@ -1136,10 +1146,10 @@
   <path class="f-e" d="M750 116 V193" marker-end="url(#fl-issue)"/><text class="f-lbl f-start" x="758" y="158">Design this</text>
   <path class="f-e" d="M660 226 H613" marker-end="url(#fl-issue)"/><text class="f-lbl" x="636" y="218">sent</text>`,
     "The plan is this sprint, the next one, the issues someone has taken and the ones labelled for design; the sprint's are sketched first. <b>Draw it</b> sketches one again now. Once the request from <b>Design this</b> goes to developers, the issue moves to <b>✓ Designed</b>.");
-  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under Changes${full(" and updates Product")}; each person marks Got it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
+  const FLOW_CHANGE = () => flow(760, 240, `A merged pull request: Design Desk explains it with screenshots, puts it under PR Changes${full(" and updates Product")}; each person marks Got it, a designer marks it Handled, and Adjust the design turns it into a request.`, `${flowHead("fl-change")}
   <rect class="f-n" x="10" y="92" width="140" height="56" rx="10"/><text x="80" y="116">A change ships</text><text class="f-sub" x="80" y="134">a merged pull request</text>
   <rect class="f-n f-checking" x="200" y="92" width="160" height="56" rx="10"/><text x="280" y="116">Design Desk explains</text><text class="f-sub" x="280" y="134">what, why, screenshots</text>
-  <rect class="f-n f-waiting" x="410" y="92" width="130" height="56" rx="10"/><text x="475" y="116">Changes</text><text class="f-sub" x="475" y="134">days are counted</text>
+  <rect class="f-n f-waiting" x="410" y="92" width="130" height="56" rx="10"/><text x="475" y="116">PR Changes</text><text class="f-sub" x="475" y="134">days are counted</text>
   ${full(`<rect class="f-n" x="200" y="186" width="160" height="44" rx="10"/><text x="280" y="213">Product is updated</text>`)}
   <rect class="f-n" x="590" y="16" width="160" height="48" rx="10"/><text x="670" y="36">Got it</text><text class="f-sub" x="670" y="53">each of you: seen</text>
   <rect class="f-n f-approved" x="590" y="96" width="160" height="48" rx="10"/><text x="670" y="116">Handled</text><text class="f-sub" x="670" y="133">a designer; the count stops</text>
@@ -1153,14 +1163,14 @@
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options${full(" and live prototypes")}. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
 <ol>
 <li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws the options you asked for (or only checks, if you asked for none), the team votes and comments${full(", and it builds a live prototype you can click through")}. Each request says what happens next and whose turn it is.${FLOW_REQUEST()}</li>
-<li><b>Changes</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches${full(" (a screen or a part in Product opens from there)")}, and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.${FLOW_CHANGE()}</li>
+<li><b>PR Changes</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches${full(" (a screen or a part in Product opens from there)")}, and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.${FLOW_CHANGE()}</li>
 ${full(`<li><b>Issues</b> — what the team plans that will change the screens: the current sprint (with the issues of its epics), the next sprint, issues someone has taken, and the ones labelled for design. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches them on its own, the sprint's first; press <b>Draw it</b> to have one sketched now, or <b>Design this</b> to start a request.${FLOW_ISSUE()}</li>`)}
 <li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
 </ol>
-<p><b>Needs a designer</b>, at the top of Requests and Changes, shows only what waits for a designer's decision.</p>
+${full("<p><b>Needs a designer</b>, at the top of Requests and PR Changes, shows only what waits for a designer's decision.</p>")}
 <p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; the link icon beside its number (<b>Copy link</b> on a narrow screen) gives a link that opens it; <b>Search</b> at the top finds an item by its words, its number, its link, or the number of its GitHub issue or pull request.</p>
 <p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
-<p>Each row in Requests and Changes shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
+<p>Each row in Requests and PR Changes shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
 <h3>Changing a design</h3>
 ${full(`<p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>`)}
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
@@ -1218,7 +1228,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       refresh: "Design Desk draws this again from the product as it is today",
       history: "Design Desk goes back through the product's changes and draws how this looked after each one, newest first",
     },
-    tab: (v) => ({ requests: "Requests: problems and ideas, their design options and live prototypes", new: "Changes: what changed in the product's screens, explained, and what a designer should look at",
+    tab: (v) => ({ requests: "Requests: problems and ideas, their design options and live prototypes", new: "PR Changes: what changed in the product's screens, explained, and what a designer should look at",
       issues: "Issues: what the team plans that will change the screens, with sketches", product: "Product: its screens, its parts in every situation, the team's decisions and the weekly history",
       people: "People: who is on the Desk, their roles and what each role can do", guide: "How Design Desk works" }[v]),
     filter: (v) => ({ "newFilter:all": "Every change", "newFilter:new": "Only changes you have not marked Got it", "newFilter:open": "Only changes no designer marked handled",
@@ -1567,7 +1577,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     slack: '<path d="M6 2 4.5 14M11.5 2 10 14M2.5 5.5h11.5M2 10.5h11.5"/>',
     issue: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/>',
     pr: '<circle cx="4" cy="3.5" r="1.6"/><circle cx="4" cy="12.5" r="1.6"/><circle cx="12" cy="12.5" r="1.6"/><path d="M4 5.1v5.8M12 10.9V6.5a2 2 0 0 0-2-2H7.5M9 3 7.5 4.5 9 6"/>',
-    desk: '<circle cx="8" cy="5.5" r="2.6"/><path d="M2.8 14.2c.4-2.8 2.6-4.3 5.2-4.3s4.8 1.5 5.2 4.3"/>',
+    // The Desk itself: a desk with a screen on it.
+    desk: '<rect x="4.5" y="1.8" width="7" height="5" rx="1"/><path d="M8 6.8v2.2M1.5 9h13M3 9v5.2M13 9v5.2"/>',
+    chat: '<circle cx="8" cy="5.5" r="2.6"/><path d="M2.8 14.2c.4-2.8 2.6-4.3 5.2-4.3s4.8 1.5 5.2 4.3"/>',
     agent: '<path d="M8 1.8 9.5 6.5 14.2 8 9.5 9.5 8 14.2 6.5 9.5 1.8 8 6.5 6.5z"/>',
     test: '<path d="M6 1.8h4M6.6 1.8v4.4L2.7 12.9a1 1 0 0 0 .9 1.4h8.8a1 1 0 0 0 .9-1.4L9.4 6.2V1.8M4.6 10h6.8"/>',
     digest: '<rect x="2.2" y="3" width="11.6" height="11" rx="1.5"/><path d="M2.2 6.5h11.6M5.5 1.8v2.4M10.5 1.8v2.4"/>',
@@ -1607,7 +1619,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       event = out(o.url, esc([o.check && `${o.check} check`, o.build && `build ${o.build}`, o.ref].filter(Boolean).join(" · ") || "a test finding"));
     } else if (o.channel === "slack") [kind, src, author] = ["slack", out(o.url, "Slack"), o.reporter];
     else if (o.channel === "github") [kind, src, author] = [o.kind === "pr" ? "pr" : "issue", out(o.url, num(o.kind === "pr" ? "PR" : "Issue", o.number)), o.reporter];
-    else if (o.channel === "chat") [kind, src, author] = ["desk", "Chat with Design Desk", o.reporter];
+    else if (o.channel === "chat") [kind, src, author] = ["chat", "Chat with Design Desk", o.reporter];
     else if (by.agent) [kind, src, author] = ["agent", "Design Desk", o.reporter];
     else [kind, src, author] = ["desk", "Desk", by.email && by.email === S.me?.email ? "you" : by.email || "someone"];
     // Filed with no person asking: by one of Design Desk's runs, or from an automated test.
@@ -1616,9 +1628,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // The card it came out of: the change a proposal or a touch-up started from.
     // Named by its kind and number, its title on hover: a title can be long or the agent's own.
     const parent = S.cards.find((x) => x.id === (o.event?.card || from));
-    const from_ = parent ? `<span>from <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
+    const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
     if (parts) return { kind, src, author, auto, parent: from_ };
-    return `<div class="prov"><span class="src">${icon(kind)}${src}</span>${author ? `<span>by <b>${esc(author)}</b></span>` : ""}${auto}${from_}</div>`;
+    return `<div class="prov"><span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b>${esc(author === "you" ? "You" : author)}</b></span>` : ""}${auto}${from_}</div>`;
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
@@ -1751,7 +1763,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const src = c.source || {}, at = c.attention;
     return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
         <div class="sub">${c.in_progress ? `<span class="chip live" title="Its pull request is still open: the change is not in the product yet">● In progress — not shipped yet</span>` : src.merged_at ? `<span class="chip ok" title="The day its pull request was merged into the product">Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.pr ? `<span>PR #${esc(src.pr)}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${c.acked ? `<span class="chip ok" title="You marked it Got it">✓ Seen</span>` : ""}</div>
-        ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${at ? `<h4>${at.level === "designer" ? "Needs a designer" : "Nothing to decide"}</h4>${(at.reasons || []).length ? `<ul>${at.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}` : ""}`;
+        ${c.summary ? `<p>${txt(c.summary)}</p>` : ""}${at && !simple() ? `<h4>${at.level === "designer" ? "Needs a designer" : "Nothing to decide"}</h4>${(at.reasons || []).length ? `<ul>${at.reasons.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}` : ""}`;
   }
   // GitHub as the Desk keeps it (docs/desk.md → GitHub on the Desk): state, labels and the
   // latest comments, written by Design Desk's watch run.
@@ -1814,7 +1826,39 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // view to point at it fires its scroll after the pointer is already there.
   document.addEventListener("scroll", () => $("#peek")?.remove(), true);
   document.addEventListener("click", peekHide, true);
-  document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; if (e.target.matches?.("[data-sect]")) S.sect[e.target.dataset.sect] = e.target.open; }, true);
+  document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; }, true);
+  // A fold opened or shut by hand: an option's section keeps how the person left it (a fold
+  // drawn open fires toggle too, so only a click counts), and the fold's height eases between
+  // its two sizes (docs/desk.md → Motion). Popovers (More, a menu, a request's steps) pop instead.
+  const calm = matchMedia("(prefers-reduced-motion: reduce)");
+  document.addEventListener("click", (e) => {
+    const sum = e.target.closest?.("summary"), d = sum?.parentElement;
+    if (!d || d.tagName !== "DETAILS" || d.querySelector(":scope > summary") !== sum || e.defaultPrevented) return;
+    const ctl = e.target.closest("a, button, input, select, textarea, label");
+    if (ctl && sum.contains(ctl)) return;
+    const want = d._fold ? !d._want : !d.open;
+    if (d.dataset.sect) S.sect[d.dataset.sect] = want;
+    if (calm.matches || d.matches(".more, .stepper")) return;
+    e.preventDefault();
+    foldTo(d, want);
+  });
+  function foldTo(d, open) {
+    const from = d.getBoundingClientRect().height;
+    d._fold?.cancel();
+    d.open = open;
+    const to = d.getBoundingClientRect().height;
+    if (!open) d.open = true;
+    if (Math.abs(to - from) < 1) { d.open = open; return; }
+    d._want = open;
+    d.style.overflow = "clip";
+    const dur = Math.round(Math.min(480, 200 + Math.abs(to - from) * .3));
+    const a = d._fold = d.animate({ height: [`${from}px`, `${to}px`] }, { duration: dur, easing: "cubic-bezier(.25,.8,.25,1)" });
+    const body = [...d.children].filter((x) => x.tagName !== "SUMMARY");
+    if (open) body.forEach((x) => x.animate({ opacity: [0, 1] }, { duration: dur, easing: "ease-out" }));
+    const end = () => { if (d._fold !== a) return; d._fold = null; d.style.overflow = ""; };
+    a.onfinish = () => { if (d._fold === a && !open) d.open = false; end(); };
+    a.oncancel = end;
+  }
 
   // ---------- dialogs ----------
   // A form never submits here (docs/desk.md → Where it works): a dialog's buttons check
@@ -1859,7 +1903,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
 
   // ---------- header and list ----------
   // The tab of the product's changes keeps its key `new`, so older links (#new) still open it.
-  const TABS = { requests: "Requests", new: "Changes", issues: "Issues", product: "Product", people: "People", guide: "How it works" };
+  const TABS = { requests: "Requests", new: "PR Changes", issues: "Issues", product: "Product", people: "People", guide: "How it works" };
   // Links name the presentation, a filter on Requests, by its own word; #call is its old name.
   const VIEWS = { presentation: "presentation", call: "presentation", changes: "new" };
   const presenting = () => S.tab === "requests" && S.reqFilter === "presentation";
@@ -1877,7 +1921,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const it = decisions ? S.decision : S.card, link = it && itemLink(it);
     return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : presenting() ? "Presentation" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(it.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
   };
-  // Requests leads; Changes and Issues follow smaller with grey counts, then Product and People.
+  // Requests leads; PR Changes and Issues follow smaller with grey counts, then Product and People.
   // How it works sits under the question mark next to the day and night switch.
   function renderNav() {
     const unseen = S.cards.filter((c) => c.kind === "change" && !c.acked).length;
@@ -1907,7 +1951,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     new: { about: "what changed in the product's screens, and what a designer should look at",
       see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
         "On each row: where it came from and who made it, how long it has been open (red when overdue), and whether it needs a designer."],
-      can: [["Filter by <b>All</b>, <b>Not seen yet</b>, <b>Not handled</b> or <b>Needs a designer</b>."],
+      can: [[`Filter by <b>All</b>, <b>Not seen yet</b>${simple() ? " or" : ","} <b>Not handled</b>${full(" or <b>Needs a designer</b>")}.`],
         ["Press <b>Got it</b> once you have read a change.", "ack"],
         ["<b>Ask a question</b> about a change; the answer appears below it.", "ask"],
         ["<b>Add screenshots</b> when a change has none.", "screens"],
@@ -1933,7 +1977,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         [`Skip the vote${full(" and the live prototype")}: <b>Send to developers now</b>, or <b>Close…</b> with a decision recorded: what you decided.`, "skip"],
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
-        [simple() ? "Filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>." : "Switch between the <b>Requests</b> and the <b>Presentation</b>; filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>."], LINK],
+        [simple() ? "Filter the requests by <b>Open</b> or <b>Closed</b>." : "Switch between the <b>Requests</b> and the <b>Presentation</b>; filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>."], LINK],
       steps: simple() ? ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer or developer refines one.", "Approve it, and it goes to the developers."]
         : ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer or developer refines one, and a designer adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
     issues: { about: "what the team plans that will change the screens",
@@ -2008,7 +2052,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return c.suggested ? ["Suggested for the presentation"] : [];
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
-  const attentionLine = (c) => (c.attention ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}" title="${c.attention.level === "designer" ? "A designer should look at this; the reasons follow" : "Nothing here waits for a designer's decision"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
+  const attentionLine = (c) => (c.attention && !simple() ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}" title="${c.attention.level === "designer" ? "A designer should look at this; the reasons follow" : "Nothing here waits for a designer's decision"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
   // Every list on the left shows the newest first: a change by the day it shipped, anything
   // else by the day it came onto the Desk (docs/desk.md → Lists).
   const dateOf = (c) => String(c.source?.merged_at || c.created || c.updated || c.at || "");
@@ -2058,6 +2102,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" title="Days since it appeared, until a designer marks it handled${S.me?.due_days ? `; to be handled within ${esc(S.me.due_days)} days` : ""}">${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
   // A request's state; options waiting for a pick, the usual state, has none.
   const hasState = (c) => c.kind === "request" && !(c.asks && !closed(c)) && (c.busy || c.status !== "feedback");
+  // Each state's own key for the dot in simple mode: options drawn and a decision without a design
+  // are states of their own; every other is the request's status.
+  const stateKey = (c) => tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status;
   const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
   function chipsFor(c) {
     const out = [];
@@ -2128,8 +2175,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>` : "";
     const head = S.tab === "requests" && simple() && reqList ? "" : S.tab === "requests" ? pages("reqFilter", [["open", "Requests"], ["presentation", "Presentation", S.agenda.length]], (k) => (k === "presentation") !== reqList)
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
-    const filter = S.tab === "new" ? seg("newFilter", [["all", "All", newCards("all").length], ["new", "Not seen yet", newCards("new").length], ["open", "Not handled", newCards("open").length], ["designer", "Needs a designer", newCards("designer").length]])
-      : S.tab === "requests" && reqList ? seg("reqFilter", [["open", "Open", requestCards("open").length], ["designer", "Needs a designer", requestCards("designer").length], ["closed", "Closed", requestCards("closed").length]])
+    const filter = S.tab === "new" ? seg("newFilter", [["all", "All", newCards("all").length], ["new", "Not seen yet", newCards("new").length], ["open", "Not handled", newCards("open").length], ...full([["designer", "Needs a designer", newCards("designer").length]])])
+      : S.tab === "requests" && reqList ? seg("reqFilter", [["open", "Open", requestCards("open").length], ...full([["designer", "Needs a designer", requestCards("designer").length]]), ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
     const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
@@ -2148,10 +2195,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
-    // Changes, Requests and Issues say where each came from, without a description; screens and elements are Design Desk's own map.
+    // PR Changes, Requests and Issues say where each came from, without a description; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span>${num(c)}${simple() && hasState(c) ? `<span class="sdot">${stateTag(c, true)}</span>` : ""}</div></button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}${simple() && c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : ""}<span>${esc(c.title)}</span>${num(c)}</div></button>
       ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
   }
@@ -3050,13 +3097,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const tr = c.triage;
     if (!tr) return "";
     const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
-    if (!title || tr.verdict === "design") return "";
+    // Simple mode names no role a request needs: no Needs a developer.
+    if (!title || tr.verdict === "design" || (simple() && tr.verdict === "needs-developer")) return "";
     return `<span class="chip warn" title="${esc([text, ...(tr.reasons || [])].join(" "))}">${esc(title)}</span>`;
   }
   function cannotFold(c) {
     const xs = c.triage?.cannot || [];
     if (!xs.length) return "";
-    return `<details class="fold"><summary>${plural(xs.length, "part needs a developer", "parts need a developer")}: what a design change cannot do, and why</summary><div class="panel"><ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul></div></details>`;
+    return `<details class="fold"><summary>${simple() ? "What a design change cannot do, and why" : `${plural(xs.length, "part needs a developer", "parts need a developer")}: what a design change cannot do, and why`}</summary><div class="panel"><ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul></div></details>`;
   }
 
   // What Design Desk found before drawing; the summary says it in words, with no label.
@@ -3242,7 +3290,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const card = c.sent_card && S.cards.find((x) => x.id === c.sent_card);
     return `<div class="sent"><b>Sent to developers${sent && c.updated ? ` on ${esc(day(c.updated))}` : ""}</b>
       ${url ? `<p><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(what)} on GitHub ↗</a>${card ? ` · on the Issues page: <button class="anchor" data-card="${esc(card.id)}">${esc(card.title)}</button>${num(card)}` : ""}</p>` : ""}
-      ${sent ? `<p class="hint">When it ships, it appears under Changes.</p>` : ""}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
+      ${sent ? `<p class="hint">When it ships, it appears under PR Changes.</p>` : ""}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
   }
   function requestsFrom(c) {
     const rs = S.cards.filter((x) => x.kind === "request" && x.from === c.id);
@@ -3315,7 +3363,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const vf = $("#variant-frame"), pins = storyPins();
     if (!vf || !pins.length) return;
     // A folded design opens first; a design not loaded yet plays once it is.
-    const box = vf.closest("details"); if (box && !box.open) box.open = true;
+    const box = vf.closest("details"); if (box && !box.open) { box.open = true; if (box.dataset.sect) S.sect[box.dataset.sect] = true; }
     vf.scrollIntoView({ behavior: "smooth", block: "nearest" });
     S.playStep = null;
     const go = () => vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
@@ -3584,6 +3632,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     html #review [data-hot] { margin-left: auto; }
     /* The design's title (number and name) repeats its option tab on the Desk. */
     html #review #review-title { display: none; }
+    /* The design's pages are named as such: "Pages:" in grey before their switcher. */
+    html #review:has(#review-views:not(:empty))::before { content: "Pages:"; flex: none; order: -1; color: #6b6b66; font-size: 13px; font-weight: 500; }
   </style>`;
   const withLook = (html) => (html.includes("</head>") ? html.replace("</head>", `${REVIEW_LOOK}</head>`) : html.includes("</body>") ? html.replace("</body>", `${REVIEW_LOOK}</body>`) : html + REVIEW_LOOK);
   const withScript = (html) => { html = withLook(html); return html.includes("</body>") ? html.replace("</body>", `${FRAME_SCRIPT}</body>`) : html + FRAME_SCRIPT; };
@@ -4851,11 +4901,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function leaveHidden() {
     if (!simple()) return;
     if (SIMPLE_HIDES.includes(S.tab) && !S.decision) { S.tab = "requests"; S.card = null; S.decision = null; }
-    if (S.reqFilter === "presentation") S.reqFilter = "open";
+    if (S.reqFilter === "presentation" || S.reqFilter === "designer") S.reqFilter = "open";
+    if (S.newFilter === "designer") S.newFilter = "all";
   }
   $("#simple").addEventListener("click", () => {
     const on = !simple();
     if (S.me) S.me.simple = on;
+    // The option's sections start again as the mode has them: in simple mode the design folded.
+    S.sect = {};
     saveSimple(on);
     renderSimple(); leaveHidden();
     renderNav(); renderList(); renderDetail();

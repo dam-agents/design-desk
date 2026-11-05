@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.49.0 — 2026-11-05
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The Changes tab is named **PR
+Changes**. Folds slide by a script in every browser instead of jumping. In simple mode an
+option's design (the mockup) starts folded and All elements open, also after switching the mode;
+every request in the list shows its state as a dot left of its title in a colour of its own;
+nothing says Needs a designer or Needs a developer. A folded request keeps two whole lines. A
+row's provenance reads `from: … by: … based on: …`, with an icon for Slack and the Desk. No
+server or data change.
+
 ## 1.48.0 — 2026-11-05
 
 **Upgrade:**

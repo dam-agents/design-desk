@@ -71,7 +71,7 @@ served by the Desk server through the platform's Artifact API relay.
   click opens one; ↑ ↓ pick, Escape closes. A GitHub number with no card offers its page on
   GitHub, in the profile's repository (`repos`); a Desk number with no item says so.
 - **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
-  answer); **Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
+  answer); **PR Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
   with grey counts, then **Product** and **People**. **How it works** opens from the question
   mark next to the day and night switch, with a picture each of how a request, an issue and a
   shipped pull request move. The switch keeps each person's choice on the Desk
@@ -84,8 +84,12 @@ served by the Desk server through the platform's Artifact API relay.
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
   button). An option's design (the mockup) starts folded; it opens with a click, and a user
-  story played opens it. In the list a request's state is only its coloured dot at the end of
-  its title's line; pointing at the row unfolds its words. A request offers no rename. The tab
+  story played opens it, and All elements stays open. In the list every request shows its state
+  as a dot left of its title, in the first line's middle when the title wraps, each state in a
+  colour of its own; pointing at the row unfolds its words. Nothing names a role a request needs:
+  no **Needs a designer** filter, line or heading, no **Needs a developer** label (what a design
+  change cannot do still folds under the status). A request offers no rename. Switching the mode
+  starts an option's sections again as the mode has them. The tab
   intros and How it works, its drawings included, leave out what it hides.
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
@@ -100,7 +104,8 @@ served by the Desk server through the platform's Artifact API relay.
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
   dialogs rise in and fade out with their backdrop, More, the menu under a name and a
   request's steps pop open,
-  folds slide open and shut, the private ask grows from its button, a new message in it rises
+  folds slide open and shut (a script eases the fold's height, so every browser slides; only a
+  fold opened or shut by a click is kept, not one drawn open), the private ask grows from its button, a new message in it rises
   in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and
   rows ease between states, and a toast comes and goes. Nothing waits on an animation; a
   browser without one of these features shows the change at once.
@@ -491,8 +496,10 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - When a step cannot go on without a person, ask once, with a suggested answer:
   `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
-- **Where a card came from.** Every row in Changes and Requests shows its source, its author and,
-  for what no person asked for, the event behind it. A change card shows its `source` (the PR,
+- **Where a card came from.** Every row in PR Changes and Requests shows its source, its author and,
+  for what no person asked for, the event behind it, as `from: <source> by: <author> based on:
+  <card>`, the joining words grey and what they name in ink; Slack and the Desk (a desk with a
+  screen) show their icon beside their name. A change card shows its `source` (the PR,
   its author, merged or open); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`
   (an issue or PR), `chat` (the operator asked you in the direct session) or `agent` (your own);

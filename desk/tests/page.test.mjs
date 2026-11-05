@@ -224,11 +224,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
 
     // Every row in Changes and Requests says where it came from and who started it; its
     // links go to the source, the rest of the row opens the item.
-    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /PR #45.*by dana.*Automatic/);
+    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /PR #45.*by: dana.*Automatic/);
     await desk.click('[data-tab="requests"]');
     const prov = '.row.item:has([data-card="r2"]) .prov';
-    assert.match(await desk.textContent(prov), /Slack.*by Carla/);
-    assert.match(await desk.textContent('.row.item:has([data-card="r3"]) .prov'), /Chat with Design Desk.*by Gita/, "the reporter is the author whatever the channel");
+    assert.match(await desk.textContent(prov), /from: Slack.*by: Carla/);
+    assert.match(await desk.textContent('.row.item:has([data-card="r3"]) .prov'), /Chat with Design Desk.*by: Gita/, "the reporter is the author whatever the channel");
     assert.equal(await desk.getAttribute(`${prov} a`, "href"), "https://acme.slack.com/archives/C0123ABCD/p1", "the source links to the thread");
     await desk.click('.row.item:has([data-card="r2"]) .meta', { force: true });
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r2"));
@@ -428,7 +428,7 @@ test("Needs a designer filters Changes and Requests, and Changes opens on All", 
   // Requests leads the menu; Changes and Issues follow, then Product and People.
   await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
   assert.deepEqual(await desk.$$eval("#nav button", (bs) => bs.map((b) => b.dataset.tab)), ["requests", "new", "issues", "product", "people"], "the Desk opens on Requests");
-  assert.match(await desk.textContent('[data-tab="new"]'), /^Changes/);
+  assert.match(await desk.textContent('[data-tab="new"]'), /^PR Changes/);
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on All");
   assert.match(await desk.textContent("#list .filters .on"), /^All \d+$/, "All carries its count");
