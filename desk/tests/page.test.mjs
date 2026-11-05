@@ -546,7 +546,7 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.goto(`${base}#presentation/C-2`);
   await desk.reload();
   assert.equal(await shown("requests", "Calmer empty list"), "C-2", "a link to the presentation opens it there, also on a fresh load");
-  assert.match(await desk.textContent("#list .subtabs .on"), /^Presentation\s*1$/, "on the Presentation page, a tab of Requests");
+  assert.match(await desk.textContent("#list .subtabs .on"), /^For presentation\s*1$/, "on the presentation page, a tab of Requests");
   assert.equal(await desk.locator("#list .filters").count(), 0, "the presentation has no filter of its own");
   await desk.click("#detail h2 [data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
@@ -674,7 +674,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     const rows = () => desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card));
     assert.deepEqual(await rows(), ["ch2"], "Open, the default, lists only the changes nobody marked handled");
     await desk.click('[data-filter="newFilter:handled"]');
-    assert.deepEqual(await rows(), ["ch3"], "Handled lists the rest");
+    assert.deepEqual(await rows(), ["ch3", "ch4"], "Handled lists the rest");
     assert.doesNotMatch(await desk.getAttribute('.row.item:has([data-card="ch3"])', "class"), /overdue/, "a handled change is not overdue");
     await desk.click('[data-filter="newFilter:designer"]');
     assert.deepEqual(await rows(), [], "a handled change leaves Needs a designer");
@@ -980,7 +980,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.waitForSelector('[data-tab="issues"] .count');
     assert.equal(await desk.textContent('[data-tab="issues"] .count'), "2", "the tab counts every open issue: not closed, handled or designed");
     await desk.click('[data-tab="issues"]');
-    assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["issueFilter:all", "issueFilter:sprint", "issueFilter:next", "issueFilter:assigned", "issueFilter:label"], "All first, then the plan; no Designed");
+    assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["issueFilter:all", "issueFilter:sprint", "issueFilter:next", "issueFilter:assigned", "issueFilter:label", "issueFilter:handled"], "All first, then the plan, then Handled; no Designed");
     await desk.click('[data-filter="issueFilter:sprint"]');
     assert.equal(await desk.locator(".row.item").count(), 1, "a closed issue is not listed");
     const row = '.row.item:has([data-card="is1"])';

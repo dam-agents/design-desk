@@ -159,7 +159,8 @@ test("For Developers or For Designers: Slack starts with developers, the Desk an
   assert.equal(forOf({ email: "bob@example.com", role: "developer" }, { audience: "developers" }), true, "the Desk's switch");
   assert.equal(forOf({ email: "bob@example.com", role: "developer" }, {}), false);
   assert.throws(() => forOf({ agent: true }, { audience: "pm" }), /audience must be one of/);
-  assert.equal(s.listCards().find((c) => c.title === "x").for, "designers");
+  const own = s.createRequest({ agent: true }, { title: "The agent's own", problem: "y" }).card;
+  assert.equal(s.listCards().find((c) => c.id === own.id).for, "designers", "the list says whose tab it is on");
   assert.equal(s.createRequest({ agent: true }, { title: "y", problem: "z" }).card.size.filed, true, "chosen when filed: the page names no one");
 });
 
