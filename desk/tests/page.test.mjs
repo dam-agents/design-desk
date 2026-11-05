@@ -1578,7 +1578,7 @@ test("lists show the newest first; a folded box stays folded on another option; 
   await desk.goto(`${base}#C-6`);
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-6");
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Design only" }).count(), 0, "no Design only label by the title");
-  assert.match(await desk.textContent("#detail details.stepper ol"), /Checked\s*Design only/, "the steps name the verdict");
+  assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Design only/, "the steps name the verdict");
 
   await desk.click('[data-tab="new"]');
   await desk.click('[data-filter="newFilter:all"]');

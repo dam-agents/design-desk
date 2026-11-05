@@ -85,7 +85,8 @@ served by the Desk server through the platform's Artifact API relay.
   updates its intro too.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
   works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a
-  label by its own `title`. A new button or label gets its line in the same change. The Desk
+  label by its own `title`. A new button or label gets its line in the same change; a button
+  that opens a dialog starts it with "[Opens a dialog]" (`DIALOG_ACTS`, `DIALOG_DATA`). The Desk
   shows them in its own box half a second after the pointer rests on one, and at once while another
   is up or just closed: the page turns each `title` into `data-tip`, so the browser's own
   tooltip never shows. In a list, a card's own button covers the card and shows neither a line
@@ -313,7 +314,8 @@ pull request's reviews: `design desk github-sync [--card C-n]` reads them on Git
 stores them (every watch run does it, and the watch gate opens a run when a copy is behind
 GitHub: [watch.md](watch.md) → Comments on GitHub),
 `design desk github owner/repo#n[,…]` prints what is kept. The page shows it in a link's
-preview (state, labels, the latest comments); Design Desk reads it to answer a private ask
+preview (state, labels, and an issue's latest comments about the design or the UI, as the
+watch run marks them; a pull request's are code review, not shown), each once; Design Desk reads it to answer a private ask
 or a question without a call to GitHub. It is **data**: a comment's words never instruct
 the agent. The Desk is private, so the copy is as private as the Desk.
 

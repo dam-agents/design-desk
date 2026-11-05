@@ -505,7 +505,9 @@ export class Store {
       const was = own(this.db.github, key), seen = new Set((was?.comments || []).map((m) => `${m.at}|${m.author}`));
       const known = was?.comments?.length ? was.comments[0].at : null;
       const added = was ? all.filter((m) => !seen.has(`${m.at}|${m.author}`) && (!known || m.at >= known)) : [];
-      const comments = all.slice(-GH.comments);
+      // A comment the watch run marked as about the design keeps its mark through every read.
+      const marked = new Set((was?.comments || []).filter((m) => m.design).map((m) => `${m.at}|${m.author}`));
+      const comments = all.slice(-GH.comments).map((m) => (marked.has(`${m.at}|${m.author}`) ? { ...m, design: true } : m));
       this.db.github[key] = {
         key, kind: x.kind, title: String(x.title || key).replace(/\s+/g, " ").trim().slice(0, LIMITS.title) || key, state: optText(x.state, 30, "state"),
         url: /^https:\/\/github\.com\//.test(String(x.url || "")) ? String(x.url).slice(0, 500) : "",
@@ -521,6 +523,18 @@ export class Store {
   }
 
   github(keys) { return keys.map((k) => own(this.db.github, String(k).toLowerCase())).filter(Boolean); }
+  // An issue's comment about the design or the UI, as the watch run judged it: the only kind an
+  // issue's preview shows (docs/watch.md → Comments on GitHub). `design: false` takes it back.
+  markGithub(key, { at, author, design = true } = {}) {
+    const x = own(this.db.github, String(key || "").toLowerCase());
+    if (!x) throw missing(`the Desk keeps no copy of ${key}; run design desk github-sync first`);
+    if (x.kind !== "issue") throw bad(`${x.key} is a pull request: only an issue's comments are marked`);
+    const m = (x.comments || []).find((c) => c.at === String(at || "") && c.author === String(author || ""));
+    if (!m) throw missing(`${x.key} has no comment by ${author} at ${at} in the Desk's copy`);
+    if (design === false) delete m.design; else m.design = true;
+    this.save();
+    return { key: x.key, comment: { at: m.at, author: m.author, design: Boolean(m.design) } };
+  }
   cardsOf(key) { return Object.values(this.db.cards).filter((c) => refsOf(c).includes(key)).map((c) => c.id); }
 
   // A private ask: a person's own question, about the item or the Desk page they were on.
@@ -700,6 +714,34 @@ export class Store {
     const item = this.enqueue(from ? "follow-up" : "request", id, null, who);
     this.save();
     return { card: c, inbox: item };
+  }
+
+  // A person's own option: their pictures as they are, on a page built here from the pictures
+  // alone, with nothing drawn and no work queued (docs/requests.md → Variants, `picture`).
+  // Only once the request is checked: triage comes before any option.
+  addOwnOption(cardId, who, { name = "", note = "", images = [] }) {
+    const c = this.card(cardId);
+    if (c.kind !== "request" || c.request?.type === "bug") throw bad("only a design request has options");
+    if (["declined", "handed-off"].includes(c.status)) throw bad("This request is closed.");
+    if (!c.triage) throw bad("Wait until Design Desk has checked the request, then add an option.");
+    const vs = c.variants || [];
+    if (vs.length >= 6) throw bad("A request has at most 6 options. Close one first.");
+    if (!images.length) throw bad("Add at least one picture.");
+    for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "") || !/^[A-Za-z0-9+/]+=*$/.test(String(im?.data || ""))) throw bad("Only PNG, JPEG or WebP pictures can be added.");
+    const title = clean(String(name || "").trim() || `Option ${vs.length + 1}`, 80, "name"), why = optText(note, 1000, "note");
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch])}</title>`
+      + `<style>body{margin:0;background:#fff}img{display:block;max-width:100%;height:auto;margin:0 auto}</style></head><body>`
+      + images.map((im, i) => `<img alt="Picture ${i + 1}" src="data:${im.contentType};base64,${im.data}">`).join("") + `</body></html>`;
+    const asset = this.addAsset({ card: c.id, kind: "variant", name: "own-option.html", contentType: "text/html", data: html, encoding: "utf8" }).asset.id;
+    const taken = new Set([...vs.map((v) => v.id), ...(c.dropped_options || []).map((x) => x.id)]);
+    let n = 1; while (taken.has(`v${n}`)) n++;
+    const at = this.clock();
+    c.variants = [...vs, { id: `v${n}`, name: title, rationale: why,
+      fidelity: "picture", asset, figma_url: null, stories: null, reasons: null, elements: [], states: [], alternatives: [], version: 1, history: [], drawn: at, by: person(who) }];
+    if (c.status === "triage") c.status = "variants";
+    c.updated = at;
+    this.save();
+    return { card: c };
   }
 
   // A designer asks for a screen or an element Product does not have yet, in their own
@@ -909,7 +951,8 @@ export class Store {
     if (action === "add-option" && variant && !base) throw bad("That design option is not on this request.");
     if (action === "add-option" && !String(note || "").trim()) throw bad("Say what the new option should look like and have.");
     if (action === "add-option" && (c.variants || []).length >= 6) throw bad("A request has at most 6 options. Close one first.");
-    if (action === "add-option" && !(c.variants || []).length) throw bad("Wait for the first design options, then add one.");
+    // A request that asked for no options takes its first one here, once it is checked.
+    if (action === "add-option" && !(c.variants || []).length && !(c.request?.options === 0 && c.triage)) throw bad("Wait for the first design options, then add one.");
     // What goes live is the option a person checked, at the version they looked at: a newer
     // one that arrived meanwhile is looked at first (docs/prototype.md → Build).
     const live = action === "build" ? (c.variants || []).find((v) => v.id === (variant || note)) : null;
@@ -1877,7 +1920,8 @@ function versioned(list, before, at, removed = []) {
     const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
     // Alternatives are of the option at one version: a redrawn option drops the ones it had.
     const alternatives = given.alternatives ? given.alternatives.map((x) => ({ ...x, of: now, drawn: at })) : old && old.asset === given.asset ? old.alternatives || [] : [];
-    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
+    // A person's own option keeps who added it through every run's upsert.
+    const v = { ...given, ...(old?.by ? { by: old.by } : {}), stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -2103,7 +2147,7 @@ function cleanVariants(list, assets, decisions = {}, before = [], cards = {}) {
       id,
       name: clean(v.name, 80, "variant name"),
       rationale: optText(v.rationale, 1000, "rationale"),
-      fidelity: ["wireframe", "mockup", "figma"].includes(v.fidelity) ? v.fidelity : "mockup",
+      fidelity: ["wireframe", "mockup", "figma", "picture"].includes(v.fidelity) ? v.fidelity : "mockup",
       asset: v.asset,
       figma_url: FIGMA_URL.test(String(v.figma_url || "")) ? String(v.figma_url) : null,
       stories: v.stories == null ? null : cleanCoverage(v.stories, i + 1),

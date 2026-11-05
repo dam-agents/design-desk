@@ -265,6 +265,11 @@ async function viewerRoute(req, res, url, who) {
     const ids = images.map((im, i) => store.addAsset({ card: p[2], kind: "screen", name: `added-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id);
     return send(res, 201, withPing(store.addScreens(p[2], actor, ids), s, who));
   }
+  // A person's own option: their pictures on a page the server builds, nothing drawn (docs/requests.md → Variants).
+  if (m === "POST" && p[1] === "cards" && p[3] === "options") {
+    need("explore");
+    return send(res, 201, store.addOwnOption(p[2], actor, { name: b.name, note: b.note, images: Array.isArray(b.images) ? b.images.slice(0, 4) : [] }));
+  }
   if (m === "POST" && p[1] === "cards" && p[3] === "actions") {
     const action = String(b.action);
     // A small change's approval is a developer's too, and a lead developer approves any request;
@@ -337,6 +342,7 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   // An ask to add a person carries its payload; only a lead's ask on the page makes one.
   if (m === "GET" && p[1] === "github") { const card = url.searchParams.get("card"); const keys = url.searchParams.get("keys"); return send(res, 200, keys ? { records: store.github(keys.split(",").filter(Boolean)) } : { refs: store.githubRefs(card || null) }); }
+  if (m === "POST" && p[1] === "github" && p[2] === "marks") return send(res, 200, store.markGithub(b.key, { at: b.at, author: b.author, design: b.design !== false }));
   if (m === "POST" && p[1] === "github") return send(res, 200, store.putGithub(b.records));
   if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from a lead on the People tab");
   if (m === "POST" && p[1] === "enqueue") return send(res, 201, (() => { store.card(String(b.card)); const it = store.enqueue(String(b.kind), String(b.card), null, { agent: true }, typeof b.note === "string" ? b.note.slice(0, 1000) : ""); store.save(); return { item: it }; })());

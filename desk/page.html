@@ -13,7 +13,7 @@
 <style>
   :root {
     --bg: #fcfbfc; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #e4e3df; --soft: #f0efeb;
-    --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
+    --tip-opens: #6fd3a0; --accent: #2f5bd3; --accent-ink: #ffffff; --ok: #1f7a4d; --ok-soft: #e3f3ea; --warn: #9a6200; --warn-soft: #fbf0d9;
     --bad: #b3261e; --bad-soft: #fbe5e3; --info-soft: #e7edfc; --live: #6b3fc4; --live-soft: #efe8fb; --why: #0d7d78; --why-soft: #e0f3f1; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
     /* What floats over the page (the private ask): a near shadow for the edge, a far one for the lift. */
     --float: 0 2px 6px rgba(0,0,0,.10), 0 14px 32px rgba(0,0,0,.18), 0 36px 84px rgba(0,0,0,.24);
@@ -28,11 +28,11 @@
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
-      --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
+      --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
       --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   }
   :root[data-theme="dark"] { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
-    --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
+    --tip-opens: #1f7a4d; --accent: #8aa8ff; --accent-ink: #10142a; --ok: #6fd3a0; --ok-soft: #1c2f25; --warn: #f0c060; --warn-soft: #34291a;
     --bad: #ff8a80; --bad-soft: #3a1f1d; --info-soft: #1f2640; --live: #c3a6ff; --live-soft: #2a2140; --why: #62d2c8; --why-soft: #16302e; --shadow: none; --float: 0 0 0 1px rgba(255,255,255,.10), 0 14px 36px rgba(0,0,0,.6), 0 36px 90px rgba(0,0,0,.7); color-scheme: dark; }
   :root[data-theme="light"] { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -100,6 +100,8 @@
   .btn.small > .ico { width: 13px; height: 13px; }
   /* What a button or label does, the moment the pointer is on it (docs/desk.md → Tooltips). */
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
+  /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
+  #tip .opens { color: var(--tip-opens); font-weight: 600; }
   .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
   .btn:hover { background: var(--soft); }
   .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
@@ -855,11 +857,26 @@
 <dialog id="option-dialog">
   <form method="dialog" id="option-form">
     <h2>Add a design option</h2>
-    <p class="hint" style="margin:0">Design Desk draws one more option next to the others, in the product's own style and on sample data, for the same brief. It takes a few minutes; the new tab appears by itself.</p>
-    <label>What should it look like, and what should it have?<textarea name="note" maxlength="2000" required placeholder="e.g. Like the compact table, but with the filters on top as chips and a summary above the list"></textarea></label>
-    <div><div class="k" style="font-size:12.5px;color:var(--muted);margin-bottom:4px">Start from</div><div class="choices" id="of-base"></div></div>
+    <div class="tabs" role="radiogroup" id="of-mode">
+      <button type="button" data-of-mode="draw" aria-pressed="true">Design Desk draws it</button>
+      <button type="button" data-of-mode="own" aria-pressed="false">Use my own pictures</button>
+    </div>
+    <div id="of-draw">
+      <p class="hint" style="margin:0">Design Desk draws one more option, in the product's own style and on sample data, for the same brief. It takes a few minutes; the new tab appears by itself.</p>
+      <label>What should it look like, and what should it have?<textarea name="note" maxlength="2000" placeholder="e.g. Like the compact table, but with the filters on top as chips and a summary above the list"></textarea></label>
+      <div id="of-base-wrap"><div class="k" style="font-size:12.5px;color:var(--muted);margin-bottom:4px">Start from</div><div class="choices" id="of-base"></div></div>
+    </div>
+    <div id="of-own" hidden>
+      <p class="hint" style="margin:0">Your pictures become the option as they are: Design Desk draws nothing. The team comments and votes on it like on any other option.</p>
+      <label>Name<input name="name" maxlength="80" placeholder="e.g. My sketch" /></label>
+      <label>What it shows (optional)<textarea name="why" maxlength="1000"></textarea></label>
+      <div class="drop" id="of-drop">
+        <span>Pictures: paste them here with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="of-file" hidden multiple /></label>. Four at most, shown one under another.</span>
+        <div class="thumbs" id="of-thumbs"></div>
+      </div>
+    </div>
     <p class="hint" id="of-error" style="color:var(--bad, #b42318);margin:0" hidden></p>
-    <div class="actions"><button type="button" class="btn primary" data-close="ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+    <div class="actions"><button type="button" class="btn primary" data-close="ok" id="of-ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
 
@@ -1233,14 +1250,22 @@
   // keeps it as its aria-label, so a screen reader still names it.
   function toTip(el) {
     if (!el.hasAttribute("aria-label") && !el.hasAttribute("aria-labelledby") && !/[\p{L}\p{N}]/u.test(textOf(el))) el.setAttribute("aria-label", el.title);
-    el.dataset.tip = el.title; el.removeAttribute("title");
+    el.dataset.tip = el.title; el.removeAttribute("title"); markOpens(el);
   }
+  // A button that opens a dialog says so first: pressing it only asks, the dialog does it. A new
+  // dialog button joins these lists (its `data-` action, or its id).
+  const OPENS = "[Opens a dialog] ";
+  const DIALOG_ACTS = new Set(["queue", "clear-call", "approve", "build", "states", "alternatives", "add-option", "explore", "history", "draw", "decide", "close", "slack-share", "slack-send", "figma-export", "figma-import"]);
+  const DIALOG_DATA = ["decide", "revoke", "size", "dropOption", "adjust", "addProduct", "addPerson", "addShots", "el", "elStates"];
+  const opensDialog = (el) => el.id === "new-request" || (el.dataset.act ? DIALOG_ACTS.has(el.dataset.act) : DIALOG_DATA.some((k) => k in el.dataset));
+  function markOpens(el) { if (opensDialog(el) && !(el.dataset.tip || "").startsWith(OPENS)) el.dataset.tip = OPENS + (el.dataset.tip || textOf(el).replace(/…$/, "")); }
   function tip(root) {
     if (root.nodeType !== 1) return;
-    for (const el of [root, ...root.querySelectorAll(`${TIPPED}, [title]`)]) {
+    for (const el of [root, ...root.querySelectorAll(`${TIPPED}, [title], [role=button]`)]) {
       if (el.matches("iframe")) continue;
       if (el.title) toTip(el);
       else if (el.matches(TIPPED) && !el.dataset.tip && !el.matches(ROW_OPEN)) { const t = tipFor(el); if (t) el.dataset.tip = t; }
+      markOpens(el);
       if (el.matches(TIPPED)) decorate(el);
     }
   }
@@ -1265,6 +1290,7 @@
     const host = [...document.querySelectorAll("dialog[open]")].pop() || document.body;
     if (box.parentElement !== host) host.append(box);
     box.textContent = t;
+    if (t.startsWith(OPENS)) { box.textContent = t.slice(OPENS.length); box.insertAdjacentHTML("afterbegin", `<span class="opens">${esc(OPENS.trim())}</span> `); }
     const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
     const below = (under && r.bottom + 6 + h <= innerHeight) || r.top - 6 - h < 0;
     box.style.left = `${Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8))}px`;
@@ -1379,13 +1405,10 @@
     .replace(/<(https?:\/\/[^|>\s]+)>/g, "$1");
   const txt = (s, c) => refs(esc(unslack(s, false)), c);
 
-  // The skills the person switched for a request's options, in the words New request showed.
+  // The skills the person switched on for a request's options, by their names.
   function skillLine(skills) {
-    const e = Object.entries(skills || {});
-    if (!e.length) return "";
-    const say = (n) => esc((S.me?.skills || []).find((k) => k.name === n)?.does || n);
-    const on = e.filter(([, v]) => v).map(([n]) => say(n)), off = e.filter(([, v]) => !v).map(([n]) => say(n));
-    return `<p class="hint">${on.length ? `Uses: ${on.join(" · ")}` : ""}${on.length && off.length ? "<br>" : ""}${off.length ? `Not for this one: ${off.join(" · ")}` : ""}</p>`;
+    const on = Object.entries(skills || {}).filter(([, v]) => v).map(([n]) => esc(n));
+    return on.length ? `<p class="hint">Uses: ${on.join(" · ")}</p>` : "";
   }
 
   // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
@@ -1465,10 +1488,11 @@
     const what = [run && esc(JOB[run] || run), event].filter(Boolean).join(" · ");
     const auto = run || o.automated ? `<span class="auto" title="Filed on its own, not by a person">${icon("auto")}<span>Automatic${what ? ` · ${what}` : ""}</span></span>` : event;
     // The card it came out of: the change a proposal or a touch-up started from.
+    // Named by its kind and number, its title on hover: a title can be long or the agent's own.
     const parent = S.cards.find((x) => x.id === (o.event?.card || from));
-    if (parts) return { kind, src, author, auto, parent: parent ? `<span>from <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(parent.title)}</button></span>` : "" };
-    return `<div class="prov"><span class="src">${icon(kind)}${src}</span>${author ? `<span>by <b>${esc(author)}</b></span>` : ""}${auto}${
-      parent ? `<span>from <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(parent.title)}</button></span>` : ""}</div>`;
+    const from_ = parent ? `<span>from <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
+    if (parts) return { kind, src, author, auto, parent: from_ };
+    return `<div class="prov"><span class="src">${icon(kind)}${src}</span>${author ? `<span>by <b>${esc(author)}</b></span>` : ""}${auto}${from_}</div>`;
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
@@ -1615,12 +1639,15 @@
     for (const k of want) S.gh[k] = null;
     for (const x of r.records || []) S.gh[x.key] = x;
   }
+  // Each issue or pull request once, though a card may point at it twice (its source and where
+  // it came from). A pull request's comments are code review and none shows; an issue shows its
+  // latest about the design or the UI, as the watch run marked them (docs/watch.md).
   function ghPeek(keys) {
-    const recs = keys.map((k) => S.gh[k]).filter(Boolean);
+    const recs = [...new Set(keys)].map((k) => S.gh[k]).filter(Boolean);
     return recs.map((x) => {
-      const last = (x.comments || []).slice(-2);
-      return `<h4>On GitHub · ${x.kind === "pr" ? "pull request" : "issue"} ${esc(x.key.split("#")[1] ? `#${x.key.split("#")[1]}` : "")}</h4>
-        <div class="sub"><span class="chip">${esc(x.state || "")}</span>${(x.labels || []).slice(0, 4).map((l) => `<span class="chip">${esc(l)}</span>`).join("")}<span>${plural((x.comments || []).length, "comment", "comments")}</span></div>
+      const pr = x.kind === "pr", design = pr ? [] : (x.comments || []).filter((m) => m.design), last = design.slice(-2);
+      return `<h4>On GitHub · ${pr ? "pull request" : "issue"} ${esc(x.key.split("#")[1] ? `#${x.key.split("#")[1]}` : "")}</h4>
+        <div class="sub"><span class="chip">${esc(x.state || "")}</span>${(x.labels || []).slice(0, 4).map((l) => `<span class="chip">${esc(l)}</span>`).join("")}${design.length ? `<span>${plural(design.length, "comment", "comments")} about the design</span>` : ""}</div>
         ${last.map((m) => `<p class="hint"><b>${esc(m.author)}</b>: ${esc(m.body.replace(/\s+/g, " ").slice(0, 160))}${m.body.length > 160 ? "…" : ""}</p>`).join("")}`;
     }).join("");
   }
@@ -1677,13 +1704,18 @@
   });
   // A confirmation for anything that cannot be taken back; optional choice, note or link.
   // `send(answer)` does the action; ask() resolves to its result, or to null on Cancel.
-  function ask({ title, body, ok, choices = null, pick = null, note = null, url = null, check = null, checked = false, check2 = null, send }) {
+  // `multi`: the choices are checkboxes, `pick` the ids ticked at first, and the answer's
+  // `choices` the ids ticked; OK waits until one is.
+  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, url = null, check = null, checked = false, check2 = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
     $("#cf-body").innerHTML = body ? md(body) : "";
     $("#cf-ok").textContent = ok;
-    $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="radio" name="choice" value="${esc(c.id)}" ${c.id === pick ? "checked" : ""} required /> ${esc(c.name)}${c.hint ? ` <span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
+    const ticked = (id) => (multi ? (pick || []).includes(id) : id === pick);
+    $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /> ${esc(c.name)}${c.hint ? ` <span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
+    const okBtn = $("#cf-ok"), none = () => multi && choices && !f.querySelector("input[name=choice]:checked");
+    okBtn.disabled = none(); $("#cf-choices").onchange = () => { okBtn.disabled = none(); };
     $("#cf-note-wrap").hidden = !note; $("#cf-note-label").textContent = note || "";
     $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url);
     $("#cf-check-wrap").hidden = !check; $("#cf-check-label").textContent = check || ""; f.check.checked = Boolean(check && checked);
@@ -1692,7 +1724,7 @@
     return new Promise((resolve) => {
       dlg.onclose = async () => {
         if (dlg.returnValue !== "ok") { resolve(null); return; }
-        const answer = { choice: f.querySelector("input[name=choice]:checked")?.value || null, note: f.note.value.trim(), url: f.url.value.trim(), check: f.check.checked, check2: f.check2.checked };
+        const answer = { choice: f.querySelector("input[name=choice]:checked")?.value || null, choices: [...f.querySelectorAll("input[name=choice]:checked")].map((i) => i.value), note: f.note.value.trim(), url: f.url.value.trim(), check: f.check.checked, check2: f.check2.checked };
         try { resolve(await sendOrReopen(dlg, () => send(answer))); } catch (e) { fail(e); }
       };
     });
@@ -2334,7 +2366,9 @@
       const [name, tone] = label[th.kind] || [th.kind, ""];
       const an = th.anchor, av = an?.variant && (c.variants || []).find((x) => x.id === an.variant);
       const snipAsset = an?.asset || (av && ((an.state && (av.states || []).find((x) => x.id === an.state)?.asset) || av.asset)) || "";
-      const anchor = an?.variant ? `<button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(th.anchor.label || th.anchor.text || "an element")} in ${esc(optionName(c, th.anchor.variant))}${th.anchor.view_name ? ` · ${esc(th.anchor.view_name)}` : ""}</button>` : "";
+      // A note from the design workspace names its option first, by its number and name, as its tab does.
+      const on = av ? `Option ${(c.variants || []).indexOf(av) + 1}: ${av.name}` : "A removed option";
+      const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}" title="${esc(KIND_TIP[th.kind] || "")}">${esc(name)}</span>${anchor}${state}</div>
@@ -2729,7 +2763,7 @@
   function renderSteps(c) {
     if (c.status === "declined") return "";
     const v = c.triage?.verdict, n = (c.variants || []).length;
-    const steps = [["check", "Checked", (v && VERDICT[typeOf(c)][v]?.[0]) || "by Design Desk"], ["options", "Options drawn", n ? plural(n, "option", "options") : "a few options"], ["feedback", "Team feedback", "votes and comments"],
+    const steps = [["check", "Filed", (v && VERDICT[typeOf(c)][v]?.[0]) || "Design Desk checks it"], ["options", "Options drawn", n ? plural(n, "option", "options") : "a few options"], ["feedback", "Team feedback", "votes and comments"],
       ...(v && v !== "design" ? [] : [["live", "Tried live", "optional"]]), ["approved", "Approved", "by a designer or a lead developer", true], ["sent", "To developers", "after approval"]];
     const at = { triage: "check", variants: "options", feedback: "feedback", prototype: "live", testing: "live", spec: "sent", "handed-off": "sent" }[c.status];
     let i = steps.findIndex(([k]) => k === at);
@@ -2885,7 +2919,7 @@
     if (closed(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
     if ((c.variants || []).length >= 6) return "";
-    return `<button class="vadd" data-act="add-option" title="Describe one more option and Design Desk draws it next to these">+ New option</button>`;
+    return `<button class="vadd" data-act="add-option" title="Add one more option: describe it for Design Desk to draw, or use your own pictures">+ New option</button>`;
   }
 
   // A tab's ✕ takes the option off, as a browser tab closes; a designer's, never the last one.
@@ -2894,14 +2928,16 @@
 
   function renderOptions(c) {
     const vs = c.variants || [];
-    if (!vs.length) return "";
+    // A request that asked for no options: once checked, its first one is added by hand.
+    if (!vs.length) return c.request?.options === 0 && c.triage && addOptionTab(c)
+      ? `<h3>Design options</h3><div class="tabs vtabs" role="group" aria-label="Design options">${addOptionTab(c)}</div><p class="hint">No options were asked for. Add one: describe it for Design Desk to draw, or use your own pictures.</p>` : "";
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"${c.chosen?.variant === x.id ? ` class="won"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
-      ${againstBox(c, v.id)}${whyStrip(c, v)}
+      ${againstBox(c, v.id)}${whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures ${v.by ? `${who(v.by)} added` : "added by hand"}; Design Desk drew nothing.</p>` : ""}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="A designer picked this option as the winner">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : ""}
       <div class="vbar">
         <button class="btn small primary" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
@@ -3839,8 +3875,8 @@
     if (name === "slack-send") {
       const thread = c.origin?.channel === "slack";
       res = await ask({ title: "Send designs to Slack", body: `Design Desk takes a picture of each design and posts them ${thread ? "in the Slack thread this request came from" : "to the team's Slack channel"}, with a link back here. Comments and the pick stay here on the Desk.`,
-        ok: "Send", choices: [{ id: "all", name: "All options" }, ...options.map((o) => ({ id: o.id, name: o.name }))], pick: "all", note: "A line for Slack (optional)",
-        send: (a) => post(JSON.stringify({ variants: a.choice || "all", note: a.note || "" })) });
+        ok: "Send", choices: options.map((o) => ({ id: o.id, name: o.name })), multi: true, pick: options.map((o) => o.id), note: "A line for Slack (optional)",
+        send: (a) => post(JSON.stringify({ variants: a.choices.length === options.length ? "all" : a.choices, note: a.note || "" })) });
       if (!res) return;
     }
     if (name === "figma-export") {
@@ -3857,11 +3893,27 @@
     await refreshList(); await openCard(c.id);
   }
   // One more option: what it should look like and have, and what it starts from.
+  // Drawn by Design Desk from what the person writes, or the person's own pictures as they
+  // are, with nothing drawn (docs/requests.md → Variants, `picture`).
+  const ownPictures = [];
+  const ofMode = (mode) => {
+    for (const b of document.querySelectorAll("[data-of-mode]")) b.setAttribute("aria-pressed", String(b.dataset.ofMode === mode));
+    $("#of-draw").hidden = mode !== "draw"; $("#of-own").hidden = mode !== "own";
+    $("#of-ok").textContent = mode === "own" ? "Add the option" : "Draw the option";
+  };
+  const ofShowPictures = () => { $("#of-thumbs").innerHTML = ownPictures.map((p) => `<img alt="" src="${p.preview}" />`).join(""); };
+  const ofAdd = (file) => { if (ownPictures.length < 4 && /^image\//.test(file.type)) { ownPictures.push({ file, preview: URL.createObjectURL(file) }); ofShowPictures(); } };
+  $("#of-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) ofAdd(f); e.target.value = ""; }));
+  $("#option-dialog").addEventListener("paste", (e) => { if ($("#of-own").hidden) return; for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); ofAdd(it.getAsFile()); } });
+  $("#of-mode").addEventListener("click", (e) => { const b = e.target.closest("[data-of-mode]"); if (b) ofMode(b.dataset.ofMode); });
   function addOption(c) {
     const dlg = $("#option-dialog"), f = $("#option-form");
     f.reset(); $("#of-error").hidden = true;
+    for (const p of ownPictures) URL.revokeObjectURL(p.preview);
+    ownPictures.length = 0; ofShowPictures(); ofMode("draw");
     const vs = c.variants || [];
     const from = S.ws.open ? S.variant : S.variant || vs[0]?.id;
+    $("#of-base-wrap").hidden = !vs.length;
     $("#of-base").innerHTML = [...vs.map((v) => ({ id: v.id, name: `Like ${v.name}, changed as I describe` })), { id: "", name: "Something new, from scratch" }]
       .map((o) => `<label><input type="radio" name="base" value="${esc(o.id)}" ${o.id === (from || "") ? "checked" : ""} /> ${esc(o.name)}</label>`).join("");
     dlg.returnValue = ""; dlg.showModal();
@@ -3869,8 +3921,14 @@
     return new Promise((resolve) => {
       dlg.onclose = async () => {
         if (dlg.returnValue !== "ok") { resolve(null); return; }
+        const own = !$("#of-own").hidden;
         const note = f.note.value.trim(), base = f.querySelector("input[name=base]:checked")?.value || "";
-        try { resolve(await sendOrReopen(dlg, () => api("POST", `/api/cards/${c.id}/actions`, { action: "add-option", note, ...(base ? { variant: base } : {}) }))); }
+        // The pictures share the size of one page on the Desk, so each gets its part of it.
+        const send = own
+          ? async () => api("POST", `/api/cards/${c.id}/options`, { name: f.name.value.trim(), note: f.why.value.trim(),
+              images: await Promise.all(ownPictures.map(async (p) => { const x = await encodePicture(p.file, Math.floor(640 * 1024 / ownPictures.length)); return { contentType: x.contentType, data: x.data }; })) })
+          : () => api("POST", `/api/cards/${c.id}/actions`, { action: "add-option", note, ...(base ? { variant: base } : {}) });
+        try { const r = await sendOrReopen(dlg, send); if (r && own) toast("Added. Your pictures are the new option."); resolve(r); }
         catch (err) { $("#of-error").textContent = err.message || String(err); $("#of-error").hidden = false; }
       };
     });
@@ -4284,15 +4342,22 @@
   $("#request-form").options.addEventListener("input", sayCount);
 
   // A picture is shrunk in the browser before it is sent: 1600 px wide at most, JPEG.
+  // A picture as a JPEG of at most `max` characters: lower quality first, then smaller.
+  async function encodePicture(file, max = 600 * 1024) {
+    const img = await createImageBitmap(file);
+    let scale = Math.min(1, 1600 / img.width), url = "";
+    for (let tries = 0; tries < 8; tries++, scale *= 0.8) {
+      const canvas = Object.assign(document.createElement("canvas"), { width: Math.max(1, Math.round(img.width * scale)), height: Math.max(1, Math.round(img.height * scale)) });
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      let q = 0.82; url = canvas.toDataURL("image/jpeg", q);
+      while (url.length > max && q > 0.4) { q -= 0.15; url = canvas.toDataURL("image/jpeg", q); }
+      if (url.length <= max) break;
+    }
+    return { contentType: "image/jpeg", data: url.split(",")[1], preview: url };
+  }
   async function addPicture(file, list = pictures, thumbs = "#rq-thumbs", max = 2) {
     if (list.length >= max || !/^image\//.test(file.type)) return;
-    const img = await createImageBitmap(file);
-    const scale = Math.min(1, 1600 / img.width);
-    const canvas = Object.assign(document.createElement("canvas"), { width: Math.round(img.width * scale), height: Math.round(img.height * scale) });
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    let q = 0.82, url = canvas.toDataURL("image/jpeg", q);
-    while (url.length > 600 * 1024 && q > 0.4) { q -= 0.15; url = canvas.toDataURL("image/jpeg", q); }
-    list.push({ contentType: "image/jpeg", data: url.split(",")[1], preview: url });
+    list.push(await encodePicture(file));
     $(thumbs).innerHTML = list.map((p) => `<img alt="" src="${p.preview}" />`).join("");
   }
 
@@ -4325,7 +4390,6 @@
       ? "Tell Design Desk what should look different. It draws options; once a designer or lead developer approves one (or a developer, on a small change), the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
     if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : `What should look different in “${from.title}”?`;
-    if (issue) f.problem.value = (from.needs || []).join("\n");
     f.from.value = from ? from.id : "";
     dlg.returnValue = ""; dlg.showModal();
   }
