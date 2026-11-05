@@ -632,6 +632,8 @@
   .status[data-o="gh-open"] { --o: #2da44e; --os: color-mix(in srgb, #2da44e 16%, transparent); } .status[data-o="gh-draft"] { --o: #8c959f; --os: color-mix(in srgb, #8c959f 16%, transparent); }
   .status[data-o="gh-merged"] { --o: #8957e5; --os: color-mix(in srgb, #8957e5 16%, transparent); }
   .s-pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: var(--o); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; text-decoration: none; white-space: nowrap; } a.s-pill:hover { opacity: .88; }
+  .status .s-meta .k { color: var(--muted); } .status .s-meta b { font-weight: 500; color: var(--ink); } .status .s-meta b.late { color: var(--closed); }
+  .ai-tag { display: inline-grid; place-items: center; margin-left: 5px; padding: 0 4px; border-radius: 4px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; line-height: 14px; color: var(--accent); background: var(--info-soft); vertical-align: 1px; }
   .status .s-meta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
   .status[data-o="checking"] { --o: var(--accent); --os: var(--info-soft); } .status[data-o="live"] { --o: var(--live); --os: var(--live-soft); }
   .s-word { display: flex; align-items: center; gap: 9px; font-size: var(--fs-head); font-weight: 650; color: var(--o); letter-spacing: -.01em; }
@@ -2173,7 +2175,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // One filter: a segmented control, its choice marked; the key is S's, or a data- action.
   // A tab's or a filter's words, with its count in a quiet pill.
   const counted = (l, n) => `${esc(l)}${n ? ` <span class="n">${n}</span>` : ""}`;
-  const seg = (key, opts, attr = "filter", value = S[key]) => `<div class="filters" role="group">${opts.map(([k, l, n]) => `<button class="btn small ${value === k ? "on" : ""}" data-${attr}="${attr === "filter" ? `${key}:${k}` : k}" aria-pressed="${value === k}">${counted(l, n)}</button>`).join("")}</div>`;
+  const seg = (key, opts, attr = "filter", value = S[key]) => `<div class="filters" role="group">${opts.map(([k, l, n, x = ""]) => `<button class="btn small ${value === k ? "on" : ""}" data-${attr}="${attr === "filter" ? `${key}:${k}` : k}" aria-pressed="${value === k}">${counted(l, n)}${x}</button>`).join("")}</div>`;
   // A filter too wide for the list fades at its edge.
   const markScrolls = (root) => root.querySelectorAll(".filters").forEach((f) => f.classList.toggle("scrolls", f.scrollWidth > f.clientWidth + 1 && f.scrollLeft + f.clientWidth < f.scrollWidth - 1));
   document.addEventListener("scroll", (e) => { if (e.target.matches?.(".filters")) markScrolls(e.target.parentElement); }, true);
@@ -2192,7 +2194,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
-    const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length]])])
+    const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["ready", "Ready", requestCards("ready").length], ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
@@ -2766,7 +2768,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${(() => {
         const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
-        const meta = [ageChip(c), c.handled?.at ? `<span>handled by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : "", src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : "", src.author ? `<span>by ${esc(src.author)}</span>` : ""].join("");
+        // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
+        const kv = (k, v, cls = "") => `<span><span class="k">${k}:</span> <b${cls ? ` class="${cls}"` : ""}>${v}</b></span>`;
+        const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : hb?.email && hb.email === S.me?.email ? "You" : hb?.name || hb?.email || "someone";
+        const meta = [c.created ? kv("created", esc(dayWord(c.created))) : "", src.merged_at ? kv("shipped", esc(dayWord(src.merged_at))) : "", src.author ? kv("by", esc(src.author)) : "",
+          handledAt(c) ? kv("handled", `${esc(dayWord(handledAt(c)))} (${esc(handler)})`) : waited(c) ? kv(overdue(c) ? "overdue" : "open", esc(plural(waited(c), "day", "days")), overdue(c) ? "late" : "") : ""].join("");
         const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
         const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
         const adjust = can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "";
