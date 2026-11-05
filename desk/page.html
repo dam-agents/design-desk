@@ -283,9 +283,6 @@
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
   details.more .menu { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; width: max-content; max-width: min(460px, calc(100vw - 32px)); display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   details.more .menu .btn { border: 0; justify-content: flex-start; width: 100%; text-align: left; white-space: nowrap; }
-  .verdict { border-radius: var(--radius); padding: 14px 16px; margin: 6px 0 4px; max-width: var(--measure); }
-  .verdict.design { background: var(--ok-soft); } .verdict.needs-developer { background: var(--warn-soft); } .verdict.product { background: var(--info-soft); }
-  .verdict b { display: block; margin-bottom: 4px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
   .two ul { margin: 4px 0 0; padding-left: 18px; }
   /* An open item's text blocks share one width, the reading measure; only the designs run wider. */
@@ -643,7 +640,6 @@
   .brief-k .face.agent { background: var(--ink); }
   .made-sec + .made-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .made-sec h4 { margin: 0 0 6px; font-size: var(--fs-ui); font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-  .made-sec .verdict { margin: 0; padding: 0; background: none; font-size: var(--fs-read); }
   .made-sec ul { margin: 6px 0 8px; padding-left: 20px; }
   .made-sec p { margin: 0 0 6px; }
   /* A section that folds, as on the prototype: a heading with its chip, + or − at the right,
@@ -916,7 +912,6 @@
     [["share"], "Share options in Slack", "slack"],
     [["people"], "Ask Design Desk to add people to the list"],
   ];
-  const RESEARCH = { clear: "Clear to go", duplicate: "Already tracked elsewhere", deliberate: "Today's behaviour was a deliberate decision", collision: "Someone is changing this right now", unclear: "Not enough to go on — Design Desk asked you a question below" };
   const GUIDE = () => `<h2>How Design Desk works</h2>
 <p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options and live prototypes. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
 <ol>
@@ -1219,7 +1214,16 @@
   // A send that fails opens its dialog again with what the person typed; the toast says why.
   // Every dialog sends through it (docs/desk.md → Where it works).
   const sendOrReopen = async (dlg, send) => { try { return await send(); } catch (e) { dlg.returnValue = ""; dlg.showModal(); throw e; } };
-  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  // The Desk runs in a sandboxed frame with no origin of its own, where local storage can
+  // throw: a choice is kept in memory too, so a redraw (another design tab) keeps it.
+  const store = (() => {
+    const mem = new Map();
+    return {
+      get(k) { if (mem.has(k)) return mem.get(k); try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { mem.set(k, String(v)); try { localStorage.setItem(k, v); } catch {} },
+      del(k) { mem.set(k, null); try { localStorage.removeItem(k); } catch {} },
+    };
+  })();
 
   // Issue and pull request numbers link to their source (docs/desk.md → Writing on the Desk):
   // #12 and PR #12 in the card's repository, owner/name#12 in that one. Only text outside
@@ -1706,18 +1710,20 @@
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
   const attentionLine = (c) => (c.attention ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}" title="${c.attention.level === "designer" ? "A designer should look at this; the reasons follow" : "Nothing here waits for a designer's decision"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
-  const newCards = (filter) => S.cards.filter((c) => c.kind === "change"
-    && (filter === "all" || (filter === "designer" ? forDesigner(c) : filter === "open" ? c.kind === "change" && !c.handled : !c.acked)));
-  const requestCards = (filter) => S.cards.filter((c) => c.kind === "request"
-    && (filter === "designer" ? forDesigner(c) : filter === "open" ? !closed(c) : closed(c)));
+  // Every list on the left shows the newest first: a change by the day it shipped, anything
+  // else by the day it came onto the Desk (docs/desk.md → Lists).
+  const dateOf = (c) => String(c.source?.merged_at || c.created || c.updated || c.at || "");
+  const newestFirst = (xs) => [...xs].sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
+  const newCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "change"
+    && (filter === "all" || (filter === "designer" ? forDesigner(c) : filter === "open" ? c.kind === "change" && !c.handled : !c.acked))));
+  const requestCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "request"
+    && (filter === "designer" ? forDesigner(c) : filter === "open" ? !closed(c) : closed(c))));
   // The list filter a person picked last is kept in their browser.
-  // Issues of the current sprint first, then the next sprint's, someone's and the labelled; the newest first in each.
   const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
   // An issue that already went through Design Desk is done on the design side: it leaves the
   // open lists, All too, for its own (docs/issues.md → On the Desk).
-  const issueCards = (filter) => S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
-      && (filter === "designed" ? c.designed : !c.designed && (filter === "all" || c.bucket === filter)))
-    .sort((a, b) => Object.keys(BUCKET).indexOf(a.bucket) - Object.keys(BUCKET).indexOf(b.bucket) || (b.source?.updated || b.updated).localeCompare(a.source?.updated || a.updated));
+  const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
+      && (filter === "designed" ? c.designed : !c.designed && (filter === "all" || c.bucket === filter))));
   const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
@@ -1732,7 +1738,7 @@
       const kind = S.productFilter === "elements" ? "element" : "screen";
       // One Design Desk could not add stays a week, so the person who asked sees why.
       const gone = (c) => c.status === "dropped" && Date.now() - Date.parse(c.updated) > 7 * 864e5;
-      return S.cards.filter((c) => c.kind === kind && !gone(c)).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
+      return newestFirst(S.cards.filter((c) => c.kind === kind && !gone(c)));
     }
     if (presenting()) return S.cards.filter((c) => S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id));
     if (S.tab === "requests") return requestCards(S.reqFilter);
@@ -1892,7 +1898,7 @@
     // Kept apart: the design side's decisions, then developers', then those whose author's role is unknown.
     const shown = S.decisions.filter((d) => !S.decisionSide || (d.side || "") === S.decisionSide);
     const rows = ["design", "developer", ""].map((k) => {
-      const xs = shown.filter((d) => (d.side || "") === k);
+      const xs = newestFirst(shown.filter((d) => (d.side || "") === k));
       return xs.length ? `<div class="side-head">${esc(k === "design" ? "From designers and PMs" : k === "developer" ? "From developers" : "Not known who")} <span class="n">${xs.length}</span></div>${xs.map(row).join("")}` : "";
     }).join("");
     list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionSide && S.decisions.length ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
@@ -2615,22 +2621,25 @@
     return said || approved ? `<div class="hint size">${said ? `<div>${said}</div>` : ""}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
   }
 
-  function renderVerdict(c) {
+  // The verdict sits as a label beside the title; its words and reasons are in its tooltip
+  // (docs/requests.md → Triage). What a design change cannot do folds under the status.
+  function verdictChip(c) {
     const tr = c.triage;
     if (!tr) return "";
     const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
-    const list = (xs) => xs?.length ? `<ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : "";
-    // Folded: only what the person asked for and design cannot do (docs/requests.md → Triage).
-    const cannot = tr.cannot || [];
-    const label = tr.verdict === "needs-developer" ? "" : `<span class="chip ${tr.verdict === "design" ? "ok" : "warn"}" title="${esc(text)}">${esc(title)}</span>`;
-    return `<section class="made-sec"><h4>What can be done ${label}${cannot.length ? ` <span class="hint">${plural(cannot.length, "part needs a developer", "parts need a developer")}</span>` : ""}</h4>
-      <div class="verdict ${esc(tr.verdict)}">${esc(text)}${list(tr.reasons)}${cannot.length ? `<b>What you asked for that a design change cannot do, and why</b>${list(cannot)}` : ""}</div></section>`;
+    if (!title) return "";
+    return `<span class="chip ${tr.verdict === "design" ? "ok" : "warn"}" title="${esc([text, ...(tr.reasons || [])].join(" "))}">${esc(title)}</span>`;
+  }
+  function cannotFold(c) {
+    const xs = c.triage?.cannot || [];
+    if (!xs.length) return "";
+    return `<details class="fold"><summary>${plural(xs.length, "part needs a developer", "parts need a developer")}: what a design change cannot do, and why</summary><div class="panel"><ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul></div></details>`;
   }
 
+  // What Design Desk found before drawing; the summary says it in words, with no label.
   function renderResearch(r) {
     if (!r) return "";
-    const tone = r.verdict === "clear" ? "ok" : r.verdict === "unclear" ? "" : "warn";
-    return `<section class="made-sec"><h4>What's already known <span class="chip ${tone}" title="What Design Desk found before drawing: whether it is already tracked, decided or being changed">${esc(RESEARCH[r.verdict] || r.verdict)}</span></h4><div>${md(r.summary)}${(r.links || []).length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${r.links.map((l) => `<li><a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a></li>`).join("")}</ul>` : ""}</div></section>`;
+    return `<section class="made-sec"><h4>What's already known</h4><div>${md(r.summary)}${(r.links || []).length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${r.links.map((l) => `<li><a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a></li>`).join("")}</ul>` : ""}</div></section>`;
   }
 
   // 👍 and ⚠ as pills with their count: grey until someone votes, then green or amber.
@@ -2737,10 +2746,11 @@
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
-      <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}<span>${esc(when(c.created))}</span></div>
+      <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
       ${renderStatus(c)}
+      ${cannotFold(c)}
       </div>
       <div class="top2">
       <div class="brief${store.get("desk-brief") === "folded" ? " clamped" : ""}"><div class="brief-k">${askHead(c, bug)}</div><div class="brief-body">
@@ -2753,7 +2763,6 @@
       ${renderIssueBrief(c)}
       ${renderGrill(c)}
       ${shots(found)}
-      ${renderVerdict(c)}
       </div>${briefToggle(store.get("desk-made") === "folded", "made")}</div></div>
       ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}${renderCatalog(c)}`
         : `${renderOptions(c)}${renderStories(c)}${renderCatalog(c)}${renderPrototype(c)}`}
@@ -4080,7 +4089,7 @@
     store.set(`desk-theme-unsaved:${me}`, "1");
     const n = ++themeSeq;
     themeSaves = themeSaves.then(() => api("POST", "/api/prefs", { theme: t })
-      .then(() => { if (n === themeSeq) try { localStorage.removeItem(`desk-theme-unsaved:${me}`); } catch {} })
+      .then(() => { if (n === themeSeq) store.del(`desk-theme-unsaved:${me}`); })
       .catch(() => { if (!quiet) toast("Switched here only: the Desk couldn't save it for your other devices yet. It tries again the next time you open the Desk."); }));
   }
   // A choice this browser has not saved yet wins and is sent again; then their saved choice;

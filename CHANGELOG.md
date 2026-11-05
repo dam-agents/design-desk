@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.44.0 — 2026-11-05
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A folded box now stays folded when
+the page draws again, for example on another design tab. Every list on the left shows the
+newest item first. A request shows its triage verdict as a label beside its title, and what a
+design change cannot do folds under the status; the "What can be done" section and the label
+on "What's already known" are gone. No server restart, no data change.
+
 ## 1.43.1 — 2026-11-05
 
 **Upgrade:**
