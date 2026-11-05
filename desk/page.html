@@ -3342,9 +3342,7 @@
     // while the others keep only a faint frame. A decision no longer in force is red.
     const tag = (el, text, focus, quiet, gone, full) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const c = gone ? "#b3261e" : "#0d7d78"; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border-radius:5px;box-sizing:border-box;" + (focus ? "border:2px solid " + c + ";background:" + (gone ? "rgba(179,38,30,.07)" : "rgba(13,125,120,.08)") : "border:1px dashed " + c + (quiet ? ";opacity:.3" : "")); layer.appendChild(d); if (quiet || !text) return; const b = document.createElement("span"); if (!full) { b.textContent = "◆"; b.style.cssText = "position:absolute;right:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#fff;color:" + c + ";border:1px solid " + c + ";font:9px/13px system-ui,sans-serif;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.18)"; d.appendChild(b); return; } b.textContent = "◆ " + text; b.style.cssText = "position:absolute;right:-2px;" + (r.top + scrollY < 22 ? "bottom:-20px" : "top:-20px") + ";background:" + (focus ? c : "#fff") + ";color:" + (focus ? "#fff" : c) + ";border:1px solid " + c + ";font:600 11px/17px system-ui,sans-serif;padding:0 6px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.18)" + (gone ? ";text-decoration:line-through" : ""); d.appendChild(b); };
     const shaped = (el) => [...new Set(pins.filter((p) => p.why && find(p.selector)?.contains(el)).map((p) => p.why))];
-    // A played story's numbered frames show only while the design's Clickable switch is on.
-    const hot = () => document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") === "true";
-    const draw = () => { layer.textContent = ""; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
+    const draw = () => { layer.textContent = ""; const why = new Map(); for (const p of pins) { if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
       // A part inside another part the same decision shaped does not repeat its number.
       const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
       for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
@@ -3357,8 +3355,9 @@
     const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
     new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
-    // A user story played: a pointer goes to each part that does it, in order, outlines it and
-    // clicks it when it is something to press; a new story stops the one playing.
+    // A user story played: a pointer goes to each part that does it, in order, shows a click on
+    // it and clicks it when it is something to press; no frames are drawn round the parts. A new
+    // story stops the one playing.
     let playing = 0;
     const pointer = document.createElement("div");
     pointer.style.cssText = "position:fixed;left:50%;top:35%;z-index:2147483647;pointer-events:none;opacity:0;transition:left .7s cubic-bezier(.4,0,.2,1),top .7s cubic-bezier(.4,0,.2,1),opacity .3s";
@@ -3369,7 +3368,7 @@
     const ripple = (x, y) => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:" + (x - 14) + "px;top:" + (y - 14) + "px;width:28px;height:28px;border-radius:50%;border:2px solid #2f5bd3;z-index:2147483646;pointer-events:none;transition:transform .5s,opacity .5s"; document.documentElement.appendChild(d); requestAnimationFrame(() => { d.style.transform = "scale(1.9)"; d.style.opacity = "0"; }); setTimeout(() => d.remove(), 650); };
     const pressable = (el) => el.closest('button, [role="button"], summary, label, input[type="checkbox"], input[type="radio"], a:not([href]), a[href^="#"]');
     async function playStory(steps) {
-      const id = ++playing; pins = []; draw();
+      const id = ++playing;
       caption.textContent = ""; pointer.style.opacity = "1";
       for (let i = 0; i < steps.length; i++) {
         const st = steps[i], el = find(st.selector);
@@ -3381,14 +3380,12 @@
         pointer.style.left = x + "px"; pointer.style.top = y + "px";
         await wait(850); if (id !== playing) return;
         ripple(x, y);
-        pins = steps.slice(0, i + 1).map((p, k) => ({ n: k + 1, selector: p.selector, label: (k + 1) + ". " + (p.label || ""), state: "story" })); draw();
         pressable(el)?.click();
         await wait(1000); if (id !== playing) return;
       }
       caption.textContent = ""; await wait(500); if (id === playing) pointer.style.opacity = "0";
     }
     addEventListener("message", (e) => { if (e.data?.type === "desk-play") playStory(e.data.steps || []); });
-    addEventListener("click", (e) => { if (e.target.closest?.("#review [data-hot]")) setTimeout(draw, 0); });
     addEventListener("mouseover", (e) => { if (pins.some((p) => p.why) && under !== e.target) { under = e.target; draw(); } if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {

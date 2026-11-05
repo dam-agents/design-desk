@@ -1023,8 +1023,7 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.equal(await desk.locator("#detail .tabs [data-variant]").count(), 2, "one switch of options, the tabs over the panel");
   assert.match(await desk.textContent(".stories .how"), /Meets it[\s\S]*A spend column on every row/);
   await desk.waitForFunction(() => document.querySelector("#variant-frame")?.srcdoc.includes('id="spend"'));
-  // A story pressed plays in the design above: the pointer names its parts there, in order
-  // (their numbered frames show only with the design's Clickable switch on).
+  // A story pressed plays in the design above: the pointer names its parts there, in order.
   await desk.click('[data-story="s1"]');
   const design = desk.frameLocator("#variant-frame");
   await design.locator("text=1. Spend column").first().waitFor();
