@@ -191,7 +191,7 @@ search() {
     got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="$q" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" || return 1
     jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || return 1
     [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$1: the search reported incomplete results — the rest come next run"
-    out="$(jq -c --argjson more "$(jq -c .items <<<"$got")" '.items += $more' <<<"$out")"
+    out="$(jq -c --slurpfile more <(jq -c .items <<<"$got") '.items += $more[0]' <<<"$out")"  # a page is too big for an argument
     [ "$(jq '.items | length' <<<"$got")" -eq 100 ] || break
     page=$((page + 1))
   done
