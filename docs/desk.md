@@ -310,7 +310,10 @@ In both modes, each request in the list shows its state as a dot in the row's to
 as large as the dot on the request's page and level with the title's first line, each state in a colour of
 its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
-A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull
+A change's and an issue's page open with the same box as a request's status: the state's dot and
+word (an issue's word is where it is planned, `This sprint`), a line of facts, the buttons (**Mark
+handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
+under an issue's How it could look. A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
@@ -319,7 +322,8 @@ person has seen an item is its bold title alone ([Read and unread](#read-and-unr
 
 An item's title in a list is bold until the person first opens it; from then on it is not, for
 them alone (`POST /api/cards/<id>/read` from the page; the list's `read`; the store keeps
-`reads: {<person>: {<card>: at}}`). Later opens and new activity change nothing. You read
+`reads: {<person>: {<card>: at}}`). Later opens and new activity change nothing. The **Unread**
+filter keeps an item just opened, no longer bold, until the person changes the filter or the tab. You read
 without marking anything.
 
 ## Claims

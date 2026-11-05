@@ -35,7 +35,9 @@ next update. Every row in every list is its title and one line under it, with no
 ends with where it is planned (`in: This sprint`). Requests filter by **Unread**, **Open**, **Ready** and
 **Closed** (Ready: options drawn, a Slack vote ended, or a live prototype up; the list adds `voting` and
 `voted`), and the presentation tab is **For presentation**. Issues filter by **All** (first and the default,
-designed issues included), This sprint, Next sprint, Assigned and For design; there is no Designed filter.
+designed issues included), This sprint, Next sprint, Assigned and For design; there is no Designed filter. A change's and an issue's page show a status box like a request's
+(an issue's says `This sprint`); an issue keeps **Design this** there and **Draw it** under How it
+could look. Unread keeps an item just opened until the filter or tab changes.
 
 ## 1.49.0 — 2026-11-05
 

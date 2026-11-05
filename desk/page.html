@@ -628,6 +628,10 @@
   .status { --o: var(--muted); --os: var(--soft); padding: 12px 16px 12px 18px; border: 1px solid var(--line); border-left: 4px solid var(--o); border-radius: 8px; background: color-mix(in srgb, var(--os) 45%, var(--panel)); gap: 8px; }
   .status[data-o="waiting"] { --o: var(--waiting); --os: var(--waiting-soft); } .status[data-o="approved"] { --o: var(--approved); --os: var(--approved-soft); }
   .status[data-o="decided"] { --o: var(--decided); --os: var(--decided-soft); } .status[data-o="closed"] { --o: var(--closed); --os: var(--closed-soft); }
+  /* A change's PR and an issue, in GitHub's colours, the same as their dots in the list. */
+  .status[data-o="gh-open"] { --o: #2da44e; --os: color-mix(in srgb, #2da44e 16%, transparent); } .status[data-o="gh-draft"] { --o: #8c959f; --os: color-mix(in srgb, #8c959f 16%, transparent); }
+  .status[data-o="gh-merged"] { --o: #8957e5; --os: color-mix(in srgb, #8957e5 16%, transparent); }
+  .status .s-meta { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
   .status[data-o="checking"] { --o: var(--accent); --os: var(--info-soft); } .status[data-o="live"] { --o: var(--live); --os: var(--live-soft); }
   .s-word { display: flex; align-items: center; gap: 9px; font-size: var(--fs-head); font-weight: 650; color: var(--o); letter-spacing: -.01em; }
   .s-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--o); flex: none; }
@@ -1475,7 +1479,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   // ---------- state ----------
-  const S = { me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
+  const JUST_READ = new Set();
+  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -2098,7 +2104,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const reqFor = () => S.reqFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
   const forOf = (c) => c.for || (c.size?.small ? "developers" : "designers");
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
-    && (filter === "unread" ? c.read === false : filter === "ready" ? readyToAct(c) : filter === "open" ? !closed(c) : closed(c))));
+    && (filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "ready" ? readyToAct(c) : filter === "open" ? !closed(c) : closed(c))));
   // Ready: an open request that waits for someone to act — its options are drawn, its vote in Slack
   // ended (or no vote runs), or its live prototype is up; not while Design Desk works or asks.
   function readyToAct(c) {
@@ -2740,22 +2746,35 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   // ---------- a shipped change ----------
+  // The box under a change's or an issue's title, as on a request: its state's word and dot on the
+  // left, a line of facts under it, its buttons on the right and the rest under ⋯ (docs/desk.md →
+  // A request's state in the list).
+  function ghStatus(o, word, tip, meta, buttons, more) {
+    const info = tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : "";
+    const menu = more ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${more}</div></details>` : "";
+    return `<div class="status" data-o="${o}">
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(word)}${info}</div></div>
+      ${buttons || menu ? `<div class="next"><div class="actions">${buttons}${menu}</div></div>` : ""}
+      ${meta ? `<p class="hint s-meta">${meta}</p>` : ""}
+    </div>`;
+  }
   function renderChange(c) {
     const src = c.source || {};
     const inProgress = src.pr && !src.merged_at;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
-      <div class="sub">${ageChip(c)}${c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : ""}${inProgress ? `<span class="chip live" title="Its pull request is still open: the change is not in the product yet">● In progress — not shipped yet</span>` : src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""}</div>
+      ${(() => {
+        const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
+        const meta = [ageChip(c), c.handled?.at ? `<span>by ${who(c.handled.by)} · ${esc(day(c.handled.at))}</span>` : "", src.merged_at ? `<span>Shipped ${esc(day(src.merged_at))}</span>` : "", src.author ? `<span>by ${esc(src.author)}</span>` : "", src.pr && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(src.pr)} ↗</a>` : ""].join("");
+        const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
+        const adjust = can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "";
+        return ghStatus(o, word, tip, meta, handle + adjust, agendaButton(c));
+      })()}
       ${inProgress ? `<p class="hint">A developer is building this now. To make it look different before it ships, choose Adjust the design.</p>` : ""}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${requestsFrom(c)}
       ${attentionLine(c)}
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
-      <div class="actions">
-        ${can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : ""}
-        ${can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : ""}
-        ${agendaButton(c)}
-      </div>
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : `<p class="hint">No screenshots yet.${can("screens") && !c.instance ? " Have one? Add it." : ""}</p>`}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
@@ -2775,21 +2794,23 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const open = c.status !== "archived";
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
-      <div class="sub">${c.designed ? `<span class="chip ok" title="A request on the Desk designed it and sent it to developers: done on the design side">✓ Designed in Design Desk</span>` : `<span class="chip ${c.bucket === "sprint" ? "info" : ""}" title="Where the team planned this issue">${esc(BUCKET[c.bucket] || "Issue")}</span>`}${src.milestone ? `<span>${esc(src.milestone)}</span>` : ""}${(src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : ""}${src.author ? `<span>by ${esc(src.author)}</span>` : ""}${src.issue && src.url ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : ""}${open ? "" : `<span class="chip" title="The issue is closed on GitHub">Closed</span>`}</div>
+      ${(() => {
+        const plan = c.bucket === "sprint" && src.milestone ? src.milestone : BUCKET[c.bucket] || "Issue";
+        const [o, word, tip] = c.designed ? ["gh-merged", "Designed", "A request on the Desk designed it and sent it to developers: done on the design side"]
+          : !open ? ["gh-draft", "Closed", "It left the team's plan or was closed on GitHub"] : ["gh-open", plan, "Where the team planned this issue; open on GitHub"];
+        const meta = [src.issue ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : "", src.author ? `<span>by ${esc(src.author)}</span>` : "", (src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : "", c.bucket === "sprint" && src.milestone ? "" : src.milestone ? `<span>${esc(src.milestone)}</span>` : ""].join("");
+        const design = open && can("follow-up") ? `<button class="btn${c.designed ? "" : " primary"}" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : "";
+        return ghStatus(o, word, tip, meta, design, open ? agendaButton(c) : "");
+      })()}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.designed ? `<div class="sent"><b>✓ Already through Design Desk — done on the design side.</b><p><button class="anchor" data-card="${esc(c.designed.card)}">${esc(c.designed.title)}</button>${num({ id: c.designed.card })} was sent to developers${c.designed.at ? ` on ${esc(day(c.designed.at))}` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
       ${againstBox(c)}${followsLine(c)}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
-      ${open ? `<div class="actions">
-        ${can("draw") && !busy && !sketch.length && !c.designed ? `<button class="btn primary" data-act="draw">Draw it</button>` : ""}
-        ${can("follow-up") ? `<button class="btn" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : ""}
-        ${agendaButton(c)}
-      </div>` : ""}
       ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
       ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch)}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
-        : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>`}
+        : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>${can("draw") && !busy && open && !c.designed ? `<div class="actions"><button class="btn" data-act="draw">Draw it</button></div>` : ""}`}
       ${c.draw?.note ? `<p class="hint">${txt(c.draw.note)}</p>` : ""}
       ${renderThreads(c)}`;
   }
@@ -4053,7 +4074,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     S.card = card;
     // The first open marks it read for this person: its title stops being bold in their list.
     const listed = S.cards.find((x) => x.id === card.id);
-    if (listed && listed.read === false) { listed.read = true; api("POST", `/api/cards/${encodeURIComponent(card.id)}/read`, {}).catch(() => {}); if (quiet && !changed) renderList(); }
+    if (listed && listed.read === false) { listed.read = true; S.justRead.add(listed.id); api("POST", `/api/cards/${encodeURIComponent(card.id)}/read`, {}).catch(() => {}); if (quiet && !changed) renderList(); }
     if (!quiet || changed) {
       renderList();
       if (!(quiet && document.activeElement?.closest?.("#composer, .reply"))) renderDetail();
@@ -4062,6 +4083,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   async function showTab(tab) {
+    S.justRead.clear();
     S.tab = tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
     if (tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); }
   }
@@ -4377,6 +4399,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       // Presentation sits beside For Designers and For Developers; either of those leaves it.
       const [k, v] = ds.filter === "reqFor:presentation" ? ["reqFilter", "presentation"] : ds.filter.split(":");
       if (k === "reqFor" && S.reqFilter === "presentation") S.reqFilter = "open";
+      S.justRead.clear();
       S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
     if (ds.dside !== undefined) { S.decisionSide = ds.dside; renderList(); return; }
