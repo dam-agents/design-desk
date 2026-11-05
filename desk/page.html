@@ -638,6 +638,11 @@
   .linkbtn { border: 0; background: none; padding: 5px; margin-left: 6px; border-radius: 8px; color: var(--muted); cursor: pointer; display: inline-grid; place-items: center; vertical-align: middle; }
   .linkbtn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .linkbtn:hover { background: var(--soft); color: var(--ink); }
+  /* Rename: small, right after the title, shown while the pointer is on the title (always on touch). */
+  .linkbtn.rename { padding: 3px; margin-left: 4px; opacity: 0; transition: opacity .12s; }
+  .linkbtn.rename svg { width: 15px; height: 15px; }
+  h2.renamable:hover .linkbtn.rename, .linkbtn.rename:focus-visible { opacity: 1; }
+  @media (hover: none) { .linkbtn.rename { opacity: 1; } }
   h2 .num { margin-left: 10px; font-size: var(--fs-ui); font-weight: 400; color: var(--muted); }
   @media (min-width: 861px) { .crumb { display: none; } }
   /* A filter's count: quiet grey beside its words, as on the prototype. */
@@ -3013,7 +3018,7 @@
     const theirs = (x) => !x.source || x.source === "person";
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     return `${backBar()}
-      <h2>${txt(c.title)}${num(c)}${titleLink(c)}${filedIt(c) || can("close") ? `<button class="linkbtn" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
+      <h2 class="renamable">${txt(c.title)}${filedIt(c) || can("close") ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}${num(c)}${titleLink(c)}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
