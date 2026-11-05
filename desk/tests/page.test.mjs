@@ -183,7 +183,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.locator('[data-card="d1"]').count(), 0, "a digest is not in Changes");
     await desk.click('[data-tab="product"]');
     await desk.click('[data-filter="productFilter:history"]');
-    assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest is in Product → History, with no status word");
+    assert.equal(await desk.locator('.row.item:has([data-card="d1"]) .meta').count(), 0, "a digest is in Product → History, with no chips under it");
     assert.deepEqual(await desk.$$eval("#list .row.item .open", (els) => els.map((e) => e.dataset.card)), ["d1", "d0"], "History lists the newest week first");
     await desk.click('[data-filter="productFilter:screens"]');
     await desk.click('[data-tab="new"]');
@@ -224,13 +224,14 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
 
     // Every row in Changes and Requests says where it came from and who started it; its
     // links go to the source, the rest of the row opens the item.
-    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /PR #45.*by: dana.*Automatic/);
+    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /from: PR #45.*by: dana/);
+    assert.doesNotMatch(await desk.textContent('.row.item:has([data-card="ch1"]) .prov'), /Automatic|shipped|↗/, "a change's row names its PR and author only");
     await desk.click('[data-tab="requests"]');
     const prov = '.row.item:has([data-card="r2"]) .prov';
     assert.match(await desk.textContent(prov), /from: Slack.*by: Carla/);
     assert.match(await desk.textContent('.row.item:has([data-card="r3"]) .prov'), /Chat with Design Desk.*by: Gita/, "the reporter is the author whatever the channel");
     assert.equal(await desk.getAttribute(`${prov} a`, "href"), "https://acme.slack.com/archives/C0123ABCD/p1", "the source links to the thread");
-    await desk.click('.row.item:has([data-card="r2"]) .meta', { force: true });
+    await desk.click('.row.item:has([data-card="r2"]) .t', { force: true });
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r2"));
 
     // The Add to Product dialog: a screen needs Design Desk's own copy, which is off here.
@@ -268,9 +269,9 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "lead developer", "developer", "PM", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer can, and:\s+Mark a request a small change[\s\S]*Ask Design Desk to add people to the list/, "only a lead adds people");
+    assert.match(await panel(0), /Everything a designer can, and:\s+Move a request to For Developers[\s\S]*Ask Design Desk to add people to the list/, "only a lead adds people");
     assert.match(await panel(1), /Everything a developer can, and:\s+Approve designs[\s\S]*Build live prototypes/, "a role names the largest one below it");
-    assert.match(await panel(2), /Everything a developer can, and:\s+Mark a request a small change/, "a lead developer says what is a small change");
+    assert.match(await panel(2), /Everything a developer can, and:\s+Move a request to For Developers/, "a lead developer says what is For Developers");
     assert.match(await panel(3), /Everything a PM can, and:\s+Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
     assert.doesNotMatch(await panel(3), /Approve designs|Choose what|Record a decision/);
     assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Draw an issue/, "a PM also has issues drawn");
@@ -423,22 +424,25 @@ test("every button and label says on hover what it does or means", (t) => open(t
   }
 }));
 
-test("Needs a designer filters Changes and Requests, and Changes opens on All", (t) => open(t, LIST, async (desk) => {
+test("Needs a designer filters Changes, Ready filters Requests, and Changes opens on Open", (t) => open(t, LIST, async (desk) => {
   const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
   // Requests leads the menu; Changes and Issues follow, then Product and People.
   await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
   assert.deepEqual(await desk.$$eval("#nav button", (bs) => bs.map((b) => b.dataset.tab)), ["requests", "new", "issues", "product", "people"], "the Desk opens on Requests");
   assert.match(await desk.textContent('[data-tab="new"]'), /^PR Changes/);
   await desk.click('[data-tab="new"]');
-  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on All");
-  assert.match(await desk.textContent("#list .filters .on"), /^All \d+$/, "All carries its count");
+  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on Open: none is handled");
+  assert.match(await desk.textContent("#list .filters .on"), /^Open \d+$/, "Open carries its count");
+  assert.equal(await desk.locator('[data-filter="newFilter:all"]').count(), 0, "there is no All");
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
   assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
   await desk.click('[data-tab="requests"]');
-  await desk.click('[data-filter="reqFilter:designer"]');
-  assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
-  assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /^Needs a designer\s*2$/);
+  assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["reqFilter:unread", "reqFilter:open", "reqFilter:ready", "reqFilter:closed"], "Requests filter by Unread, Open, Ready and Closed");
+  assert.match(await desk.textContent('[data-filter="reqFor:presentation"]'), /^For presentation/);
+  await desk.click('[data-filter="reqFilter:ready"]');
+  assert.deepEqual(await rows(), ["r1"], "Ready: options wait for someone to act");
+  assert.match(await desk.textContent('[data-filter="reqFilter:ready"]'), /^Ready\s*1$/);
   await desk.reload();
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
@@ -542,7 +546,7 @@ test("an item's number and link: shown grey by its title, copied, opened from a 
   await desk.goto(`${base}#presentation/C-2`);
   await desk.reload();
   assert.equal(await shown("requests", "Calmer empty list"), "C-2", "a link to the presentation opens it there, also on a fresh load");
-  assert.match(await desk.textContent("#list .subtabs .on"), /^Presentation\s*1$/, "on the Presentation page, a tab of Requests");
+  assert.match(await desk.textContent("#list .subtabs .on"), /^For presentation\s*1$/, "on the presentation page, a tab of Requests");
   assert.equal(await desk.locator("#list .filters").count(), 0, "the presentation has no filter of its own");
   await desk.click("#detail h2 [data-copy-link]");
   await desk.waitForFunction(() => copied.length === 1);
@@ -617,7 +621,7 @@ test("the presentation: mark an item presented, in the list and while presenting
   assert.equal(await desk.locator("#detail [data-unpresent]").count(), 0, "no Undo for an earlier meeting's item");
   assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 1, "it can go on again, once");
 
-  await desk.click('[data-filter="reqFilter:presentation"]');
+  await desk.click('[data-filter="reqFor:presentation"]');
   await desk.click('#detail [data-present="0"]');
   await desk.click('#present [data-presented="C-2"]');
   await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/cards/C-2/presented").length === 2);
@@ -666,14 +670,15 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.waitForSelector('[data-card="ch2"]');
     const row = '.row.item:has([data-card="ch2"])';
     assert.match(await desk.getAttribute(row, "class"), /overdue/, "a change past due_days is marked in the list");
-    assert.match(await desk.textContent(`${row} .meta`), /Overdue · 30 days open/);
-    assert.doesNotMatch(await desk.getAttribute('.row.item:has([data-card="ch3"])', "class"), /overdue/, "a handled change is not overdue");
+    assert.equal(await desk.locator(`${row} .meta`).count(), 0, "a row is its title and one line: no chips");
     const rows = () => desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card));
-    await desk.click('[data-filter="newFilter:open"]');
-    assert.deepEqual(await rows(), ["ch2"], "Not handled lists only the changes nobody marked handled");
+    assert.deepEqual(await rows(), ["ch2"], "Open, the default, lists only the changes nobody marked handled");
+    await desk.click('[data-filter="newFilter:handled"]');
+    assert.deepEqual(await rows(), ["ch3", "ch4"], "Handled lists the rest");
+    assert.doesNotMatch(await desk.getAttribute('.row.item:has([data-card="ch3"])', "class"), /overdue/, "a handled change is not overdue");
     await desk.click('[data-filter="newFilter:designer"]');
     assert.deepEqual(await rows(), [], "a handled change leaves Needs a designer");
-    await desk.click('[data-filter="newFilter:all"]');
+    await desk.click('[data-filter="newFilter:open"]');
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector("[data-handle]");
     assert.equal(await desk.getAttribute(".sec-head .chip a", "href"), "https://github.com/acme/widgets/pull/11", "a section links its source");
@@ -713,6 +718,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.press("body", "Escape");
 
     // A before picture keeps the after picture's marks only when the two are the same size.
+    // ch4 is handled: it is listed under Handled.
+    await desk.click('[data-filter="newFilter:handled"]');
     await desk.click('[data-card="ch4"]');
     await desk.waitForFunction(() => document.querySelectorAll("figure[data-frame]").length === 0 && document.querySelector('[data-zoom="A-7"] img')?.naturalHeight);
     assert.deepEqual(await desk.$$eval(".shot", (fs) => fs.map((f) => [f.dataset.zoom, f.querySelectorAll(".mark").length])),
@@ -725,6 +732,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.waitForSelector(".zoom img");
     assert.equal(await desk.locator(".zoom .mark").count(), 0);
     await desk.press("body", "Escape");
+    await desk.click('[data-filter="newFilter:open"]');
     await desk.click('[data-card="ch2"]');
     await desk.waitForSelector(".impact", { state: "attached" });
 
@@ -911,9 +919,6 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     await desk.hover('.row.item .prov a[href="https://github.com/acme/widgets/issues/41"]');
     await desk.waitForSelector("#peek");
     assert.match(await desk.textContent("#peek"), /A spend column in the agents list/, "the row's issue link, now without its needs, previews them");
-    // Its sprint label says what it means on the label alone.
-    await desk.hover('.row.item .meta .chip.info');
-    await desk.waitForFunction(() => document.querySelector("#tip")?.textContent === "Where the team planned this issue");
   } finally {
     await run.close();
   }
@@ -976,13 +981,15 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
   const { desk, posts, settled } = run;
   try {
     await desk.waitForSelector('[data-tab="issues"] .count');
-    assert.equal(await desk.textContent('[data-tab="issues"] .count'), "1", "the tab counts the open issues of the sprint");
+    assert.equal(await desk.textContent('[data-tab="issues"] .count'), "2", "the tab counts every open issue: not closed, handled or designed");
     await desk.click('[data-tab="issues"]');
-    assert.equal(await desk.locator(".row.item").count(), 1, "This sprint is the first view; a closed issue is not listed");
+    assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["issueFilter:all", "issueFilter:sprint", "issueFilter:next", "issueFilter:assigned", "issueFilter:label", "issueFilter:handled"], "All first, then the plan, then Handled; no Designed");
+    await desk.click('[data-filter="issueFilter:sprint"]');
+    assert.equal(await desk.locator(".row.item").count(), 1, "a closed issue is not listed");
     const row = '.row.item:has([data-card="is1"])';
     assert.match(await desk.textContent(`${row} .prov`), /from: Issue #41.*by: alice.*assigned to bob/);
     assert.equal(await desk.locator(`${row} .s`).count(), 0, "an issue's row carries no description; its page and its preview do");
-    assert.match(await desk.textContent(`${row} .meta`), /Sprint 12/);
+    assert.match(await desk.textContent(`${row} .prov`), /in: Sprint 12/, "where the team planned it is a word of the line");
     await desk.click('[data-filter="issueFilter:label"]');
     assert.deepEqual(await desk.locator(".row.item [data-card]").evaluateAll((xs) => xs.map((x) => x.dataset.card)), ["is2"]);
     await desk.click('[data-filter="issueFilter:sprint"]');
@@ -1328,7 +1335,6 @@ test("a decision: what goes against it warns with a link to it; a designer revok
   const { desk, posts } = run;
   try {
     await desk.click('[data-tab="new"]');
-    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .meta'), /Goes against a decision/);
     await desk.click('[data-card="ch1"]');
     await desk.waitForSelector("#detail .against");
     assert.match(await desk.textContent("#detail .against"), /Goes against D-1: The header stays one line[\s\S]*wraps the header/);
@@ -1374,7 +1380,7 @@ test("the screen shown stays when the person switches options, where the other o
   }
 });
 
-// Small changes (docs/desk.md → Small changes): who sees which button, and what the card says.
+// For Developers (docs/desk.md → For Developers or For Designers): who sees which button, and what the card says.
 const SMALL = `<script>
 window.calls = [];
 const as = new URLSearchParams(location.search).get("as") || "lou";
@@ -1406,7 +1412,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a small change: the lead developer marks it, a developer but its author approves, the card says who", (t) => open(t, SMALL, async (desk) => {
+test("For Developers: the lead developer moves it there, a developer but its author approves, the card says who", (t) => open(t, SMALL, async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   const card = async (who, id) => {
     await desk.goto(`${base}?as=${who}#${id}`);
@@ -1417,7 +1423,7 @@ test("a small change: the lead developer marks it, a developer but its author ap
 
   await card("lou", "C-1");
   assert.equal(await count('details.more [data-size="small"]'), 1, "the lead developer marks an open request, under More");
-  assert.equal(await count('[data-act="approve"]'), 0, "and approves no request that is not a small change");
+  assert.equal(await count('[data-act="approve"]'), 0, "and approves no request that is not For Developers");
   await desk.click("#detail details.more > summary");
   await desk.click('#detail [data-size="small"]');
   await desk.click("#cf-ok");
@@ -1425,21 +1431,21 @@ test("a small change: the lead developer marks it, a developer but its author ap
   assert.deepEqual(JSON.parse(await desk.evaluate(() => calls.find((c) => c.path === "/api/cards/C-1/size").body)), { small: true });
 
   const small = await card("dana", "C-2");
-  assert.match(small, /Small change — a developer approves[\s\S]*lou@example\.com/, "the card names who marked it");
-  assert.equal(await count('[data-act="approve"]'), 1, "another developer approves a small change");
+  assert.match(small, /For Developers — a developer approves[\s\S]*lou@example\.com/, "the card names who marked it");
+  assert.equal(await count('[data-act="approve"]'), 1, "another developer approves a request For Developers");
   assert.equal(await count("[data-size]"), 0, "a developer does not mark it");
 
   assert.match(await card("bob", "C-2"), /not bob@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "its author does not approve it");
 
   assert.match(await card("dana", "C-4"), /A designer approves it/, "the hint names a designer");
-  assert.equal(await count('[data-act="approve"]'), 0, "a small change against a decision in force is a designer's");
+  assert.equal(await count('[data-act="approve"]'), 0, "For Developers against a decision in force is a designer's");
   assert.match(await card("dana", "C-5"), /not dana@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "the reporter of a request filed for them does not approve it");
   await card("bob", "C-5");
   assert.equal(await count('[data-act="approve"]'), 1, "another developer does");
 
-  assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*as a small change/, "the card names who approved it");
+  assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*for developers/, "the card names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
 
   // docs/handoff.md step 4: a question the spec leaves open is asked on the Desk, next to the spec.
@@ -1452,10 +1458,11 @@ test("a small change: the lead developer marks it, a developer but its author ap
   assert.match(await card("dana", "C-8"), /Already through Design Desk[\s\S]*Sent/);
   assert.equal(await count('[data-act="draw"]'), 0, "a designed issue is not drawn");
   await desk.click('[data-tab="issues"]');
+  await desk.click('[data-filter="issueFilter:sprint"]');
+  assert.deepEqual(await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card)), ["C-9"], "not among the plan's");
   await desk.click('[data-filter="issueFilter:all"]');
-  assert.deepEqual(await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card)), ["C-9"], "not among the open ones");
-  await desk.click('[data-filter="issueFilter:designed"]');
-  assert.deepEqual(await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card)), ["C-8"]);
+  assert.deepEqual((await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card))).sort(), ["C-8", "C-9"], "All keeps it, with its Designed dot");
+  assert.equal(await desk.locator('.row.item:has([data-card="C-8"]) .sdot[data-s="issue-designed"]').count(), 1);
 }));
 
 // Deciding straight away (docs/desk.md → Deciding straight away): the lead developer's buttons,
@@ -1631,7 +1638,7 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Design only/, "the steps name the verdict");
 
   await desk.click('[data-tab="new"]');
-  await desk.click('[data-filter="newFilter:all"]');
+  await desk.click('[data-filter="newFilter:open"]');
   assert.deepEqual(await rows(), ["C-5", "C-4"], "changes by the day they shipped");
 }));
 

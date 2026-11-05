@@ -84,7 +84,7 @@ A skill that replaces a bundled one keeps the action's contract:
     `issue_brief` story ids, or `use`, one sentence), which the element's dialog shows
     ([requests.md](requests.md) → Every state of a part);
   - `deliver`: the routing by request type, the pictures, the hidden card marker and the
-    record ordering of `handoff-github`; the Approve (a designer's, or a developer's on a small change) is the approval a skill asks
+    record ordering of `handoff-github`; the Approve (a designer's, or a developer's on a request For Developers) is the approval a skill asks
     for.
 - **Limits**: a skill adds how, never what. The trust boundary, the hard invariants and the
   design-only guard hold whatever a skill says; everything it reads from a repository,

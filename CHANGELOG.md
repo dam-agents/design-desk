@@ -7,6 +7,41 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.50.0 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). Requests has two tabs, **For
+Designers** and **For Developers** (the former small change: `size.small`, unchanged in the
+data); New request has a switch for it, For Designers by default (`POST /api/requests
+{audience}`). A request filed by the agent takes `audience`; without it, one with a Slack
+`origin` is For Developers and any other For Designers — the `intake-slack` skill now sets it.
+Requests filed before this version keep their tab (no `size`: For Designers). An item's title
+in a list is bold until the person first opens it (`POST /api/cards/<id>/read`, the list's
+`read`, a new `reads` table the store adds by itself); every item already on the Desk starts
+unread for everyone. The private ask stays over the design workspace and asks about the part
+picked there; a part with states drawn offers **See every state**, to look through them. In
+both modes a request's state in the list is a dot in the row's top-right corner, as large as the
+dot on its page, pulsing while Design Desk works; pointing at the dot unfolds the label over the title. A row's provenance
+starts with `created:` Today, Yesterday or the date; with no person behind it, `by:` names the run
+(hourly check, daily issue read), and a change from today has no New today chip. PR Changes filters are
+**Open** (the default) and **Handled**, with no All and no Not seen yet; a change has no Got it
+button any more: opening it is what marks it read. A change's and an issue's row show their GitHub
+state as the same corner dot: a PR Draft, Open or Merged, an issue Open or Designed. The watch
+pre-flight now puts `draft` on each due pull request, and a change card keeps it in
+`source.draft` ([docs/watch.md](docs/watch.md) step 7); cards written before stay Open until their
+next update. Every row in every list is its title and one line under it, with no chips; an issue's line
+ends with where it is planned (`in: This sprint`). Requests filter by **Unread**, **Open**, **Ready** and
+**Closed** (Ready: options drawn, a Slack vote ended, or a live prototype up; the list adds `voting` and
+`voted`), and the presentation tab is **For presentation**. Issues filter by **All** (first and the default,
+designed issues included), This sprint, Next sprint, Assigned and For design; there is no Designed filter. A change's and an issue's page show a status box like a request's
+(an issue's says `This sprint`); an issue keeps **Design this** there and **Draw it** under How it
+could look. Unread keeps an item just opened until the filter or tab changes. A designer marks an issue
+**Handled** (it leaves the other lists for its own filter, and the issues pre-flight no longer draws it). The menu's counts are only what is
+still open: PR Changes the changes not handled, Issues the issues neither handled nor designed. A request with a live prototype has **Open the
+prototype** as the next step in its step pill, with the demo account on the state's line. The presentation's list and page follow the other pages' style.
+
 ## 1.49.0 — 2026-11-05
 
 **Upgrade:**

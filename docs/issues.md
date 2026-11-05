@@ -111,7 +111,12 @@ person's **Draw it** tries again.
 - **Already through Design Desk.** An issue a request came from (`request.from`) or a spec
   went to (`spec.issue_url`), once that request is sent to developers, is done on the design
   side: the store marks its card `designed` (the request, its title and date), the page takes
-  it out of the open lists, **All** included, into **✓ Designed**, and its card links the
+  it out of the plan's filters (it stays in **All**, the first filter and the default, with its
+  purple Designed dot), and its card links the
   request. The pre-flight never offers it to draw. An issue Design Desk opened itself (its
   body carries the card's marker) is read like any other, so it lands there linked.
+- **Handled.** A designer marks an issue **Handled** on its page when design has nothing to do
+  with it (`POST /api/cards/<id>/handled`, the card's `handled: {by, at}`; its `status` stays the
+  run's): it leaves every list but **Handled**, and the pre-flight never offers it to draw. **Not
+  handled yet** brings it back.
 - A question on an issue card is answered like any other ([desk.md](desk.md) → Questions).

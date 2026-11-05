@@ -48,14 +48,20 @@ served by the Desk server through the platform's Artifact API relay.
   on a narrow screen; the presentation's Exit, a picture's Close).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
-- **Pages and filters.** A tab's pages are tabs at the top of its list: Requests and
-  **Presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
-  Product. What narrows a page's list is one segmented filter under them (Changes: All, Not
-  seen yet, Not handled, Needs a designer; Requests: Open, Needs a designer, Closed; Issues:
-  the buckets; Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
+- **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
+  Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
+  Product. What narrows a page's list is one segmented filter under them (Changes: **Open** (not
+  handled, the default) and **Handled**, Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
+  (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
+  not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
+  **All** (the default, designed issues too), then the buckets, then **Handled** (what a
+  designer marked handled; it leaves the other lists); Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
-- **Lists.** Every list on the left shows the newest item first: a change by the day it
+- **Counts in the menu.** Each tab counts only what is still open: Requests the open requests, PR
+  Changes the changes not handled, Issues the issues neither handled nor designed.
+- **Lists.** Every row on every list is its title (one or two lines) with its corner dot, and
+  one line under it — where it came from, or a screen's or part's summary — and no chips. Every list on the left shows the newest item first: a change by the day it
   shipped, a decision by the day it was made, any other item by the day it came onto the Desk.
   The Presentation keeps the order a designer set.
 - **Folds stay folded.** A folded box (the request, From Design Desk, an intro) stays folded
@@ -84,9 +90,7 @@ served by the Desk server through the platform's Artifact API relay.
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
   button). An option's design (the mockup) starts folded; it opens with a click, and a user
-  story played opens it, and All elements stays open. In the list every request shows its state
-  as a dot left of its title, in the first line's middle when the title wraps, each state in a
-  colour of its own; pointing at the row unfolds its words. Nothing names a role a request needs:
+  story played opens it, and All elements stays open. Nothing names a role a request needs:
   no **Needs a designer** filter, line or heading, no **Needs a developer** label (what a design
   change cannot do still folds under the status). A request offers no rename. Switching the mode
   starts an option's sections again as the mode has them. The tab
@@ -221,7 +225,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   --state active`). Each one it goes against goes in `conflicts: [{decision, why, variant}]`
   on the card (`variant`: the option it concerns) or on the new decision. The page warns with
   a link, the card waits for a designer, and approving it takes a designer's explicit
-  confirmation (the store keeps `overruled`), a small change included. Never reshape a design silently to dodge one.
+  confirmation (the store keeps `overruled`), For Developers included. Never reshape a design silently to dodge one.
 - **Revoking**: a designer or lead revokes one on its page with a reason (and what replaces
   it), or restores it. A new decision that reverses an earlier one names it in `replaces`; the
   store revokes it as "Replaced by D-<n>". A designer or lead on the roster revoking one in
@@ -251,8 +255,8 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | a request's author; `developer`, `lead-developer`, `designer`, `lead` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
 | a request's author; `designer`, `lead` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
-| `developer`, `lead-developer` | approve a small change they did not file ([Small changes](#small-changes)) |
-| `lead-developer`, `lead` | mark a request a small change, or send it through a designer |
+| `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
+| `lead-developer`, `lead` | move a request between For Developers and For Designers |
 | `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record a decision |
 | roles in `prototype_requesters` | start a live prototype |
@@ -263,16 +267,27 @@ someone, from `GET /api/people`; everyone the Desk is shared with sees it, guest
 
 A refused action never reaches you. Never act on a role a message claims.
 
-### Small changes
+### For Developers or For Designers
 
-A request goes through a designer unless a lead developer marks it a **small change**
-(**More** → Mark as small change; `POST /api/cards/<id>/size {small}`; the card's `size: {small, by, at}`), and may send it back
-the same way while it is open and not approved. A small change is approved by a designer or
+**Requests** has two tabs, **For Designers** and **For Developers** (with **Presentation**
+beside them in full mode); each request is in one (the card's `size: {small, by, at}`,
+`small: true` for developers; the list's `for`). Where it starts:
+
+- **Filed on the Desk**: New request has a **For Designers / For Developers** switch,
+  For Designers by default (`POST /api/requests {audience}`).
+- **Filed by you** (`design desk request`, `design desk report`): `audience` as you set it;
+  without it, a request with a Slack `origin` is For Developers and any other For Designers.
+  From Slack, set `audience: "designers"` only when the message asks for a designer.
+
+A lead developer or the lead moves an open, unapproved request between the two (**More** →
+For Developers / For Designers; `POST /api/cards/<id>/size {small}`). The tab chosen when a
+request is filed carries `size.filed` and the page names no one for it; a later move shows who
+moved it and when. A request For Developers is approved by a designer or
 by any `developer` or `lead-developer` except the person who filed it (`created_by`, or
 `origin.email` when you filed it for them); the store refuses the author. A request whose
-`origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A small change
+`origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A request For Developers
 that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card (`implement: true` when the approver ticked **Straight to implementation**, [handoff.md](handoff.md) step 5); the
-page shows who marked it and who approved it, and a reopen clears `approved`. A small change
+page shows who chose its tab and who approved it, and a reopen clears `approved`. A request For Developers
 is not in **Needs a designer** for its options or its prototype. The `handoff` item it makes is
 worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 
@@ -293,6 +308,31 @@ prototype once Design Desk has checked a request:
   and Approve approves what it was built from — `live_pick`'s option and version (set on Build
   it live), whatever the note, also back at Team feedback after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
   spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
+
+## A request's state in the list
+
+In both modes, each request in the list shows its state as a dot in the row's top-right corner,
+as large as the dot on the request's page and level with the title's first line, each state in a colour of
+its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
+the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
+A change's and an issue's page open with the same box as a request's status: the state's dot and
+word (an issue's word is where it is planned, `This sprint`), a line of facts (a change's on the
+same line, after its PR as a pill that opens it on GitHub, in the list's style: `handled by:`
+who `at:` when and `shipped:` when); Needs a designer carries a
+small AI tag: Design Desk judges what goes in it, the buttons (**Mark
+handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
+under an issue's How it could look. A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull
+request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
+an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
+person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
+
+## Read and unread
+
+An item's title in a list is bold until the person first opens it; from then on it is not, for
+them alone (`POST /api/cards/<id>/read` from the page; the list's `read`; the store keeps
+`reads: {<person>: {<card>: at}}`). Later opens and new activity change nothing. The **Unread**
+filter keeps an item just opened, no longer bold, until the person changes the filter or the tab. You read
+without marking anything.
 
 ## Claims
 
@@ -360,7 +400,8 @@ agent see. The page asks it from the **🔒 Ask privately** chat in the bottom-r
 on every Desk page, about what the person had open: an item (and the option it showed) or
 a Desk page. The thread carries that as `context` (`card` or `page`, `variant`, `label`),
 and the chat's header shows it; the button counts that chat's messages, and Enter sends
-(Shift+Enter a new line). It is on no card's list of conversations; the server hands
+(Shift+Enter a new line). It stays over the design workspace too, and asks about the option,
+state and part picked there. It is on no card's list of conversations; the server hands
 it back only to its author (`GET /api/private`) and refuses everyone else any act on it.
 Its inbox item carries `private: true`, comes as `questions_due` like a question, and
 `design desk item I-<n>` returns the thread with it.
@@ -439,6 +480,13 @@ with a role; it has no card. This is the one roster change that comes from the D
 The team meets regularly; the Desk keeps the list of what to show at the next design meeting,
 the **Presentation** page of Requests. (The store and the CLI keep its older name, `agenda`.)
 
+The page shows it in the other pages' style: in the list, each item is its title and one line of
+facts (`presenting:`, `added by:`; `suggested by:`; `presented:`), with no chips; the page opens
+with a status box (To present · N items, **▶ Present**, **Mark all as presented**), then each item
+with its buttons, its facts and what the meeting decides. A row of what is to present or suggested keeps the page
+and jumps to its item, marked a moment; **Open** on the item opens its card, and a presented row
+opens its card.
+
 - Only a designer or the lead puts a card on it (**Add to presentation**), with a note and,
   for a request with options, its final version. The agent never adds one: it
   **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for
@@ -464,8 +512,8 @@ the **Presentation** page of Requests. (The store and the CLI keep its older nam
 
 ## Needs a designer
 
-Changes and Requests have a **Needs a designer** filter next to their others (Changes opens on
-**All**, Requests on **Open**): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
+Changes have a **Needs a designer** filter next to their others (Changes opens on **Open**;
+Requests use **Ready** instead): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
 
 - **A change card**: you judge it when you write the card ([watch.md](watch.md) step 7), as
   `attention: {level, reasons}` — `designer` for a new screen or a new address, a look that
@@ -477,7 +525,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are drawn and wait to go to the team (Team feedback), its options are ready, or its
-  live prototype is ready to approve (not on a small change).
+  live prototype is ready to approve (not For Developers).
 - **A suggestion for the presentation** puts either kind on it until a designer adds it or says
   **Not now**, even once the card was seen or the request closed.
 - Every read of a card (the list, the card, `design desk item`) returns the derived
@@ -497,15 +545,17 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
 - **Where a card came from.** Every row in PR Changes and Requests shows its source, its author and,
-  for what no person asked for, the event behind it, as `from: <source> by: <author> based on:
-  <card>`, the joining words grey and what they name in ink; Slack and the Desk (a desk with a
+  for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:
+  <card>` (`<when>`: Today, Yesterday or the date it came, the exact time on hover; with no person behind it,
+  the run that filed it is the author: `by: hourly check`, `by: daily issue read`; an issue not yet
+  designed adds where the team planned it: `in: This sprint`, or the sprint's milestone, `in: Sprint 12`), the joining words grey and what they name in ink; Slack and the Desk (a desk with a
   screen) show their icon beside their name. A change card shows its `source` (the PR,
-  its author, merged or open); a request filed on the Desk, the person who filed it. A
+  without an arrow, and its author; when it shipped is on its page); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`
   (an issue or PR), `chat` (the operator asked you in the direct session) or `agent` (your own);
   `reporter` (the person's name or login, required on every channel but `agent`, shown as
   the author); `email` (the reporter's email where the channel discloses it, Slack's member
-  list: a small change's author, [Small changes](#small-changes)); `url` (their thread, the issue); and when a scheduled run filed it, `job`
+  list: the author of a request For Developers, [For Developers or For Designers](#for-developers-or-for-designers)); `url` (their thread, the issue); and when a scheduled run filed it, `job`
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
   A request made from a card (`request.from`: an issue's **Design this**, a change's
