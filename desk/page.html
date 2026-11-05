@@ -740,6 +740,7 @@
   .stepper > summary::-webkit-details-marker { display: none; }
   .stepper > summary:hover { opacity: .88; }
   .stepper > summary::after { content: "▾"; font-size: var(--fs-meta); } .stepper[open] > summary::after { content: "▴"; }
+  a.step-next { text-decoration: none; display: inline-block; }
   .steppill .step-next { border: 0; background: none; padding: 1px 8px 1px 4px; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; border-radius: 999px; white-space: nowrap; }
   .steppill .step-next::before { content: "Next:"; margin-right: 5px; color: var(--muted); font-size: var(--fs-meta); font-weight: 400; }
   .steppill .step-next::after { content: " →"; color: var(--o); }
@@ -3080,10 +3081,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         sub: failed ? "Design Desk wrote why in the comments below." : "", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (live(c)) {
-      // The live prototype opens from the box, first and primary; Approve follows it.
-      const open = c.prototype.url ? `<a class="btn primary" href="${safeUrl(c.prototype.url)}" target="_blank" rel="noopener noreferrer">Open the prototype ↗</a>` : "";
-      return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c),
-        buttons: open + (canApprove(c) ? b("approve", "Approve…", !open) : "") + ends };
+      // The next step is to open the live prototype: it sits in the step pill, as Ask for feedback does.
+      const open = c.prototype.url ? `<a class="step-next" href="${safeUrl(c.prototype.url)}" target="_blank" rel="noopener noreferrer" title="Opens the live prototype in a new tab">Open the prototype</a>` : "";
+      return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c), step: open,
+        buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + ends };
     }
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
