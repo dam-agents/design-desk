@@ -34,6 +34,9 @@ in the design above, the pointer going through its `parts` in their order
 which closes in 1, 5 or 24 hours (24 picked). A played story's numbered frames show only while
 the design's Clickable switch is on. A request at `feedback` reads **Team feedback**, as its
 step does, not Options ready.
+The Clickable switch of a design's review bar starts on in designs built from now on (a design
+built before keeps its old bar, switch off), so a played story shows its numbered frames from the
+start; the Desk's previews of a part hide the outline with the bar (from #68, closed).
 
 ## 1.46.0 — 2026-11-05
 

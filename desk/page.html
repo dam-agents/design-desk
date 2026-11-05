@@ -1098,7 +1098,7 @@
 <h3>Changing a design</h3>
 <p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>
 <p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
-<p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
+<p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar (on from the start in designs made since this update) outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
 <p><b>One more option</b>: press the <b>+ New option</b> tab after the options. Write what it should look like and have, and pick the option it starts from (or something new). Design Desk draws it next to the others.</p>
 <p><b>Try 3 ways</b>: select a part of an option in the workspace, press <b>Try 3 ways</b> and describe how you picture it. Design Desk draws three ways above the design; click through them and press <b>Use this one</b> on the one to keep. It becomes the option's next version; the one before stays under its versions.</p>
 <p><b>All elements</b>: under each option, a small picture of every part it changes or adds, marked New or Changed. Open one to see it in every state, each as a picture of the part alone with the use case of the brief it covers; with none drawn yet, press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
@@ -1581,8 +1581,8 @@
   const SNIP_SCRIPT = (sel, text, grow) => `<script>(()=>{const S=${js(sel)},T=${js(text)},G=${grow ? 1 : 0},b=document.body,d=document.documentElement;
     let e=null;try{e=S&&document.querySelector(S)}catch{}
     if(!e&&T){const w=document.createTreeWalker(b,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===T){e=n;break}}
-    // A preview never shows the review bar; a part on another view opens that view first.
-    const rv=document.getElementById("review");if(rv)rv.style.display="none";
+    // A preview never shows the review bar, nor the outline its Clickable switch draws; a part on another view opens that view first.
+    const rv=document.getElementById("review");if(rv){rv.style.display="none";const h=rv.querySelector("[data-hot]");if(h)h.setAttribute("aria-checked","false")}d.classList.remove("review-hot");
     const vw=e&&e.closest("[data-view]");if(vw){const t=document.querySelector('[data-review-view="'+vw.dataset.view+'"]');t&&t.click()}
     d.style.overflow="hidden";b.style.transformOrigin="0 0";
     // Nothing named: the whole page, scaled to the frame's width from the top.
@@ -3209,7 +3209,7 @@
   // Inside an enlarged part's frame: only the part shows, centred and scaled to the frame, again on
   // every resize; its own size goes to the page, which gives the frame its shape.
   const ZOOM_SCRIPT = (sel) => `<script>(()=>{const S=${js(sel)},b=document.body,d=document.documentElement;
-    const rv=document.getElementById("review");if(rv)rv.style.display="none";
+    const rv=document.getElementById("review");if(rv){rv.style.display="none";const h=rv.querySelector("[data-hot]");if(h)h.setAttribute("aria-checked","false")}d.classList.remove("review-hot");
     let e=null;try{e=document.querySelector(S)}catch{}if(!e)return;
     const vw=e.closest("[data-view]");if(vw){const t=document.querySelector('[data-review-view="'+vw.dataset.view+'"]');t&&t.click()}
     d.style.overflow="hidden";b.style.visibility="hidden";e.style.visibility="visible";b.style.transformOrigin="0 0";let told=0;
