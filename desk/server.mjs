@@ -117,7 +117,7 @@ function settings() {
 }
 
 // The words a person reads when their role lacks an action.
-const VERBS = { ack: "mark changes as seen", handle: "mark changes as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
+const VERBS = { ack: "mark changes as seen", handle: "mark changes and issues as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "remove a design option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
   draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk" };

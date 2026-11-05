@@ -54,9 +54,12 @@ served by the Desk server through the platform's Artifact API relay.
   handled, the default) and **Handled**, Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
   (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
   not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
-  **All** (the default, designed issues too), then the buckets; Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
+  **All** (the default, designed issues too), then the buckets, then **Handled** (what a
+  designer marked handled; it leaves the other lists); Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
+- **Counts in the menu.** Each tab counts only what is still open: Requests the open requests, PR
+  Changes the changes not handled, Issues the issues neither handled nor designed.
 - **Lists.** Every row on every list is its title (one or two lines) with its corner dot, and
   one line under it — where it came from, or a screen's or part's summary — and no chips. Every list on the left shows the newest item first: a change by the day it
   shipped, a decision by the day it was made, any other item by the day it came onto the Desk.

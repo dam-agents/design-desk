@@ -424,8 +424,11 @@ export class Store {
   // the page counts the days it waits (config `change_due_days`).
   handle(cardId, who, on = true) {
     const c = this.card(cardId);
-    if (c.kind !== "change") throw bad("only a change is marked handled");
-    if (on) { c.status = "handled"; c.handled = { by: person(who), at: this.clock() }; }
+    if (!["change", "issue"].includes(c.kind)) throw bad("only a change or an issue is marked handled");
+    // An issue keeps its status, which its run sets: handled only takes it off the Desk's lists
+    // and out of drawing (docs/issues.md → On the Desk).
+    if (c.kind === "issue") { if (on) c.handled = { by: person(who), at: this.clock() }; else delete c.handled; }
+    else if (on) { c.status = "handled"; c.handled = { by: person(who), at: this.clock() }; }
     else { c.status = "new"; delete c.handled; }
     this.save();
     return { card: c };

@@ -112,7 +112,15 @@ test("a change card stays short, and a designer marks it handled", () => {
   assert.equal(s.getCard(c.id).status, "new");
   assert.equal(s.getCard(c.id).handled, undefined);
   const r = s.createRequest(alice, { title: "Bigger button", problem: "Hard to hit." }).card;
-  assert.throws(() => s.handle(r.id, alice), /only a change/);
+  assert.throws(() => s.handle(r.id, alice), /only a change or an issue/);
+  // An issue marked handled keeps its status; a run's upsert leaves the mark (docs/issues.md → On the Desk).
+  const is = s.upsertCard({ kind: "issue", title: "Export as CSV", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 77 } }).card;
+  s.handle(is.id, alice);
+  assert.deepEqual([s.getCard(is.id).status, Boolean(s.getCard(is.id).handled)], ["open", true]);
+  s.upsertCard({ id: is.id, bucket: "next" });
+  assert.ok(s.listCards({ kind: "issue" }).find((x) => x.id === is.id).handled, "the run's update keeps it handled");
+  s.handle(is.id, alice, false);
+  assert.equal(s.getCard(is.id).handled, undefined);
 });
 
 test("claims: one session per item, a heartbeat renews the lease, takeover only past it", () => {

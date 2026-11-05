@@ -115,4 +115,8 @@ person's **Draw it** tries again.
   purple Designed dot), and its card links the
   request. The pre-flight never offers it to draw. An issue Design Desk opened itself (its
   body carries the card's marker) is read like any other, so it lands there linked.
+- **Handled.** A designer marks an issue **Handled** on its page when design has nothing to do
+  with it (`POST /api/cards/<id>/handled`, the card's `handled: {by, at}`; its `status` stays the
+  run's): it leaves every list but **Handled**, and the pre-flight never offers it to draw. **Not
+  handled yet** brings it back.
 - A question on an issue card is answered like any other ([desk.md](desk.md) → Questions).

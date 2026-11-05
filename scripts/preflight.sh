@@ -339,7 +339,7 @@ issues_mode() {
   local cards='[]' drawing='[]' designed='[]'
   if [ -f "$DB" ]; then
     cards="$(jq -c '[.cards[] | select(.kind == "issue" and .status != "archived")
-      | {id, repo: .source.repo, issue: (.source.issue | tostring), bucket, sketches: ((.sketches // []) | length), failures: (.draw.failures // 0)}]' "$DB" 2>/dev/null)" \
+      | {id, repo: .source.repo, issue: (.source.issue | tostring), bucket, sketches: ((.sketches // []) | length), failures: (.draw.failures // 0), handled: (.handled != null)}]' "$DB" 2>/dev/null)" \
       || fail_out "cannot read the Desk store at $DB"
     drawing="$(jq -c '[.inbox[]? | select(.kind == "draw" and .state != "done") | .card]' "$DB" 2>/dev/null || echo '[]')"
     # The issues a request sent to developers came from or went to: done on the design side,
@@ -398,7 +398,7 @@ issues_mode() {
              elif ($st == "due" or $st == "in_progress") then (($row.ts | epoch) as $at | if $at == null or ($nowe - $at) >= 10800 then "takeover" else "held" end)
              elif $st == "failed" then (if $row.attempts < 3 then "retry" else "gave-up" end)
              else null end) as $kind
-          | ((($card.sketches // 0) == 0) and (($card.failures // 0) < 2)
+          | ((($card.sketches // 0) == 0) and (($card.failures // 0) < 2) and (($card.handled // false) | not)
              and (($designed | index("\($slug | ascii_downcase)#\($n)")) == null)
              and ($card == null or ($drawing | index($card.id)) == null)) as $wants
           | ($card.id // (if ($row.card // "") == "" then null else $row.card end)) as $cid

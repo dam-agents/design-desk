@@ -1264,7 +1264,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       "reqFor:designers": "Requests a designer or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
       "reqFilter:closed": "Requests sent to developers or closed",
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
-      "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too",
+      "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too, but not the handled ones", "issueFilter:handled": "Issues a designer marked handled: design has nothing to do with them; they leave the other lists",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
       "productFilter:decisions": "Every decision the team made, kept apart by who made it", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
@@ -1965,14 +1965,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // Requests leads; PR Changes and Issues follow smaller with grey counts, then Product and People.
   // How it works sits under the question mark next to the day and night switch.
   function renderNav() {
-    // PR Changes counts the changes this person has not opened yet, the ones shown bold.
-    const unseen = S.cards.filter((c) => c.kind === "change" && c.read === false).length;
+    // Each tab counts only what is still open: changes not handled, issues neither handled nor designed.
+    const unseen = newCards("open").length;
+    const openIssues = issueCards("all").filter((c) => !c.designed).length;
     // Requests counts the open ones; it turns amber while one waits for an answer.
     const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
     const asks = open.filter((c) => c.asks).length;
     const tab = ([k, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}"${k === "requests" ? ` class="main"` : ""}>${esc(TABS[k])}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`;
     const sep = `<span class="sep" aria-hidden="true"></span>`;
-    $("#nav").innerHTML = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], [["new", unseen], ["issues", issueCards("sprint").length]], [["product"], ["people"]]]
+    $("#nav").innerHTML = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.filter(([k]) => !(simple() && SIMPLE_HIDES.includes(k)))).filter((group) => group.length)
       .map((group) => group.map(tab).join("")).join(sep);
     $("#help").setAttribute("aria-current", String(S.tab === "guide"));
@@ -2120,8 +2121,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // An issue that already went through Design Desk is done on the design side: it leaves the
   // plan's filters and stays in All with its Designed dot (docs/issues.md → On the Desk).
   const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
-      && (filter === "all" || (!c.designed && c.bucket === filter))));
-  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label"], elFilter: ["all", "product", "design"] };
+      && (filter === "handled" ? Boolean(c.handled) : !c.handled && (filter === "all" || (!c.designed && c.bucket === filter)))));
+  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label", "handled"], elFilter: ["all", "product", "design"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
@@ -2164,7 +2165,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // once it went through Design Desk. A dot in the row's corner that unfolds into its word.
   function ghDot(c) {
     const s = c.source || {};
-    const [k, word, tip] = c.kind === "issue" ? (c.designed ? ["issue-designed", "Designed", "It went through Design Desk: its design was sent to developers"] : ["issue-open", "Open", "Open on GitHub"])
+    const [k, word, tip] = c.kind === "issue" ? (c.handled ? ["pr-draft", "Handled", "A designer marked it handled: design has nothing to do with it"] : c.designed ? ["issue-designed", "Designed", "It went through Design Desk: its design was sent to developers"] : ["issue-open", "Open", "Open on GitHub"])
       : s.merged_at ? ["pr-merged", "Merged", "Its pull request is merged: the change is in the product"]
       : s.draft ? ["pr-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"]
       : ["pr-open", "Open", "Its pull request is open: not in the product yet"];
@@ -2196,7 +2197,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["ready", "Ready", requestCards("ready").length], ["closed", "Closed", requestCards("closed").length]])
-      : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET }).map(([k, l]) => [k, l, issueCards(k).length]))
+      : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET, handled: "Handled" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
     const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
@@ -2801,11 +2802,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${(() => {
         const plan = c.bucket === "sprint" && src.milestone ? src.milestone : BUCKET[c.bucket] || "Issue";
-        const [o, word, tip] = c.designed ? ["gh-merged", "Designed", "A request on the Desk designed it and sent it to developers: done on the design side"]
+        const [o, word, tip] = c.handled ? ["gh-draft", "Handled", "A designer marked it handled: design has nothing to do with it; it left the other lists"] : c.designed ? ["gh-merged", "Designed", "A request on the Desk designed it and sent it to developers: done on the design side"]
           : !open ? ["gh-draft", "Closed", "It left the team's plan or was closed on GitHub"] : ["gh-open", plan, "Where the team planned this issue; open on GitHub"];
         const meta = [src.issue ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : "", src.author ? `<span>by ${esc(src.author)}</span>` : "", (src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : "", c.bucket === "sprint" && src.milestone ? "" : src.milestone ? `<span>${esc(src.milestone)}</span>` : ""].join("");
-        const design = open && can("follow-up") ? `<button class="btn${c.designed ? "" : " primary"}" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : "";
-        return ghStatus(o, word, tip, meta, design, open ? agendaButton(c) : "");
+        const design = open && !c.handled && can("follow-up") ? `<button class="btn${c.designed ? "" : " primary"}" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : "";
+        const handle = can("handle") ? (c.handled ? `<button class="btn" data-handle="0" title="It comes back to the lists">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing to do with this issue: it leaves the lists for Handled">Mark handled</button>`) : "";
+        return ghStatus(o, word, tip, meta, design + handle, open ? agendaButton(c) : "");
       })()}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.designed ? `<div class="sent"><b>✓ Already through Design Desk — done on the design side.</b><p><button class="anchor" data-card="${esc(c.designed.card)}">${esc(c.designed.title)}</button>${num({ id: c.designed.card })} was sent to developers${c.designed.at ? ` on ${esc(day(c.designed.at))}` : ""}; its design and spec are there.</p></div>` : ""}
@@ -4122,7 +4124,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (!visibleCards().some((x) => x.id === c.id)) {
       if (S.tab === "new") S.newFilter = c.handled ? "handled" : "open";
       if (S.tab === "requests") { S.reqFilter = closed(c) ? "closed" : "open"; S.reqFor = forOf(c); }
-      if (S.tab === "issues") S.issueFilter = "all";
+      if (S.tab === "issues") S.issueFilter = c.handled ? "handled" : "all";
     }
     S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners();
     await openCard(c.id);

@@ -978,7 +978,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
   const { desk, posts, settled } = run;
   try {
     await desk.waitForSelector('[data-tab="issues"] .count');
-    assert.equal(await desk.textContent('[data-tab="issues"] .count'), "1", "the tab counts the open issues of the sprint");
+    assert.equal(await desk.textContent('[data-tab="issues"] .count'), "2", "the tab counts every open issue: not closed, handled or designed");
     await desk.click('[data-tab="issues"]');
     assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["issueFilter:all", "issueFilter:sprint", "issueFilter:next", "issueFilter:assigned", "issueFilter:label"], "All first, then the plan; no Designed");
     await desk.click('[data-filter="issueFilter:sprint"]');
