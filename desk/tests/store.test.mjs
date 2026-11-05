@@ -1355,6 +1355,13 @@ test("an option's elements: listed, their states under them, then into the desig
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: html("A2") }, { id: "v2", version: 1, name: "Rows", asset: b }] });
   assert.deepEqual([s.getCard(added[0]).design.version, s.getCard(added[0]).design_states[0].stale], [2, true]);
   assert.equal(now[0].version, 1);
+  // A part the option no longer lists leaves the catalog, its card kept and marked; back, it is current again.
+  const els = s.getCard(card.id).variants[0].elements;
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 2, name: "Limits", asset: s.getCard(card.id).variants[0].asset, elements: els.filter((e) => e.id !== "banner") }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  assert.deepEqual([s.getCard(added[1]).status, Boolean(s.getCard(added[1]).design.gone), s.getCard(added[0]).status], ["dropped", true, "current"]);
+  assert.deepEqual(Object.keys(s.getCard(card.id).in_catalog.elements), ["provider"]);
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 2, name: "Limits", asset: s.getCard(card.id).variants[0].asset, elements: els }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  assert.deepEqual([s.getCard(added[1]).status, s.getCard(added[1]).design.gone], ["current", null]);
   const listed = s.listCards({ kind: "element" }).find((x) => x.id === added[0]);
   assert.deepEqual([listed.design.card, listed.design.of], [card.id, product.id]);
   // What the watch run reads to find the design a shipped change builds.

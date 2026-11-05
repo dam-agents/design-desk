@@ -1829,6 +1829,7 @@
     } else if (c.kind === "element" && c.design) {
       // Not the product: a part of an approved design, until the product has it.
       out.push(`<span class="chip warn" title="Drawn in the approved design of ${esc(c.design.card)}, ${esc(c.design.option)}; not in the product yet">✎ From an approved design</span>`);
+      if (c.status === "dropped") out.push(`<span class="chip bad" title="The design no longer draws this part">Left the design</span>`);
       out.push(`<span class="chip" title="${c.design.change === "new" ? "A part the product does not have yet" : "A part of the product this design changes"}">${c.design.change === "new" ? "New" : "Changed"}</span>`);
       const sh = shippedOf(c.design.card);
       if (sh) out.push(differsIn(sh, c) ? `<span class="chip bad" title="It shipped in ${esc(sh.id)}, otherwise than designed">⚠ Shipped differently</span>` : `<span class="chip ok" title="It shipped in ${esc(sh.id)} as designed">✓ Shipped as designed</span>`);
@@ -2555,6 +2556,7 @@
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}</h2>
       <div class="sub"><span class="chip warn" title="Drawn in an approved design; not in the product yet">✎ From an approved design</span><span class="chip" title="${d.change === "new" ? "A part the product does not have yet" : "A part of the product this design changes"}">${d.change === "new" ? "New" : "Changed"}</span>${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}</div>
+      ${c.status === "dropped" ? `<div class="against"><p><b>The design no longer has this part.</b> A later version of ${esc(d.option)} left it out; this card keeps how it looked.</p></div>` : ""}
       <div class="designbox"><p><b>✎ Not in the product yet.</b> This is how the approved design ${reqRef(d.card)} draws it: <b>${esc(d.option)}</b>, version ${esc(d.version)}${d.approved ? `, approved ${esc(day(d.approved))}` : ""}. ${who(d.by)} added it to the catalog ${esc(when(d.at))}.</p>
         <p>${of ? `It changes the product's <button class="anchor" data-ref="${esc(of.id)}">${esc(of.title)}</button>${num(of)}: open it to see how it is now.` : "The product has no such element yet."}</p>
         <p class="hint">${sh ? `${differsIn(sh, c) ? "⚠ It shipped differently" : "✓ It shipped as designed"} in <button class="anchor" data-ref="${esc(sh.id)}">${esc(sh.title)}</button>${num(sh)}.` : "When the change that builds it ships, Design Desk compares it with this design and says on that change whether it differs."}</p></div>

@@ -744,8 +744,14 @@ export class Store {
   // key, after a run redraws the option's states, every element already in the catalog follows.
   copyToCatalog(c, v, by, key = null) {
     const at = this.clock(), mine = (e) => Object.values(this.db.cards).find((x) => x.kind === "element" && x.design?.card === c.id && x.design?.element === e.key);
+    const els = elementsOf(v);
     let made = null;
-    for (const e of elementsOf(v)) {
+    // A part the option no longer draws leaves the catalog: its card stays, marked, never deleted;
+    // the part coming back brings it back (the loop below sets it current again).
+    for (const x of Object.values(this.db.cards))
+      if (x.kind === "element" && x.design?.card === c.id && x.status !== "dropped" && !els.some((e) => e.key === x.design.element))
+        Object.assign(x, { status: "dropped", design: { ...x.design, gone: at }, updated: at });
+    for (const e of els) {
       const was = mine(e);
       if (key ? e.key !== key : !was) continue;
       const of = e.element && own(this.db.cards, e.element)?.kind === "element" ? this.db.cards[e.element] : null;
@@ -754,7 +760,7 @@ export class Store {
       Object.assign(card, {
         status: "current", title: clean(e.name, LIMITS.title, "title"), group: of?.group || "New in approved designs",
         summary: e.how || (of ? `How ${of.title} looks in the approved design.` : "A new part of the approved design."),
-        design: { card: c.id, request: c.title, variant: v.id, option: v.name, version: v.version || 1, element: e.key, change: e.change || (of ? "changed" : "new"), of: of?.id || null, approved: c.approved?.at || card.design?.approved || null, by: key ? by : card.design?.by || by, at: key ? at : card.design?.at || at },
+        design: { gone: null, card: c.id, request: c.title, variant: v.id, option: v.name, version: v.version || 1, element: e.key, change: e.change || (of ? "changed" : "new"), of: of?.id || null, approved: c.approved?.at || card.design?.approved || null, by: key ? by : card.design?.by || by, at: key ? at : card.design?.at || at },
         design_part: { asset: v.asset, selector: e.selector || null, shot: e.shot || null, view: e.view || null },
         design_states: states, states: states.map((x) => ({ name: x.name, how: x.how })), updated: at,
       });
@@ -762,7 +768,7 @@ export class Store {
       made = card.id;
     }
     // Which elements of the option are in the catalog, and their cards.
-    const cards = Object.values(this.db.cards).filter((x) => x.kind === "element" && x.design?.card === c.id && x.design?.variant === v.id);
+    const cards = Object.values(this.db.cards).filter((x) => x.kind === "element" && x.design?.card === c.id && x.design?.variant === v.id && x.status !== "dropped");
     c.in_catalog = { variant: v.id, version: v.version || 1, cards: cards.map((x) => x.id), elements: Object.fromEntries(cards.map((x) => [x.design.element, x.id])), by: c.in_catalog?.by || by, at };
     c.updated = at;
     return made;

@@ -80,7 +80,8 @@ the design catalog** on an element of its approved option, on its tile under **A
 in its dialog ([requests.md](requests.md) → The option's elements). The store, with no run,
 makes one `element` card for it. The card follows the option: every new version of it or of
 its states (an upsert, a picked alternative) updates the cards already in the catalog, and a
-state not yet drawn again for the new version says so. Such a card has `design` (`card`,
+state not yet drawn again for the new version says so. A part the option no longer draws keeps
+its card, marked `dropped` (Left the design), until the part comes back. Such a card has `design` (`card`,
 `option`, `version`, `element`, `change`, `of`: the product's element it changes),
 `design_part` and `design_states` (the option's pictures), and no `source` or `sheet`.
 Product → Elements marks it **From an approved design**, apart from the product's own, and

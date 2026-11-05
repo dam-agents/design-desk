@@ -87,7 +87,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
     `design-desk/c<n>-…` branch, names its card (`C-<n>`), or touches the `file` of an element
     it changes; none → nothing. For that one: `design desk fetch` the option, look at it next to
     the change's screens element by element, and put `design_check` on the card: `{request,
-    verdict, summary, differences: [{element, card, what, design, shipped}]}` — `verdict`
+    verdict, summary, differences: [{element, card, what, design, shipped}]}`, at most 12
+    differences (the store refuses more; group the rest into one) — `verdict`
     `matches` or `differs`; per element that looks or behaves otherwise than approved, `what`
     in one sentence, `card` its design catalog card (`in_catalog`, by element), `design` and `shipped` a
     picture of it in each (`design shot --element`, `--kind image`). Copy, spacing, colour and
