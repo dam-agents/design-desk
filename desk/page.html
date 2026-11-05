@@ -144,6 +144,7 @@
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 12px; color: var(--muted); }
+  .prov .when { color: var(--ink); font-weight: 500; }
   .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta, 12.5px); }
   .row .prov a, .row .prov button { pointer-events: auto; }
   /* In the list a card's title is the one black line; where it came from and who asked are grey and plain under it. */
@@ -1491,6 +1492,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const contact = () => S.me?.contact || "the Desk's owner";
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
+  // A day said as people say it: Today, Yesterday, else its date.
+  const dayWord = (iso) => { const d = new Date(iso), t = new Date(), y = new Date(t); y.setDate(t.getDate() - 1); const same = (a, b) => a.toDateString() === b.toDateString(); return same(d, t) ? "Today" : same(d, y) ? "Yesterday" : day(iso); };
   const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; (document.querySelector("dialog[open]") || document.body).append(el); setTimeout(() => el.remove(), 4800); };
   const fail = (e) => { if (!(e instanceof Said)) console.error(e); toast(e instanceof Said ? e.message : `Something went wrong. Try again; if it keeps happening, tell ${contact()}.`); };
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { fail(e); } };
@@ -1649,7 +1652,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const parent = S.cards.find((x) => x.id === (o.event?.card || from));
     const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
     if (parts) return { kind, src, author, auto, parent: from_ };
-    return `<div class="prov"><span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b>${esc(author === "you" ? "You" : author)}</b></span>` : ""}${auto}${from_}</div>`;
+    // When it came: Today, Yesterday, or its date (docs/desk.md → Where a card came from).
+    return `<div class="prov">${c.created ? `<span class="when" title="${esc(new Date(c.created).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }))}">${esc(dayWord(c.created))}</span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b>${esc(author === "you" ? "You" : author)}</b></span>` : ""}${auto}${from_}</div>`;
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";

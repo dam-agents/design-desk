@@ -520,8 +520,8 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
 - **Where a card came from.** Every row in PR Changes and Requests shows its source, its author and,
-  for what no person asked for, the event behind it, as `from: <source> by: <author> based on:
-  <card>`, the joining words grey and what they name in ink; Slack and the Desk (a desk with a
+  for what no person asked for, the event behind it, as `<when> from: <source> by: <author> based on:
+  <card>` (`<when>`: Today, Yesterday or the date it came, the exact time on hover), the joining words grey and what they name in ink; Slack and the Desk (a desk with a
   screen) show their icon beside their name. A change card shows its `source` (the PR,
   its author, merged or open); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`
