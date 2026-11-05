@@ -367,12 +367,15 @@ test("every tab but How it works shows its intro in the empty pane; People besid
 test("every button and label says on hover what it does or means", (t) => open(t, OPENS, async (desk) => {
   // A tooltip takes the title away: a button with no words in it keeps it as its aria-label.
   const unnamed = () => desk.$$eval("button", (els) => els.filter((e) => e.getClientRects().length && !/[\p{L}\p{N}]/u.test(e.textContent) && !e.getAttribute("aria-label")).map((e) => e.outerHTML.slice(0, 120)));
-  const bare = () => desk.$$eval("button, a.btn, summary.btn, .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title && !e.dataset.tip).map((e) => e.outerHTML.slice(0, 120)));
+  // A list row's own button covers its card and says nothing: its labels and links say theirs.
+  const bare = () => desk.$$eval("button, a.btn, summary.btn, .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title && !e.dataset.tip && !e.matches(".row.item > .open")).map((e) => e.outerHTML.slice(0, 120)));
+  const rowSays = () => desk.$$eval("#list .row.item > .open", (els) => els.filter((e) => e.title || e.dataset.tip).map((e) => e.outerHTML.slice(0, 120)));
   await desk.waitForSelector("#detail .intro");
   for (const tab of ["requests", "new", "issues", "product", "people"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`#detail [data-intro="${tab}"]`);
     assert.deepEqual(await bare(), [], `${tab}: everything has a title`);
+    assert.deepEqual(await rowSays(), [], `${tab}: a card's own button in the list shows no line over the whole card`);
     assert.deepEqual(await unnamed(), [], `${tab}: a button with no words keeps a name`);
     if (tab === "requests") {
       await desk.hover("#help");
@@ -844,10 +847,17 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     await desk.hover("#detail h2");
     await desk.waitForSelector("#peek", { state: "detached" });
 
+    // In the list the issue's link previews it, never the whole card.
     await desk.click('[data-tab="issues"]');
     await desk.hover('.row.item [data-card="is1"]');
+    await desk.waitForTimeout(800);
+    assert.equal(await desk.$("#peek"), null, "the card itself shows no preview");
+    await desk.hover('.row.item .prov a[href="https://github.com/acme/widgets/issues/41"]');
     await desk.waitForSelector("#peek");
-    assert.match(await desk.textContent("#peek"), /A spend column in the agents list/, "the row, now without its needs, previews them");
+    assert.match(await desk.textContent("#peek"), /A spend column in the agents list/, "the row's issue link, now without its needs, previews them");
+    // Its sprint label says what it means on the label alone.
+    await desk.hover('.row.item .meta .chip.info');
+    await desk.waitForFunction(() => document.querySelector("#tip")?.textContent === "Where the team planned this issue");
   } finally {
     await run.close();
   }
@@ -883,8 +893,11 @@ test("a pull request link previews its change", async (t) => {
 
     await desk.click('[data-tab="new"]');
     await desk.hover('.row.item [data-card="ch1"]');
+    await desk.waitForTimeout(800);
+    assert.equal(await desk.$("#peek"), null, "the change's card itself shows no preview");
+    await desk.hover('.row.item .prov a[href="https://github.com/acme/widgets/pull/45"]');
     await desk.waitForSelector("#peek");
-    assert.match(await desk.textContent("#peek"), /A new header/, "the change's row previews it");
+    assert.match(await desk.textContent("#peek"), /A new header/, "the change's pull request link in its row previews it");
   } finally {
     await run.close();
   }

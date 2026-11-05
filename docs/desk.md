@@ -81,7 +81,9 @@ served by the Desk server through the platform's Artifact API relay.
   label by its own `title`. A new button or label gets its line in the same change. The Desk
   shows them in its own box half a second after the pointer rests on one, and at once while another
   is up or just closed: the page turns each `title` into `data-tip`, so the browser's own
-  tooltip never shows.
+  tooltip never shows. In a list, a card's own button covers the card and shows neither a line
+  nor a preview: a label (the sprint's, a state's) shows its line on the label alone, and an
+  issue's or a pull request's preview shows on its link alone.
 - **Buttons.** A button's icon comes from `BTN_ICON` in `desk/page.html`, by its `data-`
   action; one whose words start with a sign of their own (▶, ✓, 👍, +) keeps that sign.
   **More** closes on a click anywhere outside it, on Escape, and once something in it is picked.
