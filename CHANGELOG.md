@@ -10,10 +10,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.42.2 — 2026-11-04
 
 **Upgrade:**
-Restart the Desk server (`rc-service --user design-desk-server restart`): it refuses a state
-of a design option that carries neither a picture of the part (`shot`) nor the part's
-`selector`, so the Design catalog can no longer store a state it would show as a whole page in
-a small box. Nothing else changes.
+Restart the Desk server (`rc-service --user design-desk-server restart`): it refuses a new or
+redrawn state of a design option that it would store with neither a picture of the part
+(`shot`) nor the part's `selector`, so the Design catalog can no longer store a state it would
+show as a whole page in a small box. A state sent unchanged keeps the `shot` and `selector` it
+has; states already stored without either stay as they are. Nothing else changes.
 
 ## 1.42.1 — 2026-11-04
 

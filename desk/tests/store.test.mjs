@@ -586,6 +586,18 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   s.upsertCard({ id: card.id, variants: [st({ shot: pic, stories: ["s1", "s1"], use: "Someone points at it before uploading." }), { id: "v2", version: 1, name: "Small", asset: b }] });
   const hov = s.getCard(card.id).variants[0].states[0];
   assert.deepEqual([hov.shot, hov.stories, hov.use, hov.version], [pic, ["s1"], "Someone points at it before uploading.", 1], "a new picture of the part alone is not a new version of the state");
+  // The check reads the state the store keeps: a state sent unchanged keeps its picture, and a
+  // redrawn one sent with its old picture and no selector would keep neither, so it is refused.
+  s.upsertCard({ id: card.id, variants: [st({ shot: null, selector: null }), { id: "v2", version: 1, name: "Small", asset: b }] });
+  assert.deepEqual([s.getCard(card.id).variants[0].states[0].shot, s.getCard(card.id).variants[0].states[0].selector], [pic, "main > article:nth-child(1)"], "a state sent unchanged keeps its shot and selector");
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [st({ asset: page("hover b"), selector: null }), { id: "v2", version: 1, name: "Small", asset: b }] }), /catalog needs a picture of the part — the state is redrawn/);
+  assert.equal(s.getCard(card.id).variants[0].states[0].version, 1, "a refused redraw changes nothing");
+  // A state stored before the rule with neither (C-34) is sent back as it was read, and kept.
+  s.card(card.id).variants[0].states[1].selector = null;
+  s.upsertCard({ id: card.id, variants: [st({}), { id: "v2", version: 1, name: "Small", asset: b }] });
+  assert.equal(s.getCard(card.id).variants[0].states[1].selector, null, "an unchanged state without a picture stays as it is");
+  s.upsertCard({ id: card.id, variants: [{ ...st({}), states: s.getCard(card.id).variants[0].states.map((o) => (o.id === "error" ? { ...o, selector: "main > article:nth-child(1)" } : o)) }, { id: "v2", version: 1, name: "Small", asset: b }] });
+  assert.equal(s.getCard(card.id).variants[0].states[1].selector, "main > article:nth-child(1)", "a selector sent for an unchanged state is kept");
   // A note on one state names it; a state the option does not have is refused.
   assert.throws(() => s.openThread(card.id, alice, { kind: "change", text: "Red.", anchor: { variant: "v1", state: "loading" } }), /not drawn/);
   const { thread: note } = s.openThread(card.id, alice, { kind: "change", text: "Make it red.", anchor: { variant: "v1", state: "error", label: "the whole state" } });

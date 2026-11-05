@@ -269,17 +269,19 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    it), `shot` the picture of the part alone, `selector` the part's CSS path in the state's page
    (the inbox item's `part.selector`; the page cuts the part from the state while `shot` is
    missing), `stories` the story ids, `use` the sentence. **A state needs one of the two:** the
-   Desk refuses a state with neither a `shot` nor a `selector`, because the catalog would show
-   its whole page in a small box instead of the part.
+   Desk refuses a new or redrawn state that it would store with neither a `shot` nor a
+   `selector`, because the catalog would show its whole page in a small box instead of the
+   part. A state sent unchanged (the same `asset`) keeps the `shot` and `selector` the card has.
    The request's page shows them as its **Design catalog**, grouped by part. Keep the option's earlier states of other parts in the list; leaving
    `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
    version; the Desk keeps the earlier one.
 5. A state is a copy of the whole option, so a later `revise` of the option redraws every one
    of its states in the same run (the same ids), whatever part the notes touched, and shoots
    each part alone again (`design shot --element`, step 4) for its new `shot`: a redrawn
-   state sent with its old `shot` loses it, and the catalog shows no picture of it. The store
-   records the option version each state was drawn for (`of`); a build refuses an option whose
-   states are older than it, and the final check says which.
+   state sent with its old `shot` loses it: the catalog then cuts the part from the new page
+   by its `selector`, and the Desk refuses one with no `selector` — shoot it again and send
+   the new `shot`. The store records the option version each state was drawn for (`of`); a
+   build refuses an option whose states are older than it, and the final check says which.
    **Two runs on one card** (a `states` and a `revise` dispatched to two sessions): just before
    its upsert, each run reads the card again (`design desk card C-<n>`) and sends every option
    and state as it read it, `version` included, changing only its own. The store refuses (409)
