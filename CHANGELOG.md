@@ -7,6 +7,29 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.46.0 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A request's card names only the
+skills switched on for its options, by their names. A request's text is the asker's own words
+([docs/requests.md](docs/requests.md) → The three ways work arrives); Design this issue no
+longer fills it in with the issue's needs. Requests filed before keep their text. Send designs
+to Slack ticks the options to send; its note's `variants` is `"all"` or a list of option ids
+([`slack-polls`](.agents/skills/slack-polls/SKILL.md) → Send). Every button that opens a dialog
+starts its tooltip with "[Opens a dialog]". A request's first step is called Filed. A request
+that asked for no options shows Design options with **+ New option** once triaged, and New
+option can add a person's own pictures as an option with nothing drawn (`fidelity: picture`,
+[docs/requests.md](docs/requests.md) → Variants). A comment from the design workspace names its
+option; a card's "from" names the card it came from by kind and number; a link's preview shows
+each issue or pull request once, a pull request's comments not at all, and an issue's only
+those the watch run marks as about the design (`design desk github-mark`,
+[docs/watch.md](docs/watch.md) → Comments on GitHub); comments kept before show once marked.
+In Screens, each stage keeps its column: an After with no Before sits under the other Afters.
+A request's author, a designer or a lead can rename it (a small ✎ right after its title, shown on
+hover; the copy-link button stays as it is); a run's upsert keeps that name.
+
 ## 1.45.0 — 2026-11-05
 
 **Upgrade:**

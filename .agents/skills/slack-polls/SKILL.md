@@ -52,7 +52,8 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
 ## Send (`slack_due` with `scope: send`)
 
 **Send designs to Slack**: pictures, no vote. Works without `slack_polls`. The item's note is
-`{"variants": "all" | "<option id>", "note": "<a line for Slack>"}`.
+`{"variants": "all" | ["<option id>", …], "note": "<a line for Slack>"}` (a lone `"<option id>"`
+from an older page is one option).
 
 1. Claim the item; read the card. Where: as **Where it posts** says; the channel only with
    `slack_send: enabled`. Neither → done with `--outcome "no Slack place"`

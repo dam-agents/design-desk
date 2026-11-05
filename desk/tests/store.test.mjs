@@ -1223,6 +1223,53 @@ test("GitHub on the Desk: the agent keeps an issue with its comments, a new comm
   assert.deepEqual(s.openPrivate(alice, { text: "Why?", context: { card: card.id } }).thread.context.refs, ["acme/widgets#7"]);
 });
 
+test("GitHub on the Desk: the watch run marks an issue's design comments, the mark survives a read, a pull request's are not marked", () => {
+  const s = fresh();
+  const issue = { key: "acme/widgets#12", kind: "issue", title: "Filters", comments: [{ author: "bob", at: "2026-11-01T10:00:00Z", body: "Chips above the table?" }, { author: "ci", at: "2026-11-02T10:00:00Z", body: "Build passed." }] };
+  s.putGithub([issue, { key: "acme/widgets#7", kind: "pr", title: "Limits", comments: [{ author: "pat", at: "2026-11-01T10:00:00Z", body: "LGTM" }] }]);
+  assert.deepEqual(s.markGithub("Acme/Widgets#12", { at: "2026-11-01T10:00:00Z", author: "bob" }).comment, { at: "2026-11-01T10:00:00Z", author: "bob", design: true });
+  s.putGithub([{ ...issue, comments: [...issue.comments, { author: "dave", at: "2026-11-03T10:00:00Z", body: "The empty state?" }] }]);
+  assert.deepEqual(s.github(["acme/widgets#12"])[0].comments.map((m) => [m.author, Boolean(m.design)]), [["bob", true], ["ci", false], ["dave", false]], "a new read keeps the mark");
+  s.markGithub("acme/widgets#12", { at: "2026-11-01T10:00:00Z", author: "bob", design: false });
+  assert.equal(s.github(["acme/widgets#12"])[0].comments[0].design, undefined, "design: false takes the mark back");
+  assert.throws(() => s.markGithub("acme/widgets#7", { at: "2026-11-01T10:00:00Z", author: "pat" }), /pull request/);
+  assert.throws(() => s.markGithub("acme/widgets#12", { at: "2026-11-09T10:00:00Z", author: "bob" }), /no comment by bob/);
+  assert.throws(() => s.markGithub("acme/widgets#99", { at: "x", author: "y" }), /no copy/);
+});
+
+test("a request's author, or one who may close it, renames it; a run's upsert keeps the name", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "give me some prototypes", problem: "Try it" });
+  assert.throws(() => s.renameRequest(card.id, alice, "Calmer header"), /Only the person who filed it/, "neither its author nor allowed to close it");
+  assert.equal(s.renameRequest(card.id, alice, "Calmer header", { manage: true }).card.title, "Calmer header");
+  assert.equal(s.renameRequest(card.id, bob, "  A calmer header  ").card.title, "A calmer header", "its author may");
+  assert.throws(() => s.renameRequest(card.id, bob, " "), /title is empty/);
+  assert.equal(s.upsertCard({ id: card.id, title: "Agent's name", summary: "s" }).card.title, "A calmer header", "a run's upsert leaves it");
+  const { card: ch } = s.upsertCard({ kind: "change", title: "A change", source: { repo: "acme/widgets", pr: 9 } });
+  assert.throws(() => s.renameRequest(ch.id, bob, "x", { manage: true }), /only a request/);
+});
+
+test("a person's own option: their pictures as an option once the request is checked, nothing queued, its author kept through a run's upsert", () => {
+  const s = fresh();
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const { card } = s.createRequest(alice, { title: "Lukas test", problem: "Try it", options: 0 });
+  assert.throws(() => s.addOwnOption(card.id, alice, { images: [{ contentType: "image/png", data: png }] }), /checked the request/, "triage comes first");
+  s.upsertCard({ id: card.id, triage: { verdict: "design" } });
+  assert.doesNotThrow(() => s.act(card.id, alice, "add-option", "One more, drawn"), "a request that asked for none takes a drawn first option too");
+  assert.throws(() => s.addOwnOption(card.id, alice, { images: [] }), /at least one picture/);
+  assert.throws(() => s.addOwnOption(card.id, alice, { images: [{ contentType: "text/html", data: png }] }), /PNG, JPEG or WebP/);
+  const open = inbox(s).open.length;
+  const { card: c } = s.addOwnOption(card.id, alice, { name: "My <sketch>", note: "Filters on top", images: [{ contentType: "image/png", data: png }] });
+  const v = c.variants[0];
+  assert.deepEqual([v.id, v.name, v.fidelity, v.rationale, v.version, v.by.email, c.status, c.team_feedback.state], ["v1", "My <sketch>", "picture", "Filters on top", 1, alice.email, "variants", "waiting"], "ready, waiting for a person to ask the team");
+  assert.equal(inbox(s).open.length, open, "nothing is queued: Design Desk draws nothing");
+  const page = readFileSync(join(s.assetDir, s.db.assets[v.asset].file), "utf8");
+  assert.match(page, /<title>My &lt;sketch&gt;<\/title>/, "the name is escaped on its page");
+  assert.match(page, /<img alt="Picture 1" src="data:image\/png;base64,/);
+  const { card: after } = s.upsertCard({ id: card.id, variants: [{ id: "v1", name: v.name, asset: v.asset, fidelity: "picture", version: 1 }] });
+  assert.deepEqual([after.variants[0].fidelity, after.variants[0].by?.email], ["picture", alice.email], "a run's upsert keeps what it is and who added it");
+});
+
 test("GitHub on the Desk: every new comment is fresh even past the kept 60, a long title is cut, the pre-flight's refs file follows", () => {
   const s = fresh();
   s.upsertCard({ kind: "change", title: "Limits", source: { repo: "acme/widgets", pr: 7 } });

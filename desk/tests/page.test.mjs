@@ -26,9 +26,10 @@ test("nothing on the page submits a form", () => {
 test("the new option dialog sends on its close, as the page's other dialogs do", () => {
   const f = page.match(/<dialog id="option-dialog">[\s\S]*?<\/dialog>/)?.[0];
   assert.ok(f, "the page has the option-dialog");
-  assert.match(f, /<button type="button" class="btn primary" data-close="ok">/);
-  assert.match(page, /dlg\.onclose = async \(\) => \{\s*if \(dlg\.returnValue !== "ok"\) \{ resolve\(null\); return; \}\s*const note = f\.note\.value\.trim\(\), base/);
+  assert.match(f, /<button type="button" class="btn primary" data-close="ok"[^>]*>/);
+  assert.match(page, /dlg\.onclose = async \(\) => \{\s*if \(dlg\.returnValue !== "ok"\) \{ resolve\(null\); return; \}\s*const own = [^\n]+\s*const note = f\.note\.value\.trim\(\), base/);
   assert.match(page, /action: "add-option"/);
+  assert.match(page, /\/api\/cards\/\$\{c\.id\}\/options`/, "its own pictures go to the options route, nothing drawn");
 });
 
 // A stand-in bridge records every call; the server answers just enough for a lead's Desk
@@ -966,7 +967,8 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
 
     await desk.click("[data-adjust]");
     assert.equal(await desk.textContent("#rq-title"), "Design this issue");
-    assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "A spend column in the agents list", "the needs start the request");
+    assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "", "the request is the person's words: the issue's needs are not put in for them");
+    await desk.fill("#request-dialog textarea[name=problem]", "A spend column in the agents list");
     await desk.fill("#request-dialog input[name=options]", "5");
     assert.equal(await desk.textContent("#rq-count-say"), "5 options");
     await desk.fill("#request-dialog input[name=options]", "0");
@@ -1578,7 +1580,7 @@ test("lists show the newest first; a folded box stays folded on another option; 
   await desk.goto(`${base}#C-6`);
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-6");
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Design only" }).count(), 0, "no Design only label by the title");
-  assert.match(await desk.textContent("#detail details.stepper ol"), /Checked\s*Design only/, "the steps name the verdict");
+  assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Design only/, "the steps name the verdict");
 
   await desk.click('[data-tab="new"]');
   await desk.click('[data-filter="newFilter:all"]');

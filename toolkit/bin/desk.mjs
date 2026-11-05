@@ -83,6 +83,9 @@ const USAGE = `usage: design desk <command>
                                            prints {synced, failed, fresh: [{key, cards, comments}]}, the
                                            comments new since the last read
   github <owner/repo#n>[,…]                what the Desk keeps of them
+  github-mark <owner/repo#n> --at <iso> --author <login> [--off]
+                                           mark an issue's comment as about the design or the UI (the
+                                           only ones its preview shows); --off takes the mark back
 `;
 
 const TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml",
@@ -288,6 +291,9 @@ export async function main(_cmd, argv) {
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}&state=${encodeURIComponent(typeof f.state === "string" ? f.state : "")}`));
     case "github-sync": return out(await githubSync(typeof f.card === "string" ? f.card : null));
     case "github": return out(await call("GET", `/agent/github?keys=${encodeURIComponent(pos[0] || "")}`));
+    case "github-mark":
+      if (typeof f.at !== "string" || typeof f.author !== "string") fail("pass --at <the comment's at> and --author <its login>, as github-sync's fresh gives them");
+      return out(await call("POST", "/agent/github/marks", { key: pos[0] || "", at: f.at, author: f.author, design: !f.off }));
     case "enqueue": return out(await call("POST", "/agent/enqueue", { kind: pos[0], card: pos[1], note: typeof f.note === "string" ? f.note : "" }));
     default: process.stdout.write(USAGE); process.exit(sub ? 2 : 0);
   }

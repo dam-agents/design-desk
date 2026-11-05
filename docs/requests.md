@@ -15,6 +15,11 @@ and feedback before any live prototype ([prototype.md](prototype.md)) and the ha
 Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
 (`proposal`, [watch.md](watch.md) step 12) end per `handoff`.
 
+**The request is the person's words.** `problem`, `goal`, `steps` and `vision` hold what the
+person who asked wrote, as they wrote it (an issue's body, a Slack message, the operator's
+chat), cut at 4000 characters, never summarized or reworded; what Design Desk makes of it
+goes in research, `issue_brief` and triage. Only a `proposal` is Design Desk's own words.
+
 ## Research (`requests_due`, before triage)
 
 Before anything is designed, know what is already there: whether the request is tracked,
@@ -147,7 +152,12 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   new option for the same brief, research and boundary as the others; leave every option
   already there as it is (each sent with its `version`, the new one without) and name it after
   what makes it different. A wish the boundary does not allow is drawn as far as it goes and
-  said in its `rationale`. At most 6 options: the store refuses more.
+  said in its `rationale`. At most 6 options: the store refuses more. A request that asked for
+  no options (`request.options` 0) shows **+ New option** alone once it is triaged.
+- **A person's own option** (`fidelity: picture`): **+ New option** → *Use my own pictures*
+  puts their pictures on the card as an option as they are, with `by`; no item is queued and
+  nothing is drawn. Keep it as it is (send it back with its `version`); change it only when a
+  comment asks, and never present it as the product's look.
 - **revise** — three kinds of work arrive as `revise`:
   - **Notes on elements** from the design workspace: threads of kind `change`, each anchored
     to one option (`anchor.variant`) and, usually, one element (`anchor.selector`, its text and
@@ -367,7 +377,7 @@ refuses is logged, and the card is the record.
 
 A watch worklist's `issues_due` lists open issues labelled `issue_label`. Per issue:
 `ledger.sh claim <repo> <number>`, read it with its comments, then file a request of type
-`feature`: write the JSON with the issue's title and problem in plain words and
+`feature`: write the JSON with the issue's title, its body as `problem` (above: the person's words) and
 `origin: {channel: "github", kind: "issue", repo, number, url, reporter: <author login>,
 job: "watch", event: {label: "labelled <issue_label>"}}`, and run
 `design desk request <file>`; then `ledger.sh done <repo> <number> <card>`. Its
@@ -415,6 +425,6 @@ Designer kit made. Pick the skill, build, look, deliver:
 - A brand is saved only after the operator confirmed it; a logo is used as given, never
   redrawn or recolored.
 - In chat, a request that should become Desk work ("let's prototype this") — offer to put
-  it on the Desk as a request: `design desk request` with `origin: {channel: "chat",
-  reporter: <the operator's name>}` ([desk.md](desk.md) → Where a card came from).
+  it on the Desk as a request: `design desk request` with the operator's words as `problem`
+  and `origin: {channel: "chat", reporter: <the operator's name>}` ([desk.md](desk.md) → Where a card came from).
 - Keep sources and builds under `work/output/<YYYY-MM-DD>-<slug>/`.

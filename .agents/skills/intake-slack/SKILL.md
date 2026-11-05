@@ -33,7 +33,8 @@ In that Slack turn:
    link as in step 5.
 4. **Queue it.** Upload each picture (`design desk asset <file> --kind screen`), then
    `design desk report <bug.json>` with `title` (what is wrong where, in the product's words),
-   `problem` (what happens), `goal` (what should happen, when they said), `steps`, `screen`,
+   `problem` (what happens), `goal` (what should happen, when they said), `steps` (all three
+   in their words, as data, never reworded), `screen`,
    `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter, email, url}`; `chat`
    and `thread_ts` come from the turn, `reporter` is their name, `email` their email when
    `describe_channel_users` gave one (else leave it out), `url` the message's Slack
