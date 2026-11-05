@@ -118,7 +118,7 @@ served by the Desk server through the platform's Artifact API relay.
 - **Numbers of parts and states.** Inside an item, each thing a person may point at has a
   sub-number after a dot: `C-12.3` is an element's third situation, a screen's third
   picture as it is now (its before and after pictures included, in their order), or a
-  request's third catalog state, counted across its options in order; an older look of a
+  request's third state of an element, counted across its options in order (it opens in its element's dialog); an older look of a
   screen is cited by its date. Each
   shows its number by it; `#C-12.3` and a `C-12.3` in text open the item and scroll to it.
   Cite parts and states by these numbers in every answer.
@@ -407,8 +407,8 @@ the **Presentation** page of Requests. (The store and the CLI keep its older nam
   for a request with options, its final version. The agent never adds one: it
   **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
-  suggestion shows on the card (a request's under **More**) and under the presentation until a
-  designer adds it or says **Not now**; after **Not now** the store keeps the card from being
+  suggestion shows on the card (a request's Add under **More**) and under the presentation until a
+  designer adds it or says **Not now** (by the suggestion; for a request, on the Presentation page); after **Not now** the store keeps the card from being
   suggested again. Without a version picked (an older page), the designer's pick (`chosen`) is
   presented, else the option designers' votes clearly prefer.
 - **The brief** (`agenda_due`): for every card on the presentation, write `brief` on the card —
@@ -437,6 +437,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   error), or a screen with an open request or a theme in feedback; else `fyi`. One to five
   reasons, each a short phrase in the product's words ("a new screen", "its own grey instead of
   the product's"). It leaves the filter once the person saw it or a designer marked it handled.
+  The store adds "Differs from the approved design C-<n>" itself ([watch.md](watch.md) step 11).
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are drawn and wait to go to the team (Team feedback), its options are ready, or its

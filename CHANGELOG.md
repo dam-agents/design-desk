@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.45.0 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). An option now lists its elements
+(`elements`, [docs/requests.md](docs/requests.md) → The option's elements), shown under it as
+All elements with their states in a dialog; options drawn before list the parts their states
+draw. An approved design's elements go to Product → Elements on **Add to the design catalog**,
+and the watch run compares a shipped change with the approved design it builds
+([docs/watch.md](docs/watch.md) step 11). An answer to a worked-in note may carry `warns`
+(`design desk answer … --warns`): what the note goes against, shown as a box under the answer.
+New fields are optional; no state to migrate, no config change.
+
 ## 1.44.0 — 2026-11-05
 
 **Upgrade:**

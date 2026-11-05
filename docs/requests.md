@@ -13,7 +13,7 @@ and feedback before any live prototype ([prototype.md](prototype.md)) and the ha
 | 3. Reported | a UI bug, or something that looks wrong to someone (Desk or Slack) | `bug` | as flow 2 |
 
 Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own proposals for new features
-(`proposal`, [watch.md](watch.md) step 11) end per `handoff`.
+(`proposal`, [watch.md](watch.md) step 12) end per `handoff`.
 
 ## Research (`requests_due`, before triage)
 
@@ -160,6 +160,14 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     every state redrawn in the same upsert (Every state of a part, step 5). Then answer each note
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
+    **A note that goes against something is applied and said so**: before applying it, check
+    it against the decisions in force (`design desk decisions --concept <c> --state active`),
+    the card's `issue_brief` (its text and stories) and how the change or PR it builds on works
+    (`request.from`, the PR and its linked issue). For each it breaks, answer with `--warns
+    <file>`: `[{what, why, source}]`, at most 5 — `what` what it breaks in a few words, `why`
+    one sentence, `source` `{kind: "decision", ref: "D-<n>"}` or `{kind: "issue"|"pr", url,
+    label}`. The page shows each as a warning box under the answer, linked to its source. A
+    decision in force it goes against also goes on the option's `conflicts` (desk.md → Decisions).
     **An applied note always shows what it did**: `design desk fetch` the option's previous
     asset, then `design desk card C-<n> | jq '.card.threads[] | select(.id == "T-<n>") | .anchor'
     | design compare <previous.html> <new.html> <dir> --anchor - > <dir>/T-<n>.json`. A note
@@ -184,7 +192,9 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     the product's words, `ask` the person's note. The workspace shows them above the design;
     the person picks one with **Use this one**, and the store makes it the option's next
     version itself (no run; the earlier version stays in its history, the other alternatives
-    go, and its states are then out of date). A later redraw of the option drops alternatives
+    go). Its states are then out of date: the store queues a `states` item with `scope:
+    "redraw"` — draw every state of the option again for its new version, as step 5 of Every
+    state of a part says. A later redraw of the option drops alternatives
     drawn for an older version; `alternatives: []` removes them.
   - **Redraw with all comments**: read every thread and vote, change what they ask, keep
     what people preferred, and add one comment listing what changed per comment, with each
@@ -222,8 +232,19 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   none. An entry without `reasons` keeps the option's from before; a revised option whose parts
   moved or whose basis changed sends its new `reasons`. What goes against a decision is a
   conflict (desk.md → Decisions), never a reason.
+- **The option's elements**: each option lists the parts it changes or adds, as a person would
+  name them (a card, a banner, a button; never every box): `elements: [{id, name, change, how,
+  selector, shot, view, view_name, element}]`, at most 24 — `id` short and stable; `name` the
+  part in the product's words; `change` `new` or `changed`; `how` one sentence on what is new or
+  different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
+  (`design shot --element`, `--kind image`); `element` the product's element card it changes
+  (`C-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them under the
+  option as **All elements**; one opens in a dialog with its states. A state belongs to the
+  element its `element` names, else to the one named as its `part`. An entry without `elements`
+  keeps the option's; a revise that adds, removes or moves a part sends them anew. The tiles
+  are cut from the option's latest version, so they follow every change of it.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
-  `variants: [{id, version, name, rationale, fidelity, asset, stories, reasons, states}]` (rationale: one
+  `variants: [{id, version, name, rationale, fidelity, asset, stories, reasons, elements, states}]` (rationale: one
   line on when this one wins) and `status: feedback` in one `design desk upsert` (a Desk-filed request may stay at `variants`: [desk.md](desk.md) → Team feedback). The list is
   every option on the card: one already there goes with the `version` (and each of its states
   with its `version`) the card gave you, a new one without; one to take off goes as `{id,
@@ -236,11 +257,12 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
 
 ## Every state of a part (`variants_due`: `states`)
 
-A designer or developer selects a part of an option in the design workspace (a button, a list,
-a form) and presses **Draw every state of this part**; the request's page has no such button.
-A chat request names the part instead. The item names the option (`variant`), the part they
-selected (`part`: `{selector, text, label, view, view_name}`; none when they only named it) and
-their words (`note`). Make it with the `states` action's skill (`design skill states --repo <repo>`).
+A designer or developer opens an element of an option under **All elements** and presses
+**Draw every state**; the design workspace has no such button. A chat request names the part
+instead. The item names the option (`variant`), the element (`element`: its id, or `part-…`
+for a part only its states named), the part (`part`: `{selector, text, label, view,
+view_name}`; none when they only named it) and their words (`note`). It works on a request
+sent to developers too: the states document the approved design and change nothing of it. Make it with the `states` action's skill (`design skill states --repo <repo>`).
 
 1. Claim; read the option's latest file (`design desk fetch`) and its source under
    `work/output/`. Find the part in it; a part you cannot find → `design desk ask C-<n> <file>
@@ -265,16 +287,17 @@ their words (`note`). Make it with the `states` action's skill (`design skill st
    case in one plain sentence from the request's own words. A state no use case of the brief
    asks for says so with neither. Then one `design desk upsert` with every option (each with
    its `version`, Variants above) and, on this one, `states: [{id, version, name, how, part,
-   asset, shot, selector, stories, use}]` (`version` only for a state already there): `id` short and
+   asset, shot, selector, stories, use, element}]` (`version` only for a state already there): `id` short and
    stable (`hover`, `error`), `name` the state in plain words, `how` when it happens in one
    sentence, `part` the part in the product's words (states of several parts are grouped by
    it), `shot` the picture of the part alone, `selector` the part's CSS path in the state's page
    (the inbox item's `part.selector`; the page cuts the part from the state while `shot` is
-   missing), `stories` the story ids, `use` the sentence. **A state needs one of the two:** the
+   missing), `stories` the story ids, `use` the sentence, `element` the item's `element` when
+   it is an id of the option's `elements`. **A state needs one of the two:** the
    Desk refuses a new or redrawn state that it would store with neither a `shot` nor a
    `selector`, because the catalog would show its whole page in a small box instead of the
    part. A state sent unchanged (the same `asset`) keeps the `shot` and `selector` the card has.
-   The request's page shows them as its **Design catalog**, grouped by part. Keep the option's earlier states of other parts in the list; leaving
+   The page shows them in their element's dialog. Keep the option's earlier states of other parts in the list; leaving
    `states` out keeps them all, `[]` removes them. A state redrawn under its id gets its next
    version; the Desk keeps the earlier one.
 5. A state is a copy of the whole option, so a later `revise` of the option redraws every one

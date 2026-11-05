@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, abilities, rosterOf } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, abilities, rosterOf, elementsOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -1275,6 +1275,7 @@ test("alternatives and pick-alternative: three ways of a part, the one picked is
   s.act(id, alice, "pick-alternative", "b", { variant: "v1" });
   const after = s.getCard(id).variants[0];
   assert.deepEqual([after.version, after.asset, after.history[0].asset, after.alternatives.length], [2, y, v1.asset, 0]);
+  assert.equal(Object.values(s.db.inbox).some((i) => i.kind === "states" && i.state !== "done"), false, "an option without states has none to draw again");
 });
 
 test("drop-option: a designer closes an option's tab; the last, approved and presented ones stay, a stale run cannot bring it back", () => {
@@ -1297,4 +1298,110 @@ test("the new actions' roles: drawing is a designer's or developer's, removing a
   for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("pm", a), false, a); }
   assert.equal(can("designer", "choose"), true);
   assert.equal(can("developer", "choose"), false);
+});
+
+test("an option's elements: listed, their states under them, then into the design catalog once approved", () => {
+  const s = fresh();
+  const html = (t) => s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from(`<p>${t}</p>`).toString("base64") }).asset.id;
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const a = html("A"), b = html("B"), near = html("near"), hover = html("hover");
+  const product = s.upsertCard({ kind: "element", title: "Provider card", group: "Settings", source: { repo: "acme/widgets", file: "src/Provider.tsx", export: "Provider" }, status: "current" }).card;
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  const v = (x = {}) => ({ id: "v1", name: "Limits", asset: a, ...x });
+  // What an element must say, and what it may point at.
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [v({ elements: [{ id: "p", name: "Card", change: "moved", selector: "#p" }] })] }), /new or changed/);
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [v({ elements: [{ id: "p", name: "Card", change: "new" }] })] }), /needs a picture of it/);
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [v({ elements: [{ id: "p", name: "Card", change: "changed", selector: "#p", element: card.id }] })] }), /not an element of the product/);
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [v({ elements: [{ id: "p", name: "Card", change: "new", shot: a }] })] }), /shot must be an uploaded picture/);
+  s.upsertCard({ id: card.id, triage: { verdict: "design" }, status: "feedback", variants: [v({ elements: [
+    { id: "provider", name: "Provider card", change: "changed", how: "Shows the limit.", selector: "#provider", element: product.id },
+    { id: "banner", name: "Limit banner", change: "new", shot: pic } ],
+    states: [{ id: "near", name: "Close to the limit", part: "Provider card", element: "provider", asset: near, selector: "#provider" }, { id: "hover", name: "Hovered", part: "Raise button", asset: hover, selector: "#raise" }] }),
+    { id: "v2", name: "Rows", asset: b }] });
+  // Leaving elements out keeps them; a state's part names a derived element when no listed one has it.
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  const opt = s.getCard(card.id).variants[0];
+  assert.deepEqual(opt.elements.map((e) => e.id), ["provider", "banner"]);
+  assert.deepEqual(elementsOf(opt).map((e) => [e.key, e.states.map((x) => x.id)]), [["provider", ["near"]], ["banner", []], ["part-raise-button", ["hover"]]]);
+  // Draw every state of one element: an element the option does not have is refused before anything is queued.
+  assert.throws(() => s.act(card.id, alice, "states", "", { variant: "v1", element: "nope", part: { label: "Nope" } }), /not in this design option/);
+  const { inbox: item } = s.act(card.id, alice, "states", "", { variant: "v1", element: "banner", part: { label: "Limit banner", selector: "#banner" } });
+  assert.equal(item.element, "banner");
+  assert.equal(inbox(s).open.find((x) => x.id === item.id).element, "banner", "the inbox file names the element");
+  s.claim(item.id, "run-1"); s.done(item.id, "run-1", "drew");
+  // Not before approval; then one element at a time, marked as from the design; pressed again, the same card.
+  assert.throws(() => s.addDesignToCatalog(card.id, alice, "provider"), /Approve a design option first/);
+  s.act(card.id, alice, "approve", "v1");
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  assert.throws(() => s.addDesignToCatalog(card.id, bob, "nope"), /not in Limits/);
+  const added = ["provider", "banner"].map((k) => s.addDesignToCatalog(card.id, bob, k).added);
+  const cat = added.map((id) => s.getCard(id));
+  assert.deepEqual(cat.map((x) => [x.title, x.design.change, x.design.of, x.design_states.length]), [["Provider card", "changed", product.id, 1], ["Limit banner", "new", null, 0]]);
+  assert.equal(cat[0].group, "Settings", "it sits with the product's element it changes");
+  assert.deepEqual(s.getCard(card.id).in_catalog.elements, { provider: added[0], banner: added[1] }, "the raise button stays out until someone adds it");
+  assert.equal(s.addDesignToCatalog(card.id, bob, "banner").added, added[1], "pressed again, it updates the same card");
+  assert.throws(() => s.act(added[0], alice, "refresh"), /approved design/);
+  // Sent to developers, an element still gets its states drawn, and its catalog card follows them.
+  const { inbox: again } = s.act(card.id, bob, "states", "", { variant: "v1", element: "banner", part: { label: "Limit banner" } });
+  assert.equal(again.element, "banner");
+  s.claim(again.id, "run-2");
+  const kept = s.getCard(card.id).variants[0].states.map(({ id, name, part, asset, selector, element, version }) => ({ id, name, part, asset, selector, element, version }));
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a, states: [...kept, { id: "shown", name: "Shown", part: "Limit banner", element: "banner", asset: html("banner"), selector: "#banner" }] }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  s.done(again.id, "run-2", "drew");
+  assert.deepEqual(s.getCard(added[1]).design_states.map((x) => x.name), ["Shown"], "the design catalog shows the states drawn since");
+  assert.throws(() => s.act(card.id, bob, "revise"), /closed/, "nothing else reopens it");
+  // A new version of the option reaches the catalog: its card follows, and a state not drawn again says so.
+  const now = s.getCard(card.id).variants;
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: html("A2") }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  assert.deepEqual([s.getCard(added[0]).design.version, s.getCard(added[0]).design_states[0].stale], [2, true]);
+  assert.equal(now[0].version, 1);
+  // A part the option no longer lists leaves the catalog, its card kept and marked; back, it is current again.
+  const els = s.getCard(card.id).variants[0].elements;
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 2, name: "Limits", asset: s.getCard(card.id).variants[0].asset, elements: els.filter((e) => e.id !== "banner") }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  assert.deepEqual([s.getCard(added[1]).status, Boolean(s.getCard(added[1]).design.gone), s.getCard(added[0]).status], ["dropped", true, "current"]);
+  assert.deepEqual(Object.keys(s.getCard(card.id).in_catalog.elements), ["provider"]);
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 2, name: "Limits", asset: s.getCard(card.id).variants[0].asset, elements: els }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  assert.deepEqual([s.getCard(added[1]).status, s.getCard(added[1]).design.gone], ["current", null]);
+  const listed = s.listCards({ kind: "element" }).find((x) => x.id === added[0]);
+  assert.deepEqual([listed.design.card, listed.design.of], [card.id, product.id]);
+  // What the watch run reads to find the design a shipped change builds.
+  const [d] = s.approvedDesigns();
+  assert.deepEqual([d.card, d.variant, d.elements.map((e) => [e.key, e.file])], [card.id, "v1", [["provider", "src/Provider.tsx"], ["banner", null], ["part-raise-button", null]]]);
+});
+
+test("a shipped change read against its approved design: what differs waits for a designer", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design" }, status: "feedback", variants: [{ id: "v1", name: "Limits", asset: a }] });
+  const change = { kind: "change", title: "Limits shipped", source: { repo: "acme/widgets", pr: 45 } };
+  assert.throws(() => s.upsertCard({ ...change, design_check: { request: card.id, verdict: "matches" } }), /not an approved request/);
+  s.act(card.id, alice, "approve", "v1");
+  assert.throws(() => s.upsertCard({ ...change, design_check: { request: card.id, verdict: "differs" } }), /say what differs/);
+  assert.throws(() => s.upsertCard({ ...change, design_check: { request: card.id, verdict: "differs", differences: [{ element: "Bar", what: "Grey", design: a }] } }), /must be an uploaded picture/);
+  assert.throws(() => s.upsertCard({ id: card.id, design_check: { request: card.id, verdict: "matches" } }), /belongs to a change card/);
+  const { card: ch } = s.upsertCard({ ...change, design_check: { request: card.id, verdict: "differs", differences: [{ element: "Bar", what: "It stays grey near the limit.", design: pic, shipped: pic }] } });
+  assert.deepEqual([ch.design_check.variant, ch.design_check.differences[0].what], ["v1", "It stays grey near the limit."]);
+  const row = s.listCards({ kind: "change" })[0];
+  assert.deepEqual([row.design_check.verdict, row.attention.level, row.attention.reasons.includes(`Differs from the approved design ${card.id}`)], ["differs", "designer", true]);
+  s.upsertCard({ id: ch.id, design_check: null });
+  assert.equal(s.listCards({ kind: "change" })[0].design_check, null);
+});
+
+test("an answer says what a worked-in note goes against: a decision, the issue or a pull request, with its source", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  const d = s.addDecision({ concepts: ["limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" } }).decision;
+  const { thread } = s.openThread(card.id, alice, { kind: "comment", text: "Show a daily bar." });
+  assert.throws(() => s.answer(thread.id, "Done.", { warns: [{ what: "Weekly limits", source: { kind: "decision", ref: "D-99" } }] }), /no decision D-99/);
+  assert.throws(() => s.answer(thread.id, "Done.", { warns: [{ what: "The issue", source: { kind: "issue", url: "javascript:alert(1)" } }] }), /http\(s\) link/);
+  assert.throws(() => s.answer(thread.id, "Done.", { warns: [{ what: "X", source: { kind: "slack" } }] }), /decision, issue or pr/);
+  s.answer(thread.id, "Done: a daily bar.", { warns: [
+    { what: "Limits reset weekly", why: "The bar shows a day, the limit is a week.", source: { kind: "decision", ref: d.id } },
+    { what: "The issue's weekly view", source: { kind: "issue", url: "https://github.com/acme/widgets/issues/12", label: "Issue #12" } }] });
+  const m = s.getCard(card.id).threads.find((x) => x.id === thread.id).messages.at(-1);
+  assert.deepEqual(m.warns.map((w) => [w.source.kind, w.source.ref || w.source.url, w.what]), [["decision", d.id, "Limits reset weekly"], ["issue", "https://github.com/acme/widgets/issues/12", "The issue's weekly view"]]);
+  s.answer(thread.id, "Nothing against anything.");
+  assert.equal(s.getCard(card.id).threads.find((x) => x.id === thread.id).messages.at(-1).warns, undefined, "no warns, no box");
 });
