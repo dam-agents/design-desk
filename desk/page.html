@@ -2154,50 +2154,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `<span class="sdot" data-s="${k}"><span class="chip tag" title="${esc(tip)}"><span class="w">${esc(word)}</span></span></span>`;
   }
   const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
-  function chipsFor(c) {
-    const out = [];
-    // A screen or part a designer or developer added, before Design Desk made it.
-    const added = c.status === "building" ? `<span class="chip info" title="Design Desk is finding it in the product and drawing it">● Being added</span>` : c.status === "dropped" ? `<span class="chip warn" title="Design Desk could not add it; open it to see why">Not added</span>` : "";
-    if (c.kind === "digest") out.push(`<span class="chip info" title="One page a week: what changed in the product's UX, the decisions taken and the themes in feedback">Weekly digest</span>`);
-    else if (c.kind === "issue") {
-      const s = c.source || {};
-      if (!c.designed) out.push(`<span class="chip ${c.bucket === "sprint" ? "info" : ""}" title="Where the team planned this issue">${esc(c.bucket === "sprint" && s.milestone ? `Sprint ${s.milestone}` : BUCKET[c.bucket] || "Issue")}</span>`);
-      if (c.designed) out.push(`<span class="chip ok" title="Sent to developers from ${esc(c.designed.title)}">✓ Designed in Design Desk</span>`);
-      else if (c.busy) out.push(`<span class="chip info" title="Design Desk is sketching it right now">● Drawing</span>`);
-      else if (c.sketches) out.push(`<span class="chip ok" title="Design Desk drew how it looks now and how it could look">Sketch ready</span>`);
-      if (c.open_threads) out.push(`<span class="chip" title="Questions and comments on it that are not done yet">💬 ${plural(c.open_threads, "open question", "open questions")}</span>`);
-    }
-    else if (c.kind === "screen") {
-      if (added) out.push(added);
-      if (c.group) out.push(`<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>`);
-      if (c.path) out.push(`<span class="chip" title="The address of this screen in the product"><code>${esc(c.path)}</code></span>`);
-    } else if (c.kind === "element" && c.design) {
-      // Not the product: a part of an approved design, until the product has it.
-      out.push(`<span class="chip warn" title="Drawn in the approved design of ${esc(c.design.card)}, ${esc(c.design.option)}; not in the product yet">✎ From an approved design</span>`);
-      if (c.status === "dropped") out.push(`<span class="chip bad" title="The design no longer draws this part">Left the design</span>`);
-      out.push(`<span class="chip" title="${c.design.change === "new" ? "A part the product does not have yet" : "A part of the product this design changes"}">${c.design.change === "new" ? "New" : "Changed"}</span>`);
-      const sh = shippedOf(c.design.card);
-      if (sh) out.push(differsIn(sh, c) ? `<span class="chip bad" title="It shipped in ${esc(sh.id)}, otherwise than designed">⚠ Shipped differently</span>` : `<span class="chip ok" title="It shipped in ${esc(sh.id)} as designed">✓ Shipped as designed</span>`);
-      if (c.state_count) out.push(`<span class="chip" title="The states drawn of it in the design">${plural(c.state_count, "state", "states")}</span>`);
-    } else if (c.kind === "element") {
-      if (added) out.push(added);
-      if (c.group) out.push(`<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>`);
-      if (c.status === "stale") out.push(`<span class="chip warn" title="The product changed since it was drawn; Update the drawing draws it again">out of date</span>`);
-      else if (c.state_count) out.push(`<span class="chip" title="How many situations it is drawn in: hovered, disabled, empty…">${plural(c.state_count, "situation", "situations")}</span>`);
-      if (c.looks) out.push(`<span class="chip" title="How many earlier looks are drawn, today's included">${plural(c.looks + 1, "version", "versions")}</span>`);
-    } else if (c.kind === "change") {
-      out.push(ageChip(c));
-      if (c.open_threads) out.push(`<span class="chip" title="Questions and comments on it that are not done yet">💬 ${plural(c.open_threads, "open question", "open questions")}</span>`);
-    } else {
-      if (c.asks && !closed(c)) out.push(`<span class="chip warn" title="Design Desk asked a question and cannot go on until someone answers it">Waiting for your answer</span>`);
-      if (c.type === "bug") out.push(`<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>`);
-      else if (c.triage === "product") out.push(`<span class="chip warn" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
-    }
-    if (c.conflicts) out.push(`<span class="chip bad" title="Open it to see which decision and why">⚠ Goes against a decision</span>`);
-    if (c.design_check?.verdict === "differs") out.push(`<span class="chip bad" title="Open it to see what differs from ${esc(c.design_check.request)}">⚠ Differs from the approved design</span>`);
-    else if (c.design_check) out.push(`<span class="chip ok" title="Design Desk compared it with ${esc(c.design_check.request)}">✓ As designed</span>`);
-    return out.join("");
-  }
 
   // One filter: a segmented control, its choice marked; the key is S's, or a data- action.
   // A tab's or a filter's words, with its count in a quiet pill.
@@ -2245,8 +2201,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${c.kind === "change" || c.kind === "issue" ? ghDot(c) : ""}${c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : ""}</div></button>
-      ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
-      <div class="meta">${chipsFor(c)}</div></div>`).join("");
+      ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("");
   }
 
   // ---------- people ----------

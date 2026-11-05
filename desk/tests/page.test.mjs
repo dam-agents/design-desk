@@ -183,7 +183,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.locator('[data-card="d1"]').count(), 0, "a digest is not in Changes");
     await desk.click('[data-tab="product"]');
     await desk.click('[data-filter="productFilter:history"]');
-    assert.equal((await desk.textContent('.row.item:has([data-card="d1"]) .meta')).trim(), "Weekly digest", "a digest is in Product → History, with no status word");
+    assert.equal(await desk.locator('.row.item:has([data-card="d1"]) .meta').count(), 0, "a digest is in Product → History, with no chips under it");
     assert.deepEqual(await desk.$$eval("#list .row.item .open", (els) => els.map((e) => e.dataset.card)), ["d1", "d0"], "History lists the newest week first");
     await desk.click('[data-filter="productFilter:screens"]');
     await desk.click('[data-tab="new"]');
@@ -231,7 +231,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.match(await desk.textContent(prov), /from: Slack.*by: Carla/);
     assert.match(await desk.textContent('.row.item:has([data-card="r3"]) .prov'), /Chat with Design Desk.*by: Gita/, "the reporter is the author whatever the channel");
     assert.equal(await desk.getAttribute(`${prov} a`, "href"), "https://acme.slack.com/archives/C0123ABCD/p1", "the source links to the thread");
-    await desk.click('.row.item:has([data-card="r2"]) .meta', { force: true });
+    await desk.click('.row.item:has([data-card="r2"]) .t', { force: true });
     await desk.waitForFunction(() => calls.some((c) => c.path === "/api/cards/r2"));
 
     // The Add to Product dialog: a screen needs Design Desk's own copy, which is off here.
@@ -668,7 +668,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.waitForSelector('[data-card="ch2"]');
     const row = '.row.item:has([data-card="ch2"])';
     assert.match(await desk.getAttribute(row, "class"), /overdue/, "a change past due_days is marked in the list");
-    assert.match(await desk.textContent(`${row} .meta`), /Overdue · 30 days open/);
+    assert.equal(await desk.locator(`${row} .meta`).count(), 0, "a row is its title and one line: no chips");
     const rows = () => desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card));
     assert.deepEqual(await rows(), ["ch2"], "Open, the default, lists only the changes nobody marked handled");
     await desk.click('[data-filter="newFilter:handled"]');
@@ -914,9 +914,6 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     await desk.hover('.row.item .prov a[href="https://github.com/acme/widgets/issues/41"]');
     await desk.waitForSelector("#peek");
     assert.match(await desk.textContent("#peek"), /A spend column in the agents list/, "the row's issue link, now without its needs, previews them");
-    // Its sprint label says what it means on the label alone.
-    await desk.hover('.row.item .meta .chip.info');
-    await desk.waitForFunction(() => document.querySelector("#tip")?.textContent === "Where the team planned this issue");
   } finally {
     await run.close();
   }
@@ -985,7 +982,6 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     const row = '.row.item:has([data-card="is1"])';
     assert.match(await desk.textContent(`${row} .prov`), /from: Issue #41.*by: alice.*assigned to bob/);
     assert.equal(await desk.locator(`${row} .s`).count(), 0, "an issue's row carries no description; its page and its preview do");
-    assert.match(await desk.textContent(`${row} .meta`), /Sprint 12/);
     await desk.click('[data-filter="issueFilter:label"]');
     assert.deepEqual(await desk.locator(".row.item [data-card]").evaluateAll((xs) => xs.map((x) => x.dataset.card)), ["is2"]);
     await desk.click('[data-filter="issueFilter:sprint"]');
@@ -1331,7 +1327,6 @@ test("a decision: what goes against it warns with a link to it; a designer revok
   const { desk, posts } = run;
   try {
     await desk.click('[data-tab="new"]');
-    assert.match(await desk.textContent('.row.item:has([data-card="ch1"]) .meta'), /Goes against a decision/);
     await desk.click('[data-card="ch1"]');
     await desk.waitForSelector("#detail .against");
     assert.match(await desk.textContent("#detail .against"), /Goes against D-1: The header stays one line[\s\S]*wraps the header/);
