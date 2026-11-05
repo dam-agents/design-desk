@@ -424,7 +424,7 @@ test("every button and label says on hover what it does or means", (t) => open(t
   }
 }));
 
-test("Needs a designer filters Changes and Requests, and Changes opens on Open", (t) => open(t, LIST, async (desk) => {
+test("Needs a designer filters Changes, Ready filters Requests, and Changes opens on Open", (t) => open(t, LIST, async (desk) => {
   const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
   // Requests leads the menu; Changes and Issues follow, then Product and People.
   await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
@@ -438,9 +438,11 @@ test("Needs a designer filters Changes and Requests, and Changes opens on Open",
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
   assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
   await desk.click('[data-tab="requests"]');
-  await desk.click('[data-filter="reqFilter:designer"]');
-  assert.deepEqual(await rows(), ["r1", "r3"], "a closed request stays while it is suggested");
-  assert.match(await desk.textContent('[data-filter="reqFilter:designer"]'), /^Needs a designer\s*2$/);
+  assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["reqFilter:unread", "reqFilter:open", "reqFilter:ready", "reqFilter:closed"], "Requests filter by Unread, Open, Ready and Closed");
+  assert.match(await desk.textContent('[data-filter="reqFor:presentation"]'), /^For presentation/);
+  await desk.click('[data-filter="reqFilter:ready"]');
+  assert.deepEqual(await rows(), ["r1"], "Ready: options wait for someone to act");
+  assert.match(await desk.textContent('[data-filter="reqFilter:ready"]'), /^Ready\s*1$/);
   await desk.reload();
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");

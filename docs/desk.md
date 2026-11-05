@@ -49,9 +49,11 @@ served by the Desk server through the platform's Artifact API relay.
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
-  Developers** and **Presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
+  Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
   Product. What narrows a page's list is one segmented filter under them (Changes: **Open** (not
-  handled, the default) and **Handled**, Needs a designer; Requests: Open, Needs a designer, Closed; Issues:
+  handled, the default) and **Handled**, Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
+  (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
+  not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
   the buckets; Decisions: In force, Revoked, All and Everyone, Design and PM, Developers),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
@@ -491,8 +493,8 @@ the **Presentation** page of Requests. (The store and the CLI keep its older nam
 
 ## Needs a designer
 
-Changes and Requests have a **Needs a designer** filter next to their others (Changes opens on
-**All**, Requests on **Open**): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
+Changes have a **Needs a designer** filter next to their others (Changes opens on **Open**;
+Requests use **Ready** instead): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
 
 - **A change card**: you judge it when you write the card ([watch.md](watch.md) step 7), as
   `attention: {level, reasons}` — `designer` for a new screen or a new address, a look that

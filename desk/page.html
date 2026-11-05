@@ -1253,9 +1253,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       issues: "Issues: what the team plans that will change the screens, with sketches", product: "Product: its screens, its parts in every situation, the team's decisions and the weekly history",
       people: "People: who is on the Desk, their roles and what each role can do", guide: "How Design Desk works" }[v]),
     filter: (v) => ({ "newFilter:open": "Changes no designer marked handled yet", "newFilter:handled": "Changes a designer marked handled",
-      "newFilter:designer": "Only changes that wait for a designer", "reqFilter:open": "Requests still being worked on", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
+      "newFilter:designer": "Only changes that wait for a designer", "reqFilter:unread": "Requests you have not opened yet", "reqFilter:open": "Requests still being worked on", "reqFilter:ready": "Requests that wait for someone to act: options are drawn, a vote ended or a live prototype is ready", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
       "reqFor:designers": "Requests a designer or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
-      "reqFilter:closed": "Requests sent to developers or closed", "reqFilter:designer": "Only requests that wait for a designer's decision",
+      "reqFilter:closed": "Requests sent to developers or closed",
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows", "issueFilter:designed": "Issues already designed here and sent to developers",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
@@ -2099,14 +2099,21 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const reqFor = () => S.reqFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
   const forOf = (c) => c.for || (c.size?.small ? "developers" : "designers");
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
-    && (filter === "designer" ? forDesigner(c) : filter === "open" ? !closed(c) : closed(c))));
+    && (filter === "unread" ? c.read === false : filter === "ready" ? readyToAct(c) : filter === "open" ? !closed(c) : closed(c))));
+  // Ready: an open request that waits for someone to act — its options are drawn, its vote in Slack
+  // ended (or no vote runs), or its live prototype is up; not while Design Desk works or asks.
+  function readyToAct(c) {
+    if (closed(c) || c.busy || c.asks) return false;
+    if (c.status === "variants" || c.status === "testing") return true;
+    return c.status === "feedback" && !c.voting && (c.voted || c.team_feedback?.state !== "open");
+  }
   // The list filter a person picked last is kept in their browser.
   const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
   // An issue that already went through Design Desk is done on the design side: it leaves the
   // open lists, All too, for its own (docs/issues.md → On the Desk).
   const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
       && (filter === "designed" ? c.designed : !c.designed && (filter === "all" || c.bucket === filter))));
-  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], reqFor: ["designers", "developers"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"], elFilter: ["all", "product", "design"] };
+  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"], elFilter: ["all", "product", "design"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
@@ -2177,10 +2184,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>` : "";
     // Requests: For Designers and For Developers, each with its open count, and the presentation.
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
-    const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "Presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
+    const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length]])])
-      : S.tab === "requests" && reqList ? seg("reqFilter", [["open", "Open", requestCards("open").length], ...full([["designer", "Needs a designer", requestCards("designer").length]]), ["closed", "Closed", requestCards("closed").length]])
+      : S.tab === "requests" && reqList ? seg("reqFilter", [["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["ready", "Ready", requestCards("ready").length], ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
     const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
@@ -2193,7 +2200,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
         : S.issueFilter === "designed" ? "No issue has gone through Design Desk yet. One lands here once its request is sent to developers."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
-      requests: S.reqFilter === "designer" ? waiting : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
+      requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "ready" ? "Nothing waits for anyone to act right now." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
@@ -4942,7 +4949,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function leaveHidden() {
     if (!simple()) return;
     if (SIMPLE_HIDES.includes(S.tab) && !S.decision) { S.tab = "requests"; S.card = null; S.decision = null; }
-    if (S.reqFilter === "presentation" || S.reqFilter === "designer") S.reqFilter = "open";
+    if (S.reqFilter === "presentation") S.reqFilter = "open";
     if (S.newFilter === "designer") S.newFilter = "open";
   }
   $("#simple").addEventListener("click", () => {

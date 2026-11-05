@@ -32,7 +32,9 @@ state as the same corner dot: a PR Draft, Open or Merged, an issue Open or Desig
 pre-flight now puts `draft` on each due pull request, and a change card keeps it in
 `source.draft` ([docs/watch.md](docs/watch.md) step 7); cards written before stay Open until their
 next update. Every row in every list is its title and one line under it, with no chips; an issue's line
-ends with where it is planned (`in: This sprint`).
+ends with where it is planned (`in: This sprint`). Requests filter by **Unread**, **Open**, **Ready** and
+**Closed** (Ready: options drawn, a Slack vote ended, or a live prototype up; the list adds `voting` and
+`voted`), and the presentation tab is **For presentation**.
 
 ## 1.49.0 — 2026-11-05
 

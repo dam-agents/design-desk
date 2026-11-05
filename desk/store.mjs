@@ -312,6 +312,8 @@ export class Store {
         // Closed with a decision: the list shows it in the decided ink, as the page does.
         decided: c.kind === "request" && c.status === "declined" && c.decided?.at || null,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
+        // A Slack vote on its options: running, or one that ended (the list's Ready, docs/desk.md → Pages and filters).
+        voting: (c.polls || []).some((x) => x.state === "open"), voted: (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
         for: c.kind === "request" ? (c.size?.small ? "developers" : "designers") : null,
