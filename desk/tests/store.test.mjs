@@ -522,7 +522,7 @@ test("a worked-in change is answered with the place before and after", () => {
   assert.deepEqual(c.messages[0].shots.map((x) => x.pair), ["screen", "screen"]);
 });
 
-test("only a designer picks the winning option; votes only suggest one", () => {
+test("no option is the winner; votes only suggest one, and the presentation shows the one picked", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });
   const triaged = Object.values(s.db.inbox).find((i) => i.card === card.id);
@@ -533,21 +533,13 @@ test("only a designer picks the winning option; votes only suggest one", () => {
   assert.equal(s.card(card.id).status, "variants");
   s.openFeedback(card.id, alice);
   s.vote(card.id, alice, { variant: "v1", vote: "prefer" });
-  assert.equal(can("designer", "choose"), true);
-  assert.equal(can("pm", "choose"), false);
-  assert.throws(() => s.choose(card.id, { agent: true }, "v2"), (e) => e.status === 403);
-  assert.throws(() => s.choose(card.id, alice, "v9"), /Pick one/);
-  assert.equal(s.choose(card.id, alice, "v2").card.chosen.variant, "v2");
-  assert.match(s.getCard(card.id).attention.reasons.join(), /picked an option/);
-  // The agent's card writes never carry the pick.
+  assert.equal("choose" in s, false, "nobody picks a winner");
+  assert.match(s.getCard(card.id).attention.reasons.join(), /Options are ready/);
+  // The agent's card writes never carry a pick.
   s.upsertCard({ id: card.id, chosen: { variant: "v1" } });
-  assert.equal(s.getCard(card.id).chosen.variant, "v2");
-  // The next call presents the designer's pick, not the vote's favourite.
-  assert.equal(s.queueForCall(card.id, alice).card.agenda.variant, "v2");
-  assert.equal(s.choose(card.id, alice, null).card.chosen, undefined);
-  s.choose(card.id, alice, "v2");
-  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Table", asset: a }, { id: "v2", drop: true }] });
-  assert.equal(s.getCard(card.id).chosen, undefined, "an option that is gone is no longer the winner");
+  assert.equal(s.getCard(card.id).chosen, undefined);
+  // The presentation shows the option the person picks in its dialog.
+  assert.equal(s.queueForCall(card.id, alice, "", "v2").card.agenda.variant, "v2");
 });
 
 test("every state of a part: drawn per option, versioned, noted on its own; a build names what goes live", () => {

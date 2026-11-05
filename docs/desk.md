@@ -60,7 +60,9 @@ served by the Desk server through the platform's Artifact API relay.
   The Presentation keeps the order a designer set.
 - **Folds stay folded.** A folded box (the request, From Design Desk, an intro) stays folded
   when the page draws again, for example on another design tab. The page runs in a sandboxed
-  frame where local storage can fail, so the page also keeps the choice in memory.
+  frame where local storage can fail, so the page also keeps the choice in memory. A
+  request's own text and From Design Desk show whole the first time a person opens the
+  request in that browser, and folded on every later visit (`desk-seen-requests`).
 - **Search.** The header's one search finds words in every item's title, summary and source
   and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
   decision's (`D-3`), and while one is typed (`C-`, `C-1`, `D-`) every item or decision whose
@@ -167,7 +169,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   | `issue` | an issue or its comment that settles a question | who wrote it | the issue or comment |
   | `commit`, `doc` | research finds it only in a commit or an architecture page | its author (`git log`) | the commit or page |
   | `slack` | a message in a request's or council's thread that settles something | who wrote it | its permalink |
-  | `desk` | a comment a designer marked **Record as a decision**, or **Decide and close** (`decisions_due`) | the comment's author; who decided and closed | `card`, `thread`, `message`; `card` alone |
+  | `desk` | a comment a designer marked **Record as a decision**, or **Close…** with a decision (`decisions_due`) | the comment's author; who closed it with a decision | `card`, `thread`, `message`; `card` alone |
   | `call` | taken at the design meeting (The presentation) | who decided, as the designer said | the card |
   | `approval` | a design approved ([handoff.md](handoff.md)) | the approver | the card |
   | `chat` | the operator says so in chat | the operator | none needed |
@@ -201,7 +203,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   I-<n>`; the designer's wording in `note`). Claim it; record it (`origin.kind: desk`, the
   message's author, concepts from the card, conflicts checked); answer in the thread
   "Recorded as D-<n>", with any conflict; done. A message that decides nothing: say so in the
-  thread, done `not recorded: <why>`. An item with no `thread` is a **Decide and close**: its
+  thread, done `not recorded: <why>`. An item with no `thread` is a **Close…** with a decision: its
   `note` (and `why`) are the person's words, `by` is the author; record it, add `D-<n>` to the
   card's `decisions`, done `D-<n>`.
 
@@ -222,7 +224,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `developer`, `lead-developer` | approve a small change they did not file ([Small changes](#small-changes)) |
 | `lead-developer`, `lead` | mark a request a small change, or send it through a designer |
 | `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
-| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, pick the winning option, remove an option, record a decision |
+| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record a decision |
 | roles in `prototype_requesters` | start a live prototype |
 | `lead` | also ask you to add a person to the list ([People](#people)) |
 
@@ -253,7 +255,8 @@ prototype once Design Desk has checked a request:
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
   in the person's words ([handoff.md](handoff.md)). A lead developer does not overrule a
   decision in force: that stays a designer's.
-- **Decide and close** (`POST /api/cards/<id>/decide {text}`): the request closes with
+- **Close…** is one button and one dialog: **Just close it** (a designer; `close`), or **Close
+  it and record a decision** (a designer or a lead developer; `POST /api/cards/<id>/decide {text}`): the request closes with
   `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.
 - **While the live prototype is up**, the page folds the options (and building again) under it,
@@ -412,8 +415,8 @@ the **Presentation** page of Requests. (The store and the CLI keep its older nam
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
   suggestion shows on the card (a request's Add under **More**) and under the presentation until a
   designer adds it or says **Not now** (by the suggestion; for a request, on the Presentation page); after **Not now** the store keeps the card from being
-  suggested again. Without a version picked (an older page), the designer's pick (`chosen`) is
-  presented, else the option designers' votes clearly prefer.
+  suggested again. Without a version picked (an older page), the option designers' votes clearly
+  prefer is presented, else the first.
 - **The brief** (`agenda_due`): for every card on the presentation, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
   decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
@@ -482,9 +485,9 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
   done or reopen them, and a designer or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). The workspace's
   **Comments** switch hides the pins from the design only (`desk-notes` in the browser's local
-  storage); a pin's click opens its comment, switching Open / Done to the tab it is on. **The winner** is
-  a designer's pick (**Select as the winner**, the card's `chosen`); votes, Slack and you only
-  advise, and nothing you write sets it.
+  storage); a pin's click opens its comment, switching Open / Done to the tab it is on. No option is
+  **the winner**: Approve, Build a live prototype and Add to presentation each ask the person
+  which option; votes, Slack and you only advise. A card's old `chosen` is ignored.
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person
@@ -492,7 +495,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
   they fine-tune the options, until its author, a designer, a developer or a lead presses **Ask the team
-  for feedback** (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  for feedback**, inside the request's step pill (**Step n/m** opens every step) (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and

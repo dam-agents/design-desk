@@ -783,7 +783,7 @@ window.platform = { async request({ path }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("numbers, notes and pins preview what they name; the search lists every number as typed; the request's text folds", (t) => open(t, PEEKS, async (desk) => {
+test("numbers, notes and pins preview what they name; the search lists every number as typed; the request's text shows whole the first time, folded after", (t) => open(t, PEEKS, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   await desk.goto(`${base}#C-1`);
   await desk.waitForSelector('#detail a[data-ref="D-1"]');
@@ -806,9 +806,15 @@ test("numbers, notes and pins preview what they name; the search lists every num
 
   await desk.goto(`${base}#C-2`);
   await desk.waitForSelector(".brief:not(.clamped) [data-brief-toggle]");
+  assert.equal(await desk.locator(".top2 > .brief.clamped").count(), 0, "the first visit shows the request and what Design Desk found whole");
   await desk.click("[data-brief-toggle]");
   await desk.waitForSelector(".brief.clamped");
-  assert.equal(await desk.evaluate(() => localStorage.getItem("desk-brief")), "folded", "the request's text folds and stays so");
+  assert.deepEqual(await desk.evaluate(() => JSON.parse(localStorage.getItem("desk-seen-requests"))), ["C-2"], "the browser keeps that it was seen");
+  await desk.click("[data-back]");
+  await desk.evaluate(() => { location.hash = ""; location.hash = "#C-2"; });
+  await desk.waitForFunction(() => document.querySelectorAll(".top2 > .brief").length === 2 && document.querySelectorAll(".top2 > .brief.clamped").length === 2);
+  await desk.click(".top2 > .brief:not(.made-col) [data-brief-toggle]");
+  await desk.waitForSelector(".top2 > .brief:not(.made-col):not(.clamped)");
 
   await desk.click("[data-convo] > summary");
   await desk.hover('[data-snip="A-1"]');
@@ -1156,7 +1162,7 @@ test("a worked-in note shows the place before and after, outlined, in the thread
   }
 });
 
-test("notes in the workspace: open and done, a whole conversation, worked in together; a designer picks the winner; designs go to the Slack thread", async (t) => {
+test("notes in the workspace: open and done, a whole conversation, worked in together; no winner to pick; designs go to the Slack thread", async (t) => {
   const run = await launch(t, BRIDGE_NOTES);
   if (!run) return;
   const { desk, posts } = run;
@@ -1165,16 +1171,15 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
     await desk.waitForSelector('[data-act="workspace"]');
-    assert.doesNotMatch(await desk.textContent("#detail"), /Votes and comments help/, "no line on who picks: Select as the winner says it");
+    assert.equal(await desk.locator("[data-choose]").count(), 0, "no option is picked as the winner");
     assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
     assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
 
-    await desk.click('[data-choose="v1"]');
-    assert.deepEqual(await sent("/api/cards/r5/chosen", 1), { variant: "v1" });
-
-    await desk.click('[data-act="slack-send"]');
-    assert.match(await desk.textContent("#cf-body"), /Slack thread this request came from/);
-    await desk.locator("#confirm-dialog .actions button", { hasText: "Send" }).click();
+    // One Slack button; without the Slack app for votes, its dialog only sends the designs.
+    await desk.click('[data-act="slack"]');
+    assert.match(await desk.textContent("#sl-send-hint"), /Slack thread this request came from/);
+    assert.equal(await desk.locator("#sl-mode").isHidden(), true, "a vote is not offered without the Slack app");
+    await desk.locator("#slack-dialog .actions button", { hasText: "Send" }).click();
     assert.deepEqual(await sent("/api/cards/r5/actions", 1), { action: "slack-send", note: JSON.stringify({ variants: "all", note: "" }) });
 
     await desk.waitForSelector('[data-act="workspace"]');
@@ -1443,8 +1448,9 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   };
   await card("C-1");
   assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 1, "send to developers before any option");
-  assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1, "or decide and close");
-  await desk.click('#detail [data-act="decide"]');
+  assert.equal(await desk.locator('#detail [data-act="close"]').count(), 1, "or close it with a decision");
+  await desk.click('#detail [data-act="close"]');
+  assert.equal(await desk.locator("#cf-choices input").count(), 0, "a lead developer only closes with a decision");
   await desk.fill("#confirm-form [name=note]", "Headers stay as they are.");
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-1/decide"));
@@ -1464,11 +1470,11 @@ test("deciding straight away: a lead developer approves or decides; a live proto
   for (const id of ["C-3", "C-4"]) {
     await card(id);
     assert.equal(await desk.locator("#detail details.fold:has(#variant-frame)").count(), 0, `${id}: no live prototype, the options stay open`);
-    assert.equal(await desk.locator('#detail .next [data-act="decide"]').count(), 1, `${id}: decide and close on a switched-off prototype`);
+    assert.equal(await desk.locator('#detail .next [data-act="close"]').count(), 1, `${id}: close with a decision on a switched-off prototype`);
   }
   await card("C-5");
   assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 0, "against a decision in force a lead developer does not send it");
-  assert.equal(await desk.locator('#detail [data-act="decide"]').count(), 1);
+  assert.equal(await desk.locator('#detail [data-act="close"]').count(), 1);
   await card("C-6");
   await desk.click('#detail [data-act="approve"]');
   assert.equal(await desk.locator("#cf-check2-wrap").isVisible(), true, "an adjustment reaches the coding agent: the box is offered");

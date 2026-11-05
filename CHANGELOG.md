@@ -7,6 +7,24 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.47.0 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). No option is the winner any more:
+Select as the winner and `POST /api/cards/<id>/chosen` are gone, a card's old `chosen` is
+ignored, and Approve, Build a live prototype and Add to presentation each ask which option,
+none picked ahead ([docs/desk.md](docs/desk.md)); a build item without a note asks which option
+([docs/prototype.md](docs/prototype.md) step 3). Share in Slack and Send designs to Slack are one
+**Send to Slack…** whose dialog sends the designs or asks for a vote; the items are as before
+(`slack-share`, `slack-send`). Close… and Decide and close… are one **Close…** whose dialog
+just closes or closes with a decision. Ask the team for feedback sits in the request's step pill,
+whose **Step n/m** alone opens the steps. All elements sit above the option's design, twice as
+large; Open in the design workspace is the request's main button. A request's text and From
+Design Desk show whole on a person's first visit, folded after (`desk-seen-requests` in the
+browser).
+
 ## 1.46.0 — 2026-11-05
 
 **Upgrade:**

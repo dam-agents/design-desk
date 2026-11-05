@@ -210,8 +210,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     what people preferred, and add one comment listing what changed per comment, with each
     option's whole view before and after (`design compare` without a selector, `design desk
     comment … --shots`). Never drop
-    or merge an option on votes: only a designer's pick (the card's `chosen`, **Pick as the
-    winner**) says which option wins, and only a designer removes one: the ✕ on its tab takes it
+    or merge an option on votes: no option is the winner (Approve, Build and the presentation
+    each ask the person which option), and only a designer removes one: the ✕ on its tab takes it
     off the card (no run; the card's `dropped_options` says who and when). The last option, the
     one a live prototype is built from, the approved one and one on the presentation (queued or presented) stay. The
     store refuses (409) an upsert that sends a removed option's id again: leave it out, or
@@ -248,8 +248,8 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   part in the product's words; `change` `new` or `changed`; `how` one sentence on what is new or
   different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
-  (`C-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them under the
-  option as **All elements**; one opens in a dialog with its states. A state belongs to the
+  (`C-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
+  option's design as **All elements**; one opens in a dialog with its states. A state belongs to the
   element its `element` names, else to the one named as its `part`. An entry without `elements`
   keeps the option's; a revise that adds, removes or moves a part sends them anew. The tiles
   are cut from the option's latest version, so they follow every change of it.

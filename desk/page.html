@@ -226,17 +226,17 @@
   .catalog .k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 8px 0 2px; }
   .catalog ul { margin: 0; padding-left: 18px; font-size: 13px; }
   @media (max-width: 560px) { .catalog li { grid-template-columns: 1fr; } }
-  /* All elements of an option: a small picture of each part it changes or adds; one opens its states. */
-  .elements { margin: 16px 0 4px; }
+  /* All elements of an option, above its design: a picture of each part it changes or adds; one opens its states. */
+  .elements { margin: 4px 0 16px; }
   .elhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin: 0 0 8px; }
   .elhead h4 { margin: 0; font-size: 14px; } .elhead h4 .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
   .elhead .hint { margin: 0; flex: 1 1 220px; } .elhead .btn { flex: none; }
-  .elgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr)); gap: 10px; }
+  .elgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 336px), 1fr)); gap: 12px; }
   .eltile { display: grid; grid-template-rows: 1fr auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); min-width: 0; overflow: hidden; }
   .eltile:hover { border-color: var(--accent); }
   .eltile .elopen { display: grid; grid-template-rows: auto auto 1fr; gap: 6px; text-align: left; padding: 8px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; min-width: 0; }
   .eltile .elcat { padding: 0 8px 8px; } .eltile .elcat .anchor { font-size: var(--fs-meta, 12px); }
-  .eltile .elpic { display: block; height: 96px; overflow: hidden; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
+  .eltile .elpic { display: block; height: 192px; overflow: hidden; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
   .eltile .elpic img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .eltile .elpic iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .eltile .elname { font-weight: 600; font-size: var(--fs-ui, 13px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -342,7 +342,7 @@
   .tabs button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   .frame { width: 100%; height: 66vh; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; display: block; }
   /* The design options are folder tabs: the picked one opens into the panel under it, and
-     everything in the panel (votes, the winner, the picture) is about that option only. */
+     everything in the panel (votes, the picture, its elements) is about that option only. */
   .tabs.vtabs { gap: 4px; margin: 0; align-items: flex-end; position: relative; z-index: 1; }
   .tabs.vtabs button { border-radius: 8px 8px 0 0; border-bottom-color: transparent; background: var(--bg); color: var(--muted); margin-bottom: -1px; }
   .tabs.vtabs button[aria-pressed="true"] { background: var(--panel); color: var(--ink); border-color: var(--line); border-bottom-color: var(--panel); box-shadow: inset 0 2px 0 var(--ink); }
@@ -585,7 +585,6 @@
   /* Design options: the tabs stay; each carries a square number, so "option 2" is easy to say. */
   .ono { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; margin-right: 8px; border-radius: 5px; background: var(--muted); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; vertical-align: 1px; }
   .tabs button[aria-pressed="true"] .ono { background: var(--ink); }
-  .tabs button.won .ono { background: var(--approved); } .tabs.vtabs button.won[aria-pressed="true"] { box-shadow: inset 0 2px 0 var(--approved); }
   /* The picked option's panel is a canvas: dots under the design, the design a sheet on it. */
   .vpanel { background: var(--canvas) radial-gradient(circle, var(--dot) 1px, transparent 1.4px) 0 0 / 18px 18px; }
   .vpanel:has(> .vbar) .frame { border: 0; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 5px 16px rgba(0,0,0,.08); }
@@ -663,12 +662,16 @@
   .s-word .info:hover .tip, .s-word .info:focus-visible .tip { opacity: 1; }
   /* The status line: the state's word, its ⓘ and the steps pill. */
   .s-line { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+  /* The steps pill: Step n/m opens every step; beside it, inside the pill, the move to the next step. */
+  .steppill { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--o) 30%, var(--line)); background: var(--panel); font-size: var(--fs-ui); }
   .stepper { position: relative; }
-  .stepper > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--o) 30%, var(--line)); background: var(--panel); font-size: var(--fs-ui); font-weight: 500; color: var(--ink); }
+  .stepper > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; background: var(--o); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; }
   .stepper > summary::-webkit-details-marker { display: none; }
-  .stepper > summary:hover { border-color: var(--o); }
-  .stepper > summary .k { padding: 1px 8px; border-radius: 999px; background: var(--o); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; }
-  .stepper > summary::after { content: "▾"; color: var(--muted); font-size: var(--fs-meta); } .stepper[open] > summary::after { content: "▴"; }
+  .stepper > summary:hover { opacity: .88; }
+  .stepper > summary::after { content: "▾"; font-size: var(--fs-meta); } .stepper[open] > summary::after { content: "▴"; }
+  .steppill .step-next { border: 0; background: none; padding: 1px 8px 1px 4px; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; border-radius: 999px; white-space: nowrap; }
+  .steppill .step-next::after { content: " →"; color: var(--o); }
+  .steppill .step-next:hover { background: color-mix(in srgb, var(--o) 12%, transparent); }
   .stepper ol { position: absolute; z-index: 25; left: 0; top: calc(100% + 8px); margin: 0; padding: 10px 6px; list-style: none; width: 320px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.14); }
   .stepper li { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; padding: 4px 8px; font-size: var(--fs-ui); color: var(--muted); }
   .stepper li .n { grid-row: span 2; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--line); margin-top: 1px; }
@@ -700,6 +703,10 @@
   .brief-toggle:hover { text-decoration: underline; }
   .brief-body { font-size: var(--fs-read); line-height: 1.55; }
   /* The votes: two pills with their icon and count, at the right of the option's bar. */
+  /* The request's main action under its options: larger, in the accent, before every other button. */
+  .vbar .btn.ws-open { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; min-height: 38px; padding: 7px 16px; font-size: 14.5px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .vbar .btn.ws-open:hover { opacity: 1; filter: brightness(1.08); }
+  .vbar .btn.ws-open > .ico { width: 16px; height: 16px; }
   .vbar .votes { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
   .btn.vote { gap: 5px; padding: 1px 10px; min-height: 26px; }
   .btn.vote .vi { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -887,6 +894,26 @@
   </form>
 </dialog>
 
+<dialog id="slack-dialog">
+  <form method="dialog" id="slack-form">
+    <h2>Send to Slack</h2>
+    <div class="tabs" role="radiogroup" id="sl-mode">
+      <button type="button" data-sl-mode="send" aria-pressed="true">Send the designs</button>
+      <button type="button" data-sl-mode="vote" aria-pressed="false">Ask for a vote</button>
+    </div>
+    <div id="sl-send">
+      <p class="hint" id="sl-send-hint" style="margin:0"></p>
+      <div class="choices" id="sl-options"></div>
+    </div>
+    <div id="sl-vote" hidden>
+      <p class="hint" id="sl-vote-hint" style="margin:0"></p>
+      <div class="choices" id="sl-closes"></div>
+    </div>
+    <label><span id="sl-note-label">A line for Slack (optional)</span><textarea name="note" maxlength="500"></textarea></label>
+    <div class="actions"><button type="button" class="btn primary" data-close="ok" id="sl-ok">Send</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
 <dialog id="element-dialog" class="eldlg" aria-label="An element of a design option"><div id="el-body"></div></dialog>
 
 <dialog id="confirm-dialog">
@@ -1070,7 +1097,7 @@
 <p><b>All elements</b>: under each option, a small picture of every part it changes or adds, marked New or Changed. Open one to see it in every state, each as a picture of the part alone with the use case of the brief it covers; with none drawn yet, press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
 <p><b>Add to the design catalog</b>: once a design is approved, its elements go to Product → Elements with their states. They are marked <b>✎ From an approved design</b>, apart from the product's own, until the product has them. When the change that builds the design ships, Design Desk compares it with the design: a change that differs says <b>⚠ Differs from the approved design</b> and shows what, side by side.</p>
 <p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Select as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. No option is picked as the winner: Approve, Build a live prototype and Add to presentation each ask which option. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b>, or <b>Close…</b> and tick <b>Close it and record a decision</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send to Slack…</b> posts pictures of the options you tick, or asks the team for a vote on them — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -1100,7 +1127,6 @@
     act: {
       approve: (el) => /Send to developers/.test(textOf(el)) ? "Design Desk writes the developer spec now, without a vote or a live prototype, and sends it on. You confirm first; once sent it can't be taken back."
         : "Approves the design: Design Desk writes the developer spec and sends it on. You confirm first; once sent it can't be taken back.",
-      decide: "Write what you decided and why: Design Desk records it as a decision in your name and closes this request. You can reopen it later.",
       explore: "Design Desk draws different design options on sample data. You pick how many; they appear here in a few minutes.",
       reopen: "Opens this request again, so the team can go on with it",
       workspace: "Opens the options full page: click any part to comment on it or have it changed",
@@ -1110,10 +1136,9 @@
       "not-now": "Design Desk stops suggesting it for the presentation",
       "clear-call": "Marks everything on the presentation as presented today, for everyone",
       revise: "Design Desk redraws the options, working in every open comment",
-      close: "Design Desk stops working on it and switches off its live prototype. You confirm first and can reopen it later.",
+      close: "Design Desk stops working on it and switches off its live prototype; you can record what you decided. You confirm first and can reopen it later.",
       states: "Design Desk draws a part of this option in every state it can be in: hovered, disabled, loading, empty, with an error…",
-      "slack-share": "Posts these options to Slack for votes — into the thread the request came from, else the team's channel; votes and replies come back here",
-      "slack-send": "Posts pictures of the designs to Slack with a link back here; comments and the pick stay here",
+      slack: "Posts pictures of the designs to Slack, or asks the team there for a vote — into the thread the request came from, else the team's channel; votes and replies come back here",
       "figma-import": "Paste a link to a Figma frame: Design Desk adds it as a design option built from the product's real parts",
       "figma-export": "Design Desk puts this option into Figma as editable layers and links it here",
       draw: "Design Desk takes a picture of how it looks now and sketches how it could look. It takes a few minutes.",
@@ -1166,7 +1191,6 @@
     sendForm: "Sends your answers; Design Desk goes on with them",
     skipForm: "Design Desk takes its suggested answer for every question",
     size: (v) => v === "small" ? "Any developer but the person who filed it can then approve it, without a designer" : "A designer or a lead developer approves it",
-    choose: (v) => v ? "Picks this option as the winner; the team sees your pick" : "Takes back the pick; no option is the winner",
     vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : "Says this option worries you, and opens a comment to say why; press again to take it back",
     goto: "Opens the design workspace at the part this note is about",
     revoke: "Write why it no longer holds: it stays on the Desk, crossed out, and what refers to it stops warning",
@@ -1230,7 +1254,7 @@
   };
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: (el) => /Send to developers/.test(textOf(el)) ? "send" : "check",
-      decide: "flag", reopen: "undo", revise: "redo", close: "archive", states: "layers", "slack-share": "chat", "slack-send": "send", unqueue: "minus", "not-now": "off",
+      reopen: "undo", revise: "redo", close: "archive", states: "layers", slack: "send", unqueue: "minus", "not-now": "off",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
     notNow: "off", adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
@@ -1262,7 +1286,7 @@
   // A button that opens a dialog says so first: pressing it only asks, the dialog does it. A new
   // dialog button joins these lists (its `data-` action, or its id).
   const OPENS = "[Opens a dialog] ";
-  const DIALOG_ACTS = new Set(["queue", "clear-call", "approve", "build", "states", "alternatives", "add-option", "explore", "history", "draw", "decide", "close", "slack-share", "slack-send", "figma-export", "figma-import"]);
+  const DIALOG_ACTS = new Set(["queue", "clear-call", "approve", "build", "states", "alternatives", "add-option", "explore", "history", "draw", "close", "slack", "figma-export", "figma-import"]);
   const DIALOG_DATA = ["rename", "decide", "revoke", "size", "dropOption", "adjust", "addProduct", "addPerson", "addShots", "el", "elStates"];
   const opensDialog = (el) => el.id === "new-request" || (el.dataset.act ? DIALOG_ACTS.has(el.dataset.act) : DIALOG_DATA.some((k) => k in el.dataset));
   function markOpens(el) { if (opensDialog(el) && !(el.dataset.tip || "").startsWith(OPENS)) el.dataset.tip = OPENS + (el.dataset.tip || textOf(el).replace(/…$/, "")); }
@@ -1347,7 +1371,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { me: null, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1506,13 +1530,11 @@
   const working = (c) => [...new Set((c.waiting || []).map((w) => (w.scope === "history" ? "catalog-history" : w.scope === "send" ? "slack-send" : w.kind)).filter((k) => k !== "question"))];
   const optionName = (c, id) => (c.variants || []).find((v) => v.id === id)?.name || "an option";
 
-  // The option designers like most; none on a tie, the only one when there is one.
-  // The winner a designer picked; else the one designers' votes clearly prefer (a hint only).
+  // The option designers' votes clearly prefer, a hint only; none on a tie, the only one when
+  // there is one. No option is the winner: each action that needs one asks which.
   function favourite(c) {
     const vs = c.variants || [];
     if (vs.length === 1) return vs[0];
-    const chosen = vs.find((v) => v.id === c.chosen?.variant);
-    if (chosen) return chosen;
     const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
     const s = [...vs].sort((a, b) => score(b) - score(a));
     return s.length && score(s[0]) > 0 && score(s[0]) > score(s[1] || { id: "" }) ? s[0] : null;
@@ -1714,7 +1736,8 @@
   // `multi`: the choices are checkboxes, `pick` the ids ticked at first, and the answer's
   // `choices` the ids ticked; OK waits until one is.
   // `url` is a one-line field's label (a link, or a name with `value` filled in and `max` its length).
-  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, send }) {
+  // noteFor: the note shows only while that choice is picked.
+  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, noteFor = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
@@ -1723,8 +1746,9 @@
     const ticked = (id) => (multi ? (pick || []).includes(id) : id === pick);
     $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /> ${esc(c.name)}${c.hint ? ` <span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
     const okBtn = $("#cf-ok"), none = () => multi && choices && !f.querySelector("input[name=choice]:checked");
-    okBtn.disabled = none(); $("#cf-choices").onchange = () => { okBtn.disabled = none(); };
-    $("#cf-note-wrap").hidden = !note; $("#cf-note-label").textContent = note || "";
+    const noteHidden = () => !note || Boolean(noteFor && f.querySelector("input[name=choice]:checked")?.value !== noteFor);
+    okBtn.disabled = none(); $("#cf-choices").onchange = () => { okBtn.disabled = none(); $("#cf-note-wrap").hidden = noteHidden(); };
+    $("#cf-note-wrap").hidden = noteHidden(); $("#cf-note-label").textContent = note || "";
     $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url); f.url.value = value; f.url.maxLength = max;
     $("#cf-check-wrap").hidden = !check; $("#cf-check-label").textContent = check || ""; f.check.checked = Boolean(check && checked);
     $("#cf-check2-wrap").hidden = !check2; $("#cf-check2-label").textContent = check2 || ""; f.check2.checked = false;
@@ -1802,7 +1826,7 @@
         "Amber count in the menu: a request waits for someone's answer."],
       can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
         ["Vote on the options with <b>👍</b> or <b>⚠</b>, and comment on any part.", "vote"],
-        ["<b>Ask the team for feedback</b> once a request's options are fine-tuned: its author may, whatever their role, and designers, developers and leads may on any request filed here. One from Slack goes to the team by itself.", "request"],
+        ["<b>Ask the team for feedback</b>, beside the request's step, once its options are fine-tuned: its author may, whatever their role, and designers, developers and leads may on any request filed here. One from Slack goes to the team by itself.", "request"],
         ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
         ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
@@ -1810,7 +1834,7 @@
         ["<b>Add to the design catalog</b> once a design is approved: its elements go to Product → Elements, marked as from the approved design.", "add"],
         ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
-        ["Skip the vote and the live prototype: <b>Send to developers now</b>, or <b>Decide and close</b> with what you decided.", "skip"],
+        ["Skip the vote and the live prototype: <b>Send to developers now</b>, or <b>Close…</b> with a decision recorded: what you decided.", "skip"],
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
         ["Switch between the <b>Requests</b> and the <b>Presentation</b>; filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>."], LINK],
@@ -1854,15 +1878,26 @@
   // Folding one intro folds every tab's, and it stays so in this browser. Kept on the person's
   // click, not on toggle: a freshly drawn open intro fires a toggle of its own.
   document.addEventListener("click", (e) => { const d = e.target.closest?.("details.intro > summary")?.parentElement; if (d) store.set("desk-intro", d.open ? "hidden" : "shown"); }, true);
-  // A request's own text folds the same way, for every request in this browser.
-  // The request shows whole; folded, it keeps three lines and a link to the rest. It stays so in this browser.
+  // A request's own text and what Design Desk found show whole the first time a person opens the
+  // request in this browser, and folded every time after; folded, each keeps three lines and a
+  // link to the rest. A click folds or unfolds it while the request stays open.
+  const SEEN_KEY = "desk-seen-requests";
+  function foldsFor(c) {
+    if (S.folds.card === c.id) return;
+    let seen = [];
+    try { seen = JSON.parse(store.get(SEEN_KEY) || "[]"); } catch {}
+    if (!Array.isArray(seen)) seen = [];
+    const again = seen.includes(c.id);
+    S.folds = { card: c.id, brief: again, made: again };
+    if (!again) store.set(SEEN_KEY, JSON.stringify([...seen, c.id].slice(-500)));
+  }
   const briefToggle = (folded, kind) => { const what = kind === "made" ? "what Design Desk found" : kind ? "report" : "request";
-    return `<button class="brief-toggle" data-brief-toggle="${kind === "made" ? "made" : kind ? "bug" : ""}" title="${kind === "made" ? "Fold or unfold what Design Desk found" : "Fold or unfold what was asked"}; it stays so in this browser">${folded ? (kind === "made" ? `Show ${what}` : `Show the whole ${what}`) : `Hide ${kind === "made" ? what : `the ${what}`}`}</button>`; };
+    return `<button class="brief-toggle" data-brief-toggle="${kind === "made" ? "made" : kind ? "bug" : ""}" title="${kind === "made" ? "Fold or unfold what Design Desk found" : "Fold or unfold what was asked"}">${folded ? (kind === "made" ? `Show ${what}` : `Show the whole ${what}`) : `Hide ${kind === "made" ? what : `the ${what}`}`}</button>`; };
   document.addEventListener("click", (e) => {
     const t = e.target.closest?.("[data-brief-toggle]"); if (!t) return;
     const b = t.closest(".brief"), folded = !b.classList.contains("clamped");
     const kind = t.dataset.briefToggle;
-    b.classList.toggle("clamped", folded); store.set(kind === "made" ? "desk-made" : "desk-brief", folded ? "folded" : "open");
+    b.classList.toggle("clamped", folded); S.folds[kind === "made" ? "made" : "brief"] = folded;
     t.outerHTML = briefToggle(folded, kind === "made" ? "made" : kind === "bug");
   }, true);
 
@@ -2773,7 +2808,7 @@
   // ---------- a request ----------
   // The steps, small: a pill with where the request is now, opening onto every step and what
   // it takes; approval is a gate, drawn as a diamond (from the request-page prototype).
-  function renderSteps(c) {
+  function renderSteps(c, next = "") {
     if (c.status === "declined") return "";
     const v = c.triage?.verdict, n = (c.variants || []).length;
     const steps = [["check", "Filed", (v && VERDICT[typeOf(c)][v]?.[0]) || "Design Desk checks it"], ["options", "Options drawn", n ? plural(n, "option", "options") : "a few options"], ["feedback", "Team feedback", "votes and comments"],
@@ -2784,8 +2819,9 @@
     const tick = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
     const cur = steps[Math.min(i, steps.length - 1)];
     const done = (k) => k < i || (c.status === "handed-off" && k === i);
-    return `<details class="stepper"><summary title="Every step of a request; open it to see them all"><span class="k">Step ${i + 1}/${steps.length}</span>${esc(cur[1])}</summary>
-      <ol>${steps.map(([, l, sub, gate], k) => `<li class="${done(k) ? "done" : k === i ? "now" : ""}${gate ? " gate" : ""}"><span class="n"><span>${done(k) ? tick : gate ? "" : k + 1}</span></span><span class="l">${esc(l)}</span><small>${esc(sub)}</small></li>`).join("")}</ol></details>`;
+    // The step's name is the state's word before the pill; the pill names the move to the next step, when there is one.
+    return `<span class="steppill"><details class="stepper"><summary title="${esc(cur[1])}: every step of a request; open it to see them all">Step ${i + 1}/${steps.length}</summary>
+      <ol>${steps.map(([, l, sub, gate], k) => `<li class="${done(k) ? "done" : k === i ? "now" : ""}${gate ? " gate" : ""}"><span class="n"><span>${done(k) ? tick : gate ? "" : k + 1}</span></span><span class="l">${esc(l)}</span><small>${esc(sub)}</small></li>`).join("")}</ol></details>${next}</span>`;
   }
 
 
@@ -2825,7 +2861,8 @@
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
     // A designer or a lead developer may skip the options, the vote and the prototype.
     // Ending it: with a decision recorded in the person's name, or closed without one.
-    const ends = (can("skip") ? b("decide", "Decide and close…") : "") + (can("close") ? b("close", "Close…") : "");
+    // One Close: just close it, or close it with a decision recorded in the person's name.
+    const ends = can("close") || can("skip") ? b("close", "Close…") : "";
     const skip = (can("skip") && canApprove(c) ? b("approve", "Send to developers now…") : "") + ends;
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) + skip } : { text: none || "Next: a designer or developer starts the design options.", buttons: skip };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
@@ -2844,7 +2881,8 @@
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
       return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. The request's author, a designer, a developer or a lead asks the team for feedback once they are fine-tuned.",
-        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        step: mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask the team for feedback</button>` : "",
+        buttons: (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       const shaper = can("revise");
@@ -2860,7 +2898,7 @@
     const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
     const nx = nextFor(c);
     // Close stays at hand while the request is open, whatever step it is at.
-    if (!closed(c) && can("close") && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close…</button>`;
+    if (!closed(c) && (can("close") || can("skip")) && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close…</button>`;
     // The presentation lives in More too: the card shows its main buttons and nothing else.
     const queued = c.agenda?.status === "queued", presented = c.agenda?.status === "presented";
     // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
@@ -2872,7 +2910,7 @@
     const items = call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c)}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
@@ -2939,6 +2977,12 @@
   const closeTab = (c, x) => !closed(c) && can("choose") && (c.variants || []).length > 1
     ? `<span class="vclose" role="button" tabindex="0" data-drop-option="${esc(x.id)}" aria-label="Remove ${esc(x.name)}" title="Remove ${esc(x.name)}">✕</span>` : "";
 
+  // Slack: the designs as pictures, or a vote on them; one button, both in its dialog.
+  function slackModes(c) {
+    if (!can("share") || working(c).some((k) => k.startsWith("slack"))) return [];
+    return [(S.me?.slack_send || c.origin?.channel === "slack") && "send", S.me?.slack && !(c.polls || []).some((x) => x.state === "open") && "vote"].filter(Boolean);
+  }
+
   function renderOptions(c) {
     const vs = c.variants || [];
     // A request that asked for no options: once checked, its first one is added by hand.
@@ -2948,21 +2992,18 @@
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options</h3>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"${c.chosen?.variant === x.id ? ` class="won"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
+      <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
       ${againstBox(c, v.id)}${whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
-      ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="A designer picked this option as the winner">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : ""}
       <div class="vbar">
-        <button class="btn small primary" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
-        ${vs.length > 1 && can("choose") ? (c.chosen?.variant === v.id ? `<button class="btn small on" data-choose="">★ The winner — undo</button>` : `<button class="btn small" data-choose="${esc(v.id)}">★ Select as the winner</button>`) : ""}
+        <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
-        ${S.me?.slack && can("share") && !(c.polls || []).some((x) => x.state === "open") && !working(c).some((k) => k.startsWith("slack")) ? `<button class="btn small" data-act="slack-share">Share in Slack</button>` : ""}
-        ${(S.me?.slack_send || c.origin?.channel === "slack") && can("share") && !working(c).some((k) => k.startsWith("slack")) ? `<button class="btn small" data-act="slack-send">Send designs to Slack</button>` : ""}
+        ${slackModes(c).length ? `<button class="btn small" data-act="slack">Send to Slack…</button>` : ""}
         ${voteButtons(c, v.id, mine)}
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
-      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>
-      ${renderOptionElements(c, v)}</div>`;
+      ${renderOptionElements(c, v)}
+      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div>`;
   }
 
   // Votes in Slack: open until their date, then the result.
@@ -3017,6 +3058,7 @@
     // the request (filed before the store marked them).
     const theirs = (x) => !x.source || x.source === "person";
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
+    foldsFor(c);
     return `${backBar()}
       <h2 class="renamable">${txt(c.title)}${filedIt(c) || can("close") ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}${num(c)}${titleLink(c)}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
@@ -3026,17 +3068,17 @@
       ${cannotFold(c)}
       </div>
       <div class="top2">
-      <div class="brief${store.get("desk-brief") === "folded" ? " clamped" : ""}"><div class="brief-k">${askHead(c, bug)}</div><div class="brief-body">
+      <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c, bug)}</div><div class="brief-body">
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${!bug && r.goal ? md(r.goal) : ""}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}${askedFor(r)}</div>
-      ${shots(given)}</div>${briefToggle(store.get("desk-brief") === "folded", bug)}</div>
-      <div class="brief made-col${store.get("desk-made") === "folded" ? " clamped" : ""}"><div class="brief-k"><span class="face agent" aria-hidden="true">D</span><span class="ask-who"><b>From Design Desk</b></span></div><div class="brief-body">
+      ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
+      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent" aria-hidden="true">D</span><span class="ask-who"><b>From Design Desk</b></span></div><div class="brief-body">
       ${againstBox(c)}${followsLine(c)}
       ${renderResearch(c.research)}
       ${renderIssueBrief(c)}
       ${renderGrill(c)}
       ${shots(found)}
-      </div>${briefToggle(store.get("desk-made") === "folded", "made")}</div></div>
+      </div>${briefToggle(S.folds.made, "made")}</div></div>
       ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}`
         : `${renderOptions(c)}${renderStories(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
@@ -3169,7 +3211,7 @@
       ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
   }
 
-  // All elements of an option: every part it changes or adds, as a small picture under the
+  // All elements of an option: every part it changes or adds, as a picture above the
   // design; one opens in a dialog with its states (docs/requests.md → The option's elements).
   const CHANGE = { new: ["New", "info", "A part the product does not have yet"], changed: ["Changed", "warn", "A part of the product this design changes"] };
   function elementPic(v, e) {
@@ -3222,7 +3264,7 @@
     const more = busy ? `<li class="addstate"><div class="working"><span class="spin"></span><div>${esc(WORK.states)}</div></div></li>`
       : may ? `<li class="addstate"><button data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">+ ${e.states.length ? "Draw the states again" : "Draw every state"}<span class="hint">hovered, disabled, loading, empty, an error, a long text…</span></button></li>` : "";
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
-        <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${c.chosen?.variant === v.id ? `<span class="chip ok" title="A designer picked this option as the winner">★ The winner</span>` : ""}${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
+        <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
         <button class="btn small" data-el-close aria-label="Close">✕ Close</button></div>
       ${e.how ? `<p style="max-width:var(--measure)">${txt(e.how)}</p>` : ""}
       ${catalogButton(c, v, e) ? `<div class="actions" style="margin:0 0 8px">${catalogButton(c, v, e)}</div>` : ""}
@@ -3378,7 +3420,7 @@
       <span class="title" title="${esc(c.title)}">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span><span class="grow"></span><button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
       : `
       <span class="title" title="${esc(c.title)}">${esc(c.title)}</span>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"${c.chosen?.variant === x.id ? ` class="won"` : ""}><span class="ono">${(c.variants || []).indexOf(x) + 1}</span>${esc(x.name)}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
+      <div class="tabs vtabs" role="group" aria-label="Design options">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${(c.variants || []).indexOf(x) + 1}</span>${esc(x.name)}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <span class="grow"></span>
       ${S.me?.figma && can("figma") ? `<button class="btn small" data-act="figma-import">Import from Figma</button><button class="btn small" data-act="figma-export">Send to Figma</button>` : ""}
       ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
@@ -3435,7 +3477,7 @@
     const looked = (id) => S.ws.looked.has(`${v.id}|${id || ""}`);
     const seen = [null, ...sts.map((x) => x.id)].filter(looked).length;
     const row = (id, name, sub, ver) => `<li><button class="btn small" data-ws-state="${esc(id || "")}" aria-current="${(S.ws.state || null) === id}">${looked(id) ? "✓" : "○"} ${esc(name)}${sub ? ` <span class="hint" style="display:inline">${esc(sub)}</span>` : ""}${ver > 1 ? ` <span class="chip" title="Its latest version">version ${ver}</span>` : ""}</button></li>`;
-    side.innerHTML = `<div class="sel"><div class="k">Goes live</div><b>${esc(v.name)}</b> <span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>${c.chosen?.variant === v.id ? ` <span class="chip ok" title="A designer picked this option as the winner">★ The winner</span>` : ""}
+    side.innerHTML = `<div class="sel"><div class="k">Goes live</div><b>${esc(v.name)}</b> <span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>
         <p class="hint">${v.drawn ? `Drawn ${esc(when(v.drawn))}. ` : ""}The latest version, with every note Design Desk has worked in so far.</p></div>
       ${againstBox(c, v.id)}
       <div><h4 style="margin:0 0 6px">Click through ${sts.length ? `the option and its ${plural(sts.length, "state", "states")}` : "the option"}</h4>
@@ -3610,7 +3652,7 @@
   // What the workspace shows; a refresh that changes none of it leaves it alone.
   function wsFingerprint(c) {
     const v = (c.variants || []).find((x) => x.id === S.variant);
-    return JSON.stringify([v?.asset, v?.version, (v?.states || []).map((x) => x.asset + (x.shot || "")), v?.reasons, c.cited, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length]), c.chosen?.variant]);
+    return JSON.stringify([v?.asset, v?.version, (v?.states || []).map((x) => x.asset + (x.shot || "")), v?.reasons, c.cited, (c.waiting || []).map((w) => w.kind + w.state), notesOf(c).map((n) => [n.id, n.kind, n.state, n.messages.length])]);
   }
 
   // ---------- rendering the detail ----------
@@ -3700,7 +3742,7 @@
   async function openCard(id, { quiet = false } = {}) {
     const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
     const before = S.card;
-    if (before?.id !== card.id) { S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
+    if (before?.id !== card.id) { S.folds.card = null; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -3785,7 +3827,7 @@
     if (name === "queue") {
       const opts = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
       const r = await ask({ title: "Add to presentation", body: `The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.${opts.length ? " Which version is the final one?" : ""}`, ok: "Add to presentation",
-        choices: opts.length ? opts : null, pick: (favourite(c) || c.variants?.[0])?.id || null, note: "Note for the meeting: what should the team look at? (optional)",
+        choices: opts.length ? opts : null, pick: opts.length === 1 ? opts[0].id : null, note: "Note for the meeting: what should the team look at? (optional)",
         send: (a) => api("POST", `/api/cards/${c.id}/agenda`, { note: a.note, ...(a.choice ? { variant: a.choice } : {}) }) });
       if (!r) return;
       toast("Added to the presentation. Design Desk will write a short brief.");
@@ -3803,7 +3845,6 @@
     const options = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
     if (name === "approve") {
       const to = HANDOFF_TO[S.me?.handoff?.[c.request?.type || "idea"]] || HANDOFF_TO.desk;
-      const fav = favourite(c);
       const against = [...new Set((c.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
       // A live prototype's option is the one approved; before options, the spec comes from the request.
       // What the live prototype shows: `live_pick`'s option at its version.
@@ -3811,7 +3852,7 @@
       const what = built ? `**${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
       // Straight to the coding agent: its issue gets the agent's label, only where the spec reaches GitHub (docs/handoff.md).
       const github = (S.me?.handoff?.[c.request?.type || "idea"] || "desk") !== "desk";
-      res = await ask({ title: options.length ? "Approve a design" : "Send to developers", body: `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: options.length ? "Approve" : "Send to developers", choices: options.length && !built ? options : null, pick: fav?.id || null, note: options.length ? null : "What should developers build? (optional)",
+      res = await ask({ title: options.length ? "Approve a design" : "Send to developers", body: `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: options.length ? "Approve" : "Send to developers", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         ...(github ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
         send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? { implement: true } : {}) }) });
@@ -3820,7 +3861,7 @@
     // Build: pick the option, then look at its latest version and states once more in the
     // final check, which builds exactly what it shows (docs/prototype.md → Build).
     if (name === "build" && options.length) {
-      const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : favourite(c)?.id || options[0].id, send: async (a) => a.choice || options[0].id }) : options[0].id;
+      const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : null, send: async (a) => a.choice }) : options[0].id;
       if (!pick) return;
       S.variant = pick; S.ws.state = null; S.ws.alt = null; S.ws.version = null; S.ws.selected = null; S.ws.edit = null; S.ws.note = null;
       S.ws.open = true; S.ws.check = true; S.ws.mode = "off"; S.ws.looked = new Set(); S.ws.askFirst = true;
@@ -3868,30 +3909,23 @@
       res = await ask({ title: "Draw this issue", body: "Design Desk takes a picture of how this part of the product looks now and sketches one way it could look, in the product's own style. It takes a few minutes; the pictures appear here.", ok: "Draw it", note: "Anything the sketch should show or try? (optional)", send: (a) => post(a.note || "") });
       if (!res) return;
     }
-    if (name === "decide") {
-      res = await ask({ title: "Decide and close", body: "Write what you decided, and why. Design Desk records it as a decision in your name, under Product → Decisions, and closes this request without a vote or a live prototype. You can reopen it later.", ok: "Decide and close",
-        note: "What did you decide, and why?", send: (a) => api("POST", `/api/cards/${c.id}/decide`, { text: a.note }) });
-      if (!res) return;
-    }
+    // Close: just close it (a designer), or close it with a decision recorded in the person's
+    // name (a designer or a lead developer), without a vote or a live prototype.
+    let decided = false;
     if (name === "close") {
-      res = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. Nothing is recorded as a decision; to record what you decided, use Decide and close. You can reopen it later.", ok: "Close it", send: () => post("") });
+      const how = [can("close") && { id: "close", name: "Just close it", hint: "Nothing is recorded as a decision" },
+        can("skip") && { id: "decide", name: "Close it and record a decision", hint: "In your name, under Product → Decisions" }].filter(Boolean);
+      res = await ask({ title: "Close this request", body: "Design Desk stops working on it and switches off its live prototype. You can reopen it later.", ok: "Close it",
+        choices: how.length > 1 ? how : null, pick: how[0].id, note: how.some((x) => x.id === "decide") ? "What did you decide, and why?" : null, noteFor: how.length > 1 ? "decide" : null,
+        send: (a) => {
+          if ((a.choice || how[0].id) !== "decide") return post("");
+          if (!a.note) throw new Error("Write what you decided, and why.");
+          decided = true;
+          return api("POST", `/api/cards/${c.id}/decide`, { text: a.note });
+        } });
       if (!res) return;
     }
-    if (name === "slack-share") {
-      const at = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(15, 0, 0, 0); return d.toISOString(); };
-      const thread = c.origin?.channel === "slack";
-      res = await ask({ title: "Share in Slack", body: `Design Desk posts these options ${thread ? "in the Slack thread this request came from" : "to the team's Slack channel"}, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`,
-        ok: "Post to Slack", choices: [{ id: String(at(1)), name: "Close tomorrow at 15:00" }, { id: String(at(3)), name: "Close in 3 days" }, { id: String(at(7)), name: "Close in a week" }], pick: String(at(3)), note: "What should people look at? (optional)",
-        send: (a) => post(JSON.stringify({ closes: a.choice, note: a.note })) });
-      if (!res) return;
-    }
-    if (name === "slack-send") {
-      const thread = c.origin?.channel === "slack";
-      res = await ask({ title: "Send designs to Slack", body: `Design Desk takes a picture of each design and posts them ${thread ? "in the Slack thread this request came from" : "to the team's Slack channel"}, with a link back here. Comments and the pick stay here on the Desk.`,
-        ok: "Send", choices: options.map((o) => ({ id: o.id, name: o.name })), multi: true, pick: options.map((o) => o.id), note: "A line for Slack (optional)",
-        send: (a) => post(JSON.stringify({ variants: a.choices.length === options.length ? "all" : a.choices, note: a.note || "" })) });
-      if (!res) return;
-    }
+    if (name === "slack") { res = await slackSend(c); if (!res) return; }
     if (name === "figma-export") {
       const v = (c.variants || []).find((x) => x.id === S.variant);
       res = await ask({ title: "Send to Figma", body: `Design Desk puts **${v?.name || "this option"}** into Figma as editable layers and links it here.`, ok: "Send", send: () => post(v?.id || "") });
@@ -3902,7 +3936,7 @@
       if (!res) return;
     }
     res ||= await post("");
-    if (res.inbox) toast(name === "close" ? "Closed." : name === "decide" ? "Closed. Design Desk records your decision." : "Sent. Design Desk is on it; this page updates by itself.");
+    if (res.inbox) toast(decided ? "Closed. Design Desk records your decision." : name === "close" ? "Closed." : "Sent. Design Desk is on it; this page updates by itself.");
     await refreshList(); await openCard(c.id);
   }
   // One more option: what it should look like and have, and what it starts from.
@@ -3943,6 +3977,45 @@
           : () => api("POST", `/api/cards/${c.id}/actions`, { action: "add-option", note, ...(base ? { variant: base } : {}) });
         try { const r = await sendOrReopen(dlg, send); if (r && own) toast("Added. Your pictures are the new option."); resolve(r); }
         catch (err) { $("#of-error").textContent = err.message || String(err); $("#of-error").hidden = false; }
+      };
+    });
+  }
+
+  // Send to Slack: pictures of the designs ticked, or a vote on the options until a day
+  // (docs/desk.md → Slack); a mode the person may not use is not offered.
+  const slMode = (mode) => {
+    for (const b of document.querySelectorAll("[data-sl-mode]")) b.setAttribute("aria-pressed", String(b.dataset.slMode === mode));
+    $("#sl-send").hidden = mode !== "send"; $("#sl-vote").hidden = mode !== "vote";
+    $("#sl-note-label").textContent = mode === "vote" ? "What should people look at? (optional)" : "A line for Slack (optional)";
+    $("#sl-ok").textContent = mode === "vote" ? "Post the vote" : "Send";
+    $("#slack-dialog").dataset.mode = mode;
+  };
+  $("#sl-mode").addEventListener("click", (e) => { const b = e.target.closest("[data-sl-mode]"); if (b) slMode(b.dataset.slMode); });
+  $("#sl-options").addEventListener("change", () => { $("#sl-ok").disabled = $("#slack-dialog").dataset.mode === "send" && !$("#sl-options input:checked"); });
+  function slackSend(c) {
+    const dlg = $("#slack-dialog"), f = $("#slack-form"), modes = slackModes(c);
+    if (!modes.length) return null;
+    f.reset();
+    const where = c.origin?.channel === "slack" ? "in the Slack thread this request came from" : "to the team's Slack channel";
+    $("#sl-send-hint").textContent = `Design Desk takes a picture of each design you tick and posts them ${where}, with a link back here. Comments and the decision stay here on the Desk.`;
+    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
+    const vs = c.variants || [];
+    $("#sl-options").innerHTML = vs.map((v) => `<label><input type="checkbox" name="option" value="${esc(v.id)}" checked /> ${esc(v.name)}${tallyText(c, v.id) ? ` <span class="sub">${esc(tallyText(c, v.id))}</span>` : ""}</label>`).join("");
+    const at = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(15, 0, 0, 0); return d.toISOString(); };
+    $("#sl-closes").innerHTML = [[1, "Close tomorrow at 15:00"], [3, "Close in 3 days"], [7, "Close in a week"]].map(([d, l]) => `<label><input type="radio" name="closes" value="${esc(at(d))}" ${d === 3 ? "checked" : ""} /> ${esc(l)}</label>`).join("");
+    $("#sl-mode").hidden = modes.length < 2;
+    slMode(modes[0]); $("#sl-ok").disabled = false;
+    dlg.returnValue = ""; dlg.showModal();
+    // The page's frame has no allow-forms: the send runs on the dialog's close, as #confirm-form's.
+    return new Promise((resolve) => {
+      dlg.onclose = async () => {
+        if (dlg.returnValue !== "ok") { resolve(null); return; }
+        const note = f.note.value.trim(), vote = dlg.dataset.mode === "vote";
+        const picked = [...f.querySelectorAll("input[name=option]:checked")].map((i) => i.value);
+        const send = () => api("POST", `/api/cards/${c.id}/actions`, vote
+          ? { action: "slack-share", note: JSON.stringify({ closes: f.querySelector("input[name=closes]:checked")?.value, note }) }
+          : { action: "slack-send", note: JSON.stringify({ variants: picked.length === vs.length ? "all" : picked, note }) });
+        try { resolve(await sendOrReopen(dlg, send)); } catch (e) { fail(e); }
       };
     });
   }
@@ -4095,7 +4168,6 @@
       if (!r) return;
       await refreshList(); await openCard(S.card.id); return;
     }
-    if (ds.choose !== undefined) { await api("POST", `/api/cards/${S.card.id}/chosen`, { variant: ds.choose || null }); toast(ds.choose ? "Picked as the winner." : "No winner picked."); await refreshList(); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
     // An element of the option: its dialog, its states drawn, the product's element it changes.
     if (ds.el) { openElement(S.variant, ds.el); return; }

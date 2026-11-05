@@ -4,8 +4,8 @@ description: >-
   Post a design request's options to Slack for the team to vote on and discuss: one message
   per option with its picture, votes as 👍 / ⚠️ reactions, comments as thread replies, all
   brought back to the Desk; the result is posted when the vote closes. Use when someone
-  presses Share in Slack (`slack_due`), when an open vote is due to sync or close
-  (`polls_due`), when someone presses Send designs to Slack (`slack_due` with `scope:
+  picks Ask for a vote under Send to Slack… (`slack_due`), when an open vote is due to sync or close
+  (`polls_due`), when someone picks Send the designs under Send to Slack… (`slack_due` with `scope:
   send`: pictures only, no vote), or when someone asks in chat to "send the options to Slack".
 ---
 
@@ -51,7 +51,7 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
 
 ## Send (`slack_due` with `scope: send`)
 
-**Send designs to Slack**: pictures, no vote. Works without `slack_polls`. The item's note is
+**Send the designs** (under **Send to Slack…**): pictures, no vote. Works without `slack_polls`. The item's note is
 `{"variants": "all" | ["<option id>", …], "note": "<a line for Slack>"}` (a lone `"<option id>"`
 from an older page is one option).
 
@@ -96,11 +96,11 @@ On its date, or when the request moved on (approved, closed):
 
 1. Sync once more (above).
 2. The result per option, all votes counted (the Desk's and Slack's): "B: 7 👍, 1 ⚠️". The
-   vote advises; the winner is the one a designer picks on the Desk (the card's `chosen`).
-3. Post it as a `reply` under the poll's `chat` and `root_ts` (**Where it posts**): "🗳️ *<request title>* — the vote is closed. <result>. A designer picks
-   the winner on the Design Desk (C-<n>): <link>."
-4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. Without a designer's
-   pick yet, suggest it for the presentation (`design desk agenda C-<n> --note "Slack vote: <result>"`).
+   vote advises; no option is the winner: the person who approves on the Desk picks one.
+3. Post it as a `reply` under the poll's `chat` and `root_ts` (**Where it posts**): "🗳️ *<request title>* — the vote is closed. <result>. The team decides
+   on the Design Desk (C-<n>): <link>."
+4. `design desk poll-update C-<n> <P-n> --result "<result in one line>"`. Not approved yet:
+   suggest it for the presentation (`design desk agenda C-<n> --note "Slack vote: <result>"`).
 
 ## In a Slack turn
 
