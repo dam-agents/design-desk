@@ -559,18 +559,24 @@ export class Store {
   }
 
   // What a person chose for themselves on the page, kept by their email (docs/desk.md → The
-  // menu): only the day or night mode; null follows their system.
+  // menu): the day or night mode (null follows their system) and simple mode (null: on for a
+  // viewer, off for every other role).
   prefsOf(who) {
     const key = viewerKey(who);
-    return { theme: (key && own(this.db.prefs, key)?.theme) || null };
+    const p = (key && own(this.db.prefs, key)) || {};
+    return { theme: p.theme || null, simple: typeof p.simple === "boolean" ? p.simple : null };
   }
 
-  setPrefs(who, { theme } = {}) {
+  // Only the keys given change; a person with neither left set has no entry.
+  setPrefs(who, prefs = {}) {
     const key = viewerKey(who);
     if (!key) throw bad("only a person has preferences");
-    if (theme !== null && theme !== "light" && theme !== "dark") throw bad("theme must be light, dark or null");
-    if (theme === null) delete this.db.prefs[key];
-    else Object.defineProperty(this.db.prefs, key, { value: { theme, at: this.clock() }, enumerable: true, writable: true, configurable: true });
+    const { theme, simple } = prefs;
+    if ("theme" in prefs && theme !== null && theme !== "light" && theme !== "dark") throw bad("theme must be light, dark or null");
+    if ("simple" in prefs && simple !== null && typeof simple !== "boolean") throw bad("simple must be true, false or null");
+    const next = { ...this.prefsOf(who), ...("theme" in prefs ? { theme } : {}), ...("simple" in prefs ? { simple } : {}) };
+    if (next.theme === null && next.simple === null) delete this.db.prefs[key];
+    else Object.defineProperty(this.db.prefs, key, { value: { ...(next.theme ? { theme: next.theme } : {}), ...(next.simple !== null ? { simple: next.simple } : {}), at: this.clock() }, enumerable: true, writable: true, configurable: true });
     this.save();
     return this.prefsOf(who);
   }

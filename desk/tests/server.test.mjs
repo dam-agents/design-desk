@@ -233,6 +233,20 @@ test("day or night: each person's own choice, kept on the Desk", async (t) => {
   assert.equal(await theme("alice@example.com"), null);
 });
 
+test("simple mode: each person's own choice, kept on the Desk apart from day or night", async (t) => {
+  const d = await desk(t);
+  const me = async (email) => (await d.viewer(email, "/api/me")).body;
+  assert.equal((await me("alice@example.com")).simple, null, "no choice: the role decides on the page");
+  await d.viewer("alice@example.com", "/api/prefs", { theme: "dark" });
+  const saved = await d.viewer("alice@example.com", "/api/prefs", { simple: true });
+  assert.deepEqual([saved.status, saved.body.simple, saved.body.theme], [200, true, "dark"], "only the key sent changes");
+  assert.deepEqual([(await me("alice@example.com")).simple, (await me("bob@example.com")).simple], [true, null], "not anyone else's");
+  assert.equal((await d.viewer("alice@example.com", "/api/prefs", { theme: null })).body.simple, true, "day or night leaves it");
+  assert.equal((await d.viewer("bob@example.com", "/api/prefs", { simple: "yes" })).status, 400);
+  assert.equal((await d.viewer("guest@example.com", "/api/prefs", { simple: false })).body.simple, false, "a viewer may leave it");
+  assert.equal((await d.viewer("alice@example.com", "/api/prefs", { simple: null })).body.simple, null, "null: the role decides again");
+});
+
 test("team feedback: a Desk request waits for a person to ask the team, one from Slack goes on by itself", async (t) => {
   const d = await desk(t);
   const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Save</button>", encoding: "utf8" });

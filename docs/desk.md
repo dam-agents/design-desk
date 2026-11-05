@@ -78,6 +78,19 @@ served by the Desk server through the platform's Artifact API relay.
   (`POST /api/prefs {theme}`, `theme` in `GET /api/me`; null follows the system), so it follows
   them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
   the server takes it, and sent again on the next load.
+  **Simple mode**, a switch in the menu under the person's name (an on/off switch beside its
+  words, in the accent when on), only hides: **Issues**, **Product** and **People** leave the menu, Product's pages their
+  bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), and a
+  request offers no **Build a live prototype** (a prototype already up still shows). The tab
+  intros and How it works, its drawings included, leave out what it hides.
+  A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
+  `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
+  night (`POST /api/prefs {simple}`, `simple` in `GET /api/me`; only the keys sent change), so
+  it follows them to every device; with no choice (null) a viewer starts in simple mode and
+  every other role in full mode. A choice the server has not taken yet stays in the browser,
+  named for them (`desk-simple:<email>`, marked `desk-simple-unsaved:<email>`), and is sent
+  again on the next load. Turned on over a hidden tab (an open decision aside) or the
+  presentation, the Desk goes to the requests.
   The Desk opens on Requests.
 - **Tab intros.** Every tab but How it works has an intro (what it shows, what you can do and,
   where a tab has a flow, step by step), `INTRO` in `desk/page.html`. It fills the pane beside

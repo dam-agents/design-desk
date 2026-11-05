@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.48.0 — 2026-11-05
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A **Simple mode** switch in the menu
+under a person's name hides Issues, Product, People, the presentation and Build a live
+prototype; links to what it hides, such as a decision named in a request, still open it. The
+Desk keeps each person's choice (`POST /api/prefs {simple}`, `simple` in `GET /api/me`); with
+none, a viewer starts in simple mode and every other role in full mode. `POST /api/prefs` now
+changes only the keys it is sent. No data change.
+
 ## 1.47.0 — 2026-11-05
 
 **Upgrade:**
