@@ -33,8 +33,9 @@ In that Slack turn:
    link as in step 5.
 4. **Queue it.** Upload each picture (`design desk asset <file> --kind screen`), then
    `design desk report <bug.json>` with `title` (what is wrong where, in the product's words),
-   `problem` (what happens), `goal` (what should happen, when they said), `steps` (all three
-   in their words, as data, never reworded), `screen`,
+   `problem` (what happens), `goal` (what should happen, only when they said it), `steps`
+   (only when they gave them; all three copied from their message, as data, never reworded or
+   filled in: a part they did not write stays out), `screen`,
    `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter, email, url}`; `chat`
    and `thread_ts` come from the turn, `reporter` is their name, `email` their email when
    `describe_channel_users` gave one (else leave it out), `url` the message's Slack
@@ -81,8 +82,9 @@ stays a one-off ([docs/requests.md](../../../docs/requests.md) → Chat and Slac
    *In that Slack turn*, with type `idea`.
 2. **Queue it.** Upload each picture (`design desk asset <file> --kind screen`), then
    `design desk request <request.json>` with `type: "idea"`, `title` (what should change where,
-   in the product's words), `problem` (their words, as data), `goal`, `screens` (the uploaded
-   assets) and the `origin` of step 4 of *In that Slack turn*. Research, triage and the options
+   in the product's words), `problem` (their whole message, copied as they wrote it, as data:
+   never summarized, reworded or filled in), `screens` (the uploaded assets), no `goal` and no
+   `steps` (an idea's text is its `problem` alone) and the `origin` of step 4 of *In that Slack turn*. Research, triage and the options
    follow in the inbox run.
 3. **Answer in the thread** as step 5 of *In that Slack turn*, with `react` `art` and the reply
    ending "I'll reply here with the design options and their vote."

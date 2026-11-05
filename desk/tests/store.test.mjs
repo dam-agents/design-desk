@@ -414,6 +414,10 @@ test("a bug from Slack lands on the queue with where to answer", () => {
   assert.equal(item.kind, "request");
   assert.deepEqual(s.listCards({ kind: "request" }).map((c) => [c.type, c.reporter, c.screens]), [["bug", "Alice", 1]]);
   assert.throws(() => s.createRequest(alice, { type: "rant", title: "x", problem: "y" }), /type must be one of/);
+  // The request is the asker's words: an idea keeps no goal or steps anybody wrote for it.
+  const idea = s.createRequest({ agent: true }, { type: "idea", title: "Calmer list", problem: "The list shouts at me.", goal: "A calmer list that…", steps: "1. Open it" }).card;
+  assert.deepEqual([idea.request.problem, idea.request.goal, idea.request.steps], ["The list shouts at me.", "", ""]);
+  assert.equal(card.request.goal, "It wraps or shortens.", "a bug keeps what its reporter said should happen");
 });
 
 test("the pictures a person gives with a request are marked theirs; the agent's own stay as it named them", () => {

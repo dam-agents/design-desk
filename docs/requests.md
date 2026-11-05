@@ -17,8 +17,12 @@ Ideas filed on the Desk or asked for in Slack (`idea`) and the agent's own propo
 
 **The request is the person's words.** `problem`, `goal`, `steps` and `vision` hold what the
 person who asked wrote, as they wrote it (an issue's body, a Slack message, the operator's
-chat), cut at 4000 characters, never summarized or reworded; what Design Desk makes of it
-goes in research, `issue_brief` and triage. Only a `proposal` is Design Desk's own words.
+chat), cut at 4000 characters, never summarized, reworded or filled in; what Design Desk makes
+of it goes in research, `issue_brief` and triage. An idea's text is its `problem`, their whole
+message (and `vision`, how they picture it, from the Desk's dialog); `goal` (what should
+happen) and `steps` are a bug report's, only when the reporter wrote them, and the store keeps
+neither for an idea. A field they did not write stays empty. Only a `proposal` is Design Desk's
+own words.
 
 ## Research (`requests_due`, before triage)
 

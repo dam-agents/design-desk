@@ -44,7 +44,10 @@ prototype, Try again; Approve, Close and ⋯ stay in the row, and any other acti
 says 👍, 👎 and ⚠. A request no longer shows its "Asked for: N options" line. On the Desk a design's review bar
 leaves out its title (the option tab names it) and the product's own style line (`Style:
 <repo>@<commit>`); a fallback style keeps its line. The bar stays one row, its screens centred in it and scrolling
-sideways when the design is narrow.
+sideways when the design is narrow. A request's text is only the asker's words: the store keeps no
+`goal` or `steps` for an idea (a bug report and Design Desk's own proposal keep theirs), the page
+shows an idea's problem and how they picture it only, so a goal written for an idea before is no
+longer shown, and the `intake-slack` skill copies a Slack message as it is, filling nothing in.
 
 ## 1.46.0 — 2026-11-05
 

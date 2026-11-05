@@ -671,9 +671,13 @@ export class Store {
   createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false }) {
     if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
+    // The request is the asker's words (docs/requests.md): an idea's are its problem (and how they
+    // picture it); what should happen and the steps belong to a bug report, and to Design Desk's
+    // own proposal. Nobody fills them in for an idea, so they are not kept for one.
+    const reported = type === "bug" || type === "proposal";
     const request = {
-      type, problem: clean(problem, LIMITS.text, "problem"), goal: optText(goal, LIMITS.text, "goal"),
-      screen: optText(screen, 500, "screen"), steps: optText(steps, LIMITS.text, "steps"),
+      type, problem: clean(problem, LIMITS.text, "problem"), goal: reported ? optText(goal, LIMITS.text, "goal") : "",
+      screen: optText(screen, 500, "screen"), steps: reported ? optText(steps, LIMITS.text, "steps") : "",
       from: from ? this.card(String(from)).id : null,
       figma: figma ? String(figma) : null,
       // How the person pictures it, and the skills they switched for its options (docs/requests.md).
