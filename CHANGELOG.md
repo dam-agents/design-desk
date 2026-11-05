@@ -38,7 +38,9 @@ step does, not Options ready.
 The review bar's switch that outlines hotspots starts on in designs built from now on (a design
 built before keeps its old bar, switch off), so a played story shows its numbered frames from the
 start; the Desk's previews of a part hide the outline with the bar (from #68, closed). The switch is
-renamed **Show hotspots** (was Clickable) in designs built from now on.
+renamed **Show hotspots** (was Clickable) in designs built from now on. The step pill always offers the
+move to the next step after a grey "Next:" — Draw design options, Ask for feedback, Build a live
+prototype, Try again; Approve, Close and ⋯ stay in the row, and any other action moves under ⋯.
 
 ## 1.46.0 — 2026-11-05
 

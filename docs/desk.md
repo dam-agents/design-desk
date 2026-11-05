@@ -497,7 +497,7 @@ Changes and Requests have a **Needs a designer** filter next to their others (Ch
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
   they fine-tune the options, until its author, a designer, a developer or a lead presses **Ask for
-  feedback**, inside the request's step pill (**Step n/m** opens every step) (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step, while Approve, Close and ⋯ stay in the row) (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and
