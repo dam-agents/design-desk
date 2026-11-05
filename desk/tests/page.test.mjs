@@ -333,6 +333,32 @@ async function open(t, bridge, fn) {
   }
 }
 
+// A viewer, with no choice saved: simple mode until they switch it off in their menu.
+const VIEWER = `<script>
+window.posts = [];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body }); return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/prefs" ? { theme: null, simple: JSON.parse(body).simple } : {}) }; }
+  const answer = path === "/api/me" ? { role: "guest", email: "v@example.com", key: "v@example.com", simple: null, can: {} }
+    : path === "/api/cards" ? { cards: [] } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE} : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a viewer starts in simple mode; the switch in their menu shows it and keeps their choice on the Desk", (t) => open(t, VIEWER, async (desk) => {
+  await desk.waitForSelector("#nav [data-tab]");
+  const tabs = () => desk.$$eval("#nav [data-tab]", (xs) => xs.map((x) => x.dataset.tab));
+  assert.deepEqual((await tabs()).filter((k) => ["issues", "product", "people"].includes(k)), [], "Issues, Product and People are hidden");
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "true", "the switch says it is on");
+  assert.equal(await desk.locator("header > #simple").count(), 0, "the switch sits in the menu under the person's name");
+  await desk.click("#me");
+  await desk.click("#simple");
+  assert.equal(await desk.getAttribute("#simple", "aria-pressed"), "false");
+  assert.ok((await tabs()).includes("product"), "full mode shows them again");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/prefs").map((p) => JSON.parse(p.body))), [{ simple: false }], "saved for this person");
+}));
+
 // LIST, and each of its cards opens.
 const OPENS = LIST.replace('path === "/api/cards" ? { cards }', 'path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === path.split("/")[3]) }');
 
