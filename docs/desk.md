@@ -85,7 +85,7 @@ served by the Desk server through the platform's Artifact API relay.
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
   button). An option's design (the mockup) starts folded; it opens with a click, and a user
   story played opens it. In the list a request's state is only its coloured dot at the end of
-  its title's line; pointing at the row unfolds its words. The tab
+  its title's line; pointing at the row unfolds its words. A request offers no rename. The tab
   intros and How it works, its drawings included, leave out what it hides.
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
@@ -96,6 +96,14 @@ served by the Desk server through the platform's Artifact API relay.
   again on the next load. Turned on over a hidden tab (an open decision aside) or the
   presentation, the Desk goes to the requests.
   The Desk opens on Requests.
+- **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
+  block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
+  dialogs rise in and fade out with their backdrop, More, the menu under a name and a
+  request's steps pop open,
+  folds slide open and shut, the private ask grows from its button, a new message in it rises
+  in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and
+  rows ease between states, and a toast comes and goes. Nothing waits on an animation; a
+  browser without one of these features shows the change at once.
 - **Tab intros.** Every tab but How it works has an intro (what it shows, what you can do and,
   where a tab has a flow, step by step), `INTRO` in `desk/page.html`. It fills the pane beside
   the list while nothing is open there; People shows it above its list, beside it on a wide

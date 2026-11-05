@@ -16,10 +16,11 @@ Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 under a person's name hides Issues, Product, People, the presentation, Build a live
 prototype and the Why it looks like this strip under an option (the design workspace keeps it),
 starts an option's design folded and shows a request's state in the list as a dot that unfolds
-its words on hover; links to what it hides, such as a decision named in a request, still open it. The
+its words on hover, and offers no rename of a request; links to what it hides, such as a decision named in a request, still open it. The
 Desk keeps each person's choice (`POST /api/prefs {simple}`, `simple` in `GET /api/me`); with
 none, a viewer starts in simple mode and every other role in full mode. `POST /api/prefs` now
-changes only the keys it is sent. No data change.
+changes only the keys it is sent. In every mode dialogs, menus, folds, the private ask, a newly
+opened item and toasts animate, unless the system asks for less motion ([docs/desk.md](docs/desk.md) → **Motion**). No data change.
 
 ## 1.47.0 — 2026-11-05
 

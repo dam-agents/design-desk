@@ -820,6 +820,37 @@
   kbd { font: var(--fs-meta) var(--font); padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); font-weight: 400; }
   /* Design Desk working on it now: the tag's dot pulses. */
   .tag.busy::before { background: currentColor; box-shadow: none; animation: pulse 1.2s ease-in-out infinite; }
+  /* Motion (docs/desk.md → Motion): short and soft, only for people who did not ask their
+     system for less. Dialogs rise in and fade out, menus pop, folds slide open, the chat grows
+     from its button, a new message and a newly opened item rise in, a picked row eases into
+     place, and a toast comes and goes. Nothing waits on an animation to work. */
+  @media (prefers-reduced-motion: no-preference) {
+    :root { --ease-out: cubic-bezier(.16, 1, .3, 1); interpolate-size: allow-keywords; }
+    dialog { transition: opacity .18s ease, transform .22s var(--ease-out), overlay .22s allow-discrete, display .22s allow-discrete; }
+    dialog:not([open]) { opacity: 0; transform: translateY(10px) scale(.985); }
+    dialog::backdrop { transition: background-color .22s ease, overlay .22s allow-discrete, display .22s allow-discrete; }
+    dialog:not([open])::backdrop { background-color: rgba(0,0,0,0); }
+    @starting-style {
+      dialog[open] { opacity: 0; transform: translateY(10px) scale(.985); }
+      dialog[open]::backdrop { background-color: rgba(0,0,0,0); }
+    }
+    /* Folds slide; the popovers (More, the menu under a name, a request's steps) pop instead. */
+    details:not(.more):not(.stepper)::details-content { block-size: 0; overflow: clip; opacity: 0; transition: block-size .24s var(--ease-out), opacity .2s ease, content-visibility .24s allow-discrete; }
+    details:not(.more):not(.stepper)[open]::details-content { block-size: auto; opacity: 1; }
+    details.more[open] > .menu, details.stepper[open] > ol { animation: dd-pop .16s var(--ease-out); transform-origin: top; }
+    .btn, nav button, .row, .row.item, .subtabs > button, .chip, .tabs button { transition: background-color .15s ease, border-color .15s ease, box-shadow .2s ease, color .15s ease, transform .12s ease; }
+    .btn:active:not([disabled]) { transform: scale(.97); }
+    #detail.enter > * { animation: dd-rise .26s var(--ease-out); }
+    .ask-panel.enter { animation: dd-grow .24s var(--ease-out); transform-origin: bottom right; }
+    .ask-fab.enter { animation: dd-pop .2s var(--ease-out); }
+    .ask-row.new, .ask-msg.new { animation: dd-rise .28s var(--ease-out); }
+    .toast { animation: dd-toast-in .22s var(--ease-out), dd-toast-out .25s ease 4.5s forwards; }
+    @keyframes dd-rise { from { opacity: 0; transform: translateY(8px); } }
+    @keyframes dd-pop { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+    @keyframes dd-grow { from { opacity: 0; transform: translateY(12px) scale(.96); } }
+    @keyframes dd-toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
+    @keyframes dd-toast-out { to { opacity: 0; transform: translate(-50%, 6px); } }
+  }
 </style>
 </head>
 <body>
@@ -2549,6 +2580,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const r = await api("GET", "/api/private");
     S.ask.asks = r.asks || []; S.ask.loaded = true;
   }
+  // What the chat showed when last drawn: it animates only what is new, never a redraw.
+  let askShown = { open: false, ctx: "", said: 0 };
   function renderAsk() {
     let root = $("#ask");
     if (!can("ask")) { root?.remove(); return; }
@@ -2558,8 +2591,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const waiting = here.some((t) => t.needs_agent);
     // How many messages this item's or page's chat holds, questions and answers both.
     const said = here.reduce((n, t) => n + (t.messages || []).length, 0);
+    const was = askShown, ctxKey = JSON.stringify(ctx);
+    askShown = { open: S.ask.open, ctx: ctxKey, said };
     if (!S.ask.open) {
       root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Ask privately about this ${askWhat(ctx)}${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
+      if (was.open) root.querySelector(".ask-fab")?.classList.add("enter");
       return;
     }
     const keep = $("#ask-text")?.value || "";
@@ -2578,6 +2614,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
       </footer></section>`;
     $("#ask-text").value = keep;
+    if (!was.open) root.querySelector(".ask-panel").classList.add("enter");
+    else if (was.ctx === ctxKey && said > was.said) for (const m of [...root.querySelectorAll(".ask-body .ask-msg")].slice(-(said - was.said))) (m.closest(".ask-row") || m).classList.add("new");
     // Like any chat: it opens on the newest message, and again once its pictures are in.
     const body = root.querySelector(".ask-body"), bottom = () => { body.scrollTop = body.scrollHeight; };
     bottom();
@@ -3156,7 +3194,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     foldsFor(c);
     return `${backBar()}
-      <h2 class="renamable">${txt(c.title)}${filedIt(c) || can("close") ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}${num(c)}${titleLink(c)}</h2>
+      <h2 class="renamable">${txt(c.title)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}${num(c)}${titleLink(c)}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
@@ -3891,7 +3929,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // A request fills the pane: every part of it is as wide as the page (`.fill`).
     d.classList.toggle("fill", S.card?.kind === "request" && !(S.tab === "product" && S.productFilter === "decisions"));
     const now = [S.tab, S.card?.id || "", S.decision?.id || "", presenting() ? "p" : ""].join("|");
-    if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); }
+    if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); d.classList.remove("enter"); void d.offsetWidth; d.classList.add("enter"); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
     if (S.tab === "people") { d.innerHTML = `<div class="with-intro">${renderIntro()}<div class="guide">${renderPeople()}</div></div>`; return; }
