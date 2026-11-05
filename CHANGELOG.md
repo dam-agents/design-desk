@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.43.2 — 2026-11-05
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The list is white and the page
+lighter, as on the team's design; a list card's second line is grey. In a list, an issue's or
+a pull request's preview shows on its link alone and a label's line on the label alone, not
+over the whole card. A request's open steps close on a click outside them. No server restart, no data change.
+
 ## 1.43.1 — 2026-11-05
 
 **Upgrade:**
