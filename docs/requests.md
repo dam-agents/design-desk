@@ -227,8 +227,10 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
 - **User stories**: with an `issue_brief`, each option says how it meets every story:
   `stories: [{story, met, how, parts}]` — `met` is `yes`, `partly` or `no`; `how` one or two
   plain sentences; `parts` the elements that do it (`{selector, label, view}`, at most 6: a
-  CSS path in the option's file, a plain label, the `data-view` it is on). The page outlines
-  them when a person picks the story. An entry without `stories` keeps the option's coverage
+  CSS path in the option's file, a plain label, the `data-view` it is on), in the order the
+  story goes through them. The stories sit under the option's design; a person who presses one
+  plays it there: a pointer goes to each part in that order, outlines it and clicks it when it
+  is a button, a link to its own page or a box to tick. An entry without `stories` keeps the option's coverage
   from before; a revised option whose parts moved sends its new `stories`.
 - **Why it looks like this**: each option names the decisions on the Desk it follows and the
   parts each one shaped: `reasons: [{decision, how, parts}]` — `decision` a `D-<n>` in force

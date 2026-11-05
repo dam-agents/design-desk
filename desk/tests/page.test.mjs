@@ -1017,13 +1017,20 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.match(await desk.textContent("#detail"), /Asked for: 2 options · questions first/);
   assert.match(await desk.textContent("#detail"), /What we agreed before the design · 2 questions/);
   assert.equal(await desk.textContent('[data-story="s1"] .met'), "✓");
-  assert.match(await desk.textContent(".stories .how"), /Meets it — Column[\s\S]*A spend column on every row/);
-  await desk.waitForFunction(() => document.querySelector("#story-frame")?.srcdoc.includes('id="spend"'));
-  assert.equal(await desk.textContent('[data-story-part="0"]'), "Spend column", "the story's parts, to show in the design");
+  // The stories sit under the option's own design: no second switch of options, no second picture.
+  assert.equal(await desk.locator(".vpanel #stories").count(), 1, "the stories are the option's");
+  assert.equal(await desk.locator("#story-frame").count(), 0, "no second picture of the design");
+  assert.equal(await desk.locator("#detail .tabs [data-variant]").count(), 2, "one switch of options, the tabs over the panel");
+  assert.match(await desk.textContent(".stories .how"), /Meets it[\s\S]*A spend column on every row/);
+  await desk.waitForFunction(() => document.querySelector("#variant-frame")?.srcdoc.includes('id="spend"'));
+  // A story pressed plays in the design above: its parts are outlined there, numbered in order.
+  await desk.click('[data-story="s1"]');
+  const design = desk.frameLocator("#variant-frame");
+  await design.locator("text=1. Spend column").first().waitFor();
   await desk.click('[data-story="s2"]');
-  assert.match(await desk.textContent(".stories .story"), /I can sort by spend.*from the issue's text/);
-  assert.match(await desk.textContent(".stories .how"), /Meets part of it — Column[\s\S]*needs a developer/);
-  await desk.click('.tabs:has(+ .stories) [data-variant="v2"]');
+  assert.match(await desk.textContent('[data-story="s2"]'), /I can sort by spend.*from the issue's text/);
+  assert.match(await desk.textContent(".stories .how"), /Meets part of it[\s\S]*needs a developer/);
+  await desk.click('.vtabs [data-variant="v2"]');
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
 }));
 

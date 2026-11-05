@@ -321,14 +321,16 @@
   .linked { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); font-size: 13px; max-width: var(--measure); margin: 8px 0; }
   .linked .k { color: var(--muted); }
   /* The issue's user stories: pick one, see the parts of the option that meet it and how. */
-  .stories { display: grid; grid-template-columns: minmax(200px, 30%) minmax(0, 1fr); gap: 14px; margin: 6px 0; }
-  .stories ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; align-content: start; }
-  .stories ol button { width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; display: flex; gap: 8px; }
+  /* The issue's user stories under the option's design: one pressed plays in the design above. */
+  .stories { margin: 16px 0 4px; }
+  .stories ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .stories ol button { width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 9px 12px; cursor: pointer; font: inherit; font-size: 13.5px; color: var(--ink); display: flex; gap: 10px; align-items: flex-start; }
+  .stories ol button:hover { border-color: var(--accent); }
   .stories ol button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .stories ol button .txt { flex: 1; }
+  .stories ol button .play { flex: none; color: var(--accent); font-size: 12px; line-height: 20px; }
   .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--muted); }
-  .stories .story { font-weight: 600; margin: 0 0 8px; } .stories .frame { height: 52vh; }
-  .stories .how { margin-top: 10px; }
-  @media (max-width: 900px) { .stories { grid-template-columns: 1fr; } }
+  .stories .how { margin: 6px 0 4px 40px; font-size: 13.5px; } .stories .how b { display: block; margin-bottom: 2px; } .stories .how p { margin: 0; }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -902,14 +904,14 @@
   <form method="dialog" id="slack-form">
     <h2>Send to Slack</h2>
     <div class="tabs" role="radiogroup" id="sl-mode">
-      <button type="button" data-sl-mode="send" aria-pressed="true">Send the designs</button>
-      <button type="button" data-sl-mode="vote" aria-pressed="false">Ask for a vote</button>
+      <button type="button" data-sl-mode="vote" aria-pressed="true">Ask for a vote</button>
+      <button type="button" data-sl-mode="send" aria-pressed="false">Send the designs</button>
     </div>
-    <div id="sl-send">
+    <div id="sl-send" hidden>
       <p class="hint" id="sl-send-hint" style="margin:0"></p>
       <div class="choices" id="sl-options"></div>
     </div>
-    <div id="sl-vote" hidden>
+    <div id="sl-vote">
       <p class="hint" id="sl-vote-hint" style="margin:0"></p>
       <div class="choices" id="sl-closes"></div>
     </div>
@@ -1168,7 +1170,6 @@
     variant: "Shows this design option",
     wsVariant: "Shows this design option",
     story: "Shows how each option meets this user story",
-    storyPart: "Shows this part in the design",
     wsWhy: (v, el) => el.classList.contains("on") ? "Hides the decision tags on the design" : "Tags each part of the design with the decisions that shaped it",
     reason: "Highlights the parts this decision shaped",
     reasonPart: "Shows this part in the design",
@@ -2992,7 +2993,8 @@
   // Slack: the designs as pictures, or a vote on them; one button, both in its dialog.
   function slackModes(c) {
     if (!can("share") || working(c).some((k) => k.startsWith("slack"))) return [];
-    return [(S.me?.slack_send || c.origin?.channel === "slack") && "send", S.me?.slack && !(c.polls || []).some((x) => x.state === "open") && "vote"].filter(Boolean);
+    // The vote comes first: it is what the dialog opens on when both are offered.
+    return [S.me?.slack && !(c.polls || []).some((x) => x.state === "open") && "vote", (S.me?.slack_send || c.origin?.channel === "slack") && "send"].filter(Boolean);
   }
 
   function renderOptions(c) {
@@ -3015,7 +3017,8 @@
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
       ${renderOptionElements(c, v)}
-      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div>`;
+      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>
+      ${renderStories(c, v)}</div>`;
   }
 
   // Votes in Slack: open until their date, then the result.
@@ -3091,8 +3094,8 @@
       ${renderGrill(c)}
       ${shots(found)}
       </div>${briefToggle(S.folds.made, "made")}</div></div>
-      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}`
-        : `${renderOptions(c)}${renderStories(c)}${renderPrototype(c)}`}
+      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>`
+        : `${renderOptions(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
       ${c.spec?.asset ? `<details class="fold"${c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? " open" : ""}><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>` : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
@@ -3157,20 +3160,29 @@
     if (!S.story || !ss.some((x) => x.id === S.story)) S.story = ss[0]?.id || null;
     return ss.find((x) => x.id === S.story) || null;
   }
-  function renderStories(c) {
+  // The issue's user stories, under the option's design: a story pressed plays in the design
+  // above — a pointer goes to each part that does it, in order, and clicks it — and says how
+  // the option meets it. No second picture of the design, no second switch of options.
+  function renderStories(c, v) {
     const ss = c.issue_brief?.stories || [];
-    if (!ss.length) return "";
-    const vs = c.variants || [], v = vs.find((x) => x.id === S.variant) || null, st = storyOf(c);
-    const cov = (id) => (v?.stories || []).find((x) => x.story === id) || null, k = cov(st.id);
+    if (!ss.length || !v) return "";
+    const st = storyOf(c);
+    const cov = (id) => (v.stories || []).find((x) => x.story === id) || null;
     const mark = (x) => { const m = MET[cov(x.id)?.met]; return `<span class="met ${esc(cov(x.id)?.met || "")}" title="${esc(m?.[1] || "Not said yet")}">${m?.[0] || "·"}</span>`; };
-    const detail = !v ? `<p class="hint">Once the options are drawn, Design Desk shows here how each one meets this story.</p>`
-      : !k ? `<p class="hint">Design Desk has not said yet how ${esc(v.name)} meets this story.</p>`
-      : `${k.parts.length ? `<div class="actions" style="margin:0 0 8px">${k.parts.map((x, i) => `<button class="btn small" data-story-part="${i}" title="Show it in the design">${esc(x.label)}</button>`).join("")}</div><iframe class="frame" id="story-frame" sandbox="allow-scripts" title="${esc(v.name)}: ${esc(st.text)}"></iframe>` : ""}
-        <div class="panel how"><b>${esc(MET[k.met][1])} — ${esc(v.name)}</b>${md(k.how)}</div>`;
-    return `<h3>User stories</h3>
-      ${vs.length > 1 ? `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v?.id}">${esc(x.name)}</button>`).join("")}</div>` : ""}
-      <div class="stories"><ol>${ss.map((x) => `<li><button data-story="${esc(x.id)}" aria-pressed="${x.id === st.id}">${v ? mark(x) : ""}<span>${txt(x.text)}</span></button></li>`).join("")}</ol>
-        <div><p class="story">${txt(st.text)}${st.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</p>${detail}</div></div>`;
+    const how = (k) => !k ? `<p class="hint how">Design Desk has not said yet how ${esc(v.name)} meets this story.</p>`
+      : `<div class="how"><b>${esc(MET[k.met][1])}</b>${md(k.how)}</div>`;
+    const item = (x) => {
+      const k = cov(x.id), on = x.id === st.id, plays = (k?.parts || []).length > 0;
+      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button>${on ? how(k) : ""}</li>`;
+    };
+    return `<section class="stories" id="stories"><div class="elhead"><h4>User stories<span class="n">${ss.length}</span></h4><span class="hint">Press one to play it in ${esc(v.name)} above.</span></div><ol>${ss.map(item).join("")}</ol></section>`;
+  }
+  // Plays the picked story in the option's design: the frame moves a pointer part by part.
+  function playStory() {
+    const vf = $("#variant-frame"), pins = storyPins();
+    if (!vf || !pins.length) return;
+    vf.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
   }
   // One state of an element, as the design catalog shows it: a picture of the part alone, what
   // it is, when it happens and the use case of the brief it serves (docs/requests.md → Every
@@ -3290,7 +3302,7 @@
       .replaceAll(' loading="lazy"', "");
     loadPictures(dlg).catch(() => {});
   }
-  // The story's parts, outlined in the option and the first one scrolled into view.
+  // The story's parts, in the order the story goes through them.
   function storyPins() {
     const c = S.card, v = (c?.variants || []).find((x) => x.id === S.variant), st = c && storyOf(c);
     const k = st && (v?.stories || []).find((x) => x.story === st.id);
@@ -3341,6 +3353,37 @@
     const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
     new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    // A user story played: a pointer goes to each part that does it, in order, outlines it and
+    // clicks it when it is something to press; a new story stops the one playing.
+    let playing = 0;
+    const pointer = document.createElement("div");
+    pointer.style.cssText = "position:fixed;left:50%;top:35%;z-index:2147483647;pointer-events:none;opacity:0;transition:left .7s cubic-bezier(.4,0,.2,1),top .7s cubic-bezier(.4,0,.2,1),opacity .3s";
+    pointer.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" style="display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))"><path d="M5 3l14 8-6 1.6L10 19z" fill="#1b1b1a" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg><span style="position:absolute;left:22px;top:20px;background:#2f5bd3;color:#fff;font:600 12px/20px system-ui,sans-serif;padding:0 8px;border-radius:10px;white-space:nowrap"></span>';
+    document.documentElement.appendChild(pointer);
+    const caption = pointer.lastChild;
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const ripple = (x, y) => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:" + (x - 14) + "px;top:" + (y - 14) + "px;width:28px;height:28px;border-radius:50%;border:2px solid #2f5bd3;z-index:2147483646;pointer-events:none;transition:transform .5s,opacity .5s"; document.documentElement.appendChild(d); requestAnimationFrame(() => { d.style.transform = "scale(1.9)"; d.style.opacity = "0"; }); setTimeout(() => d.remove(), 650); };
+    const pressable = (el) => el.closest('button, [role="button"], summary, label, input[type="checkbox"], input[type="radio"], a:not([href]), a[href^="#"]');
+    async function playStory(steps) {
+      const id = ++playing; pins = []; draw();
+      caption.textContent = ""; pointer.style.opacity = "1";
+      for (let i = 0; i < steps.length; i++) {
+        const st = steps[i], el = find(st.selector);
+        if (!el) continue;
+        reveal(el); await wait(300); if (id !== playing) return;
+        el.scrollIntoView({ block: "center", behavior: "smooth" }); await wait(550); if (id !== playing) return;
+        const r = el.getBoundingClientRect(), x = r.left + Math.min(r.width / 2, 48), y = r.top + Math.min(r.height / 2, 24);
+        caption.textContent = (i + 1) + ". " + (st.label || "");
+        pointer.style.left = x + "px"; pointer.style.top = y + "px";
+        await wait(850); if (id !== playing) return;
+        ripple(x, y);
+        pins = steps.slice(0, i + 1).map((p, k) => ({ n: k + 1, selector: p.selector, label: (k + 1) + ". " + (p.label || ""), state: "story" })); draw();
+        pressable(el)?.click();
+        await wait(1000); if (id !== playing) return;
+      }
+      caption.textContent = ""; await wait(500); if (id === playing) pointer.style.opacity = "0";
+    }
+    addEventListener("message", (e) => { if (e.data?.type === "desk-play") playStory(e.data.steps || []); });
     addEventListener("mouseover", (e) => { if (pins.some((p) => p.why) && under !== e.target) { under = e.target; draw(); } if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
@@ -3694,14 +3737,8 @@
     const spec = $("#spec-body");
     if (spec && S.card?.spec?.asset) { try { spec.innerHTML = md(decode(await asset(S.card.spec.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
-    if (vf && v) { try { vf.srcdoc = withLook(decode(await asset(v.asset))); } catch {} }
-    const sf = $("#story-frame");
-    if (sf && v) {
-      try {
-        sf.srcdoc = withScript(decode(await asset(v.asset)));
-        sf.onload = () => { const pins = storyPins(); sf.contentWindow?.postMessage({ type: "desk-pins", pins }, "*"); if (pins[0]) sf.contentWindow?.postMessage({ type: "desk-show", selector: pins[0].selector }, "*"); };
-      } catch {}
-    }
+    // The option's design carries the frame's script: a user story plays in it (renderStories).
+    if (vf && v) { try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
@@ -4018,8 +4055,8 @@
     $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
     const vs = c.variants || [];
     $("#sl-options").innerHTML = vs.map((v) => `<label><input type="checkbox" name="option" value="${esc(v.id)}" checked /> ${esc(v.name)}${tallyText(c, v.id) ? ` <span class="sub">${esc(tallyText(c, v.id))}</span>` : ""}</label>`).join("");
-    const at = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(15, 0, 0, 0); return d.toISOString(); };
-    $("#sl-closes").innerHTML = [[1, "Close tomorrow at 15:00"], [3, "Close in 3 days"], [7, "Close in a week"]].map(([d, l]) => `<label><input type="radio" name="closes" value="${esc(at(d))}" ${d === 3 ? "checked" : ""} /> ${esc(l)}</label>`).join("");
+    const at = (hours) => new Date(Date.now() + hours * 3600e3).toISOString();
+    $("#sl-closes").innerHTML = [[1, "Close in 1 hour"], [5, "Close in 5 hours"], [24, "Close in 24 hours"]].map(([h, l]) => `<label><input type="radio" name="closes" value="${esc(at(h))}" ${h === 24 ? "checked" : ""} /> ${esc(l)}</label>`).join("");
     $("#sl-mode").hidden = modes.length < 2;
     slMode(modes[0]);
     dlg.returnValue = ""; dlg.showModal();
@@ -4199,8 +4236,8 @@
     }
     if ("catalogOpen" in ds) { S.elFilter = "design"; S.productFilter = "elements"; await showTab("product"); return; }
     if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
-    if (ds.story) { S.story = ds.story; renderDetail(); return; }
-    if (ds.storyPart) { const pin = storyPins()[Number(ds.storyPart)]; if (pin) $("#story-frame")?.contentWindow?.postMessage({ type: "desk-show", selector: pin.selector }, "*"); return; }
+    // A story is shown in place, so the design above keeps its frame, and it plays there.
+    if (ds.story) { S.story = ds.story; const v = (S.card.variants || []).find((x) => x.id === S.variant), box = $("#stories"); if (box && v) box.outerHTML = renderStories(S.card, v); playStory(); return; }
     if (ds.vote) {
       const mine = S.card.votes?.[S.variant]?.[myKey()]?.vote;
       const vote = mine === ds.vote ? "none" : ds.vote;

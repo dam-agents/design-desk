@@ -27,7 +27,11 @@ browser). People vote 👍, 👎 or ⚠ and only at the Team feedback step; a vo
 `dislike` (the Desk's own and a Slack 👎, [`slack-polls`](.agents/skills/slack-polls/SKILL.md)
 adds 👎 to its legend and counts it). Ask the team for feedback reads **Ask for feedback**, and
 Close… shows a cross. An element whose every state is drawn for the option's latest version
-says so in its dialog instead of a button to draw them again.
+says so in its dialog instead of a button to draw them again. The user stories sit under the
+option's design, with no switch of their own and no second picture of it: a story pressed plays
+in the design above, the pointer going through its `parts` in their order
+([docs/requests.md](docs/requests.md) → User stories). Send to Slack… opens on Ask for a vote,
+which closes in 1, 5 or 24 hours (24 picked).
 
 ## 1.46.0 — 2026-11-05
 
