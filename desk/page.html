@@ -1282,7 +1282,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     exitPresent: "Leaves the presentation (Esc)",
     ack: "Marks it seen for you: it leaves Needs a designer; nobody else is told",
     handle: (v) => v === "1" ? "Design has nothing more to do with this change; the team sees it" : "Counts its days again",
-    focusComposer: "Jumps to the question box below; Design Desk answers right there",
     adjust: "Starts a new request from this, to change its design",
     addShots: "Add screenshots from the product; Design Desk checks each one and writes its caption",
     addProduct: "Ask Design Desk to add a screen or a part that is missing here",
@@ -1362,7 +1361,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus", "not-now": "off",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
-    notNow: "off", adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
+    notNow: "off", adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
   };
   const OWN_SIGN = /^[^\p{L}\p{N}]/u;
   function iconFor(el) {
@@ -2754,7 +2753,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
       <div class="actions">
         ${can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : ""}
-        <button class="btn" data-focus-composer>Ask a question</button>
         ${can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : ""}
         ${agendaButton(c)}
       </div>
@@ -2786,7 +2784,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${open ? `<div class="actions">
         ${can("draw") && !busy && !sketch.length && !c.designed ? `<button class="btn primary" data-act="draw">Draw it</button>` : ""}
         ${can("follow-up") ? `<button class="btn" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : ""}
-        <button class="btn" data-focus-composer>Ask a question</button>
         ${agendaButton(c)}
       </div>` : ""}
       ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
@@ -2808,7 +2805,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
-      ${c.status === "dropped" ? "" : `<div class="actions">${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}<button class="btn" data-focus-composer>Ask about this screen</button>${agendaButton(c)}</div>
+      ${c.status === "dropped" ? "" : `<div class="actions">${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}${agendaButton(c)}</div>
       <h3>Screens</h3>${renderLooks(c)}
       ${els.length ? `<h3>Parts on this screen</h3><div class="actions">${els.map((e) => `<button class="anchor" data-card="${esc(e.id)}">${esc(e.title)}</button>`).join("")}</div>` : ""}
       <h3>Why it is like this</h3><div id="timeline" class="section"><p class="hint">Loading the decisions and changes…</p></div>`}
@@ -4425,7 +4422,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if ("exitPresent" in ds) { $("#present")?.remove(); return; }
     if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
     if ("handle" in ds) { await api("POST", `/api/cards/${S.card.id}/handled`, { handled: ds.handle === "1" }); await refreshList(); await openCard(S.card.id); return; }
-    if ("focusComposer" in ds) { $("#composer-text")?.focus(); $("#composer")?.scrollIntoView({ block: "center" }); return; }
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { S.convoOpen = true; await post(ds.post); return; }
