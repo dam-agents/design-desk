@@ -170,7 +170,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
+    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });
@@ -191,6 +191,8 @@ async function viewerRoute(req, res, url, who) {
     spend(who.email || who.sub, "write");
     if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
+  // A person's own day or night mode, kept for them on every device (docs/desk.md → The menu).
+  if (m === "POST" && p[1] === "prefs") return send(res, 200, store.setPrefs(actor, { theme: b.theme ?? null }));
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note, typeof b.variant === "string" ? b.variant : null), s, who)); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "suggestion") return send(res, 200, store.dismissSuggestion(p[2], actor));
   if (m === "DELETE" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.unqueue(p[2], actor));
@@ -214,6 +216,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "decide") { need("skip"); return send(res, 201, withPing(store.decideAndClose(p[2], actor, { text: b.text, why: b.why }), s, who)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "feedback") return send(res, 200, store.openFeedback(p[2], actor));
   if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "chosen") { need("choose"); return send(res, 200, store.choose(p[2], actor, b.variant === null ? null : String(b.variant || ""))); }
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }

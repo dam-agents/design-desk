@@ -222,7 +222,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   conflict (desk.md → Decisions), never a reason.
 - Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
   `variants: [{id, version, name, rationale, fidelity, asset, stories, reasons, states}]` (rationale: one
-  line on when this one wins) and `status: feedback` in one `design desk upsert`. The list is
+  line on when this one wins) and `status: feedback` in one `design desk upsert` (a Desk-filed request may stay at `variants`: [desk.md](desk.md) → Team feedback). The list is
   every option on the card: one already there goes with the `version` (and each of its states
   with its `version`) the card gave you, a new one without; one to take off goes as `{id,
   drop: true}`, only when a designer asked. The store refuses (409) a list that leaves an

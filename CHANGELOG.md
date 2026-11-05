@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.42.2 — 2026-11-04
+## 1.43.1 — 2026-11-05
 
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`): it refuses a new or
@@ -15,6 +15,19 @@ redrawn state of a design option that it would store with neither a picture of t
 (`shot`) nor the part's `selector`, so the Design catalog can no longer store a state it would
 show as a whole page in a small box. A state sent unchanged keeps the `shot` and `selector` it
 has; states already stored without either stay as they are. Nothing else changes.
+
+## 1.43.0 — 2026-11-04
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The day and night switch now keeps
+each person's choice in `db.json` (`prefs`, added on first load), and a choice a browser
+kept before is saved for its person on their next visit. The design workspace gains a
+Comments switch (`desk-notes`, browser only). A request filed on the Desk now waits at
+`variants` after its options are drawn until a person asks the team for feedback
+([docs/desk.md](docs/desk.md) → **Team feedback**); requests already at `feedback` and those
+from Slack or chat are unchanged. No config change.
 
 ## 1.42.1 — 2026-11-04
 

@@ -529,6 +529,9 @@ test("only a designer picks the winning option; votes only suggest one", () => {
   s.claim(triaged.id, "run-1"); s.done(triaged.id, "run-1", "checked");
   const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
   s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Table", asset: a }, { id: "v2", name: "Cards", asset: a }] });
+  // Filed on the Desk: its options wait for a person to ask the team (docs/desk.md → Team feedback).
+  assert.equal(s.card(card.id).status, "variants");
+  s.openFeedback(card.id, alice);
   s.vote(card.id, alice, { variant: "v1", vote: "prefer" });
   assert.equal(can("designer", "choose"), true);
   assert.equal(can("pm", "choose"), false);
