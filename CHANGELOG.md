@@ -24,7 +24,7 @@ unread for everyone. The private ask stays over the design workspace and asks ab
 picked there; a part with states drawn offers **See every state**, to look through them. In
 both modes a request's state in the list is a dot in the row's top-right corner, as large as the
 dot on its page, pulsing while Design Desk works; pointing at the dot unfolds the label over the title. A row's provenance
-starts with when it came: Today, Yesterday or the date.
+starts with `created:` Today, Yesterday or the date.
 
 ## 1.49.0 — 2026-11-05
 
