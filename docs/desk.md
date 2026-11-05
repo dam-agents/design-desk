@@ -218,6 +218,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `pm`, `developer`, `lead-developer`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
 | `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | a request's author; `developer`, `lead-developer`, `designer`, `lead` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
+| a request's author; `designer`, `lead` on any | rename a request (✎ by its title): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a small change they did not file ([Small changes](#small-changes)) |
 | `lead-developer`, `lead` | mark a request a small change, or send it through a designer |
 | `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |

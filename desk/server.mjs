@@ -265,6 +265,7 @@ async function viewerRoute(req, res, url, who) {
     const ids = images.map((im, i) => store.addAsset({ card: p[2], kind: "screen", name: `added-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id);
     return send(res, 201, withPing(store.addScreens(p[2], actor, ids), s, who));
   }
+  if (m === "POST" && p[1] === "cards" && p[3] === "title") { need("comment"); return send(res, 200, store.renameRequest(p[2], actor, b.title, { manage: can(who.deskRole, "close", s.prototypeRoles) })); }
   // A person's own option: their pictures on a page the server builds, nothing drawn (docs/requests.md → Variants).
   if (m === "POST" && p[1] === "cards" && p[3] === "options") {
     need("explore");

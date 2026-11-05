@@ -716,6 +716,20 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // A request's title, in a person's words: its author's, or anyone's who may close it
+  // (`manage`). It stays theirs: a run's upsert no longer changes it (docs/desk.md → Roles).
+  renameRequest(cardId, who, title, { manage = false } = {}) {
+    const c = this.card(cardId);
+    if (c.kind !== "request") throw bad("only a request is renamed here");
+    const mine = [c.created_by?.email, c.origin?.email].some((x) => x && who?.email && String(x).toLowerCase() === String(who.email).toLowerCase());
+    if (!mine && !manage) throw forbidden("Only the person who filed it, a designer or a lead can rename this request.");
+    c.title = clean(title, LIMITS.title, "title");
+    c.renamed = { by: person(who), at: this.clock() };
+    c.updated = c.renamed.at;
+    this.save();
+    return { card: c };
+  }
+
   // A person's own option: their pictures as they are, on a page built here from the pictures
   // alone, with nothing drawn and no work queued (docs/requests.md → Variants, `picture`).
   // Only once the request is checked: triage comes before any option.
@@ -738,7 +752,12 @@ export class Store {
     const at = this.clock();
     c.variants = [...vs, { id: `v${n}`, name: title, rationale: why,
       fidelity: "picture", asset, figma_url: null, stories: null, reasons: null, elements: [], states: [], alternatives: [], version: 1, history: [], drawn: at, by: person(who) }];
-    if (c.status === "triage") c.status = "variants";
+    // Its options are ready, as after a run draws them: a request filed on the Desk waits for a
+    // person to ask the team (docs/desk.md → Team feedback); one the agent filed goes on to feedback.
+    if (["triage", "variants"].includes(c.status) && c.team_feedback?.state !== "open") {
+      if (c.created_by?.agent) c.status = "feedback";
+      else Object.assign(c, { status: "variants", team_feedback: c.team_feedback?.state === "waiting" ? c.team_feedback : { state: "waiting", since: at } });
+    }
     c.updated = at;
     this.save();
     return { card: c };
@@ -1317,7 +1336,8 @@ export class Store {
     const brief = next.kind === "change" ? LIMITS.change : next.kind === "issue" ? LIMITS.issue : null;
     for (const k of AGENT_FIELDS) {
       if (fields[k] === undefined) continue;
-      if (k === "title") next.title = clean(fields.title, brief?.title ?? LIMITS.title, "title");
+      // A title a person gave a request is theirs: a run's upsert leaves it as it is.
+      if (k === "title") { if (!next.renamed) next.title = clean(fields.title, brief?.title ?? LIMITS.title, "title"); }
       else if (k === "summary") next.summary = clean(fields.summary, brief?.summary ?? 600, "summary");
       else if (k === "status") {
         const ok = { change: CHANGE_STATES, request: REQUEST_STATES, element: ELEMENT_STATES, screen: ELEMENT_STATES, digest: CHANGE_STATES, issue: ISSUE_STATES }[next.kind];

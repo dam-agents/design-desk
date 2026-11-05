@@ -1237,6 +1237,18 @@ test("GitHub on the Desk: the watch run marks an issue's design comments, the ma
   assert.throws(() => s.markGithub("acme/widgets#99", { at: "x", author: "y" }), /no copy/);
 });
 
+test("a request's author, or one who may close it, renames it; a run's upsert keeps the name", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "give me some prototypes", problem: "Try it" });
+  assert.throws(() => s.renameRequest(card.id, alice, "Calmer header"), /Only the person who filed it/, "neither its author nor allowed to close it");
+  assert.equal(s.renameRequest(card.id, alice, "Calmer header", { manage: true }).card.title, "Calmer header");
+  assert.equal(s.renameRequest(card.id, bob, "  A calmer header  ").card.title, "A calmer header", "its author may");
+  assert.throws(() => s.renameRequest(card.id, bob, " "), /title is empty/);
+  assert.equal(s.upsertCard({ id: card.id, title: "Agent's name", summary: "s" }).card.title, "A calmer header", "a run's upsert leaves it");
+  const { card: ch } = s.upsertCard({ kind: "change", title: "A change", source: { repo: "acme/widgets", pr: 9 } });
+  assert.throws(() => s.renameRequest(ch.id, bob, "x", { manage: true }), /only a request/);
+});
+
 test("a person's own option: their pictures as an option once the request is checked, nothing queued, its author kept through a run's upsert", () => {
   const s = fresh();
   const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
@@ -1249,7 +1261,7 @@ test("a person's own option: their pictures as an option once the request is che
   const open = inbox(s).open.length;
   const { card: c } = s.addOwnOption(card.id, alice, { name: "My <sketch>", note: "Filters on top", images: [{ contentType: "image/png", data: png }] });
   const v = c.variants[0];
-  assert.deepEqual([v.id, v.name, v.fidelity, v.rationale, v.version, v.by.email, c.status], ["v1", "My <sketch>", "picture", "Filters on top", 1, alice.email, "variants"]);
+  assert.deepEqual([v.id, v.name, v.fidelity, v.rationale, v.version, v.by.email, c.status, c.team_feedback.state], ["v1", "My <sketch>", "picture", "Filters on top", 1, alice.email, "variants", "waiting"], "ready, waiting for a person to ask the team");
   assert.equal(inbox(s).open.length, open, "nothing is queued: Design Desk draws nothing");
   const page = readFileSync(join(s.assetDir, s.db.assets[v.asset].file), "utf8");
   assert.match(page, /<title>My &lt;sketch&gt;<\/title>/, "the name is escaped on its page");

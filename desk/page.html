@@ -1258,7 +1258,7 @@
   // dialog button joins these lists (its `data-` action, or its id).
   const OPENS = "[Opens a dialog] ";
   const DIALOG_ACTS = new Set(["queue", "clear-call", "approve", "build", "states", "alternatives", "add-option", "explore", "history", "draw", "decide", "close", "slack-share", "slack-send", "figma-export", "figma-import"]);
-  const DIALOG_DATA = ["decide", "revoke", "size", "dropOption", "adjust", "addProduct", "addPerson", "addShots", "el", "elStates"];
+  const DIALOG_DATA = ["rename", "decide", "revoke", "size", "dropOption", "adjust", "addProduct", "addPerson", "addShots", "el", "elStates"];
   const opensDialog = (el) => el.id === "new-request" || (el.dataset.act ? DIALOG_ACTS.has(el.dataset.act) : DIALOG_DATA.some((k) => k in el.dataset));
   function markOpens(el) { if (opensDialog(el) && !(el.dataset.tip || "").startsWith(OPENS)) el.dataset.tip = OPENS + (el.dataset.tip || textOf(el).replace(/…$/, "")); }
   function tip(root) {
@@ -1708,7 +1708,8 @@
   // `send(answer)` does the action; ask() resolves to its result, or to null on Cancel.
   // `multi`: the choices are checkboxes, `pick` the ids ticked at first, and the answer's
   // `choices` the ids ticked; OK waits until one is.
-  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, url = null, check = null, checked = false, check2 = null, send }) {
+  // `url` is a one-line field's label (a link, or a name with `value` filled in and `max` its length).
+  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
@@ -1719,7 +1720,7 @@
     const okBtn = $("#cf-ok"), none = () => multi && choices && !f.querySelector("input[name=choice]:checked");
     okBtn.disabled = none(); $("#cf-choices").onchange = () => { okBtn.disabled = none(); };
     $("#cf-note-wrap").hidden = !note; $("#cf-note-label").textContent = note || "";
-    $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url);
+    $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url); f.url.value = value; f.url.maxLength = max;
     $("#cf-check-wrap").hidden = !check; $("#cf-check-label").textContent = check || ""; f.check.checked = Boolean(check && checked);
     $("#cf-check2-wrap").hidden = !check2; $("#cf-check2-label").textContent = check2 || ""; f.check2.checked = false;
     dlg.returnValue = ""; dlg.showModal();
@@ -1743,6 +1744,7 @@
   const num = (c) => (c?.id ? `<span class="num">${esc(c.id)}</span>` : "");
   // The item's link, as an icon beside its number: copies a link that opens it.
   const LINK_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>`;
+  const PEN_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const titleLink = (c) => (c && itemLink(c) ? `<button class="linkbtn" data-copy-link aria-label="Copy a link to ${esc(c.id)}" title="A link that opens ${esc(c.id)}: paste it in Slack, an issue or a message">${LINK_ICON}</button>` : "");
   const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${presenting() ? "presentation/" : ""}${c.id}` : "");
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
@@ -2943,7 +2945,7 @@
     return `<h3>Design options</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"${c.chosen?.variant === x.id ? ` class="won"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${c.chosen?.variant === x.id ? "★ " : ""}${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
-      ${againstBox(c, v.id)}${whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures ${v.by ? `${who(v.by)} added` : "added by hand"}; Design Desk drew nothing.</p>` : ""}
+      ${againstBox(c, v.id)}${whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       ${c.chosen ? `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="A designer picked this option as the winner">★ The winner</span> ${who(c.chosen.by)} picked <b>${esc(optionName(c, c.chosen.variant))}</b> · ${esc(when(c.chosen.at))}</p>` : ""}
       <div class="vbar">
         <button class="btn small primary" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
@@ -3011,7 +3013,7 @@
     const theirs = (x) => !x.source || x.source === "person";
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     return `${backBar()}
-      <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
+      <h2>${txt(c.title)}${num(c)}${titleLink(c)}${filedIt(c) || can("close") ? `<button class="linkbtn" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
@@ -4072,6 +4074,13 @@
       const r = await api("POST", `/api/cards/${S.card.id}/work-in`, { threads: ds.workIn.split(",") });
       toast(r.threads.length > 1 ? `Sent. Design Desk works in ${r.threads.length} comments; the design updates here by itself.` : "Sent. Design Desk works it in; the design updates here by itself.");
       await openCard(S.card.id); return;
+    }
+    if ("rename" in ds) {
+      const c = S.card;
+      const r = await ask({ title: "Rename this request", body: "A short name that says what should change and where. Design Desk keeps it as you write it.", ok: "Rename",
+        url: "Name", value: c.title, max: 200, send: (a) => api("POST", `/api/cards/${c.id}/title`, { title: a.url }) });
+      if (!r) return;
+      await refreshList(); await openCard(c.id); return;
     }
     if (ds.size) {
       const small = ds.size === "small";
