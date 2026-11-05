@@ -81,7 +81,18 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
 10. **Catalog.** Every element card whose `source.file` the change touched: set
     `status: stale` and `design desk enqueue catalog C-<n>` ([catalog.md](catalog.md)).
     Put the touched elements' ids in the change card's `elements`.
-11. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —
+11. **Approved design.** `design desk designs` lists every approved design: where its spec
+    went (`issue_url`, `pr_url`, `from`), its option (`asset`) and its elements (`of`, `file`).
+    The change builds one when the PR closes or links its spec's issue, is its `pr_url` or a
+    `design-desk/c<n>-…` branch, names its card (`C-<n>`), or touches the `file` of an element
+    it changes; none → nothing. For that one: `design desk fetch` the option, look at it next to
+    the change's screens element by element, and put `design_check` on the card: `{request,
+    verdict, summary, differences: [{element, card, what, design, shipped}]}` — `verdict`
+    `matches` or `differs`; per element that looks or behaves otherwise than approved, `what`
+    in one sentence, `card` its design catalog card (`in_catalog`, by element), `design` and `shipped` a
+    picture of it in each (`design shot --element`, `--kind image`). Copy, spacing, colour and
+    a missing state count; sample data does not. `differs` waits for a designer.
+12. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —
     not a fix, not a tweak — and fewer than `max_proposals_per_week` proposals were made in
     the last seven days, file a request of type `proposal` from the card (`request.from`),
     with `origin: {channel: "agent", job: "watch", event: {label, url, card}}` ([desk.md](desk.md)
@@ -89,7 +100,7 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
     else "PR #<n> opened"; research it from what you just read, and enqueue `explore`: the
     inbox run makes two or three design proposals the team can pick from, adjust and comment
     on. Suggest it for the presentation (`design desk agenda C-<n> --note "Design Desk proposes"`).
-12. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
+13. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title, number and link ([desk.md](desk.md) → Links to an item), never card text
     beyond the title. Send, then log `logev info notified …`.
 

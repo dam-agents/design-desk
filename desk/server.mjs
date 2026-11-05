@@ -219,6 +219,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "feedback") return send(res, 200, store.openFeedback(p[2], actor));
   if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "chosen") { need("choose"); return send(res, 200, store.choose(p[2], actor, b.variant === null ? null : String(b.variant || ""))); }
+  // An approved design's elements into Product → Elements (docs/catalog.md → From approved designs).
+  if (m === "POST" && p[1] === "cards" && p[3] === "catalog") { need("add"); return send(res, 200, store.addDesignToCatalog(p[2], actor, typeof b.element === "string" ? b.element : "")); }
   if (m === "POST" && p[1] === "cards" && p[3] === "votes") { need("vote"); return send(res, 200, store.vote(p[2], actor, b)); }
   if (m === "POST" && p[1] === "requests") {
     need(b.from ? "follow-up" : "request");
@@ -276,7 +278,7 @@ async function viewerRoute(req, res, url, who) {
     if (action === "slack-send" && !s.slackSend && store.card(p[2]).origin?.channel !== "slack") throw new DeskError(400, `Sending designs to Slack is not turned on for this Desk yet. Ask ${s.contact}.`);
     return send(res, 200, withPing(store.act(p[2], actor, action, b.note, { askFirst: b.ask_first === true, count: b.count ?? null, overrule: b.overrule === true, implement: b.implement === true,
       variant: typeof b.variant === "string" ? b.variant : null, version: Number.isInteger(b.version) ? b.version : null,
-      states: b.states && typeof b.states === "object" && !Array.isArray(b.states) ? b.states : null, part: b.part && typeof b.part === "object" ? b.part : null }), s, who));
+      states: b.states && typeof b.states === "object" && !Array.isArray(b.states) ? b.states : null, part: b.part && typeof b.part === "object" ? b.part : null, element: typeof b.element === "string" ? b.element : null }), s, who));
   }
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
 }
@@ -298,6 +300,8 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: it.card ? store.getCard(it.card) : null, thread: it.thread ? store.thread(it.thread) : null }); }
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
+  // The approved designs a shipped change may build (docs/watch.md → Approved design).
+  if (m === "GET" && p[1] === "designs") return send(res, 200, { designs: store.approvedDesigns() });
   if (m === "GET" && p[1] === "decisions" && !p[2]) return send(res, 200, { decisions: store.listDecisions(decisionQuery(url)) });
   if (m === "GET" && p[1] === "decisions" && p[2]) return send(res, 200, store.getDecision(p[2]));
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
@@ -313,7 +317,7 @@ async function agentRoute(req, res, url) {
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
-  if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve), shots: b.shots ?? null }));
+  if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve), shots: b.shots ?? null, warns: b.warns ?? null }));
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text, shots: b.shots ?? null }));
   if (m === "POST" && p[1] === "cards" && p[3] === "ask") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "asks", text: b.text, step: b.step, questions: b.questions || null }));
   if (m === "POST" && p[1] === "decisions" && !p[2]) return send(res, 201, store.addDecision(b));

@@ -10,6 +10,10 @@ export const LIMITS = {
   threadsPerCard: 300,
   // The states drawn of one option (docs/requests.md → Every state of a part).
   optionStates: 24,
+  // The parts one option changes or adds, each a tile under it (docs/requests.md → The option's elements).
+  optionElements: 24,
+  // What a shipped change does otherwise than the approved design it builds (docs/watch.md → Approved design).
+  designDifferences: 12,
   // The ways of one part a person picks from (docs/requests.md → Alternatives of a part).
   alternatives: 4,
   // What a person writes a new option should look like and have.
@@ -275,7 +279,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -305,7 +309,7 @@ export class Store {
         decided: c.kind === "request" && c.status === "declined" && c.decided?.at || null,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
-        group: c.group || null, thumb: c.screens?.[0]?.asset || null, state_count: (c.states || []).length, looks: (c.history || []).length,
+        group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
@@ -316,6 +320,10 @@ export class Store {
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
         attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
         designed: this.designedOf(c), sent_card: this.sentCardOf(c),
+        // An element from an approved design, not from the product (docs/catalog.md → From approved designs).
+        design: c.design ? { card: c.design.card, option: c.design.option, version: c.design.version, change: c.design.change, of: c.design.of } : null,
+        design_check: c.design_check ? { verdict: c.design_check.verdict, request: c.design_check.request, differences: c.design_check.differences.map((x) => ({ element: x.element, card: x.card })) } : null,
+        in_catalog: c.in_catalog ? c.in_catalog.cards.length : 0,
       }));
   }
 
@@ -351,6 +359,7 @@ export class Store {
     const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
     const against = this.activeConflicts(c).map((x) => x.decision);
     if (against.length) reasons.push(`Goes against ${[...new Set(against)].join(", ")}`);
+    if (c.design_check?.verdict === "differs") reasons.push(`Differs from the approved design ${c.design_check.request}`);
     if (c.kind === "request") {
       const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
@@ -382,7 +391,7 @@ export class Store {
   waitingFor(cardId, viewer) {
     return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done" && (!i.thread || sees(this.db.threads[i.thread], viewer)))
       .sort((a, b) => a.created.localeCompare(b.created))
-      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}) }));
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part?.label ? { part: i.part.label } : {}) }));
   }
 
   getAsset(id) {
@@ -715,6 +724,63 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // One element of the approved option becomes an element of Product → Elements, marked as from
+  // an approved design and not from the product (docs/catalog.md → From approved designs). No
+  // run: the card copies the element's words, states and pictures; pressing it again updates it.
+  addDesignToCatalog(cardId, who, element) {
+    const c = this.card(cardId);
+    if (c.kind !== "request") throw bad("Only a design request has elements to add.");
+    const vs = c.variants || [];
+    const v = vs.find((x) => x.id === c.approved?.variant) || (c.approved && vs.length === 1 ? vs[0] : null);
+    if (!c.approved || !["spec", "handed-off"].includes(c.status) || !v) throw bad("Approve a design option first; its elements then go to the design catalog.");
+    const e = elementsOf(v).find((x) => x.key === String(element || ""));
+    if (!e) throw bad(`That element is not in ${v.name}.`);
+    const id = this.copyToCatalog(c, v, person(who), e.key);
+    this.save();
+    return { card: c, added: id };
+  }
+
+  // An element card for an element of the approved option, made or updated (`key`); without a
+  // key, after a run redraws the option's states, every element already in the catalog follows.
+  copyToCatalog(c, v, by, key = null) {
+    const at = this.clock(), mine = (e) => Object.values(this.db.cards).find((x) => x.kind === "element" && x.design?.card === c.id && x.design?.element === e.key);
+    let made = null;
+    for (const e of elementsOf(v)) {
+      const was = mine(e);
+      if (key ? e.key !== key : !was) continue;
+      const of = e.element && own(this.db.cards, e.element)?.kind === "element" ? this.db.cards[e.element] : null;
+      const states = e.states.map((x) => ({ name: x.name, how: x.how || "", stale: (x.of || 1) < (v.version || 1), asset: x.asset, shot: x.shot || null, selector: x.selector || null, use: x.use || "", stories: (x.stories || []).map((id) => (c.issue_brief?.stories || []).find((st) => st.id === id)?.text).filter(Boolean) }));
+      const card = was || { kind: "element", created: at, created_by: by, sections: [], screens: [], variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" } };
+      Object.assign(card, {
+        status: "current", title: clean(e.name, LIMITS.title, "title"), group: of?.group || "New in approved designs",
+        summary: e.how || (of ? `How ${of.title} looks in the approved design.` : "A new part of the approved design."),
+        design: { card: c.id, request: c.title, variant: v.id, option: v.name, version: v.version || 1, element: e.key, change: e.change || (of ? "changed" : "new"), of: of?.id || null, approved: c.approved?.at || card.design?.approved || null, by: key ? by : card.design?.by || by, at: key ? at : card.design?.at || at },
+        design_part: { asset: v.asset, selector: e.selector || null, shot: e.shot || null, view: e.view || null },
+        design_states: states, states: states.map((x) => ({ name: x.name, how: x.how })), updated: at,
+      });
+      if (!was) { card.id = this.next("card", "C"); this.db.cards[card.id] = card; }
+      made = card.id;
+    }
+    // Which elements of the option are in the catalog, and their cards.
+    const cards = Object.values(this.db.cards).filter((x) => x.kind === "element" && x.design?.card === c.id && x.design?.variant === v.id);
+    c.in_catalog = { variant: v.id, version: v.version || 1, cards: cards.map((x) => x.id), elements: Object.fromEntries(cards.map((x) => [x.design.element, x.id])), by: c.in_catalog?.by || by, at };
+    c.updated = at;
+    return made;
+  }
+
+  // Every approved design, for the watch run to find the one a shipped change builds
+  // (docs/watch.md → Approved design): where its spec went and the elements it changes.
+  approvedDesigns() {
+    return Object.values(this.db.cards).filter((c) => c.kind === "request" && c.approved && ["spec", "handed-off"].includes(c.status)).map((c) => {
+      const v = (c.variants || []).find((x) => x.id === c.approved.variant) || ((c.variants || []).length === 1 ? c.variants[0] : null);
+      const from = own(this.db.cards, c.request?.from);
+      return { card: c.id, title: c.title, status: c.status, approved: c.approved.at, variant: v?.id || null, option: v?.name || null, version: c.approved.version || v?.version || null, asset: v?.asset || null,
+        issue_url: c.spec?.issue_url || null, pr_url: c.spec?.pr_url || null, from: from ? { card: from.id, kind: from.kind, url: from.source?.url || null } : null,
+        elements: v ? elementsOf(v).map((e) => ({ key: e.key, name: e.name, change: e.change, of: e.element || null, file: (e.element && own(this.db.cards, e.element)?.source?.file) || null, states: e.states.length })) : [],
+        in_catalog: c.in_catalog?.elements || {} };
+    });
+  }
+
   // A designer takes an option off the request, as a tab is closed: its votes and notes stay
   // in the record; the last option, and the one a live prototype is built from, stay
   // (docs/requests.md → Taking an option off).
@@ -752,8 +818,16 @@ export class Store {
     v.picked = { alternative: alt.name, part: alt.part, by: person(who), at };
     v.alternatives = [];
     c.updated = at;
+    // The new version reaches what was drawn from the option: its states are drawn again, and
+    // the elements in the design catalog follow it (docs/requests.md → Alternatives of a part).
+    let item = null;
+    if ((v.states || []).length && !Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "states")) {
+      item = this.enqueue("states", c.id, null, who, `Draw every state again for version ${v.version}.`);
+      Object.assign(item, { variant: v.id, scope: "redraw" });
+    }
+    if (c.in_catalog?.variant === v.id) this.copyToCatalog(c, v, c.in_catalog.by);
     this.save();
-    return { card: c };
+    return { card: c, ...(item ? { inbox: item } : {}) };
   }
 
   // A lead asks Design Desk to put a person on the Desk's list with a role; the agent
@@ -782,9 +856,10 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, variant = null, version = null, states = null, part = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
     const c = this.card(cardId);
     if (c.kind === "element") {
+      if (c.design) throw bad(`This element comes from the approved design of ${c.design.card}, not from the product: it is drawn there.`);
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
       if (action !== "refresh" && action !== "history") throw bad("a catalog element can only be redrawn or have its history drawn");
       if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "catalog")) throw bad(BUSY);
@@ -803,7 +878,9 @@ export class Store {
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
-    if (closed && action !== "reopen") throw bad("This request is closed. Press Reopen first.");
+    // Drawing every state of an approved design's element documents it and changes nothing of it,
+    // so it stays open once the design went to developers (docs/requests.md → Every state of a part).
+    if (closed && action !== "reopen" && !(action === "states" && c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
     // A person picks one of the ways a part could look: it becomes the option's next version.
     if (action === "pick-alternative") return this.pickAlternative(c, who, variant, note);
     if (action === "drop-option") return this.dropOption(c, who, variant);
@@ -813,6 +890,9 @@ export class Store {
     const stateOf = action === "states" ? (c.variants || []).find((v) => v.id === variant) : null;
     if (action === "states" && !stateOf) throw bad("Pick the design option whose states to draw.");
     if (action === "states" && !part?.label && !String(note || "").trim()) throw bad("Select the part of the design, or say which part, whose states to draw.");
+    // The element of the option whose states these are, from its tile (docs/requests.md → Every state of a part).
+    const elOf = stateOf && element != null ? elementsOf(stateOf).find((e) => e.key === String(element)) : null;
+    if (stateOf && element != null && !elOf) throw bad("That element is not in this design option.");
     // Ways one part could look, from what a person wrote: the option and the part they picked.
     const altOf = action === "alternatives" ? (c.variants || []).find((v) => v.id === variant) : null;
     if (action === "alternatives" && !altOf) throw bad("Pick the design option whose part to try other ways.");
@@ -899,7 +979,10 @@ export class Store {
     if (action === "build" && askFirst) item.ask_first = true;
     // Straight to the coding agent: the handoff labels its issue (docs/handoff.md, step 5).
     if (action === "approve" && implement) item.implement = true;
-    if (stateOf) { item.variant = stateOf.id; if (part?.label) item.part = cleanPart(part); }
+    if (stateOf) {
+      item.variant = stateOf.id; if (part?.label) item.part = cleanPart(part);
+      if (elOf) item.element = elOf.key;
+    }
     if (live) {
       item.variant = live.id; item.version = live.version || 1;
       // The card says which option, at which version and with which states, goes live.
@@ -1120,9 +1203,11 @@ export class Store {
     return { item: it };
   }
 
-  answer(threadId, text, { resolve = false, shots = null } = {}) {
+  answer(threadId, text, { resolve = false, shots = null, warns = null } = {}) {
     const t = this.thread(threadId);
     const body = clean(text, LIMITS.text, "text");
+    // What a worked-in note goes against, each shown as a warning box under the answer.
+    const against = cleanWarns(warns, this.db.decisions);
     if (t.kind === "private" && shots?.length) throw bad("A private ask is answered in words: Design Desk changes nothing from one.");
     const pictures = this.changeShots(shots, { agent: true });
     // The answer closes the items it could have read: the claimed ones, and open ones
@@ -1131,7 +1216,7 @@ export class Store {
     const items = Object.values(this.db.inbox).filter((it) => it.thread === threadId && it.kind === "question" && it.state !== "done");
     const claimed = items.filter((it) => it.state === "claimed");
     const seen = claimed.length ? Math.max(...claimed.map((it) => it.seen ?? t.messages.length)) : t.messages.length;
-    t.messages.push({ by: { agent: true }, at: this.clock(), text: body, ...pictures });
+    t.messages.push({ by: { agent: true }, at: this.clock(), text: body, ...pictures, ...(against.length ? { warns: against } : {}) });
     let waiting = false;
     for (const it of items) {
       if (it.state === "claimed" || (it.msg_count ?? 0) <= seen) { it.state = "done"; it.done_at = this.clock(); it.outcome = "answered"; }
@@ -1163,7 +1248,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -1201,7 +1286,7 @@ export class Store {
       } else if (k === "sections") next.sections = cleanSections(fields.sections, next.kind === "change" ? brief : null, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") {
-        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || []), c?.variants || [], this.clock(), (c?.dropped_options || []).map((x) => x.id));
+        next.variants = versioned(cleanVariants(fields.variants, this.db.assets, this.db.decisions, c?.variants || [], this.db.cards), c?.variants || [], this.clock(), (c?.dropped_options || []).map((x) => x.id));
         // A designer's pick of an option the redraw no longer has is no pick.
         if (next.chosen && !next.variants.some((v) => v.id === next.chosen.variant)) delete next.chosen;
         // Nor does an option taken off go live, nor a build still waiting to build it.
@@ -1223,6 +1308,11 @@ export class Store {
       // The decisions a card follows, and those it goes against (docs/desk.md → Decisions).
       else if (k === "decisions") { if (!Array.isArray(fields.decisions)) throw bad("decisions must be a list of D-n"); next.decisions = [...new Set(fields.decisions.slice(0, 20).map((id) => this.decision(String(id)).id))]; }
       else if (k === "conflicts") next.conflicts = cleanConflicts(fields.conflicts, this.db.decisions, next.variants);
+      // A shipped change read against the approved design it builds (docs/watch.md → Approved design).
+      else if (k === "design_check") {
+        if (next.kind !== "change") throw bad("design_check belongs to a change card");
+        next.design_check = fields.design_check === null ? null : cleanDesignCheck(fields.design_check, this.db.cards, this.db.assets, this.clock());
+      }
       else if (["bucket", "needs", "sketches", "style", "draw"].includes(k)) {
         if (next.kind !== "issue") throw bad(`${k} belongs to an issue`);
         if (k === "bucket") { if (!ISSUE_BUCKETS.includes(fields.bucket)) throw bad(`bucket must be one of ${ISSUE_BUCKETS.join(", ")}`); next.bucket = fields.bucket; }
@@ -1266,6 +1356,11 @@ export class Store {
     this.keepLook(c, next);
     next.updated = this.clock();
     this.db.cards[next.id] = next;
+    // A design already in the catalog follows every new version of its option and of its states.
+    if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {
+      const v = next.variants.find((x) => x.id === next.in_catalog.variant);
+      if (v) this.copyToCatalog(next, v, next.in_catalog.by);
+    }
     for (const it of Object.values(this.db.inbox)) if (goneLive && it.card === next.id && it.kind === "build" && it.state === "open" && it.variant === goneLive)
       Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not built: its option was taken off the card" });
     this.save();
@@ -1776,7 +1871,7 @@ function versioned(list, before, at, removed = []) {
     const was = old?.version || 1, now = !old ? 1 : old.asset === given.asset ? was : was + 1;
     // Alternatives are of the option at one version: a redrawn option drops the ones it had.
     const alternatives = given.alternatives ? given.alternatives.map((x) => ({ ...x, of: now, drawn: at })) : old && old.asset === given.asset ? old.alternatives || [] : [];
-    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
+    const v = { ...given, stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -1917,6 +2012,47 @@ function cleanConflicts(list, decisions, variants = null) {
   });
 }
 
+// What a note worked in goes against (docs/requests.md → Variants, revise): a decision in force,
+// the issue's brief, or how a pull request made it work — each with its source, for a box under the answer.
+function cleanWarns(list, decisions) {
+  if (list == null) return [];
+  if (!Array.isArray(list) || list.length > 5) throw bad("warns is a list of at most 5");
+  return list.map((x, i) => {
+    const kind = x?.source?.kind;
+    if (!["decision", "issue", "pr"].includes(kind)) throw bad(`warns ${i + 1}: source.kind must be decision, issue or pr`);
+    let source;
+    if (kind === "decision") {
+      const d = own(decisions, String(x.source.ref || ""));
+      if (!d) throw bad(`warns ${i + 1}: no decision ${x.source.ref}`);
+      source = { kind, ref: d.id };
+    } else {
+      if (!/^https?:\/\//i.test(String(x.source.url || ""))) throw bad(`warns ${i + 1}: source.url must be an http(s) link`);
+      source = { kind, url: String(x.source.url).slice(0, 500), label: optText(x.source.label, 80, "source label") };
+    }
+    return { what: clean(x.what, 200, "what it goes against"), why: optText(x.why, 400, "why"), source };
+  });
+}
+
+// What a shipped change does otherwise than the approved design it builds (docs/watch.md →
+// Approved design): per element, what differs, with a picture of each side.
+function cleanDesignCheck(o, cards, assets, at) {
+  if (typeof o !== "object" || !o || Array.isArray(o)) throw bad("design_check must be an object");
+  const r = own(cards, String(o.request || ""));
+  if (r?.kind !== "request" || !r.approved) throw bad(`design_check: ${o.request} is not an approved request`);
+  if (!["matches", "differs"].includes(o.verdict)) throw bad("design_check.verdict must be matches or differs");
+  const list = o.differences === undefined ? [] : o.differences;
+  if (!Array.isArray(list) || list.length > LIMITS.designDifferences) throw bad(`design_check.differences is a list of at most ${LIMITS.designDifferences}`);
+  if (o.verdict === "differs" && !list.length) throw bad("design_check: say what differs");
+  const pic = (id, name) => { if (id == null) return null; if (!own(assets, id)?.contentType?.startsWith("image/")) throw bad(`design_check: ${name} must be an uploaded picture`); return id; };
+  return { request: r.id, variant: optText(o.variant, 20, "variant") || r.approved.variant || null, version: Number.isInteger(o.version) ? o.version : r.approved.version || null,
+    verdict: o.verdict, summary: optText(o.summary, 400, "summary"), at,
+    differences: list.map((x, i) => {
+      const card = x.card == null || x.card === "" ? null : String(x.card);
+      if (card && own(cards, card)?.kind !== "element") throw bad(`design_check difference ${i + 1}: ${card} is not an element`);
+      return { element: clean(x.element, 80, "element"), what: clean(x.what, 400, "what differs"), card, design: pic(x.design, "design"), shipped: pic(x.shipped, "shipped") };
+    }) };
+}
+
 // Where else the same thing shows up, what a change to it touches, and the earlier
 // decisions that bound it — written by the agent, read by people.
 function cleanImpact(o, cards, decisions = {}) {
@@ -1948,7 +2084,7 @@ function cleanShotlist(list) {
   return list.slice(0, 12).map((x) => ({ name: clean(x.name, 120, "shot name"), how: optText(x.how, 600, "how"), path: optText(x.path, 300, "path") }));
 }
 
-function cleanVariants(list, assets, decisions = {}, before = []) {
+function cleanVariants(list, assets, decisions = {}, before = [], cards = {}) {
   if (!Array.isArray(list)) throw bad("variants must be a list");
   return list.slice(0, 12).map((v, i) => {
     // An option the run takes off the card on purpose: `{id, drop: true}`.
@@ -1970,6 +2106,8 @@ function cleanVariants(list, assets, decisions = {}, before = []) {
       ...(Number.isInteger(v.version) ? { read: v.version } : {}),
       // Leaving `states` out keeps the option's states from before; [] removes them.
       ...(v.states === undefined ? {} : { states: cleanOptionStates(v.states, assets, i + 1) }),
+      // Leaving `elements` out keeps the option's elements from before; [] removes them.
+      ...(v.elements === undefined ? {} : { elements: cleanOptionElements(v.elements, assets, cards, i + 1) }),
       // Leaving `alternatives` out keeps the ones from before while the option is unchanged.
       ...(v.alternatives === undefined ? {} : { alternatives: cleanAlternatives(v.alternatives, assets, i + 1) }),
     };
@@ -1994,8 +2132,47 @@ function cleanOptionStates(list, assets, n) {
     const stories = x.stories == null ? [] : x.stories;
     if (!Array.isArray(stories) || stories.length > LIMITS.stories || stories.some((s) => !STORY_ID.test(String(s)))) throw bad(`variant ${n}, state ${i + 1}: stories is a list of user story ids`);
     return { id, name: clean(x.name, 80, "state name"), how: optText(x.how, 300, "how"), part: clean(x.part || "The option", 120, "part"), asset: x.asset,
-      shot: x.shot ?? null, selector: typeof x.selector === "string" && x.selector ? x.selector.slice(0, 500) : null, stories: [...new Set(stories.map(String))], use: optText(x.use, 300, "use"), ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
+      shot: x.shot ?? null, selector: typeof x.selector === "string" && x.selector ? x.selector.slice(0, 500) : null, stories: [...new Set(stories.map(String))], use: optText(x.use, 300, "use"),
+      ...(x.element != null && x.element !== "" ? { element: STATE_ID.test(String(x.element)) ? String(x.element) : (() => { throw bad(`variant ${n}, state ${i + 1}: element is the id of one of the option's elements`); })() } : {}),
+      ...(Number.isInteger(x.version) ? { read: x.version } : {}) };
   });
+}
+
+// The parts an option changes or adds (docs/requests.md → The option's elements): each a tile
+// under the option, its states grouped under it. `element` names the product's own element
+// card it changes, when the catalog has one.
+function cleanOptionElements(list, assets, cards, n) {
+  if (list === null) return [];
+  if (!Array.isArray(list) || list.length > LIMITS.optionElements) throw bad(`variant ${n}: elements is a list of at most ${LIMITS.optionElements}`);
+  const ids = new Set();
+  return list.map((x, i) => {
+    const id = String(x?.id || `e${i + 1}`);
+    if (!STATE_ID.test(id) || ids.has(id)) throw bad(`variant ${n}, element ${i + 1}: its id must be short and its own`);
+    ids.add(id);
+    if (!["new", "changed"].includes(x.change)) throw bad(`variant ${n}, element ${i + 1}: change must be new or changed`);
+    if (x.shot != null && !own(assets, x.shot)?.contentType?.startsWith("image/")) throw bad(`variant ${n}, element ${i + 1}: shot must be an uploaded picture`);
+    const selector = typeof x.selector === "string" && x.selector ? x.selector.slice(0, 500) : null;
+    if (!selector && x.shot == null) throw bad(`variant ${n}, element ${i + 1}: the tile needs a picture of it — its selector in the option's page, or a shot of it alone`);
+    const of = x.element == null || x.element === "" ? null : String(x.element);
+    if (of && (own(cards, of)?.kind !== "element" || own(cards, of).design)) throw bad(`variant ${n}, element ${i + 1}: ${of} is not an element of the product`);
+    return { id, name: clean(x.name, 80, "element name"), change: x.change, how: optText(x.how, 300, "how"), selector, shot: x.shot ?? null,
+      ...(x.view ? { view: String(x.view).slice(0, 40), view_name: optText(x.view_name, 120, "view name") } : {}), element: of };
+  });
+}
+
+// An option's elements with their states: the ones it lists, each with the states drawn of it
+// (`state.element`, else the state's part by name), then one per part its states draw that no
+// listed element names — so an option drawn before it listed elements still shows its parts.
+const partKey = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+export function elementsOf(v) {
+  const out = (v?.elements || []).map((e) => ({ ...e, key: e.id, states: [] }));
+  for (const x of v?.states || []) {
+    let e = x.element ? out.find((y) => !y.derived && y.id === x.element) : null;
+    e ||= out.find((y) => !y.derived && partKey(y.name) === partKey(x.part)) || out.find((y) => y.derived && y.name_key === partKey(x.part));
+    if (!e) { e = { key: `part-${partKey(x.part).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "part"}`, name_key: partKey(x.part), name: x.part, change: null, how: "", derived: true, selector: x.selector || null, shot: x.shot || null, asset: x.asset, element: null, states: [] }; out.push(e); }
+    e.states.push(x);
+  }
+  return out;
 }
 
 // What an issue says about the design, for a request that came from one: the part of its

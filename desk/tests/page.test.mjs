@@ -154,12 +154,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/requests").length === 4);
     assert.equal(await rq.open(), false, "a second Send goes through");
 
-    // The confirmation dialog, through "Close this request…".
+    // The confirmation dialog, through Close… beside the request's next step.
     const cf = dialog("confirm-dialog"), actions = "/api/cards/r1/actions";
     const closeRequest = async () => {
-      await desk.waitForSelector("details.more", { state: "attached" });
-      await desk.evaluate(() => { document.querySelector("details.more").open = true; });
-      await desk.click('[data-act="close"]');
+      assert.equal(await desk.locator('details.more [data-act="close"]').count(), 0, "Close is not under More");
+      await desk.click('.next [data-act="close"]');
       assert.equal(await cf.open(), true);
     };
     await closeRequest();
@@ -412,12 +411,13 @@ test("Needs a designer filters Changes and Requests, and Changes opens on All", 
 }));
 
 // A request's presentation actions sit under More, and stay there once the request is closed
-// (docs/desk.md → The presentation): Add, Not now and Take off each send their call.
+// (docs/desk.md → The presentation): Add and Take off each send their call; Not now sits by the
+// suggestion on the Presentation page.
 const CALL = `<script>
 window.calls = [];
 const cards = [
   { id: "C-4", kind: "request", title: "Shipped, on the call", status: "handed-off", agenda: { status: "queued", by: { email: "d@example.com" } } },
-  { id: "C-5", kind: "request", title: "Shipped, suggested", status: "handed-off", call_suggestion: { note: "Worth showing" } },
+  { id: "C-5", kind: "request", title: "Shipped, suggested", status: "handed-off", call_suggestion: { note: "Worth showing" }, suggested: { note: "Worth showing" } },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
@@ -429,7 +429,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a closed request keeps Add to presentation, Not now and Take off under More", (t) => open(t, CALL, async (desk) => {
+test("a closed request keeps Add to presentation and Take off under More; Not now is on the Presentation", (t) => open(t, CALL, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   const more = async (id) => {
     if (!desk.url().endsWith(`#${id}`)) await desk.goto(`${base}#${id}`);
@@ -441,7 +441,9 @@ test("a closed request keeps Add to presentation, Not now and Take off under Mor
 
   await more("C-5");
   assert.doesNotMatch(await desk.textContent("#detail"), /suggests it for the presentation/, "no suggestion strip on the card");
-  await desk.click('#detail [data-act="not-now"]');
+  assert.equal(await desk.locator('#detail [data-act="not-now"]').count(), 0, "Not now is not under More");
+  await desk.goto(`${base}#presentation`);
+  await desk.click('#detail [data-not-now="C-5"]');
   await sent("DELETE", "/api/cards/C-5/suggestion");
   await more("C-5");
   await desk.click('#detail [data-act="queue"]');
@@ -709,12 +711,17 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('[data-skip-form="t1"]');
     assert.deepEqual(await sent("/api/threads/t1/answers", 2), { answers: [{ choice: null, note: "" }, { choice: null, note: "" }] });
 
-    // Every state of a part: drawn from the workspace only; the card shows each in its design
-    // catalog, a picture of the part alone with the use case it covers.
+    // Every state of a part: under All elements, an option drawn before it listed elements shows
+    // the part its states draw; it opens in a dialog with each state, a picture of the part alone
+    // with the use case it covers, and which option it is of.
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
     assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
-    assert.match(await desk.textContent(".catalog"), /Send button · 1 state[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
-    assert.equal(await desk.getAttribute('.catalog [data-zoom] img', "data-asset"), "A-1");
+    assert.match(await desk.textContent("#detail .elements"), /All elements[\s\S]*Send button[\s\S]*1 state/);
+    await desk.click('#detail [data-el="part-send-button"]');
+    await desk.waitForSelector("#element-dialog[open] .catalog");
+    assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
+    assert.equal(await desk.getAttribute('#element-dialog .catalog [data-zoom] img', "data-asset"), "A-1");
+    await desk.click("#element-dialog [data-el-close]");
     await desk.waitForSelector('.vbar [data-act="workspace"]');
     await desk.click('.vbar [data-act="workspace"]');
     await desk.click('[data-ws-state="error"]');
@@ -1172,7 +1179,7 @@ const BRIDGE_BAR = `<script>
 window.calls = [];
 const at = new Date().toISOString();
 const request = { id: "r6", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
-  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }, { id: "v2", name: "One page", asset: "A-2", fidelity: "wireframe" }], threads: [] };
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe", elements: [{ id: "save", name: "Save button", change: "new", selector: '[data-view="2"] button', view: "2", view_name: "Billing" }] }, { id: "v2", name: "One page", asset: "A-2", fidelity: "wireframe" }], threads: [] };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
@@ -1185,7 +1192,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks; the part picked has every state drawn", async (t) => {
+test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks; an element of the option has every state drawn", async (t) => {
   const run = await launch(t, BRIDGE_BAR.replace("can: { comment: true,", "can: { revise: true, comment: true,"));
   if (!run) return;
   const { top, desk, posts } = run;
@@ -1214,15 +1221,19 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
     assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
 
-    // Draw every state is the workspace's: it sends the option and the part picked.
-    await desk.click('#ws-side [data-act="states"]');
+    // Draw every state is an element's, under the option: the workspace has none; the element's
+    // dialog sends the option, the element and its part.
+    assert.equal(await desk.locator('#ws-side [data-act="states"]').count(), 0, "the workspace has no Draw every state");
+    await desk.click("[data-ws-close]");
+    await desk.click('#detail [data-el="save"]');
+    await desk.waitForSelector("#element-dialog[open] [data-el-states]");
+    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 1[\s\S]*In the design[\s\S]*Draw every state/);
+    await desk.click("#element-dialog [data-el-states]");
     await desk.fill("#confirm-form [name=note]", "The error first.");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Draw the states" }).click();
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r6/actions"));
     const body = JSON.parse((await posts("/api/cards/r6/actions"))[0].body);
-    assert.deepEqual([body.action, body.note, body.variant, body.part.text, body.part.view, body.part.view_name], ["states", "The error first.", "v1", "Save", "2", "Billing"]);
-    assert.match(body.part.label, /Save/);
-    assert.ok(body.part.selector, "the part's CSS path goes with it");
+    assert.deepEqual([body.action, body.note, body.variant, body.element, body.part.text, body.part.label, body.part.view, body.part.view_name, body.part.selector], ["states", "The error first.", "v1", "save", "Save button", "Save button", "2", "Billing", '[data-view="2"] button']);
   } finally {
     await run.close();
   }

@@ -215,6 +215,34 @@
   .catalog .k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin: 8px 0 2px; }
   .catalog ul { margin: 0; padding-left: 18px; font-size: 13px; }
   @media (max-width: 560px) { .catalog li { grid-template-columns: 1fr; } }
+  /* All elements of an option: a small picture of each part it changes or adds; one opens its states. */
+  .elements { margin: 16px 0 4px; }
+  .elhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin: 0 0 8px; }
+  .elhead h4 { margin: 0; font-size: 14px; } .elhead h4 .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .elhead .hint { margin: 0; flex: 1 1 220px; } .elhead .btn { flex: none; }
+  .elgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr)); gap: 10px; }
+  .eltile { display: grid; grid-template-rows: 1fr auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); min-width: 0; overflow: hidden; }
+  .eltile:hover { border-color: var(--accent); }
+  .eltile .elopen { display: grid; grid-template-rows: auto auto 1fr; gap: 6px; text-align: left; padding: 8px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; min-width: 0; }
+  .eltile .elcat { padding: 0 8px 8px; } .eltile .elcat .anchor { font-size: var(--fs-meta, 12px); }
+  .eltile .elpic { display: block; height: 96px; overflow: hidden; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
+  .eltile .elpic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .eltile .elpic iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
+  .eltile .elname { font-weight: 600; font-size: var(--fs-ui, 13px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .eltile .elmeta { display: flex; flex-wrap: wrap; gap: 4px; align-self: end; }
+  /* One element of an option: its states and what each covers, in a dialog over the request. */
+  dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
+  dialog.eldlg > div { padding: 18px 20px 20px; }
+  .elbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+  .elbar h2 { margin: 0 0 4px; font-size: 20px; }
+  /* What comes from an approved design, not from the product: a dashed edge and its own ink. */
+  .row.item.fromdesign { border-left: 3px dashed var(--waiting); }
+  .designbox { padding: 10px 14px; border-radius: var(--radius); border: 1px dashed var(--waiting); background: var(--waiting-soft); max-width: var(--measure); margin: 10px 0; }
+  .designbox p { margin: 2px 0; }
+  .diffs { display: grid; gap: 12px; margin: 8px 0 0; }
+  .diffs .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .diffs figure { margin: 0; } .diffs figcaption { font-size: var(--fs-meta, 12px); color: var(--muted); }
+  .diffs img { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
   /* Where the change is on a picture: boxes the agent measured, shown while "Outline what changed" is on. */
   .shot .pic { max-height: var(--shot-h); overflow: hidden; background: var(--soft); }
   .shot .pic img, .zoom .canvas img { min-height: 0; max-height: none; height: auto; object-fit: initial; }
@@ -232,6 +260,16 @@
   .zoom figcaption { color: #fff; font-size: 13px; text-align: center; max-width: var(--measure); }
   .zoom .gal { top: 50%; transform: translateY(-50%); font-size: 22px; line-height: 1; padding: 10px 14px; }
   .zoom .gal.prev { left: 12px; right: auto; }
+  /* A state of an element, enlarged: the part cut from its page, as large as the screen allows. */
+  .zoom .zoomframe { width: min(1100px, calc(100vw - 48px)); height: calc(100vh - 110px); border: 0; border-radius: 6px; background: #fff; pointer-events: none; display: block; }
+  .catalog li[data-zoom], .catalog li[data-zoom-snip] { cursor: zoom-in; }
+  /* The box after an element's states that has more drawn. */
+  .catalog li.addstate { border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); padding: 0; min-height: 200px; display: grid; align-items: stretch; }
+  .catalog li.addstate > button { height: 100%; width: 100%; display: grid; place-content: center; gap: 6px; text-align: center; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 16px; border-radius: 10px; }
+  .catalog li.addstate > button:hover { background: var(--info-soft); }
+  .catalog li.addstate > button .hint { font-weight: 400; margin: 0; }
+  .catalog li.addstate > .working { margin: 12px; align-self: center; }
+  .catalog li[data-zoom]:hover, .catalog li[data-zoom-snip]:hover { border-color: var(--accent); }
   .steps { display: flex; gap: 0; margin: 14px 0 6px; flex-wrap: wrap; }
   .step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; padding: 4px 10px 4px 0; }
   .step::after { content: "›"; margin-left: 8px; opacity: .5; } .step:last-child::after { content: ""; }
@@ -806,6 +844,8 @@
   </form>
 </dialog>
 
+<dialog id="element-dialog" class="eldlg" aria-label="An element of a design option"><div id="el-body"></div></dialog>
+
 <dialog id="confirm-dialog">
   <form method="dialog" id="confirm-form">
     <h2 id="cf-title"></h2>
@@ -855,7 +895,7 @@
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     revise: "Changing the design as you asked.",
     alternatives: "Drawing other ways the part you picked could look, as you described it. They appear above the design; pick the one to keep.",
-    states: "Drawing every state of the part you picked. Each state appears in the design workspace as it is drawn, and in the request's design catalog with the use case it covers.",
+    states: "Drawing every state of this element. Each state appears here and in the design workspace as it is drawn, with the use case it covers.",
     build: "Building the live prototype: a private copy of the product with this design. The first one can take up to an hour; you can close this page.",
     handoff: "Writing the developer spec and sending it on.",
     teardown: "Switching off the live prototype.",
@@ -935,7 +975,8 @@
 <p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Clickable</b> switch in its top bar outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
 <p><b>One more option</b>: press the <b>+ New option</b> tab after the options. Write what it should look like and have, and pick the option it starts from (or something new). Design Desk draws it next to the others.</p>
 <p><b>Try 3 ways</b>: select a part of an option in the workspace, press <b>Try 3 ways</b> and describe how you picture it. Design Desk draws three ways above the design; click through them and press <b>Use this one</b> on the one to keep. It becomes the option's next version; the one before stays under its versions.</p>
-<p><b>Every state of a part</b>: select a part of an option — a button, a list, a form — and press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions. On the request, the <b>Design catalog</b> shows each state as a picture of the part alone, with the use case of the brief it covers.</p>
+<p><b>All elements</b>: under each option, a small picture of every part it changes or adds, marked New or Changed. Open one to see it in every state, each as a picture of the part alone with the use case of the brief it covers; with none drawn yet, press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
+<p><b>Add to the design catalog</b>: once a design is approved, its elements go to Product → Elements with their states. They are marked <b>✎ From an approved design</b>, apart from the product's own, until the product has them. When the change that builds the design ships, Design Desk compares it with the design: a change that differs says <b>⚠ Differs from the approved design</b> and shows what, side by side.</p>
 <p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>
 <p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. A designer picks the winning option with <b>Select as the winner</b>. A lead developer can mark a request a <b>small change</b>: then any developer but the person who filed it approves it, without a designer; the request shows who marked it and who approved it. A designer or lead developer need not wait for a vote or a live prototype: <b>Send to developers now</b> or <b>Decide and close</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up. While a live prototype is up, the options fold under it; Approve approves the option it shows. <b>Send designs to Slack</b> posts pictures of the options — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
@@ -996,7 +1037,8 @@
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows", "issueFilter:designed": "Issues already designed here and sent to developers",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
-      "productFilter:decisions": "Every decision the team made, kept apart by who made it", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback" }[v]),
+      "productFilter:decisions": "Every decision the team made, kept apart by who made it", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
+      "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
     dside: (v) => ({ "": "Every decision, kept apart by who made it", design: "Only what designers, PMs and leads decided", developer: "Only what developers decided: in code, a pull request or on the Desk" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
@@ -1078,6 +1120,7 @@
     undo: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
     redo: '<path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>',
     x: '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/>',
+    archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
     layers: '<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
     chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12Z"/>',
     image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>',
@@ -1092,10 +1135,10 @@
   };
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: (el) => /Send to developers/.test(textOf(el)) ? "send" : "check",
-      decide: "flag", reopen: "undo", revise: "redo", close: "x", states: "layers", "slack-share": "chat", "slack-send": "send", unqueue: "minus", "not-now": "off",
+      decide: "flag", reopen: "undo", revise: "redo", close: "archive", states: "layers", "slack-share": "chat", "slack-send": "send", unqueue: "minus", "not-now": "off",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
-    adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
+    notNow: "off", adjust: "pen", addShots: "image", focusComposer: "chat", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
   };
   const OWN_SIGN = /^[^\p{L}\p{N}]/u;
   function iconFor(el) {
@@ -1146,7 +1189,10 @@
     // Not over an open menu, a preview or the search's hits.
     if (!t || el.closest("details.more[open] > summary") || $("#peek") || $("#hits")?.hidden === false) return tipHide();
     let box = $("#tip");
-    if (!box) { box = document.createElement("div"); box.id = "tip"; box.setAttribute("role", "tooltip"); document.body.append(box); }
+    if (!box) { box = document.createElement("div"); box.id = "tip"; box.setAttribute("role", "tooltip"); }
+    // Over an open modal dialog it shows inside it: the dialog sits above the page.
+    const host = [...document.querySelectorAll("dialog[open]")].pop() || document.body;
+    if (box.parentElement !== host) host.append(box);
     box.textContent = t;
     const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
     const below = (under && r.bottom + 6 + h <= innerHeight) || r.top - 6 - h < 0;
@@ -1195,7 +1241,7 @@
   }
 
   // ---------- state ----------
-  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { me: null, tab: "requests", newFilter: "all", reqFilter: "open", issueFilter: "sprint", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1637,7 +1683,8 @@
         ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
         ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
         ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
-        ["<b>Draw every state</b> of a part in the design workspace, step through and change each state on its own; the request's <b>Design catalog</b> shows each with the use case it covers.", "revise"],
+        ["<b>All elements</b> under an option: open a part it changes or adds and press <b>Draw every state</b>; each state shows with the use case it covers, and you step through and change each in the design workspace.", "revise"],
+        ["<b>Add to the design catalog</b> once a design is approved: its elements go to Product → Elements, marked as from the approved design.", "add"],
         ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
         ["Skip the vote and the live prototype: <b>Send to developers now</b>, or <b>Decide and close</b> with what you decided.", "skip"],
@@ -1656,7 +1703,7 @@
       steps: ["Pick an issue on the left.", "Read what the UI will need and compare now with the sketch.", "Ask what is unclear, or press Draw it for a sketch.", "Press Design this to have Design Desk draw options for it."] },
     product: { about: "a map of the product: its screens, its parts and the team's decisions",
       see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
-        "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in.",
+        "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in; parts of approved designs, not in the product yet, are marked <b>✎ From an approved design</b>.",
         "<b>Decisions</b>: everything the team decided, each with its number (D-3), who decided it and where; revoked ones too.",
         "<b>History</b>: one page a week, named by its dates: the week's UX changes, the decisions taken and the themes in people's feedback.",
         "Earlier looks of a screen or part: step back through them, or put one next to now."],
@@ -1695,7 +1742,6 @@
     b.classList.toggle("clamped", folded); store.set(kind === "made" ? "desk-made" : "desk-brief", folded ? "folded" : "open");
     t.outerHTML = briefToggle(folded, kind === "made" ? "made" : kind === "bug");
   }, true);
-  document.addEventListener("click", (e) => { const d = e.target.closest?.("details.catalog-fold > summary")?.parentElement; if (d) store.set("desk-catalog", d.open ? "folded" : "open"); }, true);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
@@ -1718,7 +1764,7 @@
   const issueCards = (filter) => S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
       && (filter === "designed" ? c.designed : !c.designed && (filter === "all" || c.bucket === filter)))
     .sort((a, b) => Object.keys(BUCKET).indexOf(a.bucket) - Object.keys(BUCKET).indexOf(b.bucket) || (b.source?.updated || b.updated).localeCompare(a.source?.updated || a.updated));
-  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"] };
+  const FILTERS = { newFilter: ["all", "new", "open", "designer"], reqFilter: ["open", "presentation", "closed", "designer"], issueFilter: ["sprint", "next", "assigned", "label", "all", "designed"], elFilter: ["all", "product", "design"] };
   for (const [k, ok] of Object.entries(FILTERS)) { const v = store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
@@ -1732,7 +1778,11 @@
       const kind = S.productFilter === "elements" ? "element" : "screen";
       // One Design Desk could not add stays a week, so the person who asked sees why.
       const gone = (c) => c.status === "dropped" && Date.now() - Date.parse(c.updated) > 7 * 864e5;
-      return S.cards.filter((c) => c.kind === kind && !gone(c)).sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
+      // Elements from the product, or from approved designs (docs/catalog.md → From approved designs).
+      // A filter kept from an earlier visit holds only while the Desk has elements of designs at all.
+      const mixed = kind === "element" && S.cards.some((c) => c.kind === "element" && c.design);
+      const side = (c) => !mixed || S.elFilter === "all" || (S.elFilter === "design") === Boolean(c.design);
+      return S.cards.filter((c) => c.kind === kind && !gone(c) && side(c)).sort((a, b) => Boolean(a.design) - Boolean(b.design) || (a.group || "").localeCompare(b.group || "") || a.title.localeCompare(b.title));
     }
     if (presenting()) return S.cards.filter((c) => S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id));
     if (S.tab === "requests") return requestCards(S.reqFilter);
@@ -1764,6 +1814,13 @@
       if (added) out.push(added);
       if (c.group) out.push(`<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>`);
       if (c.path) out.push(`<span class="chip" title="The address of this screen in the product"><code>${esc(c.path)}</code></span>`);
+    } else if (c.kind === "element" && c.design) {
+      // Not the product: a part of an approved design, until the product has it.
+      out.push(`<span class="chip warn" title="Drawn in the approved design of ${esc(c.design.card)}, ${esc(c.design.option)}; not in the product yet">✎ From an approved design</span>`);
+      out.push(`<span class="chip" title="${c.design.change === "new" ? "A part the product does not have yet" : "A part of the product this design changes"}">${c.design.change === "new" ? "New" : "Changed"}</span>`);
+      const sh = shippedOf(c.design.card);
+      if (sh) out.push(differsIn(sh, c) ? `<span class="chip bad" title="It shipped in ${esc(sh.id)}, otherwise than designed">⚠ Shipped differently</span>` : `<span class="chip ok" title="It shipped in ${esc(sh.id)} as designed">✓ Shipped as designed</span>`);
+      if (c.state_count) out.push(`<span class="chip" title="The states drawn of it in the design">${plural(c.state_count, "state", "states")}</span>`);
     } else if (c.kind === "element") {
       if (added) out.push(added);
       if (c.group) out.push(`<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>`);
@@ -1783,6 +1840,8 @@
       else if (c.triage && c.triage !== "needs-developer") out.push(`<span class="chip ${c.triage === "design" ? "ok" : "warn"}" title="${esc(VERDICT.idea[c.triage]?.[1] || "")}">${esc(VERDICT.idea[c.triage]?.[0] || "")}</span>`);
     }
     if (c.conflicts) out.push(`<span class="chip bad" title="Open it to see which decision and why">⚠ Goes against a decision</span>`);
+    if (c.design_check?.verdict === "differs") out.push(`<span class="chip bad" title="Open it to see what differs from ${esc(c.design_check.request)}">⚠ Differs from the approved design</span>`);
+    else if (c.design_check) out.push(`<span class="chip ok" title="Design Desk compared it with ${esc(c.design_check.request)}">✓ As designed</span>`);
     return out.join("");
   }
 
@@ -1808,7 +1867,8 @@
       : S.tab === "product" ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["all", "All", newCards("all").length], ["new", "Not seen yet", newCards("new").length], ["open", "Not handled", newCards("open").length], ["designer", "Needs a designer", newCards("designer").length]])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["open", "Open", requestCards("open").length], ["designer", "Needs a designer", requestCards("designer").length], ["closed", "Closed", requestCards("closed").length]])
-      : S.tab === "issues" ? seg("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, l, issueCards(k).length])) : "";
+      : S.tab === "issues" ? seg("issueFilter", Object.entries({ ...BUCKET, all: "All", designed: "✓ Designed" }).map(([k, l]) => [k, l, issueCards(k).length]))
+      : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
     const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(head); return; }
@@ -1827,7 +1887,7 @@
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     // Changes, Requests and Issues say where each came from, without a description; screens and elements are Design Desk's own map.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
-    list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}">
+    list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t">${c.kind === "change" && !c.acked ? '<span class="dot"></span>' : ""}<span>${esc(c.title)}</span>${num(c)}</div></button>
       ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}
       <div class="meta">${chipsFor(c)}</div></div>`).join("");
@@ -1976,8 +2036,8 @@
       <div class="actions">${items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : ""}${can("close") && items.length > 1 ? `<button class="btn" data-act="clear-call">Mark all as presented</button>` : ""}</div>
       ${items.map((a, i) => `<div class="section"><h4>${i + 1}. ${esc(a.title)}${num(a)}</h4>${a.option ? `<p class="sub">Presenting <b>${esc(a.option)}</b></p>` : ""}${a.agenda.note ? `<p class="sub">“${esc(a.agenda.note)}” — ${esc(a.agenda.by?.email || "Design Desk")}</p>` : ""}<b>What we decide</b>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}
         <div class="actions">${markButton(a)}<button class="btn small" data-card="${esc(a.id)}">Open</button></div></div>`).join("") || `<div class="empty">Nothing is on the presentation yet.</div>`}
-      ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the presentation until a designer adds it: open it and choose Add to presentation, or Not now (on a request, both are under More).</p>
-        <ul>${ideas.map((c) => `<li><button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>${c.suggested.note ? ` <span class="sub" style="display:inline">${esc(c.suggested.note)}</span>` : ""}</li>`).join("")}</ul>` : ""}`;
+      ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the presentation until a designer adds it: open it and choose Add to presentation (on a request, under More), or Not now here.</p>
+        <ul>${ideas.map((c) => `<li><button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>${c.suggested.note ? ` <span class="sub" style="display:inline">${esc(c.suggested.note)}</span>` : ""}${can("queue") ? ` <button class="btn small" data-not-now="${esc(c.id)}" title="Design Desk stops suggesting it for the presentation">Not now</button>` : ""}</li>`).join("")}</ul>` : ""}`;
   }
   // Mark one item presented (or put it back with Undo); the presentation steps on to the next.
   async function markPresented(id, presented = true) {
@@ -2031,6 +2091,9 @@
       z.onclick = (e) => { const g = e.target.closest("[data-gal]"); if (g) gallery(z.list, z.index + Number(g.dataset.gal)).catch(fail); else z.remove(); };
       document.body.append(z);
     }
+    // Over an open element dialog, the picture shows in it: a modal dialog sits above the page.
+    const top = $("#element-dialog[open]") || document.body;
+    if (z.parentElement !== top) top.append(z);
     z.list = list; z.index = i;
     const many = list.length > 1, cap = list[i].caption;
     z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button>${many ? `<button class="btn gal prev" data-gal="-1" aria-label="Previous picture">‹</button><button class="btn gal next" data-gal="1" aria-label="Next picture">›</button>` : ""}
@@ -2083,11 +2146,39 @@
   const subNo = (c, k) => `${c.id}.${k}`;
   const subTag = (c, k) => `<a class="subno" href="#${esc(subNo(c, k))}" data-ref="${esc(subNo(c, k))}" title="Its number: cite ${esc(subNo(c, k))} anywhere on the Desk to link here">${esc(subNo(c, k))}</a>`;
   const catalogStates = (c) => (c.variants || []).flatMap((v) => (v.states || []).map((x) => ({ v, x })));
-  // The option a request's numbered state belongs to, so its catalog tab opens on it.
+  // The option a request's numbered state belongs to, so its element opens on it.
   const subVariant = (c, k) => catalogStates(c)[k - 1]?.v.id || null;
+
+  // An option's elements with their states (docs/requests.md → The option's elements): the ones
+  // it lists, each with the states drawn of it, then one per part its states draw that no listed
+  // element names. The same as desk/store.mjs's elementsOf.
+  const partKey = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  function elementsOf(v) {
+    const out = (v?.elements || []).map((e) => ({ ...e, key: e.id, states: [] }));
+    for (const x of v?.states || []) {
+      let e = x.element ? out.find((y) => !y.derived && y.id === x.element) : null;
+      e ||= out.find((y) => !y.derived && partKey(y.name) === partKey(x.part)) || out.find((y) => y.derived && y.name_key === partKey(x.part));
+      if (!e) { e = { key: `part-${partKey(x.part).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "part"}`, name_key: partKey(x.part), name: x.part, change: null, how: "", derived: true, selector: x.selector || null, shot: x.shot || null, asset: x.asset, element: null, states: [] }; out.push(e); }
+      e.states.push(x);
+    }
+    return out;
+  }
+  // Whether Design Desk is drawing the states of this element now.
+  const drawingStates = (c, v, e) => (c.waiting || []).some((w) => w.kind === "states" && w.variant === v.id && (w.scope === "redraw" || (w.element ? w.element === e.key : partKey(w.part) === partKey(e.name))));
+  // The change that shipped a request's approved design, as Design Desk compared them (docs/watch.md → Approved design).
+  const shippedOf = (id) => S.cards.filter((x) => x.kind === "change" && x.design_check?.request === id).sort((a, b) => String(b.updated).localeCompare(String(a.updated)))[0] || null;
+  // Whether a shipped change differs from the approved design in this element of the catalog:
+  // a difference names its card, or its name.
+  const differsIn = (sh, c) => (sh.design_check.differences || []).some((x) => (x.card ? x.card === c.id : partKey(x.element) === partKey(c.title)));
+  // The approved option, once a request is approved: its elements can go to the design catalog.
+  const approvedOption = (c) => c.approved && ["spec", "handed-off"].includes(c.status)
+    ? (c.variants || []).find((x) => x.id === c.approved.variant) || ((c.variants || []).length === 1 ? c.variants[0] : null) : null;
 
   // What a worked-in comment did: Design Desk's answer carries the same place before and after.
   const changed = (m) => m.shots?.length ? `<div class="changed">${shots(m.shots)}</div>` : "";
+  // What a worked-in note goes against, as Design Desk says in its answer: a box per source.
+  const warnsOf = (m) => (m.warns || []).map((w) => `<div class="against"><p>⚠ <b>Goes against ${w.source.kind === "decision" ? decRef(w.source.ref)
+    : `<a href="${safeUrl(w.source.url)}" target="_blank" rel="noopener noreferrer">${esc(w.source.label || (w.source.kind === "pr" ? "the pull request" : "the issue"))} ↗</a>`}</b>: ${txt(w.what)}</p>${w.why ? `<p class="hint">${txt(w.why)}</p>` : ""}</div>`).join("");
 
   // The agent's own install of the product: where people try a change and take pictures.
   function renderInstance(c) {
@@ -2162,7 +2253,7 @@
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}" title="${esc(KIND_TIP[th.kind] || "")}">${esc(name)}</span>${anchor}${state}</div>
-        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${changed(m)}</div>`).join("")}
+        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
         ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`}
       </article>`;
@@ -2317,7 +2408,7 @@
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${requestsFrom(c)}
       ${attentionLine(c)}
-      ${againstBox(c)}${followsLine(c)}
+      ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
       <div class="actions">
         <button class="btn ${seen ? "" : "primary"}" data-ack ${seen ? "disabled" : ""} title="Marks it seen for you: it leaves Not seen yet and Needs a designer; nobody else is told">${seen ? "✓ Seen" : "Got it"}</button>
         ${can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : ""}
@@ -2417,12 +2508,59 @@
   }
 
   // ---------- a catalog element ----------
+  // What a shipped change does otherwise than the approved design it builds (docs/watch.md →
+  // Approved design): per element, what differs, the design and the shipped look side by side.
+  const reqRef = (id) => { const r = S.cards.find((x) => x.id === id); return `<button class="anchor" data-ref="${esc(id)}">${esc(r?.title || id)}</button>${r ? num(r) : ""}`; };
+  function designCheckBox(c) {
+    const k = c.design_check;
+    if (!k) return "";
+    const of = `${reqRef(k.request)}${k.version ? `, version ${esc(k.version)}` : ""}`;
+    if (k.verdict === "matches") return `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="Design Desk compared what shipped with the approved design">✓ As designed</span> It builds the approved design ${of}, and matches it.${k.summary ? ` ${txt(k.summary)}` : ""}</p>`;
+    const fig = (id, cap) => (id ? `<figure data-zoom="${esc(id)}"><img alt="${esc(cap)}" data-asset="${esc(id)}" /><figcaption>${esc(cap)}</figcaption></figure>` : `<div class="nopic hint">${esc(cap)}: no picture</div>`);
+    return `<div class="against"><p>⚠ <b>Differs from the approved design</b> ${of}</p>${k.summary ? `<p class="hint">${txt(k.summary)}</p>` : ""}
+      <div class="diffs">${k.differences.map((d) => `<div><p><b>${esc(d.element)}</b>${d.card ? ` <button class="anchor" data-ref="${esc(d.card)}">${esc(d.card)}</button>` : ""}: ${txt(d.what)}</p>${d.design || d.shipped ? `<div class="two">${fig(d.design, "The approved design")}${fig(d.shipped, "As it shipped")}</div>` : ""}</div>`).join("")}</div>
+      <p class="hint">A designer decides whether it stays: ask for a fix with Adjust the design, or accept it with Mark handled.</p></div>`;
+  }
+  // On a request sent to developers: the change that shipped it, as designed or not.
+  function shippedLine(c) {
+    const sh = c.kind === "request" ? shippedOf(c.id) : null;
+    if (!sh) return "";
+    const bad = sh.design_check.verdict === "differs";
+    return `<p class="hint" style="max-width:var(--measure)"><span class="chip ${bad ? "bad" : "ok"}" title="Design Desk compared the shipped change with this approved design">${bad ? "⚠ Shipped differently" : "✓ Shipped as designed"}</span> in <button class="anchor" data-ref="${esc(sh.id)}">${esc(sh.title)}</button>${num(sh)}${bad ? ": open it to see what differs" : ""}.</p>`;
+  }
+
+  // ---------- an element of an approved design ----------
+  // Not the product: what the approved design drew of it, its states, the design it comes from,
+  // and the product's element it changes (docs/catalog.md → From approved designs).
+  function renderDesignElement(c) {
+    const d = c.design, of = d.of ? S.cards.find((x) => x.id === d.of) : null, sh = shippedOf(d.card), part = c.design_part || {};
+    const pic = (x, label) => x.shot ? `<figure class="shot"${x.zoom === false ? "" : ` data-zoom="${esc(x.shot)}"`}><img alt="${esc(label)}" data-asset="${esc(x.shot)}" /></figure>`
+      : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(label)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : part.asset || "")}"></iframe></div>`
+      : `<div class="nopic hint">No picture of it alone.</div>`;
+    const states = c.design_states || [];
+    const item = (x, k) => `<li id="no-${esc(c.id)}-${k + 1}"${zoomAttrs(x, part.asset, `${c.title}: ${x.name}`)}>${pic({ ...x, zoom: false }, `${c.title}: ${x.name}`)}<div>${subTag(c, k + 1)} <b>${esc(x.name)}</b>${x.stale ? ` <span class="chip warn" title="This state shows the design before its latest version; Design Desk draws it again">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
+      ${(x.stories || []).length || x.use ? `<p class="k">Use case it covers</p><ul>${(x.stories || []).map((t) => `<li>${txt(t)}</li>`).join("")}${!(x.stories || []).length && x.use ? `<li>${txt(x.use)}</li>` : ""}</ul>` : ""}</div></li>`;
+    return `${backBar()}
+      <h2>${txt(c.title)}${num(c)}</h2>
+      <div class="sub"><span class="chip warn" title="Drawn in an approved design; not in the product yet">✎ From an approved design</span><span class="chip" title="${d.change === "new" ? "A part the product does not have yet" : "A part of the product this design changes"}">${d.change === "new" ? "New" : "Changed"}</span>${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}</div>
+      <div class="designbox"><p><b>✎ Not in the product yet.</b> This is how the approved design ${reqRef(d.card)} draws it: <b>${esc(d.option)}</b>, version ${esc(d.version)}${d.approved ? `, approved ${esc(day(d.approved))}` : ""}. ${who(d.by)} added it to the catalog ${esc(when(d.at))}.</p>
+        <p>${of ? `It changes the product's <button class="anchor" data-ref="${esc(of.id)}">${esc(of.title)}</button>${num(of)}: open it to see how it is now.` : "The product has no such element yet."}</p>
+        <p class="hint">${sh ? `${differsIn(sh, c) ? "⚠ It shipped differently" : "✓ It shipped as designed"} in <button class="anchor" data-ref="${esc(sh.id)}">${esc(sh.title)}</button>${num(sh)}.` : "When the change that builds it ships, Design Desk compares it with this design and says on that change whether it differs."}</p></div>
+      ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${part.shot || part.asset ? `<div class="catalog" style="max-width:var(--measure)">${pic({ ...part, asset: part.shot ? null : part.asset }, c.title)}</div>` : ""}
+      ${states.length ? `<h3>Every state · ${plural(states.length, "state", "states")}</h3><div class="catalog"><ol>${states.map(item).join("")}</ol></div>` : `<p class="hint">No states were drawn of it in the design.</p>`}
+      ${renderThreads(c)}`;
+  }
+
   function renderElement(c) {
+    if (c.design) return renderDesignElement(c);
     const src = c.source || {};
+    const designs = S.cards.filter((x) => x.kind === "element" && x.design?.of === c.id);
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       <div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn" title="Update the drawing draws it again from the product as it is">out of date: the product changed since it was drawn</span>` : ""}</div>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${designs.map((x) => `<div class="designbox"><p>✎ An approved design changes it: <button class="anchor" data-ref="${esc(x.id)}">${esc(x.title)}</button>${num(x)}, from ${reqRef(x.design.card)}. Until that ships, the drawing below is the product as it is.</p></div>`).join("")}
       ${renderWanted(c)}
       ${c.status === "dropped" ? "" : `<div class="actions">${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}</div>
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
@@ -2553,7 +2691,9 @@
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
     // A designer or a lead developer may skip the options, the vote and the prototype.
-    const skip = (can("skip") && canApprove(c) ? b("approve", "Send to developers now…") : "") + (can("skip") ? b("decide", "Decide and close…") : "");
+    // Ending it: with a decision recorded in the person's name, or closed without one.
+    const ends = (can("skip") ? b("decide", "Decide and close…") : "") + (can("close") ? b("close", "Close…") : "");
+    const skip = (can("skip") && canApprove(c) ? b("approve", "Send to developers now…") : "") + ends;
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, buttons: b("explore", "Draw design options", true) + skip } : { text: none || "Next: a designer or developer starts the design options.", buttons: skip };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec") return (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
@@ -2562,21 +2702,21 @@
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
       return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
-        sub: failed ? "Design Desk wrote why in the comments below." : "", buttons: (design && can("build") ? b("build", failed ? "Try again" : "Build it again", true) : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
+        sub: failed ? "Design Desk wrote why in the comments below." : "", buttons: (design && can("build") ? b("build", failed ? "Try again" : "Build it again", true) : "") + (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (live(c)) {
       return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c),
-        buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
+        buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + ends };
     }
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
       return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, ask the team for feedback." : "The options are drawn. The request's author, a designer, a developer or a lead asks the team for feedback once they are fine-tuned.",
-        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
+        buttons: (mine ? `<button class="btn primary" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, developers and leads may on any request"}.">Ask the team for feedback</button>` : "") + (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       const shaper = can("revise");
       return { text: "Your turn: look at the options, 👍 the one you like or ⚠ what worries you, and comment on any part.",
-        buttons: (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + (can("skip") ? b("decide", "Decide and close…") : "") };
+        buttons: (design && can("build") ? b("build", "Build a live prototype…") : "") + (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     return { text: "", buttons: "" };
   }
@@ -2586,15 +2726,17 @@
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
     const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
     const nx = nextFor(c);
+    // Close stays at hand while the request is open, whatever step it is at.
+    if (!closed(c) && can("close") && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close…</button>`;
     // The presentation lives in More too: the card shows its main buttons and nothing else.
     const queued = c.agenda?.status === "queued", presented = c.agenda?.status === "presented";
     // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
     const undo = presented && can("close") && Date.now() <= Date.parse(c.agenda.undo_until) ? `<button class="btn" data-unpresent="${esc(c.id)}">Undo: not presented yet</button>` : "";
     const call = queued ? (can("close") ? `<button class="btn" data-presented="${esc(c.id)}">✓ Mark as presented</button>` : "") + ((c.agenda.by?.email && c.agenda.by.email === S.me?.email) || can("close") ? `<button class="btn" data-act="unqueue">Take off the presentation</button>` : "")
-      : undo + (can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>${c.call_suggestion ? `<button class="btn" data-act="not-now" title="Design Desk suggested it for the presentation; it will not suggest it again">Not now: don't suggest it for the presentation</button>` : ""}` : "");
+      : undo + (can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "");
     // A closed request keeps its presentation actions; only the design actions leave.
     const size = can("size") && !closed(c) && c.status !== "spec" && !c.approved ? (c.size?.small ? `<button class="btn" data-size="designer">Send through a designer</button>` : `<button class="btn" data-size="small">Mark as small change</button>`) : "";
-    const items = call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}${can("close") ? `<button class="btn" data-act="close">Close this request…</button>` : ""}`);
+    const items = call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c)}</div>
@@ -2680,7 +2822,8 @@
         ${voteButtons(c, v.id, mine)}
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
-      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div>`;
+      <iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>
+      ${renderOptionElements(c, v)}</div>`;
   }
 
   // Votes in Slack: open until their date, then the result.
@@ -2740,7 +2883,7 @@
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
-      ${renderStatus(c)}
+      ${renderStatus(c)}${shippedLine(c)}
       </div>
       <div class="top2">
       <div class="brief${store.get("desk-brief") === "folded" ? " clamped" : ""}"><div class="brief-k">${askHead(c, bug)}</div><div class="brief-body">
@@ -2755,8 +2898,8 @@
       ${shots(found)}
       ${renderVerdict(c)}
       </div>${briefToggle(store.get("desk-made") === "folded", "made")}</div></div>
-      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}${renderCatalog(c)}`
-        : `${renderOptions(c)}${renderStories(c)}${renderCatalog(c)}${renderPrototype(c)}`}
+      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${can("build") ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>${renderStories(c)}`
+        : `${renderOptions(c)}${renderStories(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
       ${c.spec?.asset ? `<details class="fold"${c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? " open" : ""}><summary>The developer spec</summary><div class="panel" id="spec-body">…</div></details>` : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
@@ -2836,34 +2979,119 @@
       <div class="stories"><ol>${ss.map((x) => `<li><button data-story="${esc(x.id)}" aria-pressed="${x.id === st.id}">${v ? mark(x) : ""}<span>${txt(x.text)}</span></button></li>`).join("")}</ol>
         <div><p class="story">${txt(st.text)}${st.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}</p>${detail}</div></div>`;
   }
-  // The design catalog: every state drawn of a part of an option, each as a picture of the part
-  // alone, with what it is, when it happens and the use case of the brief it serves
-  // (docs/requests.md → Every state of a part). States are drawn from the design workspace.
-  function renderCatalog(c) {
-    const vs = (c.variants || []).filter((x) => (x.states || []).length);
-    if (!vs.length) return "";
-    const v = vs.find((x) => x.id === S.variant) || vs[0], ss = c.issue_brief?.stories || [];
-    const parts = [...new Set(v.states.map((x) => x.part))];
-    const useOf = (x) => {
-      const told = (x.stories || []).map((id) => ss.find((st) => st.id === id)).filter(Boolean);
-      if (told.length) return told.map((st) => `<li>${txt(st.text)}</li>`).join("");
-      return x.use ? `<li>${txt(x.use)}</li>` : "";
+  // One state of an element, as the design catalog shows it: a picture of the part alone, what
+  // it is, when it happens and the use case of the brief it serves (docs/requests.md → Every
+  // state of a part). Its number, C-12.3, counts the request's states across its options.
+  // A card that enlarges on a click: its picture of the part alone in the gallery, else the
+  // part cut from the state's page, as large as the screen allows.
+  const zoomAttrs = (x, base, label) => x.shot ? ` data-zoom="${esc(x.shot)}"`
+    : x.asset ? ` data-zoom-snip="${esc(x.asset)}" data-zoom-sel="${esc(x.selector || "")}" data-zoom-base="${esc(x.selector ? "" : base || "")}" data-zoom-label="${esc(label)}"` : "";
+  async function zoomSnip(el) {
+    const html = decode(await asset(el.dataset.zoomSnip)), base = el.dataset.zoomBase;
+    const sel = el.dataset.zoomSel || (base ? diffPath(decode(await asset(base)), html) : "");
+    $(".zoom")?.remove();
+    const z = document.createElement("div"); z.className = "zoom"; z.onclick = () => z.remove();
+    z.innerHTML = `<button class="btn small" aria-label="Close the picture">✕ Close</button><figure><iframe class="zoomframe" sandbox="allow-scripts" title="${esc(el.dataset.zoomLabel || "")}"></iframe><figcaption>${esc(el.dataset.zoomLabel || "")}</figcaption></figure>`;
+    ($("#element-dialog[open]") || document.body).append(z);
+    const f = z.querySelector("iframe");
+    // The frame takes the part's own shape, enlarged to fit the screen, the part centred in it:
+    // the page tells its size. A part it cannot name (no path) shows the whole page in a large frame.
+    if (sel) { f.style.visibility = "hidden"; setTimeout(() => { f.style.visibility = ""; }, 1500); }
+    f.srcdoc = sel ? (html.includes("</body>") ? html.replace("</body>", `${ZOOM_SCRIPT(sel)}</body>`) : html + ZOOM_SCRIPT(sel)) : snipDoc(html, "", "", false);
+  }
+  // Inside an enlarged part's frame: only the part shows, centred and scaled to the frame, again on
+  // every resize; its own size goes to the page, which gives the frame its shape.
+  const ZOOM_SCRIPT = (sel) => `<script>(()=>{const S=${js(sel)},b=document.body,d=document.documentElement;
+    const rv=document.getElementById("review");if(rv)rv.style.display="none";
+    let e=null;try{e=document.querySelector(S)}catch{}if(!e)return;
+    const vw=e.closest("[data-view]");if(vw){const t=document.querySelector('[data-review-view="'+vw.dataset.view+'"]');t&&t.click()}
+    d.style.overflow="hidden";b.style.visibility="hidden";e.style.visibility="visible";b.style.transformOrigin="0 0";let told=0;
+    const fit=()=>{b.style.transform="none";scrollTo(0,0);const r=e.getBoundingClientRect(),o=b.getBoundingClientRect(),W=innerWidth,H=innerHeight,p=12;if(!r.width||!r.height||!W||!H)return;
+      if(!told){told=1;parent.postMessage({type:"desk-snip-size",w:r.width,h:r.height},"*")}
+      const k=Math.min((W-2*p)/r.width,(H-2*p)/r.height,2.5),tx=(W-r.width*k)/2-o.left-k*(r.left-o.left),ty=(H-r.height*k)/2-o.top-k*(r.top-o.top);
+      b.style.transform="translate("+tx+"px,"+ty+"px) scale("+k+")"};
+    fit();addEventListener("load",fit);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
+  addEventListener("message", (e) => {
+    const f = document.querySelector(".zoom .zoomframe");
+    if (!f || e.source !== f.contentWindow || e.data?.type !== "desk-snip-size") return;
+    const w = Number(e.data.w) + 24, h = Number(e.data.h) + 24;
+    if (w > 24 && h > 24) { const k = Math.min(2.5, (innerWidth - 96) / w, (innerHeight - 140) / h); Object.assign(f.style, { width: `${Math.round(w * k)}px`, height: `${Math.round(h * k)}px` }); }
+    f.style.visibility = "";
+  });
+  function catalogItem(c, v, x) {
+    const ss = c.issue_brief?.stories || [], k = catalogStates(c).findIndex((y) => y.x === x) + 1;
+    const told = (x.stories || []).map((id) => ss.find((st) => st.id === id)).filter(Boolean);
+    const use = told.length ? told.map((st) => `<li>${txt(st.text)}</li>`).join("") : x.use ? `<li>${txt(x.use)}</li>` : "";
+    const stale = (x.of || 1) < (v.version || 1);
+    const pic = x.shot ? `<figure class="shot"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
+      : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : v.asset || "")}"></iframe></div>`
+      : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
+    return `<li id="no-${esc(c.id)}-${k}"${zoomAttrs(x, v.asset, `${x.part}: ${x.name}`)}>${pic}<div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
+      ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
+  }
+
+  // All elements of an option: every part it changes or adds, as a small picture under the
+  // design; one opens in a dialog with its states (docs/requests.md → The option's elements).
+  const CHANGE = { new: ["New", "info", "A part the product does not have yet"], changed: ["Changed", "warn", "A part of the product this design changes"] };
+  function elementPic(v, e) {
+    if (e.shot) return `<img alt="" data-asset="${esc(e.shot)}" />`;
+    const page = e.derived ? e.asset : v.asset;
+    return page ? `<iframe sandbox="allow-scripts" loading="lazy" tabindex="-1" aria-hidden="true" data-snip-asset="${esc(page)}" data-snip-sel="${esc(e.selector || "")}" data-snip-base="${esc(e.selector ? "" : v.asset || "")}"></iframe>` : "";
+  }
+  // An element of the approved option goes to the design catalog on its own; once there, a link to it.
+  function catalogButton(c, v, e) {
+    if (approvedOption(c)?.id !== v.id) return "";
+    const id = c.in_catalog?.variant === v.id ? c.in_catalog.elements?.[e.key] : null;
+    if (id) return `<button class="anchor" data-el-goto="${esc(id)}" title="It is in Product → Elements, marked as from this approved design; open it there">✓ In the catalog</button>`;
+    return can("add") ? `<button class="btn small" data-add-catalog="${esc(e.key)}" title="Add to the design catalog: it goes to Product → Elements with its states, marked as from this approved design">Add to catalog</button>` : "";
+  }
+  function renderOptionElements(c, v) {
+    const els = elementsOf(v);
+    const head = `<div class="elhead"><h4>All elements${els.length ? `<span class="n">${els.length}</span>` : ""}</h4><span class="hint">The parts this option changes or adds, each on its own. Open one to see it in every state.</span></div>`;
+    // Nothing listed yet: no section, there is nothing to do with it.
+    if (!els.length) return "";
+    const tile = (e) => {
+      const busy = drawingStates(c, v, e), ch = CHANGE[e.change];
+      const cat = catalogButton(c, v, e);
+      return `<div class="eltile"><button class="elopen" data-el="${esc(e.key)}" title="Open ${esc(e.name)}: every state of it and the use case each covers"><span class="elpic">${elementPic(v, e)}</span><span class="elname">${esc(e.name)}</span>
+        <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
     };
-    const all = catalogStates(c);
-    const item = (x) => {
-      const k = all.findIndex((y) => y.x === x) + 1;
-      const use = useOf(x), stale = (x.of || 1) < (v.version || 1);
-      const pic = x.shot ? `<figure class="shot" data-zoom="${esc(x.shot)}"><img alt="${esc(`${x.part}: ${x.name}`)}" data-asset="${esc(x.shot)}" /></figure>`
-        : x.asset ? `<div class="snipbox"><iframe sandbox="allow-scripts" loading="lazy" title="${esc(`${x.part}: ${x.name}`)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : v.asset || "")}"></iframe></div>`
-        : `<div class="nopic hint">No picture of the part alone yet; open it in the design workspace.</div>`;
-      return `<li id="no-${esc(c.id)}-${k}">${pic}<div>${subTag(c, k)} <b>${esc(x.name)}</b>${stale ? ` <span class="chip warn" title="This state shows the option before its latest change">drawn for an earlier version</span>` : ""}${x.how ? `<p class="hint">${esc(x.how)}</p>` : ""}
-        ${use ? `<p class="k">Use case it covers</p><ul>${use}</ul>` : (x.stories || []).length ? `<p class="hint">Covers a user story the brief no longer has.</p>` : `<p class="hint">Not tied to a use case of the brief.</p>`}</div></li>`;
-    };
-    // It folds like the request's own text, and stays so in this browser.
-    return `<details class="fold big catalog-fold"${store.get("desk-catalog") === "folded" ? "" : " open"}><summary><h3>Design catalog</h3><span class="chip tag t-approved" title="States drawn of ${esc(v.name)}">${plural(v.states.length, "state", "states")}</span></summary>
-      <p class="hint" style="max-width:var(--measure)">Every state Design Desk drew of a part of ${esc(v.name)}, each on its own, with the use case of the brief it covers. To draw more, select a part in the design workspace and press Draw every state of this part.</p>
-      ${vs.length > 1 ? `<div class="tabs">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"${c.chosen?.variant === x.id ? ` class="won"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}</button>`).join("")}</div>` : ""}
-      ${parts.map((p) => `<div class="catalog"><h4>${esc(p)} · ${plural(v.states.filter((x) => x.part === p).length, "state", "states")}</h4><ol>${v.states.filter((x) => x.part === p).map(item).join("")}</ol></div>`).join("")}</details>`;
+    return `<section class="elements">${head}<div class="elgrid">${els.map(tile).join("")}</div></section>`;
+  }
+
+  // The element dialog: which design it is of, what it is, and every state drawn of it; without
+  // states, the button that has them drawn. It follows the card as it refreshes.
+  $("#element-dialog").addEventListener("close", () => { S.el = null; });
+  // Escape over an enlarged picture closes the picture, not the dialog.
+  $("#element-dialog").addEventListener("cancel", (e) => { const z = $("#element-dialog .zoom"); if (z) { e.preventDefault(); z.remove(); } });
+  function openElement(variant, key) { S.el = { card: S.card?.id, variant, key }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
+  function renderElementDialog() {
+    const dlg = $("#element-dialog");
+    if (!S.el) { if (dlg.open) dlg.close(); return; }
+    const c = S.card, vs = c?.kind === "request" && c.id === S.el.card ? c.variants || [] : [], v = vs.find((x) => x.id === S.el.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
+    if (!e) { S.el = null; if (dlg.open) dlg.close(); return; }
+    const busy = drawingStates(c, v, e), ch = CHANGE[e.change];
+    // An approved design's element still gets its states drawn once it went to developers: they document it.
+    const may = can("revise") && c.status !== "declined" && !busy;
+    const stale = e.states.filter((x) => (x.of || 1) < (v.version || 1));
+    // Without states, the first card is the element as the design draws it (one of its states
+    // shows it once they are drawn); the last card draws them.
+    const look = { shot: e.shot, asset: e.shot ? null : e.derived ? e.asset : v.asset, selector: e.selector };
+    const lookPic = look.shot ? `<figure class="shot"><img alt="${esc(e.name)}" data-asset="${esc(look.shot)}" /></figure>`
+      : `<div class="snipbox"><iframe sandbox="allow-scripts" title="${esc(e.name)}" data-snip-asset="${esc(look.asset)}" data-snip-sel="${esc(look.selector || "")}" data-snip-base="${esc(look.selector ? "" : v.asset || "")}"></iframe></div>`;
+    const first = `<li${zoomAttrs(look, v.asset, `${e.name}: in the design`)}>${lookPic}<div><b>In the design</b><p class="hint">As the option draws it now.</p></div></li>`;
+    const more = busy ? `<li class="addstate"><div class="working"><span class="spin"></span><div>${esc(WORK.states)}</div></div></li>`
+      : may ? `<li class="addstate"><button data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">+ ${e.states.length ? "Draw the states again" : "Draw every state"}<span class="hint">hovered, disabled, loading, empty, an error, a long text…</span></button></li>` : "";
+    $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
+        <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${c.chosen?.variant === v.id ? `<span class="chip ok" title="A designer picked this option as the winner">★ The winner</span>` : ""}${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
+        <button class="btn small" data-el-close aria-label="Close">✕ Close</button></div>
+      ${e.how ? `<p style="max-width:var(--measure)">${txt(e.how)}</p>` : ""}
+      ${catalogButton(c, v, e) ? `<div class="actions" style="margin:0 0 8px">${catalogButton(c, v, e)}</div>` : ""}
+      ${stale.length ? `<p class="hint"><span class="chip warn" title="These states show the option before its latest change">${plural(stale.length, "state", "states")} drawn for an earlier version</span> Design Desk redraws them when it changes the option.</p>` : ""}
+      <div class="catalog"><ol>${e.states.length ? "" : first}${e.states.map((x) => catalogItem(c, v, x)).join("")}${more}</ol></div>`
+      // A lazy frame in a modal dialog never loads: the browser does not see it come into view.
+      .replaceAll(' loading="lazy"', "");
+    loadPictures(dlg).catch(() => {});
   }
   // The story's parts, outlined in the option and the first one scrolled into view.
   function storyPins() {
@@ -3073,11 +3301,11 @@
       ${againstBox(c, v.id)}
       <div><h4 style="margin:0 0 6px">Click through ${sts.length ? `the option and its ${plural(sts.length, "state", "states")}` : "the option"}</h4>
         <ol class="checklist">${row(null, "The option", "", 1)}${sts.map((x) => row(x.id, x.name, x.part, x.version || 1)).join("")}</ol>
-        <p class="hint">${sts.length ? `You looked at ${seen} of ${sts.length + 1}.` : "No states are drawn for this option. To check a part in every state first, make more changes and press Draw every state."}</p></div>
+        <p class="hint">${sts.length ? `You looked at ${seen} of ${sts.length + 1}.` : "No states are drawn for this option. To check a part in every state first, open it under All elements below the option and press Draw every state."}</p></div>
       ${changing ? `<div class="working"><span class="spin"></span><div>Design Desk is changing this option right now. Wait for the new version; it appears here by itself.</div></div>` : ""}
       ${drawing ? `<div class="working"><span class="spin"></span><div>Design Desk is still drawing states of this request; they appear here as they are drawn.</div></div>` : ""}
       ${changes.length && !changing ? `<p><span class="chip warn" title="Design Desk has not changed the design for them yet">${plural(changes.length, "note is", "notes are")} not worked in yet</span> <span class="hint" style="display:inline">Build now and ${changes.length === 1 ? "it is" : "they are"} left out, or wait for Design Desk.</span></p>` : ""}
-      ${stale.length ? `<p><span class="chip warn" title="These states show the option before its latest change">${esc(stale.map((x) => x.name).join(", "))}: drawn for an earlier version</span> <span class="hint" style="display:inline">They still show the option as it was. Design Desk redraws them when it changes the option; press Draw every state to have them drawn again now.</span></p>` : ""}
+      ${stale.length ? `<p><span class="chip warn" title="These states show the option before its latest change">${esc(stale.map((x) => x.name).join(", "))}: drawn for an earlier version</span> <span class="hint" style="display:inline">They still show the option as it was. Design Desk redraws them when it changes the option; open the element under All elements to have them drawn again now.</span></p>` : ""}
       ${comments ? `<p class="hint">${plural(comments, "open comment", "open comments")} on this option. Comments are not built in unless someone presses Work it in.</p>` : ""}
       <label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="ws-ask-first" data-ws-ask ${askFirst ? "checked" : ""} style="width:auto;margin-top:3px" /> <span>Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)</span></label>
       <div class="actions" style="margin:0"><button class="btn primary" data-ws-build ${changing || stale.length ? "disabled" : ""}>Build it live</button><button class="btn" data-ws-edit>Make more changes</button>${(c.variants || []).length > 1 ? `<button class="btn" data-act="build">Pick another option</button>` : ""}</div>
@@ -3108,7 +3336,7 @@
         <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
         ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
         ${whyOfSelected(c, v, sel)}
-        ${sel ? `<div class="actions" style="margin:6px 0 0">${can("revise") && !S.ws.state ? `<button class="btn small" data-act="alternatives" title="Describe how you picture this part; Design Desk draws three ways and you pick one">Try 3 ways</button><button class="btn small" data-act="states" title="Design Desk draws this part in every state it can be in">Draw every state of this part</button>` : ""}<button class="btn small" data-ws-clear>Clear selection</button></div>` : ""}
+        ${sel ? `<div class="actions" style="margin:6px 0 0">${can("revise") && !S.ws.state ? `<button class="btn small" data-act="alternatives" title="Describe how you picture this part; Design Desk draws three ways and you pick one">Try 3 ways</button>` : ""}<button class="btn small" data-ws-clear>Clear selection</button></div>` : ""}
         ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
         ${old ? "" : `<div class="composer" style="margin:10px 0 0">
         <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change in this part? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
@@ -3162,7 +3390,7 @@
     const workIn = all.filter((n) => workable(c, n));
     // No notes on this option: no section at all.
     if (!all.length) return "";
-    const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}${changed(m)}</div>`;
+    const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}${warnsOf(m)}${changed(m)}</div>`;
     return `<div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}${st ? ` · ${esc(st.name)}` : ""}</h3>
       <div style="margin:0 0 8px">${seg("wsFilter", [["open", "Open", count("open")], ["done", "Done", count("done")], ["all", "All", count("all")]], "ws-filter", f)}</div>
       ${workIn.length > 1 ? `<div class="actions" style="margin:0 0 8px"><button class="btn small" data-work-in="${esc(workIn.map((n) => n.id).join(","))}">Work in all ${workIn.length} open comments</button></div>` : ""}
@@ -3293,7 +3521,7 @@
     }
   }
 
-  function renderDetail() { renderDetailBody(); renderAsk(); }
+  function renderDetail() { renderDetailBody(); renderAsk(); if (S.el) renderElementDialog(); }
   // Another item, decision or tab opens at its top; a redraw of the same one keeps the place.
   let shown = null;
   function renderDetailBody() {
@@ -3391,6 +3619,9 @@
     const v = to.sub && subVariant(S.card, to.sub);
     if (v && v !== S.variant) { S.variant = v; await openCard(c.id); }
     if (to.sub && S.look !== "now") { S.look = "now"; S.lookSide = false; renderDetail(); }
+    // A request's numbered state opens in the dialog of its element.
+    const st = to.sub && S.card?.kind === "request" ? catalogStates(S.card)[to.sub - 1] : null;
+    if (st) openElement(st.v.id, elementsOf(st.v).find((e) => e.states.includes(st.x))?.key);
     if (to.sub) { const n = document.getElementById(`no-${c.id}-${to.sub}`); if (n) { n.scrollIntoView({ block: "center" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 2000); } else toast(`${c.id} has no number ${to.sub}.`); }
     return true;
   }
@@ -3463,13 +3694,13 @@
         send: (a) => post("", { ask_first: a.check }) });
       if (!res) return;
     }
-    // Every state of one part of an option: the part selected in the workspace, or the one named.
+    // Every state of one element of an option, from its dialog (docs/requests.md → Every state of a part).
     if (name === "states") {
-      const sel = S.ws.open ? S.ws.selected : null;
-      const v = (S.ws.open ? wsVariant(c) : null) || (c.variants || []).find((x) => x.id === S.variant) || c.variants?.[0];
-      if (!v) return;
-      res = await ask({ title: "Draw every state of a part", body: `Design Desk draws ${sel ? `**${sel.label}**` : "the part you name"} of **${v.name}** in every state it can be in — such as hovered, pressed, disabled, loading, empty, with an error or with a long text — each as its own picture you can step through, comment on and change. It takes a few minutes.`,
-        ok: "Draw the states", note: sel ? "Anything to add? e.g. which states matter most (optional)" : "Which part? e.g. the upload button, the list of files", send: (a) => post(a.note || "", { variant: v.id, ...(sel ? { part: { selector: sel.selector, text: sel.text, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } } : {}) }) });
+      const v = (c.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
+      if (!e) return;
+      res = await ask({ title: `Draw every state of ${e.name}`, body: `Design Desk draws **${e.name}** of **${v.name}** in every state it can be in — such as hovered, pressed, disabled, loading, empty, with an error or with a long text — each as its own picture, with the use case it covers. You can step through them, comment on and change each in the design workspace. It takes a few minutes.`,
+        ok: "Draw the states", note: "Anything to add? e.g. which states matter most (optional)",
+        send: (a) => post(a.note || "", { variant: v.id, element: e.key, part: { selector: e.selector || "", text: e.name, label: e.name, view: e.view || null, view_name: e.view_name || null } }) });
       if (!res) return;
     }
     // Three ways one part could look, from what the person writes (docs/requests.md → Alternatives of a part).
@@ -3504,7 +3735,7 @@
       if (!res) return;
     }
     if (name === "close") {
-      res = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. You can reopen it later.", ok: "Close it", send: () => post("") });
+      res = await ask({ title: "Close this request?", body: "Design Desk stops working on it and switches off its live prototype. Nothing is recorded as a decision; to record what you decided, use Decide and close. You can reopen it later.", ok: "Close it", send: () => post("") });
       if (!res) return;
     }
     if (name === "slack-share") {
@@ -3594,7 +3825,7 @@
   }
 
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-ws-note], [data-reason]");
+    const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]");
     if (!el) return;
     const ds = el.dataset;
     if (ds.hit) { await openHit(ds.hit); return; }
@@ -3602,6 +3833,7 @@
     if (ds.ref) { e.preventDefault(); await goTo(target(ds.ref)); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.presented) { await markPresented(ds.presented); return; }
+    if (ds.notNow) { await api("DELETE", `/api/cards/${encodeURIComponent(ds.notNow)}/suggestion`); await refreshList(); renderDetail(); return; }
     if (ds.unpresent) { await markPresented(ds.unpresent, false); return; }
     if (ds.filter) { const [k, v] = ds.filter.split(":"); S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
@@ -3636,9 +3868,10 @@
     if ("addProduct" in ds) { openProductDialog(); return; }
     if ("addPerson" in ds) { openPersonDialog(); return; }
     if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }
+    if (ds.zoomSnip) { await zoomSnip(el); return; }
     if (ds.zoom) {
       const list = [];
-      for (const f of el.closest("#present, #workspace, #main, body").querySelectorAll("[data-zoom]"))
+      for (const f of el.closest("#present, #workspace, #element-dialog, #main, body").querySelectorAll("[data-zoom]"))
         if (!list.some((x) => x.id === f.dataset.zoom)) list.push({ id: f.dataset.zoom, caption: f.querySelector("img")?.alt || "", marks: f.dataset.marks && !f.dataset.frame ? JSON.parse(f.dataset.marks) : null });
       await gallery(list, Math.max(0, list.findIndex((x) => x.id === ds.zoom)));
       return;
@@ -3695,6 +3928,19 @@
     }
     if (ds.choose !== undefined) { await api("POST", `/api/cards/${S.card.id}/chosen`, { variant: ds.choose || null }); toast(ds.choose ? "Picked as the winner." : "No winner picked."); await refreshList(); await openCard(S.card.id); return; }
     if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
+    // An element of the option: its dialog, its states drawn, the product's element it changes.
+    if (ds.el) { openElement(S.variant, ds.el); return; }
+    if ("elClose" in ds) { $("#element-dialog").close(); return; }
+    if ("elStates" in ds) { await act("states"); return; }
+    if (ds.elGoto) { $("#element-dialog").close(); await goTo(target(ds.elGoto)); return; }
+    if (ds.addCatalog) {
+      const c = S.card, v = approvedOption(c), e = v && elementsOf(v).find((x) => x.key === ds.addCatalog);
+      if (!e) return;
+      await api("POST", `/api/cards/${c.id}/catalog`, { element: e.key });
+      toast(`${e.name} is in Product → Elements, marked as from this approved design.`);
+      await refreshList(); await openCard(c.id); return;
+    }
+    if ("catalogOpen" in ds) { S.elFilter = "design"; S.productFilter = "elements"; await showTab("product"); return; }
     if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
     if (ds.story) { S.story = ds.story; renderDetail(); return; }
     if (ds.storyPart) { const pin = storyPins()[Number(ds.storyPart)]; if (pin) $("#story-frame")?.contentWindow?.postMessage({ type: "desk-show", selector: pin.selector }, "*"); return; }
@@ -3876,7 +4122,8 @@
     // A private ask goes with Enter; Shift+Enter starts a new line.
     if (e.target.id === "ask-text" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("[data-ask-send]")?.click(); return; }
     const z = $(".zoom");
-    if (z && e.key === "Escape") { z.remove(); return; }
+    // Over the element dialog, its own cancel closes the picture (and keeps the dialog).
+    if (z && e.key === "Escape" && !z.closest("dialog")) { z.remove(); return; }
     if (z?.list?.length > 1 && ["ArrowRight", "ArrowLeft"].includes(e.key)) { gallery(z.list, z.index + (e.key === "ArrowRight" ? 1 : -1)).catch(fail); return; }
     const ov = $("#present");
     if (ov && ["ArrowRight", "ArrowLeft", "Escape"].includes(e.key)) {

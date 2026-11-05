@@ -73,6 +73,21 @@ The profile lists the elements worth having under `catalog.elements`
 - "Build the catalog" in chat: create one element card per entry of `catalog.elements`
   (`status: building`) and enqueue a `catalog` item for each; the inbox runs fan them out.
 
+## From approved designs
+
+Once a request is approved (`spec` or `handed-off`), a designer or developer presses **Add to
+the design catalog** on an element of its approved option, on its tile under **All elements** or
+in its dialog ([requests.md](requests.md) → The option's elements). The store, with no run,
+makes one `element` card for it. The card follows the option: every new version of it or of
+its states (an upsert, a picked alternative) updates the cards already in the catalog, and a
+state not yet drawn again for the new version says so. Such a card has `design` (`card`,
+`option`, `version`, `element`, `change`, `of`: the product's element it changes),
+`design_part` and `design_states` (the option's pictures), and no `source` or `sheet`.
+Product → Elements marks it **From an approved design**, apart from the product's own, and
+the product's element it changes links to it. It is not redrawn: Update the drawing and Draw
+how it looked before are refused. The change that ships it is compared with it
+([watch.md](watch.md) step 11); the card then says whether it shipped as designed.
+
 ## History
 
 People step back through an element's versions on its card (**← Older / Newer →**, a strip

@@ -19,6 +19,8 @@ const USAGE = `usage: design desk <command>
                                            row to ## Desk people, and mark the item done
   cards [--kind change|request|issue]      list cards
   card <C-n>                               one card with its threads
+  designs                                  every approved design: where its spec went, its option
+                                           and its elements (docs/watch.md step 11)
   upsert <card.json|->                     create or update a card (agent fields only)
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
@@ -32,10 +34,12 @@ const USAGE = `usage: design desk <command>
                                            thread_ts, message_ts, reporter, email, url}}
   asset <file> --kind <k> [--card C-n] [--name <n>] [--type <media/type>]
                                            store a file; kinds: screen variant spec patch image report
-  answer <T-n> <text-file|-> [--resolve] [--shots <shots.json>]
+  answer <T-n> <text-file|-> [--resolve] [--shots <shots.json>] [--warns <warns.json>]
                                            answer a thread; --shots: what a worked-in change did,
                                            as design compare prints it with assets: [{asset, caption,
-                                           stage: before|after|diff, pair, marks}]
+                                           stage: before|after|diff, pair, marks}]; --warns: what it
+                                           goes against: [{what, why, source: {kind: decision, ref:
+                                           D-n} | {kind: issue|pr, url, label}}]
   comment <C-n> <text-file|-> [--shots <shots.json>]
                                            add a comment thread as the agent
   ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
@@ -224,6 +228,7 @@ export async function main(_cmd, argv) {
     }
     case "cards": return out(await call("GET", `/agent/cards${f.kind ? `?kind=${encodeURIComponent(f.kind)}` : ""}`));
     case "card": return out(await call("GET", `/agent/cards/${pos[0]}`));
+    case "designs": return out(await call("GET", "/agent/designs"));
     case "upsert": {
       if (!pos[0]) fail("usage: design desk upsert <card.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }
@@ -256,7 +261,7 @@ export async function main(_cmd, argv) {
         encoding: text ? "utf8" : "base64", data: text ? buf.toString("utf8") : buf.toString("base64"),
       }));
     }
-    case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve), shots: await shotsArg(f.shots) }));
+    case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve), shots: await shotsArg(f.shots), warns: typeof f.warns === "string" ? JSON.parse(readArg(f.warns)) : null }));
     case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]), shots: await shotsArg(f.shots) }));
     case "ask": {
       const body = f.form ? JSON.parse(readArg(pos[1])) : { text: readArg(pos[1]) };

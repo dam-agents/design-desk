@@ -218,11 +218,13 @@ Self-check:
   elements that do it (`stories`, docs/requests.md → Variants): give those elements an `id`
   so their CSS path stays short and survives a redraw. Each variant also names the Desk
   decisions in force it follows and the elements each one shaped (`reasons`, same section),
-  so people see why a part is there and looks as it does; the same `id` rule holds.
+  so people see why a part is there and looks as it does; the same `id` rule holds. And it
+  lists the parts it changes or adds (`elements`, docs/requests.md → The option's elements),
+  each with an `id` in the page so its picture is cut by a short path.
 - **Every state of a part** (the `states` action) — docs/requests.md → Every state of a part:
   one built page per state of the part, each the whole option with only that part changed,
   uploaded with `--kind variant` but sent as the option's `states` (`{id, version, name, how,
-  part, asset, shot, stories, use}`), never as new options. For the request's design catalog,
+  part, asset, shot, stories, use, element}`), never as new options. For the element's dialog,
   each state also carries a picture of the part alone (`design shot <state.html> <dir>
   --element <selector>`, uploaded `--kind image`, as `shot`) and the use case of the brief it
   covers: the `issue_brief` story ids (`stories`), or one plain sentence (`use`). Every upsert sends every option and state already on
