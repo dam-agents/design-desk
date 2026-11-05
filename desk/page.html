@@ -195,6 +195,8 @@
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; align-items: center; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
   .section { margin: 0 0 14px; max-width: var(--measure); }
+  /* A request's page: everything on it as wide as the pane, no part narrower than the rest. */
+  #detail.fill { --measure: 100%; }
   /* A request's brief, what a person asked for, apart from what Design Desk made of it. */
   .brief { border: 1px solid var(--line); border-left: 3px solid var(--ink); border-radius: var(--radius); background: var(--panel); padding: 12px 16px 4px; margin: 14px 0 0; }
   details.brief:not([open]) { padding-bottom: 12px; }
@@ -3835,6 +3837,8 @@
   let shown = null;
   function renderDetailBody() {
     const d = $("#detail");
+    // A request fills the pane: every part of it is as wide as the page (`.fill`).
+    d.classList.toggle("fill", S.card?.kind === "request" && !(S.tab === "product" && S.productFilter === "decisions"));
     const now = [S.tab, S.card?.id || "", S.decision?.id || "", presenting() ? "p" : ""].join("|");
     if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
