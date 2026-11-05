@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.52.0 — 2026-11-06
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**); the server is unchanged. The page
+looks the same everywhere: the Presentation's rows carry the state dot and red ! of every list,
+a screen's, an element's and a decision's page open with the status box (their buttons in it), an
+issue's GitHub link is a pill as a change's PR is, and colours and type sizes come from the
+page's tokens. Nothing else to do.
+
 ## 1.51.0 — 2026-11-06
 
 **Upgrade:**

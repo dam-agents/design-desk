@@ -60,8 +60,11 @@ served by the Desk server through the platform's Artifact API relay.
   scrolls sideways and fades at its edge. A list has no search box of its own.
 - **Counts in the menu.** Each tab counts only what is still open: Requests the open requests, PR
   Changes the changes not handled, Issues the issues neither handled nor designed.
-- **Lists.** Every row on every list is its title (one or two lines) with its corner dot, and
-  one line under it — where it came from, or a screen's or part's summary — and no chips. Every list on the left shows the newest item first: a change by the day it
+- **Lists.** Every row on every list, the Presentation's included, is its title (one or two lines)
+  with its number and its corner dot (a red **!** under the dot when it goes against a decision),
+  bold until the person first opens it, and one line under it — where it came from, or a
+  screen's or part's summary — and no chips. A row with no state of its own (a week of History)
+  keeps its number where the others have it. Every list on the left shows the newest item first: a change by the day it
   shipped, a decision by the day it was made, any other item by the day it came onto the Desk.
   The Presentation keeps the order a designer set.
 - **Folds stay folded.** A folded box (the request, From Design Desk, an intro) stays folded
@@ -325,10 +328,16 @@ Desk by: product map` (or the person who added it; an element from an approved d
 `based on:` its request); a week's page says `by: weekly digest`; a decision's dot is In force or
 Revoked, with the red ! for a decision it goes against, and its line `decided: <when> from:
 <where> by: <who>`.
-A change's and an issue's page open with the same box as a request's status: the state's dot and
-word (an issue's word is where it is planned, `This sprint`), a line of facts (a change's on the
-same line, after its PR as a pill that opens it on GitHub, in the list's style: `handled by:`
-who `at:` when and `shipped:` when); Needs a designer carries a
+Every item's page opens the same way: its title with its number grey after it (a request's ✎
+rename after the number), a grey line of chips, then the same box as a request's status: the
+state's dot and word, its buttons on the right. A change's and an issue's word is their GitHub
+state (an issue's is where it is planned, `This sprint`), with a line of facts on the same line,
+after its PR or issue as a pill that opens it on GitHub, in the list's style: `handled by:` who
+`at:` when and `shipped:` when; an issue's `by:`, `assigned to:`. A screen's and an element's box
+says what its dot says (Up to date, Out of date, Being drawn, Not drawn) and holds their buttons
+(**Update the drawing**, **Draw how it looked before**, the presentation's); a decision's says In
+force or Revoked and holds **Revoke…** or **Restore**. A week's page has no state: its chip says
+Weekly digest. Needs a designer carries a
 small AI tag: Design Desk judges what goes in it, the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
 under an issue's How it could look. A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull
@@ -490,8 +499,9 @@ with a role; it has no card. This is the one roster change that comes from the D
 The team meets regularly; the Desk keeps the list of what to show at the next design meeting,
 the **Presentation** page of Requests. (The store and the CLI keep its older name, `agenda`.)
 
-The page shows it in the other pages' style: in the list, each item is its title and one line of
-facts (`presenting:`, `added by:`; `suggested by:`; `presented:`), with no chips; the page opens
+The page shows it in the other pages' style: in the list, each item is its title, its number and
+its state dot (and the red **!**) as on every list, and one line of facts (`presenting:`, `added
+by:`; `suggested by:`; `presented:`), with no chips; the page opens
 with a status box (To present · N items, **▶ Present**, **Mark all as presented**), then each item
 with its buttons, its facts and what the meeting decides. A row of what is to present or suggested keeps the page
 and jumps to its item, marked a moment; **Open** on the item opens its card, and a presented row
