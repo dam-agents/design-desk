@@ -1208,7 +1208,7 @@
     addShots: "Add screenshots from the product; Design Desk checks each one and writes its caption",
     addProduct: "Ask Design Desk to add a screen or a part that is missing here",
     addPerson: "Ask Design Desk to add someone to the Desk with a role you pick",
-    post: (v) => v === "question" ? "Design Desk answers your question right here" : "A comment for the team; Design Desk does not act on it",
+    post: (v) => v === "question" ? "Design Desk answers right here. Everyone on the Desk sees it." : "A comment for the team; Design Desk reads it when it changes the design. Everyone on the Desk sees it.",
     sendReply: (v, el) => /Answer/.test(textOf(el)) ? "Sends your answer; Design Desk goes on with it" : "Adds your reply to this conversation (Enter)",
     resolve: "Marks this note done; you can reopen it",
     reopen: "Opens this note again; Design Desk looks at it again",
@@ -2437,7 +2437,7 @@
   function renderThreads(c, { skipAsks = false } = {}) {
     const threads = (c.threads || []).filter((th) => !(skipAsks && th.kind === "asks" && th.state === "open"));
     const label = { question: ["Question", "info"], comment: ["Comment", ""], concern: ["Concern", "warn"], change: ["Change", "info"], asks: ["Design Desk asks", "warn"] };
-    const KIND_TIP = { question: "A question to Design Desk; it answers right here", comment: "A comment for the team; Design Desk does not act on it", concern: "Someone is worried about an option", change: "A note asking Design Desk to change the design", asks: "Design Desk needs an answer before it can go on" };
+    const KIND_TIP = { question: "A question to Design Desk; it answers right here", comment: "A comment for the team; Design Desk reads it when it changes the design", concern: "Someone is worried about an option", change: "A note asking Design Desk to change the design", asks: "Design Desk needs an answer before it can go on" };
     // Newest first: the conversation whose last message is latest leads.
     const last = (th) => Date.parse(th.messages?.[th.messages.length - 1]?.at || th.at || 0) || 0;
     const rows = [...threads].sort((a, b) => last(b) - last(a)).map((th) => {
@@ -2461,8 +2461,7 @@
     return `<h3>Questions and comments</h3>
       <div class="composer" id="composer">
         <textarea id="composer-text" maxlength="4000" placeholder="Ask anything: why it works this way, what could change… or leave a comment for the team."></textarea>
-        <div class="bar"><button class="btn primary" data-post="question">Ask Design Desk</button><button class="btn" data-post="comment">Comment for the team</button></div>
-        <p class="hint">Everyone on the Desk sees these. Design Desk answers questions right here. It reads comments when it changes the design.</p></div>${convo}
+        <div class="bar"><button class="btn primary" data-post="question">Ask Design Desk</button><button class="btn" data-post="comment">Only comment</button></div></div>${convo}
 `;
   }
 

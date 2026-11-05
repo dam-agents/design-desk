@@ -56,7 +56,8 @@ verdict's words and the panel under the cards are gone, its ✓ ◐ ○ stays. F
 heading per part, and what folds as a quiet line with its count in a grey pill. Your name at the
 top opens a menu as wide as it, with How it works and day or night mode (the ? and ☾ buttons are
 gone); each tab's help draws its own flow from How it works (Requests the request's, Changes a
-shipped change's, Issues an issue's).
+shipped change's, Issues an issue's). The line under Questions and comments is gone: Ask Design Desk and
+Only comment (was Comment for the team) say on hover what happens and that everyone on the Desk sees it.
 
 ## 1.46.0 — 2026-11-05
 
