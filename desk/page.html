@@ -3446,9 +3446,16 @@
   // A drawn option's own page switcher (the review bar) in the Desk's look: a segmented
   // control, the page on a white chip. Only its look; the bar and its pages stay the option's.
   const REVIEW_LOOK = `<style data-desk-look>
-    html #review { background: #f7f7f5; color: #1b1b1a; border-color: #e4e3df; font: 500 14px/1.4 "IBM Plex Sans", system-ui, sans-serif; padding: 8px 14px; gap: 12px; }
+    html #review { background: #f7f7f5; color: #1b1b1a; border-color: #e4e3df; font: 500 14px/1.4 "IBM Plex Sans", system-ui, sans-serif; padding: 0 14px; gap: 12px; align-items: center; }
     html #review .seg { gap: 2px; padding: 3px; border: 0; border-radius: 9px; background: #f0efeb; box-shadow: inset 0 0 0 1px #e4e3df; }
-    html #review .seg button { padding: 4px 11px; border-radius: 7px; color: #6b6b66; opacity: 1; font-size: 14px; }
+    /* The bar is 41px high: the screens' segmented control fits in it, centred. */
+    html #review .seg { align-items: center; flex: none; }
+    /* One row whatever the width: the screens scroll sideways, the switches stay on the right. */
+    html #review { flex-wrap: nowrap; overflow: hidden; }
+    html #review #review-views { flex: 0 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+    html #review #review-views::-webkit-scrollbar { display: none; }
+    html #review .seg button, html #review [data-hot] { white-space: nowrap; flex: none; }
+    html #review .seg button { padding: 3px 10px; border-radius: 7px; color: #6b6b66; opacity: 1; font-size: 13px; line-height: 20px; }
     html #review .seg button[aria-pressed="true"] { background: #fff; color: #1b1b1a; font-weight: 600; box-shadow: 0 0 0 1px #e4e3df; }
     html #review .seg button:hover:not([aria-pressed="true"]) { color: #1b1b1a; }
     /* The product's own style (Style: <repo>@<commit>) goes without saying on the Desk; a fallback

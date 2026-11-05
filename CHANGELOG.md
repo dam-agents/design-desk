@@ -43,7 +43,8 @@ move to the next step after a grey "Next:" — Draw design options, Ask for feed
 prototype, Try again; Approve, Close and ⋯ stay in the row, and any other action moves under ⋯. Votes from Slack count 👎 too, and every text that names the votes
 says 👍, 👎 and ⚠. A request no longer shows its "Asked for: N options" line. On the Desk a design's review bar
 leaves out its title (the option tab names it) and the product's own style line (`Style:
-<repo>@<commit>`); a fallback style keeps its line.
+<repo>@<commit>`); a fallback style keeps its line. The bar stays one row, its screens centred in it and scrolling
+sideways when the design is narrow.
 
 ## 1.46.0 — 2026-11-05
 
