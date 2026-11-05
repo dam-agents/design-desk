@@ -649,7 +649,7 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   assert.equal(s.act(card.id, alice, "close").card.live_pick, undefined);
 });
 
-test("Send designs to Slack is one slack item scoped send, and needs options", () => {
+test("Send to Slack, Send the designs, is one slack item scoped send, and needs options", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "A new empty state." });
   assert.throws(() => s.act(card.id, alice, "slack-send", "{}"), /no design options/);

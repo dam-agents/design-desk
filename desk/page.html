@@ -3989,6 +3989,7 @@
     $("#sl-note-label").textContent = mode === "vote" ? "What should people look at? (optional)" : "A line for Slack (optional)";
     $("#sl-ok").textContent = mode === "vote" ? "Post the vote" : "Send";
     $("#slack-dialog").dataset.mode = mode;
+    $("#sl-ok").disabled = mode === "send" && !$("#sl-options input:checked");
   };
   $("#sl-mode").addEventListener("click", (e) => { const b = e.target.closest("[data-sl-mode]"); if (b) slMode(b.dataset.slMode); });
   $("#sl-options").addEventListener("change", () => { $("#sl-ok").disabled = $("#slack-dialog").dataset.mode === "send" && !$("#sl-options input:checked"); });
@@ -4004,7 +4005,7 @@
     const at = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(15, 0, 0, 0); return d.toISOString(); };
     $("#sl-closes").innerHTML = [[1, "Close tomorrow at 15:00"], [3, "Close in 3 days"], [7, "Close in a week"]].map(([d, l]) => `<label><input type="radio" name="closes" value="${esc(at(d))}" ${d === 3 ? "checked" : ""} /> ${esc(l)}</label>`).join("");
     $("#sl-mode").hidden = modes.length < 2;
-    slMode(modes[0]); $("#sl-ok").disabled = false;
+    slMode(modes[0]);
     dlg.returnValue = ""; dlg.showModal();
     // The page's frame has no allow-forms: the send runs on the dialog's close, as #confirm-form's.
     return new Promise((resolve) => {
