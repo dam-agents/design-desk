@@ -313,7 +313,7 @@ the dot (not the row) unfolds it leftwards, over the title, into the label with 
 A change's and an issue's page open with the same box as a request's status: the state's dot and
 word (an issue's word is where it is planned, `This sprint`), a line of facts (a change's on the
 same line, after its PR as a pill that opens it on GitHub, in the list's style: `handled by:`
-who · when and `shipped:` when); Needs a designer carries a
+who `at:` when and `shipped:` when); Needs a designer carries a
 small AI tag: Design Desk judges what goes in it, the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
 under an issue's How it could look. A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull

@@ -2771,7 +2771,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
         const kv = (k, v, cls = "") => `<span><span class="k">${k}:</span> <b${cls ? ` class="${cls}"` : ""}>${v}</b></span>`;
         const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : hb?.email && hb.email === S.me?.email ? "You" : hb?.name || hb?.email || "someone";
-        const meta = [handledAt(c) ? kv("handled by", `${esc(handler)} · ${esc(day(handledAt(c)))}`) : "", src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
+        const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : "", src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
         const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
         const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn primary" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
         const adjust = can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "";
