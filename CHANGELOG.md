@@ -18,7 +18,7 @@ decision in force shows a red ! under its state dot that unfolds into `Goes agai
 conflict's `status`). Product's Screens, Elements, Decisions and History rows look like the other
 lists: a state dot and a `created:`/`decided:` `from:` `by:` line, in place of the summary and the
 chips. A folded request text or From Design Desk keeps two whole lines and half of the third,
-not counting a heading. Nothing else to do.
+not counting a heading; the private ask's placeholder is in the smaller meta size. Nothing else to do.
 
 ## 1.50.0 — 2026-11-05
 

@@ -439,6 +439,8 @@
   .ask-panel footer { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 8px; }
   .ask-panel footer .starters { margin: 0; }
   .ask-panel footer textarea { min-height: 52px; }
+  /* The hint in the empty box is quieter than what a person types. */
+  .ask-panel footer textarea::placeholder { font-size: var(--fs-meta); }
   .ask-panel footer .bar { display: flex; justify-content: flex-end; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
