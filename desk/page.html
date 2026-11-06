@@ -3249,9 +3249,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       // No live prototype for a request with parts a design change cannot do: the step is to
       // ask a developer about them, and it opens them (simple mode names no role a request needs).
       const dev = !simple() && (c.triage?.cannot || []).length ? `<button class="step-next" data-dev-ask title="Opens the parts a design change cannot do, with a question for a developer to copy">Contact a developer</button>` : "";
+      // The pill always holds a move on: with no prototype and nothing for a developer, the
+      // next step is approval; for someone who cannot approve, asking the team in Slack.
+      const step = design && canBuild() ? sb("build", "Build a live prototype") : dev
+        || (canApprove(c) ? sb("approve", "Approve…") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
-        step: design && canBuild() ? sb("build", "Build a live prototype") : dev,
-        buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        step, buttons: (canApprove(c) && !step.includes('data-act="approve"') ? b("approve", "Approve…") : "") + ends };
     }
     return { text: "", buttons: "" };
   }
