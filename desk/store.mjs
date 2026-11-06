@@ -653,7 +653,7 @@ export class Store {
   prefsOf(who) {
     const key = viewerKey(who);
     const p = (key && own(this.db.prefs, key)) || {};
-    // figma: the Figma comparisons shown to this person (null: shown, when the Desk has Figma on).
+    // figma: the Figma comparisons shown to this person (null: hidden until they turn it on).
     return { theme: p.theme || null, simple: typeof p.simple === "boolean" ? p.simple : null, figma: typeof p.figma === "boolean" ? p.figma : null };
   }
 
@@ -690,7 +690,7 @@ export class Store {
   // Nothing new is logged: each event is read from what the store keeps anyway (a card's
   // creation, a message, a drawn option, a vote, an approval, a spec, a decision). A person
   // never sees their own doings, nor another person's private ask. `since` is when they last
-  // opened the bell: newer events are unread.
+  // opened the bell: newer events For you are unread (the bell's count).
   notifications(who, { limit = 50, days = 30 } = {}) {
     const key = viewerKey(who);
     const mine = new Set([who?.email, ...(who?.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
@@ -741,7 +741,7 @@ export class Store {
     out.sort((a, b) => b.at.localeCompare(a.at));
     const seen = (key && own(this.db.seen, key)) || null;
     const items = out.slice(0, limit);
-    return { items, seen, unread: out.filter((x) => !seen || x.at > seen).length };
+    return { items, seen, unread: out.filter((x) => x.for_you && (!seen || x.at > seen)).length };
   }
 
   // A person opened the bell: what is there now counts as seen, for them alone.

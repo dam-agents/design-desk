@@ -1842,6 +1842,11 @@ test("notifications: what others did lately, private asks for their owner, For y
   // Opening the bell marks it seen, for that person alone.
   s.markSeen(alice);
   assert.equal(s.notifications(alice).unread, 0);
-  assert.ok(s.notifications(carol).unread > 0);
+  // Carol wrote in the thread, so the request, Bob's comment and his reply are for her and count.
+  assert.equal(s.notifications(carol).unread, 3);
+  // Dave took no part: he sees all of it under All, and his count stays 0.
+  const dave = s.notifications({ email: "dave@example.com", role: "designer" });
+  assert.ok(dave.items.length > 0 && dave.items.every((x) => !x.for_you));
+  assert.equal(dave.unread, 0);
   assert.deepEqual(s.markSeen({ agent: true }), { seen: null });
 });

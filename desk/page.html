@@ -3224,9 +3224,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   // ---------- compared with Figma ----------
   // Where an item differs from its frame in Figma (the figma skill), shown only with Figma on for
-  // the Desk and for this person (the Figma switch in their menu): one line per difference with
+  // the Desk and for this person (the Figma switch in their menu, off until they turn it on): one line per difference with
   // Figma's value and the product's, a colour with its swatch, and both pictures when there are.
-  const figmaOn = () => Boolean(S.me?.figma) && S.me?.figma_pref !== false;
+  const figmaOn = () => Boolean(S.me?.figma) && S.me?.figma_pref === true;
   // What is in the product already: a screen, an element, a shipped change (Product → Differences).
   const FIG_KINDS = ["screen", "element", "change"];
   const swatched = (v) => esc(v).replace(/#[0-9a-f]{6}\b/gi, (h) => `<span class="swatch" style="background:${h}"></span>${h}`);
@@ -5780,7 +5780,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const NOTE_KIND = { request: "Request", change: "PR change", issue: "Issue", screen: "Screen", element: "Element", decision: "Decision" };
   const noteBy = (by) => !by ? "" : by.agent ? "Design Desk" : by.name && !by.email ? by.name : personName(by.email, by.name || "someone");
   const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : dayWord(iso) === "Yesterday" ? "Yesterday" : new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric" }); };
-  S.notes = { items: [], seen: null, unread: 0, was: null, only: false };
+  // For you leads: the bell counts only what is for you (docs/desk.md → Notifications).
+  S.notes = { items: [], seen: null, unread: 0, was: null, only: true };
   async function loadNotes() {
     const r = await api("GET", "/api/notifications");
     Object.assign(S.notes, { items: r.items || [], seen: r.seen, unread: r.unread || 0 });
@@ -5808,7 +5809,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         ${x.detail ? `<span class="q">${esc(x.detail)}</span>` : ""}</button>`;
     }).join("");
     $("#notes").innerHTML = `<div class="nh"><b>Notifications</b><div class="tabs2" role="radiogroup" aria-label="Show">
-      <button type="button" data-keep data-only="0" aria-pressed="${!S.notes.only}">All</button><button type="button" data-keep data-only="1" aria-pressed="${S.notes.only}" title="Only what you filed, voted on or wrote in">For you</button></div></div>
+      <button type="button" data-keep data-only="1" aria-pressed="${S.notes.only}" title="What you filed, approved, voted on or wrote in: the bell counts these">For you</button><button type="button" data-keep data-only="0" aria-pressed="${!S.notes.only}">All</button></div></div>
       <div class="nl">${rows || `<div class="empty">${S.notes.only ? "Nothing new on what you filed, voted on or wrote in." : "Nothing happened on the Desk in the last 30 days."}</div>`}</div>`;
     $("#notes").querySelectorAll("[data-only]").forEach((b) => b.addEventListener("click", () => { S.notes.only = b.dataset.only === "1"; renderNotes(); }));
     $("#notes").querySelectorAll("[data-note]").forEach((b) => b.addEventListener("click", guard(async () => {

@@ -14,6 +14,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
    ([docs/desk.md](docs/desk.md) → **Publishing the page**). The bell reads what the store
    already keeps; the store adds `seen` on its own.
+2. The Figma switch in each person's menu is now off until they turn it on: a person who never
+   chose sees no Differences page and no box of differences from Figma. Nothing to migrate.
 
 ## 1.60.0 — 2026-11-06
 

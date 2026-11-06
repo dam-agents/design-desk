@@ -114,7 +114,7 @@ served by the Desk server through the platform's Artifact API relay.
   **Figma**, a switch under simple mode in the same style, shows only on a Desk with `figma:
   enabled`: off, that person sees no Differences page and no box of differences from Figma
   anywhere. Kept on the Desk like simple mode (`POST /api/prefs {figma}`, `figma_pref` in
-  `GET /api/me`); with no choice (null) it is on.
+  `GET /api/me`); with no choice (null) it is off.
   The Desk opens on Requests.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
@@ -478,8 +478,9 @@ private ask only its owner. The events:
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
 line of what was said. A click opens the item: a decision on its page, a message with the
-conversation unfolded and scrolled to its thread. **For you** keeps what the person filed, voted on,
-approved or wrote in. The red count is what is newer than the person last opened the bell;
+conversation unfolded and scrolled to its thread. The bell opens on **For you**: what the person
+filed, voted on, approved or wrote in; **All** shows the rest too. The red count is what is For
+you and newer than the person last opened the bell;
 opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
 `seen: {<person>: at}`), outside the write budget like reading an item.
 

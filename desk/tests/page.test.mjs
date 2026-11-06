@@ -1946,7 +1946,7 @@ window.platform = { async request({ method, path, body }) {
     return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/prefs" ? { figma: window.figmaPref } : { figma_check: {} }) };
   }
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? null, can: { handle: true, revise: true, figma: true, request: true } }
+  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? true, can: { handle: true, revise: true, figma: true, request: true } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
     : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" }
     : one ? { card: one } : {};
@@ -1994,7 +1994,7 @@ test("Differences from Figma: the Product page lists what is in the product, a b
 
   // The Figma switch in the menu: off, no Differences page and no box, saved for this person.
   await desk.click("#me");
-  assert.equal(await desk.getAttribute("#figma", "aria-pressed"), "true", "on by default");
+  assert.equal(await desk.getAttribute("#figma", "aria-pressed"), "true", "on: this person turned it on");
   await desk.click("#figma");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/prefs").body), { figma: false });
