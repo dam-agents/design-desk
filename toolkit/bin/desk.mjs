@@ -231,7 +231,9 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
   const said = api(`repos/${repo}/issues/${n}/comments`).map((c) => ({ author: c.user?.login || "", at: c.created_at, url: c.html_url, body: c.body || "" }));
   const reviews = pr ? api(`repos/${repo}/pulls/${n}/reviews`).filter((v) => v.body).map((v) => ({ author: v.user?.login || "", at: v.submitted_at, url: v.html_url, body: `[review: ${v.state}] ${v.body}` })) : [];
   // An issue's pull requests: the ones that mention it, newest last; the Desk follows the work on it.
-  const linked = pr ? [] : api(`repos/${repo}/issues/${n}/timeline`).filter((e) => e.event === "cross-referenced" && e.source?.issue?.pull_request)
+  // A timeline it cannot read leaves the list empty: the issue itself still counts.
+  const timeline = () => { try { return api(`repos/${repo}/issues/${n}/timeline`); } catch { return []; } };
+  const linked = pr ? [] : timeline().filter((e) => e.event === "cross-referenced" && e.source?.issue?.pull_request)
     .map((e) => e.source.issue).filter((p, i, all) => all.findIndex((q) => q.html_url === p.html_url) === i)
     .map((p) => ({ title: p.title, url: p.html_url, state: p.pull_request?.merged_at ? "merged" : p.draft ? "draft" : p.state, author: p.user?.login || "" }));
   return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",

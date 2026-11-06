@@ -7,6 +7,7 @@ import { githubSync } from "../bin/desk.mjs";
 // A stand-in gh: each REST path answers one page, as `gh api --paginate --slurp` does.
 const GH = {
   "repos/acme/widgets/issues/3": [{ title: "One account", state: "open", html_url: "https://github.com/acme/widgets/issues/3", user: { login: "pat" }, labels: [{ name: "design" }], body: "b", updated_at: "2026-11-02T10:00:00Z" }],
+  "repos/acme/widgets/issues/3/timeline": [[{ event: "labeled" }, { event: "cross-referenced", source: { issue: { title: "Build the red", html_url: "https://github.com/acme/widgets/pull/8", user: { login: "bot" }, state: "open", draft: false, pull_request: { merged_at: null } } } }]],
   "repos/acme/widgets/issues/3/comments": [[{ user: { login: "lee" }, created_at: "2026-11-02T10:00:00Z", html_url: "https://github.com/acme/widgets/issues/3#c1", body: "Make it red?" }]],
   "repos/acme/widgets/issues/7": [{ title: "Limits", state: "closed", pull_request: { merged_at: "2026-11-01T10:00:00Z" }, html_url: "https://github.com/acme/widgets/pull/7", user: { login: "bob" }, labels: [], body: "", updated_at: "2026-11-01T10:00:00Z" }],
   "repos/acme/widgets/issues/7/comments": [[]],
@@ -25,6 +26,7 @@ test("github-sync reads each ref with its comments and reviews, posts them, merg
   assert.equal(posted.length, 1, "one batch for three refs");
   const [issue, pr] = posted[0].records;
   assert.deepEqual([issue.kind, issue.state, issue.labels, issue.comments.map((c) => c.body)], ["issue", "open", ["design"], ["Make it red?"]]);
+  assert.deepEqual(issue.linked, [{ title: "Build the red", url: "https://github.com/acme/widgets/pull/8", state: "open", author: "bot" }], "an issue knows the pull requests that build it");
   assert.deepEqual([pr.kind, pr.state, pr.comments.map((c) => c.body)], ["pr", "merged", ["[review: APPROVED] Fine."]], "a pull request's reviews with a body are its comments");
   assert.deepEqual([out.synced, out.failed.map((x) => x.key), out.fresh.map((x) => x.key)], [2, ["acme/widgets#9"], ["acme/widgets#3"]]);
   assert.match(out.failed[0].error, /404/);
