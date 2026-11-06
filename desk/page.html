@@ -791,6 +791,8 @@
   .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, #1a7f37 14%, var(--panel)); color: #1a7f37; } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, #8250df 14%, var(--panel)); color: #8250df; }
   .spec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; } .spec-head .hint { margin: 0; } .spec-tools { margin: 0; }
+  /* The approved note reads on the heading's line, after it, in the hints' size. */
+  h3 .locked-note { font-weight: 400; font-size: var(--fs-meta); margin-left: 10px; }
   .anchor-text { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .anchor-text:hover { text-decoration: underline; }
   .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
   .spec-preview { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow: auto; max-height: 36em; }
@@ -3551,7 +3553,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
-    return `<h3>Design options</h3>${locked(c) ? `<p class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</p>` : ""}
+    return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
       ${againstBox(c, v.id)}${simple() ? "" : whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
