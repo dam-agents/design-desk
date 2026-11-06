@@ -993,12 +993,14 @@ test("two requests from an issue: one line each, inside the box at a phone's wid
     .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/ch1"');
   const run = await launch(t, bridge);
   if (!run) return;
-  const { desk } = run;
+  const { top, desk } = run;
   try {
     await desk.click('[data-tab="issues"]');
     await desk.click('.row.item [data-card="is1"]');
     await desk.waitForSelector("#detail .linked");
-    await desk.setViewportSize({ width: 380, height: 800 });
+    // The Desk runs in a frame: a phone's width is the frame's.
+    await top.$eval("iframe", (f) => { f.style.width = "380px"; });
+    await desk.waitForFunction(() => innerWidth <= 380);
     assert.equal(await desk.$eval("#detail .linked", (l) => l.classList.contains("many")), true, "two requests: the list form");
     assert.equal(await desk.locator("#detail .linked .lk").count(), 2, "one line per request");
     const out = await desk.$eval("#detail .linked", (l) => { const box = l.getBoundingClientRect(); return [...l.querySelectorAll(".lk .chip")].filter((c) => c.getBoundingClientRect().right > box.right + 0.5).length; });
