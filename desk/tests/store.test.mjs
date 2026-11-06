@@ -1516,6 +1516,11 @@ test("the decision check: a design written without it queues one, a write with i
   s.db.cards[card.id].status = "feedback";
   assert.throws(() => s.act(card.id, alice, "build", "v1"), (e) => e.status === 409 && new RegExp(`Bar goes against ${d.id}`).test(e.message));
   assert.equal(s.act(card.id, alice, "build", "v1", { overrule: true }).inbox.kind, "build", "built knowingly");
+  s.addDecision({ concepts: ["limits"], text: "Limits show in the header", author: { name: "Alice" }, origin: { kind: "chat" } });
+  assert.equal(checks().length, 1, "another decision about it checks it again");
+  for (const i of Object.values(s.db.inbox).filter((x) => x.card === card.id && x.kind === "build")) { s.claim(i.id, "run-1"); s.done(i.id, "run-1"); }
+  s.act(card.id, alice, "close");
+  assert.deepEqual([checks().length, Object.values(s.db.inbox).find((i) => i.kind === "decision-check" && i.card === card.id && i.outcome === "not checked: closed") !== undefined], [0, true], "closing it ends the check waiting");
 });
 
 test("a decision someone other than a designer made is approved by a designer; it holds either way", () => {

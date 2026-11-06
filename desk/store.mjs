@@ -1103,7 +1103,12 @@ export class Store {
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     // A closed request has nothing going live.
-    if (action === "close") { c.status = "declined"; delete c.call_suggestion; delete c.live_pick; }
+    if (action === "close") {
+      c.status = "declined"; delete c.call_suggestion; delete c.live_pick;
+      // Nothing is designed on it any more: a check still waiting has nothing to check.
+      for (const it of Object.values(this.db.inbox)) if (it.card === cardId && it.kind === "decision-check" && it.state === "open")
+        Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not checked: closed" });
+    }
     // Draw design options says how many; the request keeps it for its later redraws.
     if (action === "explore" && count !== null) {
       const n = cleanCount(count);

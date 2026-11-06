@@ -261,7 +261,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   silently to dodge one, and never drop a conflict without a check that says why.
 - **`checks_due`**: claim; `decision-check`; upsert `{id, conflicts, decision_check}`; a
   conflict new to the card also asks in its thread whether `D-<n>` still holds (Revoking); done
-  `checked: <n> against`.
+  `checked: <n> against`. A card closed or handed off meanwhile: done `not checked: closed`.
 - **Approved by a designer**: a decision whose author is not on the design side (the server's
   `side`: a developer, or not known) is **Not approved** until a designer or a lead presses
   **Approve** in its status box (`POST /api/decisions/<id>/approve`; `approved: {by, at}`).
