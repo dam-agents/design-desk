@@ -2,7 +2,7 @@
 // and design.json for any product.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bundleOf, acceptanceOf } from "../bin/desk.mjs";
+import { bundleOf, acceptanceOf, specPictures } from "../bin/desk.mjs";
 
 const card = {
   id: "C-7", title: "Calmer header", request: { type: "idea", problem: "The header is too loud." },
@@ -52,4 +52,12 @@ test("the acceptance criteria come from the spec's own text, as a person last ed
     { given: "the agents list", when: "it opens", then: "the header is grey" },
     { given: "no agents", when: "the list opens", then: "it says so" }]);
   assert.equal(acceptanceOf("# Spec without them"), null, "no heading: the card's list stands");
+});
+
+test("the spec's pictures are saved once and its lines point at them", async () => {
+  const asked = [];
+  const { text, files } = await specPictures("![Before](asset:A-12)\n![After](asset:A-13)\n![Before again](asset:A-12)", async (id) => { asked.push(id); return { contentType: "image/png", encoding: "base64", data: "iVBORw0KGgo=" }; });
+  assert.deepEqual(asked, ["A-12", "A-13"], "each picture fetched once");
+  assert.equal(text, "![Before](pictures/A-12.png)\n![After](pictures/A-13.png)\n![Before again](pictures/A-12.png)");
+  assert.deepEqual(files.map((f) => f.name), ["pictures/A-12.png", "pictures/A-13.png"]);
 });

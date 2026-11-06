@@ -169,6 +169,19 @@ export function acceptanceOf(text) {
   return out;
 }
 
+// The spec's pictures are Desk assets (`![view](asset:A-n)`): each fetched once into pictures/,
+// and the spec's lines pointed at the saved file. `fetch(id)` answers as the Desk's asset route.
+export async function specPictures(text, fetch) {
+  const files = [];
+  for (const id of [...new Set([...String(text).matchAll(/\]\(asset:(A-\d+)\)/g)].map((m) => m[1]))]) {
+    const a = await fetch(id);
+    const name = `pictures/${id}.${(String(a.contentType).split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5)}`;
+    files.push({ name, data: Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8") });
+    text = text.split(`](asset:${id})`).join(`](${name})`);
+  }
+  return { text, files };
+}
+
 export function bundleOf(card) {
   const pick = card.live_pick?.variant || card.approved?.variant;
   const v = (card.variants || []).find((x) => x.id === pick) || (card.variants || [])[0] || null;
@@ -351,15 +364,10 @@ export async function main(_cmd, argv) {
       // The spec's pictures are Desk assets: saved under pictures/, the spec pointing at them there.
       const specFile = join(pos[1], "spec.md"), pictures = [];
       try {
-        let text = readFileSync(specFile, "utf8");
-        for (const id of [...new Set([...text.matchAll(/\]\(asset:(A-\d+)\)/g)].map((m) => m[1]))]) {
-          const a = await call("GET", `/agent/assets/${id}`);
-          const name = `pictures/${id}.${(String(a.contentType).split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5)}`;
-          mkdirSync(join(pos[1], "pictures"), { recursive: true });
-          writeFileSync(join(pos[1], name), Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8"));
-          text = text.split(`](asset:${id})`).join(`](${name})`);
-          pictures.push(name);
-        }
+        const got = await specPictures(readFileSync(specFile, "utf8"), (id) => call("GET", `/agent/assets/${id}`));
+        if (got.files.length) mkdirSync(join(pos[1], "pictures"), { recursive: true });
+        for (const f of got.files) { writeFileSync(join(pos[1], f.name), f.data); pictures.push(f.name); }
+        const text = got.text;
         writeFileSync(specFile, text);
         // The spec's newest text wins over the list written with its first version.
         const fromText = acceptanceOf(text);
