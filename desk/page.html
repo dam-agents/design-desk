@@ -4465,8 +4465,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   let shown = null, entered = 0;
   function renderDetailBody() {
     const d = $("#detail");
-    // A request fills the pane: every part of it is as wide as the page (`.fill`).
-    d.classList.toggle("fill", S.card?.kind === "request" && !(S.tab === "product" && S.productFilter === "decisions"));
+    // Every open item, decision and People fill the pane: each part is as wide as the page (`.fill`).
+    d.classList.toggle("fill", Boolean(S.card || S.decision) || S.tab === "people");
     const now = [S.tab, S.card?.id || "", S.decision?.id || "", presenting() ? "p" : ""].join("|");
     if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); d.classList.remove("enter"); void d.offsetWidth; d.classList.add("enter"); clearTimeout(entered); entered = setTimeout(() => d.classList.remove("enter"), 400); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
