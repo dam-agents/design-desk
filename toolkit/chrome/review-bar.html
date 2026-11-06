@@ -47,7 +47,11 @@
   (() => {
     const de = document.documentElement;
     document.getElementById("review-title").textContent = de.dataset.reviewTitle || document.title;
-    document.getElementById("review-style").textContent = de.dataset.reviewStyle || "";
+    // The product's own style (Style: <repo>@<commit>) goes without saying, here and in every
+    // screenshot; a fallback style (wireframe, Carbon, a saved brand) keeps its line, so it never
+    // passes for the product's look. The style stays named in data-review-style and the CSS comment.
+    const st = de.dataset.reviewStyle || "";
+    document.getElementById("review-style").textContent = /@/.test(st) && !/^Style: brand/.test(st) ? "" : st;
     const closeMenus = () => document.querySelectorAll("[data-menu-open]").forEach((m) => { m.hidden = true; m.removeAttribute("data-menu-open"); });
     const press = (b) => b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
     const syncEmpty = () => {

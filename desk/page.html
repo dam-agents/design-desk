@@ -3004,7 +3004,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
-      ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch, "sketch")}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
+      ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch, "sketch")}<p class="hint">A sketch${c.style && !/@/.test(c.style) ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
         : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>${can("draw") && !busy && open && !c.designed ? `<div class="actions"><button class="btn" data-act="draw">Draw it</button></div>` : ""}`}
       ${c.draw?.note ? `<p class="hint">${txt(c.draw.note)}</p>` : ""}
       ${renderThreads(c)}`;
