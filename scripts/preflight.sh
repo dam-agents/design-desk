@@ -243,7 +243,7 @@ watch_mode() {
     # Open pull requests too: a developer's UI is seen, and adjusted, before it ships.
     if [ "$OPEN_PRS" = enabled ]; then
       more="$(search "$repo" "repo:$slug is:pr is:open created:>=$since_day")" || fail_out "could not list open pull requests of $repo"
-      items="$(jq -c --argjson more "$(jq -c '.items | map(. + {state: "open"})' <<<"$more")" '.items += $more' <<<"$items")"
+      items="$(jq -c --slurpfile more <(jq -c '.items | map(. + {state: "open"})' <<<"$more") '.items += $more[0]' <<<"$items")"  # a page is too big for an argument
     fi
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
     while IFS=$'\t' read -r num state merged title url author draft; do
