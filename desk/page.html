@@ -2371,7 +2371,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   function renderDecision(d) {
     const HOW = { conflicts: "goes against it", cites: "follows it", replaces: "replaces it", shapes: "a design option follows it" };
-    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, r.title, r.status === "revoked") : `<button class="anchor" data-card="${esc(r.id)}">${esc(r.title)}</button>${num(r)}`} — <span class="${r.how === "conflicts" ? "chip bad" : "chip"}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
+    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, r.title, r.status === "revoked") : `<button class="anchor" data-card="${esc(r.id)}">${esc(r.title)}</button> ${num(r)}`} — <span class="${r.how === "conflicts" ? "chip bad" : "chip"}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
     const against = (d.conflicts || []).filter((x) => x.status === "active");
     const rv = d.revoked;
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}${titleLink(d)}</h2>
