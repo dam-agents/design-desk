@@ -12,7 +12,9 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 ## Build (`prototypes_due`, a `build` item)
 
 1. **Check.** Claim the item. The card's `triage.verdict` is `design` (the server refuses a
-   build otherwise; re-check anyway). Count cards with `prototype.state` `live` or
+   build otherwise; re-check anyway). An option against a decision in force goes live only
+   when the person confirmed it (the store refuses otherwise); the prototype's comment names
+   each `D-<n>` it goes against ([desk.md](desk.md) → Decisions → The check). Count cards with `prototype.state` `live` or
    `building`: at `max_prototypes`, answer on the card with a comment naming the
    prototypes that hold the places and stop (`done --outcome "no free place"`). Only open
    requests count; a closed one's prototype waits for its expiry teardown.
@@ -49,7 +51,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    /tmp/design-desk-c<n>/prototype.patch > /tmp/design-desk-c<n>/guard.json`. Not `ok` →
    [boundary.md](boundary.md) → When the guard refuses. Upload the report and the patch
    (`--kind report`, `--kind patch`) and set `prototype: {state: "building", guard: {ok,
-   summary, asset}, branch, base}` and `status: prototype`.
+   summary, asset}, branch, base, patch: <the patch's asset>}` and `status: prototype`.
 5. **Environment.** `create_environment` with `name` = `c<n>`, the profile's
    `engine.endpoints`, `storage`, `start` when it names one, and `expires` =
    `<prototype_expiry_days>d`. An Environment of that name already there is reused.

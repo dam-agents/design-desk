@@ -13,7 +13,19 @@ The `deliver` action ([docs/actions.md](../../../docs/actions.md)). Reads `hando
 `work/CONFIG.md`. The spec is written and uploaded ([docs/handoff.md](../../../docs/handoff.md)
 steps 1 to 3); the **Approve** on the Desk (a designer's, or a developer's on a request For Developers,
 [docs/desk.md](../../../docs/desk.md) → For Developers or For Designers), with their name on the item, is the
-approval to send it.
+approval to send it, and with `spec_review` on, **Send to developers** on the spec too (a
+`deliver` item). Send the spec's newest version as it is: a person may have edited it.
+
+## The bundle
+
+Every delivery carries the bundle ([docs/handoff.md](../../../docs/handoff.md) step 5), so a
+coding agent builds from the same design as a person:
+- `design.json` in the body, folded: `<details><summary>For a coding agent: design.json</summary>`
+  and the JSON in a fenced block; cut `states[].page` and `shot` paths to names when the folder
+  is not pushed;
+- the pushed `handoff/C-<n>/` folder's link, when `prototype_remote` is set;
+- one line for the agent: build from `design.json` and `mockup.html`, check each state against
+  `shots/`, tick every acceptance line in the pull request.
 
 ## The pictures
 
@@ -25,7 +37,9 @@ never stands in for them (a developer may not see the Desk):
    `design shot <option.html> <dir> --width 1280`, plus `--width 390` when the request is about
    a small screen. Light first; dark when the change is about colour. Add the screen as it is
    today from the card's screens (`design desk fetch <A-n> <file>`), so the developer sees before and after.
-2. Keep the views the spec names, at most six pictures, each under 5 MB.
+2. Keep the views the spec names, at most six pictures, each under 5 MB. The spec writes its
+   pictures as `![<view>](asset:A-<n>)`: fetch each (`design desk fetch A-<n> <file>`) and
+   replace the line with the attached file's, so none stays a Desk-only reference.
 3. Attach them with `--attach <file>#<alt>`, repeated per picture (`gh issue create`,
    `gh issue comment`, `gh issue edit`, `gh pr create`, `gh pr comment`, `gh pr edit`), and
    refer to each in the body as `![<view name>](<file>)` so it lands in place. A comment

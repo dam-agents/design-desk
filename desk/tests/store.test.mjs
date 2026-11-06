@@ -38,11 +38,15 @@ test("one person's row may list every address they go by, and each counts as the
   assert.equal(personOf(roster, "nobody@example.com"), null);
   const named = rosterOf([{ email: "lukas@example.com, lukas.j@work.example.com", role: "lead", name: " Lukas " }]);
   assert.deepEqual(namesOf(named), { "lukas@example.com": "Lukas", "lukas.j@work.example.com": "Lukas" }, "a name, by every address of the row");
-  // The author never approves their request For Developers, by any of their addresses.
+  // The person who filed a request renames it by any of their addresses.
   const s = fresh();
   const { card } = s.createRequest({ agent: true }, { title: "Overflow", problem: "Runs over.", origin: { channel: "slack", reporter: "Lukas", email: "lukas.j@work.example.com" } });
   assert.throws(() => s.renameRequest(card.id, { email: "other@example.com" }, "New"), /Only the person who filed it/);
   assert.doesNotThrow(() => s.renameRequest(card.id, { email: "lukas@example.com", emails: ["lukas@example.com", "lukas.j@work.example.com"] }, "New"), "their Desk address renames the request they filed in Slack");
+  // Who put an item on the presentation takes it off by any of their addresses.
+  s.card(card.id).agenda = { status: "queued", by: { email: "lukas.j@work.example.com" } };
+  assert.throws(() => s.unqueue(card.id, { email: "other@example.com", role: "pm" }), /Only the person who added it/);
+  assert.equal(s.unqueue(card.id, { email: "lukas@example.com", emails: ["lukas@example.com", "lukas.j@work.example.com"], role: "pm" }).card.agenda.status, "removed");
 });
 
 test("a lead asks for a new person: one item with no card, the roster and open asks refuse twins", () => {
@@ -208,6 +212,40 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   s.act(card.id, alice, "reopen");
   assert.equal(s.card(card.id).approved, undefined, "a reopened request waits for a new approval");
   assert.equal(s.setSize(card.id, lee, false).card.size.small, false);
+});
+
+test("the developer spec waits for a person: edit keeps every version, changes go back to Design Desk, only a send lets it go", () => {
+  const s = fresh();
+  const shot = () => s.addAsset({ kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec v1", encoding: "utf8" }).asset.id;
+  const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "Too loud." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] } });
+  const ok = s.act(card.id, alice, "approve");
+  s.claim(ok.inbox.id, "s2");
+  const first = shot();
+  s.upsertCard({ id: card.id, status: "spec", spec: { asset: first, review: "draft", acceptance: [{ given: "the header", when: "the page opens", then: "it is grey" }] } });
+  s.done(ok.inbox.id, "s2", "review");
+  assert.throws(() => s.specAction(card.id, { agent: true }, { action: "send" }), (e) => e.status === 403, "Design Desk never sends it itself");
+  assert.throws(() => s.specAction(card.id, { email: "pat@example.com", role: "pm" }, { action: "send" }), (e) => e.status === 403, "only who may approve");
+  const edited = s.specAction(card.id, alice, { action: "edit", text: "# Spec v2, by Alice" }).card;
+  assert.notEqual(edited.spec.asset, first);
+  assert.deepEqual(edited.spec.history.map((x) => x.asset), [first], "the version it replaces stays");
+  assert.equal(edited.spec.review, "draft");
+  assert.equal(edited.spec.acceptance.length, 1, "an edit keeps the acceptance criteria");
+  const asked = s.specAction(card.id, alice, { action: "changes", note: "The error state needs its own picture." });
+  assert.equal(asked.inbox.scope, "spec-revise");
+  assert.throws(() => s.specAction(card.id, alice, { action: "send" }), /not waiting|already|still/i, "not while Design Desk rewrites it");
+  s.claim(asked.inbox.id, "s3");
+  const third = shot();
+  s.upsertCard({ id: card.id, spec: { ...s.card(card.id).spec, asset: third, review: "draft" } });
+  s.done(asked.inbox.id, "s3", "review");
+  assert.deepEqual(s.card(card.id).spec.history.map((x) => x.asset), [first, edited.spec.asset], "the rewrite keeps Alice's version too");
+  const fourth = shot();
+  s.upsertCard({ id: card.id, spec: { asset: fourth } });
+  assert.equal(s.card(card.id).spec.review, "draft", "a new version Design Desk writes waits for a person, even when the write leaves review out");
+  const sent = s.specAction(card.id, alice, { action: "send" });
+  assert.deepEqual([sent.inbox.kind, sent.inbox.scope, sent.card.spec.review], ["handoff", "deliver", "sent"]);
+  assert.throws(() => s.specAction(card.id, alice, { action: "edit", text: "late" }), /already on its way|in progress|still/i);
 });
 
 test("For Developers: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
@@ -423,6 +461,38 @@ test("a failed card write leaves nothing behind", () => {
   assert.throws(() => s.upsertCard({ kind: "change", title: "Ghost", screens: ["A-99"] }), /no asset/);
   assert.equal(s.listCards().length, 0);
   assert.throws(() => s.upsertCard({ kind: "request", title: "Bad link", prototype: { state: "live", url: "javascript:alert(1)" } }), /http/);
+});
+
+test("an issue keeps its linked pull requests when a read could not get them", () => {
+  const s = fresh();
+  const rec = (extra) => ({ key: "acme/widgets#3", kind: "issue", title: "Red", state: "open", url: "https://github.com/acme/widgets/issues/3", ...extra });
+  s.putGithub([rec({ linked: [{ title: "Build it", url: "https://github.com/acme/widgets/pull/8", state: "open", author: "bot" }], assignees: ["bot"] })]);
+  s.putGithub([rec({})]);
+  assert.deepEqual(s.db.github["acme/widgets#3"].linked.map((p) => p.url), ["https://github.com/acme/widgets/pull/8"], "left out: the list from before stays");
+  s.putGithub([rec({ linked: [] })]);
+  assert.deepEqual(s.db.github["acme/widgets#3"].linked, [], "read and empty: none");
+});
+
+test("an approved design is final: nothing changes it; a new request starts from it", () => {
+  const s = fresh();
+  const { card, inbox: item } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Quiet", asset: page }] });
+  s.act(card.id, alice, "approve", "v1");
+  s.upsertCard({ id: card.id, status: "spec" });
+  for (const a of ["revise", "explore", "add-option", "build"]) assert.throws(() => s.act(card.id, alice, a, "more", { variant: "v1" }), /approved, so it no longer changes/, a);
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  assert.throws(() => s.act(card.id, alice, "reopen"), /new request from this one/, "a design sent to developers is not reopened");
+  const next = s.createRequest(alice, { title: "Calmer header, again", problem: "Smaller still.", from: card.id, carry: ["v1"], options: 0, auto: true }).card;
+  assert.equal(next.request.from, card.id, "the new request names the approved one it starts from");
+  assert.deepEqual(next.variants.map((v) => [v.id, v.name, v.asset, v.carried.card]), [["v1", "Quiet", page, card.id]], "the ticked option carries over as it was");
+  assert.equal(next.request.auto, true, "carried options are changed right after triage");
+  assert.throws(() => s.createRequest(alice, { title: "x", problem: "y", from: card.id, carry: ["v9"] }), /no option v9/);
+  // A redraw of the carried option keeps saying where it came from.
+  const page2 = s.addAsset({ kind: "variant", name: "v2.html", contentType: "text/html", data: "<p>v2</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: next.id, variants: [{ id: "v1", name: "Quiet", asset: page2, version: 1 }] });
+  assert.equal(s.getCard(next.id).variants[0].carried?.card, card.id, "the revise keeps the carried marker");
 });
 
 test("a closed request takes no work and no late status from a session", () => {
@@ -1447,7 +1517,7 @@ test("an option's elements: listed, their states under them, then into the desig
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a, states: [...kept, { id: "shown", name: "Shown", part: "Limit banner", element: "banner", asset: html("banner"), selector: "#banner" }] }, { id: "v2", version: 1, name: "Rows", asset: b }] });
   s.done(again.id, "run-2", "drew");
   assert.deepEqual(s.getCard(added[1]).design_states.map((x) => x.name), ["Shown"], "the design catalog shows the states drawn since");
-  assert.throws(() => s.act(card.id, bob, "revise"), /closed/, "nothing else reopens it");
+  assert.throws(() => s.act(card.id, bob, "revise"), /approved, so it no longer changes/, "nothing else changes it");
   // A new version of the option reaches the catalog: its card follows, and a state not drawn again says so.
   const now = s.getCard(card.id).variants;
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: html("A2") }, { id: "v2", version: 1, name: "Rows", asset: b }] });
@@ -1502,6 +1572,100 @@ test("an answer says what a worked-in note goes against: a decision, the issue o
   assert.deepEqual(m.warns.map((w) => [w.source.kind, w.source.ref || w.source.url, w.what]), [["decision", d.id, "Limits reset weekly"], ["issue", "https://github.com/acme/widgets/issues/12", "The issue's weekly view"]]);
   s.answer(thread.id, "Nothing against anything.");
   assert.equal(s.getCard(card.id).threads.find((x) => x.id === thread.id).messages.at(-1).warns, undefined, "no warns, no box");
+});
+
+test("the decision check: a design written without it queues one, a write with it closes it, a new decision checks the cards about it, a build against one is confirmed", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Limits", problem: "Show the limit" });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  const checks = () => Object.values(s.db.inbox).filter((i) => i.kind === "decision-check" && i.card === card.id && i.state !== "done");
+  s.upsertCard({ id: card.id, concepts: ["limits"], triage: { verdict: "design" } });
+  assert.equal(checks().length, 0, "no decision to check against: nothing queued");
+  const d = s.addDecision({ concepts: ["Limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/40" } }).decision;
+  assert.equal(checks().length, 1, "a new decision about it checks the card");
+  assert.match(checks()[0].note, new RegExp(`${d.id} is in force`));
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Bar", asset }] });
+  assert.equal(checks().length, 1, "a design written without its check joins the check waiting");
+  assert.throws(() => s.upsertCard({ id: card.id, decision_check: { concepts: [], read: [] } }), /what the design is about/);
+  assert.throws(() => s.upsertCard({ id: card.id, decision_check: { concepts: ["limits"], read: ["D-9"] } }), /no decision D-9/);
+  s.upsertCard({ id: card.id, conflicts: [{ decision: d.id, why: "The bar shows a day.", variant: "v1" }], decision_check: { concepts: ["Limits"], read: [d.id] } });
+  assert.equal(checks().length, 0, "a write with its check closes it");
+  assert.deepEqual([s.card(card.id).decision_check.concepts, s.card(card.id).decision_check.read, s.card(card.id).decision_check.options], [["limits"], [d.id], { v1: "1" }]);
+  assert.deepEqual(s.decisionCheck(card.id).decisions.map((x) => x.id), [d.id]);
+  assert.deepEqual(s.decisionCheck(card.id).conflicts.map((x) => x.decision), [d.id]);
+  const other = s.createRequest(alice, { title: "Other", problem: "x" }).card;
+  s.upsertCard({ id: other.id, concepts: ["header"], triage: { verdict: "design" } });
+  assert.deepEqual(s.decisionCheck(other.id).decisions, [], "another concept reads nothing");
+  assert.deepEqual(s.decisionCheck(other.id, { q: "weekly reset" }).decisions.map((x) => x.id), [d.id], "the words find it too");
+  s.db.cards[card.id].status = "feedback";
+  assert.throws(() => s.act(card.id, alice, "build", "v1"), (e) => e.status === 409 && new RegExp(`Bar goes against ${d.id}`).test(e.message));
+  assert.equal(s.act(card.id, alice, "build", "v1", { overrule: true }).inbox.kind, "build", "built knowingly");
+  s.addDecision({ concepts: ["limits"], text: "Limits show in the header", author: { name: "Alice" }, origin: { kind: "chat" } });
+  assert.equal(checks().length, 1, "another decision about it checks it again");
+  for (const i of Object.values(s.db.inbox).filter((x) => x.card === card.id && x.kind === "build")) { s.claim(i.id, "run-1"); s.done(i.id, "run-1"); }
+  s.act(card.id, alice, "close");
+  assert.deepEqual([checks().length, Object.values(s.db.inbox).find((i) => i.kind === "decision-check" && i.card === card.id && i.outcome === "not checked: closed") !== undefined], [0, true], "closing it ends the check waiting");
+});
+
+test("the decision check: each trigger queues one; a check a decision queued closes only once the write read it; a long read says it is cut", () => {
+  const pr = { kind: "pr", url: "https://github.com/acme/widgets/pull/40" };
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const open = (s, id) => Object.values(s.db.inbox).filter((i) => i.kind === "decision-check" && i.card === id && i.state === "open");
+  const decide = (s) => s.addDecision({ concepts: ["filters"], text: "Filters sit on the left", author: { login: "dana" }, origin: pr }).decision;
+
+  // A picked alternative.
+  { const { s, id, page, finish } = withOptions();
+    s.upsertCard({ id, concepts: ["filters"] }); decide(s);
+    s.act(id, alice, "alternatives", "Chips", { variant: "v1", part: { selector: "#f", label: "Filters" } });
+    const vs = s.getCard(id).variants;
+    s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: vs[0].asset, alternatives: [{ id: "a", name: "Chips", part: "Filters", asset: page("X") }] }, { id: "v2", version: 1, name: "Cards", asset: vs[1].asset }] });
+    finish();
+    s.act(id, alice, "pick-alternative", "a", { variant: "v1" });
+    assert.equal(open(s, id).length, 1, "a picked alternative is checked"); }
+
+  // A person's own option; a restored decision; what closes a check a decision queued.
+  { const { s, id, finish } = withOptions();
+    s.upsertCard({ id, concepts: ["filters"] }); const d = decide(s);
+    assert.deepEqual(open(s, id).map((i) => i.decisions), [[d.id]], "the item names the decision that queued it");
+    finish();
+    s.addOwnOption(id, alice, { images: [{ contentType: "image/png", data: png }] });
+    assert.equal(open(s, id).length, 1, "a person's own option is checked");
+    finish();
+    s.revokeDecision(d.id, alice, { reason: "Top now." }); s.restoreDecision(d.id, alice);
+    assert.deepEqual(open(s, id).map((i) => i.decisions), [[d.id]], "a restored decision checks the cards about it");
+    s.upsertCard({ id, decision_check: { concepts: ["filters"], read: [] } });
+    assert.equal(open(s, id).length, 1, "a write that did not read it leaves it open");
+    s.upsertCard({ id, decision_check: { concepts: ["filters"], read: [d.id] } });
+    assert.equal(open(s, id).length, 0, "a write that read it closes it");
+    s.upsertCard({ id, impact: { concept: "filters", places: [{ where: "Toolbar" }] } });
+    assert.equal(open(s, id).length, 1, "a new impact is checked");
+
+    // A new change card, and an open issue with a sketch.
+    const change = s.upsertCard({ kind: "change", title: "One", summary: "Short.", source: { repo: "acme/widgets", pr: 9 },
+      sections: [{ key: "what", title: "What changed", body: "Filters moved.", source: { label: "PR #9" } }] }).card;
+    assert.equal(open(s, change.id).length, 1, "a change card written without its check is checked");
+    const shot = s.addAsset({ kind: "screen", name: "s", contentType: "image/png", data: png }).asset.id;
+    const issue = s.upsertCard({ kind: "issue", title: "See filters", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 41 }, sketches: [{ asset: shot, source: "sketch" }] }).card;
+    assert.equal(open(s, issue.id).length, 1, "an issue's sketch is checked");
+
+    for (let i = 0; i < 60; i++) s.addDecision({ concepts: ["filters"], text: `Rule ${i}`, author: { name: "Alice" }, origin: { kind: "chat" } });
+    const read = s.decisionCheck(id);
+    assert.deepEqual([read.decisions.length, read.total, read.truncated], [60, 61, true], "a long read is cut and says so");
+    assert.deepEqual(s.decisionCheck(id, { q: "left" }).decisions.map((x) => x.text), ["Filters sit on the left"], "words read instead of the concepts narrow it");
+  }
+});
+
+test("a decision someone other than a designer made is approved by a designer; it holds either way", () => {
+  const s = fresh();
+  const pr = { kind: "pr", url: "https://github.com/acme/widgets/pull/40" };
+  const d = s.addDecision({ concepts: ["limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: pr }).decision;
+  assert.throws(() => s.approveDecision(d.id, { agent: true }), (e) => e.status === 403);
+  const a = s.approveDecision(d.id, alice).decision;
+  assert.deepEqual([a.status, a.approved.by.email, a.history.at(-1).what], ["active", alice.email, "approved"]);
+  assert.throws(() => s.approveDecision(d.id, alice), /already approved/);
+  const gone = s.addDecision({ concepts: ["rows"], text: "Rows stay roomy", author: { login: "dana" }, origin: pr }).decision;
+  s.revokeDecision(gone.id, alice, { reason: "Dense now." });
+  assert.throws(() => s.approveDecision(gone.id, alice), /restore it first/);
 });
 
 test("a designer adds a decision on the Desk in their own name, with its pictures; Design Desk does not", () => {

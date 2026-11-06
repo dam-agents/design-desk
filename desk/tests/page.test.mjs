@@ -788,6 +788,23 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.equal(await desk.isChecked("#ws-ask-first"), false, "a step to a state keeps the unticked box");
     await desk.click("[data-ws-build]");
     assert.equal((await sent("/api/cards/r2/actions", 2)).ask_first, false);
+
+    // An option against a decision in force goes live only knowingly: Build it live asks first,
+    // refuses an unticked box, and sends the confirmation (docs/desk.md → Decisions → The check).
+    await desk.evaluate(() => { request.conflicts = [{ decision: "D-9", why: "The button shouts.", status: "active", text: "Buttons stay quiet", variant: "v1" }]; });
+    await desk.click('[data-card="r2"]');
+    await desk.waitForSelector('#detail .against');
+    await desk.click('[data-act="build"]');
+    await desk.waitForSelector("[data-ws-build]");
+    await desk.click("[data-ws-build]");
+    await desk.waitForSelector("#confirm-dialog[open]");
+    assert.match(await desk.textContent("#confirm-dialog"), /Calm goes against D-9/);
+    await cf("Build it live").click();
+    await desk.waitForSelector("#confirm-dialog[open] .toast", { state: "attached" });
+    assert.equal(await desk.evaluate(() => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r2/actions").length), 2, "nothing goes while the box is unticked");
+    await desk.check("#confirm-form [name=check]");
+    await cf("Build it live").click();
+    assert.equal((await sent("/api/cards/r2/actions", 3)).overrule, true);
   } finally {
     await run.close();
   }
@@ -1141,6 +1158,35 @@ test("a request from Slack names its author by the people list's name, not the a
   assert.match(line, /by:\s*Dana Kovar/);
   assert.doesNotMatch(line, /dana\.k@/, "no address where a name is known");
 }));
+// Your own name from the people list is what the menu shows; the Desk's name stays the page's title.
+test("the menu names you by your row of the people list, the title stays the Desk's", (t) => open(t, BRIDGE_STORIES
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", my_name: "Alice Hale", name: "Acme Desk", can: { vote: true, comment: true } }'), async (desk) => {
+  await desk.waitForFunction(() => /Alice Hale/.test(document.querySelector("#me")?.textContent || ""));
+  assert.doesNotMatch(await desk.textContent("#me"), /Acme Desk/, "not the Desk's name");
+  assert.equal(await desk.title(), "Acme Desk");
+}));
+
+// The developer spec waits for a person: Send to developers is the next step, Edit and
+// Ask for changes sit in the row, and nothing goes before a send (docs/handoff.md → Review before it goes).
+test("a spec in draft waits for a person: read it, edit it, then send it", (t) => open(t, BRIDGE_STORIES
+  .replace('title: "Spend in the list", status: "feedback"', 'title: "Spend in the list", status: "spec", approved: { by: { email: "alice@example.com" }, variant: "v1" }, spec: { asset: "A-9", review: "draft" }')
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }')
+  .replace(': path === "/api/assets/A-1"', ': path === "/api/assets/A-9" ? { contentType: "text/markdown", encoding: "utf8", data: "# The spec\\n\\nGrey header." }\n    : path === "/api/assets/A-1"'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.waitForSelector("#detail .steppill [data-spec-send]");
+  assert.equal(await desk.locator("#detail .spec-tools [data-spec-edit]").count(), 1, "Edit on the spec itself");
+  assert.equal(await desk.locator("#detail .spec-tools [data-spec-changes]").count(), 1, "and Ask for changes…");
+  assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 0, "not in the row");
+  await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-body")?.textContent || ""));
+  assert.match(await desk.textContent("#detail"), /Spec draft — read it, then send/, "the state says the spec has not gone");
+  await desk.click("#detail [data-spec-edit]");
+  await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-text")?.value || ""), null, { timeout: 5000 });
+  await desk.fill("#spec-text", "# The spec\n\nGrey header, 14 px.");
+  await desk.click("#detail [data-spec-save]");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/spec"));
+  assert.equal(await desk.evaluate(() => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r7/spec").length), 1, "the edit is one save; nothing is sent");
+}));
 
 // A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
 test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
@@ -1155,6 +1201,65 @@ test("a folded list leaves Guide and a narrow window their page", (t) => open(t,
   assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "and so does a phone's width");
   await desk.evaluate(() => document.querySelector("#main").classList.remove("has-detail"));
   assert.notEqual(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none", "with no item open there, the folded list shows");
+}));
+
+// A decision a developer made waits for a designer's approval; one of the design side does not.
+const APPROVALS = `<script>
+const calls = [];
+const decisions = [{ id: "D-1", text: "Search sits in the header", status: "active", side: "design", at: "2026-10-01T00:00:00Z", concepts: ["search"], author: { name: "Alice" } },
+  { id: "D-2", text: "Limits reset weekly", status: "active", side: "developer", unapproved: true, at: "2026-10-02T00:00:00Z", concepts: ["limits"], author: { login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" } }];
+const cards = [{ id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows D-2.", source: { repo: "acme/widgets", pr: 45 } },
+  { id: "C-7", kind: "request", title: "Show a daily spend bar", status: "prototype", created: "2026-11-05T09:00:00Z", request: { problem: "Show today's spend." },
+    triage: { verdict: "design", reasons: [] }, variants: [], threads: [], prototype: { state: "failed" },
+    conflicts: [{ decision: "D-2", why: "A daily bar suggests a daily reset.", status: "active", text: "Limits reset weekly" }] }];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { decide: true, build: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] }
+    : path.endsWith("/approve") ? { decision: { ...decisions[1], unapproved: false, approved: { by: { email: "d@example.com" }, at: "2026-11-06T10:00:00Z" } } }
+    : path.startsWith("/api/decisions/") ? { decision: decisions.find((d) => d.id === path.slice(15)), refs: [] }
+    : path.startsWith("/api/decisions") ? { decisions: /state=unapproved/.test(path) ? decisions.filter((d) => d.unapproved) : decisions }
+    : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a decision someone other than a designer made says Not approved in its peek, its row and its page; a designer approves it there; Not approved filters", (t) => open(t, APPROVALS, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#C-1`);
+  await desk.waitForSelector('#detail a[data-ref="D-2"]');
+  await desk.hover('#detail a[data-ref="D-2"]');
+  await desk.waitForFunction(() => /Limits reset weekly/.test(document.querySelector("#peek")?.textContent || ""));
+  assert.match(await desk.textContent("#peek"), /Not approved/, "the peek says it");
+  await desk.mouse.move(0, 0);
+  await desk.goto(`${base}#D-2`);
+  await desk.waitForSelector("#detail [data-approve-decision]");
+  assert.match(await desk.textContent("#detail .status"), /Not approved/, "its status box says it");
+  assert.match(await desk.textContent('#list [data-decision="D-2"]'), /Not approved/, "its dot says it");
+  assert.doesNotMatch(await desk.textContent('#list [data-decision="D-1"]'), /Not approved/, "a designer's does not");
+  await desk.click("#detail [data-approve-decision]");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/decisions/D-2/approve"));
+  await desk.click('[data-dstate="unapproved"]');
+  await desk.waitForFunction(() => calls.some((c) => /state=unapproved/.test(c.path)));
+  await desk.waitForSelector('#list [data-decision="D-2"]');
+  assert.equal(await desk.$('#list [data-decision="D-1"]'), null, "the filter lists only the ones waiting");
+
+  // A request with no options that goes against a decision builds only knowingly.
+  await desk.goto(`${base}#C-7`);
+  await desk.waitForSelector('#detail [data-act="build"]');
+  await desk.click('#detail [data-act="build"]');
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.match(await desk.textContent("#confirm-dialog"), /It goes against D-2/);
+  const ok = desk.locator("#confirm-dialog .actions button", { hasText: "Build it" });
+  await ok.click();
+  await desk.waitForSelector("#confirm-dialog[open] .toast", { state: "attached" });
+  assert.equal(await desk.evaluate(() => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/C-7/actions").length), 0, "nothing goes while the box is unticked");
+  await desk.check("#confirm-form [name=check2]");
+  await ok.click();
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/C-7/actions"));
+  assert.equal(await desk.evaluate(() => JSON.parse(calls.find((c) => c.method === "POST" && c.path === "/api/cards/C-7/actions").body).overrule), true);
 }));
 
 // An option that names the decisions it rests on, one of them revoked.

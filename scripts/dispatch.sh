@@ -10,7 +10,7 @@
 # worklist every expensive item (a request to triage, variants, a prototype, a
 # handoff, a catalog drawing, a screen for the map, Figma work, an issue to draw) after the first expensive one; in an
 # issues worklist every issue to draw after the first. Questions, teardowns, expiring
-# prototypes, comments to record as decisions and issues only to read are quick and stay in the run.
+# prototypes, comments to record as decisions, checks against the decisions and issues only to read are quick and stay in the run.
 # A unit's task text carries the item id and the unit's path and nothing from the
 # item: it becomes the new session's prompt. Titles come from ids alone.
 # `dispatch: disabled` in the worklist's config keeps everything in the run.
@@ -41,7 +41,7 @@ if [ "$cmd" = plan ]; then
       jq --arg a "$arr" --argjson item "$(jq -c .item <<<"$e")" --arg by "${LOG_RUN:-session}" --arg title "$VERB $NOUN $label" --argjson arrays "$ARRAYS" '
         . as $w | reduce ($arrays[]) as $k ($w; .[$k] = [])
         | .[$a] = [$item] | .dispatched = {id: $item.id, by: $by} | .title = $title
-        | del(.questions_due, .teardowns_due, .expiring_due, .screens_due, .polls_due, .councils_due, .issue_news_due, .people_due, .decisions_due)' "$wl" > "$unit" )
+        | del(.questions_due, .teardowns_due, .expiring_due, .screens_due, .polls_due, .councils_due, .issue_news_due, .people_due, .decisions_due, .checks_due)' "$wl" > "$unit" )
     jq -cn --arg id "$id" --arg name "design-desk-unit-$mode-$safe" --arg unit "$unit" --arg section "$SECTION" \
       --arg title "$VERB $NOUN $label" --arg model "$model" '
       {id: $id, name: $name, worklist: $unit, sessionTitle: $title,
@@ -62,7 +62,7 @@ if [ "$cmd" = rest ]; then
   elif [ "$mode" = issues ]; then
     title="$(jq -r '((.drawings_due // []) + (.issue_news_due // []))[] | "#\(.issue)"' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Read issues $title"
   else
-    title="$(jq -r '[.requests_due, .variants_due, .prototypes_due, .handoffs_due, .catalog_due, .map_due, .figma_due, .slack_due, .drawings_due, .questions_due, .screens_due, .polls_due, .councils_due, .teardowns_due, .people_due, .decisions_due] | map(. // []) | add | .[].id' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Work Desk items ${title:-(quick ones)}"
+    title="$(jq -r '[.requests_due, .variants_due, .prototypes_due, .handoffs_due, .catalog_due, .map_due, .figma_due, .slack_due, .drawings_due, .questions_due, .screens_due, .polls_due, .councils_due, .teardowns_due, .people_due, .decisions_due, .checks_due] | map(. // []) | add | .[].id' "$out" | head -3 | paste -sd, - | sed 's/,/, /g')"; title="Work Desk items ${title:-(quick ones)}"
   fi
   jq -n --arg w "$out" --arg t "$title" '{worklist: $w, title: $t}'
   exit 0

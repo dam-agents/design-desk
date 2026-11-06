@@ -67,7 +67,7 @@ config_json() {
     --arg max_changes_per_run "$(cfg max_changes_per_run)" --arg profile "$(cfg profile)" \
     --arg default_style "$(cfg default_style)" --arg prototype_requesters "$(cfg prototype_requesters)" \
     --arg max_prototypes "$(cfg max_prototypes)" --arg prototype_expiry_days "$(cfg prototype_expiry_days)" \
-    --arg prototype_remote "$(cfg prototype_remote)" --arg handoff "$(cfg handoff)" \
+    --arg prototype_remote "$(cfg prototype_remote)" --arg handoff "$(cfg handoff)" --arg spec_review "$(cfg spec_review)" \
     --arg desk_ping "$(cfg desk_ping)" --arg desk_artifact "$(cfg desk_artifact)" --arg desk_link "$(cfg desk_link)" --arg bug_reports "$(cfg bug_reports)" \
     --arg watch_open_prs "$(cfg watch_open_prs)" --arg issue_label "$(cfg issue_label)" --arg proposals "$(cfg proposals)" \
     --arg max_proposals_per_week "$(cfg max_proposals_per_week)" --arg implementer "$(cfg implementer)" \
@@ -92,6 +92,7 @@ config_json() {
       prototype_expiry_days: ($prototype_expiry_days | tonumber? // 7),
       prototype_remote: ($prototype_remote | if . == "" then "none" else . end),
       handoff: ($handoff | if . == "" then "desk" else . end),
+      spec_review: ($spec_review | if . == "disabled" then "disabled" else "enabled" end),
       desk_ping: ($desk_ping | if . == "" then "enabled" else . end),
       desk_artifact: $desk_artifact,
       desk_link: $desk_link,
@@ -534,6 +535,7 @@ inbox_mode() {
       drawings_due: pick(["draw"]),
       people_due: [ pick(["person"])[] | select(.person != null) ],
       decisions_due: pick(["decision"]),
+      checks_due: pick(["decision-check"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
