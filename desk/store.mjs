@@ -904,6 +904,25 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // Where else it shows up: every screen there opens its card in Product → Screens. A place
+  // without a card finds the screen of that name; a screen Product does not have yet gets a card
+  // the next run draws, as + Add would (docs/map.md → A screen someone added). Only once Product
+  // has screens at all: without the screens instance nothing would ever draw it.
+  linkPlaces(impact) {
+    const key = (t) => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const screens = Object.values(this.db.cards).filter((x) => x.kind === "screen" && x.status !== "dropped");
+    if (!screens.length) return;
+    for (const p of impact.places) {
+      if (p.card || p.kind !== "screen") continue;
+      const name = (p.screen || String(p.where).split("→")[0]).trim() || p.where;
+      const known = screens.find((x) => key(x.title) === key(name) || key(x.title) === key(p.where));
+      if (known) { p.card = known.id; continue; }
+      const { card } = this.addToProduct({ agent: true }, { kind: "screen", part: name, where: "", show: p.how || "" });
+      screens.push(card);
+      p.card = card.id;
+    }
+  }
+
   // One element of the approved option becomes an element of Product → Elements, marked as from
   // an approved design and not from the product (docs/catalog.md → From approved designs). No
   // run: the card copies the element's words, states and pictures; pressing it again updates it.
@@ -1044,6 +1063,17 @@ export class Store {
   // A state change a person asks for on a request card; the agent does the work.
   act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
     const c = this.card(cardId);
+    // Check again: Design Desk takes the screen's pictures again on the live product; the same
+    // pictures mark it checked, new ones redraw it (docs/map.md → Check again).
+    if (c.kind === "screen") {
+      if (action !== "refresh") throw bad("a screen can only be checked again");
+      if (c.status === "building" || c.status === "dropped") throw bad("Design Desk has not drawn this screen yet.");
+      if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "map")) throw bad(BUSY);
+      const item = this.enqueue("map", cardId, null, who, optText(note, 1000, "note"));
+      item.scope = "refresh";
+      this.save();
+      return { card: c, inbox: item };
+    }
     if (c.kind === "element") {
       if (c.design) throw bad(`This element comes from the approved design of ${c.design.card}, not from the product: it is drawn there.`);
       // `history` draws how it looked at earlier commits of the code (docs/catalog.md → History).
@@ -1535,7 +1565,7 @@ export class Store {
         // Nor does an option taken off go live, nor a build still waiting to build it.
         if (next.live_pick && !next.variants.some((v) => v.id === next.live_pick.variant)) { goneLive = next.live_pick.variant; delete next.live_pick; }
       }
-      else if (k === "impact") next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions);
+      else if (k === "impact") { next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions); this.linkPlaces(next.impact); }
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
       else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
       else if (k === "path") next.path = clean(String(fields.path), 300, "path");

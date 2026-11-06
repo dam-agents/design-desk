@@ -1712,3 +1712,32 @@ test("a closed request is deleted for good, with its conversations and pictures;
   assert.equal(Object.values(s.db.inbox).some((i) => i.card === card.id), false);
   assert.throws(() => s.deleteRequest(card.id, alice), (e) => e.status === 404);
 });
+
+test("Check again: a screen goes back to Design Desk once, as a map item with scope refresh; the same pictures mark it checked", () => {
+  const s = fresh();
+  const shot = s.addAsset({ kind: "screen", name: "a", contentType: "image/png", data: Buffer.from("png-a").toString("base64") }).asset.id;
+  const { card } = s.upsertCard({ kind: "screen", title: "Agents list", path: "/agents", status: "current", screens: [{ asset: shot, source: "instance" }] });
+  assert.ok(card.drawn, "first pictures: drawn");
+  const { inbox: item } = s.act(card.id, alice, "refresh");
+  assert.deepEqual([item.kind, item.scope], ["map", "refresh"]);
+  assert.throws(() => s.act(card.id, alice, "refresh"), /already working/);
+  assert.throws(() => s.act(card.id, alice, "history"), /only be checked again/);
+  const again = s.upsertCard({ id: card.id, screens: [{ asset: shot, source: "instance" }] }).card;
+  assert.equal(again.drawn, card.drawn, "the same pictures: not redrawn");
+  assert.ok(again.checked >= card.drawn, "but checked");
+});
+
+test("Where else this shows up: a screen opens its card in Product, and one Product does not have gets a card to draw", () => {
+  const s = fresh();
+  const { card: list } = s.upsertCard({ kind: "screen", title: "Agents list", path: "/agents", status: "current" });
+  const { card: req } = s.createRequest(alice, { title: "Calmer spend", problem: "The spend shouts." });
+  const im = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [
+    { where: "Agents list → each row", kind: "screen" }, { where: "Billing", how: "the month's total", kind: "screen" }, { where: "Slack alert", kind: "message" }] } }).card.impact;
+  assert.equal(im.places[0].card, list.id, "named as the screen is: linked");
+  const added = s.card(im.places[1].card);
+  assert.deepEqual([added.kind, added.status, added.title, added.created_by], ["screen", "building", "Billing", { agent: true }]);
+  assert.ok(inbox(s).open.some((i) => i.kind === "map" && i.card === added.id), "the next run draws it");
+  assert.equal(im.places[2].card, null, "a message is no screen");
+  const again = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [{ where: "Billing", kind: "screen" }] } }).card.impact;
+  assert.equal(again.places[0].card, added.id, "written again: the same card, no twin");
+});

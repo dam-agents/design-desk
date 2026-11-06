@@ -75,7 +75,9 @@ On a card, one `design desk upsert` with:
 
 `kind` is one of `screen`, `component`, `message`, `email`, `document`, `other`. A place that
 is a screen or a part in Product (`design desk cards --kind screen`, `--kind element`) carries
-its `card` id, and the page opens it from there. A decision on the Desk is cited by its `id`;
+its `card` id, and the page opens it from there. A screen with no card yet: leave `card` out;
+the store links the screen of that name, or adds a card the next run draws
+([map.md](../../../docs/map.md) → A screen someone added). A decision on the Desk is cited by its `id`;
 one found elsewhere by its words and source. At most 30
 places, 20 effects, 20 decisions; the most important first.
 
