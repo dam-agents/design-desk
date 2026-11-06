@@ -908,12 +908,13 @@ export class Store {
   // without a card finds the screen of that name; a screen Product does not have yet gets a card
   // the next run draws, as + Add would (docs/map.md → A screen someone added). Only once Product
   // has screens at all: without the screens instance nothing would ever draw it.
-  linkPlaces(impact) {
+  linkPlaces(impact, given = []) {
     const key = (t) => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
     const screens = Object.values(this.db.cards).filter((x) => x.kind === "screen" && x.status !== "dropped");
     if (!screens.length) return;
-    for (const p of impact.places) {
-      if (p.card || p.kind !== "screen") continue;
+    // A place that named a card keeps what it named: an unknown one is no link, never a new screen.
+    for (const [i, p] of impact.places.entries()) {
+      if (p.card || p.kind !== "screen" || given?.[i]?.card != null) continue;
       const name = (p.screen || String(p.where).split("→")[0]).trim() || p.where;
       const known = screens.find((x) => key(x.title) === key(name) || key(x.title) === key(p.where));
       if (known) { p.card = known.id; continue; }
@@ -1565,7 +1566,7 @@ export class Store {
         // Nor does an option taken off go live, nor a build still waiting to build it.
         if (next.live_pick && !next.variants.some((v) => v.id === next.live_pick.variant)) { goneLive = next.live_pick.variant; delete next.live_pick; }
       }
-      else if (k === "impact") { next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions); this.linkPlaces(next.impact); }
+      else if (k === "impact") { next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions); this.linkPlaces(next.impact, fields.impact.places); }
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
       else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
       else if (k === "path") next.path = clean(String(fields.path), 300, "path");
