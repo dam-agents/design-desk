@@ -366,6 +366,9 @@
   .linked .k { color: var(--muted); }
   /* The number reads with its title, on the same baseline, as in a heading. */
   .linked { align-items: baseline; } .linked .num { margin-left: -6px; font-size: 11px; }
+  .linked .lk { display: inline-flex; align-items: baseline; gap: 10px; min-width: 0; max-width: 100%; } .linked .lk .num { margin-left: -6px; }
+  .linked .lk .anchor { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .linked .lk .num, .linked .lk .chip { flex-shrink: 0; }
+  .linked.many { flex-direction: column; align-items: flex-start; gap: 6px; }
   /* The issue's user stories: pick one, see the parts of the option that meet it and how. */
   /* The issue's user stories under the option's design: one pressed plays in the design above. */
   /* The story player: a bar at the bottom of the window while a story plays in the design. */
@@ -3727,7 +3730,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function requestsFrom(c) {
     const rs = S.cards.filter((x) => x.kind === "request" && x.from === c.id);
     if (!rs.length) return "";
-    return `<div class="linked"><span class="k">${rs.length === 1 ? "A request from this" : `${rs.length} requests from this`}</span>${rs.map((x) => `<button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>${num(x)}<span class="chip" title="Where that request is now">${esc(STATUS[x.status] || x.status)}</span>`).join("")}</div>`;
+    // Each request on a line of its own: title, number, where it is now.
+    const one = (x) => `<span class="lk"><button class="anchor" data-card="${esc(x.id)}">${esc(x.title)}</button>${num(x)}<span class="chip" title="Where that request is now">${esc(STATUS[x.status] || x.status)}</span></span>`;
+    return `<div class="linked${rs.length > 1 ? " many" : ""}"><span class="k">${rs.length === 1 ? "A request from this" : `${rs.length} requests from this`}</span>${rs.map(one).join("")}</div>`;
   }
 
   // What the issue says about the design: only the parts about what people see (docs/requests.md → Research).
@@ -4876,8 +4881,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     }
     if (ds.restore) { await api("POST", `/api/decisions/${ds.restore}/restore`, {}); await refreshList(); await openDecision(ds.restore); return; }
     if (ds.approveDecision) { await api("POST", `/api/decisions/${ds.approveDecision}/approve`, {}); toast(`${ds.approveDecision} is approved.`); await refreshList(); await openDecision(ds.approveDecision); return; }
+    // An item opens on its own tab, as a link to it does: a PR on PR Changes, an issue on Issues,
+    // so the menu says where you are; an item whose tab is hidden (simple mode) lights none.
     if (ds.card) {
-      await openCard(ds.card);
+      if (S.cards.some((x) => x.id === ds.card)) await goTo({ id: ds.card }); else await openCard(ds.card);
       if (ds.madeBy) { showBeforeAfter(S.card, ds.madeBy); renderDetail(); }
       return;
     }

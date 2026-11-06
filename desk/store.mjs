@@ -29,7 +29,7 @@ export const LIMITS = {
   // heartbeat therefore returns dead work to the queue on the next inbox tick.
   claimTtlMin: 15,
   // A change card is read in passing: a short title, a one-sentence summary, a few short sections.
-  change: { title: 90, summary: 180, sections: 5, section: 400 },
+  change: { title: 90, summary: 180, sections: 5, section: 280 },
   // An issue on the Issues page: what it brings, and in a few bullets what the UI will need.
   issue: { title: 90, summary: 180, needs: 3, need: 200, sketches: 2 },
   // The user stories of the issue a request came from, and how each option meets them.
