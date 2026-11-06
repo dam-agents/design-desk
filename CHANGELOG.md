@@ -7,6 +7,20 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.60.0 — 2026-11-06
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**). The store keeps `figma_check` on
+   items and the Figma switch per person.
+2. Only with `figma: enabled`: Figma's REST API now reads frames and compares the product with
+   them (Product → Differences). Ask the owner to add a read-only Figma personal access token
+   as a Custom Header connection `X-Figma-Token` for `api.figma.com`, from an account with a
+   Dev or Full seat, unless the Figma MCP server already works; allow `api.figma.com` and
+   Figma's image host in the egress. Check it with `design figma frames <a file link>`.
+   Nothing to do with `figma: disabled`.
+
 ## 1.59.0 — 2026-11-06
 
 **Upgrade:**

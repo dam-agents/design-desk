@@ -288,6 +288,18 @@ test("simple mode: each person's own choice, kept on the Desk apart from day or 
   assert.equal((await d.viewer("alice@example.com", "/api/prefs", { simple: null })).body.simple, null, "null: the role decides again");
 });
 
+test("the Figma switch: each person shows or hides the comparisons with Figma, kept on the Desk", async (t) => {
+  const d = await desk(t);
+  const me = async (email) => (await d.viewer(email, "/api/me")).body;
+  assert.equal((await me("alice@example.com")).figma_pref, null, "no choice: shown while the Desk has Figma on");
+  await d.viewer("alice@example.com", "/api/prefs", { simple: true });
+  const saved = await d.viewer("alice@example.com", "/api/prefs", { figma: false });
+  assert.deepEqual([saved.status, saved.body.figma, saved.body.simple], [200, false, true], "only the key sent changes");
+  assert.deepEqual([(await me("alice@example.com")).figma_pref, (await me("bob@example.com")).figma_pref], [false, null], "not anyone else's");
+  assert.equal((await d.viewer("bob@example.com", "/api/prefs", { figma: "off" })).status, 400);
+  assert.equal((await d.viewer("alice@example.com", "/api/prefs", { figma: null })).body.figma, null, "null: shown again");
+});
+
 test("read and unread: the first open marks an item read for that person alone", async (t) => {
   const d = await desk(t);
   const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." })).body.card.id;

@@ -54,6 +54,8 @@ const USAGE = `usage: design desk <command>
   decision-show <D-n>                      one decision with what cites it or goes against it
   decision-revoke <D-n> <revoke.json|->    revoke a decision as a person did: {reason, by: {name, login,
                                            email}, origin: {kind, label, url, card}, replaced_by}
+  decision-figma <D-n> <check.json|->      a Figma frame that goes against a decision, as figma_check (the figma
+                                           skill → Compare with the product); null clears it
   decisions [--concept <c>] [--q <words>] [--state active|revoked]
                                            earlier decisions, newest first
   decision-check <C-n> [--concept <a,b>] [--q <words>]
@@ -358,6 +360,7 @@ export async function main(_cmd, argv) {
     case "decision": return out(await call("POST", "/agent/decisions", JSON.parse(readArg(pos[0]))));
     case "decision-show": return out(await call("GET", `/agent/decisions/${encodeURIComponent(pos[0] || "")}`));
     case "decision-revoke": return out(await call("POST", `/agent/decisions/${encodeURIComponent(pos[0] || "")}/revoke`, JSON.parse(readArg(pos[1]))));
+    case "decision-figma": return out(await call("POST", `/agent/decisions/${encodeURIComponent(pos[0] || "")}/figma`, { figma_check: JSON.parse(readArg(pos[1])) }));
     case "bundle": {
       if (!pos[0] || !pos[1]) fail("usage: design desk bundle <C-n> <dir>");
       const { card } = await call("GET", `/agent/cards/${pos[0]}`);

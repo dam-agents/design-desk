@@ -405,6 +405,8 @@ export class Store {
         design: c.design ? { card: c.design.card, option: c.design.option, version: c.design.version, change: c.design.change, of: c.design.of } : null,
         design_check: c.design_check ? { verdict: c.design_check.verdict, request: c.design_check.request, differences: c.design_check.differences.map((x) => ({ element: x.element, card: x.card })) } : null,
         in_catalog: c.in_catalog ? c.in_catalog.cards.length : 0,
+        // Compared with its Figma frame (the figma skill): Product → Differences lists it.
+        figma: c.figma_check ? figmaRow(c.figma_check) : null,
       }));
   }
 
@@ -651,19 +653,21 @@ export class Store {
   prefsOf(who) {
     const key = viewerKey(who);
     const p = (key && own(this.db.prefs, key)) || {};
-    return { theme: p.theme || null, simple: typeof p.simple === "boolean" ? p.simple : null };
+    // figma: the Figma comparisons shown to this person (null: shown, when the Desk has Figma on).
+    return { theme: p.theme || null, simple: typeof p.simple === "boolean" ? p.simple : null, figma: typeof p.figma === "boolean" ? p.figma : null };
   }
 
   // Only the keys given change; a person with neither left set has no entry.
   setPrefs(who, prefs = {}) {
     const key = viewerKey(who);
     if (!key) throw bad("only a person has preferences");
-    const { theme, simple } = prefs;
+    const { theme, simple, figma } = prefs;
     if ("theme" in prefs && theme !== null && theme !== "light" && theme !== "dark") throw bad("theme must be light, dark or null");
     if ("simple" in prefs && simple !== null && typeof simple !== "boolean") throw bad("simple must be true, false or null");
-    const next = { ...this.prefsOf(who), ...("theme" in prefs ? { theme } : {}), ...("simple" in prefs ? { simple } : {}) };
-    if (next.theme === null && next.simple === null) delete this.db.prefs[key];
-    else Object.defineProperty(this.db.prefs, key, { value: { ...(next.theme ? { theme: next.theme } : {}), ...(next.simple !== null ? { simple: next.simple } : {}), at: this.clock() }, enumerable: true, writable: true, configurable: true });
+    if ("figma" in prefs && figma !== null && typeof figma !== "boolean") throw bad("figma must be true, false or null");
+    const next = { ...this.prefsOf(who), ...("theme" in prefs ? { theme } : {}), ...("simple" in prefs ? { simple } : {}), ...("figma" in prefs ? { figma } : {}) };
+    if (next.theme === null && next.simple === null && next.figma === null) delete this.db.prefs[key];
+    else Object.defineProperty(this.db.prefs, key, { value: { ...(next.theme ? { theme: next.theme } : {}), ...(next.simple !== null ? { simple: next.simple } : {}), ...(next.figma !== null ? { figma: next.figma } : {}), at: this.clock() }, enumerable: true, writable: true, configurable: true });
     this.save();
     return this.prefsOf(who);
   }
@@ -1527,7 +1531,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -1592,6 +1596,11 @@ export class Store {
       else if (k === "design_check") {
         if (next.kind !== "change") throw bad("design_check belongs to a change card");
         next.design_check = fields.design_check === null ? null : cleanDesignCheck(fields.design_check, this.db.cards, this.db.assets, this.clock());
+      }
+      // The item read against its frame in Figma (the figma skill → Compare with the product).
+      else if (k === "figma_check") {
+        if (!FIGMA_KINDS.includes(next.kind)) throw bad(`figma_check belongs to a ${FIGMA_KINDS.join(", ")} card`);
+        next.figma_check = fields.figma_check === null ? null : keepDismissed(c?.figma_check, cleanFigmaCheck(fields.figma_check, this.db.assets, this.clock(), next.kind === "request" ? next.variants || [] : null));
       }
       else if (["bucket", "needs", "sketches", "style", "draw"].includes(k)) {
         if (next.kind !== "issue") throw bad(`${k} belongs to an issue`);
@@ -2051,6 +2060,32 @@ export class Store {
     return { decision: { ...d, conflicts: against }, refs };
   }
 
+  // A decision read against a Figma frame that goes against it (the figma skill → Compare with
+  // the product); null clears it.
+  setDecisionFigma(id, check) {
+    const d = this.decision(id);
+    if (check === null) delete d.figma_check;
+    else d.figma_check = keepDismissed(d.figma_check, cleanFigmaCheck(check, this.db.assets, this.clock(), null));
+    this.save();
+    return { decision: d };
+  }
+
+  // A person takes a difference off an item's Figma table (the box's ×), or brings it back
+  // (on: false). It stays off while the frame is the same (keepDismissed).
+  dismissFigma(id, who, part, on = true) {
+    const x = String(id).startsWith("D-") ? this.decision(id) : this.card(id);
+    const k = x.figma_check;
+    if (!k) throw bad("Nothing here is compared with Figma.");
+    const key = String(part || "").trim();
+    if (!k.differences.some((d) => d.part === key)) throw bad("That difference is not in the table.");
+    const rest = (k.dismissed || []).filter((d) => d.part !== key);
+    if (on) rest.push({ part: key, by: person(who), at: this.clock() });
+    if (rest.length) k.dismissed = rest; else delete k.dismissed;
+    if (x.kind) x.updated = this.clock();
+    this.save();
+    return { figma_check: k };
+  }
+
   addAsset({ card = null, kind, name, contentType, data, encoding = "base64" }) {
     if (!["screen", "variant", "spec", "patch", "image", "report"].includes(kind)) throw bad("unknown asset kind");
     if (!/^[\w.+-]+\/[\w.+-]+$/.test(contentType || "")) throw bad("contentType is not a media type");
@@ -2425,6 +2460,54 @@ function cleanDesignCheck(o, cards, assets, at) {
       if (card && own(cards, card)?.kind !== "element") throw bad(`design_check difference ${i + 1}: ${card} is not an element`);
       return { element: clean(x.element, 80, "element"), what: clean(x.what, 400, "what differs"), card, design: pic(x.design, "design"), shipped: pic(x.shipped, "shipped") };
     }) };
+}
+
+// Where an item differs from its frame in Figma (the figma skill → Compare with the product):
+// the frame, both sides' pictures, and per difference what, how much it matters, each side's
+// value and picture. On a request it names the option it was made for.
+const FIGMA_KINDS = ["change", "screen", "element", "request"];
+export const FIGMA_SEVERITIES = ["major", "minor"];
+function cleanFigmaCheck(o, assets, at, variants) {
+  if (typeof o !== "object" || !o || Array.isArray(o)) throw bad("figma_check must be an object");
+  if (!["matches", "differs"].includes(o.verdict)) throw bad("figma_check.verdict must be matches or differs");
+  const f = o.frame;
+  if (typeof f !== "object" || !f || !FIGMA_URL.test(String(f.url || ""))) throw bad("figma_check.frame.url must be a link to the frame in Figma");
+  const pic = (id, name) => { if (id == null || id === "") return null; if (!own(assets, id)?.contentType?.startsWith("image/")) throw bad(`figma_check: ${name} must be an uploaded picture`); return id; };
+  const when = (v, name) => { if (v == null || v === "") return null; if (Number.isNaN(Date.parse(v))) throw bad(`figma_check: ${name} must be a date`); return new Date(v).toISOString(); };
+  let variant = null;
+  if (variants) {
+    variant = optText(o.variant, 20, "variant") || null;
+    if (!variant || !variants.some((v) => v.id === variant)) throw bad("figma_check on a request names the option it compares (variant)");
+  }
+  const list = o.differences === undefined ? [] : o.differences;
+  if (!Array.isArray(list) || list.length > LIMITS.designDifferences) throw bad(`figma_check.differences is a list of at most ${LIMITS.designDifferences}`);
+  if (o.verdict === "differs" && !list.length) throw bad("figma_check: say what differs");
+  return {
+    verdict: o.verdict, checked: at, ...(variant ? { variant } : {}),
+    frame: { url: String(f.url), name: clean(f.name, 120, "frame name"), version: optText(f.version, 40, "frame version") || null, edited: when(f.edited, "frame.edited"), shot: pic(f.shot, "frame.shot") },
+    product_shot: pic(o.product_shot, "product_shot"),
+    differences: list.map((x, i) => {
+      if (!FIGMA_SEVERITIES.includes(x?.severity)) throw bad(`figma_check difference ${i + 1}: severity must be major or minor`);
+      return { part: clean(x.part, 80, "part"), what: clean(x.what, 300, "what differs"), severity: x.severity,
+        figma: optText(x.figma, 120, "figma value"), product: optText(x.product, 120, "product value"),
+        figma_shot: pic(x.figma_shot, "figma_shot"), product_shot: pic(x.product_shot, "product_shot") };
+    }),
+  };
+}
+
+// The list's summary of a comparison: the differences people did not take off the table.
+function figmaRow(k) {
+  const off = new Set((k.dismissed || []).map((d) => d.part));
+  const count = (k.differences || []).filter((d) => !off.has(d.part)).length;
+  return { verdict: count ? k.verdict : "matches", count, frame: k.frame?.name || "", checked: k.checked || null };
+}
+
+// A new comparison keeps the differences people took off the table while the frame is the
+// same one, unedited (its url and version), and only those still in it.
+function keepDismissed(prev, next) {
+  const same = prev?.dismissed?.length && prev.frame?.url === next.frame.url && (prev.frame?.version || null) === next.frame.version;
+  const kept = same ? prev.dismissed.filter((d) => next.differences.some((x) => x.part === d.part)) : [];
+  return kept.length ? { ...next, dismissed: kept } : next;
 }
 
 // Where else the same thing shows up, what a change to it touches, and the earlier

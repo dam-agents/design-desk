@@ -179,10 +179,15 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    Desk store, its threads and votes cannot be rebuilt from anywhere else; recommend yes.
 8. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
 9. **Figma** (`figma`, `figma_file`) — "Does the team design in Figma? I can import frames
-   from it and send options back as editable layers." Yes → ask the owner to add Figma's MCP
-   server (`https://mcp.figma.com/mcp`) as a Custom MCP connection with OAuth and grant it to
-   this agent, then set `figma: enabled`; ask for a file the exports should go to
-   (`figma_file`, may stay empty). No → `figma: disabled`.
+   from it, show where the product differs from its design there, and send options back as
+   editable layers." Yes → ask the owner to add Figma's MCP server
+   (`https://mcp.figma.com/mcp`) as a Custom MCP connection with OAuth and grant it to this
+   agent, and a Figma personal access token (read only, from an account with a Dev or Full
+   seat) as a Custom Header connection `X-Figma-Token` for `api.figma.com`; either alone
+   works, the token without layers sent back. Allow `api.figma.com` and Figma's image host in
+   the egress if they are not on it. Then set `figma: enabled` and check `design figma frames
+   <a file link>`; ask for a file the exports should go to (`figma_file`, may stay empty).
+   No → `figma: disabled`.
 10. **Public manifest and peers** (`agent_manifest`) — not a question: write `dam` and tell the
     operator: "I publish my public interface (triggers, skills, blocks I read and write,
     channels, public pages) as a public manifest that people and other agents can read. It

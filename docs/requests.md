@@ -137,6 +137,9 @@ Variants are quick, static and on **sample data**: the place to compare directio
 anyone builds. Every upsert that adds or changes an option, a version, an alternative or a state
 carries its check against the decisions ([desk.md](desk.md) → Decisions → The check). Make them with the skill `design skill options --repo <repo>` names (the
 bundled `variants`, or the product's own), and revise them with the `revise` action's.
+With `figma: enabled` and a Figma link on the request (`request.figma`), compare the option
+the link's frame stands for with that frame once it is drawn or revised (the `figma` skill →
+Compare with the product); a note from **Work into the design** is a `revise` like any other.
 
 - **What the person chose** in New request: `request.vision` is how they picture it, so one
   option follows it as closely as the boundary allows and the others are real alternatives;
