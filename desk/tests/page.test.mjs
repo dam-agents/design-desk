@@ -971,7 +971,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41", author: "alice", milestone: "Sprint 12", assignees: ["bob"] }, waiting: [], threads: [] };
   const later = { id: "is2", kind: "issue", status: "open", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], sketches: 0, source: { repo: "acme/widgets", issue: 40, author: "erin" } };
   const gone = { id: "is3", kind: "issue", status: "archived", title: "Closed", bucket: "sprint", source: { repo: "acme/widgets", issue: 39 } };
-  const made = { id: "r9", kind: "request", title: "Spend column options", status: "feedback", from: "is1", by: { email: "lead@example.com" } };`;
+  const made = { id: "r9", kind: "request", title: "Spend column options", status: "declined", from: "is1", by: { email: "lead@example.com" } };`;
   const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
     .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, later, gone, made]")
     .replace("can: { request: true,", "can: { draw: true, \"follow-up\": true, request: true,")
@@ -1008,6 +1008,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/is1/actions"));
     assert.deepEqual(JSON.parse((await posts("/api/cards/is1/actions"))[0].body), { action: "draw", note: "try a chart" });
 
+    // Its request was closed, so Design this is back; while one is open, the issue offers only the link to it.
     await desk.click("[data-adjust]");
     assert.equal(await desk.textContent("#rq-title"), "Design this issue");
     assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "", "the request is the person's words: the issue's needs are not put in for them");

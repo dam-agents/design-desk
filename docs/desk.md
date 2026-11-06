@@ -600,7 +600,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
   A request made from a card (`request.from`: an issue's **Design this**, a change's
-  **Adjust the design**) names that card at its top, and the card lists its requests.
+  **Adjust the design**) names that card at its top, and the card lists its requests. While one of them is open, the card offers no **Design this** or **Adjust the design**: the list links to it; a closed request brings the button back.
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.
