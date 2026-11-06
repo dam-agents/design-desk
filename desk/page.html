@@ -2946,7 +2946,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   // A screen's or an element's drawing, in the same box: its word as its dot says it in the list.
   const MAP_TONE = { current: "approved", stale: "waiting", building: "checking", dropped: "closed" };
-  const mapStatus = (c, buttons) => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, "", buttons, ""); };
+  // The presentation sits under ⋯, as on every other item.
+  const mapStatus = (c, buttons, more = "") => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, "", buttons, more); };
   function renderChange(c) {
     const src = c.source || {};
     return `${backBar()}
@@ -3018,7 +3019,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${c.group || c.path ? `<div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}</div>` : ""}
-      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}${agendaButton(c)}`)}
+      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
@@ -3114,8 +3115,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const designs = S.cards.filter((x) => x.kind === "element" && x.design?.of === c.id);
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
-      ${c.group ? `<div class="sub"><span class="chip" title="Where in the product it belongs">${esc(c.group)}</span></div>` : ""}
-      ${mapStatus(c, c.status === "dropped" ? "" : `${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}`)}
+      ${mapStatus(c, c.status === "dropped" ? "" : `${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${designs.map((x) => `<div class="designbox"><p>✎ An approved design changes it: <button class="anchor" data-ref="${esc(x.id)}">${esc(x.title)}</button>${num(x)}, from ${reqRef(x.design.card)}. Until that ships, the drawing below is the product as it is.</p></div>`).join("")}
       ${renderWanted(c)}
