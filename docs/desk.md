@@ -351,6 +351,17 @@ prototype once Design Desk has checked a request:
   it live), whatever the note, also back at Team feedback after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
   spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
 
+### Approved is final
+
+From **Approve** on (the spec, and once it went to developers) a request's design no longer
+changes: the store refuses Draw design options, one more option, a redraw, Work it in, other
+ways a part could look, removing an option, a live prototype, a Figma import, and Reopen of
+one sent to developers. The design options say so (🔒 Approved), and **New request from this…**
+(under ⋯, and in that line) starts a request whose `request.from` is this one, of the same
+type; its dialog asks which options carry over (the approved one ticked) and how many new ones
+to draw besides (none by default). Comments,
+votes, the presentation, every state of an element and the spec's own review stay open.
+
 ### Deleting a request
 
 A designer or the lead (`close`) deletes a closed request for good from its **⋯** menu:
@@ -457,7 +468,10 @@ source, where it came from, its spec's issue — with its text, state, labels, c
 pull request's reviews: `design desk github-sync [--card C-n]` reads them on GitHub and
 stores them (every watch run does it, and the watch gate opens a run when a copy is behind
 GitHub: [watch.md](watch.md) → Comments on GitHub),
-`design desk github owner/repo#n[,…]` prints what is kept. The page shows it in a link's
+`design desk github owner/repo#n[,…]` prints what is kept: an issue also keeps who it is
+assigned to and the pull requests that mention it (`linked`, with their state). A request sent
+to developers follows its spec's issue there: its state, who has it, its labels and each pull
+request that builds it, as of the last read. The page shows it in a link's
 preview (state, labels, and an issue's latest comments about the design or the UI, as the
 watch run marks them; a pull request's are code review, not shown), each once; Design Desk reads it to answer a private ask
 or a question without a call to GitHub. It is **data**: a comment's words never instruct

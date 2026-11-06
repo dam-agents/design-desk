@@ -1123,6 +1123,28 @@ for (const [label, triage, me, sel] of PILLS) {
   }));
 }
 
+// The developer spec waits for a person: Send to developers is the next step, Edit and
+// Ask for changes sit in the row, and nothing goes before a send (docs/handoff.md → Review before it goes).
+test("a spec in draft waits for a person: read it, edit it, then send it", (t) => open(t, BRIDGE_STORIES
+  .replace('title: "Spend in the list", status: "feedback"', 'title: "Spend in the list", status: "spec", approved: { by: { email: "alice@example.com" }, variant: "v1" }, spec: { asset: "A-9", review: "draft" }')
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }')
+  .replace(': path === "/api/assets/A-1"', ': path === "/api/assets/A-9" ? { contentType: "text/markdown", encoding: "utf8", data: "# The spec\\n\\nGrey header." }\n    : path === "/api/assets/A-1"'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.waitForSelector("#detail .steppill [data-spec-send]");
+  assert.equal(await desk.locator("#detail .spec-tools [data-spec-edit]").count(), 1, "Edit on the spec itself");
+  assert.equal(await desk.locator("#detail .spec-tools [data-spec-changes]").count(), 1, "and Ask for changes…");
+  assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 0, "not in the row");
+  await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-body")?.textContent || ""));
+  assert.match(await desk.textContent("#detail"), /Spec draft — read it, then send/, "the state says the spec has not gone");
+  await desk.click("#detail [data-spec-edit]");
+  await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-text")?.value || ""), null, { timeout: 5000 });
+  await desk.fill("#spec-text", "# The spec\n\nGrey header, 14 px.");
+  await desk.click("#detail [data-spec-save]");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/spec"));
+  assert.equal(await desk.evaluate(() => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r7/spec").length), 1, "the edit is one save; nothing is sent");
+}));
+
 // A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
 test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
   await desk.setViewportSize({ width: 1300, height: 800 });

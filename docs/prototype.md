@@ -51,7 +51,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    /tmp/design-desk-c<n>/prototype.patch > /tmp/design-desk-c<n>/guard.json`. Not `ok` →
    [boundary.md](boundary.md) → When the guard refuses. Upload the report and the patch
    (`--kind report`, `--kind patch`) and set `prototype: {state: "building", guard: {ok,
-   summary, asset}, branch, base}` and `status: prototype`.
+   summary, asset}, branch, base, patch: <the patch's asset>}` and `status: prototype`.
 5. **Environment.** `create_environment` with `name` = `c<n>`, the profile's
    `engine.endpoints`, `storage`, `start` when it names one, and `expires` =
    `<prototype_expiry_days>d`. An Environment of that name already there is reused.

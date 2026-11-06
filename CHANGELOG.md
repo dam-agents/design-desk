@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.54.0 — 2026-11-06
+## 1.56.0 — 2026-11-06
 
 **Upgrade:**
 1. Restart the Desk server (`rc-service --user design-desk-server restart`): the store keeps a
@@ -15,6 +15,16 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    force without a confirmation, and takes a designer's approval of a decision.
 2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
    ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+## 1.55.0 — 2026-11-06
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): it takes a
+   person's edit, changes and send of the developer spec.
+2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+3. Optional: `- spec_review: disabled` in `work/CONFIG.md` keeps the old way, the spec going
+   out on its own. A spec already sent stays as it is.
 
 ## 1.53.0 — 2026-11-06
 

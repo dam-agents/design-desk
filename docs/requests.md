@@ -112,16 +112,16 @@ The person deciding should know it before a single variant exists.
 4. Write `triage` on the card, with its check against the decisions ([desk.md](desk.md) → Decisions → The check): `verdict`, `reasons` (one plain sentence, only when the verdict
    needs it) and `cannot`: only what the person asked for — in the issue, the request or
    their answers — that a design change cannot do, each with its reason in their terms; never
-   a part nobody asked for. The Desk names every verdict in the request's steps, shows
-   `product` as a label beside the title, with its words and `reasons` on hover,
-   and folds `cannot` under the status. With options drawn and no live prototype to build
+   a part nobody asked for. The Desk names every verdict in the request's steps (no label
+   beside the title), says in the state's ⓘ what it means for the next step, and folds
+   `cannot` under the status. With options drawn and no live prototype to build
    next, the request's next step is **Contact a developer**: it opens `cannot`, where **Copy a
    question for a developer** copies a link to the request, its state and these parts. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request
    with `request.auto` (filed by someone who may start options, with `request.options` above
-   0) whose verdict is not `product`.
+   0, or options carried over: `request.carry`) whose verdict is not `product`.
 6. `design desk done I-<n> --outcome triaged`.
 
 A request too vague to triage gets **one question from you** instead, with your best guess
@@ -141,6 +141,10 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   `request.skills` (`{name: on}`) — a skill switched on is used for this request's options
   (read its `SKILL.md`), one switched off is not, even where it would run by default; a
   skill not listed follows the usual rules. Say on the card when a choice could not be kept.
+- **Carried options** — a request made from an approved one (`request.from` a request) may
+  start with some of its options (`request.carry`; each option's `carried: {card, variant,
+  version}`): change each as the new request says — a revise of it, its next version — and draw
+  `request.options` new ones besides (0: none). Never redraw a carried option from scratch.
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
   `status: variants`, make `request.options` genuinely distinct approaches (one to five; three
   when it is missing; 0 means the person asked for none, so only a designer's or developer's Draw starts them)

@@ -572,6 +572,9 @@ export class Store {
         key, kind: x.kind, title: String(x.title || key).replace(/\s+/g, " ").trim().slice(0, LIMITS.title) || key, state: optText(x.state, 30, "state"),
         url: /^https:\/\/github\.com\//.test(String(x.url || "")) ? String(x.url).slice(0, 500) : "",
         author: optText(x.author, 100, "author"), labels: (Array.isArray(x.labels) ? x.labels : []).slice(0, 20).map((l) => String(l).slice(0, 60)),
+        assignees: (Array.isArray(x.assignees) ? x.assignees : []).slice(0, 10).map((a) => String(a).slice(0, 100)),
+        // No list read this time (`linked` left out): the one from before stays.
+        linked: !Array.isArray(x.linked) ? (was?.linked || []) : x.linked.slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
       };
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
@@ -708,6 +711,7 @@ export class Store {
   workIn(cardId, who, threadIds) {
     const c = this.card(cardId);
     if (c.kind !== "request") throw bad("only a design request's options take changes");
+    if (designLocked(c)) throw bad(LOCKED);
     if ((c.status === "declined" || c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
     if (!Array.isArray(threadIds) || !threadIds.length) throw bad("Pick the comments to work in.");
     const ts = [...new Set(threadIds.map(String))].slice(0, LIMITS.threadsPerCard).map((id) => {
@@ -748,7 +752,7 @@ export class Store {
   // Types: an idea for the design; a UI bug; a feature (a larger piece, usually an
   // issue); an adjustment of UI a developer built (a pull request or a change card);
   // a proposal the agent made for a new feature.
-  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false, audience = null }) {
+  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false, audience = null, carry = [] }) {
     if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
     if (audience !== null && audience !== undefined && !AUDIENCES.includes(audience)) throw bad(`audience must be one of ${AUDIENCES.join(", ")}`);
@@ -783,6 +787,20 @@ export class Store {
     // and filed by the agent) are theirs: the page shows them with the request, apart from
     // the ones Design Desk takes.
     if (!who?.agent || c.origin?.reporter) c.screens = c.screens.map((x) => ({ ...x, source: x.source || "person", ...(x.by || who?.agent ? {} : { by: person(who) }) }));
+    // A request made from an approved one may carry its options over (docs/desk.md → Approved is
+    // final): each starts here as it was there, at its latest version, and names where it came from.
+    const source = request.from ? this.card(request.from) : null;
+    if (Array.isArray(carry) && carry.length) {
+      if (source?.kind !== "request") throw bad("Only options of a request carry over.");
+      const picked = [...new Set(carry.map(String))];
+      const vs = picked.map((vid) => (source.variants || []).find((v) => v.id === vid) || (() => { throw bad(`${source.id} has no option ${vid}`); })());
+      c.variants = vs.map((v) => ({ id: v.id, name: v.name, purpose: v.purpose, rationale: v.rationale, fidelity: v.fidelity, asset: v.asset, figma_url: v.figma_url || null,
+        stories: v.stories || null, reasons: v.reasons || null, states: structuredClone(v.states || []), elements: structuredClone(v.elements || []), version: 1,
+        carried: { card: source.id, variant: v.id, version: v.version || 1 } }));
+      request.carry = c.variants.map((v) => v.id);
+      // Carried options are changed right after triage, as new ones would be drawn.
+      if (auto === true) request.auto = true;
+    }
     const id = this.next("card", "C");
     c.id = id;
     this.db.cards[id] = c;
@@ -811,6 +829,7 @@ export class Store {
   addOwnOption(cardId, who, { name = "", note = "", images = [] }) {
     const c = this.card(cardId);
     if (c.kind !== "request" || c.request?.type === "bug") throw bad("only a design request has options");
+    if (designLocked(c)) throw bad(LOCKED);
     if (["declined", "handed-off"].includes(c.status)) throw bad("This request is closed.");
     if (!c.triage) throw bad("Wait until Design Desk has checked the request, then add an option.");
     const vs = c.variants || [];
@@ -1021,6 +1040,7 @@ export class Store {
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
+    if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import", "reopen"].includes(action)) throw bad(LOCKED);
     // Drawing every state of an approved design's element documents it and changes nothing of it,
     // so it stays open once the design went to developers (docs/requests.md → Every state of a part).
     if (closed && action !== "reopen" && !(action === "states" && c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
@@ -1145,6 +1165,54 @@ export class Store {
     if (action === "slack-send") item.scope = "send";
     this.save();
     return { card: c, inbox: item };
+  }
+
+  // ---------- the developer spec, read by a person before it goes ----------
+  // Design Desk writes the spec as a draft (`spec.review: "draft"`); a person reads it, edits
+  // it, asks for changes, or sends it. Only a send lets it leave the Desk (docs/handoff.md →
+  // Review before it goes). Every version stays: an edit or a rewrite keeps the one it replaces.
+  specAction(cardId, who, { action, text = "", note = "", implement = null } = {}) {
+    const c = this.card(cardId);
+    if (who?.agent) throw forbidden("A person reads the spec and sends it; Design Desk writes it.");
+    if (c.kind !== "request" || c.status !== "spec" || !c.spec?.asset) throw bad("There is no developer spec to look at yet.");
+    if (!["draft", "changes"].includes(c.spec.review || "")) throw bad(c.spec.review === "sent" ? "This spec is already on its way to developers." : "This spec is not waiting for a review.");
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "handoff")) throw bad(BUSY);
+    if ((c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open")) throw bad("Answer Design Desk's questions first; the spec takes your answers in.");
+    const may = can(who?.role, "approve") || can(who?.role, "skip") || (c.approved?.small && DEVELOPERS.includes(who?.role) && !isAuthor(c, who));
+    if (!may) throw forbidden("Only the people who may approve this request read and send its spec.");
+    const at = this.clock();
+    if (action === "edit") {
+      const body = clean(text, 60000, "spec");
+      const id = this.addAsset({ card: c.id, kind: "spec", name: "spec.md", contentType: "text/markdown", data: body, encoding: "utf8" }).asset.id;
+      c.spec = { ...c.spec, history: [...(c.spec.history || []), { asset: c.spec.asset, at: c.spec.at || c.updated, by: c.spec.by || { agent: true } }].slice(-20), asset: id, at, by: person(who), review: "draft" };
+      c.updated = at;
+      this.save();
+      return { card: c };
+    }
+    if (action === "changes") {
+      const ask = clean(note, 2000, "what to change");
+      c.spec = { ...c.spec, review: "changes", asked: { by: person(who), at, note: ask } };
+      c.updated = at;
+      const item = this.enqueue("handoff", cardId, null, who, ask);
+      item.scope = "spec-revise";
+      this.save();
+      return { card: c, inbox: item };
+    }
+    if (action === "send") {
+      // Here the person picks the route: an issue for developers, or straight to the coding
+      // agent with its label (`implement`); left out, what Approve said holds.
+      const straight = implement == null ? Boolean(c.approved?.implement) : Boolean(implement);
+      c.spec = { ...c.spec, review: "sent", sent: { by: person(who), at, implement: straight } };
+      if (c.approved) c.approved = { ...c.approved, implement: straight || undefined };
+      if (c.approved && !straight) delete c.approved.implement;
+      c.updated = at;
+      const item = this.enqueue("handoff", cardId, null, who, c.approved?.variant || "");
+      item.scope = "deliver";
+      if (straight) item.implement = true;
+      this.save();
+      return { card: c, inbox: item };
+    }
+    throw bad("unknown spec action");
   }
 
   // A person hands the drawn options of a Desk request to the team: from here people vote and
@@ -1490,6 +1558,16 @@ export class Store {
         // The agent's brief for the call: what is on the table and what to decide.
         if (!next.agenda) throw bad("a brief belongs to a card on the agenda");
         next.agenda = { ...next.agenda, brief: clean(fields.brief, 1500, "brief") };
+      }
+      else if (k === "spec") {
+        // A rewrite keeps the version it replaces, a person's edit included (specAction).
+        const was = c?.spec, now = cleanLinks(k, fields.spec);
+        // A new version Design Desk writes waits for a person (docs/handoff.md → Review before it
+        // goes), unless the write says otherwise (`review`, as with spec_review disabled) or it went.
+        if (now?.asset && now.asset !== was?.asset && now.review === undefined && !was?.sent) now.review = "draft";
+        next.spec = now && was?.asset && now.asset && now.asset !== was.asset
+          ? { ...now, history: [...(was.history || []), { asset: was.asset, at: was.at || c.updated, by: was.by || { agent: true } }].slice(-20), at: this.clock(), by: { agent: true } }
+          : now && was ? { ...now, history: now.history || was.history, ...(was.sent && !now.sent ? { sent: was.sent } : {}) } : now;
       }
       else next[k] = cleanLinks(k, fields[k]);
     }
@@ -1957,6 +2035,10 @@ function mustBeChecked(c, verb) {
 // Whether a person filed the request: its author never approves it For Developers. A
 // request the agent filed for someone carries their email in `origin.email` when the channel
 // disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
+// An approved design is final: from Approve on (the spec, sent to developers) nothing changes
+// it; a change is a new request made from it (docs/desk.md → Approved is final).
+const designLocked = (c) => c.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
+const LOCKED = "This design is approved, so it no longer changes. To change it, start a new request from this one.";
 const isAuthor = (c, who) => {
   const me = String(who?.email || "").toLowerCase();
   return Boolean(me) && [c.created_by?.email, c.origin?.email].some((x) => String(x || "").toLowerCase() === me);
@@ -2087,7 +2169,8 @@ function versioned(list, before, at, removed = []) {
     // Alternatives are of the option at one version: a redrawn option drops the ones it had.
     const alternatives = given.alternatives ? given.alternatives.map((x) => ({ ...x, of: now, drawn: at })) : old && old.asset === given.asset ? old.alternatives || [] : [];
     // A person's own option keeps who added it through every run's upsert.
-    const v = { ...given, ...(old?.by ? { by: old.by } : {}), stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
+    // An option carried over from an approved request keeps saying so through every version.
+    const v = { ...given, ...(old?.by ? { by: old.by } : {}), ...(old?.carried ? { carried: old.carried } : {}), stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
