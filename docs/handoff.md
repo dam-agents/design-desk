@@ -20,9 +20,11 @@ sent; the developer or coding agent gets only answers.
    - **Why** — the request in the requester's words, the decisions taken on the Desk (which
      variant, which concerns changed it), each with who decided.
    - **The design** — the prototype link and demo sign-in while it lives, the variant
-     names, and the screens as pictures, before and after (`![<view>](<file>)`; the deliver
-     skill attaches them, [handoff-github](../.agents/skills/handoff-github/SKILL.md) → The
-     pictures).
+     names, and the screens as pictures, before and after: upload each (`design desk asset
+     <file> --kind image --card C-<n>`) and write it as `![<view>](asset:A-<n>)`, so the
+     Desk shows it to the people who review the spec; the deliver skill attaches them to
+     GitHub ([handoff-github](../.agents/skills/handoff-github/SKILL.md) → The pictures) and
+     the bundle saves them under `pictures/`.
    - **Changes by screen** — per screen: layout, components, styles and tokens, icons.
    - **States** — empty, loading, error, long content, small screens, permissions: what each
      looks like, and which the prototype shows.
@@ -76,7 +78,7 @@ card the people who may approve it read the spec, and:
    the boundary and what needs a developer, every element and state with its selector in the
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
    prototype's branch and patch), `mockup.html` (the approved option, the exact reference),
-   `states/` and `shots/` (each state alone). Look at `design.json`: every element has its
+   `states/` and `shots/` (each state alone), `pictures/` (the spec's pictures, its lines pointing at them). Look at `design.json`: every element has its
    states, every acceptance line names something on the screens. With `prototype_remote` set,
    commit the folder as `handoff/C-<n>/` on the request's `design-desk/` branch (the
    prototype's, else `design-desk/c<n>-handoff` from the default branch) and push it there.

@@ -784,6 +784,8 @@
   /* The spec's versions read as plain text: each a link, the one shown in ink. */
   .spec-versions button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .spec-versions button:hover { text-decoration: underline; }
   .spec-versions button[aria-pressed="true"] { color: var(--ink); font-weight: 600; cursor: default; text-decoration: none; }
+  .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
+  .spec-preview { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow: auto; max-height: 36em; }
   .spec-text { width: 100%; font-family: var(--mono); font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
   /* The state's help: now, then every way on as branches; a move you cannot make is grey, with why. */
   .s-word .info .tip { max-width: 360px; text-align: left; }
@@ -3381,11 +3383,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const state = sp.review === "draft" ? `<span class="chip warn" title="Nothing has gone to developers yet">Draft · waiting for you</span>` : sp.review === "changes" ? `<span class="chip info">Being changed</span>`
       : sp.sent ? `<span class="chip ok" title="Sent by ${esc(nm(sp.sent.by?.email))}">✓ Sent ${esc(day(sp.sent.at))}</span>` : "";
     const list = versions.length > 1 ? `<p class="hint spec-versions">Versions: ${versions.map((x, i) => `<button data-spec-view="${esc(x.asset)}" aria-pressed="${x === shown}">${i + 1} · ${esc(by(x))}</button>`).join(", ")}</p>` : "";
-    const edit = S.specEdit === c.id ? `<textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
+    const edit = S.specEdit === c.id ? `<div class="spec-edit"><textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="spec-preview" id="spec-preview" aria-label="How it reads"></div></div><p class="hint">Pictures stay as <code>![name](asset:A-…)</code> lines; the preview on the right shows them. To add one, paste a picture's line from another spec version or ask for changes.</p><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
     return `<details class="fold"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec ${state}</summary><div class="panel">
       <p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(by(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p>${list}
       ${edit || `<div id="spec-body" data-asset="${esc(shown.asset)}">…</div>`}</div></details>`;
   }
+
+  // While the spec is edited, the text on the left reads on the right, pictures included.
+  let specTimer = null;
+  async function specPreview() { const t = $("#spec-text"), p = $("#spec-preview"); if (!t || !p) return; p.innerHTML = md(t.value); await loadPictures(p); }
+  document.addEventListener("input", (e) => { if (e.target.id === "spec-text") { clearTimeout(specTimer); specTimer = setTimeout(specPreview, 300); } });
 
   // The prototype's demo account in the facts' style: grey words, the values in ink.
   const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}${l.hint ? `<span>${esc(l.hint)}</span>` : ""}`;
@@ -4329,8 +4336,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   async function loadImages() {
     await loadPictures(document);
     const spec = $("#spec-body"), specText = $("#spec-text");
-    if (spec?.dataset.asset) { try { spec.innerHTML = md(decode(await asset(spec.dataset.asset))); } catch { spec.textContent = "The spec could not be loaded."; } }
-    if (specText && S.card?.spec?.asset && !specText.value) { try { specText.value = decode(await asset(S.card.spec.asset)); } catch {} }
+    // The spec's pictures are Desk assets (`![view](asset:A-n)`): they show here, and in the preview while you edit.
+    if (spec?.dataset.asset) { try { spec.innerHTML = md(decode(await asset(spec.dataset.asset))); await loadPictures(spec); } catch { spec.textContent = "The spec could not be loaded."; } }
+    if (specText && S.card?.spec?.asset && !specText.value) { try { specText.value = decode(await asset(S.card.spec.asset)); await specPreview(); } catch {} }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
     if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }

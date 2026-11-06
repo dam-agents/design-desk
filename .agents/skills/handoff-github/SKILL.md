@@ -37,7 +37,9 @@ never stands in for them (a developer may not see the Desk):
    `design shot <option.html> <dir> --width 1280`, plus `--width 390` when the request is about
    a small screen. Light first; dark when the change is about colour. Add the screen as it is
    today from the card's screens (`design desk fetch <A-n> <file>`), so the developer sees before and after.
-2. Keep the views the spec names, at most six pictures, each under 5 MB.
+2. Keep the views the spec names, at most six pictures, each under 5 MB. The spec writes its
+   pictures as `![<view>](asset:A-<n>)`: fetch each (`design desk fetch A-<n> <file>`) and
+   replace the line with the attached file's, so none stays a Desk-only reference.
 3. Attach them with `--attach <file>#<alt>`, repeated per picture (`gh issue create`,
    `gh issue comment`, `gh issue edit`, `gh pr create`, `gh pr comment`, `gh pr edit`), and
    refer to each in the body as `![<view name>](<file>)` so it lands in place. A comment

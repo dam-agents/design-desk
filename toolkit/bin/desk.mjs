@@ -58,7 +58,8 @@ const USAGE = `usage: design desk <command>
                                            earlier decisions, newest first
   fetch <A-n> <file>                       save an asset (an option's page, a screen) to a file
   bundle <C-n> <dir>                       the handoff bundle of an approved request (docs/handoff.md →
-                                           The bundle): spec.md, design.json, mockup.html, states/, shots/
+                                           The bundle): spec.md, design.json, mockup.html, states/, shots/,
+                                           pictures/ (the spec's pictures, its lines pointing at them)
   poll-open <C-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
                                            [{variant, ts}], closes, url, channel}
   poll-update <C-n> <P-n> [--synced <iso>] [--result <text>]
@@ -324,8 +325,23 @@ export async function main(_cmd, argv) {
         const a = await call("GET", `/agent/assets/${f.asset}`);
         writeFileSync(join(pos[1], f.path), Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8"));
       }
+      // The spec's pictures are Desk assets: saved under pictures/, the spec pointing at them there.
+      const specFile = join(pos[1], "spec.md"), pictures = [];
+      try {
+        let text = readFileSync(specFile, "utf8");
+        for (const id of [...new Set([...text.matchAll(/\]\(asset:(A-\d+)\)/g)].map((m) => m[1]))]) {
+          const a = await call("GET", `/agent/assets/${id}`);
+          const name = `pictures/${id}.${(String(a.contentType).split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5)}`;
+          mkdirSync(join(pos[1], "pictures"), { recursive: true });
+          writeFileSync(join(pos[1], name), Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8"));
+          text = text.split(`](asset:${id})`).join(`](${name})`);
+          pictures.push(name);
+        }
+        writeFileSync(specFile, text);
+      } catch (e) { if (e.code !== "ENOENT") throw e; }
+      design.pictures = pictures;
       writeFileSync(join(pos[1], "design.json"), `${JSON.stringify(design, null, 2)}\n`);
-      return out({ bundle: pos[1], files: ["design.json", ...files.map((f) => f.path)], acceptance: design.acceptance.length });
+      return out({ bundle: pos[1], files: ["design.json", ...files.map((f) => f.path), ...pictures], acceptance: design.acceptance.length });
     }
     case "fetch": {
       const a = await call("GET", `/agent/assets/${pos[0]}`);
