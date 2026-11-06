@@ -313,7 +313,7 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 A designer, the lead or a lead developer (`skip`) may skip the options, the vote and the live
 prototype once Design Desk has checked a request:
 
-- **Approve** at any open step from Checking on (**Send to developers now…** before options);
+- **Approve** at any open step from Checking on (the same **Approve…** before options: the spec then comes from the request);
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
   in the person's words ([handoff.md](handoff.md)). A lead developer does not overrule a
   decision in force: that stays a designer's.

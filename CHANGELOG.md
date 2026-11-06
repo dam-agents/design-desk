@@ -12,7 +12,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). The private ask's text box
-has a short placeholder, and at Team feedback the step pill always offers a move on.
+has a short placeholder, and at Team feedback the step pill always offers a move on; Send to developers now… is Approve… like every other step.
 
 ## 1.52.1 — 2026-11-06
 
