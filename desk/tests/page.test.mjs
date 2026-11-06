@@ -1136,7 +1136,7 @@ test("a spec in draft waits for a person: read it, edit it, then send it", (t) =
   assert.equal(await desk.locator("#detail .spec-tools [data-spec-changes]").count(), 1, "and Ask for changes…");
   assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 0, "not in the row");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-body")?.textContent || ""));
-  assert.match(await desk.textContent("#detail"), /Draft · waiting for you/, "the spec says it has not gone");
+  assert.match(await desk.textContent("#detail"), /Spec draft — read it, then send/, "the state says the spec has not gone");
   await desk.click("#detail [data-spec-edit]");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-text")?.value || ""), null, { timeout: 5000 });
   await desk.fill("#spec-text", "# The spec\n\nGrey header, 14 px.");

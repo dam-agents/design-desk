@@ -1158,7 +1158,7 @@
   const tone = (c) => c.status === "declined" && c.decided ? "decided" : held(c) ? "waiting" : TONE[c.status] || "fyi";
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
-  const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec ready — read it" : c.spec?.review === "sent" ? "Sending to developers" : "";
+  const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
   const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : specWord(c) || STATUS[c.status] || c.status;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   const WORK = {
@@ -3391,7 +3391,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const shown = versions.find((x) => x.asset === S.specView) || versions[versions.length - 1];
     const nm = (e) => e && e === S.me?.email ? "you" : e || "someone";
     const by = (x) => x.by?.agent || !x.by ? "Design Desk" : nm(x.by.email);
-    const state = sp.review === "draft" ? `<span class="chip warn" title="Nothing has gone to developers yet">Draft · waiting for you</span>` : sp.review === "changes" ? `<span class="chip info">Being changed</span>`
+    // The state above already says a draft waits; the spec repeats only what the state does not.
+    const state = sp.review === "draft" || sp.review === "changes" ? ""
       : sp.sent ? `<span class="chip ok" title="Sent by ${esc(nm(sp.sent.by?.email))}">✓ Sent ${esc(day(sp.sent.at))}</span>` : "";
     const list = versions.length > 1 ? `<p class="hint spec-versions">Versions: ${versions.map((x, i) => `<button data-spec-view="${esc(x.asset)}" aria-pressed="${x === shown}">${i + 1} · ${esc(by(x))}</button>`).join(", ")}</p>` : "";
     const edit = S.specEdit === c.id ? `<div class="spec-edit"><textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="spec-preview" id="spec-preview" aria-label="How it reads"></div></div><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
