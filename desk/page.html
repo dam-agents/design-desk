@@ -3344,9 +3344,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return { now, paths };
   }
   // The help as HTML (the diagram) and as one line for screen readers.
-  function nextHelp(c, own) {
+  function nextHelp(c, own, turn = "") {
     const { now, paths } = nextPaths(c);
-    const head = [own, now].filter(Boolean);
+    const head = [turn || own, now].filter(Boolean);
     const moves = paths.filter((x) => !x.info), notes = paths.filter((x) => x.info);
     const one = moves.filter((x) => x.ok).length === 1 && moves.length === 1;
     const li = (x) => `<li class="${x.ok ? "ok" : "no"}"><b>${x.ok ? "" : "✕ "}${esc(x.label)}</b><span>${x.ok ? "" : "Not now: "}${esc(x.sub)}</span></li>`;
@@ -3378,7 +3378,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const items = (nx.more || "") + call + size + del + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const h = nextHelp(c, own); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}

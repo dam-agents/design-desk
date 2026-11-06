@@ -1106,7 +1106,7 @@ const PILLS = [
   ["Build a live prototype", { verdict: "design", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, '[data-act="build"]'],
   ["Contact a developer", { verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, "[data-dev-ask]"],
   ["Approve…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
-  ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "developer", email: "dev@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
+  ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
 ];
 for (const [label, triage, me, sel] of PILLS) {
   test(`at Team feedback the step pill offers ${label}`, (t) => open(t, BRIDGE_PILL(triage, me), async (desk) => {
@@ -1124,7 +1124,8 @@ test("a folded list leaves Guide and a narrow window their page", (t) => open(t,
   await desk.click("#list-fold");
   assert.equal(await desk.$eval("#main", (m) => m.classList.contains("folded")), true, "the arrow folds the list");
   assert.equal(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none");
-  await desk.click('[data-tab="guide"]');
+  await desk.click("#me");
+  await desk.click("#help");
   assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "Guide has the whole width");
   await desk.setViewportSize({ width: 700, height: 800 });
   assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "and so does a phone's width");
