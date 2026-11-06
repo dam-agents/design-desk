@@ -170,7 +170,12 @@
   .prov b > svg { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; color: inherit; }
   .prov b { color: var(--ink); font-weight: 600; }
   .prov a { color: var(--accent); text-decoration: none; } .prov a:hover { text-decoration: underline; }
-  .prov .anchor { font-size: 12px; max-width: 32ch; }
+  .prov .anchor { max-width: 32ch; }
+  /* based on: reads as text like the rest of the line, with an arrow: it opens another item, it does not filter. */
+  .prov .anchor { font: inherit; font-weight: bold; color: var(--ink); background: none; padding: 0; border-radius: 0; }
+  .row .prov .anchor { font-weight: 400; }
+  .prov .anchor::after { content: " →"; color: var(--muted); }
+  .prov .anchor:hover { text-decoration: underline; }
   .sub + .prov { margin-top: 8px; }
   .row.overdue { border-left: 3px solid var(--bad); }
   /* Whose decision it is: the design side (designers, PMs, leads) blue, developers amber. */
@@ -764,6 +769,16 @@
   .s-word .info svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
   .s-word .info .tip { position: absolute; z-index: 30; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: 300px; padding: 8px 11px; border-radius: 7px; background: var(--ink); color: var(--panel); font-size: var(--fs-meta); line-height: 1.45; font-weight: 400; letter-spacing: 0; opacity: 0; pointer-events: none; transition: opacity .1s; }
   .s-word .info:hover .tip, .s-word .info:focus-visible .tip { opacity: 1; }
+  /* The state's help: now, then every way on as branches; a move you cannot make is grey, with why. */
+  .s-word .info .tip { max-width: 360px; text-align: left; }
+  .s-word .info .tip .t-now { display: block; margin-bottom: 6px; }
+  .s-word .info .tip .t-h { display: block; font-weight: 600; margin: 2px 0 4px; }
+  .s-word .info .tip .t-paths { list-style: none; margin: 0; padding: 0 0 0 10px; border-left: 1.5px solid color-mix(in srgb, var(--panel) 45%, transparent); }
+  .s-word .info .tip .t-paths li { position: relative; padding: 2px 0 4px 12px; }
+  .s-word .info .tip .t-paths li::before { content: ""; position: absolute; left: -10px; top: 10px; width: 16px; border-top: 1.5px solid color-mix(in srgb, var(--panel) 45%, transparent); }
+  .s-word .info .tip .t-paths b { display: block; font-weight: 600; }
+  .s-word .info .tip .t-paths span { display: block; opacity: .85; }
+  .s-word .info .tip .t-paths li.no { opacity: .6; }
   /* The status line: the state's word, its ⓘ and the steps pill. */
   .s-line { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
   /* The steps pill: Step n/m opens every step; beside it, inside the pill, the move to the next step. */
@@ -1731,7 +1746,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // The card it came out of: the change a proposal or a touch-up started from.
     // Named by its kind and number, its title on hover: a title can be long or the agent's own.
     const parent = S.cards.find((x) => x.id === (o.event?.card || c.design?.card || from));
-    const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
+    const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="Opens ${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
     // Where the team planned an issue, as one more word of the line: `in: This sprint`.
     const planned = c.kind === "issue" && !c.designed && c.bucket ? `<span title="Where the team planned this issue"><span class="k">in:</span> <b>${esc(c.bucket === "sprint" && c.source?.milestone ? c.source.milestone : BUCKET[c.bucket] || c.bucket)}</b></span>` : "";
     if (parts) return { kind, src, author, auto, parent: from_ };
@@ -3259,6 +3274,66 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return { text: "", buttons: "" };
   }
 
+  // The state's help (the ⓘ by its word): what is happening now, and every way on from here as
+  // a small decision diagram — each move the viewer can make, and each usual move they cannot,
+  // with why not and who can (docs/desk.md → Team feedback).
+  function nextPaths(c) {
+    const p = c.prototype || { state: "none" }, v = c.triage?.verdict, hasOptions = (c.variants || []).length > 0;
+    const against = (c.conflicts || []).some((x) => x.status === "active");
+    const go = (label, sub) => ({ label, ok: true, sub }), no = (label, sub) => ({ label, ok: false, sub });
+    const info = (sub) => ({ label: "", ok: true, sub, info: true });
+    const ask = `ask ${contact()}`;
+    const approve = () => canApprove(c) ? go("Approve…", hasOptions ? "Pick the option; Design Desk writes the developer spec and sends it. It can't be taken back." : "Without design options: Design Desk writes the spec from the request and sends it to developers.")
+      : no("Approve…", against ? "It goes against a decision in force: only a designer approves it."
+        : c.size?.small ? (filedIt(c) ? "You filed it: another developer approves it." : "For Developers: a developer approves it.")
+        : `A designer or a lead developer approves it; ${S.me?.role === "guest" ? ask : "tell them in a comment when the team is happy"}.`);
+    const close = () => can("close") || can("skip") ? go("Close…", "Nothing goes to developers. You can record a decision with it, in your name.")
+      : no("Close…", "Only a designer, a lead or a lead developer closes a request; say so in a comment.");
+    const build = (label = "Build a live prototype") => v !== "design" ? no(label, `${v ? `${VERDICT[typeOf(c)][v]?.[0] || v} — a` : "Not checked yet — a"} live prototype only changes the look, and this request needs more than that.`)
+      : simple() ? no(label, "Simple mode hides the live prototype; switch simple mode off to build one.")
+      : !can("build") ? no(label, `Your role does not build live prototypes; ${ask}.`)
+      : go(label, "A private copy of the product with this option's look, with made-up data. The first one can take up to an hour.");
+    const slack = () => {
+      const modes = slackModes(c), poll = (c.polls || []).find((x) => x.state === "open");
+      if (modes.length) return go("Send to Slack…", modes.includes("vote") ? "Pictures of the options you tick, or a vote on them; replies come back here." : `Pictures of the options you tick${poll ? `; the vote there runs until ${when(poll.closes)}` : ""}.`);
+      if (!S.me?.slack && !S.me?.slack_send && c.origin?.channel !== "slack") return no("Send to Slack…", "Slack is not set up for this Desk.");
+      if (!can("share")) return no("Send to Slack…", `Your role does not send to Slack; ${ask}.`);
+      if (working(c).some((k) => k.startsWith("slack"))) return no("Send to Slack…", "Design Desk is sending to Slack now.");
+      return no("Send to Slack…", poll ? `A vote already runs in Slack until ${when(poll.closes)}.` : "Not available for this request.");
+    };
+    const busy = working(c);
+    const now = busy.length ? busy.map((k) => WORK[k] || "Design Desk is working on this.").join(" ") : "";
+    let paths;
+    if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer reopens it; say so in a comment.")];
+    else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here.")];
+    else if (c.status === "spec") paths = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
+      ? [go("Answer Design Desk's questions", "They are in this box; the spec waits for them."), close()]
+      : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
+    else if (c.status === "triage" && !c.triage) paths = [info("Design Desk checks it first: how the screen works today, who else is changing it, what a design change can do."), close()];
+    else if (c.status === "triage") paths = [can("explore") ? go("Draw design options", "Design Desk draws a few ways it could look.") : no("Draw design options", `Only designers, developers and leads start the options; ${ask}.`), approve(), close()];
+    else if (held(c)) paths = [can("revise") || filedIt(c) ? go("Ask for feedback", "Once the options are fine-tuned: the team votes and comments.") : no("Ask for feedback", "Only the request's author, a designer, a developer or a lead asks the team."), build(), approve(), close()];
+    else if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) paths = [build(p.state === "failed" ? "Try again" : "Build it again"), approve(), close()];
+    else if (live(c)) paths = [go("Open the prototype", "Try it and comment below."), approve(), close()];
+    else if (["prototype", "testing"].includes(c.status)) paths = [info("Design Desk builds the live prototype; this page updates by itself."), close()];
+    else if (hasOptions) paths = [go("Vote and comment", "👍, 👎 or ⚠ on each option, a comment on any part."), build(),
+      ...((c.triage?.cannot || []).length ? [simple() ? no("Contact a developer", "Simple mode hides it; switch simple mode off.") : go("Contact a developer", "The parts a design change cannot do, with a question to copy.")] : []),
+      slack(), approve(), close()];
+    else paths = [info("Design Desk draws the design options; this page updates by itself."), close()];
+    return { now, paths };
+  }
+  // The help as HTML (the diagram) and as one line for screen readers.
+  function nextHelp(c, own) {
+    const { now, paths } = nextPaths(c);
+    const head = [own, now].filter(Boolean);
+    const moves = paths.filter((x) => !x.info), notes = paths.filter((x) => x.info);
+    const one = moves.filter((x) => x.ok).length === 1 && moves.length === 1;
+    const li = (x) => `<li class="${x.ok ? "ok" : "no"}"><b>${x.ok ? "" : "✕ "}${esc(x.label)}</b><span>${x.ok ? "" : "Not now: "}${esc(x.sub)}</span></li>`;
+    const html = `${head.map((t) => `<span class="t-now">${esc(t)}</span>`).join("")}${notes.map((x) => `<span class="t-now">${esc(x.sub)}</span>`).join("")}`
+      + (moves.length ? `<span class="t-h">${one ? "Next:" : working(c).length ? "When it is done, one of these:" : "Next, one of these:"}</span><ul class="t-paths">${moves.map(li).join("")}</ul>` : "");
+    const text = [...head, ...notes.map((x) => x.sub), ...moves.map((x) => `${x.label}${x.ok ? "" : " (not now)"}: ${x.sub}`)].join(" ");
+    return { html, text };
+  }
+
   // The prototype's demo account in the facts' style: grey words, the values in ink.
   const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}${l.hint ? `<span>${esc(l.hint)}</span>` : ""}`;
   function renderStatus(c) {
@@ -3281,7 +3356,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const items = (nx.more || "") + call + size + del + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const h = nextHelp(c, own); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
