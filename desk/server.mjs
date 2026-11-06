@@ -201,6 +201,10 @@ async function viewerRoute(req, res, url, who) {
   // outside the write budget: browsing many items must not use up what comments and votes need,
   // and it writes at most once per person and item.
   if (m === "POST" && p[1] === "cards" && p[3] === "read" && !p[4]) return send(res, 200, store.full() ? { read: false } : store.markRead(p[2], actor));
+  // The bell: what happened lately, for this person (docs/desk.md → Notifications). Opening it
+  // marks it seen; like reading an item, that is outside the write budget.
+  if (m === "GET" && p[1] === "notifications") return send(res, 200, store.notifications(actor));
+  if (m === "POST" && p[1] === "notifications" && p[2] === "seen") return send(res, 200, store.full() ? { seen: null } : store.markSeen(actor));
   const b = m === "GET" ? {} : await body(req);
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);

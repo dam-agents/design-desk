@@ -230,7 +230,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {}, seen: {} };
 }
 
 export class Store {
@@ -684,6 +684,74 @@ export class Store {
     Object.defineProperty(this.db.reads, key, { value: mine, enumerable: true, writable: true, configurable: true });
     this.save();
     return { read: true };
+  }
+
+  // What happened lately on the Desk, newest first, for the bell (docs/desk.md → Notifications).
+  // Nothing new is logged: each event is read from what the store keeps anyway (a card's
+  // creation, a message, a drawn option, a vote, an approval, a spec, a decision). A person
+  // never sees their own doings, nor another person's private ask. `since` is when they last
+  // opened the bell: newer events are unread.
+  notifications(who, { limit = 50, days = 30 } = {}) {
+    const key = viewerKey(who);
+    const mine = new Set([who?.email, ...(who?.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
+    const isMine = (by) => Boolean(by?.email) && mine.has(String(by.email).toLowerCase());
+    const from = new Date(Date.parse(this.clock()) - days * 864e5).toISOString();
+    const out = [];
+    const push = (at, event, item, by, extra = {}, forYou = false) => { if (at && at >= from && !isMine(by)) out.push({ at, event, ...item, by: by || null, ...extra, for_you: forYou }); };
+    const itemOf = (c) => ({ item: c.id, kind: c.kind, title: c.title || "", screen: c.request?.screen || c.path || null, status: c.status });
+    for (const c of Object.values(this.db.cards)) {
+      if (c.status === "archived" || c.kind === "digest") continue;
+      const it = itemOf(c);
+      // Yours: you filed it, voted on it or wrote in it. The bell's For you shows these alone.
+      const talked = new Set((c.threads || []).filter((tid) => (own(this.db.threads, tid)?.messages || []).some((m) => isMine(m.by))));
+      const filed = [c.created_by, c.origin].some(isMine);
+      const yours = filed || isMine(c.approved?.by) || talked.size > 0 || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
+      const author = c.origin?.reporter && c.origin.channel !== "agent" ? { name: c.origin.reporter, email: c.origin.email || null, via: c.origin.channel } : c.created_by;
+      if (["request", "change", "issue"].includes(c.kind)) push(c.created, `new-${c.kind}`, it, author, {}, yours);
+      // Options drawn in one run come as one event: new ones, then redrawn ones.
+      const runs = new Map();
+      for (const v of c.variants || []) {
+        if (!v.drawn) continue;
+        const k = `${v.drawn}|${(v.version || 1) > 1 ? "redrawn" : "drawn"}`;
+        runs.set(k, [...(runs.get(k) || []), v.name]);
+      }
+      for (const [k, names] of runs) { const [at, how] = k.split("|"); push(at, `options-${how}`, it, { agent: true }, { detail: names.join(", ") }, yours); }
+      for (const [variant, byKey] of Object.entries(c.votes || {})) {
+        const name = (c.variants || []).find((v) => v.id === variant)?.name || variant;
+        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${{ prefer: "Prefers", dislike: "Dislikes", concern: "Has a concern about" }[v.vote] || "Voted on"} ${name}` }, yours);
+      }
+      if (c.approved?.at) push(c.approved.at, "approved", it, c.approved.by, { detail: (c.variants || []).find((v) => v.id === c.approved.variant)?.name || null }, yours);
+      if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
+      if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
+      for (const tid of c.threads || []) {
+        const t = own(this.db.threads, tid);
+        if (!t || !sees(t, key || "")) continue;
+        (t.messages || []).forEach((m, i) => {
+          const event = i === 0 ? (t.kind === "asks" ? "agent-asks" : t.kind === "question" || t.kind === "private" ? "question" : "comment")
+            : m.by?.agent ? (t.kind === "question" || t.kind === "private" ? "answer" : "reply") : "reply";
+          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, private: t.kind === "private" || undefined }, talked.has(t.id) || filed || t.kind === "private" || (t.kind === "asks" && yours));
+        });
+      }
+    }
+    for (const d of Object.values(this.db.decisions)) {
+      const it = { item: d.id, kind: "decision", title: d.text, screen: null, status: d.status };
+      push(d.recorded || d.at, "new-decision", it, d.author ? { email: d.author.email, name: d.author.name || d.author.login, role: d.author.role } : null);
+      if (d.revoked?.at) push(d.revoked.at, "revoked", it, d.revoked.by || null, { detail: d.revoked.reason || null });
+    }
+    out.sort((a, b) => b.at.localeCompare(a.at));
+    const seen = (key && own(this.db.seen, key)) || null;
+    const items = out.slice(0, limit);
+    return { items, seen, unread: out.filter((x) => !seen || x.at > seen).length };
+  }
+
+  // A person opened the bell: what is there now counts as seen, for them alone.
+  markSeen(who) {
+    const key = viewerKey(who);
+    if (!key) return { seen: null };
+    const at = this.clock();
+    Object.defineProperty(this.db.seen, key, { value: at, enumerable: true, writable: true, configurable: true });
+    this.save();
+    return { seen: at };
   }
 
   privateAsks(who) {

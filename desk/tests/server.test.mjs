@@ -337,6 +337,17 @@ test("read and unread: the first open marks an item read for that person alone",
   assert.equal((await d.viewer("alice@example.com", "/api/cards/C-999/read", {})).status, 404);
 });
 
+test("notifications: the bell lists what others did and opening it marks it seen", async (t) => {
+  const d = await desk(t);
+  const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." })).body.card.id;
+  const bell = async (email) => (await d.viewer(email, "/api/notifications")).body;
+  assert.deepEqual((await bell("alice@example.com")).items, [], "not her own request");
+  const bob = await bell("bob@example.com");
+  assert.deepEqual([bob.items[0].event, bob.items[0].item, bob.unread], ["new-request", id, 1]);
+  assert.ok((await d.viewer("bob@example.com", "/api/notifications/seen", {})).body.seen);
+  assert.equal((await bell("bob@example.com")).unread, 0);
+});
+
 test("team feedback: a Desk request waits for a person to ask the team, one from Slack goes on by itself", async (t) => {
   const d = await desk(t);
   const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Save</button>", encoding: "utf8" });

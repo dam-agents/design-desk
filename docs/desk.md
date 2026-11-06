@@ -458,6 +458,29 @@ them alone (`POST /api/cards/<id>/read` from the page; the list's `read`; the st
 filter keeps an item just opened, no longer bold, until the person changes the filter or the tab. You read
 without marking anything.
 
+## Notifications
+
+The bell at the top right, left of the person's menu, lists what happened on the Desk in the
+last 30 days, newest first, at most 50 (`GET /api/notifications`). Nothing new is logged: each
+event is read from what the store keeps anyway. A person never sees their own doings, and a
+private ask only its owner. The events:
+
+| Event | When |
+| --- | --- |
+| New request, New PR change, New issue | an item is created |
+| New comment, New question, New reply | a message in a conversation |
+| Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
+| New options drawn, Options redrawn | a run draws options, or new versions of them |
+| New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
+| New decision, Decision revoked | a decision is added or revoked |
+
+Every row says the same things in the same places: an icon and what happened, who (when known),
+how long ago, the item's title and number, its page and screen, and for a message or a vote one
+line of what was said. A click opens the item. **For you** keeps what the person filed, voted on,
+approved or wrote in. The red count is what is newer than the person last opened the bell;
+opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
+`seen: {<person>: at}`), outside the write budget like reading an item.
+
 ## Claims
 
 Inbox work is claimed in the store, so a ping session, a scheduled run and a dispatched unit

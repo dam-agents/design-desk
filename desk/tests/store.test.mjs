@@ -1819,3 +1819,29 @@ test("Under the hood: a short plain text with its sources; a plain string is its
   assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x", behind: "Nothing changes behind the screens." } }).card.impact.behind.text, "Nothing changes behind the screens.");
   assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x" } }).card.impact.behind, undefined, "none written: none shown");
 });
+
+test("notifications: what others did lately, private asks for their owner, For you, seen", () => {
+  const s = fresh();
+  const carol = { email: "carol@example.com", role: "pm" };
+  const { card } = s.createRequest(alice, { title: "Calmer cards", problem: "too loud", screen: "Agents list" });
+  const t = s.openThread(card.id, bob, { kind: "comment", text: "The badges shout." });
+  s.reply(t.thread.id, carol, "Agreed.");
+  s.openPrivate(bob, { text: "Only mine" });
+  const mine = s.notifications(alice);
+  // Alice's own request is not news to her; Bob's comment and Carol's reply are, on her request.
+  assert.deepEqual(mine.items.map((x) => x.event).sort(), ["comment", "reply"]);
+  for (const x of mine.items) { assert.equal(x.item, card.id); assert.equal(x.title, "Calmer cards"); assert.equal(x.screen, "Agents list"); assert.equal(x.for_you, true); }
+  assert.equal(mine.unread, 2);
+  // Carol sees the request and Bob's comment, never her own reply nor Bob's private ask.
+  const hers = s.notifications(carol).items;
+  assert.deepEqual(hers.map((x) => x.event).sort(), ["comment", "new-request"]);
+  assert.ok(hers.every((x) => !x.private));
+  // A new message in a thread she wrote in is for her.
+  s.reply(t.thread.id, bob, "Thanks");
+  assert.equal(s.notifications(carol).items.find((x) => x.detail === "Thanks").for_you, true);
+  // Opening the bell marks it seen, for that person alone.
+  s.markSeen(alice);
+  assert.equal(s.notifications(alice).unread, 0);
+  assert.ok(s.notifications(carol).unread > 0);
+  assert.deepEqual(s.markSeen({ agent: true }), { seen: null });
+});
