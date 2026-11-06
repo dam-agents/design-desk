@@ -29,10 +29,24 @@ export const hexOf = (c, opacity = 1) => {
   return `#${hex2(c.r)}${hex2(c.g)}${hex2(c.b)}`.toUpperCase() + (a < 0.999 ? hex2(a).toUpperCase() : "");
 };
 
+// Everything about a node that changes how it looks, in a fixed order: its box, layout, paints,
+// effects, opacity, corners, full text and style, component and visibility, and the same for
+// every child. The frame's `hash` is taken over this, so any visible edit gives a new one.
+const LAYOUT = ["layoutMode", "itemSpacing", "counterAxisSpacing", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "primaryAxisAlignItems", "counterAxisAlignItems", "primaryAxisSizingMode", "counterAxisSizingMode", "layoutWrap", "layoutAlign", "layoutGrow", "layoutPositioning", "clipsContent"];
+const LOOK = ["fills", "strokes", "strokeWeight", "strokeAlign", "effects", "opacity", "blendMode", "cornerRadius", "rectangleCornerRadii", "characters", "style", "characterStyleOverrides", "styleOverrideTable", "componentId", "visible", "rotation", "constraints"];
+const r1 = (x) => (typeof x === "number" ? Math.round(x * 10) / 10 : x);
+export function canon(n) {
+  if (!n || typeof n !== "object") return null;
+  const box = n.absoluteBoundingBox ? [r1(n.absoluteBoundingBox.x), r1(n.absoluteBoundingBox.y), r1(n.absoluteBoundingBox.width), r1(n.absoluteBoundingBox.height)] : null;
+  const pick = (keys) => keys.filter((k) => n[k] !== undefined).map((k) => [k, n[k]]);
+  return [n.type || "", n.name || "", box, pick(LAYOUT), pick(LOOK), (n.children || []).map(canon)];
+}
+export const frameHash = (node) => createHash("sha256").update(JSON.stringify(canon(node))).digest("hex").slice(0, 16);
+
 // What a frame is made of, small enough to read next to the product's tokens: its colours,
 // type, spacing and corners with how often each is used and on which parts, the component
-// instances, and the texts. `hash` changes when any of it changes, so a check can tell a
-// frame edited since the last comparison without drawing it again.
+// instances, and the texts. `hash` (frameHash) changes with any visible edit, so a check can
+// tell a frame edited since the last comparison without drawing it again.
 export function summarize(node, components = {}, { maxTexts = 80, maxParts = 3 } = {}) {
   const colors = new Map(), fonts = new Map(), spacing = new Map(), radii = new Map(), used = new Map(), texts = [];
   const bump = (map, key, part, extra = {}) => {
@@ -70,7 +84,7 @@ export function summarize(node, components = {}, { maxTexts = 80, maxParts = 3 }
     colors: list(colors, "hex"), fonts: list(fonts, "font"), spacing: list(spacing, "value"), radii: list(radii, "value"),
     components: list(used, "name"), texts,
   };
-  out.hash = createHash("sha256").update(JSON.stringify([out.colors, out.fonts, out.spacing, out.radii, out.components, out.texts, out.size])).digest("hex").slice(0, 16);
+  out.hash = frameHash(node);
   return out;
 }
 

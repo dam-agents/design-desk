@@ -103,7 +103,9 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
     a missing state count; sample data does not. `differs` waits for a designer.
     With `figma: enabled`, also compare the change with its frames in Figma: the frame of the
     request it builds, else those of the screens and elements it touched (the `figma` skill →
-    Compare with the product), and put `figma_check` on the change card.
+    Compare with the product), and put `figma_check` on the change card. At most 10 Figma
+    reads per run; a Figma failure skips the comparison and never fails the change or its
+    ledger entry (the skill → Failures).
 12. **Propose** (`proposals: enabled`): when the change adds a new feature or a new screen —
     not a fix, not a tweak — and fewer than `max_proposals_per_week` proposals were made in
     the last seven days, file a request of type `proposal` from the card (`request.from`),

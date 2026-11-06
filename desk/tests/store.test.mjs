@@ -1591,6 +1591,8 @@ test("an item read against its frame in Figma: what differs, how much, each side
   s.upsertCard({ id: r.id, variants: [{ id: "v1", name: "Calm", asset: page }] });
   assert.throws(() => s.upsertCard({ id: r.id, figma_check: { verdict: "matches", frame } }), /names the option it compares/);
   assert.equal(s.upsertCard({ id: r.id, figma_check: { verdict: "matches", frame, variant: "v1" } }).card.figma_check.variant, "v1");
+  const issue = s.upsertCard({ kind: "issue", title: "Export as CSV", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 77 } }).card;
+  assert.throws(() => s.upsertCard({ id: issue.id, figma_check: { verdict: "matches", frame } }), /belongs to a change, screen, element, request card/, "not on an issue");
   // A decision a frame goes against; null clears it.
   const { decision: dd } = s.addDecision({ concepts: ["send"], text: "The send button is always on the right.", author: { login: "alice" }, origin: { kind: "chat" } });
   assert.equal(s.setDecisionFigma(dd.id, { verdict: "differs", frame, differences: [{ ...diff, part: "Send button", severity: "major" }] }).decision.figma_check.differences[0].severity, "major");
@@ -1603,12 +1605,24 @@ test("an item read against its frame in Figma: what differs, how much, each side
   const check = { verdict: "differs", frame, product_shot: pic, differences: [diff, { ...diff, part: "Header", severity: "major" }] };
   assert.equal(s.upsertCard({ id: screen.id, figma_check: check }).card.figma_check.dismissed.length, 1, "the same frame: still off");
   assert.equal(s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: "a7b1" } } }).card.figma_check.dismissed, undefined, "an edited frame: back on");
+  // Without a version nothing tells an unedited frame, so a removal never outlives the check.
+  s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: null } } });
+  s.dismissFigma(screen.id, alice, "Stopped dot");
+  assert.equal(s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: null } } }).card.figma_check.dismissed, undefined, "no version: back on");
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { ...check, differences: [diff, { ...diff, severity: "major" }] } }), /named twice/);
+  s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: "a7b1" } } });
   s.dismissFigma(screen.id, alice, "Header"); s.dismissFigma(screen.id, alice, "Stopped dot");
   assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked }, "all off: it matches");
   s.dismissFigma(screen.id, alice, "Header", false);
   assert.equal(s.listCards({ kind: "screen" })[0].figma.count, 1, "brought back");
   s.upsertCard({ id: screen.id, figma_check: null });
   assert.equal(s.listCards({ kind: "screen" })[0].figma, null);
+  // The search for a frame is kept, so it runs once; a question names its thread.
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_search: { state: "asked" } }), /names its thread/);
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_search: { state: "maybe" } }), /must be one of none, asked, no/);
+  assert.throws(() => s.upsertCard({ id: r.id, figma_search: { state: "none" } }), /belongs to a screen or an element/);
+  assert.equal(s.upsertCard({ id: screen.id, figma_search: { state: "no" } }).card.figma_search.state, "no");
+  assert.equal(s.upsertCard({ id: screen.id, figma_search: null }).card.figma_search, null);
 });
 
 test("an answer says what a worked-in note goes against: a decision, the issue or a pull request, with its source", () => {

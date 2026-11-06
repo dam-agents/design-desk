@@ -4,6 +4,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseLink, linkTo, hexOf, summarize, framesOf, get } from "../lib/figma.mjs";
 
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
 test("a Figma link names its file and node; a branch link names the branch's file", () => {
   assert.deepEqual(parseLink("https://www.figma.com/design/AbC123/Agents-app?node-id=12-40&t=x"), { key: "AbC123", node: "12:40", url: "https://www.figma.com/design/AbC123/Agents-app?node-id=12-40&t=x" });
   assert.equal(parseLink("https://www.figma.com/file/AbC123/App").node, null);
@@ -47,6 +49,25 @@ test("a frame's summary: colours, type, spacing, corners and components with the
   assert.notEqual(edited.hash, s.hash, "an edit changes it");
 });
 
+test("any visible edit anywhere in the frame gives a new hash", () => {
+  const base = summarize(frame).hash;
+  const edits = {
+    "a child moved": (f) => { f.children[1].absoluteBoundingBox = { x: 200, y: 0, width: 328, height: 34 }; },
+    "a child resized": (f) => { f.children[0].absoluteBoundingBox = { x: 0, y: 0, width: 120, height: 40 }; },
+    "a shadow added": (f) => { f.children[1].effects = [{ type: "DROP_SHADOW", radius: 4, visible: true }]; },
+    "an opacity set": (f) => { f.children[2].opacity = 0.5; },
+    "text edited past what the summary lists": (f) => { f.children[0].characters = "Agents and their status, with every reason they stopped"; },
+    "a layer hidden": (f) => { f.children[2].visible = false; },
+    "alignment changed": (f) => { f.primaryAxisAlignItems = "CENTER"; },
+  };
+  for (const [what, edit] of Object.entries(edits)) {
+    const f = clone(frame);
+    edit(f);
+    assert.notEqual(summarize(f).hash, base, what);
+  }
+  assert.equal(summarize(clone(frame)).hash, base, "an unedited copy keeps it");
+});
+
 test("where a design sits in a file: frames, the frames in a section, components; filtered by words", () => {
   const file = { name: "Agents app", document: { children: [
     { name: "Screens", children: [frame, { id: "9:1", name: "Flow", type: "SECTION", children: [{ id: "9:2", name: "Settings", type: "FRAME", devStatus: { type: "READY_FOR_DEV" } }] }] },
@@ -62,5 +83,7 @@ test("Figma's refusals in plain words", async () => {
   const answer = (status, headers = {}) => async () => ({ status, ok: status < 400, headers: { get: (k) => headers[k] ?? null }, json: async () => ({}) });
   await assert.rejects(get("/v1/files/x", { fetchImpl: answer(403) }), /token is missing, expired/);
   await assert.rejects(get("/v1/files/x", { fetchImpl: answer(429, { "retry-after": "30" }) }), /try again in 30 seconds/);
+  await assert.rejects(get("/v1/files/x", { fetchImpl: answer(404) }), /no such file or node/);
+  await assert.rejects(get("/v1/files/x", { fetchImpl: answer(500) }), /Figma answered 500/, "any other failure is not taken for an answer");
   assert.deepEqual(await get("/v1/files/x", { fetchImpl: answer(200) }), {});
 });

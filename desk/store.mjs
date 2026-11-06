@@ -1531,7 +1531,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -1596,6 +1596,12 @@ export class Store {
       else if (k === "design_check") {
         if (next.kind !== "change") throw bad("design_check belongs to a change card");
         next.design_check = fields.design_check === null ? null : cleanDesignCheck(fields.design_check, this.db.cards, this.db.assets, this.clock());
+      }
+      // Where the search for a screen's or an element's frame in Figma stands, so it runs once
+      // (the figma skill → Finding the frame); null: search again.
+      else if (k === "figma_search") {
+        if (!["screen", "element"].includes(next.kind)) throw bad("figma_search belongs to a screen or an element");
+        next.figma_search = fields.figma_search === null ? null : cleanFigmaSearch(fields.figma_search, this.db.threads, this.clock());
       }
       // The item read against its frame in Figma (the figma skill → Compare with the product).
       else if (k === "figma_check") {
@@ -2482,6 +2488,10 @@ function cleanFigmaCheck(o, assets, at, variants) {
   const list = o.differences === undefined ? [] : o.differences;
   if (!Array.isArray(list) || list.length > LIMITS.designDifferences) throw bad(`figma_check.differences is a list of at most ${LIMITS.designDifferences}`);
   if (o.verdict === "differs" && !list.length) throw bad("figma_check: say what differs");
+  // A difference is named by its part: the ×, Work into the design and a kept removal find it so.
+  const parts = list.map((x) => String(x?.part ?? "").trim());
+  const twice = parts.find((x, i) => parts.indexOf(x) !== i);
+  if (twice !== undefined) throw bad(`figma_check: "${twice}" is named twice; give each difference its own part`);
   return {
     verdict: o.verdict, checked: at, ...(variant ? { variant } : {}),
     frame: { url: String(f.url), name: clean(f.name, 120, "frame name"), version: optText(f.version, 40, "frame version") || null, edited: when(f.edited, "frame.edited"), shot: pic(f.shot, "frame.shot") },
@@ -2495,6 +2505,15 @@ function cleanFigmaCheck(o, assets, at, variants) {
   };
 }
 
+// How the search for a frame ended: nothing fits, a question waits (its thread), or a person said no.
+const FIGMA_SEARCH = ["none", "asked", "no"];
+function cleanFigmaSearch(o, threads, at) {
+  if (typeof o !== "object" || !o || !FIGMA_SEARCH.includes(o.state)) throw bad(`figma_search.state must be one of ${FIGMA_SEARCH.join(", ")}`);
+  const thread = o.thread == null || o.thread === "" ? null : String(o.thread);
+  if (o.state === "asked" && !own(threads, thread)) throw bad("figma_search: an open question names its thread");
+  return { state: o.state, at, ...(thread ? { thread } : {}) };
+}
+
 // The list's summary of a comparison: the differences people did not take off the table.
 function figmaRow(k) {
   const off = new Set((k.dismissed || []).map((d) => d.part));
@@ -2503,9 +2522,10 @@ function figmaRow(k) {
 }
 
 // A new comparison keeps the differences people took off the table while the frame is the
-// same one, unedited (its url and version), and only those still in it.
+// same one, unedited: the same url and the same version, which must be known on both sides
+// (a frame without one never keeps a removal). Only those still in it stay off.
 function keepDismissed(prev, next) {
-  const same = prev?.dismissed?.length && prev.frame?.url === next.frame.url && (prev.frame?.version || null) === next.frame.version;
+  const same = prev?.dismissed?.length && prev.frame?.url === next.frame.url && Boolean(next.frame.version) && prev.frame?.version === next.frame.version;
   const kept = same ? prev.dismissed.filter((d) => next.differences.some((x) => x.part === d.part)) : [];
   return kept.length ? { ...next, dismissed: kept } : next;
 }
