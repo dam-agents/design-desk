@@ -313,7 +313,7 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 A designer, the lead or a lead developer (`skip`) may skip the options, the vote and the live
 prototype once Design Desk has checked a request:
 
-- **Approve** at any open step from Checking on (**Send to developers now…** before options);
+- **Approve** at any open step from Checking on (the same **Approve…** before options: the spec then comes from the request);
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
   in the person's words ([handoff.md](handoff.md)). A lead developer does not overrule a
   decision in force: that stays a designer's.
@@ -365,6 +365,10 @@ under an issue's How it could look. A change and an issue show their GitHub stat
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
+On a wide window the list folds away with an arrow halfway down its edge and comes back with
+it; each browser remembers it (`desk-list-folded` in local storage). At a phone's width there is
+no arrow and a folded list shows while no item is open; Guide and People have no list, and the
+fold applies again on leaving them.
 
 ## Read and unread
 
@@ -479,25 +483,25 @@ Answer it as a question (above), with these differences:
 5. **The starters.** A thread's `starter` names the one it began with; its message is the
    short label the person saw. Answer the full brief of that starter:
 
-   - `explain` — *Explain this simply.* On an item: what it is about in five sentences at
+   - `explain` — *Explain simply.* On an item: what it is about in five sentences at
      most — the problem people have, what the item proposes or changed, who it is for,
      and where it stands now (its step, what it waits for). On a page: what the page is
      for, what each part of it shows, and the one thing a designer does there most.
-   - `why` — *Why does it look like this today?* The current look of the screen or part:
+   - `why` — *Why does it look like this?* The current look of the screen or part:
      the shipped changes and decisions that made it so, oldest first, each with its source
      and date; what the design system says about it; and what is not documented and who
      would know. On a page: why the Desk shows it this way (this definition's docs).
-   - `fixed` — *What can't change here, and why?* The boundary verdict in plain words:
+   - `fixed` — *What can't change, and why?* The boundary verdict in plain words:
      what is design and may change (colors, spacing, words, layout), what is behavior and
      needs a developer, and what a recorded decision fixes — each item with its source.
      End with what *can* change freely.
    - `options` — *How do the options differ?* (on a request with options; elsewhere
-     *What are my options here?*) Each option in one line — what a person sees first and
+     *What are my options?*) Each option in one line — what a person sees first and
      what it is good at — with its picture; then the trade-off between them in two or
      three sentences; then what the team said so far (votes, comments) without names of
      who voted. Elsewhere: what the person can do from here, in order, with the button
      for each.
-   - `ask-team` — *What should I ask the team?* Two or three questions that would move
+   - `ask-team` — *What to ask the team?* Two or three questions that would move
      the item on, each with why it matters and who would answer it (a role or a contact
      from the profile, never a guess at a person).
 
@@ -600,7 +604,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
   A request made from a card (`request.from`: an issue's **Design this**, a change's
-  **Adjust the design**) names that card at its top, and the card lists its requests.
+  **Adjust the design**) names that card at its top, and the card lists its requests. While one of them is open, the card offers no **Design this** or **Adjust the design**: the list links to it; a request closed or sent to developers brings the button back.
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.
@@ -620,7 +624,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
   they fine-tune the options, until its author, a designer, a developer or a lead presses **Ask for
-  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step, while Approve, Close and ⋯ stay in the row) (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Team feedback Build a live prototype, else Contact a developer, else Approve…, else Send to Slack… — while Approve, Close and ⋯ stay in the row); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and

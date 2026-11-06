@@ -41,7 +41,10 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
       rules, one step per changed area, `source: "rebuild"`, and write the shot list on the
       card so a person can add real screenshots.
    Every screen carries its `source` (`pr`, `instance`, `rebuild`); people's own are
-   `person`.
+   `person`. The page says it under each picture — a screenshot from the pull request or
+   the issue (`issue`), a real screen (`instance`, `prototype`), an AI drawing or sketch
+   (`rebuild`, `sketch`, never a real screen), a test's (`test`) — and "not recorded"
+   when it is missing, so never leave it out.
    Look at every screen before you use it (Read the image): a sign-in page, an error or
    an empty frame is not a screen of the change.
 7. **Write the card** with the `explain` skill: short, structured, only what a designer acts

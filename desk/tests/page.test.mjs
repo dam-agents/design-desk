@@ -971,7 +971,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41", author: "alice", milestone: "Sprint 12", assignees: ["bob"] }, waiting: [], threads: [] };
   const later = { id: "is2", kind: "issue", status: "open", title: "A calmer empty Home", bucket: "label", needs: ["An empty state on Home"], sketches: 0, source: { repo: "acme/widgets", issue: 40, author: "erin" } };
   const gone = { id: "is3", kind: "issue", status: "archived", title: "Closed", bucket: "sprint", source: { repo: "acme/widgets", issue: 39 } };
-  const made = { id: "r9", kind: "request", title: "Spend column options", status: "feedback", from: "is1", by: { email: "lead@example.com" } };`;
+  const made = { id: "r9", kind: "request", title: "Spend column options", status: "declined", from: "is1", by: { email: "lead@example.com" } };`;
   const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
     .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, later, gone, made]")
     .replace("can: { request: true,", "can: { draw: true, \"follow-up\": true, request: true,")
@@ -1008,6 +1008,7 @@ test("the Issues tab lists the planned issues; Draw it and Design this act once"
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/is1/actions"));
     assert.deepEqual(JSON.parse((await posts("/api/cards/is1/actions"))[0].body), { action: "draw", note: "try a chart" });
 
+    // Its request was closed, so Design this is back; while one is open, the issue offers only the link to it.
     await desk.click("[data-adjust]");
     assert.equal(await desk.textContent("#rq-title"), "Design this issue");
     assert.equal(await desk.inputValue("#request-dialog textarea[name=problem]"), "", "the request is the person's words: the issue's needs are not put in for them");
@@ -1031,7 +1032,7 @@ const issue = { id: "is1", kind: "issue", status: "open", title: "See what each 
 const request = { id: "r7", kind: "request", title: "Spend in the list", status: "feedback", created: new Date().toISOString(), triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, threads: [],
   request: { type: "feature", problem: "A spend column", from: "is1", options: 2, grill: true }, grill: { state: "done", asked: 2, summary: "- Weekly spend" },
   issue_brief: { text: "Each agent shows its weekly spend.", stories: [{ id: "s1", text: "As a lead I see what each agent spends" }, { id: "s2", text: "I can sort by spend", derived: true }] },
-  variants: [{ id: "v1", name: "Column", asset: "A-1", fidelity: "mockup", stories: [{ story: "s1", met: "yes", how: "A spend column on every row.", parts: [{ selector: "#spend", label: "Spend column" }] }, { story: "s2", met: "partly", how: "Sorting needs a developer.", parts: [] }] },
+  variants: [{ id: "v1", name: "Column", asset: "A-1", fidelity: "mockup", stories: [{ story: "s1", met: "yes", how: "A spend column on every row.", parts: [{ selector: "#spend", label: "Spend column" }] }, { story: "s2", met: "partly", how: "Sorting needs a developer.", parts: [{ selector: "#sort", label: "Sort" }] }] },
     { id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };
 window.platform = { async request({ method, path }) {
   calls.push({ method, path });
@@ -1066,12 +1067,75 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.click('[data-story="s1"]');
   const design = desk.frameLocator("#variant-frame");
   await design.locator("text=1. Spend column").first().waitFor();
+  assert.match(await desk.textContent("#story-player"), /Playing/, "the bar with Pause and Stop shows while it plays");
+  await desk.click('#story-player [data-play-ctl="stop"]');
+  // A story whose parts are not in this version of the design says so, instead of playing nothing.
   await desk.click('[data-story="s2"]');
+  await desk.waitForFunction(() => /Can't play it/.test(document.querySelector("#story-player")?.textContent || ""));
+  await desk.click('#story-player [data-play-ctl="stop"]');
+  assert.equal(await desk.locator("#story-player").count(), 0, "and goes on Close");
   assert.match(await desk.textContent('[data-story="s2"]'), /I can sort by spend.*from the issue's text/);
   assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), true, "picking a story keeps the section open");
   assert.match(await desk.textContent('[data-story="s2"] .how.partly'), /needs a developer/, "one it meets in part says why, in amber");
   await desk.click('.vtabs [data-variant="v2"]');
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
+}));
+
+// An issue with a request: while the request is open the issue offers only its link; one sent
+// to developers (or closed) brings Design this back.
+const BRIDGE_ISSUE_REQUEST = (status) => BRIDGE_STORIES
+  .replace('title: "Spend in the list", status: "feedback"', `title: "Spend in the list", status: "${status}"`)
+  .replace('can: { vote: true, comment: true } }', 'can: { vote: true, comment: true, "follow-up": true } }')
+  .replace(': path === "/api/cards/r7"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/r7"');
+for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
+  test(`an issue whose request is ${status === "feedback" ? "open offers only the link to it" : "with developers offers Design this again"}`, (t) => open(t, BRIDGE_ISSUE_REQUEST(status), async (desk) => {
+    await desk.click('[data-tab="issues"]');
+    await desk.click('#list [data-card="is1"]');
+    await desk.waitForSelector("#detail .linked");
+    assert.match(await desk.textContent("#detail .linked"), /A request from this.*Spend in the list/, "the link to the request is there");
+    assert.equal(await desk.locator("#detail [data-adjust]").count(), buttons);
+  }));
+}
+
+// At Team feedback the step pill always offers a move on: a live prototype for Design only,
+// else a developer for parts design cannot do, else Approve…, else Send to Slack….
+const BRIDGE_PILL = (triage, me) => BRIDGE_STORIES
+  .replace('triage: { verdict: "design", reasons: [] }', `triage: ${JSON.stringify(triage)}`)
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me));
+const PILLS = [
+  ["Build a live prototype", { verdict: "design", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, '[data-act="build"]'],
+  ["Contact a developer", { verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, "[data-dev-ask]"],
+  ["Approve…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
+  ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
+];
+for (const [label, triage, me, sel] of PILLS) {
+  test(`at Team feedback the step pill offers ${label}`, (t) => open(t, BRIDGE_PILL(triage, me), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector("#detail .steppill");
+    assert.equal(await desk.locator(`#detail .steppill ${sel}`).count(), 1, `the pill holds ${label}`);
+    assert.equal(await desk.locator("#detail .steppill .step-next").count(), 1, "one move, no more");
+    // The state's ⓘ draws every way on: a move the viewer may make plainly, one they may not
+    // greyed with why and who can.
+    const help = await desk.textContent("#detail .s-word .info .tip");
+    if (me.can.approve) assert.doesNotMatch(help, /✕ Approve…/, "an approver's help offers Approve…");
+    else assert.match(help, /✕ Approve…Not now: A designer or a lead developer approves it/, "anyone else's says who approves it");
+  }));
+}
+
+// A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
+test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
+  await desk.setViewportSize({ width: 1300, height: 800 });
+  await desk.click("#list-fold");
+  assert.equal(await desk.$eval("#main", (m) => m.classList.contains("folded")), true, "the arrow folds the list");
+  assert.equal(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none");
+  await desk.click("#me");
+  await desk.click("#help");
+  assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "Guide has the whole width");
+  await desk.setViewportSize({ width: 700, height: 800 });
+  assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "and so does a phone's width");
+  await desk.evaluate(() => document.querySelector("#main").classList.remove("has-detail"));
+  assert.notEqual(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none", "with no item open there, the folded list shows");
 }));
 
 // An option that names the decisions it rests on, one of them revoked.
@@ -1586,7 +1650,7 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.equal(await desk.$$eval("[data-ask-starter]", (x) => x.length), 5, "five starters");
   await desk.click('[data-ask-starter="fixed"]');
   await desk.waitForFunction(() => posted.length === 1);
-  assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change here, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
+  assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
   await desk.fill("#ask-text", "Is the bar too thin?");
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posted.length === 2);

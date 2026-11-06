@@ -772,6 +772,15 @@ test("a picture keeps where the change is, and a place links only a screen or a 
   assert.throws(() => s.upsertCard({ id: card.id, screens: [{ asset: shot, marks: Array(21).fill({ x: 0, y: 0, w: 0.1, h: 0.1 }) }] }), /at most 20/, "more marks than design diff gives are refused, not cut");
 });
 
+test("a picture keeps where it came from: an issue's own and an AI sketch too; an unknown source is dropped", () => {
+  const s = fresh();
+  const shot = () => s.addAsset({ kind: "screen", name: "x", contentType: "image/png", data: "iVBORw0KGgo=" }).asset.id;
+  const { card } = s.upsertCard({ kind: "issue", title: "Spend", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 41 },
+    screens: [{ asset: shot(), source: "issue" }, { asset: shot(), source: "made-up" }], sketches: [{ asset: shot(), source: "sketch" }] });
+  assert.deepEqual(card.screens.map((x) => x.source), ["issue", undefined], "the issue's own picture says so; an unknown source is not kept");
+  assert.equal(card.sketches[0].source, "sketch");
+});
+
 test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relayed once", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });

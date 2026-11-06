@@ -13,7 +13,7 @@ needed, and the tiles change when the code changes.
 A card of kind `element` on the Desk:
 
 - `title` — the element's name in the product's words ("Agent row");
-- `group` — its family under Product → Elements ("Lists and rows", "Status", "Dialogs");
+- `group` — its family under Product → Elements ("Lists and rows", "Status", "Dialogs"); it sorts the list and is not shown on the element's page;
 - `summary` — one sentence: what it is and where people see it;
 - `source` — `{repo, file, export, commit}`: the component, at the commit drawn;
 - `states` — one entry per tile: `name` and `how` it happens, in plain words;

@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.53.0 — 2026-11-06
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): the store
+   accepts the picture sources `issue` and `sketch`.
+2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
 ## 1.52.1 — 2026-11-06
 
 **Upgrade:**
