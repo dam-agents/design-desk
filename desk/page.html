@@ -166,6 +166,7 @@
   /* Whose decision it is: the design side (designers, PMs, leads) blue, developers amber. */
   .row.side-design { border-left: 3px solid var(--accent); } .row.side-developer { border-left: 3px solid var(--warn); }
   .chip.side-design { background: var(--info-soft); color: var(--accent); } .chip.side-developer { background: var(--warn-soft); color: var(--warn); }
+  .bad-text { color: var(--bad); }
   .side-head { display: flex; gap: 8px; align-items: baseline; margin: 14px 4px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .side-head .n { font-weight: 400; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
@@ -2371,20 +2372,24 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   function renderDecision(d) {
     const HOW = { conflicts: "goes against it", cites: "follows it", replaces: "replaces it", shapes: "a design option follows it" };
-    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, r.title, r.status === "revoked") : `<button class="anchor" data-card="${esc(r.id)}">${esc(r.title)}</button> ${num(r)}`} — <span class="${r.how === "conflicts" ? "chip bad" : "chip"}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
+    // Plain words, no labels: a decision by its number and the start of its text (the peek shows
+    // all of it on hover), anything else by its title and number; then how it refers to this one.
+    const short = (t) => { const x = String(t || ""); return x.length > 60 ? x.slice(0, 57).replace(/\s+\S*$/, "") + "…" : x; };
+    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, short(r.title), r.status === "revoked") : `<a href="#${esc(r.id)}" data-card="${esc(r.id)}">${esc(r.title)}</a> ${num(r)}`} — <span class="${r.how === "conflicts" ? "bad-text" : ""}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
+    const side = SIDE[d.side || ""];
     const against = (d.conflicts || []).filter((x) => x.status === "active");
     const rv = d.revoked;
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}${titleLink(d)}</h2>
-      <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).map((x) => `<span class="chip" title="What it is about">${esc(x)}</span>`).join("")}</div>
+      <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).length ? `<span title="What it is about">${esc(d.concepts.join(", "))}</span>` : ""}</div>
       ${ghStatus(d.status === "revoked" ? "closed" : "approved", d.status === "revoked" ? "Revoked" : "In force", d.status === "revoked" ? "It no longer holds; it stays here crossed out, with the reason" : "This decision holds today; anything against it warns", "",
         can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "")}
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
-      <h3>Who decided</h3><p>${sideChip(d)} ${d.author ? `<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` <span class="sub" style="display:inline">(${esc(d.author.login)})</span>` : ""}` : `<span class="hint">Not recorded.</span>`}</p>
-      <h3>Where it was decided</h3>${originLine(d.origin)}
+      ${d.author ? `<h3>Who decided</h3><p>${d.side ? `<span title="${esc(side[1])}">${esc(side[0])}</span> ` : ""}<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` <span class="sub" style="display:inline">(${esc(d.author.login)})</span>` : ""}</p>` : ""}
+      ${d.origin ? `<h3>Where it was decided</h3>${originLine(d.origin)}` : ""}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
       ${(d.replaces || []).length ? `<h3>It replaces</h3><ul>${d.replaces.map((id) => `<li>${decRef(id)}</li>`).join("")}</ul>` : ""}
-      <h3>What refers to it</h3>${refs ? `<ul>${refs}</ul>` : `<p class="hint">Nothing on the Desk refers to it yet.</p>`}`;
+      ${refs ? `<h3>What refers to it</h3><ul>${refs}</ul>` : ""}`;
   }
   // The decisions in force a card goes against: on the card, and on the option it names.
   // The decisions a card follows, by their numbers.
@@ -3309,7 +3314,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       <div class="vbar">
         <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
-        ${slackModes(c).length ? `<button class="btn small" data-act="slack">Send to Slack…</button>` : ""}
+        ${c.status === "feedback" && slackModes(c).length ? `<button class="btn small" data-act="slack">Send to Slack…</button>` : ""}
         ${voteButtons(c, v.id, mine)}
       </div>
       ${renderPolls(c)}${renderCouncils(c)}

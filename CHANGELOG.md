@@ -15,7 +15,9 @@ Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.ht
 looks the same everywhere: the Presentation's rows carry the state dot and red ! of every list,
 a screen's, an element's and a decision's page open with the status box (their buttons in it), an
 issue's GitHub link is a pill as a change's PR is, a request's page no longer has a
-Needs a developer label under its title (its steps name it), and colours and type sizes come from the
+Needs a developer label under its title (its steps name it), Send to Slack… shows only at Team
+feedback, a decision's page drops its labels and its empty headings and names a decision it
+refers to by number and the start of its text, and colours and type sizes come from the
 page's tokens. Nothing else to do.
 
 ## 1.51.0 — 2026-11-06

@@ -220,7 +220,10 @@ and `D-12` in text link to it as to a card (Links to an item).
   else the author's on the roster (by `author.email`), else a `pr`, `commit` or `doc` origin
   is a developer's; otherwise it is not known. Product → Decisions keeps them apart: From
   designers and PMs, From developers, Not known who, with a filter for each side; each row's
-  edge colour and each decision's page say whose it is.
+  edge colour and each decision's page say whose it is (the page names a side it knows in
+  plain words, and none it does not). A decision's page has no labels and leaves out a heading
+  with nothing under it; under **What refers to it** a decision is its number and the start of
+  its text, and hovering it shows the whole decision.
 - **Citing**: whatever rests on a decision names its number — a card's `decisions: ["D-3"]`,
   `impact.decisions[].id`, an option's `reasons[].decision` with the parts it shaped
   ([requests.md](requests.md) → Variants), a section, an answer, a spec, a Slack reply, the digest.
