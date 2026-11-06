@@ -383,8 +383,8 @@ A card that goes against a decision in force (the list's `against`) shows a red 
 dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`
 (at most three numbers, then `+N`; the hint names them all). Product's
 lists are drawn the same way: a screen's and an element's dot says whether its drawing is up to
-date, out of date, being drawn or not drawn, and its line says `created: <when> from: Design
-Desk by: product map` (or the person who added it; an element from an approved design is
+date, out of date, being drawn or not drawn, and its line says `drawn: <when> from: Design
+Desk by: live product instance` (an element: `by: product code`; or the person who added it; an element from an approved design is
 `based on:` its request); a week's page says `by: weekly digest`; a decision's dot is In force,
 Not approved or Revoked, with the red ! for a decision it goes against, and its line `decided: <when> from:
 <where> by: <who>`.

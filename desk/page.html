@@ -1753,7 +1753,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     auto: '<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/>',
   };
   // The runs that file on their own (store.mjs ORIGIN_JOBS), in the team's words.
-  const JOB = { watch: "hourly check", digest: "weekly digest", issues: "daily issue read", map: "product map" };
+  const JOB = { watch: "hourly check", digest: "weekly digest", issues: "daily issue read", map: "live product instance", catalog: "product code" };
   // A request's head, as on the prototype: who asked, their role, where it came from (with its
   // icon) and when; the request's own words fold under it.
   function askHead(c, bug) {
@@ -1778,7 +1778,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       event = "";
     } else if (c.kind === "digest") [kind, src, run] = ["digest", "Design Desk", "digest"];
     // A screen or an element: Design Desk's map of the product, or a part a person added with + Add.
-    else if ((c.kind === "screen" || c.kind === "element") && !by.email) [kind, src, run] = ["agent", c.design ? "an approved design" : "Design Desk", c.design ? "" : "map"];
+    else if ((c.kind === "screen" || c.kind === "element") && !by.email) [kind, src, run] = ["agent", c.design ? "an approved design" : "Design Desk", c.design ? "" : c.kind === "screen" ? "map" : "catalog"];
     else if (c.kind === "issue") {
       const s = c.source || {};
       // As a change's PR: a plain link, the row stays short.
