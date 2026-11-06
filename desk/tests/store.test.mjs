@@ -442,6 +442,21 @@ test("a failed card write leaves nothing behind", () => {
   assert.throws(() => s.upsertCard({ kind: "request", title: "Bad link", prototype: { state: "live", url: "javascript:alert(1)" } }), /http/);
 });
 
+test("an approved design is final: nothing changes it; a new request starts from it", () => {
+  const s = fresh();
+  const { card, inbox: item } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Quiet", asset: page }] });
+  s.act(card.id, alice, "approve", "v1");
+  s.upsertCard({ id: card.id, status: "spec" });
+  for (const a of ["revise", "explore", "add-option", "build"]) assert.throws(() => s.act(card.id, alice, a, "more", { variant: "v1" }), /approved, so it no longer changes/, a);
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  assert.throws(() => s.act(card.id, alice, "reopen"), /new request from this one/, "a design sent to developers is not reopened");
+  const next = s.createRequest(alice, { title: "Calmer header, again", problem: "Smaller still.", from: card.id }).card;
+  assert.equal(next.request.from, card.id, "the new request names the approved one it starts from");
+});
+
 test("a closed request takes no work and no late status from a session", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Calmer", problem: "It shouts." });
@@ -1464,7 +1479,7 @@ test("an option's elements: listed, their states under them, then into the desig
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a, states: [...kept, { id: "shown", name: "Shown", part: "Limit banner", element: "banner", asset: html("banner"), selector: "#banner" }] }, { id: "v2", version: 1, name: "Rows", asset: b }] });
   s.done(again.id, "run-2", "drew");
   assert.deepEqual(s.getCard(added[1]).design_states.map((x) => x.name), ["Shown"], "the design catalog shows the states drawn since");
-  assert.throws(() => s.act(card.id, bob, "revise"), /closed/, "nothing else reopens it");
+  assert.throws(() => s.act(card.id, bob, "revise"), /approved, so it no longer changes/, "nothing else changes it");
   // A new version of the option reaches the catalog: its card follows, and a state not drawn again says so.
   const now = s.getCard(card.id).variants;
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: html("A2") }, { id: "v2", version: 1, name: "Rows", asset: b }] });

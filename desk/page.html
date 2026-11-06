@@ -791,6 +791,7 @@
   .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, #1a7f37 14%, var(--panel)); color: #1a7f37; } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, #8250df 14%, var(--panel)); color: #8250df; }
   .spec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; } .spec-head .hint { margin: 0; } .spec-tools { margin: 0; }
+  .anchor-text { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .anchor-text:hover { text-decoration: underline; }
   .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
   .spec-preview { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow: auto; max-height: 36em; }
   .spec-text { width: 100%; font-family: var(--mono); font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
@@ -1595,6 +1596,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // A request For Developers is approved by any developer but the one who filed it (docs/desk.md → For Developers or For Designers).
   const DEVELOPERS = ["lead-developer", "developer"];
   // A request the agent filed for someone carries their email in origin.email, when the channel disclosed it.
+  // An approved design is final: from Approve on nothing changes it; a change is a new request
+  // made from it (docs/desk.md → Approved is final).
+  const locked = (c) => c?.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
   const filedIt = (c) => Boolean(S.me?.email) && [c.created_by?.email, c.origin?.email].some((x) => String(x || "").toLowerCase() === S.me.email.toLowerCase());
   // Going against a decision in force stays a designer's call, For Developers included.
   // A designer or a lead developer approves at any step once it is checked (docs/desk.md → Deciding straight away).
@@ -3430,7 +3434,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const size = can("size") && !closed(c) && c.status !== "spec" && !c.approved ? (c.size?.small ? `<button class="btn" data-size="designer">For Designers</button>` : `<button class="btn" data-size="small">For Developers</button>`) : "";
     // A closed request can be deleted for good, behind a confirmation (docs/desk.md → Deleting a request).
     const del = c.status === "declined" && can("close") ? `<button class="btn danger" data-act="delete">Delete this request…</button>` : "";
-    const items = (nx.more || "") + call + size + del + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
+    const items = (nx.more || "") + call + size + del + (closed(c) || locked(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`) + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
@@ -3496,7 +3500,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
 
   // The last tab adds one more option from what a person writes (docs/requests.md → One more option).
   function addOptionTab(c) {
-    if (closed(c) || !can("explore")) return "";
+    if (closed(c) || locked(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
     if ((c.variants || []).length >= 6) return "";
     return `<button class="vadd" data-act="add-option" title="Add one more option: describe it for Design Desk to draw, or use your own pictures">+ New option</button>`;
@@ -3531,7 +3535,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
-    return `<h3>Design options</h3>
+    return `<h3>Design options</h3>${locked(c) ? `<p class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</p>` : ""}
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
       ${againstBox(c, v.id)}${simple() ? "" : whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
@@ -4047,7 +4051,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return (c.threads || []).filter((th) => th.anchor?.variant).map((th, i) => ({ ...th, n: i + 1 }));
   }
   // A comment on an option a designer can hand to Design Desk to change the design.
-  const workable = (c, th) => can("change") && c.kind === "request" && th.kind !== "change" && th.kind !== "asks" && th.state !== "resolved" && (c.variants || []).some((v) => v.id === th.anchor?.variant) && !["declined", "handed-off"].includes(c.status);
+  const workable = (c, th) => can("change") && c.kind === "request" && th.kind !== "change" && th.kind !== "asks" && th.state !== "resolved" && (c.variants || []).some((v) => v.id === th.anchor?.variant) && !["declined", "handed-off"].includes(c.status) && !locked(c);
   function noteState(c, th) {
     if (th.state === "resolved") return ["done", "Done"];
     const last = th.messages[th.messages.length - 1];
@@ -4096,7 +4100,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     }
     if (S.ws.check) S.ws.looked.add(`${v.id}|${S.ws.state || ""}`);
     const old = showing.version !== (d.version || 1);
-    const shaper = can("change");
+    const shaper = can("change") && !locked(S.card);
     $("#ws-top").innerHTML = S.ws.check ? `
       <span class="title" title="${esc(c.title)}">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span><span class="grow"></span><button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
       : `
@@ -4177,7 +4181,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function renderWsSide(c, v, old) {
     const side = $("#ws-side");
     const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
-    const shaper = can("change");
+    const shaper = can("change") && !locked(S.card);
     const sel = S.ws.selected;
     const altBusy = (c.waiting || []).some((w) => w.kind === "revise" && w.scope === "alternatives");
     const busy = working(c).filter((k) => ["revise", "states", "figma", "explore"].includes(k)).map((k) => (k === "revise" && altBusy ? "alternatives" : k));
@@ -5244,13 +5248,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !S.me?.figma;
     const issue = from?.kind === "issue";
-    $("#rq-title").textContent = issue ? "Design this issue" : from ? "Adjust this change" : "New request";
+    const again = from?.kind === "request";
+    $("#rq-title").textContent = issue ? "Design this issue" : again ? "A new request from this one" : from ? "Adjust this change" : "New request";
     $("#rq-hint").textContent = issue
       ? "Design Desk checks what can be done as a design change, draws options for this issue, shows how each meets the issue's user stories, and the team picks one."
       : from
       ? "Tell Design Desk what should look different. It draws options; once a designer or lead developer approves one (or a developer, on a request For Developers), the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
-    if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : `What should look different in “${from.title}”?`;
+    if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : again ? `What should change in the approved design of “${from.title}”?` : `What should look different in “${from.title}”?`;
     f.from.value = from ? from.id : "";
     dlg.returnValue = ""; dlg.showModal();
   }

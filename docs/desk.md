@@ -326,6 +326,15 @@ prototype once Design Desk has checked a request:
   it live), whatever the note, also back at Team feedback after a revise while it is live — and keeps them in `approved.variant` and `approved.version`; the
   spec is written from `live_pick`'s option, version and assets ([handoff.md](handoff.md)).
 
+### Approved is final
+
+From **Approve** on (the spec, and once it went to developers) a request's design no longer
+changes: the store refuses Draw design options, one more option, a redraw, Work it in, other
+ways a part could look, removing an option, a live prototype, a Figma import, and Reopen of
+one sent to developers. The design options say so (🔒 Approved), and **New request from this…**
+(under ⋯, and in that line) starts a request whose `request.from` is this one. Comments,
+votes, the presentation, every state of an element and the spec's own review stay open.
+
 ### Deleting a request
 
 A designer or the lead (`close`) deletes a closed request for good from its **⋯** menu:

@@ -663,6 +663,7 @@ export class Store {
   workIn(cardId, who, threadIds) {
     const c = this.card(cardId);
     if (c.kind !== "request") throw bad("only a design request's options take changes");
+    if (designLocked(c)) throw bad(LOCKED);
     if ((c.status === "declined" || c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
     if (!Array.isArray(threadIds) || !threadIds.length) throw bad("Pick the comments to work in.");
     const ts = [...new Set(threadIds.map(String))].slice(0, LIMITS.threadsPerCard).map((id) => {
@@ -766,6 +767,7 @@ export class Store {
   addOwnOption(cardId, who, { name = "", note = "", images = [] }) {
     const c = this.card(cardId);
     if (c.kind !== "request" || c.request?.type === "bug") throw bad("only a design request has options");
+    if (designLocked(c)) throw bad(LOCKED);
     if (["declined", "handed-off"].includes(c.status)) throw bad("This request is closed.");
     if (!c.triage) throw bad("Wait until Design Desk has checked the request, then add an option.");
     const vs = c.variants || [];
@@ -974,6 +976,7 @@ export class Store {
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
+    if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import", "reopen"].includes(action)) throw bad(LOCKED);
     // Drawing every state of an approved design's element documents it and changes nothing of it,
     // so it stays open once the design went to developers (docs/requests.md → Every state of a part).
     if (closed && action !== "reopen" && !(action === "states" && c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
@@ -1928,6 +1931,10 @@ function mustBeChecked(c, verb) {
 // Whether a person filed the request: its author never approves it For Developers. A
 // request the agent filed for someone carries their email in `origin.email` when the channel
 // disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
+// An approved design is final: from Approve on (the spec, sent to developers) nothing changes
+// it; a change is a new request made from it (docs/desk.md → Approved is final).
+const designLocked = (c) => c.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
+const LOCKED = "This design is approved, so it no longer changes. To change it, start a new request from this one.";
 const isAuthor = (c, who) => {
   const me = String(who?.email || "").toLowerCase();
   return Boolean(me) && [c.created_by?.email, c.origin?.email].some((x) => String(x || "").toLowerCase() === me);
