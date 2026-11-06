@@ -184,6 +184,23 @@ test("a decision says whose it is: the design side or a developer, by the role n
   const sides = Object.fromEntries((await d.viewer("alice@example.com", "/api/decisions")).body.decisions.map((x) => [x.id, x.side]));
   assert.deepEqual(ids.map((id) => sides[id]), ["design", "developer", "design", "developer", null]);
   assert.equal((await d.viewer("alice@example.com", `/api/decisions/${ids[1]}`)).body.decision.side, "developer", "one decision says it too");
+
+  // Not the design side's: Not approved until a designer approves it; it holds meanwhile.
+  const pending = async () => (await d.viewer("alice@example.com", "/api/decisions?state=unapproved")).body.decisions.map((x) => x.id).sort();
+  assert.deepEqual(await pending(), [ids[1], ids[3], ids[4]].sort());
+  assert.equal((await d.viewer("bob@example.com", `/api/decisions/${ids[1]}/approve`, {})).status, 403, "a developer does not approve one");
+  assert.equal((await d.viewer("alice@example.com", `/api/decisions/${ids[0]}/approve`, {})).status, 400, "a designer's needs none");
+  const ok = await d.viewer("alice@example.com", `/api/decisions/${ids[1]}/approve`, {});
+  assert.deepEqual([ok.status, ok.body.decision.unapproved, ok.body.decision.approved.by.email], [200, false, "alice@example.com"]);
+  assert.deepEqual(await pending(), [ids[3], ids[4]].sort());
+
+  // What a check reads: by the card's concepts, or by the concepts and words asked for instead.
+  const card = (await d.agent("/agent/cards", { kind: "change", title: "Rows", concepts: ["rows"], source: { repo: "acme/widgets", pr: 3 } })).body.card.id;
+  const read = async (q) => (await d.agent(`/agent/cards/${card}/decision-check${q}`)).body;
+  const all = await read("");
+  assert.deepEqual([all.card, all.total, all.truncated, all.decisions.length], [card, 5, false, 5], "the route is not taken for the card itself");
+  assert.equal((await read("?concept=prices&q=")).total, 0, "an asked concept reads instead of the card's");
+  assert.equal((await read("?concept=&q=roomy%20rows")).total, 5, "words read too");
 });
 
 test("a private ask reaches only its author over the API; another viewer cannot read or act on it", async (t) => {

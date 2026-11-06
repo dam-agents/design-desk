@@ -55,7 +55,7 @@ served by the Desk server through the platform's Artifact API relay.
   (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
   not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
   **All** (the default, designed issues too), then the buckets, then **Handled** (what a
-  designer marked handled; it leaves the other lists); Decisions: In force, Revoked, All),
+  designer marked handled; it leaves the other lists); Decisions: In force, Not approved, Revoked, All),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
 - **Counts in the menu.** Each tab counts only what is still open: Requests the open requests, PR
@@ -180,7 +180,7 @@ served by the Desk server through the platform's Artifact API relay.
   shows its number and repository and says it is not on the Desk. The GitHub text is not on the
   Desk. An item's or a decision's number in text (`C-11`, `D-26`) previews it the same way:
   a request its status, any other item its kind and `summary`, a decision its text, who made
-  it, its day and whether it is in force. A note's label on an element (◎ …) previews that element alone, cut from its option. A preview shows half a second after the pointer rests on
+  it, its day, whether it is in force and whether a designer approved it. A note's label on an element (◎ …) previews that element alone, cut from its option. A preview shows half a second after the pointer rests on
   it. A link that previews shows no one-line tooltip.
 - **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
   in a channel message (the platform turns it into the share link and keeps `#C-<n>`),
@@ -236,12 +236,40 @@ and `D-12` in text link to it as to a card (Links to an item).
 - **Citing**: whatever rests on a decision names its number — a card's `decisions: ["D-3"]`,
   `impact.decisions[].id`, an option's `reasons[].decision` with the parts it shaped
   ([requests.md](requests.md) → Variants), a section, an answer, a spec, a Slack reply, the digest.
-- **Conflicts**: before writing a triage verdict, options, a change card, an issue's sketch or
-  a decision, read the ones in force for its concepts (`design desk decisions --concept <c>
-  --state active`). Each one it goes against goes in `conflicts: [{decision, why, variant}]`
-  on the card (`variant`: the option it concerns) or on the new decision. The page warns with
-  a link (and a red ! in the list), the card waits for a designer, and approving it takes a designer's explicit
-  confirmation (the store keeps `overruled`), For Developers included. Never reshape a design silently to dodge one.
+- **The check**: every step that makes or changes a design, or says what one can be, is read
+  against the decisions in force first — triage, impact, a change card, options (a new one, a
+  person's description, a redraw, notes worked in, three ways of a part, every state), an
+  issue's sketch, a live prototype, a new decision, an answer to a question that asks for a
+  change, a design asked for in Slack or chat.
+  1. `design desk decision-check C-<n> [--concept <a,b>] [--q <words>]`: the card's options,
+     the decisions in force about its concepts (or, given, about those concepts and words
+     instead), its conflicts now and its last check. Name the concepts the design touches; a card about nothing named reads every one.
+     `truncated: true` (more than 60 of `total`): narrow with `--concept` or `--q` until it is
+     false, and read each part.
+  2. Judge each option and the verdict against each decision read. Each one it goes against goes
+     in `conflicts: [{decision, why, variant}]` (`variant`: the option it concerns) on the card,
+     or on the new decision; one it rests on is a reason or a citation, never a conflict.
+  3. Write it in the same `design desk upsert` as the design, with `decision_check: {concepts,
+     read: [D-n]}`; the store stamps when and the option versions it saw. A design written
+     without its check, an alternative a person picked, a person's own option, and a decision
+     recorded or restored about a card's concepts queue a `decision-check` item (`checks_due`);
+     one a decision queued names it (`decisions`) and closes only with a write whose `read` has it.
+  4. Outside a card's fields, name what it goes against: an answer or a worked-in note
+     `--warns` (`source.kind: decision`), a GitHub or Slack reply and a chat deliverable the
+     `D-<n>` in its text.
+
+  The page warns with a link (and a red ! in the list), the card waits for a designer, building
+  an option live and approving it take a person's explicit confirmation (approving: a
+  designer's; the store keeps `overruled`), For Developers included. Never reshape a design
+  silently to dodge one, and never drop a conflict without a check that says why.
+- **`checks_due`**: claim; `decision-check`; upsert `{id, conflicts, decision_check}`; a
+  conflict new to the card also asks in its thread whether `D-<n>` still holds (Revoking); done
+  `checked: <n> against`. A card closed or handed off meanwhile: done `not checked: closed`.
+- **Approved by a designer**: a decision whose author is not on the design side (the server's
+  `side`: a developer, or not known) is **Not approved** until a designer or a lead presses
+  **Approve** in its status box (`POST /api/decisions/<id>/approve`; `approved: {by, at}`).
+  It holds and warns as any other meanwhile; its dot, its peek and its page say Not approved,
+  and Decisions has a **Not approved** filter (`GET /api/decisions?state=unapproved`).
 - **Revoking**: a designer or lead revokes one on its page with a reason (and what replaces
   it), or restores it. A new decision that reverses an earlier one names it in `replaces`; the
   store revokes it as "Replaced by D-<n>". A designer or lead on the roster revoking one in
@@ -274,7 +302,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | `lead-developer`, `lead` | move a request between For Developers and For Designers |
 | `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
-| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record a decision |
+| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
 | roles in `prototype_requesters` | start a live prototype |
 | `lead` | also ask you to add a person to the list ([People](#people)) |
 
@@ -357,8 +385,8 @@ dot, in every list; pointing at it unfolds it the same way into `Goes against D-
 lists are drawn the same way: a screen's and an element's dot says whether its drawing is up to
 date, out of date, being drawn or not drawn, and its line says `created: <when> from: Design
 Desk by: product map` (or the person who added it; an element from an approved design is
-`based on:` its request); a week's page says `by: weekly digest`; a decision's dot is In force or
-Revoked, with the red ! for a decision it goes against, and its line `decided: <when> from:
+`based on:` its request); a week's page says `by: weekly digest`; a decision's dot is In force,
+Not approved or Revoked, with the red ! for a decision it goes against, and its line `decided: <when> from:
 <where> by: <who>`.
 Every item's page opens the same way: its title with its number grey after it (a request's ✎
 rename after the number), a grey line of chips, then the same box as a request's status: the
@@ -368,7 +396,7 @@ after its PR or issue as a pill that opens it on GitHub, in the list's style: `h
 `at:` when and `shipped:` when; an issue's `by:`, `assigned to:`. A screen's and an element's box
 says what its dot says (Up to date, Out of date, Being drawn, Not drawn) and holds their buttons
 (**Update the drawing**, **Draw how it looked before**, the presentation's); a decision's says In
-force or Revoked and holds **Revoke…** or **Restore**. A week's page has no state: its chip says
+force, Not approved or Revoked and holds **Approve** (when not approved), **Revoke…** or **Restore**. A week's page has no state: its chip says
 Weekly digest. Needs a designer carries a
 small AI tag: Design Desk judges what goes in it, the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
@@ -426,7 +454,8 @@ A `questions_due` item points at a thread: on a card, or a private ask about a D
    Slack, the reply also names the card and links it ([requests.md](requests.md) → Answering
    in the thread).
 3. A question that is really a request ("can it be blue?") gets the answer *and* the
-   boundary verdict in one sentence, and points to **Adjust the design**.
+   boundary verdict in one sentence, with what it goes against (Decisions → The check), and
+   points to **Adjust the design**.
 4. A question you cannot answer from sources says so and names who can (the PR author, the
    profile's `contacts`).
 

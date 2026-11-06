@@ -65,8 +65,7 @@ The person deciding sees it on the card, and every later step builds on it.
 8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
    else the same thing shows up, what a change touches, and the earlier decisions about it,
    written as `impact` on the card. A deliberate behaviour you found becomes a decision,
-   and a request or option that goes against one in force gets `conflicts`
-   ([desk.md](desk.md) → Decisions). A request
+   and the request is checked against the decisions in force ([desk.md](desk.md) → Decisions → The check). A request
    that switched `impact` off (`request.skills`, Variants below) skips this step.
 9. **The issue.** A request from an issue (`request.from` an issue card, or an `origin` of
    kind `issue`) gets `issue_brief: {text, url, stories}` in one `design desk upsert`: `text`
@@ -110,7 +109,7 @@ The person deciding should know it before a single variant exists.
      new action;
    - `product` — the request changes what the product does or who it is for; it needs a
      decision before design work makes sense.
-4. Write `triage` on the card: `verdict`, `reasons` (one plain sentence, only when the verdict
+4. Write `triage` on the card, with its check against the decisions ([desk.md](desk.md) → Decisions → The check): `verdict`, `reasons` (one plain sentence, only when the verdict
    needs it) and `cannot`: only what the person asked for — in the issue, the request or
    their answers — that a design change cannot do, each with its reason in their terms; never
    a part nobody asked for. The Desk names every verdict in the request's steps (no label
@@ -133,7 +132,8 @@ item with `--outcome asked`.
 ## Variants (`variants_due`: `explore` and `revise`; `states` is [below](#every-state-of-a-part-variants_due-states))
 
 Variants are quick, static and on **sample data**: the place to compare directions before
-anyone builds. Make them with the skill `design skill options --repo <repo>` names (the
+anyone builds. Every upsert that adds or changes an option, a version, an alternative or a state
+carries its check against the decisions ([desk.md](desk.md) → Decisions → The check). Make them with the skill `design skill options --repo <repo>` names (the
 bundled `variants`, or the product's own), and revise them with the `revise` action's.
 
 - **What the person chose** in New request: `request.vision` is how they picture it, so one
@@ -181,13 +181,12 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
     **A note that goes against something is applied and said so**: before applying it, check
-    it against the decisions in force (`design desk decisions --concept <c> --state active`),
-    the card's `issue_brief` (its text and stories) and how the change or PR it builds on works
-    (`request.from`, the PR and its linked issue). For each it breaks, answer with `--warns
-    <file>`: `[{what, why, source}]`, at most 5 — `what` what it breaks in a few words, `why`
-    one sentence, `source` `{kind: "decision", ref: "D-<n>"}` or `{kind: "issue"|"pr", url,
-    label}`. The page shows each as a warning box under the answer, linked to its source. A
-    decision in force it goes against also goes on the option's `conflicts` (desk.md → Decisions).
+    it against the decisions in force ([desk.md](desk.md) → Decisions → The check), the card's `issue_brief` (its text
+    and stories) and how the change or PR it builds on works (`request.from`, the PR and its
+    linked issue). For each it breaks, answer with `--warns <file>`: `[{what, why, source}]`,
+    at most 5 — `what` what it breaks in a few words, `why` one sentence, `source` `{kind:
+    "decision", ref: "D-<n>"}` or `{kind: "issue"|"pr", url, label}`. The page shows each as a
+    warning box under the answer, linked to its source.
     **An applied note always shows what it did**: `design desk fetch` the option's previous
     asset, then `design desk card C-<n> | jq '.card.threads[] | select(.id == "T-<n>") | .anchor'
     | design compare <previous.html> <new.html> <dir> --anchor - > <dir>/T-<n>.json`. A note
@@ -254,7 +253,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   truly shaped a part, never a decision to decorate one; a part with no decision behind it gets
   none. An entry without `reasons` keeps the option's from before; a revised option whose parts
   moved or whose basis changed sends its new `reasons`. What goes against a decision is a
-  conflict (desk.md → Decisions), never a reason.
+  conflict (desk.md → Decisions → The check), never a reason.
 - **The option's elements**: each option lists the parts it changes or adds, as a person would
   name them (a card, a banner, a button; never every box): `elements: [{id, name, change, how,
   selector, shot, view, view_name, element}]`, at most 24 — `id` short and stable; `name` the
@@ -377,7 +376,8 @@ thread they started: `reply` with `chatId` = `origin.chat` and `threadTs` =
 (`C-<n>`) and links it; attach a PNG of the design or screen whenever the step has one. One
 text reply per step, in the words the Desk shows:
 
-- after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.";
+- after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.",
+  with each decision in force it goes against by its `D-<n>`;
 - options on the card (`feedback`): run `share-options` with the request's thread as its
   destination when `slack_polls: enabled`; it opens the vote, closing 48 hours later
   (`slack-polls` → Share), and posts each option with its
@@ -437,7 +437,8 @@ Designer kit made. Pick the skill, build, look, deliver:
   through `create_artifact_upload_url`, `curl -X PUT --data-binary @<file>`, then
   `upload_ref`. A revision is `update_artifact` on the **same** artifact, never a new one.
 - Reply with the link, what you made (one line per option or step), the style used
-  (repo@commit, brand, Carbon or wireframe), the sources and every assumption. Numbers you
+  (repo@commit, brand, Carbon or wireframe), the sources, every assumption and each decision in
+  force it goes against ([desk.md](desk.md) → Decisions → The check). Numbers you
   made up are labelled illustrative. In Slack, also attach HTML or a PNG still.
 - A brand is saved only after the operator confirmed it; a logo is used as given, never
   redrawn or recolored.
