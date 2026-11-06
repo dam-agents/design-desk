@@ -2815,11 +2815,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function starters(ctx) {
     const item = Boolean(ctx.card), options = S.card?.kind === "request" && (S.card.variants || []).length > 1;
     return [
-      ["explain", item ? "Explain this simply" : "Explain this page simply"],
-      ["why", item ? "Why does it look like this today?" : "Why is this page set up like this?"],
-      ["fixed", "What can't change here, and why?"],
-      ["options", options ? "How do the options differ?" : "What are my options here?"],
-      ["ask-team", "What should I ask the team?"],
+      // Short, and in this order, so the five sit on two lines in the chat's width.
+      ["explain", item ? "Explain simply" : "Explain this page"],
+      ["why", item ? "Why does it look like this?" : "Why is it set up like this?"],
+      ["ask-team", "What to ask the team?"],
+      ["fixed", "What can't change, and why?"],
+      ["options", options ? "How do the options differ?" : "What are my options?"],
     ];
   }
   async function loadAsks() {

@@ -479,25 +479,25 @@ Answer it as a question (above), with these differences:
 5. **The starters.** A thread's `starter` names the one it began with; its message is the
    short label the person saw. Answer the full brief of that starter:
 
-   - `explain` — *Explain this simply.* On an item: what it is about in five sentences at
+   - `explain` — *Explain simply.* On an item: what it is about in five sentences at
      most — the problem people have, what the item proposes or changed, who it is for,
      and where it stands now (its step, what it waits for). On a page: what the page is
      for, what each part of it shows, and the one thing a designer does there most.
-   - `why` — *Why does it look like this today?* The current look of the screen or part:
+   - `why` — *Why does it look like this?* The current look of the screen or part:
      the shipped changes and decisions that made it so, oldest first, each with its source
      and date; what the design system says about it; and what is not documented and who
      would know. On a page: why the Desk shows it this way (this definition's docs).
-   - `fixed` — *What can't change here, and why?* The boundary verdict in plain words:
+   - `fixed` — *What can't change, and why?* The boundary verdict in plain words:
      what is design and may change (colors, spacing, words, layout), what is behavior and
      needs a developer, and what a recorded decision fixes — each item with its source.
      End with what *can* change freely.
    - `options` — *How do the options differ?* (on a request with options; elsewhere
-     *What are my options here?*) Each option in one line — what a person sees first and
+     *What are my options?*) Each option in one line — what a person sees first and
      what it is good at — with its picture; then the trade-off between them in two or
      three sentences; then what the team said so far (votes, comments) without names of
      who voted. Elsewhere: what the person can do from here, in order, with the button
      for each.
-   - `ask-team` — *What should I ask the team?* Two or three questions that would move
+   - `ask-team` — *What to ask the team?* Two or three questions that would move
      the item on, each with why it matters and who would answer it (a role or a contact
      from the profile, never a guess at a person).
 

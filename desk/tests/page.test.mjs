@@ -1592,7 +1592,7 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.equal(await desk.$$eval("[data-ask-starter]", (x) => x.length), 5, "five starters");
   await desk.click('[data-ask-starter="fixed"]');
   await desk.waitForFunction(() => posted.length === 1);
-  assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change here, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
+  assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
   await desk.fill("#ask-text", "Is the bar too thin?");
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posted.length === 2);
