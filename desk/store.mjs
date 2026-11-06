@@ -910,14 +910,18 @@ export class Store {
   // has screens at all: without the screens instance nothing would ever draw it.
   linkPlaces(impact, given = []) {
     const key = (t) => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-    const screens = Object.values(this.db.cards).filter((x) => x.kind === "screen" && x.status !== "dropped");
-    if (!screens.length) return;
+    // A dropped screen counts too: a place named like one gets no link and no new card, so a name
+    // the product does not have is not tried again on every write.
+    const screens = Object.values(this.db.cards).filter((x) => x.kind === "screen");
+    if (!screens.some((x) => x.status !== "dropped")) return;
     // A place that named a card keeps what it named: an unknown one is no link, never a new screen.
     for (const [i, p] of impact.places.entries()) {
       if (p.card || p.kind !== "screen" || given?.[i]?.card != null) continue;
       const name = (p.screen || String(p.where).split("→")[0]).trim() || p.where;
-      const known = screens.find((x) => key(x.title) === key(name) || key(x.title) === key(p.where));
-      if (known) { p.card = known.id; continue; }
+      // A live screen of that name wins over a dropped one of the same name.
+      const named = screens.filter((x) => key(x.title) === key(name) || key(x.title) === key(p.where));
+      const known = named.find((x) => x.status !== "dropped") || named[0];
+      if (known) { p.card = known.status === "dropped" ? null : known.id; continue; }
       const { card } = this.addToProduct({ agent: true }, { kind: "screen", part: name, where: "", show: p.how || "" });
       screens.push(card);
       p.card = card.id;

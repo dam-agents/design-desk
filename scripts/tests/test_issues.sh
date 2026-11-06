@@ -106,19 +106,23 @@ assert "an undatable issue is read last, an offset one by its instant" \
 assert "a failed list is an error" '.error != null' "$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" issues)"
 # The decisions page (docs/decisions-page.md): off by default; public renders every decision
 # without names or links, is due until its hash is recorded, and runs with the Issues page off.
-printf -- '- display_name: Acme Desk\n- decisions_page: public\n\n## Desk people\n\n| email | role |\n|---|---|\n| dana@acme.test | Designer |\n' > "$WORK_DIR/CONFIG.md"
+printf -- '- display_name: Acme Desk\n- decisions_page: public\n\n## Desk people\n\n| email | role |\n|---|---|\n| dana@acme.test | Designer |\n| ola@acme.test | Admin |\n' > "$WORK_DIR/CONFIG.md"
 mkdir -p "$DESK_DIR"
 cat > "$DESK_DIR/db.json" <<'JSON'
 {"cards":{},"inbox":{},"decisions":{
  "D-1":{"id":"D-1","concepts":["send button"],"text":"The send button is blue.","author":{"name":"Xavier"},"origin":{"kind":"slack","url":"https://acme.slack.com/p1"},"at":"2026-10-01T10:00:00Z","recorded":"2026-10-01T10:00:00Z","status":"revoked","revoked":{"at":"2026-10-05T10:00:00Z","reason":"Replaced by D-2","replaced_by":"D-2"}},
  "D-2":{"id":"D-2","concepts":["send button","colors"],"text":"The send button uses the primary color.","why":"Ask alice@acme.test or <@U0123ABCD>.","author":{"email":"dana@acme.test"},"origin":{"kind":"desk"},"at":"2026-10-05T10:00:00Z","recorded":"2026-10-05T10:00:00Z","status":"active","replaces":["D-1"]},
- "D-10":{"id":"D-10","concepts":["tables"],"text":"Tables\nnever scroll sideways.","author":{"login":"bob"},"origin":{"kind":"pr","url":"https://github.com/acme/widgets/pull/9"},"at":"2026-10-07T10:00:00Z","recorded":"2026-10-07T10:00:00Z","status":"active"}}}
+ "D-10":{"id":"D-10","concepts":["tables"],"text":"Tables\nnever scroll sideways.","author":{"login":"bob"},"origin":{"kind":"pr","url":"https://github.com/acme/widgets/pull/9"},"at":"2026-10-07T10:00:00Z","recorded":"2026-10-07T10:00:00Z","status":"active"},
+ "D-11":{"id":"D-11","concepts":["lists"],"text":"An empty list says what to do next.","author":{"email":"ola@acme.test"},"origin":{"kind":"desk"},"at":"2026-10-08T10:00:00Z","recorded":"2026-10-08T10:00:00Z","status":"active"},
+ "D-12":{"id":"D-12","concepts":["lists"],"text":"Lists show at most 50 rows.","author":{"name":"Xavier","role":"lead"},"origin":{"kind":"desk"},"at":"2026-10-09T10:00:00Z","recorded":"2026-10-09T10:00:00Z","status":"active"}}}
 JSON
 dp="$(bash "$ROOT/scripts/preflight.sh" issues)"
 assert "the page alone is due with the Issues page off" '.nothing_to_do == false and .title == "Publish the design decisions" and .read_set == ["docs/decisions-page.md"] and (.decisions_page_due[0] | .artifact == null and (.sha | startswith("sha256:")))' "$dp"
 page="$(cat "$WORK_DIR/decisions-page.md")"
 assert "in force by number, a role and a kind, a developer's not approved yet, revoked in one line" \
   '(index("### D-2") < index("### D-10")) and test("Decided 2026-10-05 by a designer, from the Desk. Replaces D-1.") and test("from a pull request. Not approved yet.") and test("Tables never scroll sideways.") and test("- D-1 \\(send button\\): The send button is blue. Revoked 2026-10-05: Replaced by D-2.\n")' "$(jq -Rs . <<<"$page")"
+assert "an admin decides on the design side, by the roster or by the role a decision kept as lead before 1.59.0" \
+  'test("### D-11[^#]*Decided 2026-10-08 by an admin, from the Desk\\.") and test("### D-12[^#]*Decided 2026-10-09 by an admin, from the Desk\\.") and (test("### D-1[12][^#]*Not approved yet") | not)' "$(jq -Rs . <<<"$page")"
 assert "no name, login, e-mail, Slack id or link" '(test("Xavier|bob|dana|alice@|U0123ABCD|https?://") | not) and test("\\[e-mail\\]")' "$(jq -Rs . <<<"$page")"
 jq -n --arg sha "$(jq -r '.decisions_page_due[0].sha' <<<"$dp")" '{id: "a1", url: "https://share.test/a/x/raw", sha: $sha, at: "2026-11-01T00:00:00Z"}' > "$WORK_DIR/decisions-page.json"
 assert "an unchanged page is not due" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" issues)"

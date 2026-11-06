@@ -1476,7 +1476,7 @@ test("drop-option: a designer closes an option's tab; the last, approved and pre
   assert.throws(() => s.upsertCard({ id, variants: read.map((v) => ({ id: v.id, version: v.version, name: v.name, asset: v.asset })) }), /was removed/);
 });
 
-test("the new actions' roles: drawing is a designer's or developer's, removing an option a designer's", () => {
+test("the new actions' roles: drawing is a designer's, a PM's or a developer's, removing an option a designer's", () => {
   for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("guest", a), false, a); }
   assert.equal(can("designer", "choose"), true);
   assert.equal(can("developer", "choose"), false);
@@ -1740,6 +1740,21 @@ test("Where else this shows up: a screen opens its card in Product, and one Prod
   assert.equal(im.places[2].card, null, "a message is no screen");
   const again = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [{ where: "Billing", kind: "screen" }] } }).card.impact;
   assert.equal(again.places[0].card, added.id, "written again: the same card, no twin");
+  s.upsertCard({ id: added.id, status: "dropped" });
+  for (let k = 0; k < 2; k++) {
+    const after = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [{ where: "Billing", kind: "screen" }] } }).card.impact;
+    assert.equal(after.places[0].card, null, "named like a dropped screen: no link");
+  }
+  assert.equal(Object.values(s.db.cards).filter((x) => x.kind === "screen" && x.title === "Billing").length, 1, "and no new card, however often it is written");
+});
+
+test("a PM moves a request along but marks no presentation presented", () => {
+  const s = fresh();
+  const pat = { email: "pat@example.com", role: "pm" };
+  const { card } = s.createRequest(alice, { title: "Calmer header", problem: "The header shouts." });
+  assert.throws(() => s.markPresented(card.id, pat), (e) => e.status === 403, "an item: a designer's");
+  assert.throws(() => s.closeCall(pat), (e) => e.status === 403, "the whole presentation: a designer's");
+  assert.doesNotThrow(() => s.closeCall(alice));
 });
 
 test("Under the hood: a short plain text with its sources; a plain string is its text", () => {

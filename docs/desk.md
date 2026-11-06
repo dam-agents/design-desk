@@ -343,9 +343,9 @@ prototype once Design Desk has checked a request:
 
 - **Approve** at any open step from Checking on (the same **Approve…** before options: the spec then comes from the request);
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
-  in the person's words ([handoff.md](handoff.md)). A lead developer does not overrule a
+  in the person's words ([handoff.md](handoff.md)). A PM or a lead developer does not overrule a
   decision in force: that stays a designer's.
-- **Close…** is one button and one dialog: **Just close it** (a designer; `close`), or **Close
+- **Close…** is one button and one dialog: **Just close it** (a designer, a PM or an admin; `close`), or **Close
   it and record a decision** (a designer, a PM or a lead developer; `POST /api/cards/<id>/decide {text}`): the request closes with
   `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.

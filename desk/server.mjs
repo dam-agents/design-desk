@@ -315,7 +315,7 @@ async function viewerRoute(req, res, url, who) {
     const action = String(b.action);
     // A request For Developers is approved by a developer too, and a lead developer approves any request;
     // the store checks who (docs/desk.md → For Developers or For Designers, Deciding straight away).
-    // Drawing every state of a part is changing the option: a designer's or developer's.
+    // Drawing every state of a part is changing the option: a designer's, a PM's or a developer's.
     if (action !== "approve" || !(store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : action === "add-option" ? "explore" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");

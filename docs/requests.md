@@ -149,7 +149,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   `request.options` new ones besides (0: none). Never redraw a carried option from scratch.
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
   `status: variants`, make `request.options` genuinely distinct approaches (one to five; three
-  when it is missing; 0 means the person asked for none, so only a designer's or developer's Draw starts them)
+  when it is missing; 0 means the person asked for none, so only a designer's, a PM's or a developer's Draw starts them)
   (the skill says what distinct means), each one self-contained HTML file built into the
   real screen in the product's own styles; `fidelity: wireframe` (`--style wireframe`,
   grayscale boxes) when the question is structure or flow, `mockup` (the product's styles)
