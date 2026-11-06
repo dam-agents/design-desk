@@ -866,7 +866,8 @@
   .vbar .notes { color: var(--muted); font-size: var(--fs-meta); margin-left: 2px; }
   /* What Design Desk found, without a box: each part a heading and its text, what folds a quiet
      line with its count in a grey pill; then Show or Hide. */
-  .made-col.brief { margin-top: 14px; border: 0; border-radius: 0; background: none; padding: 0; }
+  /* Its first line sits level with the request's beside it, which has a border and padding. */
+  .made-col.brief { margin-top: 14px; border: 0; border-radius: 0; background: none; padding: 13px 0 0; }
   .made-col .made-sec h4 { font-size: var(--fs-read); font-weight: 600; margin: 0 0 6px; }
   .made-col details.fold { max-width: none; }
   .made-col details.fold > summary { font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
