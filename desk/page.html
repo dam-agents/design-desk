@@ -329,7 +329,8 @@
   .step .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); font-size: 11px; }
   .step.done { color: var(--ink); } .step.done .n { background: var(--ok-soft); color: var(--ok); }
   .step.now { color: var(--ink); font-weight: 600; } .step.now .n { background: var(--ink); color: var(--panel); }
-  .status { display: grid; gap: 10px; margin: 12px 0 8px; max-width: var(--measure); }
+  /* A card's status box takes the page's full width on every card, as on a request. */
+  .status { display: grid; gap: 10px; margin: 12px 0 8px; max-width: none; }
   .working { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border-radius: var(--radius); background: var(--info-soft); }
   .spin { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex: none; animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .25; } }
@@ -847,7 +848,7 @@
   .top2 > .brief { max-width: none; }
   .top2 .made-col { min-width: 0; }
   /* The head blocks take the page's full width. */
-  .top2, .standing .status { max-width: none; }
+  .top2 { max-width: none; }
   /* Folded, the request keeps two whole lines and a third that fades out; the link under it shows the rest. */
   .brief { padding-bottom: 10px; }
   /* Headings do not count: `clampBriefs` measures where the text's own lines fall (--clip, --fade). */
