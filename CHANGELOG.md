@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.58.0 — 2026-11-06
+
+**Upgrade:**
+1. Offer the operator the decisions page: `- decisions_page: public` in `work/CONFIG.md`
+   (`design config write`) publishes every decision on the Desk, without names, as one public
+   text page for coding agents ([docs/decisions-page.md](docs/decisions-page.md)); the key
+   missing is `off`. The daily issues run publishes it, its schedule stays as it is.
+2. Run `bash "$HOME/scripts/verify-onboarding.sh" --config`, then rewrite and republish the
+   agent manifest ([docs/manifest.md](docs/manifest.md) → **Write, check, publish**): it lists
+   the page and its `design-decisions` contract once published.
+
 ## 1.57.3 — 2026-11-06
 
 **Upgrade:**

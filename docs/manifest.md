@@ -63,7 +63,7 @@ Take the content from wherever it is true; the schema fixes only the shape.
   - The frame of each Slack or Telegram turn says whether the conversation is ambient and whether you are its default agent. Record both per conversation in `work/manifest-channels.json` when a turn arrives (`ambient`, `defaultAgent`, `seenAt`); copy `ambient` and `defaultAgent` into the card. `seenAt` stays in that file: a time in the card would change `source.version` on every turn. Unknown → `null`.
   - `PLATFORM_HARNESS` → `runtime.harness`.
   - The Model Router's catalog → `runtime.providers`: `curl -fsS -H "X-Platform-Harness: $PLATFORM_HARNESS" "http://127.0.0.1:${PLATFORM_MODEL_ROUTER_PORT:-24180}/v1/models"` lists the models this harness can use as `<provider alias>/<model id>`; group them by alias. The alias is the provider's only name in the card: its display name is the operator's text and may say whose key it is. A 503 means the catalog has not listed yet: keep the last card's list.
-  - The share URLs of the public pages you publish → `surfaces.artifact.pages`.
+  - The share URLs of the public pages you publish → `surfaces.artifact.pages`; the decisions page (`work/decisions-page.json` → `url`, [decisions-page.md](decisions-page.md)) also gets the contract `design-decisions`.
 - **The operator**, in the direct session: the owner role, and anything the definition cannot know.
 
 A value you cannot get yet: write `TODO(manifest)`; the publish gate refuses it, so fill it or remove the field.

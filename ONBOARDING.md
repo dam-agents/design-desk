@@ -189,6 +189,9 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
     holds only what I already show in public; a script blocks private values. Say so if you
     want it kept local (`off`)." Then ask which agents this one works with, and put each
     manifest link into `work/PEERS.md` (`docs/manifest.md` → **Peers**); none is a fine answer.
+11. **Decisions page** (`decisions_page`) — "Should I publish the team's design decisions,
+    without names, as one public text page that coding agents read before they change the
+    screens?" Yes → `public` ([docs/decisions-page.md](docs/decisions-page.md)); default `off`.
 
 Write the file in exactly this shape with `design config write` (a restored file included;
 [docs/config.md](docs/config.md) → Writing the file), then `bash "$HOME/scripts/verify-onboarding.sh"
@@ -226,6 +229,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - work_repo: none
 - audit_report: enabled
 - agent_manifest: dam
+- decisions_page: off
 - log_level: info
 - figma: disabled
 - figma_file:
