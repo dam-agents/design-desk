@@ -90,7 +90,8 @@ direction, not options.
    a developer must build is drawn and labelled "needs a developer". No real person or
    data; every number is made up.
 5. Upload each (`design desk asset <file> --kind screen --card C-<n>`), then one
-   `design desk upsert` `{id, screens, sketches, style, draw: {failures: 0, note: ""}}`,
+   `design desk upsert` `{id, screens, sketches, style, draw: {failures: 0, note: ""}}` with its
+   check against the decisions (`conflicts`, `decision_check`: [desk.md](desk.md) → Decisions → The check),
    each picture with a one-line caption and its `source` (`instance`, or `issue` for a
    picture taken from the issue itself; every sketch `sketch`); `style` names the look used (the product's own
    styles at `<repo>@<commit>`, or the fallback). Keep the sources under

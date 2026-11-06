@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
+KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters spec_review max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -169,7 +169,7 @@ else
   [ -z "$unknown" ] && ok config_keys "every bullet is a known key" || fail config_keys "unknown keys (invisible to the runtime): $unknown" "rename to the documented key (docs/config.md) or delete"
   if grep -qx '## Desk people' "$CONFIG"; then
     hdr="$(sed -n '/^## Desk people$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
-    [ "$hdr" = "|email|role|" ] && ok desk_people_header "| email | role |" || fail desk_people_header "the Desk people table header is '$hdr'" "use | email | role |"
+    case "$hdr" in "|email|role|"|"|email|role|name|") ok desk_people_header "$hdr" ;; *) fail desk_people_header "the Desk people table header is '$hdr'" "use | email | role | (and an optional | name |)" ;; esac
     # A role is read as the server reads it: lower case, inner spaces as hyphens (`Lead developer`).
     badrole="$(cfg_table 'Desk people' | awk -F'|' '{r=tolower($3); gsub(/^[ \t]+|[ \t]+$/,"",r); gsub(/[ \t]+/,"-",r); if (r !~ /^(lead|designer|lead-developer|developer|pm|guest)$/) print $2}' | head -3 | tr '\n' ' ')"
     [ -z "$badrole" ] && ok desk_people_roles "roles valid" || fail desk_people_roles "rows with an unknown role: $badrole" "lead, designer, lead-developer, developer, pm or guest"

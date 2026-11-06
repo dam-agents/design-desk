@@ -7,13 +7,50 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.53.1 — 2026-11-06
+## 1.57.2 — 2026-11-06
 
 **Upgrade:**
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**), and restart the Desk server
 (`rc-service --user design-desk-server restart`): a change card's section holds at most
 280 characters. Cards written before keep their text until the next watch run rewrites them.
+
+## 1.57.1 — 2026-11-06
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+## 1.57.0 — 2026-11-06
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): a person's row in
+   `## Desk people` may list several addresses.
+2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+3. **Operator-only**, optional: tell the operator that a row of `## Desk people` may list a
+   person's other addresses in its `email` cell, separated by a comma (such as the one Slack
+   knows them by), and a third column `| name |` shows names instead of addresses. Never add
+   an address or a name yourself: a wrong one gives that row's role to another person.
+
+## 1.56.0 — 2026-11-06
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): the store keeps a
+   card's `decision_check`, queues `decision-check` items, refuses a build against a decision in
+   force without a confirmation, and takes a designer's approval of a decision.
+2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
+## 1.55.0 — 2026-11-06
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): it takes a
+   person's edit, changes and send of the developer spec.
+2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+3. Optional: `- spec_review: disabled` in `work/CONFIG.md` keeps the old way, the spec going
+   out on its own. A spec already sent stays as it is.
 
 ## 1.53.0 — 2026-11-06
 

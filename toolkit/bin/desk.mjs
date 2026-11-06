@@ -1,10 +1,10 @@
 // design desk <command> — the agent's side of the Desk. Every write goes through the
 // Desk server (its store has one writer), authenticated by work/desk/.agent-token.
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { WORK, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
-import { ADDABLE_ROLES, rosterOf } from "../../desk/store.mjs";
+import { ADDABLE_ROLES, rosterOf, personOf } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
@@ -56,7 +56,14 @@ const USAGE = `usage: design desk <command>
                                            email}, origin: {kind, label, url, card}, replaced_by}
   decisions [--concept <c>] [--q <words>] [--state active|revoked]
                                            earlier decisions, newest first
+  decision-check <C-n> [--concept <a,b>] [--q <words>]
+                                           what a check reads (docs/desk.md → Decisions → The check):
+                                           the card's options, the decisions in force it could go
+                                           against, its conflicts now and its last check
   fetch <A-n> <file>                       save an asset (an option's page, a screen) to a file
+  bundle <C-n> <dir>                       the handoff bundle of an approved request (docs/handoff.md →
+                                           The bundle): spec.md, design.json, mockup.html, states/, shots/,
+                                           pictures/ (the spec's pictures, its lines pointing at them)
   poll-open <C-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
                                            [{variant, ts}], closes, url, channel}
   poll-update <C-n> <P-n> [--synced <iso>] [--result <text>]
@@ -110,6 +117,9 @@ function flags(argv) {
   return { pos, f };
 }
 
+// What a check reads (docs/desk.md → Decisions → The check): the card, its concepts and words.
+export const decisionCheckPath = (card, f = {}) => `/agent/cards/${encodeURIComponent(card || "")}/decision-check?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`;
+
 export async function call(method, path, body) {
   const port = Number(process.env.DESK_PORT || 5555);
   const dir = process.env.DESK_DIR || join(WORK, "desk");
@@ -149,12 +159,80 @@ async function shotsArg(file) {
 // is now: the row already there with that role is `added` (a run that wrote it and died
 // before done); otherwise the asker is the owner or still a lead, and the role one a lead
 // may give. `{ write: true }` when the row is still to be added.
+// The handoff bundle of an approved request (docs/handoff.md → The bundle): what a developer and
+// a coding agent build from, the same for any product. `design` is design.json; `files` the
+// assets to save beside it, each at its path in the bundle. Pure: the card in, the plan out.
+// The acceptance criteria as the spec's newest version has them (a person may have edited it):
+// the lines under its "Acceptance criteria" heading, each "Given …, when …, then …".
+export function acceptanceOf(text) {
+  const lines = String(text || "").split("\n"), at = lines.findIndex((l) => /^#{1,6}\s*acceptance criteria\s*$/i.test(l.trim()));
+  if (at < 0) return null;
+  const out = [];
+  for (const l of lines.slice(at + 1)) {
+    if (/^#{1,6}\s/.test(l.trim())) break;
+    const m = /^\s*(?:[-*]|\d+[.)])\s*(?:\*\*)?given\b(?:\*\*)?\s*(.+?),?\s*(?:\*\*)?when\b(?:\*\*)?\s*(.+?),?\s*(?:\*\*)?then\b(?:\*\*)?\s*(.+?)\s*\.?\s*$/i.exec(l);
+    if (m) out.push({ given: m[1].trim(), when: m[2].trim(), then: m[3].trim() });
+  }
+  return out;
+}
+
+// The spec's pictures are Desk assets (`![view](asset:A-n)`): each fetched once into pictures/,
+// and the spec's lines pointed at the saved file. `fetch(id)` answers as the Desk's asset route.
+export async function specPictures(text, fetch) {
+  const files = [];
+  for (const id of [...new Set([...String(text).matchAll(/\]\(asset:(A-\d+)\)/g)].map((m) => m[1]))]) {
+    const a = await fetch(id);
+    const name = `pictures/${id}.${(String(a.contentType).split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 5)}`;
+    files.push({ name, data: Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8") });
+    text = text.split(`](asset:${id})`).join(`](${name})`);
+  }
+  return { text, files };
+}
+
+export function bundleOf(card) {
+  const pick = card.live_pick?.variant || card.approved?.variant;
+  const v = (card.variants || []).find((x) => x.id === pick) || (card.variants || [])[0] || null;
+  // What a live prototype showed counts only when there is one, for this option.
+  const shown = Boolean(v && card.live_pick && card.live_pick.variant === v.id);
+  const version = shown ? card.live_pick.version : card.approved?.version || v?.version || 1;
+  const files = [];
+  if (card.spec?.asset) files.push({ path: "spec.md", asset: card.spec.asset });
+  const mockup = shown ? card.live_pick.asset : v?.asset;
+  if (mockup) files.push({ path: "mockup.html", asset: mockup });
+  const slug = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "state";
+  const states = (v?.states || []).map((x) => {
+    const page = `states/${x.id}-${slug(x.name)}.html`, shot = x.shot ? `shots/${x.id}-${slug(x.name)}.png` : null;
+    files.push({ path: page, asset: x.asset });
+    if (shot) files.push({ path: shot, asset: x.shot });
+    return { id: x.id, name: x.name, part: x.part, element: x.element || null, when: x.how || "", use: x.use || "", stories: x.stories || [], page, shot, selector: x.selector || null };
+  });
+  const design = {
+    format: "design-desk/handoff@1",
+    request: { id: card.id, title: card.title, type: card.request?.type || "idea", problem: card.request?.problem || "", vision: card.request?.vision || "" },
+    approved: { option: v ? { id: v.id, name: v.name, version } : null, by: card.approved?.by?.role || null, at: card.approved?.at || null, straight_to_implementation: Boolean(card.approved?.implement) },
+    // What a design change can and cannot do here: the parts a developer adds beyond the look.
+    boundary: { verdict: card.triage?.verdict || null, can: card.triage?.can || [], needs_developer: card.triage?.cannot || [] },
+    mockup: mockup ? "mockup.html" : null,
+    elements: (v?.elements || []).map((e) => ({ id: e.id, name: e.name, change: e.change, what: e.how || "", selector: e.selector || null, view: e.view_name || e.view || null,
+      product_element: e.element || null, states: states.filter((x) => x.element === e.id).map((x) => x.id) })),
+    states,
+    stories: (card.issue_brief?.stories || []).map((x) => ({ id: x.id, text: x.text, met: (v?.stories || []).find((k) => k.story === x.id)?.met || null })),
+    // Written by Design Desk with the spec (docs/handoff.md → The bundle): each checks one thing a person can see.
+    acceptance: card.spec?.acceptance || [],
+    decisions: (v?.reasons || []).map((r) => ({ decision: r.decision, how: r.how })),
+    prototype: card.prototype?.branch || card.prototype?.patch ? { branch: card.prototype.branch || null, patch: card.prototype.patch ? "prototype.patch" : null, note: "A starting point; not reviewed as production code." } : null,
+    desk: card.link || null,
+  };
+  if (card.prototype?.patch) files.push({ path: "prototype.patch", asset: card.prototype.patch });
+  return { design, files };
+}
+
 export function personVerdict(item, text) {
   const { email, role } = item.person;
   const roster = rosterOf(tableIn(text, "Desk people"));
-  const on = roster.find((r) => r.email === email);
+  const on = personOf(roster, email);
   if (on) return { outcome: on.role === role ? "added" : `not added: ${email} is already on the list.` };
-  const asker = roster.find((r) => r.email === String(item.by?.email || "").toLowerCase());
+  const asker = personOf(roster, item.by?.email);
   if (!item.by?.owner && asker?.role !== "lead") return { outcome: `not added: ${item.by?.email || "the person who asked"} is no longer a lead.` };
   if (!ADDABLE_ROLES.includes(role)) return { outcome: `not added: a lead cannot give the role ${role}.` };
   return { write: true };
@@ -188,8 +266,15 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
   const pr = Boolean(it.pull_request);
   const said = api(`repos/${repo}/issues/${n}/comments`).map((c) => ({ author: c.user?.login || "", at: c.created_at, url: c.html_url, body: c.body || "" }));
   const reviews = pr ? api(`repos/${repo}/pulls/${n}/reviews`).filter((v) => v.body).map((v) => ({ author: v.user?.login || "", at: v.submitted_at, url: v.html_url, body: `[review: ${v.state}] ${v.body}` })) : [];
+  // An issue's pull requests: the ones that mention it, newest last; the Desk follows the work on it.
+  // A timeline it cannot read gives no list at all (`null`): the Desk keeps the one it had.
+  const timeline = () => { try { return api(`repos/${repo}/issues/${n}/timeline`); } catch { return null; } };
+  const read = pr ? [] : timeline();
+  const linked = read === null ? null : read.filter((e) => e.event === "cross-referenced" && e.source?.issue?.pull_request)
+    .map((e) => e.source.issue).filter((p, i, all) => all.findIndex((q) => q.html_url === p.html_url) === i)
+    .map((p) => ({ title: p.title, url: p.html_url, state: p.pull_request?.merged_at ? "merged" : p.draft ? "draft" : p.state, author: p.user?.login || "" }));
   return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",
-    labels: (it.labels || []).map((l) => l.name), body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
+    labels: (it.labels || []).map((l) => l.name), assignees: (it.assignees || []).map((a) => a.login), ...(linked === null ? {} : { linked }), body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
 }
 // `io` stands in for the Desk server and gh in a test.
 export async function githubSync(card, io = { call, gh: undefined }) {
@@ -273,6 +358,32 @@ export async function main(_cmd, argv) {
     case "decision": return out(await call("POST", "/agent/decisions", JSON.parse(readArg(pos[0]))));
     case "decision-show": return out(await call("GET", `/agent/decisions/${encodeURIComponent(pos[0] || "")}`));
     case "decision-revoke": return out(await call("POST", `/agent/decisions/${encodeURIComponent(pos[0] || "")}/revoke`, JSON.parse(readArg(pos[1]))));
+    case "bundle": {
+      if (!pos[0] || !pos[1]) fail("usage: design desk bundle <C-n> <dir>");
+      const { card } = await call("GET", `/agent/cards/${pos[0]}`);
+      if (card.kind !== "request" || !card.approved) fail(`${pos[0]} is not an approved request`);
+      const { design, files } = bundleOf(card);
+      for (const d of ["", "states", "shots"]) mkdirSync(join(pos[1], d), { recursive: true });
+      for (const f of files) {
+        const a = await call("GET", `/agent/assets/${f.asset}`);
+        writeFileSync(join(pos[1], f.path), Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8"));
+      }
+      // The spec's pictures are Desk assets: saved under pictures/, the spec pointing at them there.
+      const specFile = join(pos[1], "spec.md"), pictures = [];
+      try {
+        const got = await specPictures(readFileSync(specFile, "utf8"), (id) => call("GET", `/agent/assets/${id}`));
+        if (got.files.length) mkdirSync(join(pos[1], "pictures"), { recursive: true });
+        for (const f of got.files) { writeFileSync(join(pos[1], f.name), f.data); pictures.push(f.name); }
+        const text = got.text;
+        writeFileSync(specFile, text);
+        // The spec's newest text wins over the list written with its first version.
+        const fromText = acceptanceOf(text);
+        if (fromText) design.acceptance = fromText;
+      } catch (e) { if (e.code !== "ENOENT") throw e; }
+      design.pictures = pictures;
+      writeFileSync(join(pos[1], "design.json"), `${JSON.stringify(design, null, 2)}\n`);
+      return out({ bundle: pos[1], files: ["design.json", ...files.map((f) => f.path), ...pictures], acceptance: design.acceptance.length });
+    }
     case "fetch": {
       const a = await call("GET", `/agent/assets/${pos[0]}`);
       if (!pos[1]) fail("usage: design desk fetch <A-n> <file>");
@@ -288,6 +399,7 @@ export async function main(_cmd, argv) {
     case "council-update": return out(await call("POST", `/agent/cards/${pos[0]}/councils/${pos[1]}`, { synced: typeof f.synced === "string" ? f.synced : null, seen: typeof f.seen === "string" ? f.seen : null, result: typeof f.result === "string" ? f.result : null }));
     case "find-council": return out(await call("GET", `/agent/councils?ts=${encodeURIComponent(pos[0] || "")}`));
     case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
+    case "decision-check": return out(await call("GET", decisionCheckPath(pos[0], f)));
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}&state=${encodeURIComponent(typeof f.state === "string" ? f.state : "")}`));
     case "github-sync": return out(await githubSync(typeof f.card === "string" ? f.card : null));
     case "github": return out(await call("GET", `/agent/github?keys=${encodeURIComponent(pos[0] || "")}`));
