@@ -142,13 +142,13 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    to start a few days back instead.
 2. **People** (`## Desk people`) — "Who will use the Desk? Their email and one role each:
    designer, PM, developer, lead developer (moves requests to For Developers, which another
-   developer approves), or lead." The emails must be the ones they sign in to the
+   developer approves), or admin." The emails must be the ones they sign in to the
    platform with.
 3. **Live prototypes and screens** — "Should I build live prototypes on Environments? And
    keep my own copy of the product for screenshots of what ships, which people can open and
    try?" (`screens`, `max_screen_prs`; both need Environments and a profile with an engine.)
    Live prototypes: yes →
-   `max_prototypes` (default 2), `prototype_requesters` (default `designer, lead`). No →
+   `max_prototypes` (default 2), `prototype_requesters` (default `designer, pm, admin`). No →
    `max_prototypes: 0`.
 4. **Issues and the coding agent** — "Which label marks an issue that needs design work?"
    (`issue_label`, default `design`; `none` turns it off.) "When a designer adjusts a
@@ -206,7 +206,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - max_changes_per_run: 10
 - profile: auto
 - default_style: auto
-- prototype_requesters: designer, lead
+- prototype_requesters: designer, pm, admin
 - max_prototypes: 2
 - prototype_expiry_days: 7
 - spec_review: enabled

@@ -1,6 +1,6 @@
 # Handoff — the developer spec
 
-A `handoff` item comes from an **Approve** (with the option picked in its note): a designer's, a lead developer's, or a developer's on a request For Developers ([desk.md](desk.md) → For Developers or For Designers, Deciding straight away). Approved before any option, its note is what to build in the approver's words: write the spec from the request, the triage and that note, and leave out what has no design. The spec is what a
+A `handoff` item comes from an **Approve** (with the option picked in its note): a designer's or an admin's, a PM's or a lead developer's, or a developer's on a request For Developers ([desk.md](desk.md) → For Developers or For Designers, Deciding straight away). Approved before any option, its note is what to build in the approver's words: write the spec from the request, the triage and that note, and leave out what has no design. The spec is what a
 developer needs to build the approved design without asking: the design, its states and copy,
 exactly what the prototype changed, and what it could not change. **Nothing leaves with an open
 question.** What the Desk did not settle is asked and answered on the Desk, before the spec is

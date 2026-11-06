@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SERVER = join(dirname(fileURLToPath(import.meta.url)), "..", "server.mjs");
-const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example.com | lead |\n| alice@example.com | designer |\n| pat@example.com | pm |\n| lou@example.com | Lead developer |\n| bob@example.com | developer |\n| dana@example.com | developer |\n";
+const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example.com | admin |\n| alice@example.com | designer |\n| pat@example.com | pm |\n| lou@example.com | Lead developer |\n| bob@example.com | developer |\n| dana@example.com | developer |\n";
 
 const freePort = () => new Promise((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 
@@ -36,28 +36,28 @@ async function desk(t, config = "", roster = ROSTER) {
   };
 }
 
-test("only a lead asks for a new person; the owner's ask says so; the agent cannot make one", async (t) => {
+test("only an admin asks for a new person; the owner's ask says so; the agent cannot make one", async (t) => {
   const d = await desk(t);
   const ask = { email: "alex@example.com", role: "pm" };
   const designer = await d.viewer("alice@example.com", "/api/people", ask);
   assert.equal(designer.status, 403);
-  assert.match(designer.body.error, /Only a lead can add people/);
+  assert.match(designer.body.error, /Only an admin can add people/);
   assert.equal((await d.viewer("guest@example.com", "/api/people", ask)).status, 403);
 
-  const lead = await d.viewer("lee@example.com", "/api/people", ask);
-  assert.equal(lead.status, 201);
-  assert.deepEqual([lead.body.inbox.kind, lead.body.inbox.person, lead.body.inbox.by.owner], ["person", ask, undefined]);
+  const admin = await d.viewer("lee@example.com", "/api/people", ask);
+  assert.equal(admin.status, 201);
+  assert.deepEqual([admin.body.inbox.kind, admin.body.inbox.person, admin.body.inbox.by.owner], ["person", ask, undefined]);
   const owner = await d.viewer("own@example.com", "/api/people", { email: "dee@example.com", role: "developer" }, "owner");
   assert.equal(owner.status, 201);
   assert.equal(owner.body.inbox.by.owner, true, "the platform's owner role is recorded");
 
   const people = await d.viewer("alice@example.com", "/api/people");
   assert.deepEqual(people.body.asks.map((a) => a.email).sort(), ["alex@example.com", "dee@example.com"]);
-  assert.deepEqual(people.body.addable, ["designer", "lead-developer", "developer", "pm"]);
+  assert.deepEqual(people.body.addable, ["designer", "pm", "lead-developer", "developer"]);
 
   const enqueue = await d.agent("/agent/enqueue", { kind: "person", card: "C-1" });
   assert.equal(enqueue.status, 400);
-  assert.match(enqueue.body.error, /only from a lead/);
+  assert.match(enqueue.body.error, /only from an admin/);
 });
 
 test("a request's options start after triage only for someone who may start them; a bug asks for none", async (t) => {
@@ -67,7 +67,7 @@ test("a request's options start after triage only for someone who may start them
   assert.equal(designer.status, 201);
   assert.deepEqual([designer.body.card.request.options, designer.body.card.request.grill, designer.body.card.request.auto], [4, true, true]);
   const pm = await file("pat@example.com", {});
-  assert.deepEqual([pm.body.card.request.options, pm.body.card.request.auto], [3, false], "a pm's options wait for a designer");
+  assert.deepEqual([pm.body.card.request.options, pm.body.card.request.auto], [3, true], "a PM starts options too");
   assert.equal((await file("alice@example.com", { options: 0 })).body.card.request.auto, false, "none asked for: nothing starts");
   const bug = await file("alice@example.com", { type: "bug", options: 5, grill: true });
   assert.deepEqual([bug.body.card.request.options, bug.body.card.request.grill, bug.body.card.request.auto], [0, false, false]);
@@ -76,19 +76,20 @@ test("a request's options start after triage only for someone who may start them
   assert.deepEqual(pasted.body.card.screens.map((x) => [x.source, x.by?.email]), [["person", "alice@example.com"]], "a pasted picture is the person's: the page shows it with the request, by who added it");
 });
 
-test("drawing every state of a part is a designer's or developer's, not a viewer's, and carries the part", async (t) => {
+test("drawing every state of a part is a designer's, a PM's or a developer's, not a viewer's, and carries the part", async (t) => {
   const d = await desk(t);
   const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
   const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
   assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: asset.id }] })).status, 200);
   const ask = { action: "states", note: "", variant: "v1", part: { selector: "body > button", label: "Button “Upload”" } };
-  const pm = await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask);
-  assert.equal(pm.status, 403);
-  assert.match(pm.body.error, /Only designers can redraw options/);
-  assert.equal((await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask)).status, 403, "a viewer off the roster may not");
+  const viewer = await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(viewer.status, 403, "a viewer off the roster may not");
+  assert.match(viewer.body.error, /To redraw options, ask/);
   const dev = await d.viewer("bob@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(dev.status, 200, "a developer changes options too");
   assert.deepEqual([dev.body.inbox.kind, dev.body.inbox.variant, dev.body.inbox.part.label], ["states", "v1", "Button “Upload”"]);
+  const pm = await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.deepEqual([pm.status, /already working/.test(pm.body.error)], [400, true], "a PM may too: only the one already waiting stops it");
   const again = await d.viewer("alice@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(again.status, 400, "one states item at a time per request");
 });
@@ -105,7 +106,7 @@ test("For Developers: only a lead developer moves it there, any developer but it
   const me = await d.viewer("lou@example.com", "/api/me");
   assert.deepEqual([me.body.role, me.body.can.size, me.body.can.approve, me.body.can.explore], ["lead-developer", true, false, true], "a roster role with a space reads as lead-developer");
   assert.equal((await approve("dana@example.com")).status, 403, "For Designers: a designer's");
-  for (const email of ["bob@example.com", "alice@example.com", "pat@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
+  for (const email of ["bob@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
 
   const marked = await size("lou@example.com", true);
   assert.equal(marked.status, 200);
@@ -113,7 +114,6 @@ test("For Developers: only a lead developer moves it there, any developer but it
   const author = await approve("bob@example.com");
   assert.equal(author.status, 403);
   assert.match(author.body.error, /You filed this request/);
-  assert.equal((await approve("pat@example.com")).status, 403, "a PM is no developer");
   assert.equal((await approve("guest@example.com")).status, 403);
   const ok = await approve("dana@example.com");
   assert.equal(ok.status, 200);
@@ -321,4 +321,21 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   assert.equal((await draw(slack)).body.card.status, "feedback", "from Slack: on to the team by itself");
   const none = (await d.viewer("pat@example.com", "/api/requests", { problem: "Typo in the footer.", options: 0 })).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id: none, status: "feedback", triage: { verdict: "design", reasons: ["Words only."] } })).body.card.status, "feedback", "no options to fine-tune: on by itself");
+});
+
+test("a PM moves a request along — size, close, reopen, build by default — and marks no presentation presented", async (t) => {
+  const d = await desk(t);
+  const me = (await d.viewer("pat@example.com", "/api/me")).body;
+  assert.deepEqual([me.role, me.can.size, me.can.close, me.can.reopen, me.can.build, me.can.queue], ["pm", true, true, true, true, false], "prototype_requesters unset: a PM builds");
+  assert.equal((await d.viewer("bob@example.com", "/api/me")).body.can.build, false, "a developer does not");
+  const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/size`, { small: true })).status, 403, "a developer does not move it");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/size`, { small: true })).status, 200, "a PM does");
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "close" })).status, 403, "a developer does not close it");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "close" })).body.card.status, "declined", "a PM does");
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "reopen" })).status, 403, "a developer does not reopen it");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "reopen" })).body.card.status, "triage", "a PM does");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/presented`, {})).status, 403, "marking an item presented stays a designer's");
+  assert.equal((await d.viewer("pat@example.com", "/api/calls", {})).status, 403, "and so does marking the presentation presented");
 });

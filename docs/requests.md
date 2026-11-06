@@ -64,8 +64,9 @@ The person deciding sees it on the card, and every later step builds on it.
    question it raises (`design desk agenda` → [desk.md](desk.md) → The presentation), and the
    triage says what that means for the request.
 8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
-   else the same thing shows up, what a change touches, and the earlier decisions about it,
-   written as `impact` on the card. A deliberate behaviour you found becomes a decision,
+   else the same thing shows up, under the hood whether the product would have to work
+   differently (its logic, architecture, security; a short plain text, not a list), and the
+   earlier decisions about it, written as `impact` on the card. A deliberate behaviour you found becomes a decision,
    and the request is checked against the decisions in force ([desk.md](desk.md) → Decisions → The check). A request
    that switched `impact` off (`request.skills`, Variants below) skips this step.
 9. **The issue.** A request from an issue (`request.from` an issue card, or an `origin` of
@@ -148,14 +149,14 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   `request.options` new ones besides (0: none). Never redraw a carried option from scratch.
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
   `status: variants`, make `request.options` genuinely distinct approaches (one to five; three
-  when it is missing; 0 means the person asked for none, so only a designer's or developer's Draw starts them)
+  when it is missing; 0 means the person asked for none, so only a designer's, a PM's or a developer's Draw starts them)
   (the skill says what distinct means), each one self-contained HTML file built into the
   real screen in the product's own styles; `fidelity: wireframe` (`--style wireframe`,
   grayscale boxes) when the question is structure or flow, `mockup` (the product's styles)
   when it is the look. An option that spans several screens is one view per screen, each
   control that leads on wired to its view (the `variants` skill → Flow). A `needs-developer` request still gets variants; the parts a
   developer must add are drawn and labelled "needs a developer" in the variant.
-- **One more option** (`explore` with `scope: "add"`): a designer or developer pressed the
+- **One more option** (`explore` with `scope: "add"`): a designer, PM or developer pressed the
   **+ New option** tab and wrote what it should look like and have (`note`). `variant`, when
   set, is the option it starts from ("like this one, changed as I describe"); none means a new
   direction. Pick the product's parts it uses yourself, from the catalog
@@ -173,7 +174,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   - **Notes on elements** from the design workspace: threads of kind `change`, each anchored
     to one option (`anchor.variant`) and, usually, one element (`anchor.selector`, its text and
     a plain `label`; `anchor.view`/`view_name` the view it is on; `anchor.edit` is a text the
-    person typed in place: `{from, to}`). A comment a designer or developer pressed **Work it in** on is one
+    person typed in place: `{from, to}`). A comment a designer, PM or developer pressed **Work it in** on is one
     too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its
@@ -200,7 +201,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
     before and after, the change outlined. Notes done in one rebuild share the previous asset.
     A note with `anchor.state` compares that state's previous and new file (`states[].asset` of
     that state), not the option's file.
-  - **Alternatives of a part** (`scope: "alternatives"`): a designer or developer selected a
+  - **Alternatives of a part** (`scope: "alternatives"`): a designer, PM or developer selected a
     part in the design workspace, pressed **Try 3 ways** and wrote how they picture it
     (`note`); `part` is the part (`{selector, text, label, view, view_name}`), `variant` and
     `version` the option as they saw it. Draw **three** genuinely different ways the part could
@@ -282,7 +283,7 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
 
 ## Every state of a part (`variants_due`: `states`)
 
-A designer or developer opens an element of an option under **All elements** and presses
+A designer, PM or developer opens an element of an option under **All elements** and presses
 **Draw every state**; the design workspace has no such button. Once every state is drawn for
 the option's latest version, the dialog says so instead of the button: nothing is left to draw
 until the option changes. A chat request names the part

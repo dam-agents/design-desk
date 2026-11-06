@@ -21,7 +21,10 @@ A card of kind `screen`, found again by its `path`:
 - `concepts` — the product's ideas it shows ("an agent's weekly spend"), in the glossary's
   words: the timeline "Why it is like this" lists the decisions about them;
 - `changes` — the change cards that touched it, oldest first;
-- `instance` — as on a change card, so people open the screen in the copy.
+- `instance` — as on a change card, so people open the screen on the live product;
+- `drawn` and `checked` — written by the store: when the pictures last changed, and when they
+  were last sent again (new or the same). The card shows both and where it came from: the
+  instance's `ref` and `commit`, or a person's screenshot.
 - `history` — its earlier pictures, kept by the store when new ones replace them
   ([catalog.md](catalog.md) → History).
 
@@ -41,7 +44,8 @@ is turned on), and again on request ("rebuild the product map"):
 
 ## A screen someone added (`map_due`)
 
-A designer or developer pressed **+ Add**: the card (`status: building`) has `wanted` — `part` (the screen
+A designer, PM or developer pressed **+ Add**, or a request's "Where else this shows up" named a
+screen Product did not have (the store adds it, by Design Desk): the card (`status: building`) has `wanted` — `part` (the screen
 in their words), `where` (their clicks or an address), `show` (what the pictures should
 have) — and maybe their screenshot.
 
@@ -56,6 +60,15 @@ have) — and maybe their screenshot.
    `design desk upsert` with the card's `id`, `path`, the instance's pictures (they replace
    the person's) and `status: current`.
 5. `design desk done I-<n> --session <id> --outcome mapped` (or `dropped`).
+
+## Check again (`map_due`, `scope: refresh`)
+
+A designer, PM or developer pressed **Check again** on a screen. Claim the item, take the
+screen's pictures again with its recipe (**Build it** step 2), and `design desk upsert` them
+with the card's `id`: the same pictures mark it `checked`, new ones redraw it (`drawn`, its
+earlier pictures kept in `history`). A screen that is gone from the product → `status: stale`
+and one section saying where it went. Then `design desk done I-<n> --session <id> --outcome
+checked` (or `redrawn`, `stale`).
 
 ## Keep it current
 

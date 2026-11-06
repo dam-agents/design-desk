@@ -52,17 +52,17 @@ const log = (level, event, msg) => {
 const roster = () => rosterOf(cfgTable("Desk people"));
 const rowOf = (email) => personOf(roster(), email);
 function roleOf(caller) {
-  if (caller.role === "owner") return "lead";
+  if (caller.role === "owner") return "admin";
   if (!caller.email) return "guest";
   const role = rowOf(caller.email)?.role;
   return ROLES.includes(role) ? role : "guest";
 }
 
 // Who a decision came from (docs/desk.md → Decisions → Who decided): the design side
-// (a designer, a PM, a lead) or a developer. The role the record names, else the author's
+// (a designer, a PM, an admin) or a developer. The role the record names, else the author's
 // on the roster, else where it was decided: a pull request, a commit or an architecture page
 // is a developer's. Unknown stays null.
-const DESIGN_SIDE = ["lead", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
+const DESIGN_SIDE = ["admin", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
 function sideOf(d) {
   const email = String(d.author?.email || "").toLowerCase();
   const role = readRole(d.author?.role) || (email ? rowOf(email)?.role || null : null);
@@ -87,17 +87,17 @@ function slackRole(email) {
 
 function settings() {
   const list = (v, d) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
-  const lead = roster().find((r) => r.role === "lead");
+  const admin = roster().find((r) => r.role === "admin");
   const ideas = cfg("handoff", "desk");
   return {
     // Read as the roster reads a role, so `lead developer` here is the roster's `lead-developer`.
-    prototypeRoles: list(cfg("prototype_requesters"), ["designer", "lead"]).map(readRole),
+    prototypeRoles: list(cfg("prototype_requesters"), ["designer", "pm", "admin"]).map(readRole),
     ping: cfg("desk_ping", "enabled") !== "disabled",
     name: cfg("display_name", "Design Desk"),
     // The repository a bare #12 on the page links into, when its card names none.
     repo: list(cfg("repos"), []).find((r) => r !== "none") || null,
-    // Who people ask for access or help: the first lead on the roster, else the owner.
-    contact: lead?.email || "the Desk's owner",
+    // Who people ask for access or help: the first admin on the roster, else the owner.
+    contact: admin?.email || "the Desk's owner",
     figma: cfg("figma", "disabled") !== "disabled",
     // A screen card needs the agent's own copy of the product for its pictures (docs/map.md).
     screens: cfg("screens", "disabled") === "enabled",
@@ -172,7 +172,7 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "a lead" : action === "size" ? "a lead developer" : action === "skip" ? "designers and lead developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "an admin" : action === "size" ? "designers, PMs and lead developers" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
@@ -233,7 +233,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "threads" && p[3] === "reopen") { need("comment"); return send(res, 200, withPing(store.reopenThread(p[2], actor), s, who)); }
   // Decisions (docs/desk.md → Decisions): Design Desk records one from a comment; a designer revokes or restores one.
   if (m === "POST" && p[1] === "threads" && p[3] === "decision") { need("decide"); return send(res, 201, withPing(store.proposeDecision(p[2], actor, { message: b.message, note: b.note }), s, who)); }
-  // A designer or a lead adds a decision in their own name, with up to two pictures (docs/desk.md → Decisions).
+  // A designer or an admin adds a decision in their own name, with up to two pictures (docs/desk.md → Decisions).
   if (m === "POST" && p[1] === "decisions" && !p[2]) {
     need("decide");
     const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
@@ -286,7 +286,7 @@ async function viewerRoute(req, res, url, who) {
     const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);
     return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry }), s, who));
   }
-  // A lead asks for a new person on the list; the agent writes the row (docs/desk.md → People).
+  // An admin asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }
   if (m === "POST" && p[1] === "product") {
     need("add");
@@ -315,7 +315,7 @@ async function viewerRoute(req, res, url, who) {
     const action = String(b.action);
     // A request For Developers is approved by a developer too, and a lead developer approves any request;
     // the store checks who (docs/desk.md → For Developers or For Designers, Deciding straight away).
-    // Drawing every state of a part is changing the option: a designer's or developer's.
+    // Drawing every state of a part is changing the option: a designer's, a PM's or a developer's.
     if (action !== "approve" || !(store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : action === "add-option" ? "explore" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
@@ -383,11 +383,11 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "cards" && p[3] === "relay") return send(res, 201, store.relayComment(p[2], { ...b, role: slackRole(b.email) }));
   if (m === "POST" && p[1] === "items" && p[3] === "claim") return send(res, 200, store.claim(p[2], String(b.session || ""), { takeover: Boolean(b.takeover), heartbeat: Boolean(b.heartbeat) }));
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
-  // An ask to add a person carries its payload; only a lead's ask on the page makes one.
+  // An ask to add a person carries its payload; only an admin's ask on the page makes one.
   if (m === "GET" && p[1] === "github") { const card = url.searchParams.get("card"); const keys = url.searchParams.get("keys"); return send(res, 200, keys ? { records: store.github(keys.split(",").filter(Boolean)) } : { refs: store.githubRefs(card || null) }); }
   if (m === "POST" && p[1] === "github" && p[2] === "marks") return send(res, 200, store.markGithub(b.key, { at: b.at, author: b.author, design: b.design !== false }));
   if (m === "POST" && p[1] === "github") return send(res, 200, store.putGithub(b.records));
-  if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from a lead on the People tab");
+  if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from an admin on the People tab");
   if (m === "POST" && p[1] === "enqueue") return send(res, 201, (() => { store.card(String(b.card)); const it = store.enqueue(String(b.kind), String(b.card), null, { agent: true }, typeof b.note === "string" ? b.note.slice(0, 1000) : ""); store.save(); return { item: it }; })());
   throw new DeskError(404, `no route ${m} ${url.pathname}`);
 }

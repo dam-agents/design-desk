@@ -32,7 +32,7 @@ assert "slack_send reaches the worklist config, off by default" '.config.slack_s
 assert "request sorted" '[.requests_due[].id] == ["I-2"]' "$out"
 assert "build sorted" '[.prototypes_due[].id] == ["I-3"]' "$out"
 assert "a screen someone added sorted" '[.map_due[].id] == ["I-6"]' "$out"
-assert "a person a lead asked for sorted, with no card; one without its payload is not due" '[.people_due[] | select(.card == null) | .person.email] == ["alex@example.com"]' "$out"
+assert "a person an admin asked for sorted, with no card; one without its payload is not due" '[.people_due[] | select(.card == null) | .person.email] == ["alex@example.com"]' "$out"
 assert "a comment to record as a decision sorted" '[.decisions_due[].id] == ["I-9"]' "$out"
 assert "a check against the decisions sorted" '[.checks_due[].id] == ["I-10"]' "$out"
 assert "stale claim taken over" '[.variants_due[] | select(.takeover) | .id] == ["I-4"]' "$out"

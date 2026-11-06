@@ -15,7 +15,8 @@ A card of kind `element` on the Desk:
 - `title` — the element's name in the product's words ("Agent row");
 - `group` — its family under Product → Elements ("Lists and rows", "Status", "Dialogs"); it sorts the list and is not shown on the element's page;
 - `summary` — one sentence: what it is and where people see it, in plain words ([desk.md](desk.md) → Writing on the Desk);
-- `source` — `{repo, file, export, commit}`: the component, at the commit drawn;
+- `source` — `{repo, file, export, commit}`: the component, at the commit drawn; the card shows
+  it as "from", with `drawn` and `checked` (store-written, as on a screen card, [map.md](map.md));
 - `states` — one entry per tile: `name` and `how` it happens, in plain words;
 - `sheet` — the asset id of the state sheet (one HTML file with every tile);
 - `screens` — one thumbnail (the sheet's first screen), for the list;
@@ -69,13 +70,13 @@ The profile lists the elements worth having under `catalog.elements`
 - The watch run marks an element `stale` when a merged change touched its file (or a child
   the sheet depends on) and enqueues a redraw: `design desk enqueue catalog C-<n>`
   ([watch.md](watch.md) step 10).
-- A designer or developer can press **Update the drawing** on an element.
+- A designer, PM or developer can press **Update the drawing** on an element.
 - "Build the catalog" in chat: create one element card per entry of `catalog.elements`
   (`status: building`) and enqueue a `catalog` item for each; the inbox runs fan them out.
 
 ## From approved designs
 
-Once a request is approved (`spec` or `handed-off`), a designer or developer presses **Add to
+Once a request is approved (`spec` or `handed-off`), a designer, PM or developer presses **Add to
 the design catalog** on an element of its approved option, on its tile under **All elements** or
 in its dialog ([requests.md](requests.md) → The option's elements). The store, with no run,
 makes one `element` card for it. The card follows the option: every new version of it or of

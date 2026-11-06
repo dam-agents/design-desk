@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, abilities, rosterOf, personOf, namesOf, elementsOf } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, abilities, rosterOf, readRole, personOf, namesOf, elementsOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -22,21 +22,34 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "queue"), true);
   for (const a of ["explore", "revise", "refresh", "history", "change", "figma", "share", "add", "draw"]) assert.equal(can("developer", a), true, a);
   for (const a of ["approve", "close", "reopen", "queue", "handle", "choose", "decide"]) assert.equal(can("developer", a), false, a);
-  assert.equal(can("pm", "explore"), false);
-  assert.equal(can("lead", "add"), true);
+  assert.equal(can("guest", "explore"), false);
+  // A PM moves a request along: everything a lead developer may, and closing, reopening and live prototypes.
+  for (const a of ["explore", "revise", "size", "skip", "close", "reopen", "build"]) assert.equal(can("pm", a), true, a);
+  for (const a of ["approve", "queue", "handle", "choose", "decide", "people"]) assert.equal(can("pm", a), false, a);
+  assert.equal(can("admin", "add"), true);
 });
 
 test("the roster: the first row of an email counts, an unknown role is a guest's", () => {
-  assert.deepEqual(rosterOf([{ email: " Alice@Example.com ", role: "Designer" }, { email: "alice@example.com", role: "lead" }, { email: "dave@example.com", role: "ops" }, { email: "", role: "pm" }]),
+  assert.deepEqual(rosterOf([{ email: " Alice@Example.com ", role: "Designer" }, { email: "alice@example.com", role: "admin" }, { email: "dave@example.com", role: "ops" }, { email: "", role: "pm" }]),
     [{ email: "alice@example.com", also: [], role: "designer" }, { email: "dave@example.com", also: [], role: "guest" }]);
 });
 
+test("a roster role written as lead, the admin's name before 1.59.0, reads as admin", () => {
+  assert.equal(readRole(" Lead "), "admin");
+  assert.deepEqual(rosterOf([{ email: "lee@example.com", role: "lead" }]), [{ email: "lee@example.com", also: [], role: "admin" }]);
+  const dir = mkdtempSync(join(tmpdir(), "desk-lead-"));
+  writeFileSync(join(dir, "db.json"), JSON.stringify({ cards: { r1: { id: "r1", votes: { v1: { "lee@example.com": { vote: "prefer", role: "lead" } } } } }, decisions: { "D-1": { id: "D-1", text: "x", author: { email: "lee@example.com", role: "lead" } } } }));
+  const s = new Store(dir);
+  assert.equal(s.db.cards.r1.votes.v1["lee@example.com"].role, "admin");
+  assert.equal(s.db.decisions["D-1"].author.role, "admin");
+});
+
 test("one person's row may list every address they go by, and each counts as them", () => {
-  const roster = rosterOf([{ email: "lukas@example.com, Lukas.J@work.example.com", role: "lead" }, { email: "lukas.j@work.example.com", role: "pm" }]);
-  assert.deepEqual(roster, [{ email: "lukas@example.com", also: ["lukas.j@work.example.com"], role: "lead" }], "an address already on a row counts once");
-  assert.equal(personOf(roster, "LUKAS.J@work.example.com")?.role, "lead", "the Slack address finds the row");
+  const roster = rosterOf([{ email: "lukas@example.com, Lukas.J@work.example.com", role: "admin" }, { email: "lukas.j@work.example.com", role: "pm" }]);
+  assert.deepEqual(roster, [{ email: "lukas@example.com", also: ["lukas.j@work.example.com"], role: "admin" }], "an address already on a row counts once");
+  assert.equal(personOf(roster, "LUKAS.J@work.example.com")?.role, "admin", "the Slack address finds the row");
   assert.equal(personOf(roster, "nobody@example.com"), null);
-  const named = rosterOf([{ email: "lukas@example.com, lukas.j@work.example.com", role: "lead", name: " Lukas " }]);
+  const named = rosterOf([{ email: "lukas@example.com, lukas.j@work.example.com", role: "admin", name: " Lukas " }]);
   assert.deepEqual(namesOf(named), { "lukas@example.com": "Lukas", "lukas.j@work.example.com": "Lukas" }, "a name, by every address of the row");
   // The person who filed a request renames it by any of their addresses.
   const s = fresh();
@@ -49,26 +62,26 @@ test("one person's row may list every address they go by, and each counts as the
   assert.equal(s.unqueue(card.id, { email: "lukas@example.com", emails: ["lukas@example.com", "lukas.j@work.example.com"], role: "pm" }).card.agenda.status, "removed");
 });
 
-test("a lead asks for a new person: one item with no card, the roster and open asks refuse twins", () => {
-  assert.equal(can("lead", "people"), true);
+test("an admin asks for a new person: one item with no card, the roster and open asks refuse twins", () => {
+  assert.equal(can("admin", "people"), true);
   assert.equal(can("designer", "people"), false);
   const s = fresh();
-  const lead = { email: "lee@example.com", role: "lead" };
+  const admin = { email: "lee@example.com", role: "admin" };
   const roster = [{ email: "alice@example.com", role: "designer" }];
-  const { inbox: item } = s.askForPerson(lead, { email: " Alex@Example.com ", role: "pm" }, roster);
+  const { inbox: item } = s.askForPerson(admin, { email: " Alex@Example.com ", role: "pm" }, roster);
   assert.equal(item.card, null);
   assert.deepEqual(inbox(s).open.map((i) => [i.kind, i.person]), [["person", { email: "alex@example.com", role: "pm" }]]);
-  assert.throws(() => s.askForPerson(lead, { email: "alex@example.com", role: "designer" }, roster), /already working/);
-  assert.throws(() => s.askForPerson(lead, { email: "alice@example.com", role: "pm" }, roster), /already on the list/);
-  assert.throws(() => s.askForPerson(lead, { email: "carol@example.com", role: "lead" }, roster), /role must be one of/);
-  assert.throws(() => s.askForPerson(lead, { email: "a|b@example.com", role: "pm" }, roster), /not an email/);
+  assert.throws(() => s.askForPerson(admin, { email: "alex@example.com", role: "designer" }, roster), /already working/);
+  assert.throws(() => s.askForPerson(admin, { email: "alice@example.com", role: "pm" }, roster), /already on the list/);
+  assert.throws(() => s.askForPerson(admin, { email: "carol@example.com", role: "admin" }, roster), /role must be one of/);
+  assert.throws(() => s.askForPerson(admin, { email: "a|b@example.com", role: "pm" }, roster), /not an email/);
   // The agent claims it without a card and answers it with its outcome.
-  assert.equal(item.by.owner, undefined, "a roster lead is not the owner");
-  assert.equal(s.askForPerson({ email: "own@example.com", role: "lead" }, { email: "dee@example.com", role: "developer" }, roster, { owner: true }).inbox.by.owner, true);
+  assert.equal(item.by.owner, undefined, "a roster admin is not the owner");
+  assert.equal(s.askForPerson({ email: "own@example.com", role: "admin" }, { email: "dee@example.com", role: "developer" }, roster, { owner: true }).inbox.by.owner, true);
   assert.equal(s.claim(item.id, "run-1").card, null);
   s.done(item.id, "run-1", "added");
   // An item without its payload (an older store, a hand-made one) never breaks the list.
-  s.enqueue("person", null, null, lead);
+  s.enqueue("person", null, null, admin);
   assert.deepEqual(s.peopleAsks().map((a) => [a.email, a.state, a.outcome, a.by]), [["dee@example.com", "open", null, "own@example.com"], ["alex@example.com", "done", "added", "lee@example.com"]]);
 });
 
@@ -187,8 +200,9 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   const lee = { email: "lee@example.com", role: "lead-developer" };
   const dana = { email: "dana@example.com", role: "developer" };
   assert.equal(can("lead-developer", "size"), true);
-  assert.equal(can("lead", "size"), true);
-  for (const r of ["designer", "developer", "pm", "guest"]) assert.equal(can(r, "size"), false, r);
+  assert.equal(can("admin", "size"), true);
+  for (const r of ["designer", "pm"]) assert.equal(can(r, "size"), true, r);
+  for (const r of ["developer", "guest"]) assert.equal(can(r, "size"), false, r);
   assert.equal(can("lead-developer", "approve"), false, "a developer approves only a request For Developers, per card");
   assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", also: [], role: "lead-developer" }]);
 
@@ -202,7 +216,7 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   assert.deepEqual(marked.size, { small: true, by: { email: "lee@example.com", role: "lead-developer" }, at: marked.size.at });
   assert.equal(s.attentionOf(marked), null, "a request For Developers waits for a developer, not a designer");
   assert.throws(() => s.act(card.id, bob, "approve"), (e) => e.status === 403 && /You filed this request/.test(e.message));
-  assert.throws(() => s.act(card.id, { email: "pat@example.com", role: "pm" }, "approve"), (e) => e.status === 403);
+  assert.throws(() => s.act(card.id, { email: "gus@example.com", role: "guest" }, "approve"), (e) => e.status === 403);
   const ok = s.act(card.id, dana, "approve");
   assert.equal(ok.inbox.kind, "handoff");
   assert.deepEqual(ok.card.approved, { by: { email: "dana@example.com", role: "developer" }, at: ok.card.approved.at, small: true });
@@ -226,7 +240,7 @@ test("the developer spec waits for a person: edit keeps every version, changes g
   s.upsertCard({ id: card.id, status: "spec", spec: { asset: first, review: "draft", acceptance: [{ given: "the header", when: "the page opens", then: "it is grey" }] } });
   s.done(ok.inbox.id, "s2", "review");
   assert.throws(() => s.specAction(card.id, { agent: true }, { action: "send" }), (e) => e.status === 403, "Design Desk never sends it itself");
-  assert.throws(() => s.specAction(card.id, { email: "pat@example.com", role: "pm" }, { action: "send" }), (e) => e.status === 403, "only who may approve");
+  assert.throws(() => s.specAction(card.id, { email: "gus@example.com", role: "guest" }, { action: "send" }), (e) => e.status === 403, "only who may approve");
   const edited = s.specAction(card.id, alice, { action: "edit", text: "# Spec v2, by Alice" }).card;
   assert.notEqual(edited.spec.asset, first);
   assert.deepEqual(edited.spec.history.map((x) => x.asset), [first], "the version it replaces stays");
@@ -271,8 +285,8 @@ test("deciding straight away: a designer or lead developer approves without opti
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };
   const dana = { email: "dana@example.com", role: "developer" };
-  for (const r of ["lead", "designer", "lead-developer"]) assert.equal(can(r, "skip"), true, r);
-  for (const r of ["developer", "pm", "guest"]) assert.equal(can(r, "skip"), false, r);
+  for (const r of ["admin", "designer", "pm", "lead-developer"]) assert.equal(can(r, "skip"), true, r);
+  for (const r of ["developer", "guest"]) assert.equal(can(r, "skip"), false, r);
 
   const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
   assert.throws(() => s.act(card.id, lee, "approve"), /still checking/, "not before it is checked");
@@ -375,7 +389,7 @@ test("a request from an issue keeps what the issue says about the design and how
   const issue = s.upsertCard({ kind: "issue", title: "See spend", status: "open", bucket: "sprint", needs: ["A spend column"], source: { repo: "acme/widgets", issue: 41 } }).card;
   const { card } = s.createRequest(alice, { problem: "A spend column", type: "feature", from: issue.id });
   const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
-  const brief = { text: "People see each agent's weekly spend.", url: "https://github.com/acme/widgets/issues/41", stories: [{ id: "s1", text: "As a lead I see what each agent spends." }, { id: "s2", text: "I can sort by spend.", derived: true }] };
+  const brief = { text: "People see each agent's weekly spend.", url: "https://github.com/acme/widgets/issues/41", stories: [{ id: "s1", text: "As an admin I see what each agent spends." }, { id: "s2", text: "I can sort by spend.", derived: true }] };
   s.upsertCard({ id: card.id, issue_brief: brief, grill: { state: "done", asked: 3, summary: "- Weekly, not monthly" },
     variants: [{ id: "v1", name: "Column", asset, stories: [{ story: "s1", met: "yes", how: "A spend column.", parts: [{ selector: "#spend", label: "Spend column", view: "1" }] }] }] });
   const c = s.card(card.id);
@@ -1059,7 +1073,7 @@ test("a screen keeps its earlier pictures; a designer asks for an element's hist
   assert.equal(s.getCard(el.id).waiting[0].scope, "history");
   assert.throws(() => s.act(el.id, alice, "refresh"), /already working/);
   assert.equal(can("developer", "history"), true);
-  assert.equal(can("pm", "history"), false);
+  assert.equal(can("guest", "history"), false);
   assert.equal(can("designer", "history"), true);
 });
 
@@ -1462,8 +1476,8 @@ test("drop-option: a designer closes an option's tab; the last, approved and pre
   assert.throws(() => s.upsertCard({ id, variants: read.map((v) => ({ id: v.id, version: v.version, name: v.name, asset: v.asset })) }), /was removed/);
 });
 
-test("the new actions' roles: drawing is a designer's or developer's, removing an option a designer's", () => {
-  for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("pm", a), false, a); }
+test("the new actions' roles: drawing is a designer's, a PM's or a developer's, removing an option a designer's", () => {
+  for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("guest", a), false, a); }
   assert.equal(can("designer", "choose"), true);
   assert.equal(can("developer", "choose"), false);
 });
@@ -1697,4 +1711,57 @@ test("a closed request is deleted for good, with its conversations and pictures;
   assert.equal(Object.values(s.db.threads).some((t) => t.card === card.id), false, "its conversations go");
   assert.equal(Object.values(s.db.inbox).some((i) => i.card === card.id), false);
   assert.throws(() => s.deleteRequest(card.id, alice), (e) => e.status === 404);
+});
+
+test("Check again: a screen goes back to Design Desk once, as a map item with scope refresh; the same pictures mark it checked", () => {
+  const s = fresh();
+  const shot = s.addAsset({ kind: "screen", name: "a", contentType: "image/png", data: Buffer.from("png-a").toString("base64") }).asset.id;
+  const { card } = s.upsertCard({ kind: "screen", title: "Agents list", path: "/agents", status: "current", screens: [{ asset: shot, source: "instance" }] });
+  assert.ok(card.drawn, "first pictures: drawn");
+  const { inbox: item } = s.act(card.id, alice, "refresh");
+  assert.deepEqual([item.kind, item.scope], ["map", "refresh"]);
+  assert.throws(() => s.act(card.id, alice, "refresh"), /already working/);
+  assert.throws(() => s.act(card.id, alice, "history"), /only be checked again/);
+  const again = s.upsertCard({ id: card.id, screens: [{ asset: shot, source: "instance" }] }).card;
+  assert.equal(again.drawn, card.drawn, "the same pictures: not redrawn");
+  assert.ok(again.checked >= card.drawn, "but checked");
+});
+
+test("Where else this shows up: a screen opens its card in Product, and one Product does not have gets a card to draw", () => {
+  const s = fresh();
+  const { card: list } = s.upsertCard({ kind: "screen", title: "Agents list", path: "/agents", status: "current" });
+  const { card: req } = s.createRequest(alice, { title: "Calmer spend", problem: "The spend shouts." });
+  const im = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [
+    { where: "Agents list → each row", kind: "screen" }, { where: "Billing", how: "the month's total", kind: "screen" }, { where: "Slack alert", kind: "message" }] } }).card.impact;
+  assert.equal(im.places[0].card, list.id, "named as the screen is: linked");
+  const added = s.card(im.places[1].card);
+  assert.deepEqual([added.kind, added.status, added.title, added.created_by], ["screen", "building", "Billing", { agent: true }]);
+  assert.ok(inbox(s).open.some((i) => i.kind === "map" && i.card === added.id), "the next run draws it");
+  assert.equal(im.places[2].card, null, "a message is no screen");
+  const again = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [{ where: "Billing", kind: "screen" }] } }).card.impact;
+  assert.equal(again.places[0].card, added.id, "written again: the same card, no twin");
+  s.upsertCard({ id: added.id, status: "dropped" });
+  for (let k = 0; k < 2; k++) {
+    const after = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [{ where: "Billing", kind: "screen" }] } }).card.impact;
+    assert.equal(after.places[0].card, null, "named like a dropped screen: no link");
+  }
+  assert.equal(Object.values(s.db.cards).filter((x) => x.kind === "screen" && x.title === "Billing").length, 1, "and no new card, however often it is written");
+});
+
+test("a PM moves a request along but marks no presentation presented", () => {
+  const s = fresh();
+  const pat = { email: "pat@example.com", role: "pm" };
+  const { card } = s.createRequest(alice, { title: "Calmer header", problem: "The header shouts." });
+  assert.throws(() => s.markPresented(card.id, pat), (e) => e.status === 403, "an item: a designer's");
+  assert.throws(() => s.closeCall(pat), (e) => e.status === 403, "the whole presentation: a designer's");
+  assert.doesNotThrow(() => s.closeCall(alice));
+});
+
+test("Under the hood: a short plain text with its sources; a plain string is its text", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "A daily bar", problem: "Show each day's spend." });
+  const im = s.upsertCard({ id: card.id, impact: { concept: "an agent's spend", places: [], behind: { text: "The product only keeps the week's total today.", sources: [{ label: "PR #5", url: "https://example.com/pr/5" }] } } }).card.impact;
+  assert.deepEqual(im.behind, { text: "The product only keeps the week's total today.", sources: [{ label: "PR #5", url: "https://example.com/pr/5", card: null }] });
+  assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x", behind: "Nothing changes behind the screens." } }).card.impact.behind.text, "Nothing changes behind the screens.");
+  assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x" } }).card.impact.behind, undefined, "none written: none shown");
 });
