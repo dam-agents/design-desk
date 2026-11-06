@@ -3566,6 +3566,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     let bar = $("#story-player");
     if (!d || ["done", "stopped"].includes(d.state)) { bar?.remove(); return; }
     if (!bar) { bar = document.createElement("div"); bar.id = "story-player"; bar.setAttribute("role", "status"); document.body.append(bar); }
+    if (d.state === "missing") {
+      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">This version of the design does not have this story's parts.</span><button class="btn small" data-play-ctl="stop">✕ Close</button>`;
+      return;
+    }
     if (d.step) S.playStep = { step: d.step, of: d.of };
     const at = S.playStep ? `step ${S.playStep.step} of ${S.playStep.of}` : "";
     const st = (S.card?.issue_brief?.stories || []).find((x) => x.id === S.story);
@@ -3582,6 +3586,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const box = vf.closest("details"); if (box && !box.open) { box.open = true; if (box.dataset.sect) S.sect[box.dataset.sect] = true; }
     vf.scrollIntoView({ behavior: "smooth", block: "nearest" });
     S.playStep = null;
+    // The bar shows at the press, before the design finds its first part.
+    storyPlayer({ state: "playing" });
     const go = () => vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
     if (vf.dataset.ready) go(); else vf.addEventListener("load", () => setTimeout(go, 50), { once: true });
   }
@@ -3785,9 +3791,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     async function playStory(steps) {
       const id = ++playing; paused = false; pins = []; draw();
       caption.textContent = ""; pointer.style.opacity = "1";
+      let found = 0;
       for (let i = 0; i < steps.length; i++) {
         const st = steps[i], el = find(st.selector);
         if (!el) continue;
+        found++;
         tell("playing", i + 1, steps.length);
         reveal(el); await wait(300, id); if (id !== playing) return;
         const b = el.getBoundingClientRect(); scrollTo({ top: b.top + scrollY - innerHeight / 3, behavior: "smooth" }); await wait(550, id); if (id !== playing) return;
@@ -3800,6 +3808,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         pressable(el)?.click();
         await wait(1000, id); if (id !== playing) return;
       }
+      // None of the story's parts is in this design: the Desk says so instead of playing nothing.
+      if (!found) { pointer.style.opacity = "0"; tell("missing"); return; }
       caption.textContent = ""; await wait(500, id); if (id === playing) { pointer.style.opacity = "0"; tell("done"); }
     }
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-play") playStory(d.steps || []);

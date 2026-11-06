@@ -1031,7 +1031,7 @@ const issue = { id: "is1", kind: "issue", status: "open", title: "See what each 
 const request = { id: "r7", kind: "request", title: "Spend in the list", status: "feedback", created: new Date().toISOString(), triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, threads: [],
   request: { type: "feature", problem: "A spend column", from: "is1", options: 2, grill: true }, grill: { state: "done", asked: 2, summary: "- Weekly spend" },
   issue_brief: { text: "Each agent shows its weekly spend.", stories: [{ id: "s1", text: "As a lead I see what each agent spends" }, { id: "s2", text: "I can sort by spend", derived: true }] },
-  variants: [{ id: "v1", name: "Column", asset: "A-1", fidelity: "mockup", stories: [{ story: "s1", met: "yes", how: "A spend column on every row.", parts: [{ selector: "#spend", label: "Spend column" }] }, { story: "s2", met: "partly", how: "Sorting needs a developer.", parts: [] }] },
+  variants: [{ id: "v1", name: "Column", asset: "A-1", fidelity: "mockup", stories: [{ story: "s1", met: "yes", how: "A spend column on every row.", parts: [{ selector: "#spend", label: "Spend column" }] }, { story: "s2", met: "partly", how: "Sorting needs a developer.", parts: [{ selector: "#sort", label: "Sort" }] }] },
     { id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };
 window.platform = { async request({ method, path }) {
   calls.push({ method, path });
@@ -1066,7 +1066,13 @@ test("a request from an issue names it, folds what the issue says, and shows how
   await desk.click('[data-story="s1"]');
   const design = desk.frameLocator("#variant-frame");
   await design.locator("text=1. Spend column").first().waitFor();
+  assert.match(await desk.textContent("#story-player"), /Playing/, "the bar with Pause and Stop shows while it plays");
+  await desk.click('#story-player [data-play-ctl="stop"]');
+  // A story whose parts are not in this version of the design says so, instead of playing nothing.
   await desk.click('[data-story="s2"]');
+  await desk.waitForFunction(() => /Can't play it/.test(document.querySelector("#story-player")?.textContent || ""));
+  await desk.click('#story-player [data-play-ctl="stop"]');
+  assert.equal(await desk.locator("#story-player").count(), 0, "and goes on Close");
   assert.match(await desk.textContent('[data-story="s2"]'), /I can sort by spend.*from the issue's text/);
   assert.equal(await desk.evaluate(() => document.querySelector("details[data-stories]").open), true, "picking a story keeps the section open");
   assert.match(await desk.textContent('[data-story="s2"] .how.partly'), /needs a developer/, "one it meets in part says why, in amber");
