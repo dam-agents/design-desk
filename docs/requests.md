@@ -115,7 +115,9 @@ The person deciding should know it before a single variant exists.
    their answers — that a design change cannot do, each with its reason in their terms; never
    a part nobody asked for. The Desk names every verdict in the request's steps, shows
    `product` as a label beside the title, with its words and `reasons` on hover,
-   and folds `cannot` under the status. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+   and folds `cannot` under the status. With options drawn and no live prototype to build
+   next, the request's next step is **Contact a developer**: it opens `cannot`, where **Copy a
+   question for a developer** copies a link to the request, its state and these parts. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request

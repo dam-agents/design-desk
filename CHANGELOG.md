@@ -16,7 +16,8 @@ looks the same everywhere: the Presentation's rows carry the state dot and red !
 a screen's, an element's and a decision's page open with the status box (their buttons in it), an
 issue's GitHub link is a pill as a change's PR is, a request's page no longer has a
 Needs a developer label under its title (its steps name it), Send to Slack… shows only at Team
-feedback, a decision's page drops its labels and its empty headings and names a decision it
+feedback, a request with parts a design change cannot do and no live prototype to build has the
+next step Contact a developer (it opens those parts, with a question for a developer to copy), a decision's page drops its labels and its empty headings and names a decision it
 refers to by number and the start of its text, and colours and type sizes come from the
 page's tokens. Nothing else to do.
 

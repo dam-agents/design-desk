@@ -1627,6 +1627,9 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.equal(await desk.locator(".made-col h4", { hasText: "What can be done" }).count(), 0, "no What can be done in the box");
   assert.doesNotMatch(await desk.textContent(".made-col"), /deliberate decision/, "no label on what is already known");
   assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");
+  await desk.click(".steppill [data-dev-ask]");
+  assert.equal(await desk.$eval("#dev-parts", (d) => d.open), true, "the step Contact a developer opens what design cannot do");
+  assert.equal(await desk.locator("#dev-parts [data-dev-copy]").count(), 1, "with a question for a developer to copy");
 
   await desk.click('[data-brief-toggle="made"]');
   assert.equal(await desk.locator(".made-col.clamped").count(), 1, "folded");

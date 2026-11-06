@@ -167,6 +167,7 @@
   .row.side-design { border-left: 3px solid var(--accent); } .row.side-developer { border-left: 3px solid var(--warn); }
   .chip.side-design { background: var(--info-soft); color: var(--accent); } .chip.side-developer { background: var(--warn-soft); color: var(--warn); }
   .bad-text { color: var(--bad); }
+  #dev-parts .panel > ul { margin: 0; } #dev-parts .panel > .actions { margin: 12px 0 0 40px; }
   .side-head { display: flex; gap: 8px; align-items: baseline; margin: 14px 4px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .side-head .n { font-weight: 400; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
@@ -3181,8 +3182,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
+      // No live prototype for a request with parts a design change cannot do: the step is to
+      // ask a developer about them, and it opens them (simple mode names no role a request needs).
+      const dev = !simple() && (c.triage?.cannot || []).length ? `<button class="step-next" data-dev-ask title="Opens the parts a design change cannot do, with a question for a developer to copy">Contact a developer</button>` : "";
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
-        step: design && canBuild() ? sb("build", "Build a live prototype") : "",
+        step: design && canBuild() ? sb("build", "Build a live prototype") : dev,
         buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     return { text: "", buttons: "" };
@@ -3241,7 +3245,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function cannotFold(c) {
     const xs = c.triage?.cannot || [];
     if (!xs.length) return "";
-    return `<details class="fold"><summary>${simple() ? "What a design change cannot do, and why" : `${plural(xs.length, "part needs a developer", "parts need a developer")}: what a design change cannot do, and why`}</summary><div class="panel"><ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul></div></details>`;
+    return `<details class="fold" id="dev-parts"><summary>${simple() ? "What a design change cannot do, and why" : `${plural(xs.length, "part needs a developer", "parts need a developer")}: what a design change cannot do, and why`}</summary><div class="panel"><ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>${simple() ? "" : `<div class="actions"><button class="btn small" data-dev-copy title="Copies a link to this request, what it is about and these parts, to paste to a developer in Slack or a message">Copy a question for a developer</button></div>`}</div></details>`;
+  }
+  // A question for a developer about the parts a design change cannot do: a link, the request in a line, the parts.
+  function devQuestion(c) {
+    const xs = c.triage?.cannot || [];
+    return [`A question about ${c.id}: ${c.title}`, itemLink(c), `It is at ${stateWord(c)}. Design Desk says these parts need a developer:`,
+      ...xs.map((x) => `- ${x}`), "", "Can these be built, and roughly how big is each?"].join("\n");
   }
 
   // What Design Desk found before drawing; the summary says it in words, with no label.
@@ -4234,17 +4244,18 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return true;
   }
   // The frame may not get the clipboard: the browser's own copy, else the link shown to copy by hand.
-  async function copyLink(c) {
-    const link = itemLink(c);
-    try { await navigator.clipboard.writeText(link); toast(`Copied the link to ${c.id}.`); return; } catch {}
+  const copyLink = (c) => copyText(itemLink(c), `the link to ${c.id}`);
+  async function copyText(text, what) {
+    const done = () => toast(`Copied ${what}.`);
+    try { await navigator.clipboard.writeText(text); done(); return; } catch {}
     const t = document.createElement("textarea");
-    t.value = link; t.readOnly = true; t.style.cssText = "position:fixed;top:0;opacity:0";
+    t.value = text; t.readOnly = true; t.style.cssText = "position:fixed;top:0;opacity:0";
     document.body.append(t); t.select();
     let copied = false;
     try { copied = document.execCommand("copy"); } catch {}
     t.remove();
-    if (copied) { toast(`Copied the link to ${c.id}.`); return; }
-    await ask({ title: `The link to ${c.id}`, body: `The browser did not let the Desk copy it. Select it and copy it:\n\n\`${link}\``, ok: "Done", send: () => null });
+    if (copied) { done(); return; }
+    await ask({ title: what[0].toUpperCase() + what.slice(1), body: `The browser did not let the Desk copy it. Select it and copy it:\n\n\`\`\`\n${text}\n\`\`\``, ok: "Done", send: () => null });
   }
 
   // ---------- events ----------
@@ -4559,6 +4570,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { S.convoOpen = true; await post(ds.post); return; }
+    if ("devAsk" in ds) { const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
+    if ("devCopy" in ds) { await copyText(devQuestion(S.card), "a question for a developer"); return; }
     if ("teamFeedback" in ds) { await api("POST", `/api/cards/${S.card.id}/feedback`); toast("The team can vote and comment on the options now."); await openCard(S.card.id); await refreshList(); return; }
     if ("askOpen" in ds) { S.ask.open = true; await loadAsks(); renderAsk(); $("#ask-text")?.focus(); return; }
     if ("askClose" in ds) { S.ask.open = false; renderAsk(); return; }
