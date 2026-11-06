@@ -28,6 +28,7 @@ assert "UI files listed" '.changes_due[0].ui_files == ["src/agents/list.tsx"]' "
 assert "a title from ids" '.title == "Explain #11, #14"' "$out"
 assert "read_set names the watch doc" '.read_set | index("docs/watch.md") != null' "$out"
 assert "config resolved with defaults" '.config.handoff == "desk" and .config.max_changes_per_run == 2' "$out"
+assert "prototype_requesters unset: a PM builds live prototypes too" '.config.prototype_requesters == "designer, pm, admin"' "$out"
 assert "the rest wait" '.logs | map(test("wait for the next run")) | any' "$out"
 assert "skipped logged" '.logs | map(test("touch no UI")) | any' "$out"
 
