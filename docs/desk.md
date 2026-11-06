@@ -120,10 +120,9 @@ served by the Desk server through the platform's Artifact API relay.
   in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and
   rows ease between states, and a toast comes and goes. Nothing waits on an animation; a
   browser without one of these features shows the change at once.
-- **Tab intros.** Every tab but How it works has an intro (what it shows, what you can do and,
+- **Tab intros.** Every tab but How it works and People has an intro (what it shows, what you can do and,
   where a tab has a flow, step by step), `INTRO` in `desk/page.html`. It fills the pane beside
-  the list while nothing is open there; People shows it above its list, beside it on a wide
-  screen. It folds; folding one folds every tab's, and the browser keeps the choice
+  the list while nothing is open there; People shows its roster and roles, which say the same. It folds; folding one folds every tab's, and the browser keeps the choice
   (`desk-intro` in its local storage). A change that adds, renames or removes a tab's action
   updates its intro too.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it

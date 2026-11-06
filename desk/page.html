@@ -104,9 +104,6 @@
   .intro ul, .intro ol { margin: 0; padding-left: 18px; } .intro li { margin-bottom: 3px; }
   .pick { color: var(--muted); text-align: center; margin: 0 0 16px; }
   /* People shows at once: its intro on top, beside it on a wide screen. */
-  .with-intro { display: grid; gap: 32px 48px; align-items: start; }
-  .with-intro > .intro { margin: 0; }
-  @media (min-width: 1280px) { .with-intro { grid-template-columns: minmax(0, var(--measure)) minmax(280px, 380px); } .with-intro > .intro { order: 2; } }
   .intro li.off { color: var(--muted); } .intro li .chip { font-size: 10.5px; padding: 0 6px; margin-left: 4px; }
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
@@ -2181,10 +2178,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         ["<b>Revoke</b> a decision that no longer holds, or restore it.", "decide"],
         ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
       steps: ["Pick Screens, Elements, Decisions or History.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
-    people: { about: "who is on this Desk, and what each role can do",
-      see: ["Everyone the Desk is shared with, and their role.", "What each role can do; yours is marked.", "Asks to add someone, and where each one stands."],
-      can: [["<b>+ Add a person</b>: Design Desk puts them on the list as a designer, PM, lead developer or developer.", "people"],
-        [`To get another role, or to make someone an admin, ask ${esc(contact())}.`]] },
   });
   // Each tab's help draws its own flow from How it works: a request, a shipped change, an issue.
   const FLOW_OF = { requests: FLOW_REQUEST, new: FLOW_CHANGE, issues: FLOW_ISSUE };
@@ -2453,7 +2446,6 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       return `<tr><td>${esc(a.email)}</td><td>${roleIcon(a.role)}${esc(roleName(a.role))}</td><td>${chip}${why}<div class="sub">${esc(a.by || "An admin")} asked · ${esc(when(a.created))}</div></td></tr>`;
     }).join("");
     return `<h2>People and roles</h2>
-      <p class="lead">Who has which role on this Desk, and what each role can do. ${can("people") ? "Add someone with <b>+ Add a person</b>; Design Desk puts them on the list. " : ""}${esc(contact().replace(/^the/, "The"))} changes roles${can("people") ? "" : " and adds people"}.</p>
       <div class="sec-head"><h3>People</h3>${can("people") ? `<button class="btn small primary" data-add-person style="margin-left:auto">+ Add a person</button>` : ""}</div>
       ${rows ? `<table class="people"><thead><tr><th>Email</th><th>Role</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Nobody has a role yet.</div>`}
       <p class="sub">The Desk's owner is always an admin. Anyone else the Desk is shared with is a viewer.</p>
@@ -4460,7 +4452,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); d.classList.remove("enter"); void d.offsetWidth; d.classList.add("enter"); clearTimeout(entered); entered = setTimeout(() => d.classList.remove("enter"), 400); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
-    if (S.tab === "people") { d.innerHTML = `<div class="with-intro">${renderIntro()}<div class="guide">${renderPeople()}</div></div>`; return; }
+    if (S.tab === "people") { d.innerHTML = `<div class="guide">${renderPeople()}</div>`; return; }
     if (presenting() && !S.card) { renderAgendaDetail(); return; }
     if (S.tab === "product" && S.productFilter === "decisions") {
       d.innerHTML = S.decision ? renderDecision(S.decision) : `<p class="pick">Every decision the team made about the product, with where it was made. Pick one, or search for one at the top.</p>${renderIntro()}`;

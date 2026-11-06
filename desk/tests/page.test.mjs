@@ -371,12 +371,13 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   assert.equal(await desk.locator("#banners .intro").count(), 0, "no intro under the menu");
   assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
   assert.match(await desk.textContent(`${intro} li.off`), /Vote on the options[\s\S]*not with your role/, "an action the role may not do says so");
-  for (const tab of ["new", "issues", "product", "people"]) {
+  for (const tab of ["new", "issues", "product"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"]`);
   }
-  assert.match(await desk.textContent('#detail [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is an admin's");
-  assert.equal(await desk.locator("#detail .with-intro > .guide").count(), 1, "People shows its list with the intro");
+  await desk.click('[data-tab="people"]');
+  await desk.waitForSelector("#detail > .guide");
+  assert.equal(await desk.locator("#detail .intro").count(), 0, "People has no intro: its roles say what each may do");
   // Folding one intro folds every tab's, and it stays folded after a reload.
   await desk.click('[data-tab="requests"]');
   await desk.click(`${intro} > summary`);
