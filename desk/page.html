@@ -4860,12 +4860,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if ("specSend" in ds) {
       // The route is picked here: an issue a developer builds from, or straight to the coding
       // agent, its issue labelled for it (docs/handoff.md step 6). Spec on the Desk only: no choice.
-      const c = S.card, route = S.me?.handoff?.[c.request?.type || "idea"] || "desk";
+      // Where it goes is the Desk's setting by request type (`handoff`, `issue_writeback`): GitHub,
+      // or for an idea or a proposal set to `desk`, the Desk itself, where developers read it.
+      const c = S.card, route = S.me?.handoff?.[c.request?.type || "idea"] || "github";
       const choices = route === "desk" ? null : [
         { id: "issue", name: "As an issue for developers", hint: "A developer picks it up and builds it from the spec and the design." },
         { id: "agent", name: "Straight to the coding agent", hint: "The issue gets the coding agent's label, so it starts building; you follow its pull request here." }];
-      const r = await ask({ title: "Send the spec to developers", body: route === "desk" ? "The spec stays on the Desk for developers to read; nothing goes to GitHub." : "Design Desk sends the spec as it is now, with the approved design, its pictures and states. Once sent, it can't be taken back.",
-        ok: "Send to developers", choices, pick: choices ? (c.approved?.implement ? "agent" : "issue") : null,
+      const r = await ask({ title: route === "desk" ? "Mark the spec ready for developers" : "Send the spec to developers",
+        body: route === "desk" ? `This Desk keeps the spec of ${c.request?.type === "proposal" ? "a proposal" : "an idea"} here: developers read it on the Desk, and nothing goes to GitHub. To have it filed on GitHub instead, ask ${contact()} to change where ideas go (the \`handoff\` setting).`
+          : "Design Desk sends the spec as it is now, with the approved design, its pictures and states, to GitHub. Once sent, it can't be taken back.",
+        ok: route === "desk" ? "Mark ready" : "Send to developers", choices, pick: choices ? (c.approved?.implement ? "agent" : "issue") : null,
         send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send", ...(choices ? { implement: a.choice === "agent" } : {}) }) });
       if (r) { toast("The spec is on its way to developers."); await openCard(S.card.id); await refreshList(); }
       return;
