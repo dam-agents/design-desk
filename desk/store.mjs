@@ -327,6 +327,8 @@ export class Store {
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
         attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
+        // The decisions in force it goes against, by number: the list's red ! (docs/desk.md → Decisions).
+        against: [...new Set(this.activeConflicts(c).map((x) => x.decision))],
         designed: this.designedOf(c), sent_card: this.sentCardOf(c),
         // An element from an approved design, not from the product (docs/catalog.md → From approved designs).
         design: c.design ? { card: c.design.card, option: c.design.option, version: c.design.version, change: c.design.change, of: c.design.of } : null,
@@ -1762,7 +1764,9 @@ export class Store {
       .filter((d) => (!state || d.status === state)
         && (!c || d.concepts.some((x) => x.includes(c) || c.includes(x)))
         && (!w || d.id.toLowerCase() === w || `${d.text} ${d.why}`.toLowerCase().includes(w)))
-      .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+      .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")))
+      // Each decision it goes against says whether that one still holds: the list's red ! counts only those in force.
+      .map((d) => d.conflicts ? { ...d, conflicts: d.conflicts.map((x) => ({ ...x, status: this.db.decisions[x.decision]?.status || "revoked" })) } : d);
   }
 
   // One decision with everything that names it: cards that follow it or go against it, and
