@@ -61,6 +61,10 @@ sent; the developer or coding agent gets only answers.
 
 ## Review before it goes
 
+Writing the spec and sending it are two steps, and the Desk says so everywhere: the request's
+steps (**Approved** → **Spec written** → **Sent to developers**, Send a person's step like
+Approve), its state word (*Spec ready — read it*), and Approve's words (the spec waits on the
+Desk; nothing goes to developers until **Send to developers**).
 Nothing leaves the Desk until a person sends it (`spec_review`, default `enabled`; `disabled`
 → go straight on to step 5). After step 4 with no open question: keep `status: spec`,
 `done --outcome review` and stop. On the
