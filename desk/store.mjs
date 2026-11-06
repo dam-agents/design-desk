@@ -704,7 +704,7 @@ export class Store {
   // Types: an idea for the design; a UI bug; a feature (a larger piece, usually an
   // issue); an adjustment of UI a developer built (a pull request or a change card);
   // a proposal the agent made for a new feature.
-  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false, audience = null }) {
+  createRequest(who, { title, problem, goal = "", screen = "", steps = "", type = "idea", from = null, screens = [], origin = null, figma = "", vision = "", skills = null, options = 3, grill = false, auto = false, audience = null, carry = [] }) {
     if (figma && !FIGMA_URL.test(String(figma))) throw bad("The Figma link should start with https://www.figma.com/");
     if (!REQUEST_TYPES.includes(type)) throw bad(`type must be one of ${REQUEST_TYPES.join(", ")}`);
     if (audience !== null && audience !== undefined && !AUDIENCES.includes(audience)) throw bad(`audience must be one of ${AUDIENCES.join(", ")}`);
@@ -739,6 +739,20 @@ export class Store {
     // and filed by the agent) are theirs: the page shows them with the request, apart from
     // the ones Design Desk takes.
     if (!who?.agent || c.origin?.reporter) c.screens = c.screens.map((x) => ({ ...x, source: x.source || "person", ...(x.by || who?.agent ? {} : { by: person(who) }) }));
+    // A request made from an approved one may carry its options over (docs/desk.md → Approved is
+    // final): each starts here as it was there, at its latest version, and names where it came from.
+    const source = request.from ? this.card(request.from) : null;
+    if (Array.isArray(carry) && carry.length) {
+      if (source?.kind !== "request") throw bad("Only options of a request carry over.");
+      const picked = [...new Set(carry.map(String))];
+      const vs = picked.map((vid) => (source.variants || []).find((v) => v.id === vid) || (() => { throw bad(`${source.id} has no option ${vid}`); })());
+      c.variants = vs.map((v) => ({ id: v.id, name: v.name, purpose: v.purpose, rationale: v.rationale, fidelity: v.fidelity, asset: v.asset, figma_url: v.figma_url || null,
+        stories: v.stories || null, reasons: v.reasons || null, states: structuredClone(v.states || []), elements: structuredClone(v.elements || []), version: 1,
+        carried: { card: source.id, variant: v.id, version: v.version || 1 } }));
+      request.carry = c.variants.map((v) => v.id);
+      // Carried options are changed right after triage, as new ones would be drawn.
+      if (auto === true) request.auto = true;
+    }
     const id = this.next("card", "C");
     c.id = id;
     this.db.cards[id] = c;

@@ -254,7 +254,10 @@ async function viewerRoute(req, res, url, who) {
     const audience = b.audience === "developers" ? "developers" : "designers";
     // How many options, and questions first: a bug is fixed, not designed, so it has neither.
     // From an issue on the Issues page it designs that feature; from a change it adjusts it.
-    const type = from ? (store.card(String(from)).kind === "issue" ? "feature" : "adjustment") : b.type === "bug" ? "bug" : "idea";
+    // From an approved request, a new one of the same kind, its options carried over as ticked.
+    const src = from ? store.card(String(from)) : null;
+    const type = src ? (src.kind === "issue" ? "feature" : src.kind === "request" ? (src.request?.type === "bug" ? "idea" : src.request?.type || "idea") : "adjustment") : b.type === "bug" ? "bug" : "idea";
+    const carry = src?.kind === "request" && Array.isArray(b.carry) ? b.carry.slice(0, 6).map(String) : [];
     // A bug is fixed, not designed: no picture of it and no skills. Only the offered skills count.
     const offered = new Set(offerSkills(s.figma).map((k) => k.name));
     const vision = type === "bug" ? "" : b.vision;
@@ -267,7 +270,7 @@ async function viewerRoute(req, res, url, who) {
     const options = type === "bug" ? 0 : b.options, grill = type !== "bug" && b.grill === true;
     // The options start right after triage only for someone who may start them.
     const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience }), s, who));
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry }), s, who));
   }
   // A lead asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }

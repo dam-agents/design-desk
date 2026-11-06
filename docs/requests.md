@@ -141,6 +141,10 @@ bundled `variants`, or the product's own), and revise them with the `revise` act
   `request.skills` (`{name: on}`) — a skill switched on is used for this request's options
   (read its `SKILL.md`), one switched off is not, even where it would run by default; a
   skill not listed follows the usual rules. Say on the card when a choice could not be kept.
+- **Carried options** — a request made from an approved one (`request.from` a request) may
+  start with some of its options (`request.carry`; each option's `carried: {card, variant,
+  version}`): change each as the new request says — a revise of it, its next version — and draw
+  `request.options` new ones besides (0: none). Never redraw a carried option from scratch.
 - **explore** — read the product's `PROFILE.md` and the card's research first; set
   `status: variants`, make `request.options` genuinely distinct approaches (one to five; three
   when it is missing; 0 means the person asked for none, so only a designer's or developer's Draw starts them)

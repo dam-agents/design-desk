@@ -332,7 +332,9 @@ From **Approve** on (the spec, and once it went to developers) a request's desig
 changes: the store refuses Draw design options, one more option, a redraw, Work it in, other
 ways a part could look, removing an option, a live prototype, a Figma import, and Reopen of
 one sent to developers. The design options say so (🔒 Approved), and **New request from this…**
-(under ⋯, and in that line) starts a request whose `request.from` is this one. Comments,
+(under ⋯, and in that line) starts a request whose `request.from` is this one, of the same
+type; its dialog asks which options carry over (the approved one ticked) and how many new ones
+to draw besides (none by default). Comments,
 votes, the presentation, every state of an element and the spec's own review stay open.
 
 ### Deleting a request

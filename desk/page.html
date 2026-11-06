@@ -1000,7 +1000,8 @@
     <label><span id="rq-problem-label">What would you change, and for whom?</span><textarea name="problem" maxlength="4000" required></textarea></label>
     <label id="rq-vision"><span>How do you picture it? (optional)</span><textarea name="vision" maxlength="4000" placeholder="e.g. calmer, like the cards in Settings; the main button on the right; less text"></textarea></label>
     <label><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
-    <div class="count-pick" id="rq-count"><span class="hint" style="margin:0">How many design options should Design Desk draw?</span>
+    <div id="rq-carry" hidden><span class="hint" style="margin:0">Which options carry over? They start here as they are, and Design Desk changes them as you say.</span><div class="choices" id="rq-carry-list"></div></div>
+    <div class="count-pick" id="rq-count"><span class="hint" style="margin:0" id="rq-count-q">How many design options should Design Desk draw?</span>
       <div class="row2"><input type="range" name="options" min="0" max="5" step="1" value="3" aria-label="How many design options to draw" /><output id="rq-count-say">3 options</output></div>
       <span class="hint" style="margin:0" id="rq-count-hint"></span></div>
     <label class="switch" id="rq-grill"><input type="checkbox" role="switch" name="grill" /><span>Ask me questions first<small>Before it starts, Design Desk asks you one question at a time about the decisions and how you picture it, each with its suggested answer.</small></span></label>
@@ -5201,7 +5202,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function sayCount() {
     const n = Number($("#request-form").options.value);
     $("#rq-count-say").textContent = optionsSay(n);
-    $("#rq-count-hint").textContent = !n ? "Design Desk only checks what can be done as a design change; a designer or developer can still have options drawn later."
+    const carried = !$("#rq-carry").hidden && $("#request-form").querySelector("input[name=carry]:checked");
+    $("#rq-count-hint").textContent = !n && carried ? "Design Desk changes only the options you carry over."
+      : !n ? "Design Desk only checks what can be done as a design change; a designer or developer can still have options drawn later."
       : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer or developer starts them after Design Desk checks what can be done.";
   }
   $("#request-form").options.addEventListener("input", sayCount);
@@ -5250,16 +5253,25 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const issue = from?.kind === "issue";
     const again = from?.kind === "request";
     $("#rq-title").textContent = issue ? "Design this issue" : again ? "A new request from this one" : from ? "Adjust this change" : "New request";
-    $("#rq-hint").textContent = issue
+    $("#rq-hint").textContent = again
+      ? "Say what should change in the approved design. Design Desk checks what can be done, changes the options you carry over, and the team picks one again."
+      : issue
       ? "Design Desk checks what can be done as a design change, draws options for this issue, shows how each meets the issue's user stories, and the team picks one."
       : from
       ? "Tell Design Desk what should look different. It draws options; once a designer or lead developer approves one (or a developer, on a request For Developers), the coding agent builds it into the product."
       : "Describe it in your own words. Design Desk first tells you what can be done as a design change and what needs a developer.";
+    // From an approved request: tick the options to carry over, the approved one first.
+    const vs = again ? from.variants || [] : [];
+    $("#rq-carry").hidden = !vs.length;
+    $("#rq-carry-list").innerHTML = vs.map((v) => `<label><input type="checkbox" name="carry" value="${esc(v.id)}"${v.id === from.approved?.variant ? " checked" : ""} /> ${esc(v.name)}${v.id === from.approved?.variant ? ` <span class="sub">approved</span>` : ""}</label>`).join("");
+    $("#rq-count-q").textContent = vs.length ? "How many new options should Design Desk draw besides them?" : "How many design options should Design Desk draw?";
+    if (vs.length) { f.options.value = "0"; sayCount(); }
     if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : again ? `What should change in the approved design of “${from.title}”?` : `What should look different in “${from.title}”?`;
     f.from.value = from ? from.id : "";
     dlg.returnValue = ""; dlg.showModal();
   }
   $("#new-request").addEventListener("click", () => openRequestDialog(null));
+  $("#rq-carry-list").addEventListener("change", sayCount);
 
   // ---------- the Add to Product dialog ----------
   const parts = [];
@@ -5442,7 +5454,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const body = { type: f.type.value, audience: f.audience.value, problem: f.problem.value, screen: f.screen.value, ...(f.figma.value.trim() ? { figma: f.figma.value.trim() } : {}),
       ...(design && f.vision.value.trim() ? { vision: f.vision.value } : {}), ...(Object.keys(skills).length ? { skills } : {}),
       ...(design ? { options: Number(f.options.value), grill: f.grill.checked } : {}),
-      ...(f.from.value ? { from: f.from.value } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
+      ...(f.from.value ? { from: f.from.value } : {}), ...(!$("#rq-carry").hidden ? { carry: [...f.querySelectorAll("input[name=carry]:checked")].map((i) => i.value) } : {}), ...(pictures.length ? { images: pictures.map(({ contentType, data }) => ({ contentType, data })) } : {}) };
     const r = await sendOrReopen(e.target, () => api("POST", "/api/requests", body));
     toast("Sent. Design Desk first checks what can be done; this page updates by itself.");
     S.tab = "requests"; S.reqFilter = "open"; S.reqFor = body.audience; renderBanners(); await refreshList(); await openCard(r.card.id);

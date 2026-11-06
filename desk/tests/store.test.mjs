@@ -453,8 +453,11 @@ test("an approved design is final: nothing changes it; a new request starts from
   for (const a of ["revise", "explore", "add-option", "build"]) assert.throws(() => s.act(card.id, alice, a, "more", { variant: "v1" }), /approved, so it no longer changes/, a);
   s.upsertCard({ id: card.id, status: "handed-off" });
   assert.throws(() => s.act(card.id, alice, "reopen"), /new request from this one/, "a design sent to developers is not reopened");
-  const next = s.createRequest(alice, { title: "Calmer header, again", problem: "Smaller still.", from: card.id }).card;
+  const next = s.createRequest(alice, { title: "Calmer header, again", problem: "Smaller still.", from: card.id, carry: ["v1"], options: 0, auto: true }).card;
   assert.equal(next.request.from, card.id, "the new request names the approved one it starts from");
+  assert.deepEqual(next.variants.map((v) => [v.id, v.name, v.asset, v.carried.card]), [["v1", "Quiet", page, card.id]], "the ticked option carries over as it was");
+  assert.equal(next.request.auto, true, "carried options are changed right after triage");
+  assert.throws(() => s.createRequest(alice, { title: "x", problem: "y", from: card.id, carry: ["v9"] }), /no option v9/);
 });
 
 test("a closed request takes no work and no late status from a session", () => {
