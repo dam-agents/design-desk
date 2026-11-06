@@ -1495,7 +1495,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // dialog button joins these lists (its `data-` action, or its id).
   const OPENS = "[Opens a dialog] ";
   const DIALOG_ACTS = new Set(["queue", "clear-call", "approve", "build", "states", "alternatives", "add-option", "explore", "history", "draw", "close", "slack", "figma-export", "figma-import"]);
-  const DIALOG_DATA = ["rename", "decide", "revoke", "size", "dropOption", "adjust", "addProduct", "addPerson", "addShots", "el", "elStates"];
+  const DIALOG_DATA = ["rename", "decide", "revoke", "size", "dropOption", "adjust", "addProduct", "addPerson", "addShots", "el", "elStates", "specChanges", "specSend"];
   const opensDialog = (el) => el.id === "new-request" || (el.dataset.act ? DIALOG_ACTS.has(el.dataset.act) : DIALOG_DATA.some((k) => k in el.dataset));
   function markOpens(el) { if (opensDialog(el) && !(el.dataset.tip || "").startsWith(OPENS)) el.dataset.tip = OPENS + (el.dataset.tip || textOf(el).replace(/…$/, "")); }
   function tip(root) {
@@ -3286,7 +3286,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const may = canApprove(c);
       return { text: may ? "Your turn: read the developer spec below. Edit it or ask for changes; send it when it is right." : "The developer spec is written. It goes to developers once someone who may approve it has read it.",
         sub: may ? "Nothing leaves the Desk until you press Send to developers." : approver(c),
-        step: may ? `<button class="step-next" data-spec-send title="Sends the spec as it is now, with the design, to developers">Send to developers</button>` : "",
+        step: may ? `<button class="step-next" data-spec-send title="Sends the spec as it is now, with the design, to developers; you pick first where it goes">Send to developers…</button>` : "",
         // Edit and Ask for changes sit on the spec itself, below; the row keeps Close.
         buttons: "" };
     }
