@@ -1480,3 +1480,34 @@ test("an answer says what a worked-in note goes against: a decision, the issue o
   s.answer(thread.id, "Nothing against anything.");
   assert.equal(s.getCard(card.id).threads.find((x) => x.id === thread.id).messages.at(-1).warns, undefined, "no warns, no box");
 });
+
+test("a designer adds a decision on the Desk in their own name, with its pictures; Design Desk does not", () => {
+  const s = fresh();
+  const pic = s.addAsset({ kind: "image", name: "decision-1", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const d = s.recordDecision(alice, { text: "Empty lists show a hint", why: "People got stuck.", concepts: ["Empty list", " onboarding "], pictures: [pic] }).decision;
+  assert.deepEqual(d.author, { name: null, login: null, email: "alice@example.com", role: "designer" });
+  assert.deepEqual(d.origin, { kind: "desk", label: "Added on the Desk", url: null, card: null, thread: null, message: null }, "decided on the Desk, with no link");
+  assert.deepEqual(d.concepts, ["empty list", "onboarding"]);
+  assert.deepEqual(d.pictures, [pic]);
+  assert.throws(() => s.recordDecision(alice, { text: "x", concepts: [] }), /what it is about/);
+  assert.throws(() => s.recordDecision(alice, { text: "x", concepts: ["a"], pictures: ["A-99"] }), /no asset A-99/);
+  assert.throws(() => s.recordDecision({ agent: true }, { text: "x", concepts: ["a"] }), (e) => e.status === 403);
+  assert.throws(() => s.addDecision({ concepts: ["a"], text: "x", author: { login: "dana" }, origin: { kind: "desk" } }), /needs a link/, "the agent's desk origin still names its card");
+});
+
+test("a closed request is deleted for good, with its conversations and pictures; an open one or one still worked on is not", () => {
+  const s = fresh();
+  const card = s.createRequest(alice, { title: "Softer colours", problem: "Too loud." }).card;
+  s.openThread(card.id, bob, { text: "Why close it?" });
+  assert.throws(() => s.deleteRequest(card.id, alice), /Close the request first/);
+  s.act(card.id, alice, "close");
+  assert.throws(() => s.deleteRequest(card.id, alice), /still working/, "not while an item on it is open");
+  for (const it of Object.values(s.db.inbox)) if (it.card === card.id && it.state !== "done") { s.claim(it.id, "run-1"); s.done(it.id, "run-1"); }
+  const pic = s.addAsset({ card: card.id, kind: "screen", name: "s", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  assert.deepEqual(s.deleteRequest(card.id, alice), { deleted: card.id });
+  assert.equal(s.db.cards[card.id], undefined);
+  assert.equal(s.db.assets[pic], undefined, "its pictures go");
+  assert.equal(Object.values(s.db.threads).some((t) => t.card === card.id), false, "its conversations go");
+  assert.equal(Object.values(s.db.inbox).some((i) => i.card === card.id), false);
+  assert.throws(() => s.deleteRequest(card.id, alice), (e) => e.status === 404);
+});

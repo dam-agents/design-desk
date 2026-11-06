@@ -1,7 +1,7 @@
 // The Desk store: cards, threads, votes, assets and the inbox of work waiting for
 // the agent. Pure logic over one JSON document; the server is its only writer and
 // persists it after every change (tmp + rename), so a crash never leaves half a file.
-import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const LIMITS = {
@@ -1680,20 +1680,43 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // A designer or a lead deletes a closed request for good: the card, its conversations, its
+  // pictures and Design Desk's finished work on it (docs/desk.md → Deleting a request). Only once
+  // nothing is left to do on it, so no live prototype outlives it.
+  deleteRequest(cardId, who) {
+    const c = this.card(cardId);
+    if (!who || who.agent) throw forbidden("Only a person deletes a request.");
+    if (c.kind !== "request") throw bad("Only a request is deleted.");
+    if (c.status !== "declined") throw bad("Close the request first: only a closed request is deleted.");
+    if (["building", "live"].includes(c.prototype?.state)) throw bad("Its live prototype is still on. Delete it once Design Desk has switched it off.");
+    if (Object.values(this.db.inbox).some((i) => i.card === cardId && i.state !== "done")) throw bad("Design Desk is still working on this request. Delete it once it is done.");
+    for (const [id, t] of Object.entries(this.db.threads)) if (t.card === cardId) delete this.db.threads[id];
+    for (const [id, i] of Object.entries(this.db.inbox)) if (i.card === cardId) delete this.db.inbox[id];
+    for (const [id, a] of Object.entries(this.db.assets)) if (a.card === cardId) { try { unlinkSync(join(this.assetDir, a.file)); } catch {} delete this.db.assets[id]; }
+    for (const mine of Object.values(this.db.reads)) if (mine && typeof mine === "object") delete mine[cardId];
+    delete this.db.cards[cardId];
+    this.save();
+    return { deleted: cardId };
+  }
+
   // ---------- decisions ----------
 
   // What the team decided, who decided it and where, kept so a later change can say what it
   // follows or goes against (docs/desk.md → Decisions). The agent records them; a person
   // asks for one from a comment, revokes one or restores it.
-  addDecision({ concepts, text, why = "", author, origin, at = null, replaces = [], conflicts = [] }) {
+  addDecision({ concepts, text, why = "", author, origin, at = null, replaces = [], conflicts = [], pictures = [] }, { onDesk = false } = {}) {
     if (!Array.isArray(concepts) || !concepts.length) throw bad("a decision names at least one concept");
     if (!Array.isArray(replaces)) throw bad("replaces must be a list of D-n");
+    if (!Array.isArray(pictures)) throw bad("pictures must be a list of asset ids");
     const d = {
       concepts: concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()),
       text: clean(text, 600, "decision"), why: optText(why, 1500, "why"),
-      author: cleanAuthor(author), origin: cleanDecisionOrigin(origin, this.db.cards, this.db.threads),
+      author: cleanAuthor(author), origin: cleanDecisionOrigin(origin, this.db.cards, this.db.threads, onDesk),
       at: optText(at, 40, "at") || this.clock(), recorded: this.clock(), status: "active",
     };
+    const pics = [...new Set(pictures.slice(0, 4).map(String))];
+    for (const id of pics) if (!own(this.db.assets, id)) throw bad(`pictures: no asset ${id}`);
+    if (pics.length) d.pictures = pics;
     const old = [...new Set(replaces.slice(0, 10).map((id) => this.decision(String(id))))];
     for (const o of old) if (o.status !== "active") throw bad(`replaces: ${o.id} is no longer in force`);
     const against = cleanConflicts(conflicts, this.db.decisions);
@@ -1708,6 +1731,18 @@ export class Store {
     this.db.decisions[d.id] = d;
     this.save();
     return { decision: d };
+  }
+
+  // A designer or a lead adds a decision on the Desk, in their own name, with its pictures
+  // (docs/desk.md → Decisions → Adding one on the Desk).
+  recordDecision(who, { text, why = "", concepts = [], pictures = [] } = {}) {
+    if (!who || who.agent) throw forbidden("Design Desk does not decide: a person does");
+    const about = (Array.isArray(concepts) ? concepts : String(concepts || "").split(",")).map((x) => String(x).trim()).filter(Boolean);
+    if (!about.length) throw bad("Say what it is about, e.g. send button.");
+    const role = readRole(who.role);
+    return this.addDecision({ concepts: about, text, why, pictures,
+      author: { email: who.email, ...(ADDABLE_ROLES.includes(role) || role === "lead" ? { role } : {}) },
+      origin: { kind: "desk", label: "Added on the Desk" } }, { onDesk: true });
   }
 
   // A person on the page revokes in their own name; the agent names the person and where they said it.
@@ -2077,7 +2112,7 @@ function cleanAuthor(a) {
 }
 
 // Where it was decided, with a link: a web address, or the card (and comment) on the Desk.
-function cleanDecisionOrigin(o, cards, threads) {
+function cleanDecisionOrigin(o, cards, threads, onDesk = false) {
   if (!o || typeof o !== "object" || Array.isArray(o)) throw bad(`a decision names its origin: {kind, label, url, card} (kind: ${DECISION_ORIGINS.join(", ")})`);
   if (!DECISION_ORIGINS.includes(o.kind)) throw bad(`origin.kind must be one of ${DECISION_ORIGINS.join(", ")}`);
   const url = o.url == null || o.url === "" ? null : String(o.url);
@@ -2089,7 +2124,8 @@ function cleanDecisionOrigin(o, cards, threads) {
   if (thread && own(threads, thread).kind === "private") throw bad("origin: a private ask is not a decision's source");
   const message = o.message == null ? null : Number(o.message);
   if (message !== null && (!thread || !Number.isInteger(message) || !own(threads, thread).messages[message])) throw bad("origin.message is a message of origin.thread");
-  if (!url && !card && o.kind !== "chat") throw bad("origin needs a link: url, or the card it was decided on");
+  // Only a decision a person adds on the Desk itself comes with no link: the Desk is where it was decided.
+  if (!url && !card && o.kind !== "chat" && !(onDesk && o.kind === "desk")) throw bad("origin needs a link: url, or the card it was decided on");
   return { kind: o.kind, label: optText(o.label, 200, "origin label"), url: url ? url.slice(0, 500) : null, card, thread, message };
 }
 

@@ -1343,10 +1343,12 @@ test("a decision: what goes against it warns with a link to it; a designer revok
     assert.match(await desk.textContent("#detail"), /Follows D-2 revoked/, "a cited decision no longer in force says so");
     assert.equal(await desk.locator('#detail .impact [data-ref="D-2"]').count(), 1, "the impact cites a decision by its number");
     await desk.click('#detail .against [data-ref="D-1"]');
-    await desk.waitForSelector("text=Who decided");
-    assert.match(await desk.textContent("#detail"), /Developer Dana[\s\S]*PR #40[\s\S]*A new header ch1[\s\S]*goes against it/, "it says a developer decided it");
+    await desk.waitForSelector("#detail .status .s-meta");
+    assert.match(await desk.textContent("#detail .status .s-meta"), /by:\s*Dana \(dana\)[\s\S]*from:\s*Pull request — PR #40/, "the status box says who decided it and where, on its line");
+    assert.equal(await desk.locator('#detail .status .s-meta .role-ic').getAttribute("data-tip") ?? await desk.locator('#detail .status .s-meta .role-ic').getAttribute("title"), "A developer", "a developer's icon by the name");
+    assert.match(await desk.textContent("#detail"), /A new header ch1[\s\S]*goes against it/);
     assert.match(await desk.textContent('.row.item:has([data-decision="D-1"])'), /The header stays one line[\s\S]*In force[\s\S]*decided:[\s\S]*from: PR #40[\s\S]*by: Dana/, "a decision's row is drawn as every list's");
-    assert.match(await desk.textContent("#list"), /From developers 1[\s\S]*The header stays one line/, "the list keeps developers' decisions apart");
+    assert.equal(await desk.locator("#list .side-head").count(), 0, "one list, not kept apart by who decided");
     await desk.click('[data-revoke="D-1"]');
     await desk.fill("#confirm-form [name=note]", "Two lines are fine now");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Revoke it" }).click();

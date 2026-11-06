@@ -164,9 +164,9 @@
   .sub + .prov { margin-top: 8px; }
   .row.overdue { border-left: 3px solid var(--bad); }
   /* Whose decision it is: the design side (designers, PMs, leads) blue, developers amber. */
-  .row.side-design { border-left: 3px solid var(--accent); } .row.side-developer { border-left: 3px solid var(--warn); }
-  .chip.side-design { background: var(--info-soft); color: var(--accent); } .chip.side-developer { background: var(--warn-soft); color: var(--warn); }
   .bad-text { color: var(--bad); }
+  .role-ic { display: inline-flex; vertical-align: -2px; margin-right: 3px; color: var(--muted); }
+  .role-ic svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   #dev-parts .panel > ul { margin: 0; } #dev-parts .panel > .actions { margin: 12px 0 0 40px; }
   .side-head { display: flex; gap: 8px; align-items: baseline; margin: 14px 4px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .side-head .n { font-weight: 400; }
@@ -369,6 +369,7 @@
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
   details.more .menu { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; width: max-content; max-width: min(460px, calc(100vw - 32px)); display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   details.more .menu .btn { border: 0; justify-content: flex-start; width: 100%; text-align: left; white-space: nowrap; }
+  .btn.danger { color: var(--bad); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
   .two ul { margin: 4px 0 0; padding-left: 18px; }
   /* An open item's text blocks share one width, the reading measure; only the designs run wider. */
@@ -990,6 +991,21 @@
   </form>
 </dialog>
 
+<dialog id="decision-dialog">
+  <form method="dialog" id="decision-form">
+    <h2>Add a decision</h2>
+    <p class="sub">It is recorded in your name, as decided on the Desk. Design Desk then warns when a change or an option goes against it.</p>
+    <label><span>What was decided</span><textarea name="text" maxlength="600" required placeholder="e.g. The send button is always on the right."></textarea></label>
+    <label><span>What it is about — a few words, separated by commas</span><input name="concepts" maxlength="300" required placeholder="e.g. send button, composer" /></label>
+    <label><span>Why (optional)</span><textarea name="why" maxlength="1500" placeholder="e.g. Thumb reach on phones."></textarea></label>
+    <div class="drop">
+      <span>Pictures (optional, up to 2): paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="dc-file" hidden multiple /></label>.</span>
+      <div class="thumbs" id="dc-thumbs"></div>
+    </div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
 <dialog id="person-dialog">
   <form method="dialog" id="person-form">
     <h2>Add a person</h2>
@@ -1143,11 +1159,11 @@
     [["ack", "ask", "comment"], "Read everything, ask and comment"],
     [["vote", "request", "follow-up", "screens"], "Vote on options, send requests and bug reports, add screenshots"],
     [["explore", "revise", "refresh"], "Start design options and change them in the workspace"],
-    [["approve", "close", "reopen"], "Approve designs, close and reopen requests"],
+    [["approve", "close", "reopen"], "Approve designs, close, reopen and delete requests"],
     [["queue"], "Choose what the presentation shows"],
     [["change"], "Note changes on a product element"],
     [["handle"], "Mark changes handled"],
-    [["decide"], "Record a decision from a comment, revoke and restore decisions"],
+    [["decide"], "Add a decision or record one from a comment, revoke and restore decisions"],
     [["add"], "Add a missing screen or part to Product"],
     [["history"], "Draw how a screen or part looked before"],
     [["draw"], "Draw an issue: how it looks now and a sketch of how it could look"],
@@ -1287,9 +1303,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too, but not the handled ones", "issueFilter:handled": "Issues a designer marked handled: design has nothing to do with them; they leave the other lists",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
-      "productFilter:decisions": "Every decision the team made, kept apart by who made it", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
+      "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
-    dside: (v) => ({ "": "Every decision, kept apart by who made it", design: "Only what designers, PMs and leads decided", developer: "Only what developers decided: in code, a pull request or on the Desk" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
     decision: (v) => `Opens decision ${v}`,
@@ -1505,7 +1520,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // ---------- state ----------
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
-  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1621,6 +1636,19 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   const roleName = (r) => ROLE[r] || r;
+  // Each role's icon, shown by a person's name: in the header, on People and by a decision's author.
+  const ROLE_ICON = {
+    lead: '<path d="M2.5 13h11M3 13 2 5.5l3.5 3L8 3l2.5 5.5 3.5-3-1 7.5"/>',
+    designer: '<path d="M10.5 2.2l3.3 3.3-8 8H2.5v-3.3zM8.8 3.9l3.3 3.3"/>',
+    pm: '<rect x="3.2" y="2.8" width="9.6" height="11.7" rx="1.3"/><path d="M6 2.8V1.8h4v1M5.8 7.2h4.4M5.8 10.2h4.4"/>',
+    "lead-developer": '<path d="M5.3 7 2.3 10l3 3M10.7 7l3 3-3 3M5 5.2h6l.6-3.4L9.8 3.2 8 1.6 6.2 3.2 4.4 1.8z"/>',
+    developer: '<path d="M5.3 4.5 1.8 8l3.5 3.5M10.7 4.5 14.2 8l-3.5 3.5M9.2 2.8 6.8 13.2"/>',
+    guest: '<path d="M1.5 8s2.4-4.6 6.5-4.6 6.5 4.6 6.5 4.6-2.4 4.6-6.5 4.6S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>',
+  };
+  const roleIcon = (r, tip = "") => ROLE_ICON[r] ? `<span class="role-ic" title="${esc(tip || roleName(r))}"><svg viewBox="0 0 16 16" aria-hidden="true">${ROLE_ICON[r]}</svg></span>` : "";
+  // A decision's author's role, else the side the server read for them.
+  const decRole = (d) => ROLE_ICON[d.author?.role] ? [d.author.role, ""] : d.side === "developer" ? ["developer", "A developer"] : d.side === "design" ? ["designer", "A designer, a PM or a lead"] : [null, ""];
+  const authorIcon = (d) => { const [r, tip] = decRole(d); return r ? roleIcon(r, tip) : ""; };
   const who = (by) => by?.agent ? "<b>Design Desk</b>"
     : by?.via === "slack" ? `<b>${esc(by.name || by.email || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
     : `<b>${esc(by?.email && by.email === S.me?.email ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
@@ -1815,7 +1843,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   function peekDecision(d) {
     return `<div class="t"><b class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text || d.id)}</b>${num(d)}</div>
-        <div class="sub">${sideChip(d)}${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.author ? `<span>by ${named(d.author)}</span>` : ""}</div>
+        <div class="sub">${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.author ? `<span>by ${authorIcon(d)}${named(d.author)}</span>` : ""}</div>
         ${(d.concepts || []).length ? `<p class="hint">About: ${esc(d.concepts.join(", "))}</p>` : ""}`;
   }
   function peekIssue(c) {
@@ -2245,7 +2273,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // A tab's pages (Product's four, Requests and its presentation) are tabs; filters narrow the page's list.
     const pages = (key, opts, on, extra = "") => `<nav class="subtabs" aria-label="Pages">${opts.map(([k, l, n]) => `<button class="${on(k) ? "on" : ""}" data-filter="${key}:${k}" aria-current="${on(k) ? "page" : "false"}">${counted(l, n)}</button>`).join("")}${extra}</nav>`;
     const reqList = S.reqFilter !== "presentation";
-    const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>` : "";
+    const add = S.tab !== "product" ? "" : ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>`
+      : S.productFilter === "decisions" && can("decide") ? `<button class="btn small primary" data-add-decision title="Record a decision the team made, in your name">+ Add</button>` : "";
     // Requests: For Designers and For Developers, each with its open count, and the presentation.
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
@@ -2287,7 +2316,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (P.error) return `<h2>People and roles</h2><div class="panel">${esc(P.error)}</div>`;
     const order = Object.keys(ROLE_ABOUT);
     const people = [...P.people].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.email.localeCompare(b.email));
-    const rows = people.map((x) => `<tr><td>${esc(x.email)}${x.email === S.me?.email ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${esc(roleName(x.role))}</td></tr>`).join("");
+    const rows = people.map((x) => `<tr><td>${esc(x.email)}${x.email === S.me?.email ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
     const shown = order.filter((r) => P.roles[r]);
     const may = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a])).map(([, words]) => words)]));
     // Each role says only what it adds to the largest roles below it that it covers; a role
@@ -2301,14 +2330,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const more = same ? [] : may[r].filter((w) => !below.some((b) => may[b].includes(w)));
       const names = (rs) => rs.map((b) => esc(roleName(b))).join(" or ");
       const list = same ? `<p>Same as a ${names([same])}.</p>` : below.length ? `<p>Everything a ${names(below)} can, and:</p>` : "";
-      return `<div class="panel"><h4>${esc(roleName(r))}${S.me?.role === r ? ` <span class="chip" title="The role you have on this Desk">your role</span>` : ""}</h4><p>${esc(ROLE_ABOUT[r])}</p>${list}${more.length ? `<ul>${more.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
+      return `<div class="panel"><h4>${roleIcon(r)}${esc(roleName(r))}${S.me?.role === r ? ` <span class="chip" title="The role you have on this Desk">your role</span>` : ""}</h4><p>${esc(ROLE_ABOUT[r])}</p>${list}${more.length ? `<ul>${more.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
     }).join("");
     // A lead's asks to add someone: waiting, added, or not added with Design Desk's reason.
     const asked = (P.asks || []).map((a) => {
       const chip = a.state !== "done" ? `<span class="chip info" title="Design Desk is putting them on the list; this page updates by itself">● Design Desk is adding them</span>`
         : a.outcome === "added" ? `<span class="chip ok" title="They are on the list with the role asked for">✓ Added</span>` : `<span class="chip warn" title="Design Desk could not add it; open it to see why">Not added</span>`;
       const why = a.state === "done" && a.outcome !== "added" ? ` ${esc(String(a.outcome || "").replace(/^not added:\s*/i, ""))}` : "";
-      return `<tr><td>${esc(a.email)}</td><td>${esc(roleName(a.role))}</td><td>${chip}${why}<div class="sub">${esc(a.by || "A lead")} asked · ${esc(when(a.created))}</div></td></tr>`;
+      return `<tr><td>${esc(a.email)}</td><td>${roleIcon(a.role)}${esc(roleName(a.role))}</td><td>${chip}${why}<div class="sub">${esc(a.by || "A lead")} asked · ${esc(when(a.created))}</div></td></tr>`;
     }).join("");
     return `<h2>People and roles</h2>
       <p class="lead">Who has which role on this Desk, and what each role can do. ${can("people") ? "Add someone with <b>+ Add a person</b>; Design Desk puts them on the list. " : ""}${esc(contact())} changes roles${can("people") ? "" : " and adds people"}.</p>
@@ -2324,12 +2353,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The presentation", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
   const named = (a) => a ? esc(a.name || a.login || a.email || "someone") : "";
   // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
-  const SIDE = { design: ["Designer or PM", "Decided by a designer, a PM or a lead"], developer: ["Developer", "Decided by a developer: in code, a pull request or on the Desk"], "": ["Not known who", "The Desk does not know this person's role"] };
-  const sideChip = (d) => { const [l, t] = SIDE[d.side || ""]; return `<span class="chip side-${esc(d.side || "none")}" title="${esc(t)}">${esc(l)}</span>`; };
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
     const list = $("#list");
-    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["revoked", "Revoked"], ["", "All"]], "dstate")}${seg("decisionSide", [["", "Everyone"], ["design", "Design and PM"], ["developer", "Developers"]], "dside")}</div></div>`;
+    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["revoked", "Revoked"], ["", "All"]], "dstate")}</div></div>`;
     // As every list on the Desk: its words, its number and a dot for where it stands; a red ! under the
     // dot when it goes against a decision in force; then when it was decided, where, and by whom.
     const row = (d) => {
@@ -2339,15 +2366,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const against = [...new Set((d.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
       const state = d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"] : ["in-force", "In force", "This decision holds today; anything against it warns"];
       return `<div class="row item side-${esc(d.side || "none")}"><button class="open" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}<span class="sdot" data-s="${state[0]}"><span class="chip tag" title="${esc(state[2])}"><span class="w">${state[1]}</span></span></span></div>${againstDot({ against })}</button>
-      <div class="prov">${d.at ? `<span><span class="k">decided:</span> <span class="when" title="${esc(when(d.at))}">${esc(dayWord(d.at))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${k}">${icon(k)}${src}</span></span>${d.author ? `<span><span class="k">by:</span> <b>${named(d.author)}</b></span>` : ""}</div></div>`;
+      <div class="prov">${d.at ? `<span><span class="k">decided:</span> <span class="when" title="${esc(when(d.at))}">${esc(dayWord(d.at))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${k}">${icon(k)}${src}</span></span>${d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b></span>` : ""}</div></div>`;
     };
-    // Kept apart: the design side's decisions, then developers', then those whose author's role is unknown.
-    const shown = S.decisions.filter((d) => !S.decisionSide || (d.side || "") === S.decisionSide);
-    const rows = ["design", "developer", ""].map((k) => {
-      const xs = newestFirst(shown.filter((d) => (d.side || "") === k));
-      return xs.length ? `<div class="side-head">${esc(k === "design" ? "From designers and PMs" : k === "developer" ? "From developers" : "Not known who")} <span class="n">${xs.length}</span></div>${xs.map(row).join("")}` : "";
-    }).join("");
-    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionSide && S.decisions.length ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    // One list, the newest first.
+    const rows = newestFirst(S.decisions).map(row).join("");
+    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
     allDecs = null;
@@ -2359,17 +2382,21 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     try { r = await api("GET", `/api/decisions/${encodeURIComponent(id)}`); } catch { toast(`There is no decision numbered ${id} on the Desk.`); return false; }
     S.tab = "product"; S.productFilter = "decisions"; S.card = null; S.ws.open = false;
     S.decision = { ...r.decision, refs: r.refs || [] };
-    if (!S.decisions.some((x) => x.id === id)) { S.decisionState = ""; S.decisionSide = ""; }
+    if (!S.decisions.some((x) => x.id === id)) S.decisionState = "";
     await loadDecisions();
     renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
     return true;
   }
   function originLine(o) {
-    if (!o) return `<p class="hint">Where it was decided was not recorded.</p>`;
+    return o ? `<p>${originText(o)}</p>` : `<p class="hint">Where it was decided was not recorded.</p>`;
+  }
+  function originText(o) {
+    // Added on the Desk itself: the Desk is where it was decided.
+    if (o.kind === "desk" && !o.card && !o.url) return `<b>${esc(o.label || "On the Desk")}</b>`;
     const card = o.card && S.cards.find((x) => x.id === o.card);
     const where = o.url ? `<a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.label || ORIGIN_KIND[o.kind] || "source")} ↗</a>`
       : card ? `<button class="anchor" data-card="${esc(card.id)}">${esc(o.label || card.title)} ${esc(card.id)}</button>` : esc(o.label || "");
-    return `<p><b>${esc(ORIGIN_KIND[o.kind] || "Source")}</b>${where ? ` — ${where}` : ""}${o.url && card ? ` · on <button class="anchor" data-card="${esc(card.id)}">${esc(card.id)}</button>` : ""}</p>`;
+    return `<b>${esc(ORIGIN_KIND[o.kind] || "Source")}</b>${where ? ` — ${where}` : ""}${o.url && card ? ` · on <button class="anchor" data-card="${esc(card.id)}">${esc(card.id)}</button>` : ""}`;
   }
   function renderDecision(d) {
     const HOW = { conflicts: "goes against it", cites: "follows it", replaces: "replaces it", shapes: "a design option follows it" };
@@ -2377,18 +2404,19 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // all of it on hover), anything else by its title and number; then how it refers to this one.
     const short = (t) => { const x = String(t || ""); return x.length > 60 ? x.slice(0, 57).replace(/\s+\S*$/, "") + "…" : x; };
     const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, short(r.title), r.status === "revoked") : `<a href="#${esc(r.id)}" data-card="${esc(r.id)}">${esc(r.title)}</a> ${num(r)}`} — <span class="${r.how === "conflicts" ? "bad-text" : ""}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
-    const side = SIDE[d.side || ""];
     const against = (d.conflicts || []).filter((x) => x.status === "active");
     const rv = d.revoked;
+    // Who decided it and where, in the status box as a change's PR and author are.
+    const meta = [d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` (${esc(d.author.login)})` : ""}</span>` : "",
+      d.origin ? `<span><span class="k">from:</span> ${originText(d.origin)}</span>` : ""].join("");
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}${titleLink(d)}</h2>
       <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).length ? `<span title="What it is about">${esc(d.concepts.join(", "))}</span>` : ""}</div>
-      ${ghStatus(d.status === "revoked" ? "closed" : "approved", d.status === "revoked" ? "Revoked" : "In force", d.status === "revoked" ? "It no longer holds; it stays here crossed out, with the reason" : "This decision holds today; anything against it warns", "",
-        can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "")}
+      ${ghStatus(d.status === "revoked" ? "closed" : "approved", d.status === "revoked" ? "Revoked" : "In force", d.status === "revoked" ? "It no longer holds; it stays here crossed out, with the reason" : "This decision holds today; anything against it warns", meta,
+        can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "", { inline: true })}
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
-      ${d.author ? `<h3>Who decided</h3><p>${d.side ? `<span title="${esc(side[1])}">${esc(side[0])}</span> ` : ""}<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` <span class="sub" style="display:inline">(${esc(d.author.login)})</span>` : ""}</p>` : ""}
-      ${d.origin ? `<h3>Where it was decided</h3>${originLine(d.origin)}` : ""}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
+      ${(d.pictures || []).length ? `<h3>Pictures</h3>${shots(d.pictures.map((asset) => ({ asset, caption: "" })))}` : ""}
       ${(d.replaces || []).length ? `<h3>It replaces</h3><ul>${d.replaces.map((id) => `<li>${decRef(id)}</li>`).join("")}</ul>` : ""}
       ${refs ? `<h3>What refers to it</h3><ul>${refs}</ul>` : ""}`;
   }
@@ -3209,7 +3237,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       : undo + (can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "");
     // A closed request keeps its presentation actions; only the design actions leave.
     const size = can("size") && !closed(c) && c.status !== "spec" && !c.approved ? (c.size?.small ? `<button class="btn" data-size="designer">For Designers</button>` : `<button class="btn" data-size="small">For Developers</button>`) : "";
-    const items = (nx.more || "") + call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
+    // A closed request can be deleted for good, behind a confirmation (docs/desk.md → Deleting a request).
+    const del = c.status === "declined" && can("close") ? `<button class="btn danger" data-act="delete">Delete this request…</button>` : "";
+    const items = (nx.more || "") + call + size + del + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
@@ -4148,6 +4178,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (S.tab === "product" && S.productFilter === "decisions") {
       d.innerHTML = S.decision ? renderDecision(S.decision) : `<p class="pick">Every decision the team made about the product, with where it was made. Pick one, or search for one at the top.</p>${renderIntro()}`;
       $("#main").classList.toggle("has-detail", Boolean(S.decision));
+      // A decision's pictures load as a card's do.
+      if (S.decision?.pictures?.length) loadPictures(d);
       return;
     }
     if (!S.card) {
@@ -4273,6 +4305,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     }
     if (name === "not-now") { await api("DELETE", `/api/cards/${c.id}/suggestion`); await refreshList(); await openCard(c.id); return; }
     if (name === "unqueue") { await api("DELETE", `/api/cards/${c.id}/agenda`); await refreshList(); await openCard(c.id); return; }
+    if (name === "delete") {
+      const r = await ask({ title: `Delete ${c.id} for good?`, body: "The request, its options, comments and pictures are deleted for everyone. This cannot be undone; the decisions recorded from it stay.", ok: "Delete it", send: () => api("DELETE", `/api/cards/${c.id}`) });
+      if (!r) return;
+      toast(`Deleted ${c.id}.`);
+      S.card = null; history.replaceState(null, "", location.pathname + location.search);
+      await refreshList(); renderDetail(); return;
+    }
     if (name === "clear-call") {
       const r = await ask({ title: "Mark all as presented?", body: "Everything on the presentation is marked as presented today, for everyone.", ok: "Mark all as presented", send: () => api("POST", "/api/calls", {}) });
       if (!r) return;
@@ -4524,7 +4563,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       S.justRead.clear();
       S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
-    if (ds.dside !== undefined) { S.decisionSide = ds.dside; renderList(); return; }
+    if ("addDecision" in ds) { openDecisionDialog(); return; }
     if (ds.dstate !== undefined) { S.decisionState = ds.dstate; S.decision = null; await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decide) {
       const [th, i] = ds.decide.split(":");
@@ -4992,10 +5031,29 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     await refreshList(); renderNav(); renderBanners(); await openCard(r.card.id);
   }));
 
+  // ---------- the Add a decision dialog (docs/desk.md → Decisions) ----------
+  const decPics = [];
+  const addDecPic = (f) => addPicture(f, decPics, "#dc-thumbs", 2);
+  function openDecisionDialog() {
+    $("#decision-form").reset(); decPics.length = 0; $("#dc-thumbs").innerHTML = "";
+    const dlg = $("#decision-dialog"); dlg.returnValue = ""; dlg.showModal();
+  }
+  $("#dc-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addDecPic(f); e.target.value = ""; }));
+  $("#decision-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addDecPic(it.getAsFile()); } }));
+  $("#decision-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send") return;
+    const f = $("#decision-form");
+    const body = { text: f.text.value.trim(), why: f.why.value.trim(), concepts: f.concepts.value.split(",").map((x) => x.trim()).filter(Boolean), images: decPics.map(({ contentType, data }) => ({ contentType, data })) };
+    const r = await sendOrReopen(e.target, () => api("POST", "/api/decisions", body));
+    toast(`Added as ${r.decision.id}.`);
+    S.decisionState = "active";
+    await openDecision(r.decision.id);
+  }));
+
   // ---------- the Add a person dialog ----------
   function openPersonDialog() {
     $("#person-form").reset();
-    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> <span class="rn">${esc(roleName(r))}</span> <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
+    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> <span class="rn">${roleIcon(r)}${esc(roleName(r))}</span> <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
     const dlg = $("#person-dialog"); dlg.returnValue = ""; dlg.showModal();
   }
   $("#person-dialog").addEventListener("close", guard(async (e) => {
@@ -5121,7 +5179,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function applyMe() {
     $("#new-request").hidden = !can("request");
     document.title = S.me?.name || "Design Desk";
-    $("#me").textContent = S.me ? `${S.me.email || ""} · ${roleName(S.me.role)}` : "";
+    $("#me").innerHTML = S.me ? `${esc(S.me.email || "")} · ${roleIcon(S.me.role)}${esc(roleName(S.me.role))}` : "";
     renderBanners();
   }
 
