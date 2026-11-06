@@ -4856,7 +4856,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       S.specEdit = null; toast("Saved as a new version. It goes when you press Send to developers."); await openCard(S.card.id); return;
     }
     if ("specChanges" in ds) {
-      const r = await ask({ title: "Ask for changes to the spec", body: "Design Desk rewrites the spec as you say and brings it back here to read. Nothing goes to developers meanwhile.", ok: "Ask for changes", note: "What should change? e.g. the error state needs its own picture; say the button stays where it is", max: 2000,
+      const r = await ask({ title: "Ask for changes to the spec", body: "Design Desk rewrites the spec as you say and brings it back here to read.", ok: "Ask for changes", note: "What should change?", max: 2000,
         send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "changes", note: a.note }) });
       if (r) { await openCard(S.card.id); await refreshList(); }
       return;
