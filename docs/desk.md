@@ -475,7 +475,7 @@ private ask only its owner. The events:
 | New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
 | New decision, Decision revoked | a decision is added or revoked |
 
-Every row says the same things in the same places: an icon and what happened, who (when known),
+Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
 line of what was said. A click opens the item. **For you** keeps what the person filed, voted on,
 approved or wrote in. The red count is what is newer than the person last opened the bell;

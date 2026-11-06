@@ -80,7 +80,8 @@
   .notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
   .notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
   .notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; }
+  /* A row is at most three lines: what and who, the item, what was said; each line cuts with … */
+  .notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .notes .note .ev span { font-weight: 400; color: var(--muted); }
   .notes .note time { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
   .notes .note .ti { grid-column: 2 / span 2; display: flex; gap: 8px; align-items: baseline; min-width: 0; color: var(--ink); }
