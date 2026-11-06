@@ -76,7 +76,7 @@ A Slack turn in a council thread, or a `councils_due` entry with `close: false`.
 5. One rebuild per option for all its asks; upload and upsert as in Variants. Comment on the
    card what was asked in Slack, by whom, and what changed. A message that settles something
    is recorded as a decision with `origin.kind: slack`, and an ask against one in force goes in
-   `conflicts` ([docs/desk.md](../../../docs/desk.md) → Decisions).
+   `conflicts` ([docs/desk.md](../../../docs/desk.md) → Decisions → The check).
 6. **Answer**, then `council-update --seen <newest ts> --synced <now>`.
 7. **Agreement?** Below.
 

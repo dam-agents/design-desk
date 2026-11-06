@@ -84,4 +84,5 @@ In chat, the same three lists in plain words.
 ## 5. Keep the decisions
 
 A decision you found that the Desk does not know yet, with who made it and where, is recorded
-once, and what the card goes against becomes its `conflicts`: docs/desk.md → Decisions.
+once, and the card is checked against the decisions in force (`conflicts`, `decision_check`):
+docs/desk.md → Decisions → The check.

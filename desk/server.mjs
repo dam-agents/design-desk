@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole } from "./store.mjs";
+import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -46,17 +46,17 @@ const log = (level, event, msg) => {
   try { process.stderr.write(`${new Date().toISOString()} ${level} ${event} ${msg}\n`); } catch {}
 };
 
-// The roster: `## Desk people` in work/CONFIG.md, | email | role |. Re-read on every
-// request: it is small, and an edit by the operator takes effect at once.
+// The roster: `## Desk people` in work/CONFIG.md, | email | role |; one person's row may
+// list several addresses (docs/config.md). Re-read on every request: it is small, and an
+// edit by the operator takes effect at once.
+const roster = () => rosterOf(cfgTable("Desk people"));
+const rowOf = (email) => personOf(roster(), email);
 function roleOf(caller) {
   if (caller.role === "owner") return "lead";
   if (!caller.email) return "guest";
-  const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === caller.email);
-  const role = readRole(row?.role);
+  const role = rowOf(caller.email)?.role;
   return ROLES.includes(role) ? role : "guest";
 }
-
-const roster = () => rosterOf(cfgTable("Desk people"));
 
 // Who a decision came from (docs/desk.md → Decisions → Who decided): the design side
 // (a designer, a PM, a lead) or a developer. The role the record names, else the author's
@@ -65,12 +65,14 @@ const roster = () => rosterOf(cfgTable("Desk people"));
 const DESIGN_SIDE = ["lead", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
 function sideOf(d) {
   const email = String(d.author?.email || "").toLowerCase();
-  const role = readRole(d.author?.role) || (email ? readRole(cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === email)?.role) : null);
+  const role = readRole(d.author?.role) || (email ? rowOf(email)?.role || null : null);
   if (DESIGN_SIDE.includes(role)) return "design";
   if (DEVELOPER_SIDE.includes(role)) return "developer";
   return ["pr", "commit", "doc"].includes(d.origin?.kind) ? "developer" : null;
 }
-const withSide = (d) => ({ ...d, side: sideOf(d) });
+// A decision from anyone but the design side waits for a designer's approval; it holds meanwhile
+// (docs/desk.md → Decisions → Approved by a designer).
+const withSide = (d) => { const side = sideOf(d); return { ...d, side, unapproved: d.status === "active" && side !== "design" && !d.approved }; };
 
 // The skills New request offers, from `request_skills` (toolkit/lib/actions.mjs).
 const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact, brand, walkthrough, figma"),
@@ -79,14 +81,13 @@ const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact
 // The roster role of a person met in Slack, by the email the workspace discloses.
 function slackRole(email) {
   if (!email) return "slack";
-  const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === String(email).toLowerCase());
-  const role = readRole(row?.role);
+  const role = rowOf(email)?.role;
   return ROLES.includes(role) && role !== "guest" ? role : "slack";
 }
 
 function settings() {
   const list = (v, d) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
-  const lead = cfgTable("Desk people").find((r) => (r.role || "").toLowerCase() === "lead");
+  const lead = roster().find((r) => r.role === "lead");
   const ideas = cfg("handoff", "desk");
   return {
     // Read as the roster reads a role, so `lead developer` here is the roster's `lead-developer`.
@@ -107,6 +108,9 @@ function settings() {
     link: ((v) => (/^https?:\/\/[^\s#]+$/.test(v) ? v : null))(cfg("desk_link", "")),
     // Days a change may wait to be handled before the page shows it overdue; 0 or off: never.
     dueDays: ((v) => (v === "off" ? 0 : /^\d+$/.test(v) ? Number(v) : 21))(cfg("change_due_days", "21")),
+    // Whether a person reads and sends the spec (docs/handoff.md → Review before it goes): then
+    // they pick its route at Send, not at Approve.
+    specReview: cfg("spec_review", "enabled") !== "disabled",
     // Where an approved design goes, by request type, so the page can say it before approving.
     handoff: {
       feature: cfg("issue_writeback", "enabled") === "disabled" ? "desk" : "issue-comment",
@@ -139,7 +143,10 @@ function callerOf(req) {
   const email = String(req.headers["x-platform-caller-email"] || "").trim().toLowerCase() || null;
   const sub = String(req.headers["x-platform-caller-sub"] || "");
   const caller = { role, email, sub };
-  return { ...caller, deskRole: roleOf(caller) };
+  // Every address the person goes by: the one they signed in with first, then their row's others.
+  const row = email ? rowOf(email) : null;
+  const emails = row ? [email, ...[row.email, ...row.also].filter((e) => e !== email)] : email ? [email] : [];
+  return { ...caller, emails, deskRole: roleOf(caller) };
 }
 
 async function body(req) {
@@ -159,7 +166,7 @@ const send = (res, status, obj) => {
 
 async function viewerRoute(req, res, url, who) {
   const s = settings();
-  const actor = { email: who.email, sub: who.sub, role: who.deskRole };
+  const actor = { email: who.email, emails: who.emails, sub: who.sub, role: who.deskRole };
   const need = (action) => {
     if (can(who.deskRole, action, s.prototypeRoles)) return;
     const verb = VERBS[action] || "do that";
@@ -170,7 +177,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
+    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });
@@ -183,7 +190,12 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "private") return send(res, 200, { asks: store.privateAsks(actor) });
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
-  if (m === "GET" && p[1] === "decisions" && !p[2]) return send(res, 200, { decisions: store.listDecisions(decisionQuery(url)).slice(0, 200).map(withSide) });
+  if (m === "GET" && p[1] === "decisions" && !p[2]) {
+    // Not approved: the ones in force that wait for a designer's approval.
+    const q = decisionQuery(url), pending = url.searchParams.get("state") === "unapproved";
+    const all = store.listDecisions({ ...q, state: pending ? "active" : q.state }).map(withSide);
+    return send(res, 200, { decisions: (pending ? all.filter((d) => d.unapproved) : all).slice(0, 200) });
+  }
   if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2]); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
   // Opening an item marks it read for this person alone (docs/desk.md → Read and unread). It is
   // outside the write budget: browsing many items must not use up what comments and votes need,
@@ -193,7 +205,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide"].includes(p[3]))) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
   // A person's own day or night mode and simple mode, kept for them on every device
   // (docs/desk.md → The menu); only the keys sent change.
@@ -231,9 +243,16 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "decisions" && p[3] === "revoke") { need("decide"); return send(res, 200, store.revokeDecision(p[2], actor, { reason: b.reason, replaced_by: b.replaced_by || null })); }
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
+  if (m === "POST" && p[1] === "decisions" && p[3] === "approve") {
+    need("decide");
+    if (sideOf(store.decision(p[2])) === "design") throw new DeskError(400, "A decision of the design side needs no approval.");
+    return send(res, 200, { decision: withSide(store.approveDecision(p[2], actor).decision) });
+  }
   if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "decide") { need("skip"); return send(res, 201, withPing(store.decideAndClose(p[2], actor, { text: b.text, why: b.why }), s, who)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "feedback") return send(res, 200, store.openFeedback(p[2], actor));
+  // The developer spec, read before it goes: edit it, ask for changes, or send it (docs/handoff.md).
+  if (m === "POST" && p[1] === "cards" && p[3] === "spec") { const r = store.specAction(p[2], actor, { action: b.action, text: b.text, note: b.note, implement: typeof b.implement === "boolean" ? b.implement : null }); return send(res, 200, r.inbox ? withPing(r, s, who) : r); }
   if (m === "POST" && p[1] === "cards" && p[3] === "size") { need("size"); return send(res, 200, store.setSize(p[2], actor, b.small)); }
   // An approved design's elements into Product → Elements (docs/catalog.md → From approved designs).
   if (m === "POST" && p[1] === "cards" && p[3] === "catalog") { need("add"); return send(res, 200, store.addDesignToCatalog(p[2], actor, typeof b.element === "string" ? b.element : "")); }
@@ -249,7 +268,10 @@ async function viewerRoute(req, res, url, who) {
     const audience = b.audience === "developers" ? "developers" : "designers";
     // How many options, and questions first: a bug is fixed, not designed, so it has neither.
     // From an issue on the Issues page it designs that feature; from a change it adjusts it.
-    const type = from ? (store.card(String(from)).kind === "issue" ? "feature" : "adjustment") : b.type === "bug" ? "bug" : "idea";
+    // From an approved request, a new one of the same kind, its options carried over as ticked.
+    const src = from ? store.card(String(from)) : null;
+    const type = src ? (src.kind === "issue" ? "feature" : src.kind === "request" ? (src.request?.type === "bug" ? "idea" : src.request?.type || "idea") : "adjustment") : b.type === "bug" ? "bug" : "idea";
+    const carry = src?.kind === "request" && Array.isArray(b.carry) ? b.carry.slice(0, 6).map(String) : [];
     // A bug is fixed, not designed: no picture of it and no skills. Only the offered skills count.
     const offered = new Set(offerSkills(s.figma).map((k) => k.name));
     const vision = type === "bug" ? "" : b.vision;
@@ -262,7 +284,7 @@ async function viewerRoute(req, res, url, who) {
     const options = type === "bug" ? 0 : b.options, grill = type !== "bug" && b.grill === true;
     // The options start right after triage only for someone who may start them.
     const auto = type !== "bug" && can(who.deskRole, "explore", s.prototypeRoles);
-    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience }), s, who));
+    return send(res, 201, withPing(store.createRequest(actor, { title, problem, goal, screen, steps, type, from, screens, figma, vision, skills, options, grill, auto, audience, carry }), s, who));
   }
   // A lead asks for a new person on the list; the agent writes the row (docs/desk.md → People).
   if (m === "POST" && p[1] === "people") { need("people"); return send(res, 201, withPing(store.askForPerson(actor, { email: b.email, role: b.role }, roster(), { owner: who.role === "owner" }), s, who)); }
@@ -321,6 +343,8 @@ async function agentRoute(req, res, url) {
   const m = req.method;
   if (m === "GET" && p[1] === "inbox") return send(res, 200, JSON.parse(readFileSync(join(DIR, "inbox.json"), "utf8")));
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined }) });
+  // What a check reads (docs/desk.md → Decisions → The check).
+  if (m === "GET" && p[1] === "cards" && p[3] === "decision-check") return send(res, 200, store.decisionCheck(p[2], { concepts: (url.searchParams.get("concept") || "").split(",").filter(Boolean), q: url.searchParams.get("q") || "" }));
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: it.card ? store.getCard(it.card) : null, thread: it.thread ? store.thread(it.thread) : null }); }
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
