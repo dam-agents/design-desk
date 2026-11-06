@@ -476,7 +476,7 @@ private ask only its owner. The events:
 | New decision, Decision revoked | a decision is added or revoked |
 
 Every row says the same things in the same places: an icon and what happened, who (when known),
-how long ago, the item's title and number, its page and screen, and for a message or a vote one
+how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
 line of what was said. A click opens the item. **For you** keeps what the person filed, voted on,
 approved or wrote in. The red count is what is newer than the person last opened the bell;
 opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
