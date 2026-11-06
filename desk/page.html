@@ -784,6 +784,7 @@
   /* The spec's versions read as plain text: each a link, the one shown in ink. */
   .spec-versions button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .spec-versions button:hover { text-decoration: underline; }
   .spec-versions button[aria-pressed="true"] { color: var(--ink); font-weight: 600; cursor: default; text-decoration: none; }
+  .spec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; } .spec-head .hint { margin: 0; } .spec-tools { margin: 0; }
   .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
   .spec-preview { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow: auto; max-height: 36em; }
   .spec-text { width: 100%; font-family: var(--mono); font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
@@ -3277,7 +3278,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       return { text: may ? "Your turn: read the developer spec below. Edit it or ask for changes; send it when it is right." : "The developer spec is written. It goes to developers once someone who may approve it has read it.",
         sub: may ? "Nothing leaves the Desk until you press Send to developers." : approver(c),
         step: may ? `<button class="step-next" data-spec-send title="Sends the spec as it is now, with the design, to developers">Send to developers</button>` : "",
-        buttons: may ? `<button class="btn" data-spec-edit>Edit the spec</button><button class="btn" data-spec-changes>Ask for changes…</button>` : "" };
+        // Edit and Ask for changes sit on the spec itself, below; the row keeps Close.
+        buttons: "" };
     }
     if (c.status === "spec") return { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
@@ -3384,8 +3386,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       : sp.sent ? `<span class="chip ok" title="Sent by ${esc(nm(sp.sent.by?.email))}">✓ Sent ${esc(day(sp.sent.at))}</span>` : "";
     const list = versions.length > 1 ? `<p class="hint spec-versions">Versions: ${versions.map((x, i) => `<button data-spec-view="${esc(x.asset)}" aria-pressed="${x === shown}">${i + 1} · ${esc(by(x))}</button>`).join(", ")}</p>` : "";
     const edit = S.specEdit === c.id ? `<div class="spec-edit"><textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="spec-preview" id="spec-preview" aria-label="How it reads"></div></div><p class="hint">Pictures stay as <code>![name](asset:A-…)</code> lines; the preview on the right shows them. To add one, paste a picture's line from another spec version or ask for changes.</p><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
+    const tools = review && canApprove(c) && S.specEdit !== c.id ? `<div class="actions spec-tools"><button class="btn small" data-spec-edit title="Change the text here; it becomes the newest version">✎ Edit</button><button class="btn small" data-spec-changes title="Say what to change; Design Desk rewrites it and brings it back here">Ask for changes…</button></div>` : "";
     return `<details class="fold"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec ${state}</summary><div class="panel">
-      <p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(by(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p>${list}
+      <div class="spec-head"><p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(by(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p>${tools}</div>${list}
       ${edit || `<div id="spec-body" data-asset="${esc(shown.asset)}">…</div>`}</div></details>`;
   }
 
@@ -3435,17 +3438,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return said || approved ? `<div class="hint size">${said ? `<div>${said}</div>` : ""}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
   }
 
-  // A verdict other than design sits as a label beside the title; its words and reasons are in
-  // its tooltip. Design, the usual case, has no label: the request's steps name it
-  // (docs/requests.md → Triage). What a design change cannot do folds under the status.
-  function verdictChip(c) {
-    const tr = c.triage;
-    if (!tr) return "";
-    const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
-    // Needs a developer has no label: the steps name it and what a design change cannot do folds under the status.
-    if (!title || tr.verdict === "design" || tr.verdict === "needs-developer") return "";
-    return `<span class="chip warn" title="${esc([text, ...(tr.reasons || [])].join(" "))}">${esc(title)}</span>`;
-  }
+  // No verdict is a label beside the title: the request's steps name it (Filed · Needs a
+  // decision), and the state's ⓘ says what it means for the next step (docs/requests.md → Triage).
+  const verdictChip = () => "";
   function cannotFold(c) {
     const xs = c.triage?.cannot || [];
     if (!xs.length) return "";

@@ -1132,8 +1132,9 @@ test("a spec in draft waits for a person: read it, edit it, then send it", (t) =
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
   await desk.waitForSelector("#detail .steppill [data-spec-send]");
-  assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 1, "Edit the spec in the row");
-  assert.equal(await desk.locator("#detail .next [data-spec-changes]").count(), 1, "and Ask for changes…");
+  assert.equal(await desk.locator("#detail .spec-tools [data-spec-edit]").count(), 1, "Edit on the spec itself");
+  assert.equal(await desk.locator("#detail .spec-tools [data-spec-changes]").count(), 1, "and Ask for changes…");
+  assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 0, "not in the row");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-body")?.textContent || ""));
   assert.match(await desk.textContent("#detail"), /Draft · waiting for you/, "the spec says it has not gone");
   await desk.click("#detail [data-spec-edit]");
