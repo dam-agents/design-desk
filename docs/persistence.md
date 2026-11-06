@@ -45,6 +45,9 @@ up any remainder); a rejected non-fast-forward push re-seeds from the new remote
 retries with a fresh snapshot. Never force-push; a push that fails all retries is logged
 and retried next run — not a run failure, because the data is safe on `work/`.
 
+The whole of `work/` is backed up — `output/` and `logs/` too — except `.git`, the Desk's
+`agent-token` and `.desk-down-ticks`.
+
 `restore` is the inverse — remote → `work/` (data only, never a `.git`) — run once on a
 fresh machine (`ONBOARDING.md` Step 2a).
 

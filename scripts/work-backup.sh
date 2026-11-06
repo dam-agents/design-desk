@@ -79,7 +79,7 @@ sync_in() {
   find "$LOCAL" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + 2>/dev/null || true
   # The Desk's agent token stays on this machine; a restore makes the server mint none
   # and keep the one it has.
-  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' --exclude='./output' --exclude='./logs' -f - . ) \
+  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' -f - . ) \
     | ( cd "$LOCAL" && tar -xf - ) || return 1
   return 0
 }
