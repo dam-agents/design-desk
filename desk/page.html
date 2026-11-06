@@ -3306,7 +3306,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const info = (sub) => ({ label: "", ok: true, sub, info: true });
     const ask = `ask ${contact()}`;
     const approve = () => canApprove(c) ? go("Approve…", hasOptions ? "Pick the option; Design Desk writes the developer spec and sends it. It can't be taken back." : "Without design options: Design Desk writes the spec from the request and sends it to developers.")
-      : no("Approve…", against ? "It goes against a decision in force: only a designer approves it."
+      : no("Approve…", against ? "A designer approves it: it goes against a decision in force."
         : c.size?.small ? `For Developers: a developer approves it${(c.created_by?.email || c.origin?.email) ? `, not ${c.created_by?.email || c.origin?.email} who filed it` : ""}.`
         : `A designer or a lead developer approves it; ${S.me?.role === "guest" ? ask : "tell them in a comment when the team is happy"}.`);
     const close = () => can("close") || can("skip") ? go("Close…", "Nothing goes to developers. You can record a decision with it, in your name.")
