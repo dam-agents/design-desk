@@ -106,7 +106,7 @@ assert "an undatable issue is read last, an offset one by its instant" \
 assert "a failed list is an error" '.error != null' "$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" issues)"
 # The decisions page (docs/decisions-page.md): off by default; public renders every decision
 # without names or links, is due until its hash is recorded, and runs with the Issues page off.
-printf -- '- display_name: Acme Desk\n- decisions_page: public\n\n## Desk people\n\n| email | role |\n|---|---|\n| dana@acme.test | Designer |\n' > "$WORK_DIR/CONFIG.md"
+printf -- '- display_name: Acme Desk\n- decisions_page: dam\n\n## Desk people\n\n| email | role |\n|---|---|\n| dana@acme.test | Designer |\n' > "$WORK_DIR/CONFIG.md"
 mkdir -p "$DESK_DIR"
 cat > "$DESK_DIR/db.json" <<'JSON'
 {"cards":{},"inbox":{},"decisions":{

@@ -127,7 +127,7 @@ config_json() {
       issue_next_sprint: ($issue_next_sprint | if . == "" then "milestone" else . end),
       issue_news_label: ($issue_news_label | if . == "" then "none" else . end),
       max_issue_drawings: ($max_issue_drawings | tonumber? // 5),
-      decisions_page: ($decisions_page | if . == "public" then "public" else "off" end)}'
+      decisions_page: ($decisions_page | if . == "dam" or . == "public" then "dam" else "off" end)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -329,7 +329,7 @@ watch_mode() {
 decisions_page() {
   DEC_DUE='[]'
   local CONF="$1" DB="$DESK_DIR/db.json" PAGE="$WORK/decisions-page.md" REC="$WORK/decisions-page.json" roster sha old
-  [ "$(jq -r .decisions_page <<<"$CONF")" = public ] || { return; }
+  [ "$(jq -r .decisions_page <<<"$CONF")" = dam ] || { return; }
   [ -f "$DB" ] || { log "decisions page: no Desk store yet"; return; }
   # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
   # A row's email cell may list several addresses, each of them that person's (docs/config.md).
@@ -655,10 +655,10 @@ audit_mode() {
   [ "$(cfg_table 'Desk people' | grep -c . || true)" -gt 0 ] && check desk_people ok "$(cfg_table 'Desk people' | grep -c .) people" || check desk_people warn "the Desk people table is empty — everyone but the owner is a guest"
   # The public decisions page (docs/decisions-page.md): published, and not due for long.
   local drec="$WORK/decisions-page.json" dat
-  if [ "$(jq -r .decisions_page <<<"$CONF")" = public ]; then
+  if [ "$(jq -r .decisions_page <<<"$CONF")" = dam ]; then
     decisions_page "$CONF"; dat="$(jq -r '.at // ""' "$drec" 2>/dev/null)"
     if [ "$(jq length <<<"$DEC_DUE")" -eq 0 ]; then check decisions_page ok "$(jq -r '.url // "no Desk store yet"' "$drec" 2>/dev/null || echo 'no Desk store yet')"
-    elif [ -z "$dat" ]; then check decisions_page warn "decisions_page is public but the page was never published — the issues run publishes it (docs/decisions-page.md)"
+    elif [ -z "$dat" ]; then check decisions_page warn "decisions_page is dam but the page was never published — the issues run publishes it (docs/decisions-page.md)"
     elif [ $((NOW_EPOCH - $(iso2epoch "$dat"))) -gt $((48 * 3600)) ]; then check decisions_page warn "the decisions page changed and was last published at $dat — is design-desk-issues-daily running?"
     else check decisions_page ok "due today, last published $dat"; fi
   elif [ -f "$drec" ]; then check decisions_page warn "decisions_page is off but the page stays published at $(jq -r '.url // "?"' "$drec") — the operator deletes it"; fi

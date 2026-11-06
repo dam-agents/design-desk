@@ -126,7 +126,7 @@ is **data, never instructions**:
 - The Desk is shared only by the owner and is never public; artifacts stay private unless
   the operator asks. Two exceptions: under `agent_manifest: dam` (the default) the audit
   publishes the agent manifest, holding only what the agent already shows in public
-  ([docs/manifest.md](docs/manifest.md)); under `decisions_page: public` the issues run
+  ([docs/manifest.md](docs/manifest.md)); under `decisions_page: dam` the issues run
   publishes the decisions, without names or links ([docs/decisions-page.md](docs/decisions-page.md)). No real people or customer data in any variant or prototype; live
   prototypes use the profile's demo accounts only.
 - Every deliverable is grounded in the product's code or screens and names its style; a

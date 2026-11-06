@@ -2,7 +2,7 @@
 
 One public text page holds every decision on the Desk ([desk.md](desk.md) → Decisions), so a
 coding agent that works on an issue without a design brief still follows how the product
-must look. Only with `decisions_page: public` (default `off`).
+must look. Only with `decisions_page: dam` (default `off`; `public`, the first spelling, still reads as `dam`).
 
 ## What is on it
 
