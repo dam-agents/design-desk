@@ -2833,7 +2833,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       </div>
       <footer>
         <div class="starters">${starters(ctx).map(([k, l]) => `<button class="btn small" data-ask-starter="${k}" data-ask-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
-        <textarea id="ask-text" maxlength="4000" placeholder="Or write your own question about ${esc(ctx.label)}… (Enter sends, Shift+Enter a new line)"></textarea>
+        <textarea id="ask-text" maxlength="4000" placeholder="Your question…" title="Enter sends, Shift+Enter starts a new line"></textarea>
         <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
       </footer></section>`;
     $("#ask-text").value = keep;
