@@ -329,7 +329,7 @@ For Developers / For Designers; `POST /api/cards/<id>/size {small}`). The tab ch
 request is filed carries `size.filed` and the page names no one for it; a later move shows who
 moved it and when. A request For Developers is approved by a designer or
 by any `developer` or `lead-developer` except the person who filed it (`created_by`, or
-`origin.email` when you filed it for them); the store refuses the author. A request whose
+`origin.email` when you filed it for them); the store refuses the author, by any address on their row of `## Desk people`, and the page names them **you** by any of them, from Slack, GitHub or chat as from the Desk. A request whose
 `origin` names its reporter only by name or login (a GitHub issue) has no author to refuse. A request For Developers
 that goes against a decision in force is approved by a designer only. Every approval writes `approved: {by, at, small}` on the card (`implement: true` when the approver ticked **Straight to implementation**, [handoff.md](handoff.md) step 5); the
 page shows who chose its tab and who approved it, and a reopen clears `approved`. A request For Developers

@@ -15,9 +15,9 @@ const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example
 
 const freePort = () => new Promise((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 
-async function desk(t, config = "") {
+async function desk(t, config = "", roster = ROSTER) {
   const work = mkdtempSync(join(tmpdir(), "desk-server-"));
-  writeFileSync(join(work, "CONFIG.md"), config + ROSTER);
+  writeFileSync(join(work, "CONFIG.md"), config + roster);
   mkdirSync(join(work, "desk"));
   const port = await freePort();
   const proc = spawn(process.execPath, [SERVER], { env: { ...process.env, WORK_DIR: work, DESK_DIR: join(work, "desk"), DESK_PORT: String(port) }, stdio: "ignore" });
@@ -119,6 +119,29 @@ test("For Developers: only a lead developer moves it there, any developer but it
   assert.equal(ok.status, 200);
   assert.deepEqual([ok.body.card.approved.by.email, ok.body.card.approved.small], ["dana@example.com", true]);
   assert.equal((await size("lou@example.com", false)).status, 400, "approved: the size stays");
+});
+
+// One row may list several addresses and a name (docs/config.md → Desk people): a person is
+// the same by any of them — their role, their own request, their name on the menu.
+test("a person by any address of their row: the same role, still the author, their own name", async (t) => {
+  const d = await desk(t, "", ROSTER.replace("| email | role |\n| --- | --- |", "| email | role | name |\n| --- | --- | --- |")
+    .replace("| bob@example.com | developer |", "| bob@example.com, bob@slack.example.com | developer | Bob Stone |"));
+  const me = await d.viewer("bob@slack.example.com", "/api/me");
+  assert.deepEqual([me.body.role, me.body.my_name, me.body.name], ["developer", "Bob Stone", "Design Desk"], "the Desk's name stays its own");
+  assert.deepEqual(me.body.emails, ["bob@slack.example.com", "bob@example.com"]);
+  assert.equal(me.body.names["bob@example.com"], "Bob Stone");
+
+  const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 });
+  const id = filed.body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);
+  assert.equal((await d.viewer("lou@example.com", `/api/cards/${id}/size`, { small: true })).status, 200);
+  const author = await d.viewer("bob@slack.example.com", `/api/cards/${id}/actions`, { action: "approve" });
+  assert.equal(author.status, 403, "the other address files nothing new");
+  assert.match(author.body.error, /You filed this request/);
+
+  const relayed = await d.agent(`/agent/cards/${id}/relay`, { name: "Bob", email: "bob@slack.example.com", text: "Looks good", slack_ts: "1.2" });
+  assert.equal(relayed.status, 201);
+  assert.equal(relayed.body.thread.messages[0].by.role, "developer", "Slack's address carries the row's role");
 });
 
 test("deciding straight away: a lead developer approves or decides and closes, a developer does not", async (t) => {

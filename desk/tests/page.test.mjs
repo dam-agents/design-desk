@@ -1140,6 +1140,32 @@ for (const [label, triage, me, sel] of PILLS) {
   }));
 }
 
+// A request filed in Slack under the address Slack knows a person by is theirs on the Desk
+// too, when their row of the people list names both addresses.
+test("a request from Slack names you by the address Slack knows you by", (t) => open(t, BRIDGE_STORIES
+  .replace('prototype: { state: "none" }, threads: [],', 'prototype: { state: "none" }, threads: [], origin: { channel: "slack", reporter: "lukas.j@work.example.com", email: "lukas.j@work.example.com" },')
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", emails: ["alice@example.com", "lukas.j@work.example.com"], can: { vote: true, comment: true } }'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.waitForSelector('.row.item:has([data-card="r7"]) .prov');
+  assert.match(await desk.textContent('.row.item:has([data-card="r7"]) .prov'), /by:\s*you/i, "by: you, not the Slack address");
+}));
+test("a request from Slack names its author by the people list's name, not the address", (t) => open(t, BRIDGE_STORIES
+  .replace('prototype: { state: "none" }, threads: [],', 'prototype: { state: "none" }, threads: [], origin: { channel: "slack", reporter: "dana.k@work.example.com", email: "dana.k@work.example.com" },')
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", names: { "dana.k@work.example.com": "Dana Kovar" }, can: { vote: true, comment: true } }'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.waitForSelector('.row.item:has([data-card="r7"]) .prov');
+  const line = await desk.textContent('.row.item:has([data-card="r7"]) .prov');
+  assert.match(line, /by:\s*Dana Kovar/);
+  assert.doesNotMatch(line, /dana\.k@/, "no address where a name is known");
+}));
+// Your own name from the people list is what the menu shows; the Desk's name stays the page's title.
+test("the menu names you by your row of the people list, the title stays the Desk's", (t) => open(t, BRIDGE_STORIES
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", my_name: "Alice Hale", name: "Acme Desk", can: { vote: true, comment: true } }'), async (desk) => {
+  await desk.waitForFunction(() => /Alice Hale/.test(document.querySelector("#me")?.textContent || ""));
+  assert.doesNotMatch(await desk.textContent("#me"), /Acme Desk/, "not the Desk's name");
+  assert.equal(await desk.title(), "Acme Desk");
+}));
+
 // The developer spec waits for a person: Send to developers is the next step, Edit and
 // Ask for changes sit in the row, and nothing goes before a send (docs/handoff.md → Review before it goes).
 test("a spec in draft waits for a person: read it, edit it, then send it", (t) => open(t, BRIDGE_STORIES

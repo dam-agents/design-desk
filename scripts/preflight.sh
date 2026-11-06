@@ -332,8 +332,10 @@ decisions_page() {
   [ "$(jq -r .decisions_page <<<"$CONF")" = public ] || { return; }
   [ -f "$DB" ] || { log "decisions page: no Desk store yet"; return; }
   # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
-  roster="$(cfg_table 'Desk people' | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $3); print $2 "\t" $3}' \
-    | jq -R 'split("\t") | {key: (.[0] | ascii_downcase), value: (.[1] // "" | ascii_downcase | gsub("\\s+"; "-"))}' | jq -sc 'reverse | from_entries')"
+  # A row's email cell may list several addresses, each of them that person's (docs/config.md).
+  roster="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
+    | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
+        | .[0] | split(",")[] | gsub("^\\s+|\\s+$"; "") | ascii_downcase | select(length > 0) | {key: ., value: $r}' | jq -sc 'reverse | from_entries')"
   jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" '
     def scrub: gsub("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[a-z]{2,}"; "[e-mail]") | gsub("<@[A-Z0-9]+>"; "[person]")
       | gsub("xox[abposr]-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9]{20,}"; "[token]");
