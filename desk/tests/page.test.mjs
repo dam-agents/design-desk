@@ -1081,6 +1081,34 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
 }));
 
+// An issue with a request: while the request is open the issue offers only its link; one sent
+// to developers (or closed) brings Design this back.
+const BRIDGE_ISSUE_REQUEST = (status) => BRIDGE_STORIES
+  .replace('title: "Spend in the list", status: "feedback"', `title: "Spend in the list", status: "${status}"`)
+  .replace('can: { vote: true, comment: true } }', 'can: { vote: true, comment: true, "follow-up": true } }')
+  .replace(': path === "/api/cards/r7"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/r7"');
+for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
+  test(`an issue whose request is ${status === "feedback" ? "open offers only the link to it" : "with developers offers Design this again"}`, (t) => open(t, BRIDGE_ISSUE_REQUEST(status), async (desk) => {
+    await desk.click('[data-tab="issues"]');
+    await desk.click('#list [data-card="is1"]');
+    await desk.waitForSelector("#detail .linked");
+    assert.match(await desk.textContent("#detail .linked"), /A request from this.*Spend in the list/, "the link to the request is there");
+    assert.equal(await desk.locator("#detail [data-adjust]").count(), buttons);
+  }));
+}
+
+// A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
+test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
+  await desk.setViewportSize({ width: 1300, height: 800 });
+  await desk.click("#list-fold");
+  assert.equal(await desk.$eval("#main", (m) => m.classList.contains("folded")), true, "the arrow folds the list");
+  assert.equal(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none");
+  await desk.click('[data-tab="guide"]');
+  assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "Guide has the whole width");
+  await desk.setViewportSize({ width: 700, height: 800 });
+  assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "and so does a phone's width");
+}));
+
 // An option that names the decisions it rests on, one of them revoked.
 const BRIDGE_WHY = BRIDGE_STORIES
   .replace('{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };', `{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }],
