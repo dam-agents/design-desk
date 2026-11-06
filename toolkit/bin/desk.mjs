@@ -117,6 +117,9 @@ function flags(argv) {
   return { pos, f };
 }
 
+// What a check reads (docs/desk.md → Decisions → The check): the card, its concepts and words.
+export const decisionCheckPath = (card, f = {}) => `/agent/cards/${encodeURIComponent(card || "")}/decision-check?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`;
+
 export async function call(method, path, body) {
   const port = Number(process.env.DESK_PORT || 5555);
   const dir = process.env.DESK_DIR || join(WORK, "desk");
@@ -396,7 +399,7 @@ export async function main(_cmd, argv) {
     case "council-update": return out(await call("POST", `/agent/cards/${pos[0]}/councils/${pos[1]}`, { synced: typeof f.synced === "string" ? f.synced : null, seen: typeof f.seen === "string" ? f.seen : null, result: typeof f.result === "string" ? f.result : null }));
     case "find-council": return out(await call("GET", `/agent/councils?ts=${encodeURIComponent(pos[0] || "")}`));
     case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
-    case "decision-check": return out(await call("GET", `/agent/cards/${encodeURIComponent(pos[0] || "")}/decision-check?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`));
+    case "decision-check": return out(await call("GET", decisionCheckPath(pos[0], f)));
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}&state=${encodeURIComponent(typeof f.state === "string" ? f.state : "")}`));
     case "github-sync": return out(await githubSync(typeof f.card === "string" ? f.card : null));
     case "github": return out(await call("GET", `/agent/github?keys=${encodeURIComponent(pos[0] || "")}`));

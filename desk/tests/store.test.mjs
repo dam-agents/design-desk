@@ -1589,6 +1589,54 @@ test("the decision check: a design written without it queues one, a write with i
   assert.deepEqual([checks().length, Object.values(s.db.inbox).find((i) => i.kind === "decision-check" && i.card === card.id && i.outcome === "not checked: closed") !== undefined], [0, true], "closing it ends the check waiting");
 });
 
+test("the decision check: each trigger queues one; a check a decision queued closes only once the write read it; a long read says it is cut", () => {
+  const pr = { kind: "pr", url: "https://github.com/acme/widgets/pull/40" };
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const open = (s, id) => Object.values(s.db.inbox).filter((i) => i.kind === "decision-check" && i.card === id && i.state === "open");
+  const decide = (s) => s.addDecision({ concepts: ["filters"], text: "Filters sit on the left", author: { login: "dana" }, origin: pr }).decision;
+
+  // A picked alternative.
+  { const { s, id, page, finish } = withOptions();
+    s.upsertCard({ id, concepts: ["filters"] }); decide(s);
+    s.act(id, alice, "alternatives", "Chips", { variant: "v1", part: { selector: "#f", label: "Filters" } });
+    const vs = s.getCard(id).variants;
+    s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: vs[0].asset, alternatives: [{ id: "a", name: "Chips", part: "Filters", asset: page("X") }] }, { id: "v2", version: 1, name: "Cards", asset: vs[1].asset }] });
+    finish();
+    s.act(id, alice, "pick-alternative", "a", { variant: "v1" });
+    assert.equal(open(s, id).length, 1, "a picked alternative is checked"); }
+
+  // A person's own option; a restored decision; what closes a check a decision queued.
+  { const { s, id, finish } = withOptions();
+    s.upsertCard({ id, concepts: ["filters"] }); const d = decide(s);
+    assert.deepEqual(open(s, id).map((i) => i.decisions), [[d.id]], "the item names the decision that queued it");
+    finish();
+    s.addOwnOption(id, alice, { images: [{ contentType: "image/png", data: png }] });
+    assert.equal(open(s, id).length, 1, "a person's own option is checked");
+    finish();
+    s.revokeDecision(d.id, alice, { reason: "Top now." }); s.restoreDecision(d.id, alice);
+    assert.deepEqual(open(s, id).map((i) => i.decisions), [[d.id]], "a restored decision checks the cards about it");
+    s.upsertCard({ id, decision_check: { concepts: ["filters"], read: [] } });
+    assert.equal(open(s, id).length, 1, "a write that did not read it leaves it open");
+    s.upsertCard({ id, decision_check: { concepts: ["filters"], read: [d.id] } });
+    assert.equal(open(s, id).length, 0, "a write that read it closes it");
+    s.upsertCard({ id, impact: { concept: "filters", places: [{ where: "Toolbar" }] } });
+    assert.equal(open(s, id).length, 1, "a new impact is checked");
+
+    // A new change card, and an open issue with a sketch.
+    const change = s.upsertCard({ kind: "change", title: "One", summary: "Short.", source: { repo: "acme/widgets", pr: 9 },
+      sections: [{ key: "what", title: "What changed", body: "Filters moved.", source: { label: "PR #9" } }] }).card;
+    assert.equal(open(s, change.id).length, 1, "a change card written without its check is checked");
+    const shot = s.addAsset({ kind: "screen", name: "s", contentType: "image/png", data: png }).asset.id;
+    const issue = s.upsertCard({ kind: "issue", title: "See filters", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 41 }, sketches: [{ asset: shot, source: "sketch" }] }).card;
+    assert.equal(open(s, issue.id).length, 1, "an issue's sketch is checked");
+
+    for (let i = 0; i < 60; i++) s.addDecision({ concepts: ["filters"], text: `Rule ${i}`, author: { name: "Alice" }, origin: { kind: "chat" } });
+    const read = s.decisionCheck(id);
+    assert.deepEqual([read.decisions.length, read.total, read.truncated], [60, 61, true], "a long read is cut and says so");
+    assert.deepEqual(s.decisionCheck(id, { q: "left" }).decisions.map((x) => x.text), ["Filters sit on the left"], "words read instead of the concepts narrow it");
+  }
+});
+
 test("a decision someone other than a designer made is approved by a designer; it holds either way", () => {
   const s = fresh();
   const pr = { kind: "pr", url: "https://github.com/acme/widgets/pull/40" };

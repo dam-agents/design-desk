@@ -5,6 +5,8 @@ import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, 
 import { join } from "node:path";
 
 export const LIMITS = {
+  // The decisions one check reads at most; past it the read says it is cut (docs/desk.md → Decisions → The check).
+  checkRead: 60,
   title: 200,
   text: 4000,
   threadsPerCard: 300,
@@ -307,11 +309,12 @@ export class Store {
     if (c.kind === "issue") return c.status === "open" && (c.sketches || []).length > 0;
     return false;
   }
-  // The decisions in force a card could go against: by its concepts and the words asked for;
-  // a card about nothing named is read against every one.
+  // The decisions in force a card could go against: by its concepts, or by the concepts and
+  // words asked for instead (to narrow a long read); a card about nothing named reads every one.
   decisionsFor(c, { concepts = [], q = "" } = {}) {
-    const about = [...new Set([...this.conceptsOf(c), ...concepts.map((x) => String(x).trim().toLowerCase()).filter(Boolean)])];
+    const asked = concepts.map((x) => String(x).trim().toLowerCase()).filter(Boolean);
     const words = String(q || "").toLowerCase().split(/[\s,]+/).filter((w) => w.length > 2);
+    const about = asked.length || words.length ? asked : this.conceptsOf(c);
     return Object.values(this.db.decisions).filter((d) => d.status === "active" && ((!about.length && !words.length)
       || about.some((a) => d.concepts.some((x) => x.includes(a) || a.includes(x)))
       || words.some((w) => `${d.text} ${d.why} ${d.concepts.join(" ")}`.toLowerCase().includes(w))))
@@ -328,17 +331,21 @@ export class Store {
   checkAgainst(d) {
     for (const c of Object.values(this.db.cards)) {
       const about = this.conceptsOf(c);
-      if (about.length && this.checkable(c) && about.some((a) => d.concepts.some((x) => x.includes(a) || a.includes(x))))
-        this.pendingOrNew("decision-check", c.id, { agent: true }, `${d.id} is in force: check the design against it.`);
+      if (!about.length || !this.checkable(c) || !about.some((a) => d.concepts.some((x) => x.includes(a) || a.includes(x)))) continue;
+      // The item names the decisions that queued it: only a check that read them closes it.
+      const it = this.pendingOrNew("decision-check", c.id, { agent: true }, `${d.id} is in force: check the design against it.`);
+      it.decisions = [...new Set([...(it.decisions || []), d.id])];
     }
   }
   // What the agent reads for a check: the card's options, the decisions in force it could go
   // against, what it goes against now and its last check.
   decisionCheck(id, { concepts = [], q = "" } = {}) {
-    const c = this.card(id);
+    const c = this.card(id), all = this.decisionsFor(c, { concepts, q });
+    // A long list is cut, and says so: the agent narrows it with concepts or words until it is whole.
     return { card: c.id, kind: c.kind, title: c.title, concepts: this.conceptsOf(c),
       options: (c.variants || []).map((v) => ({ id: v.id, name: v.name, version: v.version || 1 })),
-      decisions: this.decisionsFor(c, { concepts, q }).slice(0, 60).map((d) => ({ id: d.id, text: d.text, why: d.why, concepts: d.concepts, at: d.at, author: d.author })),
+      decisions: all.slice(0, LIMITS.checkRead).map((d) => ({ id: d.id, text: d.text, why: d.why, concepts: d.concepts, at: d.at, author: d.author })),
+      total: all.length, truncated: all.length > LIMITS.checkRead,
       conflicts: this.activeConflicts(c), last: c.decision_check || null };
   }
 
@@ -1592,7 +1599,9 @@ export class Store {
       || (fields.variants !== undefined && JSON.stringify(Store.checkedOptions(c || {})) !== JSON.stringify(Store.checkedOptions(next)));
     if (next.decision_check && fields.decision_check !== undefined) {
       next.decision_check = { ...next.decision_check, at: this.clock(), options: Store.checkedOptions(next) };
-      for (const it of Object.values(this.db.inbox)) if (it.card === next.id && it.kind === "decision-check" && it.state === "open")
+      // A check a decision queued closes only once the write read that decision.
+      const read = new Set(next.decision_check.read);
+      for (const it of Object.values(this.db.inbox)) if (it.card === next.id && it.kind === "decision-check" && it.state === "open" && (it.decisions || []).every((d) => read.has(d)))
         Object.assign(it, { state: "done", done_at: this.clock(), outcome: "checked with its write" });
     }
     this.keepLook(c, next);
@@ -2304,7 +2313,7 @@ function cleanDecisionCheck(x, decisions) {
   if (!x || typeof x !== "object" || Array.isArray(x)) throw bad("decision_check is {concepts, read}");
   if (!Array.isArray(x.concepts) || !x.concepts.length) throw bad("decision_check.concepts names what the design is about");
   if (!Array.isArray(x.read ?? [])) throw bad("decision_check.read is a list of D-n");
-  const read = [...new Set((x.read || []).slice(0, 60).map(String))];
+  const read = [...new Set((x.read || []).slice(0, 1000).map(String))];
   for (const id of read) if (!own(decisions, id)) throw bad(`decision_check: no decision ${id}`);
   return { concepts: [...new Set(x.concepts.slice(0, 10).map((c) => clean(String(c), 80, "concept").toLowerCase()))], read };
 }
