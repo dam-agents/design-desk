@@ -21,7 +21,10 @@ A card of kind `screen`, found again by its `path`:
 - `concepts` — the product's ideas it shows ("an agent's weekly spend"), in the glossary's
   words: the timeline "Why it is like this" lists the decisions about them;
 - `changes` — the change cards that touched it, oldest first;
-- `instance` — as on a change card, so people open the screen in the copy.
+- `instance` — as on a change card, so people open the screen on the live product instance;
+- `drawn` and `checked` — written by the store: when the pictures last changed, and when they
+  were last sent again (new or the same). The card shows both and where it came from: the
+  instance's `ref` and `commit`, or a person's screenshot.
 - `history` — its earlier pictures, kept by the store when new ones replace them
   ([catalog.md](catalog.md) → History).
 

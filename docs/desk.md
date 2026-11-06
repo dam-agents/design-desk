@@ -498,7 +498,7 @@ Answer it as a question (above), with these differences:
 1. **Answer about its context, and only that.** The thread's `context` (also on the inbox
    item) is what the person had open when they asked: the item `card`, its option
    `variant`, in the design workspace the `state` and the `part` picked (`selector`,
-   `label`); a recorded `decision` (`D-n`); or the `page` (`new` Changes, `requests`, `issues`, `product`, `people`,
+   `label`); a recorded `decision` (`D-n`); or the `page` (`new` PR Changes, `requests`, `issues`, `product`, `people`,
    `guide` How it works) and its `filter`. Read exactly that before writing — the card and
    that option, state and part, or that page — and answer about it: "this", "here" and
    "it" mean that. Each item and each Desk page has its own chat and history; within one,

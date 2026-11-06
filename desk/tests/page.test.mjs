@@ -406,7 +406,7 @@ test("every button and label says on hover what it does or means", (t) => open(t
   await desk.waitForSelector("#detail .intro");
   for (const tab of ["requests", "new", "issues", "product", "people"]) {
     await desk.click(`[data-tab="${tab}"]`);
-    await desk.waitForSelector(`#detail [data-intro="${tab}"]`);
+    await desk.waitForSelector(tab === "people" ? "#detail > .guide" : `#detail [data-intro="${tab}"]`);
     assert.deepEqual(await bare(), [], `${tab}: everything has a title`);
     assert.deepEqual(await rowSays(), [], `${tab}: a card's own button in the list shows no line over the whole card`);
     assert.deepEqual(await unnamed(), [], `${tab}: a button with no words keeps a name`);
@@ -1170,7 +1170,7 @@ for (const [label, triage, me, sel] of PILLS) {
     // greyed with why and who can.
     const help = await desk.textContent("#detail .s-word .info .tip");
     if (me.can.approve) assert.doesNotMatch(help, /✕ Approve…/, "an approver's help offers Approve…");
-    else assert.match(help, /✕ Approve…Not now: A designer or a lead developer approves it/, "anyone else's says who approves it");
+    else assert.match(help, /✕ Approve…Not now: A designer, a PM or a lead developer approves it/, "anyone else's says who approves it");
   }));
 }
 

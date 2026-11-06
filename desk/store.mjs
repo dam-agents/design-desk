@@ -1620,6 +1620,8 @@ export class Store {
         Object.assign(it, { state: "done", done_at: this.clock(), outcome: "checked with its write" });
     }
     this.keepLook(c, next);
+    // A screen's or an element's pictures sent again, new or the same: Design Desk looked at it again.
+    if ((next.kind === "screen" || next.kind === "element") && (fields.screens !== undefined || fields.sheet !== undefined)) next.checked = this.clock();
     next.updated = this.clock();
     this.db.cards[next.id] = next;
     // A design already in the catalog follows every new version of its option and of its states.

@@ -809,6 +809,9 @@
   .s-word .info .tip .t-paths li.no { opacity: .6; }
   /* The status line: the state's word, its ⓘ and the steps pill. */
   .s-line { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+  /* A screen's or a part's drawn, checked and from: one line, cut short with … when narrow. */
+  .s-meta .one-line { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s-meta .one-line > span + span { margin-left: 12px; }
   /* The steps pill: Step n/m opens every step; beside it, inside the pill, the move to the next step. */
   .steppill { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--o) 30%, var(--line)); background: var(--panel); font-size: var(--fs-ui); }
   .stepper { position: relative; }
@@ -1368,7 +1371,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     tab: (v) => ({ requests: "Requests: problems and ideas, their design options and live prototypes", new: "PR Changes: what changed in the product's screens, explained, and what a designer should look at",
       issues: "Issues: what the team plans that will change the screens, with sketches", product: "Product: its screens, its parts in every situation, the team's decisions and the weekly history",
       people: "People: who is on the Desk, their roles and what each role can do", guide: "How Design Desk works" }[v]),
-    filter: (v) => ({ "newFilter:open": "Changes no designer marked handled yet", "newFilter:handled": "Changes a designer marked handled",
+    filter: (v) => ({ "newFilter:open": "PR Changes no designer marked handled yet", "newFilter:handled": "PR Changes a designer marked handled",
       "newFilter:designer": "Only changes that wait for a designer", "reqFilter:unread": "Requests you have not opened yet", "reqFilter:open": "Requests still being worked on", "reqFilter:ready": "Requests that wait for someone to act: options are drawn, a vote ended or a live prototype is ready", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
       "reqFor:designers": "Requests a designer, a PM or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
       "reqFilter:closed": "Requests sent to developers or closed",
@@ -1800,12 +1803,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // The card it came out of: the change a proposal or a touch-up started from.
     // Named by its kind and number, its title on hover: a title can be long or the agent's own.
     const parent = S.cards.find((x) => x.id === (o.event?.card || c.design?.card || from));
-    const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="Opens ${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
+    const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="Opens ${esc(parent.title)}">${esc(({ change: "PR Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
     // Where the team planned an issue, as one more word of the line: `in: This sprint`.
     const planned = c.kind === "issue" && !c.designed && c.bucket ? `<span title="Where the team planned this issue"><span class="k">in:</span> <b>${esc(c.bucket === "sprint" && c.source?.milestone ? c.source.milestone : BUCKET[c.bucket] || c.bucket)}</b></span>` : "";
     if (parts) return { kind, src, author, auto, parent: from_ };
     // When it came: Today, Yesterday, or its date (docs/desk.md → Where a card came from).
-    return `<div class="prov">${c.created ? `<span><span class="k">created:</span> <span class="when" title="${esc(new Date(c.created).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }))}">${esc(dayWord(c.created))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b${machine ? ' title="Filed on its own by Design Desk, not by a person"' : ""}>${machine ? icon("auto") : ""}${esc(author === "you" ? "You" : author)}</b></span>` : ""}${planned}${auto}${from_}</div>`;
+    // A screen or a part says when it was drawn, not when its card was made (docs/map.md → A screen card).
+    const [stampK, stamp] = (c.kind === "screen" || c.kind === "element") && c.drawn ? ["drawn", c.drawn] : ["created", c.created];
+    return `<div class="prov">${stamp ? `<span><span class="k">${stampK}:</span> <span class="when" title="${esc(new Date(stamp).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }))}">${esc(dayWord(stamp))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b${machine ? ' title="Filed on its own by Design Desk, not by a person"' : ""}>${machine ? icon("auto") : ""}${esc(author === "you" ? "You" : author)}</b></span>` : ""}${planned}${auto}${from_}</div>`;
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
@@ -2657,7 +2662,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // ---------- shared pieces of a page ----------
   // Every picture says where it came from: a person's own, a real screen, a screenshot from the
   // pull request or the issue, or one AI drew, which is never a real screen.
-  const FROM = { pr: "Screenshot from the pull request", issue: "Screenshot from the GitHub issue", instance: "Real screen, taken on Design Desk's copy of the product", prototype: "Real screen, taken on the live prototype",
+  const FROM = { pr: "Screenshot from the pull request", issue: "Screenshot from the GitHub issue", instance: "Real screen, taken on the live product instance", prototype: "Real screen, taken on the live prototype",
     rebuild: "AI drawing from the code, not a real screen", sketch: "AI sketch, not a real screen", test: "Screenshot from an automated test" };
   const fromOf = (s) => s.source === "person" ? `Added by ${personName(s.by?.email)}` : FROM[s.source] || "Where it came from is not recorded";
   const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
@@ -2760,7 +2765,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const link = (path) => i?.url ? `${i.url.replace(/\/$/, "")}${path || ""}` : "";
     return `<div class="panel" style="max-width:var(--measure);margin-top:12px">
       ${i ? `<b>Try it yourself</b><p class="hint">Design Desk runs its own copy of the product${i.ref ? ` at ${esc(i.ref)}` : ""}${i.commit ? ` (${esc(i.commit.slice(0, 7))})` : ""}, with made-up data. Sign in with the demo account below, not your own.</p>
-        <div class="actions"><a class="btn primary" href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer">Open the product ↗</a>${can("screens") ? `<button class="btn" data-add-shots>Add screenshots</button>` : ""}</div>
+        <div class="actions"><a class="btn primary" href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer" title="Opens Design Desk's own running copy of the product, with made-up data">Open the live product instance ↗</a>${can("screens") ? `<button class="btn" data-add-shots>Add screenshots</button>` : ""}</div>
         ${i.login ? `<dl class="kv"><dt>Demo account</dt><dd><code>${esc(i.login.user || "")}</code>${i.login.password ? ` / <code>${esc(i.login.password)}</code>` : ""}${i.login.hint ? ` <span class="sub">${esc(i.login.hint)}</span>` : ""}</dd></dl>` : ""}` : ""}
       ${list.length ? `<p style="margin:12px 0 4px"><b>What to capture</b></p><ol class="md" style="padding-left:20px;margin:0">${list.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — ${esc(x.how)}` : ""}${x.path && i?.url ? ` <a href="${safeUrl(link(x.path))}" target="_blank" rel="noopener noreferrer">open ↗</a>` : ""}</li>`).join("")}</ol>` : ""}
     </div>`;
@@ -2995,7 +3000,20 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // A screen's or an element's drawing, in the same box: its word as its dot says it in the list.
   const MAP_TONE = { current: "approved", stale: "waiting", building: "checking", dropped: "closed" };
   // The presentation sits under ⋯, as on every other item.
-  const mapStatus = (c, buttons, more = "") => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, "", buttons, more); };
+  // When a screen or a part was drawn, when Design Desk last looked at it again, and what it was
+  // drawn from (docs/map.md → A screen card; docs/catalog.md): in the change card's grey-and-ink style.
+  function mapMeta(c) {
+    const kv = (k, v, tip = "") => `<span${tip ? ` title="${esc(tip)}"` : ""}><span class="k">${k}:</span> <b>${v}</b></span>`;
+    const short = (x) => esc(String(x || "").slice(0, 7));
+    const i = c.instance || {}, src = c.source || {};
+    const from = c.kind === "screen"
+      ? (i.ref || i.commit || src.commit ? kv("from", `${i.ref ? esc(i.ref) : "the product"}${i.commit || src.commit ? ` @ ${short(i.commit || src.commit)}` : ""}`, "Drawn on the live product instance, at this branch and commit") : c.wanted ? kv("from", "a person's screenshot") : "")
+      : src.file ? kv("from", `${esc(src.file.split("/").pop())}${src.commit ? ` @ ${short(src.commit)}` : ""}`, `Drawn from ${src.file}${src.export ? `, ${src.export}` : ""}`) : "";
+    const checked = c.checked && day(c.checked) !== day(c.drawn) ? c.checked : null;
+    const parts = [c.drawn ? kv("drawn", esc(day(c.drawn))) : "", checked ? kv("checked", esc(day(checked)), "Design Desk last looked at it again; it had not changed") : "", from].filter(Boolean);
+    return parts.length ? `<span class="one-line">${parts.join(" ")}</span>` : "";
+  }
+  const mapStatus = (c, buttons, more = "") => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, c.status === "building" || c.status === "dropped" ? "" : mapMeta(c), buttons, more, { inline: true }); };
   function renderChange(c) {
     const src = c.source || {};
     return `${backBar()}
@@ -3067,7 +3085,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${c.group || c.path ? `<div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}</div>` : ""}
-      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open the product ↗</a>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
+      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer" title="Opens this screen on Design Desk's own running copy of the product, with made-up data">Open the live product instance ↗</a>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
@@ -5090,7 +5108,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // The header's one search: words over every item's title, summary and source and over the
   // decisions; an item's number (C-12, 12), a decision's (D-3), a GitHub issue or pull request
   // number (#4512, PR 4512) or link, or a Desk link. Enter opens the first hit.
-  const KIND_NAME = { request: "Request", change: "Change", issue: "Issue", screen: "Screen", element: "Element", digest: "Week", decision: "Decision" };
+  const KIND_NAME = { request: "Request", change: "PR Change", issue: "Issue", screen: "Screen", element: "Element", digest: "Week", decision: "Decision" };
   // The GitHub numbers a card stands for: its pull request or issue, and where it came from.
   const ghNums = (c) => [c.source?.pr, c.source?.issue, c.origin?.number, ghRef(c.source?.url)?.n, ghRef(c.origin?.url)?.n].filter(Boolean).map(String);
   const hay = (c) => [c.title, c.summary, c.reporter, c.source?.author, c.source?.repo, c.path, c.period, c.origin?.reporter].filter(Boolean).join(" ").toLowerCase();

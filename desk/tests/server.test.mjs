@@ -84,7 +84,7 @@ test("drawing every state of a part is a designer's or developer's, not a viewer
   const ask = { action: "states", note: "", variant: "v1", part: { selector: "body > button", label: "Button “Upload”" } };
   const viewer = await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(viewer.status, 403, "a viewer off the roster may not");
-  assert.match(viewer.body.error, /Only designers can redraw options/);
+  assert.match(viewer.body.error, /To redraw options, ask/);
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask)).status, 200, "a PM changes options too");
   const dev = await d.viewer("bob@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(dev.status, 200, "a developer changes options too");

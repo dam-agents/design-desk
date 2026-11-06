@@ -15,7 +15,8 @@ A card of kind `element` on the Desk:
 - `title` — the element's name in the product's words ("Agent row");
 - `group` — its family under Product → Elements ("Lists and rows", "Status", "Dialogs"); it sorts the list and is not shown on the element's page;
 - `summary` — one sentence: what it is and where people see it, in plain words ([desk.md](desk.md) → Writing on the Desk);
-- `source` — `{repo, file, export, commit}`: the component, at the commit drawn;
+- `source` — `{repo, file, export, commit}`: the component, at the commit drawn; the card shows
+  it as "from", with `drawn` and `checked` (store-written, as on a screen card, [map.md](map.md));
 - `states` — one entry per tile: `name` and `how` it happens, in plain words;
 - `sheet` — the asset id of the state sheet (one HTML file with every tile);
 - `screens` — one thumbnail (the sheet's first screen), for the list;
