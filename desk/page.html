@@ -1575,7 +1575,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // A request For Developers is approved by any developer but the one who filed it (docs/desk.md → For Developers or For Designers).
   const DEVELOPERS = ["lead-developer", "developer"];
   // A request the agent filed for someone carries their email in origin.email, when the channel disclosed it.
-  const filedIt = (c) => Boolean(S.me?.email) && [c.created_by?.email, c.origin?.email].some((x) => String(x || "").toLowerCase() === S.me.email.toLowerCase());
+  // You, by any address you go by: the one you signed in with and the others on your row of the
+  // people list, such as the one Slack knows you by (docs/config.md → Desk people).
+  const isMe = (e) => Boolean(e) && (S.me?.emails?.length ? S.me.emails : [S.me?.email]).some((x) => x && String(x).toLowerCase() === String(e).toLowerCase());
+  const filedIt = (c) => [c.created_by?.email, c.origin?.email].some(isMe);
   // Going against a decision in force stays a designer's call, For Developers included.
   // A designer or a lead developer approves at any step once it is checked (docs/desk.md → Deciding straight away).
   const canApprove = (c) => can("approve") || (!(c.conflicts || []).some((x) => x.status === "active")
@@ -1696,7 +1699,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const authorIcon = (d) => { const [r, tip] = decRole(d); return r ? roleIcon(r, tip) : ""; };
   const who = (by) => by?.agent ? "<b>Design Desk</b>"
     : by?.via === "slack" ? `<b>${esc(by.name || by.email || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
-    : `<b>${esc(by?.email && by.email === S.me?.email ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
+    : `<b>${esc(isMe(by?.email) ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
   // Where a card came from and who started it (docs/desk.md → Where a card came from): the
   // source with its link, the author, and for what a run filed on its own, the event it acted on.
   const ICON = {
@@ -1747,11 +1750,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     else if (o.automated) {
       [kind, src, author] = ["test", "Automated test", o.tool || ""];
       event = out(o.url, esc([o.check && `${o.check} check`, o.build && `build ${o.build}`, o.ref].filter(Boolean).join(" · ") || "a test finding"));
-    } else if (o.channel === "slack") [kind, src, author] = ["slack", out(o.url, "Slack"), o.reporter];
-    else if (o.channel === "github") [kind, src, author] = [o.kind === "pr" ? "pr" : "issue", out(o.url, num(o.kind === "pr" ? "PR" : "Issue", o.number)), o.reporter];
-    else if (o.channel === "chat") [kind, src, author] = ["chat", "Chat with Design Desk", o.reporter];
+    } else if (o.channel === "slack") [kind, src, author] = ["slack", out(o.url, "Slack"), isMe(o.email) || isMe(o.reporter) ? "you" : o.reporter];
+    else if (o.channel === "github") [kind, src, author] = [o.kind === "pr" ? "pr" : "issue", out(o.url, num(o.kind === "pr" ? "PR" : "Issue", o.number)), isMe(o.email) || isMe(o.reporter) ? "you" : o.reporter];
+    else if (o.channel === "chat") [kind, src, author] = ["chat", "Chat with Design Desk", isMe(o.email) || isMe(o.reporter) ? "you" : o.reporter];
     else if (by.agent) [kind, src, author] = ["agent", "Design Desk", o.reporter];
-    else [kind, src, author] = ["desk", "Desk", by.email && by.email === S.me?.email ? "you" : by.email || "someone"];
+    else [kind, src, author] = ["desk", "Desk", isMe(by.email) ? "you" : by.email || "someone"];
     // Filed with no person asking: by one of Design Desk's runs, or from an automated test.
     // With no person behind it, the run that filed it is its author: `by: hourly check`.
     const machine = !author && run && !o.automated;
@@ -2384,7 +2387,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (P.error) return `<h2>People and roles</h2><div class="panel">${esc(P.error)}</div>`;
     const order = Object.keys(ROLE_ABOUT);
     const people = [...P.people].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.email.localeCompare(b.email));
-    const rows = people.map((x) => `<tr><td>${esc(x.email)}${x.email === S.me?.email ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
+    const rows = people.map((x) => `<tr><td>${esc(x.email)}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
     const shown = order.filter((r) => P.roles[r]);
     const may = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a])).map(([, words]) => words)]));
     // Each role says only what it adds to the largest roles below it that it covers; a role
@@ -2523,7 +2526,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const l = S.cards.find((x) => x.id === c.id) || c;
     return `<div class="row item${l.read === false ? " unread" : ""}"><button class="open" ${jump ? `data-jump="${esc(c.id)}" aria-current="${S.jump === c.id}"` : `data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"`}><div class="t"><span>${title}</span>${num(c)}${rowDot(l)}</div>${againstDot(l)}</button>${facts ? `<div class="prov">${facts}</div>` : ""}</div>`;
   };
-  const addedBy = (a) => a.agenda.by?.email ? (a.agenda.by.email === S.me?.email ? "You" : a.agenda.by.email) : "Design Desk";
+  const addedBy = (a) => a.agenda.by?.email ? (isMe(a.agenda.by.email) ? "You" : a.agenda.by.email) : "Design Desk";
   function renderAgendaList(filters = "") {
     const items = S.agenda, ideas = suggested(), done = S.presented || [];
     $("#list").innerHTML = filters + (items.length ? `<div class="side-head">To present · in this order</div>${items.map((a, i) => agendaRow(a, `${i + 1}. ${esc(a.title)}`,
@@ -2614,7 +2617,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // pull request or the issue, or one AI drew, which is never a real screen.
   const FROM = { pr: "Screenshot from the pull request", issue: "Screenshot from the GitHub issue", instance: "Real screen, taken on Design Desk's copy of the product", prototype: "Real screen, taken on the live prototype",
     rebuild: "AI drawing from the code, not a real screen", sketch: "AI sketch, not a real screen", test: "Screenshot from an automated test" };
-  const fromOf = (s) => s.source === "person" ? `Added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "Where it came from is not recorded";
+  const fromOf = (s) => s.source === "person" ? `Added by ${isMe(s.by?.email) ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "Where it came from is not recorded";
   const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
   // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
   // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
@@ -2959,7 +2962,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
         // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
         const kv = (k, v, cls = "") => `<span><span class="k">${k}:</span> <b${cls ? ` class="${cls}"` : ""}>${v}</b></span>`;
-        const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : hb?.email && hb.email === S.me?.email ? "You" : hb?.name || hb?.email || "someone";
+        const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : isMe(hb?.email) ? "You" : hb?.name || hb?.email || "someone";
         const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : "", src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
         const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
         const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
@@ -3222,7 +3225,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (simple()) return "";
     const shown = c.agenda?.variant ? optionName(c, c.agenda.variant) : "";
     if (c.agenda?.status === "queued") {
-      const mine = c.agenda.by?.email && c.agenda.by.email === S.me?.email;
+      const mine = isMe(c.agenda.by?.email);
       return `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${shown ? ` · ${esc(shown)}` : ""}</span>${markButton(c)}${mine || can("close") ? `<button class="btn small" data-act="unqueue">Take off the presentation</button>` : ""}`;
     }
     // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
@@ -3369,7 +3372,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const queued = c.agenda?.status === "queued", presented = c.agenda?.status === "presented";
     // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
     const undo = presented && can("close") && Date.now() <= Date.parse(c.agenda.undo_until) ? `<button class="btn" data-unpresent="${esc(c.id)}">Undo: not presented yet</button>` : "";
-    const call = simple() ? "" : queued ? (can("close") ? `<button class="btn" data-presented="${esc(c.id)}">✓ Mark as presented</button>` : "") + ((c.agenda.by?.email && c.agenda.by.email === S.me?.email) || can("close") ? `<button class="btn" data-act="unqueue">Take off the presentation</button>` : "")
+    const call = simple() ? "" : queued ? (can("close") ? `<button class="btn" data-presented="${esc(c.id)}">✓ Mark as presented</button>` : "") + (isMe(c.agenda.by?.email) || can("close") ? `<button class="btn" data-act="unqueue">Take off the presentation</button>` : "")
       : undo + (can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "");
     // A closed request keeps its presentation actions; only the design actions leave.
     const size = can("size") && !closed(c) && c.status !== "spec" && !c.approved ? (c.size?.small ? `<button class="btn" data-size="designer">For Designers</button>` : `<button class="btn" data-size="small">For Developers</button>`) : "";

@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.54.0 — 2026-11-06
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): a person's row in
+   `## Desk people` may list several addresses.
+2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**).
+3. Optional: on the row of anyone who uses Slack under another address than the Desk's, add
+   that address to the `email` cell, separated by a comma.
+
 ## 1.53.0 — 2026-11-06
 
 **Upgrade:**

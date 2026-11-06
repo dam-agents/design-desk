@@ -1123,6 +1123,16 @@ for (const [label, triage, me, sel] of PILLS) {
   }));
 }
 
+// A request filed in Slack under the address Slack knows a person by is theirs on the Desk
+// too, when their row of the people list names both addresses.
+test("a request from Slack names you by the address Slack knows you by", (t) => open(t, BRIDGE_STORIES
+  .replace('prototype: { state: "none" }, threads: [],', 'prototype: { state: "none" }, threads: [], origin: { channel: "slack", reporter: "lukas.j@work.example.com", email: "lukas.j@work.example.com" },')
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", emails: ["alice@example.com", "lukas.j@work.example.com"], can: { vote: true, comment: true } }'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.waitForSelector('.row.item:has([data-card="r7"]) .prov');
+  assert.match(await desk.textContent('.row.item:has([data-card="r7"]) .prov'), /by:\s*you/i, "by: you, not the Slack address");
+}));
+
 // A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
 test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
   await desk.setViewportSize({ width: 1300, height: 800 });

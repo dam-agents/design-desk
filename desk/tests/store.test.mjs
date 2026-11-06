@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, abilities, rosterOf, elementsOf } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, abilities, rosterOf, personOf, elementsOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -28,7 +28,19 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
 
 test("the roster: the first row of an email counts, an unknown role is a guest's", () => {
   assert.deepEqual(rosterOf([{ email: " Alice@Example.com ", role: "Designer" }, { email: "alice@example.com", role: "lead" }, { email: "dave@example.com", role: "ops" }, { email: "", role: "pm" }]),
-    [{ email: "alice@example.com", role: "designer" }, { email: "dave@example.com", role: "guest" }]);
+    [{ email: "alice@example.com", also: [], role: "designer" }, { email: "dave@example.com", also: [], role: "guest" }]);
+});
+
+test("one person's row may list every address they go by, and each counts as them", () => {
+  const roster = rosterOf([{ email: "lukas@example.com, Lukas.J@work.example.com", role: "lead" }, { email: "lukas.j@work.example.com", role: "pm" }]);
+  assert.deepEqual(roster, [{ email: "lukas@example.com", also: ["lukas.j@work.example.com"], role: "lead" }], "an address already on a row counts once");
+  assert.equal(personOf(roster, "LUKAS.J@work.example.com")?.role, "lead", "the Slack address finds the row");
+  assert.equal(personOf(roster, "nobody@example.com"), null);
+  // The author never approves their request For Developers, by any of their addresses.
+  const s = fresh();
+  const { card } = s.createRequest({ agent: true }, { title: "Overflow", problem: "Runs over.", origin: { channel: "slack", reporter: "Lukas", email: "lukas.j@work.example.com" } });
+  assert.throws(() => s.renameRequest(card.id, { email: "other@example.com" }, "New"), /Only the person who filed it/);
+  assert.doesNotThrow(() => s.renameRequest(card.id, { email: "lukas@example.com", emails: ["lukas@example.com", "lukas.j@work.example.com"] }, "New"), "their Desk address renames the request they filed in Slack");
 });
 
 test("a lead asks for a new person: one item with no card, the roster and open asks refuse twins", () => {
@@ -172,7 +184,7 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   assert.equal(can("lead", "size"), true);
   for (const r of ["designer", "developer", "pm", "guest"]) assert.equal(can(r, "size"), false, r);
   assert.equal(can("lead-developer", "approve"), false, "a developer approves only a request For Developers, per card");
-  assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", role: "lead-developer" }]);
+  assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", also: [], role: "lead-developer" }]);
 
   const { card, inbox: item } = s.createRequest(bob, { title: "Tighter row spacing", problem: "Rows are too airy." });
   s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
