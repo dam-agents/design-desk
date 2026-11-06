@@ -8,7 +8,7 @@ worklist's `config`. A missing key takes its default.
 **Writing the file.** An existing `work/CONFIG.md` is never edited in place, onboarding
 included: `design config sha` gives its fingerprint, edit a copy, then
 `design config write <copy> --from <sha>`. It writes under `work/.CONFIG.lock` only when the
-file is unchanged; exit 3 means another writer came first (a lead's roster row through
+file is unchanged; exit 3 means another writer came first (an admin's roster row through
 `design desk person`): read the file again and redo the change.
 
 - `display_name` (`Design Desk`) — the Desk's title.
@@ -20,7 +20,7 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
-- `prototype_requesters` (`designer, lead`; roles read as in `## Desk people`, so `lead developer`
+- `prototype_requesters` (`designer, admin`; roles read as in `## Desk people`, so `lead developer`
   is `lead-developer`), `max_prototypes` (`2`; `0` = none),
   `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
@@ -68,9 +68,9 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   mark it handled before the Desk shows it red as overdue; `0`/`off` disables.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
-- `## Desk people` table, `| email | role |`: `lead`, `designer`, `lead-developer`, `developer` or `pm`;
+- `## Desk people` table, `| email | role |`: `admin`, `designer`, `lead-developer`, `developer` or `pm`;
   one person's `email` cell may list several addresses, separated by commas — the one they sign in
   to the Desk with and the one Slack or GitHub knows them by — and every one counts as them;
   an optional third column `| name |` gives the name the Desk shows instead of the address;
-  anyone else on the share list is a `guest`; the owner is always `lead`. A lead may ask
+  anyone else on the share list is a `guest`; the owner is always `admin` (a row still written `lead`, its name before 1.59.0, reads as `admin`). An admin may ask
   on the Desk for a new row ([desk.md](desk.md) → People).

@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SERVER = join(dirname(fileURLToPath(import.meta.url)), "..", "server.mjs");
-const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example.com | lead |\n| alice@example.com | designer |\n| pat@example.com | pm |\n| lou@example.com | Lead developer |\n| bob@example.com | developer |\n| dana@example.com | developer |\n";
+const ROSTER = "## Desk people\n\n| email | role |\n| --- | --- |\n| lee@example.com | admin |\n| alice@example.com | designer |\n| pat@example.com | pm |\n| lou@example.com | Lead developer |\n| bob@example.com | developer |\n| dana@example.com | developer |\n";
 
 const freePort = () => new Promise((ok) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => ok(port)); }); });
 
@@ -36,17 +36,17 @@ async function desk(t, config = "", roster = ROSTER) {
   };
 }
 
-test("only a lead asks for a new person; the owner's ask says so; the agent cannot make one", async (t) => {
+test("only an admin asks for a new person; the owner's ask says so; the agent cannot make one", async (t) => {
   const d = await desk(t);
   const ask = { email: "alex@example.com", role: "pm" };
   const designer = await d.viewer("alice@example.com", "/api/people", ask);
   assert.equal(designer.status, 403);
-  assert.match(designer.body.error, /Only a lead can add people/);
+  assert.match(designer.body.error, /Only an admin can add people/);
   assert.equal((await d.viewer("guest@example.com", "/api/people", ask)).status, 403);
 
-  const lead = await d.viewer("lee@example.com", "/api/people", ask);
-  assert.equal(lead.status, 201);
-  assert.deepEqual([lead.body.inbox.kind, lead.body.inbox.person, lead.body.inbox.by.owner], ["person", ask, undefined]);
+  const admin = await d.viewer("lee@example.com", "/api/people", ask);
+  assert.equal(admin.status, 201);
+  assert.deepEqual([admin.body.inbox.kind, admin.body.inbox.person, admin.body.inbox.by.owner], ["person", ask, undefined]);
   const owner = await d.viewer("own@example.com", "/api/people", { email: "dee@example.com", role: "developer" }, "owner");
   assert.equal(owner.status, 201);
   assert.equal(owner.body.inbox.by.owner, true, "the platform's owner role is recorded");
@@ -57,7 +57,7 @@ test("only a lead asks for a new person; the owner's ask says so; the agent cann
 
   const enqueue = await d.agent("/agent/enqueue", { kind: "person", card: "C-1" });
   assert.equal(enqueue.status, 400);
-  assert.match(enqueue.body.error, /only from a lead/);
+  assert.match(enqueue.body.error, /only from an admin/);
 });
 
 test("a request's options start after triage only for someone who may start them; a bug asks for none", async (t) => {

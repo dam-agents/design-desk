@@ -217,9 +217,9 @@ and `D-12` in text link to it as to a card (Links to an item).
 
   `other` marks only a record from before decisions named their origin; never write it.
 
-- **Who decided**: name the author's role in `author.role` when you know it (`lead`,
+- **Who decided**: name the author's role in `author.role` when you know it (`admin`,
   `designer`, `pm`, `lead-developer`, `developer`). The server tells the page whose decision
-  it is (`side`): the design side (a designer, a PM or a lead) or a developer, by that role,
+  it is (`side`): the design side (a designer, a PM or an admin) or a developer, by that role,
   else the author's on the roster (by `author.email`), else a `pr`, `commit` or `doc` origin
   is a developer's; otherwise it is not known. Product → Decisions is one list, the newest
   first; a decision's status box names, on its one line, who decided it and where (`by:`,
@@ -227,7 +227,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   (the author's own role, else their side's; none when it is not known). A decision's page has
   no labels and leaves out a heading with nothing under it; under **What refers to it** a
   decision is its number and the start of its text, and hovering it shows the whole decision.
-- **Adding one on the Desk**: a designer or a lead presses **+ Add** by the Decisions tab, as on Screens and Elements,
+- **Adding one on the Desk**: a designer or an admin presses **+ Add** by the Decisions tab, as on Screens and Elements,
   and writes what was decided, what it is about (a few words, separated by commas), why, and
   adds up to two pictures (pasted or chosen). The server records it at once in their name
   (`origin.kind: desk`, `Added on the Desk`, with no link: the Desk is where it was
@@ -266,13 +266,13 @@ and `D-12` in text link to it as to a card (Links to an item).
   conflict new to the card also asks in its thread whether `D-<n>` still holds (Revoking); done
   `checked: <n> against`. A card closed or handed off meanwhile: done `not checked: closed`.
 - **Approved by a designer**: a decision whose author is not on the design side (the server's
-  `side`: a developer, or not known) is **Not approved** until a designer or a lead presses
+  `side`: a developer, or not known) is **Not approved** until a designer or an admin presses
   **Approve** in its status box (`POST /api/decisions/<id>/approve`; `approved: {by, at}`).
   It holds and warns as any other meanwhile; its dot, its peek and its page say Not approved,
   and Decisions has a **Not approved** filter (`GET /api/decisions?state=unapproved`).
-- **Revoking**: a designer or lead revokes one on its page with a reason (and what replaces
+- **Revoking**: a designer or admin revokes one on its page with a reason (and what replaces
   it), or restores it. A new decision that reverses an earlier one names it in `replaces`; the
-  store revokes it as "Replaced by D-<n>". A designer or lead on the roster revoking one in
+  store revokes it as "Replaced by D-<n>". A designer or admin on the roster revoking one in
   Slack, the call or chat (anyone else: answer that a designer revokes it on the Desk):
   `design desk decision-revoke D-<n> <file>` with `{reason, by, origin, replaced_by}`. Design
   Desk never revokes on its own judgement: what goes against a decision records the conflict
@@ -288,25 +288,25 @@ and `D-12` in text link to it as to a card (Links to an item).
 ## Roles
 
 The server reads the role from `## Desk people` by the email the platform verified; the
-owner is `lead`, anyone else on the share list is `guest`. A roster role is read in lower case
+owner is `admin`, anyone else on the share list is `guest`. A roster role is read in lower case
 with spaces as hyphens (`Lead developer` → `lead-developer`).
 
 | Role | May |
 | --- | --- |
 | everyone | read, mark reviewed, ask, comment |
 | `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
-| `pm`, `developer`, `lead-developer`, `designer`, `lead` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
-| `developer`, `lead-developer`, `designer`, `lead` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
-| a request's author; `developer`, `lead-developer`, `designer`, `lead` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
-| a request's author; `designer`, `lead` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
+| `pm`, `developer`, `lead-developer`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
+| `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| a request's author; `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
+| a request's author; `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
-| `lead-developer`, `lead` | move a request between For Developers and For Designers |
-| `lead-developer`, `designer`, `lead` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
-| `designer`, `lead` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
+| `lead-developer`, `admin` | move a request between For Developers and For Designers |
+| `lead-developer`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
+| `designer`, `admin` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
 | roles in `prototype_requesters` | start a live prototype |
-| `lead` | also ask you to add a person to the list ([People](#people)) |
+| `admin` | also ask you to add a person to the list ([People](#people)) |
 
-The page's **People** tab shows the roster, each role's actions and a lead's asks to add
+The page's **People** tab shows the roster, each role's actions and an admin's asks to add
 someone, from `GET /api/people`; everyone the Desk is shared with sees it, guests included.
 Each role has its icon, by the role there and by the person's own role in the page's header.
 
@@ -324,7 +324,7 @@ beside them in full mode); each request is in one (the card's `size: {small, by,
   without it, a request with a Slack `origin` is For Developers and any other For Designers.
   From Slack, set `audience: "designers"` only when the message asks for a designer.
 
-A lead developer or the lead moves an open, unapproved request between the two (**More** →
+A lead developer or an admin moves an open, unapproved request between the two (**More** →
 For Developers / For Designers; `POST /api/cards/<id>/size {small}`). The tab chosen when a
 request is filed carries `size.filed` and the page names no one for it; a later move shows who
 moved it and when. A request For Developers is approved by a designer or
@@ -338,7 +338,7 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 
 ### Deciding straight away
 
-A designer, the lead or a lead developer (`skip`) may skip the options, the vote and the live
+A designer, an admin or a lead developer (`skip`) may skip the options, the vote and the live
 prototype once Design Desk has checked a request:
 
 - **Approve** at any open step from Checking on (the same **Approve…** before options: the spec then comes from the request);
@@ -367,7 +367,7 @@ votes, the presentation, every state of an element and the spec's own review sta
 
 ### Deleting a request
 
-A designer or the lead (`close`) deletes a closed request for good from its **⋯** menu:
+A designer or an admin (`close`) deletes a closed request for good from its **⋯** menu:
 **Delete this request…** asks first, then `DELETE /api/cards/<id>` removes the card, its
 conversations, its pictures and its finished items. The store refuses an open request, one
 whose live prototype is still on, and one with an item not yet done (a teardown included), so
@@ -550,12 +550,12 @@ Answer it as a question (above), with these differences:
 
 ## People
 
-A `people_due` item is a lead's ask, on the People tab, to put a person on `## Desk people`
+A `people_due` item is an admin's ask, on the People tab, to put a person on `## Desk people`
 with a role; it has no card. This is the one roster change that comes from the Desk.
 
 1. `design desk claim I-<n> --session <id>`.
 2. `design desk person I-<n> --session <id>`: it checks again that the asker is the owner or
-   still a lead and that the email is not on the list, adds the row through the one writer of `work/CONFIG.md`, and
+   still an admin and that the email is not on the list, adds the row through the one writer of `work/CONFIG.md`, and
    marks the item done (`added`, or `not added: <reason>`); a row already there with that role
    is `added`. A non-zero exit (the file unreadable, the write failed) leaves the item claimed
    for the next run: report it. Never edit `## Desk people` by hand for an ask.
@@ -575,7 +575,7 @@ with its buttons, its facts and what the meeting decides. A row of what is to pr
 and jumps to its item, marked a moment; **Open** on the item opens its card, and a presented row
 opens its card.
 
-- Only a designer or the lead puts a card on it (**Add to presentation**), with a note and,
+- Only a designer or an admin puts a card on it (**Add to presentation**), with a note and,
   for a request with options, its final version. The agent never adds one: it
   **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for
   testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
@@ -682,7 +682,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   closed it. People's own actions set the rest through the server.
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
-  they fine-tune the options, until its author, a designer, a developer or a lead presses **Ask for
+  they fine-tune the options, until its author, a designer, a developer or an admin presses **Ask for
   feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Team feedback Build a live prototype, else Contact a developer, else Approve…, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.

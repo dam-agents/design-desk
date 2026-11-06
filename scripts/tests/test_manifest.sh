@@ -8,7 +8,7 @@ cat > "$WORK_DIR/CONFIG.md" <<'CFG'
 - issue_label: design
 - handoff: desk
 - implementer: pr-comment
-- prototype_requesters: designer, lead
+- prototype_requesters: designer, admin
 - digest: desk
 - watch_paths: *
 - work_repo: "acme/internal-config"

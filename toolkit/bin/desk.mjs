@@ -15,7 +15,7 @@ const USAGE = `usage: design desk <command>
                                            --heartbeat renews your own claim
   done <I-n> --session <id> [--outcome <text>]
                                            mark a claimed item done, with the same id
-  person <I-n> --session <id>              work a lead's ask to add a person: re-check it, add the
+  person <I-n> --session <id>              work an admin's ask to add a person: re-check it, add the
                                            row to ## Desk people, and mark the item done
   cards [--kind change|request|issue]      list cards
   card <C-n>                               one card with its threads
@@ -155,9 +155,9 @@ async function shotsArg(file) {
   return shots;
 }
 
-// A lead's ask to add a person (docs/desk.md → People), decided on work/CONFIG.md as it
+// An admin's ask to add a person (docs/desk.md → People), decided on work/CONFIG.md as it
 // is now: the row already there with that role is `added` (a run that wrote it and died
-// before done); otherwise the asker is the owner or still a lead, and the role one a lead
+// before done); otherwise the asker is the owner or still an admin, and the role one an admin
 // may give. `{ write: true }` when the row is still to be added.
 // The handoff bundle of an approved request (docs/handoff.md → The bundle): what a developer and
 // a coding agent build from, the same for any product. `design` is design.json; `files` the
@@ -233,8 +233,8 @@ export function personVerdict(item, text) {
   const on = personOf(roster, email);
   if (on) return { outcome: on.role === role ? "added" : `not added: ${email} is already on the list.` };
   const asker = personOf(roster, item.by?.email);
-  if (!item.by?.owner && asker?.role !== "lead") return { outcome: `not added: ${item.by?.email || "the person who asked"} is no longer a lead.` };
-  if (!ADDABLE_ROLES.includes(role)) return { outcome: `not added: a lead cannot give the role ${role}.` };
+  if (!item.by?.owner && asker?.role !== "admin") return { outcome: `not added: ${item.by?.email || "the person who asked"} is no longer an admin.` };
+  if (!ADDABLE_ROLES.includes(role)) return { outcome: `not added: an admin cannot give the role ${role}.` };
   return { write: true };
 }
 

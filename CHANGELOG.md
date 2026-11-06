@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.59.0 — 2026-11-06
+
+**Upgrade:**
+1. The role `lead` is now `admin`. Rewrite each `lead` row of `## Desk people` and a `lead` in
+   `prototype_requesters` as `admin` with `design config write` (a `lead` left there still
+   reads as `admin`, so nothing breaks meanwhile).
+2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**), and restart the Desk server
+   (`rc-service --user design-desk-server restart`): roles stored as `lead` on votes and
+   decisions read as `admin` from then on.
+
 ## 1.58.0 — 2026-11-06
 
 **Upgrade:**

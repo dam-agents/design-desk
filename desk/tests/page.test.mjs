@@ -32,12 +32,12 @@ test("the new option dialog sends on its close, as the page's other dialogs do",
   assert.match(page, /\/api\/cards\/\$\{c\.id\}\/options`/, "its own pictures go to the options route, nothing drawn");
 });
 
-// A stand-in bridge records every call; the server answers just enough for a lead's Desk
+// A stand-in bridge records every call; the server answers just enough for an admin's Desk
 // with one shipped change, two weekly digests and two open requests, one of them waiting for
 // an answer.
 // /api/people as the server builds it: every role, with the default prototype_requesters.
-const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "lead" }, { email: "pat@example.com", role: "pm" }],
-  roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "lead"])])), addable: ADDABLE_ROLES });
+const PEOPLE = JSON.stringify({ people: [{ email: "lead@example.com", role: "admin" }, { email: "pat@example.com", role: "pm" }],
+  roles: Object.fromEntries(ROLES.map((r) => [r, abilities(r, ["designer", "admin"])])), addable: ADDABLE_ROLES });
 const BRIDGE = `<script>
 window.calls = [];
 const change = { id: "ch1", kind: "change", title: "A new header", summary: "From PR #45.", source: { repo: "acme/widgets", pr: 45, url: "https://github.com/acme/widgets/pull/45", author: "dana" } };
@@ -52,12 +52,12 @@ window.platform = { async request({ method, path, body }) {
   // failNext fails the next send only: the page polls with GETs every few seconds, and on a
   // slow machine a poll must not take the failure that a dialog's send is to get.
   if (window.failNext && method !== "GET") { window.failNext = false; return { status: 503, contentType: "text/plain", body: "" }; }
-  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true },
+  const answer = path === "/api/me" ? { role: "admin", email: "lead@example.com", can: { request: true, close: true, screens: true, add: true, people: true },
       skills: [{ name: "copy", does: "Write the words", on: true }, { name: "brand", does: "Use a saved brand", on: false }] }
     : path === "/api/cards" ? { cards: [change, earlier, digest, ...requests] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/requests" ? { card: { id: "r1" } }
     : path === "/api/product" ? { card: { id: "e1", kind: "element" } }
-    : path === "/api/cards/e1" ? { card: { id: "e1", kind: "element", title: "The agent row", status: "building", wanted: { part: "The agent row", where: "", show: "" }, created_by: { email: "lead@example.com", role: "lead" } } }
+    : path === "/api/cards/e1" ? { card: { id: "e1", kind: "element", title: "The agent row", status: "building", wanted: { part: "The agent row", where: "", show: "" }, created_by: { email: "lead@example.com", role: "admin" } } }
     : path === "/api/cards/r1" ? { card: { id: "r1", kind: "request", title: "Bigger send button", status: "triage" } }
     : path === "/api/cards/ch1" ? { card: change }
     : path === "/api/people" ? ${PEOPLE} : {};
@@ -266,10 +266,11 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // People: the roster with its roles, and what each role adds to the one below it.
     await desk.click('[data-tab="people"]');
     await desk.waitForSelector("table.people");
-    assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tlead", "pat@example.com\tPM"]);
-    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead your role", "designer", "lead developer", "developer", "PM", "viewer"]);
+    assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tadmin", "pat@example.com\tPM"]);
+    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["admin your role", "designer", "lead developer", "developer", "PM", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer can, and:\s+Move a request to For Developers[\s\S]*Ask Design Desk to add people to the list/, "only a lead adds people");
+    assert.match(await panel(0), /Everything a designer and a lead developer can, and:\s+Ask Design Desk to add people to the list/, "only an admin adds people");
+    assert.doesNotMatch(await panel(0), /Move a request/, "moving a request between the tabs is named once, under a lead developer");
     assert.match(await panel(1), /Everything a developer can, and:\s+Approve designs[\s\S]*Build live prototypes/, "a role names the largest one below it");
     assert.match(await panel(2), /Everything a developer can, and:\s+Move a request to For Developers/, "a lead developer says what is For Developers");
     assert.match(await panel(3), /Everything a PM can, and:\s+Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
@@ -277,7 +278,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Draw an issue/, "a PM also has issues drawn");
     assert.doesNotMatch(await panel(5), /Everything|Same as/, "the smallest role lists its own");
 
-    // A lead asks Design Desk to add a person with a role; the roles to pick leave out lead.
+    // An admin asks Design Desk to add a person with a role; the roles to pick leave out admin.
     const pe = dialog("person-dialog");
     await desk.click("[data-add-person]");
     assert.equal(await pe.open(), true);
@@ -373,7 +374,7 @@ test("every tab but How it works shows its intro in the empty pane; People besid
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"]`);
   }
-  assert.match(await desk.textContent('#detail [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is a lead's");
+  assert.match(await desk.textContent('#detail [data-intro="people"] li.off'), /Add a person[\s\S]*not with your role/, "a designer sees that adding people is an admin's");
   assert.equal(await desk.locator("#detail .with-intro > .guide").count(), 1, "People shows its list with the intro");
   // Folding one intro folds every tab's, and it stays folded after a reload.
   await desk.click('[data-tab="requests"]');
@@ -1077,7 +1078,7 @@ window.calls = [];
 const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41" } };
 const request = { id: "r7", kind: "request", title: "Spend in the list", status: "feedback", created: new Date().toISOString(), triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, threads: [],
   request: { type: "feature", problem: "A spend column", from: "is1", options: 2, grill: true }, grill: { state: "done", asked: 2, summary: "- Weekly spend" },
-  issue_brief: { text: "Each agent shows its weekly spend.", stories: [{ id: "s1", text: "As a lead I see what each agent spends" }, { id: "s2", text: "I can sort by spend", derived: true }] },
+  issue_brief: { text: "Each agent shows its weekly spend.", stories: [{ id: "s1", text: "As an admin I see what each agent spends" }, { id: "s2", text: "I can sort by spend", derived: true }] },
   variants: [{ id: "v1", name: "Column", asset: "A-1", fidelity: "mockup", stories: [{ story: "s1", met: "yes", how: "A spend column on every row.", parts: [{ selector: "#spend", label: "Spend column" }] }, { story: "s2", met: "partly", how: "Sorting needs a developer.", parts: [{ selector: "#sort", label: "Sort" }] }] },
     { id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };
 window.platform = { async request({ method, path }) {
@@ -1849,7 +1850,7 @@ const cards = [
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
-  const answer = path === "/api/me" ? { role: "lead", email: "lead@example.com", can: { explore: true, choose: true, vote: true } }
+  const answer = path === "/api/me" ? { role: "admin", email: "lead@example.com", can: { explore: true, choose: true, vote: true } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/cards/C-2" ? { card: full } : path === "/api/cards/C-6" ? { card: plain }
     : path.startsWith("/api/assets/") ? { id: "A-1", kind: "variant", content: "<p>An option</p>" } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };

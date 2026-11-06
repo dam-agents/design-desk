@@ -43,18 +43,18 @@ export const LIMITS = {
   dbBytes: 50 * 1024 * 1024,
 };
 
-export const ROLES = ["lead", "designer", "lead-developer", "developer", "pm", "guest"];
+export const ROLES = ["admin", "designer", "lead-developer", "developer", "pm", "guest"];
 // The roles that approve a request For Developers, when they did not file it (docs/desk.md → For Developers or For Designers).
 export const DEVELOPERS = ["lead-developer", "developer"];
 // The two tabs of Requests: whose call a request is (docs/desk.md → For Developers or For Designers).
 export const AUDIENCES = ["developers", "designers"];
 const BUSY = "Design Desk is already working on this. The result appears here.";
 
-// Who may do what. The operator's roster assigns roles; the owner is always `lead`.
+// Who may do what. The operator's roster assigns roles; the owner is always `admin`.
 // `prototypeRoles` comes from config (`prototype_requesters`).
-export function can(role, action, prototypeRoles = ["designer", "lead"]) {
+export function can(role, action, prototypeRoles = ["designer", "admin"]) {
   const member = role !== "guest";
-  const shaper = role === "designer" || role === "lead";
+  const shaper = role === "designer" || role === "admin";
   const dev = DEVELOPERS.includes(role);
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
@@ -64,7 +64,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     // A developer starts and changes everything a designer does; deciding stays a designer's.
     case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev;
     // Whether a request is For Developers, which a developer approves, or For Designers.
-    case "size": return role === "lead-developer" || role === "lead";
+    case "size": return role === "lead-developer" || role === "admin";
     // Skip the vote and the live prototype: approve straight away, or decide and close
     // (docs/desk.md → Deciding straight away).
     case "skip": return shaper || role === "lead-developer";
@@ -73,7 +73,7 @@ export function can(role, action, prototypeRoles = ["designer", "lead"]) {
     // Record a decision from a comment, revoke one and restore it (docs/desk.md → Decisions).
     case "decide": return shaper;
     case "build": return prototypeRoles.includes(role);
-    case "people": return role === "lead";
+    case "people": return role === "admin";
     default: return false;
   }
 }
@@ -92,7 +92,8 @@ export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.ma
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
 // hyphens (`Lead developer` → `lead-developer`). scripts/verify-onboarding.sh reads it the same way.
-export const readRole = (r) => String(r || "").trim().toLowerCase().replace(/\s+/g, "-");
+// `lead` is what the admin role was called before 1.59.0; a roster that still says so keeps working.
+export const readRole = (r) => { const x = String(r || "").trim().toLowerCase().replace(/\s+/g, "-"); return x === "lead" ? "admin" : x; };
 
 // A row's emails: one person may sign in to the Desk with one address and meet Design Desk in
 // Slack with another, so the email cell holds every address of theirs, separated by commas.
@@ -113,8 +114,8 @@ export const personOf = (roster, email) => { const e = String(email || "").trim(
 // Every address a caller goes by: the one they signed in with and their row's others.
 const addressesOf = (who) => [who?.email, ...(who?.emails || [])].map((e) => String(e || "").toLowerCase()).filter(Boolean);
 
-// The roles a lead may ask Design Desk to give a new person (docs/desk.md → People);
-// making a lead stays the operator's.
+// The roles an admin may ask Design Desk to give a new person (docs/desk.md → People);
+// making an admin stays the operator's.
 export const ADDABLE_ROLES = ["designer", "lead-developer", "developer", "pm"];
 const EMAIL = /^[^\s@|`<>]+@[^\s@|`<>]+\.[^\s@|`<>]+$/;
 
@@ -240,7 +241,8 @@ export class Store {
   }
 
   load() {
-    this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8")) : emptyDb();
+    // A role stored before 1.59.0 as `lead` (a vote, a decision's author, who approved) reads as `admin`.
+    this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8"), (k, v) => (k === "role" && v === "lead" ? "admin" : v)) : emptyDb();
     for (const k of Object.keys(emptyDb())) if (this.db[k] === undefined) this.db[k] = emptyDb()[k];
     this.db.seq = { ...emptyDb().seq, ...this.db.seq };
     for (const d of Object.values(this.db.decisions)) upgradeDecision(d);
@@ -832,7 +834,7 @@ export class Store {
     const c = this.card(cardId);
     if (c.kind !== "request") throw bad("only a request is renamed here");
     const mine = [c.created_by?.email, c.origin?.email].some((x) => x && addressesOf(who).includes(String(x).toLowerCase()));
-    if (!mine && !manage) throw forbidden("Only the person who filed it, a designer or a lead can rename this request.");
+    if (!mine && !manage) throw forbidden("Only the person who filed it, a designer or an admin can rename this request.");
     c.title = clean(title, LIMITS.title, "title");
     c.renamed = { by: person(who), at: this.clock() };
     c.updated = c.renamed.at;
@@ -1009,7 +1011,7 @@ export class Store {
     return { card: c, ...(item ? { inbox: item } : {}) };
   }
 
-  // A lead asks Design Desk to put a person on the Desk's list with a role; the agent
+  // An admin asks Design Desk to put a person on the Desk's list with a role; the agent
   // writes the row (docs/desk.md → People). `roster` is the list the server reads now.
   askForPerson(who, { email, role }, roster = [], { owner = false } = {}) {
     const e = clean(String(email ?? ""), 254, "email").toLowerCase();
@@ -1020,7 +1022,7 @@ export class Store {
     if (Object.values(this.db.inbox).some((i) => i.kind === "person" && i.state !== "done" && i.person?.email === e)) throw bad(BUSY);
     const it = this.enqueue("person", null, null, who);
     it.person = { email: e, role };
-    // The owner is a lead whatever the roster says; the agent's re-check needs to know.
+    // The owner is an admin whatever the roster says; the agent's re-check needs to know.
     if (owner) it.by.owner = true;
     this.save();
     return { inbox: it };
@@ -1239,7 +1241,7 @@ export class Store {
     if (c.kind !== "request" || c.status !== "variants" || !(c.variants || []).length) throw bad("There are no drawn options to show the team yet.");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind)))
       throw bad("Design Desk is still drawing the options. Ask the team once they are here.");
-    if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, developers, leads or the person who filed it ask the team for feedback.");
+    if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, developers, admins or the person who filed it ask the team for feedback.");
     c.status = "feedback";
     c.team_feedback = { state: "open", by: person(who), at: this.clock() };
     c.updated = this.clock();
@@ -1287,7 +1289,7 @@ export class Store {
   // ---------- the next call's agenda ----------
 
   // A designer puts a card on the agenda of the team's next call, with the option to
-  // present; the agent writes a brief for it (what to decide); after the call the lead
+  // present; the agent writes a brief for it (what to decide); after the call an admin
   // closes the agenda. The agent only suggests a card; a designer adds it or says Not now.
   queueForCall(cardId, who, note = "", variant = null) {
     const c = this.card(cardId);
@@ -1339,7 +1341,7 @@ export class Store {
   // A designer marks one item presented once the team saw it. Undo puts it back on until
   // the end of that day: an item of an earlier meeting keeps its date and who presented it.
   markPresented(cardId, who, presented = true) {
-    if (!can(who.role, "close")) throw forbidden("Only a designer or the lead marks an item presented.");
+    if (!can(who.role, "close")) throw forbidden("Only a designer or an admin marks an item presented.");
     const c = this.card(cardId);
     if (presented) {
       if (c.agenda?.status !== "queued") throw bad("it is not on the presentation");
@@ -1358,7 +1360,7 @@ export class Store {
 
   // Mark all as presented: what was queued becomes presented, with the date.
   closeCall(who, { date = null } = {}) {
-    if (!can(who.role, "close")) throw forbidden("Only a designer or the lead marks the presentation presented.");
+    if (!can(who.role, "close")) throw forbidden("Only a designer or an admin marks the presentation presented.");
     const when = optText(date, 40, "date") || this.clock(), until = endOfDay(this.clock());
     const done = [];
     for (const c of Object.values(this.db.cards)) if (c.agenda?.status === "queued") { c.agenda = { ...c.agenda, status: "presented", call: when, undo_until: until }; done.push(c.id); }
@@ -1848,7 +1850,7 @@ export class Store {
     return { card: c, inbox: item };
   }
 
-  // A designer or a lead deletes a closed request for good: the card, its conversations, its
+  // A designer or an admin deletes a closed request for good: the card, its conversations, its
   // pictures and Design Desk's finished work on it (docs/desk.md → Deleting a request). Only once
   // nothing is left to do on it, so no live prototype outlives it.
   deleteRequest(cardId, who) {
@@ -1902,7 +1904,7 @@ export class Store {
     return { decision: d };
   }
 
-  // A designer or a lead adds a decision on the Desk, in their own name, with its pictures
+  // A designer or an admin adds a decision on the Desk, in their own name, with its pictures
   // (docs/desk.md → Decisions → Adding one on the Desk).
   recordDecision(who, { text, why = "", concepts = [], pictures = [] } = {}) {
     if (!who || who.agent) throw forbidden("Design Desk does not decide: a person does");
@@ -1910,7 +1912,7 @@ export class Store {
     if (!about.length) throw bad("Say what it is about, e.g. send button.");
     const role = readRole(who.role);
     return this.addDecision({ concepts: about, text, why, pictures,
-      author: { email: who.email, ...(ADDABLE_ROLES.includes(role) || role === "lead" ? { role } : {}) },
+      author: { email: who.email, ...(ADDABLE_ROLES.includes(role) || role === "admin" ? { role } : {}) },
       origin: { kind: "desk", label: "Added on the Desk" } }, { onDesk: true });
   }
 
@@ -2039,7 +2041,7 @@ export class Store {
 function favouriteOf(c) {
   const vs = c.variants || [];
   if (vs.length === 1) return vs[0];
-  const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "lead"].includes(x.role)).length;
+  const score = (v) => Object.values(c.votes?.[v.id] || {}).filter((x) => x.vote === "prefer" && ["designer", "admin"].includes(x.role)).length;
   const s = [...vs].sort((a, b) => score(b) - score(a));
   return s.length && score(s[0]) > 0 && score(s[0]) > (s[1] ? score(s[1]) : 0) ? s[0] : null;
 }
@@ -2293,7 +2295,7 @@ function cleanAuthor(a) {
   // Their role, where it is known (docs/desk.md → Decisions → Who decided).
   if (a.role != null && a.role !== "") {
     const role = readRole(a.role);
-    if (!ADDABLE_ROLES.includes(role) && role !== "lead") throw bad(`author.role must be one of lead, ${ADDABLE_ROLES.join(", ")}`);
+    if (!ADDABLE_ROLES.includes(role) && role !== "admin") throw bad(`author.role must be one of admin, ${ADDABLE_ROLES.join(", ")}`);
     x.role = role;
   }
   return x;

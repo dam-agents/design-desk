@@ -89,7 +89,7 @@ config_json() {
       max_changes_per_run: ($max_changes_per_run | tonumber? // 10),
       profile: ($profile | if . == "" then "auto" else . end),
       default_style: ($default_style | if . == "" then "auto" else . end),
-      prototype_requesters: ($prototype_requesters | if . == "" then "designer, lead" else . end),
+      prototype_requesters: ($prototype_requesters | if . == "" then "designer, admin" else . end),
       max_prototypes: ($max_prototypes | tonumber? // 2),
       prototype_expiry_days: ($prototype_expiry_days | tonumber? // 7),
       prototype_remote: ($prototype_remote | if . == "" then "none" else . end),
@@ -342,10 +342,10 @@ decisions_page() {
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub;
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def role: (.author.role // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-"));
-    def who: {lead: "the team lead", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
+    def role: (.author.role // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+    def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
     def side: role as $r | (.origin.kind // "") as $k
-      | if (["lead", "designer", "pm"] | index($r)) != null then "design"
+      | if (["admin", "designer", "pm"] | index($r)) != null then "design"
         elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
