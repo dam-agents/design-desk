@@ -124,7 +124,7 @@ const endOfDay = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? 
 const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
-const SCREEN_SOURCES = ["pr", "instance", "person", "prototype", "rebuild", "test"];
+const SCREEN_SOURCES = ["pr", "issue", "instance", "person", "prototype", "rebuild", "sketch", "test"];
 // Thread kinds: people ask, comment, raise a concern or note a change to one element;
 // the agent asks (`asks`) when a step cannot go on without a person's answer. A private
 // ask (`private`) is a question only its author and the agent see: Design Desk explains,

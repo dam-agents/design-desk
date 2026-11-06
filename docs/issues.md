@@ -91,7 +91,8 @@ direction, not options.
    data; every number is made up.
 5. Upload each (`design desk asset <file> --kind screen --card C-<n>`), then one
    `design desk upsert` `{id, screens, sketches, style, draw: {failures: 0, note: ""}}`,
-   each picture with a one-line caption; `style` names the look used (the product's own
+   each picture with a one-line caption and its `source` (`instance`, or `issue` for a
+   picture taken from the issue itself; every sketch `sketch`); `style` names the look used (the product's own
    styles at `<repo>@<commit>`, or the fallback). Keep the sources under
    `work/output/issues/C-<n>/`.
 6. An inbox item: `design desk done I-<n> --session <id> --outcome drawn`.

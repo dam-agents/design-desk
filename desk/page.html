@@ -2607,8 +2607,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const decode = (a) => (a.encoding === "base64" ? new TextDecoder().decode(Uint8Array.from(atob(a.data), (ch) => ch.charCodeAt(0))) : a.data);
 
   // ---------- shared pieces of a page ----------
-  const FROM = { pr: "from the pull request", instance: "from Design Desk's copy of the product", prototype: "from the live prototype", rebuild: "drawn from the code, not a real screen", test: "from an automated test" };
-  const fromOf = (s) => s.source === "person" ? `added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "";
+  // Every picture says where it came from: a person's own, a real screen, a screenshot from the
+  // pull request or the issue, or one AI drew, which is never a real screen.
+  const FROM = { pr: "Screenshot from the pull request", issue: "Screenshot from the GitHub issue", instance: "Real screen, taken on Design Desk's copy of the product", prototype: "Real screen, taken on the live prototype",
+    rebuild: "AI drawing from the code, not a real screen", sketch: "AI sketch, not a real screen", test: "Screenshot from an automated test" };
+  const fromOf = (s) => s.source === "person" ? `Added by ${s.by?.email && s.by.email === S.me?.email ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "Where it came from is not recorded";
   const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
   // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
   // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
@@ -2632,8 +2635,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // Before and after of one screen sit side by side, with the differences drawn on the third.
   // Each stage keeps its own column in every pair: an After with no Before still sits in the
   // After column, under the other Afters, and the missing place stays empty.
-  function shots(list) {
-    list = list || [];
+  // `source`: where a list's pictures came from when they do not say (an issue's sketches).
+  function shots(list, source) {
+    list = (list || []).map((x) => x.source || !source ? x : { ...x, source });
     if (!list.length) return "";
     const pairs = [...new Set(list.filter((x) => x.stage).map((x) => x.pair))];
     const cols = [["before", "Before"], ["after", "After"], ["diff", "What changed"]].filter(([st]) => list.some((x) => x.stage === st));
@@ -3000,7 +3004,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
-      ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch)}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
+      ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch, "sketch")}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
         : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>${can("draw") && !busy && open && !c.designed ? `<div class="actions"><button class="btn" data-act="draw">Draw it</button></div>` : ""}`}
       ${c.draw?.note ? `<p class="hint">${txt(c.draw.note)}</p>` : ""}
       ${renderThreads(c)}`;
