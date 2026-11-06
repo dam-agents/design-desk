@@ -784,6 +784,8 @@
   /* The spec's versions read as plain text: each a link, the one shown in ink. */
   .spec-versions button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .spec-versions button:hover { text-decoration: underline; }
   .spec-versions button[aria-pressed="true"] { color: var(--ink); font-weight: 600; cursor: default; text-decoration: none; }
+  .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, #1a7f37 14%, var(--panel)); color: #1a7f37; } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, #8250df 14%, var(--panel)); color: #8250df; }
   .spec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; } .spec-head .hint { margin: 0; } .spec-tools { margin: 0; }
   .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
   .spec-preview { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow: auto; max-height: 36em; }
@@ -3637,7 +3639,24 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const card = c.sent_card && S.cards.find((x) => x.id === c.sent_card);
     return `<div class="sent"><b>Sent to developers${sent && c.updated ? ` on ${esc(day(c.updated))}` : ""}</b>
       ${url ? `<p><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(what)} on GitHub ↗</a>${card ? ` · on the Issues page: <button class="anchor" data-card="${esc(card.id)}">${esc(card.title)}</button>${num(card)}` : ""}</p>` : ""}
+      ${followWork(url, c)}
       ${sent ? `<p class="hint">When it ships, it appears under PR Changes.</p>` : ""}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
+  }
+  // Where the work stands on GitHub, as the Desk's copy has it (docs/desk.md → GitHub on the
+  // Desk): the issue's state, who has it, its labels, and every pull request that builds it.
+  const GH_STATE = { open: ["Open", "gh-open"], closed: ["Closed", "gh-draft"], merged: ["Merged", "gh-merged"], draft: ["Draft", "gh-draft"] };
+  function followWork(url, c) {
+    const ref = ghRef(url);
+    if (!ref) return "";
+    if (!(ref.key in S.gh)) { ghLoad([ref.key]).then(() => { if (S.card?.id === c.id) renderDetail(); }).catch(() => {}); return `<p class="hint">Reading where it stands…</p>`; }
+    const g = S.gh[ref.key];
+    if (!g) return `<p class="hint">Design Desk has not read it on GitHub yet; its next check does.</p>`;
+    const pill = (st) => { const [w, o] = GH_STATE[st] || [st || "?", "gh-draft"]; return `<span class="chip" data-o="${o}">${esc(w)}</span>`; };
+    const who = (g.assignees || []).length ? ` · with ${esc(g.assignees.join(", "))}` : "";
+    const prs = (g.linked || []).map((p) => `<li>${pill(p.state)} <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.title)} ↗</a>${p.author ? ` <span class="hint">by ${esc(p.author)}</span>` : ""}</li>`).join("");
+    const agent = c.spec?.sent?.implement || c.approved?.implement;
+    return `<div class="follow"><p>${pill(g.state)} ${esc(g.kind === "pr" ? "The pull request" : "The issue")}${who}${(g.labels || []).length ? ` · <span class="hint">${esc(g.labels.join(", "))}</span>` : ""}${g.fetched ? ` <span class="hint">· read ${esc(when(g.fetched))}</span>` : ""}</p>
+      ${prs ? `<p class="hint" style="margin:6px 0 2px">Pull requests that build it</p><ul class="follow-prs">${prs}</ul>` : g.kind === "issue" && g.state === "open" ? `<p class="hint">No pull request builds it yet${agent ? ": the coding agent opens one once it starts" : ""}.</p>` : ""}</div>`;
   }
   // An issue or a change that already has a request (one not closed) offers no Design this or
   // Adjust the design: the line A request from this links to it. One closed or sent to developers brings the button back.
@@ -4524,7 +4543,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const github = (S.me?.handoff?.[c.request?.type || "idea"] || "desk") !== "desk";
       res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
-        ...(github ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
+        ...(github && !S.me?.spec_review ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
         send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? { implement: true } : {}) }) });
       if (!res) return;
     }
@@ -4830,8 +4849,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       return;
     }
     if ("specSend" in ds) {
-      const r = await ask({ title: "Send the spec to developers", body: "Design Desk sends the spec as it is now, with the approved design, its pictures and states. Once sent, it can't be taken back.", ok: "Send to developers",
-        send: () => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send" }) });
+      // The route is picked here: an issue a developer builds from, or straight to the coding
+      // agent, its issue labelled for it (docs/handoff.md step 6). Spec on the Desk only: no choice.
+      const c = S.card, route = S.me?.handoff?.[c.request?.type || "idea"] || "desk";
+      const choices = route === "desk" ? null : [
+        { id: "issue", name: "As an issue for developers", hint: "A developer picks it up and builds it from the spec and the design." },
+        { id: "agent", name: "Straight to the coding agent", hint: "The issue gets the coding agent's label, so it starts building; you follow its pull request here." }];
+      const r = await ask({ title: "Send the spec to developers", body: route === "desk" ? "The spec stays on the Desk for developers to read; nothing goes to GitHub." : "Design Desk sends the spec as it is now, with the approved design, its pictures and states. Once sent, it can't be taken back.",
+        ok: "Send to developers", choices, pick: choices ? (c.approved?.implement ? "agent" : "issue") : null,
+        send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send", ...(choices ? { implement: a.choice === "agent" } : {}) }) });
       if (r) { toast("The spec is on its way to developers."); await openCard(S.card.id); await refreshList(); }
       return;
     }

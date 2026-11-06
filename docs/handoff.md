@@ -70,7 +70,10 @@ card the people who may approve it read the spec, and:
   the spec from its newest version (theirs, if they edited it) as the note says, upload it,
   `spec: {asset, acceptance, review: "draft"}`, `done --outcome review`;
 - **Send to developers** — a `handoff` item with `scope: "deliver"`: go on at step 5 with the
-  spec's newest version exactly as it is, never rewritten.
+  spec's newest version exactly as it is, never rewritten. Here the person picks the route,
+  where it goes to GitHub: **As an issue for developers**, or **Straight to the coding agent**
+  (the item's `implement`, the issue labelled for it; step 6). Approve then asks no such
+  thing; with `spec_review: disabled` Approve still does.
 ## Sending it
 
 5. **The bundle.** `design desk bundle C-<n> /tmp/design-desk-c<n>/handoff`: `spec.md` (the

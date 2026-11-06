@@ -525,6 +525,8 @@ export class Store {
         key, kind: x.kind, title: String(x.title || key).replace(/\s+/g, " ").trim().slice(0, LIMITS.title) || key, state: optText(x.state, 30, "state"),
         url: /^https:\/\/github\.com\//.test(String(x.url || "")) ? String(x.url).slice(0, 500) : "",
         author: optText(x.author, 100, "author"), labels: (Array.isArray(x.labels) ? x.labels : []).slice(0, 20).map((l) => String(l).slice(0, 60)),
+        assignees: (Array.isArray(x.assignees) ? x.assignees : []).slice(0, 10).map((a) => String(a).slice(0, 100)),
+        linked: (Array.isArray(x.linked) ? x.linked : []).slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
       };
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
@@ -1094,7 +1096,7 @@ export class Store {
   // Design Desk writes the spec as a draft (`spec.review: "draft"`); a person reads it, edits
   // it, asks for changes, or sends it. Only a send lets it leave the Desk (docs/handoff.md →
   // Review before it goes). Every version stays: an edit or a rewrite keeps the one it replaces.
-  specAction(cardId, who, { action, text = "", note = "" } = {}) {
+  specAction(cardId, who, { action, text = "", note = "", implement = null } = {}) {
     const c = this.card(cardId);
     if (who?.agent) throw forbidden("A person reads the spec and sends it; Design Desk writes it.");
     if (c.kind !== "request" || c.status !== "spec" || !c.spec?.asset) throw bad("There is no developer spec to look at yet.");
@@ -1122,11 +1124,16 @@ export class Store {
       return { card: c, inbox: item };
     }
     if (action === "send") {
-      c.spec = { ...c.spec, review: "sent", sent: { by: person(who), at } };
+      // Here the person picks the route: an issue for developers, or straight to the coding
+      // agent with its label (`implement`); left out, what Approve said holds.
+      const straight = implement == null ? Boolean(c.approved?.implement) : Boolean(implement);
+      c.spec = { ...c.spec, review: "sent", sent: { by: person(who), at, implement: straight } };
+      if (c.approved) c.approved = { ...c.approved, implement: straight || undefined };
+      if (c.approved && !straight) delete c.approved.implement;
       c.updated = at;
       const item = this.enqueue("handoff", cardId, null, who, c.approved?.variant || "");
       item.scope = "deliver";
-      if (c.approved?.implement) item.implement = true;
+      if (straight) item.implement = true;
       this.save();
       return { card: c, inbox: item };
     }
