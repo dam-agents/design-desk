@@ -488,7 +488,11 @@
   dialog h2 { font-size: 18px; } label { font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 4px; }
   .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: 6px; border: 1px solid var(--line); }
-  .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: var(--fs-ui); } .choices input { width: auto; } .choices .rn { white-space: nowrap; flex: none; }
+  /* Choices read as a table: the button, the name and its hint each in a column of their own. */
+  .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: var(--fs-ui); }
+  #cf-choices { grid-template-columns: auto minmax(0, max-content) minmax(0, 1fr); gap: 8px 10px; align-items: baseline; }
+  #cf-choices label { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; }
+  #cf-choices label .sub { margin: 0; } .choices input { width: auto; } .choices .rn { white-space: nowrap; flex: none; }
   /* The roles read as a table: the radio, the role's name, then its description in one column. */
   #pe-roles { grid-template-columns: auto max-content 1fr; column-gap: 10px; }
   #pe-roles label { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
@@ -2037,7 +2041,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     $("#cf-body").innerHTML = body ? md(body) : "";
     $("#cf-ok").textContent = ok;
     const ticked = (id) => (multi ? (pick || []).includes(id) : id === pick);
-    $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /> ${esc(c.name)}${c.hint ? ` <span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
+    $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /><span class="cn">${esc(c.name)}</span>${c.hint ? `<span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
     const okBtn = $("#cf-ok"), none = () => multi && choices && !f.querySelector("input[name=choice]:checked");
     const noteHidden = () => !note || Boolean(noteFor && f.querySelector("input[name=choice]:checked")?.value !== noteFor);
     okBtn.disabled = none(); $("#cf-choices").onchange = () => { okBtn.disabled = none(); $("#cf-note-wrap").hidden = noteHidden(); };
@@ -4868,7 +4872,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         { id: "agent", name: "Straight to the coding agent", hint: "The issue gets the coding agent's label, so it starts building; you follow its pull request here." }];
       const r = await ask({ title: route === "desk" ? "Mark the spec ready for developers" : "Send the spec to developers",
         body: route === "desk" ? `This Desk keeps the spec of ${c.request?.type === "proposal" ? "a proposal" : "an idea"} here: developers read it on the Desk, and nothing goes to GitHub. To have it filed on GitHub instead, ask ${contact()} to change where ideas go (the \`handoff\` setting).`
-          : "Design Desk sends the spec as it is now, with the approved design, its pictures and states, to GitHub. Once sent, it can't be taken back.",
+          : "Design Desk sends the spec as it is now, with the approved design, its pictures and states, to GitHub.",
         ok: route === "desk" ? "Mark ready" : "Send to developers", choices, pick: choices ? (c.approved?.implement ? "agent" : "issue") : null,
         send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send", ...(choices ? { implement: a.choice === "agent" } : {}) }) });
       if (r) { toast("The spec is on its way to developers."); await openCard(S.card.id); await refreshList(); }
