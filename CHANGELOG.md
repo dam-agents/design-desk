@@ -12,7 +12,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
 ([docs/desk.md](docs/desk.md) → **Publishing the page**). The private ask's text box
-has a short placeholder, and at Team feedback the step pill always offers a move on; Send to developers now… is Approve… like every other step. A user story pressed shows its player bar at once, and says when it can't be played. The state's ⓘ lists every next move, with why one is not possible; based on: reads as text with an arrow. The list folds away with an arrow on its edge. The private ask's five starters are shorter and fit on two lines.
+has a short placeholder, and at Team feedback the step pill always offers a move on; Send to developers now… is Approve… like every other step. A user story pressed shows its player bar at once, and says when it can't be played. The state's ⓘ lists every next move, with why one is not possible; based on: reads as text with an arrow. The list folds away with an arrow on its edge. The private ask's five starters are shorter and fit on two lines. A folded request hides its pictures.
 
 ## 1.52.1 — 2026-11-06
 
