@@ -18,6 +18,12 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    agent manifest ([docs/manifest.md](docs/manifest.md) → **Write, check, publish**): it lists
    the page and its `design-decisions` contract once published.
 
+## 1.57.1 — 2026-11-06
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**).
+
 ## 1.57.0 — 2026-11-06
 
 **Upgrade:**
