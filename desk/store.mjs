@@ -526,7 +526,8 @@ export class Store {
         url: /^https:\/\/github\.com\//.test(String(x.url || "")) ? String(x.url).slice(0, 500) : "",
         author: optText(x.author, 100, "author"), labels: (Array.isArray(x.labels) ? x.labels : []).slice(0, 20).map((l) => String(l).slice(0, 60)),
         assignees: (Array.isArray(x.assignees) ? x.assignees : []).slice(0, 10).map((a) => String(a).slice(0, 100)),
-        linked: (Array.isArray(x.linked) ? x.linked : []).slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
+        // No list read this time (`linked` left out): the one from before stays.
+        linked: !Array.isArray(x.linked) ? (was?.linked || []) : x.linked.slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
       };
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
@@ -1502,6 +1503,9 @@ export class Store {
       else if (k === "spec") {
         // A rewrite keeps the version it replaces, a person's edit included (specAction).
         const was = c?.spec, now = cleanLinks(k, fields.spec);
+        // A new version Design Desk writes waits for a person (docs/handoff.md → Review before it
+        // goes), unless the write says otherwise (`review`, as with spec_review disabled) or it went.
+        if (now?.asset && now.asset !== was?.asset && now.review === undefined && !was?.sent) now.review = "draft";
         next.spec = now && was?.asset && now.asset && now.asset !== was.asset
           ? { ...now, history: [...(was.history || []), { asset: was.asset, at: was.at || c.updated, by: was.by || { agent: true } }].slice(-20), at: this.clock(), by: { agent: true } }
           : now && was ? { ...now, history: now.history || was.history, ...(was.sent && !now.sent ? { sent: was.sent } : {}) } : now;
@@ -2079,7 +2083,8 @@ function versioned(list, before, at, removed = []) {
     // Alternatives are of the option at one version: a redrawn option drops the ones it had.
     const alternatives = given.alternatives ? given.alternatives.map((x) => ({ ...x, of: now, drawn: at })) : old && old.asset === given.asset ? old.alternatives || [] : [];
     // A person's own option keeps who added it through every run's upsert.
-    const v = { ...given, ...(old?.by ? { by: old.by } : {}), stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
+    // An option carried over from an approved request keeps saying so through every version.
+    const v = { ...given, ...(old?.by ? { by: old.by } : {}), ...(old?.carried ? { carried: old.carried } : {}), stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };

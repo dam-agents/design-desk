@@ -155,13 +155,29 @@ async function shotsArg(file) {
 // The handoff bundle of an approved request (docs/handoff.md → The bundle): what a developer and
 // a coding agent build from, the same for any product. `design` is design.json; `files` the
 // assets to save beside it, each at its path in the bundle. Pure: the card in, the plan out.
+// The acceptance criteria as the spec's newest version has them (a person may have edited it):
+// the lines under its "Acceptance criteria" heading, each "Given …, when …, then …".
+export function acceptanceOf(text) {
+  const lines = String(text || "").split("\n"), at = lines.findIndex((l) => /^#{1,6}\s*acceptance criteria\s*$/i.test(l.trim()));
+  if (at < 0) return null;
+  const out = [];
+  for (const l of lines.slice(at + 1)) {
+    if (/^#{1,6}\s/.test(l.trim())) break;
+    const m = /^\s*(?:[-*]|\d+[.)])\s*(?:\*\*)?given\b(?:\*\*)?\s*(.+?),?\s*(?:\*\*)?when\b(?:\*\*)?\s*(.+?),?\s*(?:\*\*)?then\b(?:\*\*)?\s*(.+?)\s*\.?\s*$/i.exec(l);
+    if (m) out.push({ given: m[1].trim(), when: m[2].trim(), then: m[3].trim() });
+  }
+  return out;
+}
+
 export function bundleOf(card) {
   const pick = card.live_pick?.variant || card.approved?.variant;
   const v = (card.variants || []).find((x) => x.id === pick) || (card.variants || [])[0] || null;
-  const version = card.live_pick?.variant === v?.id ? card.live_pick.version : card.approved?.version || v?.version || 1;
+  // What a live prototype showed counts only when there is one, for this option.
+  const shown = Boolean(v && card.live_pick && card.live_pick.variant === v.id);
+  const version = shown ? card.live_pick.version : card.approved?.version || v?.version || 1;
   const files = [];
   if (card.spec?.asset) files.push({ path: "spec.md", asset: card.spec.asset });
-  const mockup = card.live_pick?.variant === v?.id ? card.live_pick.asset : v?.asset;
+  const mockup = shown ? card.live_pick.asset : v?.asset;
   if (mockup) files.push({ path: "mockup.html", asset: mockup });
   const slug = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "state";
   const states = (v?.states || []).map((x) => {
@@ -173,7 +189,7 @@ export function bundleOf(card) {
   const design = {
     format: "design-desk/handoff@1",
     request: { id: card.id, title: card.title, type: card.request?.type || "idea", problem: card.request?.problem || "", vision: card.request?.vision || "" },
-    approved: { option: v ? { id: v.id, name: v.name, version } : null, by: card.approved?.by?.email || null, at: card.approved?.at || null, straight_to_implementation: Boolean(card.approved?.implement) },
+    approved: { option: v ? { id: v.id, name: v.name, version } : null, by: card.approved?.by?.role || null, at: card.approved?.at || null, straight_to_implementation: Boolean(card.approved?.implement) },
     // What a design change can and cannot do here: the parts a developer adds beyond the look.
     boundary: { verdict: card.triage?.verdict || null, can: card.triage?.can || [], needs_developer: card.triage?.cannot || [] },
     mockup: mockup ? "mockup.html" : null,
@@ -231,13 +247,14 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
   const said = api(`repos/${repo}/issues/${n}/comments`).map((c) => ({ author: c.user?.login || "", at: c.created_at, url: c.html_url, body: c.body || "" }));
   const reviews = pr ? api(`repos/${repo}/pulls/${n}/reviews`).filter((v) => v.body).map((v) => ({ author: v.user?.login || "", at: v.submitted_at, url: v.html_url, body: `[review: ${v.state}] ${v.body}` })) : [];
   // An issue's pull requests: the ones that mention it, newest last; the Desk follows the work on it.
-  // A timeline it cannot read leaves the list empty: the issue itself still counts.
-  const timeline = () => { try { return api(`repos/${repo}/issues/${n}/timeline`); } catch { return []; } };
-  const linked = pr ? [] : timeline().filter((e) => e.event === "cross-referenced" && e.source?.issue?.pull_request)
+  // A timeline it cannot read gives no list at all (`null`): the Desk keeps the one it had.
+  const timeline = () => { try { return api(`repos/${repo}/issues/${n}/timeline`); } catch { return null; } };
+  const read = pr ? [] : timeline();
+  const linked = read === null ? null : read.filter((e) => e.event === "cross-referenced" && e.source?.issue?.pull_request)
     .map((e) => e.source.issue).filter((p, i, all) => all.findIndex((q) => q.html_url === p.html_url) === i)
     .map((p) => ({ title: p.title, url: p.html_url, state: p.pull_request?.merged_at ? "merged" : p.draft ? "draft" : p.state, author: p.user?.login || "" }));
   return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",
-    labels: (it.labels || []).map((l) => l.name), assignees: (it.assignees || []).map((a) => a.login), linked, body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
+    labels: (it.labels || []).map((l) => l.name), assignees: (it.assignees || []).map((a) => a.login), ...(linked === null ? {} : { linked }), body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
 }
 // `io` stands in for the Desk server and gh in a test.
 export async function githubSync(card, io = { call, gh: undefined }) {
@@ -344,6 +361,9 @@ export async function main(_cmd, argv) {
           pictures.push(name);
         }
         writeFileSync(specFile, text);
+        // The spec's newest text wins over the list written with its first version.
+        const fromText = acceptanceOf(text);
+        if (fromText) design.acceptance = fromText;
       } catch (e) { if (e.code !== "ENOENT") throw e; }
       design.pictures = pictures;
       writeFileSync(join(pos[1], "design.json"), `${JSON.stringify(design, null, 2)}\n`);

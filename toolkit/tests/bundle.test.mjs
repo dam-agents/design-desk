@@ -2,7 +2,7 @@
 // and design.json for any product.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bundleOf } from "../bin/desk.mjs";
+import { bundleOf, acceptanceOf } from "../bin/desk.mjs";
 
 const card = {
   id: "C-7", title: "Calmer header", request: { type: "idea", problem: "The header is too loud." },
@@ -22,6 +22,7 @@ test("the bundle carries the approved option, its states, the boundary and the a
   assert.equal(design.format, "design-desk/handoff@1");
   assert.deepEqual(design.approved.option, { id: "v2", name: "Quiet", version: 3 }, "the option a person approved, not the first");
   assert.equal(design.approved.straight_to_implementation, true);
+  assert.equal(design.approved.by, null, "no e-mail address in a file that may go public");
   assert.deepEqual(design.boundary.needs_developer, ["Sort by spend: no such order in the data."]);
   assert.deepEqual(design.elements[0].states, ["s1"], "an element lists its states");
   assert.equal(design.states[0].shot, "shots/s1-empty-list.png");
@@ -36,4 +37,19 @@ test("a live prototype's option and version are what the bundle carries", () => 
   const { design, files } = bundleOf(live);
   assert.deepEqual(design.approved.option, { id: "v1", name: "Bold", version: 2 });
   assert.equal(files.find((f) => f.path === "mockup.html").asset, "A-11", "the page the prototype showed");
+});
+
+test("a request approved before any option bundles its spec alone", () => {
+  const { design, files } = bundleOf({ id: "C-8", title: "Copy only", approved: { by: { role: "designer" } }, variants: [], spec: { asset: "A-5" } });
+  assert.equal(design.approved.option, null);
+  assert.equal(design.approved.by, "designer");
+  assert.deepEqual(files, [{ path: "spec.md", asset: "A-5" }]);
+});
+
+test("the acceptance criteria come from the spec's own text, as a person last edited it", () => {
+  const text = "# Spec\n\n## Acceptance criteria\n\n- Given the agents list, when it opens, then the header is grey.\n- **Given** no agents **when** the list opens **then** it says so\n- A loose line\n\n## Notes\n- Given x, when y, then z";
+  assert.deepEqual(acceptanceOf(text), [
+    { given: "the agents list", when: "it opens", then: "the header is grey" },
+    { given: "no agents", when: "the list opens", then: "it says so" }]);
+  assert.equal(acceptanceOf("# Spec without them"), null, "no heading: the card's list stands");
 });

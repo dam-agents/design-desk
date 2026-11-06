@@ -222,6 +222,9 @@ test("the developer spec waits for a person: edit keeps every version, changes g
   s.upsertCard({ id: card.id, spec: { ...s.card(card.id).spec, asset: third, review: "draft" } });
   s.done(asked.inbox.id, "s3", "review");
   assert.deepEqual(s.card(card.id).spec.history.map((x) => x.asset), [first, edited.spec.asset], "the rewrite keeps Alice's version too");
+  const fourth = shot();
+  s.upsertCard({ id: card.id, spec: { asset: fourth } });
+  assert.equal(s.card(card.id).spec.review, "draft", "a new version Design Desk writes waits for a person, even when the write leaves review out");
   const sent = s.specAction(card.id, alice, { action: "send" });
   assert.deepEqual([sent.inbox.kind, sent.inbox.scope, sent.card.spec.review], ["handoff", "deliver", "sent"]);
   assert.throws(() => s.specAction(card.id, alice, { action: "edit", text: "late" }), /already on its way|in progress|still/i);
@@ -442,6 +445,16 @@ test("a failed card write leaves nothing behind", () => {
   assert.throws(() => s.upsertCard({ kind: "request", title: "Bad link", prototype: { state: "live", url: "javascript:alert(1)" } }), /http/);
 });
 
+test("an issue keeps its linked pull requests when a read could not get them", () => {
+  const s = fresh();
+  const rec = (extra) => ({ key: "acme/widgets#3", kind: "issue", title: "Red", state: "open", url: "https://github.com/acme/widgets/issues/3", ...extra });
+  s.putGithub([rec({ linked: [{ title: "Build it", url: "https://github.com/acme/widgets/pull/8", state: "open", author: "bot" }], assignees: ["bot"] })]);
+  s.putGithub([rec({})]);
+  assert.deepEqual(s.db.github["acme/widgets#3"].linked.map((p) => p.url), ["https://github.com/acme/widgets/pull/8"], "left out: the list from before stays");
+  s.putGithub([rec({ linked: [] })]);
+  assert.deepEqual(s.db.github["acme/widgets#3"].linked, [], "read and empty: none");
+});
+
 test("an approved design is final: nothing changes it; a new request starts from it", () => {
   const s = fresh();
   const { card, inbox: item } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });
@@ -458,6 +471,10 @@ test("an approved design is final: nothing changes it; a new request starts from
   assert.deepEqual(next.variants.map((v) => [v.id, v.name, v.asset, v.carried.card]), [["v1", "Quiet", page, card.id]], "the ticked option carries over as it was");
   assert.equal(next.request.auto, true, "carried options are changed right after triage");
   assert.throws(() => s.createRequest(alice, { title: "x", problem: "y", from: card.id, carry: ["v9"] }), /no option v9/);
+  // A redraw of the carried option keeps saying where it came from.
+  const page2 = s.addAsset({ kind: "variant", name: "v2.html", contentType: "text/html", data: "<p>v2</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: next.id, variants: [{ id: "v1", name: "Quiet", asset: page2, version: 1 }] });
+  assert.equal(s.getCard(next.id).variants[0].carried?.card, card.id, "the revise keeps the carried marker");
 });
 
 test("a closed request takes no work and no late status from a session", () => {

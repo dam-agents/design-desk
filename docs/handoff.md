@@ -46,7 +46,7 @@ sent; the developer or coding agent gets only answers.
    bundle carries it to the coding agent.
 3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset, acceptance,
    review: "draft"}`; the card shows it under **The developer spec**. With `spec_review:
-   disabled` leave `review` out.
+   disabled` write `review: "sent"`: a spec without it waits for a person.
 4. **Questions on the Desk, never in the spec.** List what the spec leaves to the developer's
    judgement that changes what gets built (a state, a copy, a breakpoint, an edge case the
    options never showed, which of two readings of a note) and that the card, its threads and
@@ -88,7 +88,9 @@ card the people who may approve it read the spec, and:
    `states/` and `shots/` (each state alone), `pictures/` (the spec's pictures, its lines pointing at them). Look at `design.json`: every element has its
    states, every acceptance line names something on the screens. With `prototype_remote` set,
    commit the folder as `handoff/C-<n>/` on the request's `design-desk/` branch (the
-   prototype's, else `design-desk/c<n>-handoff` from the default branch) and push it there.
+   prototype's, else `design-desk/c<n>-handoff` from the default branch), run `design guard`
+   on that exact diff ([boundary.md](boundary.md)), and push only when it passes; a refusal
+   pushes nothing, and the delivery carries `design.json` in the issue alone.
 6. Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
    [actions.md](actions.md); the bundled one is
    [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)), with the approved option's

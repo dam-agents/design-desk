@@ -122,7 +122,7 @@ The person deciding should know it before a single variant exists.
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request
    with `request.auto` (filed by someone who may start options, with `request.options` above
-   0) whose verdict is not `product`.
+   0, or options carried over: `request.carry`) whose verdict is not `product`.
 6. `design desk done I-<n> --outcome triaged`.
 
 A request too vague to triage gets **one question from you** instead, with your best guess

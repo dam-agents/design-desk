@@ -3429,7 +3429,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // While the spec is edited, the text on the left reads on the right, pictures included.
   let specTimer = null;
   async function specPreview() { const t = $("#spec-text"), p = $("#spec-preview"); if (!t || !p) return; p.innerHTML = md(t.value); await loadPictures(p); }
-  document.addEventListener("input", (e) => { if (e.target.id === "spec-text") { clearTimeout(specTimer); specTimer = setTimeout(specPreview, 300); } });
+  document.addEventListener("input", (e) => { if (e.target.id === "spec-text") { S.specDraft = { card: S.card?.id, text: e.target.value }; clearTimeout(specTimer); specTimer = setTimeout(specPreview, 300); } });
 
   // The prototype's demo account in the facts' style: grey words, the values in ink.
   const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}${l.hint ? `<span>${esc(l.hint)}</span>` : ""}`;
@@ -3681,7 +3681,17 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function followWork(url, c) {
     const ref = ghRef(url);
     if (!ref) return "";
-    if (!(ref.key in S.gh)) { ghLoad([ref.key]).then(() => { if (S.card?.id === c.id) renderDetail(); }).catch(() => {}); return `<p class="hint">Reading where it stands…</p>`; }
+    // Read again at most once a minute while the request is open: the page refreshes itself.
+    S.ghRead ||= {};
+    const stale = ref.key in S.gh && Date.now() - (S.ghRead[ref.key] || 0) > 60000;
+    if (!(ref.key in S.gh) || stale) {
+      S.ghRead[ref.key] = Date.now();
+      const was = JSON.stringify(S.gh[ref.key] ?? null);
+      if (stale) delete S.gh[ref.key];
+      ghLoad([ref.key]).then(() => { if (S.card?.id === c.id && JSON.stringify(S.gh[ref.key] ?? null) !== was) renderDetail(); }).catch(() => {});
+      if (!stale) return `<p class="hint">Reading where it stands…</p>`;
+      S.gh[ref.key] = JSON.parse(was);
+    }
     const g = S.gh[ref.key];
     if (!g) return `<p class="hint">Design Desk has not read it on GitHub yet; its next check does.</p>`;
     const pill = (st) => { const [w, o] = GH_STATE[st] || [st || "?", "gh-draft"]; return `<span class="chip" data-o="${o}">${esc(w)}</span>`; };
@@ -4385,7 +4395,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const spec = $("#spec-body"), specText = $("#spec-text");
     // The spec's pictures are Desk assets (`![view](asset:A-n)`): they show here, and in the preview while you edit.
     if (spec?.dataset.asset) { try { spec.innerHTML = md(decode(await asset(spec.dataset.asset))); await loadPictures(spec); } catch { spec.textContent = "The spec could not be loaded."; } }
-    if (specText && S.card?.spec?.asset && !specText.value) { try { specText.value = decode(await asset(S.card.spec.asset)); await specPreview(); } catch {} }
+    // While you edit, a redraw (the page refreshes itself) keeps what you typed, not the saved text.
+    if (specText && S.card?.spec?.asset && !specText.value) { try { specText.value = S.specDraft?.card === S.card.id ? S.specDraft.text : decode(await asset(S.card.spec.asset)); await specPreview(); } catch {} }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
     if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
@@ -4868,12 +4879,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // The developer spec, read before it goes (docs/handoff.md → Review before it goes).
     if ("specView" in ds) { S.specView = ds.specView; renderDetail(); return; }
     if ("specEdit" in ds) { S.specEdit = S.card.id; S.specView = null; renderDetail(); return; }
-    if ("specCancel" in ds) { S.specEdit = null; renderDetail(); return; }
+    if ("specCancel" in ds) { S.specEdit = null; S.specDraft = null; renderDetail(); return; }
     if ("specSave" in ds) {
       const text = $("#spec-text")?.value || "";
       if (!text.trim()) { toast("The spec is empty."); return; }
       await api("POST", `/api/cards/${S.card.id}/spec`, { action: "edit", text });
-      S.specEdit = null; toast("Saved as a new version. It goes when you press Send to developers."); await openCard(S.card.id); return;
+      S.specEdit = null; S.specDraft = null; toast("Saved as a new version. It goes when you press Send to developers."); await openCard(S.card.id); return;
     }
     if ("specChanges" in ds) {
       const r = await ask({ title: "Ask for changes to the spec", body: "Design Desk rewrites the spec as you say and brings it back here to read.", ok: "Ask for changes", note: "What should change?", max: 2000,
