@@ -20,7 +20,9 @@
 #            expiring_due (docs/desk.md).
 #   issues — the open issues of the watched repositories, for the Desk's Issues page
 #            (docs/issues.md): new or changed ones to read, the sprint's and assigned
-#            ones to draw, closed ones to archive → issue_news_due, drawings_due.
+#            ones to draw, closed ones to archive → issue_news_due, drawings_due; and
+#            the public decisions page when it changed → decisions_page_due
+#            (docs/decisions-page.md).
 #   digest — the week in the Desk's store, and 30 days of feedback for its themes
 #            (docs/digest.md); nothing in a quiet week or once the week's digest exists.
 #   audit  — deterministic health checks (docs/audit.md).
@@ -79,7 +81,7 @@ config_json() {
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
     --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
     --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg issue_next_sprint "$(cfg issue_next_sprint)" --arg issue_news_label "$(cfg issue_news_label)" \
-    --arg max_issue_drawings "$(cfg max_issue_drawings)" \
+    --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -124,7 +126,8 @@ config_json() {
       issue_sprint: ($issue_sprint | if . == "" then "milestone" else . end),
       issue_next_sprint: ($issue_next_sprint | if . == "" then "milestone" else . end),
       issue_news_label: ($issue_news_label | if . == "" then "none" else . end),
-      max_issue_drawings: ($max_issue_drawings | tonumber? // 5)}'
+      max_issue_drawings: ($max_issue_drawings | tonumber? // 5),
+      decisions_page: ($decisions_page | if . == "public" then "public" else "off" end)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -317,6 +320,71 @@ watch_mode() {
       changes_due:$due, issues_due:$issues, config:$config, logs:$logs}'
 }
 
+# ===================================================== THE DECISIONS PAGE ===
+# The team's decisions as one public text page for coding agents (docs/decisions-page.md).
+# Rendered here, deterministically, into work/decisions-page.md (a cache: the agent
+# publishes it); due when its hash differs from the one last published
+# (work/decisions-page.json). No names, logins, e-mails or links: only roles and kinds.
+# Prints the `decisions_page_due` array.
+decisions_page() {
+  DEC_DUE='[]'
+  local CONF="$1" DB="$DESK_DIR/db.json" PAGE="$WORK/decisions-page.md" REC="$WORK/decisions-page.json" roster sha old
+  [ "$(jq -r .decisions_page <<<"$CONF")" = public ] || { return; }
+  [ -f "$DB" ] || { log "decisions page: no Desk store yet"; return; }
+  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
+  roster="$(cfg_table 'Desk people' | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $2); gsub(/^[ \t]+|[ \t]+$/, "", $3); print $2 "\t" $3}' \
+    | jq -R 'split("\t") | {key: (.[0] | ascii_downcase), value: (.[1] // "" | ascii_downcase | gsub("\\s+"; "-"))}' | jq -sc 'reverse | from_entries')"
+  jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" '
+    def scrub: gsub("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[a-z]{2,}"; "[e-mail]") | gsub("<@[A-Z0-9]+>"; "[person]")
+      | gsub("xox[abposr]-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9]{20,}"; "[token]");
+    def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub;
+    def num: .id | ltrimstr("D-") | tonumber? // 0;
+    def day: tostring | .[0:10];
+    def role: (.author.role // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-"));
+    def who: {lead: "the team lead", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
+    def side: role as $r | (.origin.kind // "") as $k
+      | if (["lead", "designer", "pm"] | index($r)) != null then "design"
+        elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
+    def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
+      call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
+    [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all
+    | ($all | map(select((.status // "active") == "active")) | sort_by(num)) as $on
+    | ($all | map(select(.status == "revoked")) | sort_by(num)) as $off
+    | ([ $all[] | .recorded, .at, .revoked.at?, (.history // [])[]?.at, .approved.at? ] | map(select(type == "string")) | max // "") as $last
+    | "# Design decisions: \($name | line)",
+      "",
+      "The design decisions this product'"'"'s team has made, kept by Design Desk. Follow every decision in force when you change what a person sees in the product: a screen, a part, a state, a word. A change that must go against one says so in its pull request, names the decision (D-<n>), and waits for a designer: never work around one silently. \"Not approved yet\" means a designer has not confirmed it; it still holds. A revoked decision binds nothing: it is listed so that an old reference to it makes sense.",
+      "",
+      "In force: \($on | length) · Revoked: \($off | length) · Last change: \(if $last == "" then "none" else ($last | day) end)",
+      "",
+      (if ($on | length) > 0 then
+        "## Index by concept", "",
+        ([ $on[] | . as $d | (.concepts // [])[] | {c: (. | line), id: $d.id} ] | group_by(.c)[] | "- \(.[0].c): \(map(.id) | join(", "))"),
+        "", "## In force", "",
+        ($on[] | . as $d
+          | "### \(.id) · \((.concepts // []) | map(line) | join(", "))", "", (.text | line), "",
+            (if ((.why // "") | line) != "" then "Why: \(.why | line)", "" else empty end),
+            ("Decided \(.at // .recorded // "" | day)\(if who then " by \(who)" else "" end)\(if from then ", from \(from)" else "" end)."
+              + (if (.replaces // []) | length > 0 then " Replaces \(.replaces | join(", "))." else "" end)
+              + (if side != "design" and .approved == null then " Not approved yet." else "" end)),
+            "")
+      else "No decision is in force yet.", "" end),
+      (if ($off | length) > 0 then
+        "## Revoked", "",
+        ($off[] | "- \(.id) (\((.concepts // []) | map(line) | join(", "))): \(.text | line) Revoked \(.revoked.at // "" | day)"
+          + (if ((.revoked.reason // "") | line) != "" then ": \(.revoked.reason | line | rtrimstr("."))." else "." end)
+          + (if .revoked.replaced_by and ((.revoked.reason // "") | contains("Replaced by") | not) then " Replaced by \(.revoked.replaced_by)." else "" end))
+      else empty end)' "$DB" > "$PAGE.tmp" 2>/dev/null || { rm -f "$PAGE.tmp"; log "decisions page: cannot read the Desk store at $DB"; return; }
+  mv "$PAGE.tmp" "$PAGE"
+  sha="sha256:$( (sha256sum 2>/dev/null || shasum -a 256) < "$PAGE" | cut -c1-16)"
+  old="$(jq -r '.sha // ""' "$REC" 2>/dev/null)"
+  if [ "$sha" = "$old" ]; then log "decisions page: unchanged since its last publish"; return; fi
+  log "decisions page: changed ($sha) — publish it"
+  DEC_DUE="$(jq -nc --arg file "$PAGE" --arg sha "$sha" --arg artifact "$(jq -r '.id // ""' "$REC" 2>/dev/null)" --rawfile page "$PAGE" \
+    '[{id: "decisions-page", file: $file, sha: $sha, artifact: (if $artifact == "" then null else $artifact end),
+       counts: ($page | split("\n") | map(select(startswith("In force: ")))[0])}]')"
+}
+
 # ============================================================ ISSUES MODE ===
 # The open issues of each watched repository, for the Desk's Issues page (docs/issues.md).
 # The agent judges whether an issue changes the screens; this pass only says which issues
@@ -328,9 +396,11 @@ watch_mode() {
 issues_mode() {
   local CONF REPOS SPRINT_CFG NEXT_CFG LABEL MAXD DB="$DESK_DIR/db.json" ILEDGER="$WORK/ISSUES.tsv"
   CONF="$(config_json)"
-  [ "$(jq -r .issue_news <<<"$CONF")" = enabled ] || { log "the Issues page is off (issue_news)"; quiet_out; }
+  # The decisions page rides on this daily pass, whether the Issues page is on or not.
+  decisions_page "$CONF"
+  [ "$(jq -r .issue_news <<<"$CONF")" = enabled ] || { log "the Issues page is off (issue_news)"; page_only_out "$CONF"; }
   REPOS="$(jq -r '.repos' <<<"$CONF")"
-  [ "$REPOS" = none ] && { log "no watched repositories (repos: none)"; quiet_out; }
+  [ "$REPOS" = none ] && { log "no watched repositories (repos: none)"; page_only_out "$CONF"; }
   SPRINT_CFG="$(jq -r .issue_sprint <<<"$CONF")"; NEXT_CFG="$(jq -r .issue_next_sprint <<<"$CONF")"
   LABEL="$(jq -r .issue_news_label <<<"$CONF")"; [ "$LABEL" = none ] && LABEL=""; MAXD="$(jq -r .max_issue_drawings <<<"$CONF")"
   # Reading is cheap and drawing is not: a backlog is read over several passes.
@@ -439,13 +509,23 @@ issues_mode() {
   local njudge ndraw; njudge="$(jq '[.[] | select(.need == "judge")] | length' <<<"$news")"; ndraw="$(jq length <<<"$draw")"
   [ "$deferred" -gt 0 ] && log "$deferred more issues wait for the next pass (at most $MAXJ to read and $MAXD to draw a pass)"
   printf '%s read=%s draw=%s move=%s leave=%s close=%s deferred=%s\n' "$NOW_ISO" "$njudge" "$ndraw" "$nmove" "$nleave" "$nclose" "$deferred" >> "$WORK/ISSUES.log"
-  [ "$(jq length <<<"$news")" -gt 0 ] || [ "$ndraw" -gt 0 ] || quiet_out
+  [ "$(jq length <<<"$news")" -gt 0 ] || [ "$ndraw" -gt 0 ] || page_only_out "$CONF"
   logev info preflight "issues: $njudge to read, $ndraw to draw, $nmove moved, $nleave left, $nclose closed"
-  jq -n --argjson news "$news" --argjson draw "$draw" --argjson sprints "$sprints" --argjson nexts "$nexts" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+  jq -n --argjson news "$news" --argjson draw "$draw" --argjson sprints "$sprints" --argjson nexts "$nexts" --argjson dec "$DEC_DUE" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     --arg title "$(jq -r '.[] | "#\(.issue)"' <<<"$(jq -c --argjson a "$draw" '$a + .' <<<"$news")" | title_for Read issues)" \
     '{mode:"issues", nothing_to_do:false, title:$title, sprint:$sprints, next_sprint:$nexts,
-      read_set: (["docs/issues.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end)),
-      issue_news_due:$news, drawings_due:$draw, config:$config, logs:$logs}'
+      read_set: (["docs/issues.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end) + (if ($dec | length) > 0 then ["docs/decisions-page.md"] else [] end)),
+      issue_news_due:$news, drawings_due:$draw, decisions_page_due:$dec, config:$config, logs:$logs}'
+}
+
+# No issue to read or draw: the run is the decisions page alone, or nothing.
+page_only_out() {
+  [ "$(jq length <<<"$DEC_DUE")" -gt 0 ] || quiet_out
+  logev info preflight "issues: the decisions page changed"
+  jq -n --argjson dec "$DEC_DUE" --argjson config "$1" --argjson logs "$(logs_json)" \
+    '{mode:"issues", nothing_to_do:false, title:"Publish the design decisions", read_set:["docs/decisions-page.md"],
+      issue_news_due:[], drawings_due:[], decisions_page_due:$dec, config:$config, logs:$logs}'
+  exit 0
 }
 
 # ============================================================ INBOX MODE ====
@@ -571,6 +651,15 @@ audit_mode() {
   [ -n "$(cfg desk_artifact)" ] && check desk_artifact ok "$(cfg desk_artifact)" || check desk_artifact warn "desk_artifact is not set — the Desk page was never published (docs/desk.md → Publishing the page)"
   [ -n "$(cfg desk_link)" ] && check desk_link ok "$(cfg desk_link)" || check desk_link warn "desk_link is not set — items on the Desk have no Copy link (docs/desk.md → Publishing the page)"
   [ "$(cfg_table 'Desk people' | grep -c . || true)" -gt 0 ] && check desk_people ok "$(cfg_table 'Desk people' | grep -c .) people" || check desk_people warn "the Desk people table is empty — everyone but the owner is a guest"
+  # The public decisions page (docs/decisions-page.md): published, and not due for long.
+  local drec="$WORK/decisions-page.json" dat
+  if [ "$(jq -r .decisions_page <<<"$CONF")" = public ]; then
+    decisions_page "$CONF"; dat="$(jq -r '.at // ""' "$drec" 2>/dev/null)"
+    if [ "$(jq length <<<"$DEC_DUE")" -eq 0 ]; then check decisions_page ok "$(jq -r '.url // "no Desk store yet"' "$drec" 2>/dev/null || echo 'no Desk store yet')"
+    elif [ -z "$dat" ]; then check decisions_page warn "decisions_page is public but the page was never published — the issues run publishes it (docs/decisions-page.md)"
+    elif [ $((NOW_EPOCH - $(iso2epoch "$dat"))) -gt $((48 * 3600)) ]; then check decisions_page warn "the decisions page changed and was last published at $dat — is design-desk-issues-daily running?"
+    else check decisions_page ok "due today, last published $dat"; fi
+  elif [ -f "$drec" ]; then check decisions_page warn "decisions_page is off but the page stays published at $(jq -r '.url // "?"' "$drec") — the operator deletes it"; fi
 
   # toolchain: the design command, a real build and screenshot, saved brand and repo profiles
   local DESIGN="$HOME_DIR/bin/design" t out

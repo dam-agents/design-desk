@@ -36,6 +36,8 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
 - `run_model` (`default`), `dispatch` (`enabled`), `work_repo` (`none`; env
   `GITHUB_REPO_WORK` wins), `audit_report` (`enabled`), `agent_manifest` (`dam`: publish the
   public agent manifest in `docs/manifest.md`; `off`: keep it local), `log_level` (`info` | `debug`).
+- `decisions_page` (`off`) — `public`: every decision on the Desk, without names, on one public
+  text page for coding agents, republished daily when it changed ([decisions-page.md](decisions-page.md)).
 - `screens` (`disabled`) — `enabled`: the agent keeps its own install of the product for
   screenshots and for people to try ([screens.md](screens.md)); `max_screen_prs` (`2`) — open pull
   requests with an install of their own.

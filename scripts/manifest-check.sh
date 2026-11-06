@@ -32,7 +32,7 @@ PY="${MANIFEST_PYTHON:-${DESIGN_DESK_DATA:-$HOME_DIR/.local/share/design-desk}/p
 # Config keys whose values may appear in the public card (labels, logins, the
 # target repo). Every other CONFIG.md value is private.
 # MANIFEST_PUBLIC_KEYS overrides the list for a one-time run (docs/manifest.md).
-PUBLIC_KEYS="${MANIFEST_PUBLIC_KEYS:-display_name repos issue_label handoff implementer prototype_requesters digest}"
+PUBLIC_KEYS="${MANIFEST_PUBLIC_KEYS:-display_name repos issue_label handoff implementer prototype_requesters digest decisions_page}"
 
 mode="${1:-}"; card="${2:-}"
 case "$mode" in (check|publish|stamp|peer|digest) ;; (*) echo "usage: $0 check|publish|stamp|peer|digest <card.json>" >&2; exit 2;; esac

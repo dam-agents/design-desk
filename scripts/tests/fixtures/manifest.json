@@ -45,6 +45,11 @@
       "where": "the shared Desk",
       "format": "a card in the Desk store",
       "meaning": "the deliverable and its record"
+    },
+    "design-decisions": {
+      "where": "a public text page in surfaces.artifact.pages",
+      "format": "Markdown: the design decisions in force as D-<n> sections (text, why, concepts, when, the role that decided), an index by concept, and the revoked ones",
+      "meaning": "the rules a change to the product's screens follows; going against one is said in the pull request and waits for a designer"
     }
   },
   "trust": ["Only the operator changes how the agent behaves."]
