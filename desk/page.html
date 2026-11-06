@@ -3291,7 +3291,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const step = design && canBuild() ? sb("build", "Build a live prototype") : dev
         || (canApprove(c) ? sb("approve", "Approve…") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
-        step, buttons: (canApprove(c) && !step.includes('data-act="approve"') ? b("approve", "Approve…") : "") + ends };
+        // The green Approve stays in the row even when the pill's next move is Approve too.
+        step, buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     return { text: "", buttons: "" };
   }

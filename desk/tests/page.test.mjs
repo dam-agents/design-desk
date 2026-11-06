@@ -1115,6 +1115,7 @@ for (const [label, triage, me, sel] of PILLS) {
     await desk.waitForSelector("#detail .steppill");
     assert.equal(await desk.locator(`#detail .steppill ${sel}`).count(), 1, `the pill holds ${label}`);
     assert.equal(await desk.locator("#detail .steppill .step-next").count(), 1, "one move, no more");
+    if (me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve stays in the row too");
     // The state's ⓘ draws every way on: a move the viewer may make plainly, one they may not
     // greyed with why and who can.
     const help = await desk.textContent("#detail .s-word .info .tip");
@@ -1511,7 +1512,7 @@ test("For Developers: the lead developer moves it there, a developer but its aut
 
   const small = await card("dana", "C-2");
   assert.match(small, /For Developers — a developer approves[\s\S]*lou@example\.com/, "the card names who marked it");
-  assert.equal(await count('[data-act="approve"]'), 1, "another developer approves a request For Developers");
+  assert.equal(await count('.btn[data-act="approve"]'), 1, "another developer approves a request For Developers");
   assert.equal(await count("[data-size]"), 0, "a developer does not mark it");
 
   assert.match(await card("bob", "C-2"), /not bob@example\.com who filed it/);
@@ -1522,7 +1523,7 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   assert.match(await card("dana", "C-5"), /not dana@example\.com who filed it/);
   assert.equal(await count('[data-act="approve"]'), 0, "the reporter of a request filed for them does not approve it");
   await card("bob", "C-5");
-  assert.equal(await count('[data-act="approve"]'), 1, "another developer does");
+  assert.equal(await count('.btn[data-act="approve"]'), 1, "another developer does");
 
   assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*for developers/, "the card names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
@@ -1575,7 +1576,7 @@ test("deciding straight away: a lead developer approves or decides; a live proto
     await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n, id);
   };
   await card("C-1");
-  assert.equal(await desk.locator('#detail [data-act="approve"]').count(), 1, "send to developers before any option");
+  assert.equal(await desk.locator('#detail .btn[data-act="approve"]').count(), 1, "send to developers before any option");
   assert.equal(await desk.locator('#detail [data-act="close"]').count(), 1, "or close it with a decision");
   await desk.click('#detail [data-act="close"]');
   assert.equal(await desk.locator("#cf-choices input").count(), 0, "a lead developer only closes with a decision");
