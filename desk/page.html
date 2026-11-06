@@ -364,6 +364,8 @@
   /* Where a request came from, and the requests a card started. */
   .linked { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); font-size: 13px; max-width: var(--measure); margin: 8px 0; }
   .linked .k { color: var(--muted); }
+  /* The number reads with its title, on the same baseline, as in a heading. */
+  .linked { align-items: baseline; } .linked .num { margin-left: -6px; font-size: 11px; }
   /* The issue's user stories: pick one, see the parts of the option that meet it and how. */
   /* The issue's user stories under the option's design: one pressed plays in the design above. */
   /* The story player: a bar at the bottom of the window while a story plays in the design. */
