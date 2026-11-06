@@ -85,10 +85,11 @@ test("drawing every state of a part is a designer's or developer's, not a viewer
   const viewer = await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(viewer.status, 403, "a viewer off the roster may not");
   assert.match(viewer.body.error, /To redraw options, ask/);
-  assert.equal((await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask)).status, 200, "a PM changes options too");
   const dev = await d.viewer("bob@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(dev.status, 200, "a developer changes options too");
   assert.deepEqual([dev.body.inbox.kind, dev.body.inbox.variant, dev.body.inbox.part.label], ["states", "v1", "Button “Upload”"]);
+  const pm = await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.deepEqual([pm.status, /already working/.test(pm.body.error)], [400, true], "a PM may too: only the one already waiting stops it");
   const again = await d.viewer("alice@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(again.status, 400, "one states item at a time per request");
 });
