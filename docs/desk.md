@@ -384,7 +384,7 @@ dot, in every list; pointing at it unfolds it the same way into `Goes against D-
 (at most three numbers, then `+N`; the hint names them all). Product's
 lists are drawn the same way: a screen's and an element's dot says whether its drawing is up to
 date, out of date, being drawn or not drawn, and its line says `drawn: <when> from: Design
-Desk by: live product instance` (an element: `by: product code`; or the person who added it; an element from an approved design is
+Desk by: live product` (an element: `by: source code`; or the person who added it; an element from an approved design is
 `based on:` its request); a week's page says `by: weekly digest`; a decision's dot is In force,
 Not approved or Revoked, with the red ! for a decision it goes against, and its line `decided: <when> from:
 <where> by: <who>`.

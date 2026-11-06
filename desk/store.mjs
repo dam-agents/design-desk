@@ -394,6 +394,8 @@ export class Store {
         // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
         origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
         path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
+        // When a screen or a part was drawn and last looked at again: the list says drawn: (docs/map.md → A screen card).
+        drawn: c.drawn || null, checked: c.checked || null,
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
         attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
         // The decisions in force it goes against, by number: the list's red ! (docs/desk.md → Decisions).

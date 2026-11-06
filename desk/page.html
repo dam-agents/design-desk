@@ -1753,7 +1753,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     auto: '<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/>',
   };
   // The runs that file on their own (store.mjs ORIGIN_JOBS), in the team's words.
-  const JOB = { watch: "hourly check", digest: "weekly digest", issues: "daily issue read", map: "live product instance", catalog: "product code" };
+  const JOB = { watch: "hourly check", digest: "weekly digest", issues: "daily issue read", map: "live product", catalog: "source code" };
   // A request's head, as on the prototype: who asked, their role, where it came from (with its
   // icon) and when; the request's own words fold under it.
   function askHead(c, bug) {
@@ -2663,7 +2663,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // ---------- shared pieces of a page ----------
   // Every picture says where it came from: a person's own, a real screen, a screenshot from the
   // pull request or the issue, or one AI drew, which is never a real screen.
-  const FROM = { pr: "Screenshot from the pull request", issue: "Screenshot from the GitHub issue", instance: "Real screen, taken on the live product instance", prototype: "Real screen, taken on the live prototype",
+  const FROM = { pr: "Screenshot from the pull request", issue: "Screenshot from the GitHub issue", instance: "Real screen, taken on the live product", prototype: "Real screen, taken on the live prototype",
     rebuild: "AI drawing from the code, not a real screen", sketch: "AI sketch, not a real screen", test: "Screenshot from an automated test" };
   const fromOf = (s) => s.source === "person" ? `Added by ${personName(s.by?.email)}` : FROM[s.source] || "Where it came from is not recorded";
   const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
@@ -2766,7 +2766,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const link = (path) => i?.url ? `${i.url.replace(/\/$/, "")}${path || ""}` : "";
     return `<div class="panel" style="max-width:var(--measure);margin-top:12px">
       ${i ? `<b>Try it yourself</b><p class="hint">Design Desk runs its own copy of the product${i.ref ? ` at ${esc(i.ref)}` : ""}${i.commit ? ` (${esc(i.commit.slice(0, 7))})` : ""}, with made-up data. Sign in with the demo account below, not your own.</p>
-        <div class="actions"><a class="btn primary" href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer" title="Opens Design Desk's own running copy of the product, with made-up data">Open the live product instance ↗</a>${can("screens") ? `<button class="btn" data-add-shots>Add screenshots</button>` : ""}</div>
+        <div class="actions"><a class="btn primary" href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer" title="Opens Design Desk's own running copy of the product, with made-up data">Open the live product ↗</a>${can("screens") ? `<button class="btn" data-add-shots>Add screenshots</button>` : ""}</div>
         ${i.login ? `<dl class="kv"><dt>Demo account</dt><dd><code>${esc(i.login.user || "")}</code>${i.login.password ? ` / <code>${esc(i.login.password)}</code>` : ""}${i.login.hint ? ` <span class="sub">${esc(i.login.hint)}</span>` : ""}</dd></dl>` : ""}` : ""}
       ${list.length ? `<p style="margin:12px 0 4px"><b>What to capture</b></p><ol class="md" style="padding-left:20px;margin:0">${list.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — ${esc(x.how)}` : ""}${x.path && i?.url ? ` <a href="${safeUrl(link(x.path))}" target="_blank" rel="noopener noreferrer">open ↗</a>` : ""}</li>`).join("")}</ol>` : ""}
     </div>`;
@@ -3008,7 +3008,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const short = (x) => esc(String(x || "").slice(0, 7));
     const i = c.instance || {}, src = c.source || {};
     const from = c.kind === "screen"
-      ? (i.ref || i.commit || src.commit ? kv("from", `${i.ref ? esc(i.ref) : "the product"}${i.commit || src.commit ? ` @ ${short(i.commit || src.commit)}` : ""}`, "Drawn on the live product instance, at this branch and commit") : c.wanted ? kv("from", "a person's screenshot") : "")
+      ? (i.ref || i.commit || src.commit ? kv("from", `${i.ref ? esc(i.ref) : "the product"}${i.commit || src.commit ? ` @ ${short(i.commit || src.commit)}` : ""}`, "Drawn on the live product, at this branch and commit") : c.wanted ? kv("from", "a person's screenshot") : "")
       : src.file ? kv("from", `${esc(src.file.split("/").pop())}${src.commit ? ` @ ${short(src.commit)}` : ""}`, `Drawn from ${src.file}${src.export ? `, ${src.export}` : ""}`) : "";
     const checked = c.checked && day(c.checked) !== day(c.drawn) ? c.checked : null;
     const parts = [c.drawn ? kv("drawn", esc(day(c.drawn))) : "", checked ? kv("checked", esc(day(checked)), "Design Desk last looked at it again; it had not changed") : "", from].filter(Boolean);
@@ -3086,7 +3086,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${c.group || c.path ? `<div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}</div>` : ""}
-      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer" title="Opens this screen on Design Desk's own running copy of the product, with made-up data">Open the live product instance ↗</a>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
+      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer" title="Opens this screen on Design Desk's own running copy of the product, with made-up data">Open the live product ↗</a>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
