@@ -365,6 +365,9 @@ under an issue's How it could look. A change and an issue show their GitHub stat
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
+On a wide window the list folds away with an arrow halfway down its edge and comes back with
+it; each browser remembers it (`desk-list-folded` in local storage). Where there is no arrow
+(a phone's width, Guide, People) a folded list still shows.
 
 ## Read and unread
 
@@ -600,7 +603,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   (`watch` or `digest`) and `event: {label, url, card}` — what it acted on, in plain words
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
   A request made from a card (`request.from`: an issue's **Design this**, a change's
-  **Adjust the design**) names that card at its top, and the card lists its requests. While one of them is open, the card offers no **Design this** or **Adjust the design**: the list links to it; a closed request brings the button back.
+  **Adjust the design**) names that card at its top, and the card lists its requests. While one of them is open, the card offers no **Design this** or **Adjust the design**: the list links to it; a request closed or sent to developers brings the button back.
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.
