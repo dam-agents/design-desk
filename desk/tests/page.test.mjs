@@ -1097,6 +1097,27 @@ for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
   }));
 }
 
+// At Team feedback the step pill always offers a move on: a live prototype for Design only,
+// else a developer for parts design cannot do, else Approve…, else Send to Slack….
+const BRIDGE_PILL = (triage, me) => BRIDGE_STORIES
+  .replace('triage: { verdict: "design", reasons: [] }', `triage: ${JSON.stringify(triage)}`)
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me));
+const PILLS = [
+  ["Build a live prototype", { verdict: "design", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, '[data-act="build"]'],
+  ["Contact a developer", { verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, "[data-dev-ask]"],
+  ["Approve…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
+  ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "developer", email: "dev@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
+];
+for (const [label, triage, me, sel] of PILLS) {
+  test(`at Team feedback the step pill offers ${label}`, (t) => open(t, BRIDGE_PILL(triage, me), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector("#detail .steppill");
+    assert.equal(await desk.locator(`#detail .steppill ${sel}`).count(), 1, `the pill holds ${label}`);
+    assert.equal(await desk.locator("#detail .steppill .step-next").count(), 1, "one move, no more");
+  }));
+}
+
 // A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
 test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
   await desk.setViewportSize({ width: 1300, height: 800 });
@@ -1107,6 +1128,8 @@ test("a folded list leaves Guide and a narrow window their page", (t) => open(t,
   assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "Guide has the whole width");
   await desk.setViewportSize({ width: 700, height: 800 });
   assert.ok(await desk.$eval("#detail", (d) => d.getBoundingClientRect().width) > 600, "and so does a phone's width");
+  await desk.evaluate(() => document.querySelector("#main").classList.remove("has-detail"));
+  assert.notEqual(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none", "with no item open there, the folded list shows");
 }));
 
 // An option that names the decisions it rests on, one of them revoked.
