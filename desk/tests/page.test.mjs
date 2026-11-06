@@ -981,6 +981,35 @@ test("a pull request link previews its change", async (t) => {
   }
 });
 
+// Two requests from one issue: each on its own line, and at a phone's width the title cuts
+// short so its number and state stay inside the box.
+test("two requests from an issue: one line each, inside the box at a phone's width", async (t) => {
+  const issues = `const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", needs: ["A spend column"], sketches: 0,
+    source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41", author: "alice" }, waiting: [], threads: [] };
+  const one = { id: "r9", kind: "request", title: "Spend column options for the agents list and its totals", status: "triage", from: "is1", by: { email: "lead@example.com" } };
+  const two = { id: "r10", kind: "request", title: "A calmer spend chip", status: "feedback", from: "is1", by: { email: "lead@example.com" } };`;
+  const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
+    .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, one, two]")
+    .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/ch1"');
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { top, desk } = run;
+  try {
+    await desk.click('[data-tab="issues"]');
+    await desk.click('.row.item [data-card="is1"]');
+    await desk.waitForSelector("#detail .linked");
+    // The Desk runs in a frame: a phone's width is the frame's.
+    await top.$eval("iframe", (f) => { f.style.width = "380px"; });
+    await desk.waitForFunction(() => innerWidth <= 380);
+    assert.equal(await desk.$eval("#detail .linked", (l) => l.classList.contains("many")), true, "two requests: the list form");
+    assert.equal(await desk.locator("#detail .linked .lk").count(), 2, "one line per request");
+    const out = await desk.$eval("#detail .linked", (l) => { const box = l.getBoundingClientRect(); return [...l.querySelectorAll(".lk .chip")].filter((c) => c.getBoundingClientRect().right > box.right + 0.5).length; });
+    assert.equal(out, 0, "every state chip ends inside the box");
+  } finally {
+    await run.close();
+  }
+});
+
 // The Issues tab: the sprint's issues first, what the UI will need in each row, and an
 // issue's Draw it and Design this.
 test("the Issues tab lists the planned issues; Draw it and Design this act once", async (t) => {
@@ -1140,6 +1169,18 @@ for (const [label, triage, me, sel] of PILLS) {
     else assert.match(help, /✕ Approve…Not now: A designer or a lead developer approves it/, "anyone else's says who approves it");
   }));
 }
+
+// An item opened from another one's link opens on its own tab: the menu says where you are.
+test("a link to an issue opens it under Issues, and the menu says so", (t) => open(t, BRIDGE_STORIES
+  .replace(': path === "/api/cards/r7"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/r7"'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('#list [data-card="r7"]');
+  await desk.waitForSelector('#detail .linked [data-card="is1"]');
+  assert.equal(await desk.getAttribute('#nav [data-tab="requests"]', "aria-current"), "true");
+  await desk.click('#detail .linked [data-card="is1"]');
+  await desk.waitForFunction(() => document.querySelector('#nav [data-tab="issues"]')?.getAttribute("aria-current") === "true");
+  assert.equal(await desk.getAttribute('#nav [data-tab="requests"]', "aria-current"), "false", "Requests is no longer lit");
+}));
 
 // A request filed in Slack under the address Slack knows a person by is theirs on the Desk
 // too, when their row of the people list names both addresses.
