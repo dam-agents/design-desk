@@ -38,6 +38,12 @@
       "triggers": ["chat-request"],
       "writes": ["desk-card"],
       "result": "the requested deliverable and its Desk card"
+    },
+    "decisions-page": {
+      "description": "Publishes the team's design decisions as one public text page for coding agents.",
+      "schedule": "every day, when a decision changed",
+      "writes": ["design-decisions"],
+      "result": "the decisions page, at the same link"
     }
   },
   "contracts": {
