@@ -1000,11 +1000,11 @@
     <label><span id="rq-problem-label">What would you change, and for whom?</span><textarea name="problem" maxlength="4000" required></textarea></label>
     <label id="rq-vision"><span>How do you picture it? (optional)</span><textarea name="vision" maxlength="4000" placeholder="e.g. calmer, like the cards in Settings; the main button on the right; less text"></textarea></label>
     <label><span>Which screen? (optional)</span><input name="screen" maxlength="500" placeholder="e.g. the agents list" /></label>
-    <div id="rq-carry" hidden><span class="hint" style="margin:0">Which options carry over? They start here as they are, and Design Desk changes them as you say.</span><div class="choices" id="rq-carry-list"></div></div>
+    <div id="rq-carry" hidden><span class="hint" style="margin:0">Carry over</span><div class="choices" id="rq-carry-list"></div></div>
     <div class="count-pick" id="rq-count"><span class="hint" style="margin:0" id="rq-count-q">How many design options should Design Desk draw?</span>
       <div class="row2"><input type="range" name="options" min="0" max="5" step="1" value="3" aria-label="How many design options to draw" /><output id="rq-count-say">3 options</output></div>
       <span class="hint" style="margin:0" id="rq-count-hint"></span></div>
-    <label class="switch" id="rq-grill"><input type="checkbox" role="switch" name="grill" /><span>Ask me questions first<small>Before it starts, Design Desk asks you one question at a time about the decisions and how you picture it, each with its suggested answer.</small></span></label>
+    <label class="switch" id="rq-grill"><input type="checkbox" role="switch" name="grill" /><span>Ask me questions first<small>One question at a time, each with a suggested answer.</small></span></label>
     <fieldset class="skills" id="rq-skills" hidden><legend>What Design Desk uses for the options</legend><div id="rq-skill-list"></div></fieldset>
     <label id="rq-figma" hidden><span>Figma link (optional)</span><input name="figma" maxlength="500" placeholder="https://www.figma.com/design/…" /></label>
     <div class="drop" id="rq-drop">
@@ -5203,7 +5203,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const n = Number($("#request-form").options.value);
     $("#rq-count-say").textContent = optionsSay(n);
     const carried = !$("#rq-carry").hidden && $("#request-form").querySelector("input[name=carry]:checked");
-    $("#rq-count-hint").textContent = !n && carried ? "Design Desk changes only the options you carry over."
+    $("#rq-count-hint").textContent = carried ? ""
       : !n ? "Design Desk only checks what can be done as a design change; a designer or developer can still have options drawn later."
       : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer or developer starts them after Design Desk checks what can be done.";
   }
@@ -5254,7 +5254,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const again = from?.kind === "request";
     $("#rq-title").textContent = issue ? "Design this issue" : again ? "A new request from this one" : from ? "Adjust this change" : "New request";
     $("#rq-hint").textContent = again
-      ? "Say what should change in the approved design. Design Desk checks what can be done, changes the options you carry over, and the team picks one again."
+      ? "Say what should change. Design Desk changes the options you carry over."
       : issue
       ? "Design Desk checks what can be done as a design change, draws options for this issue, shows how each meets the issue's user stories, and the team picks one."
       : from
@@ -5264,9 +5264,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const vs = again ? from.variants || [] : [];
     $("#rq-carry").hidden = !vs.length;
     $("#rq-carry-list").innerHTML = vs.map((v) => `<label><input type="checkbox" name="carry" value="${esc(v.id)}"${v.id === from.approved?.variant ? " checked" : ""} /> ${esc(v.name)}${v.id === from.approved?.variant ? ` <span class="sub">approved</span>` : ""}</label>`).join("");
-    $("#rq-count-q").textContent = vs.length ? "How many new options should Design Desk draw besides them?" : "How many design options should Design Desk draw?";
+    $("#rq-count-q").textContent = vs.length ? "New options besides them" : "How many design options should Design Desk draw?";
     if (vs.length) { f.options.value = "0"; sayCount(); }
-    if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : again ? `What should change in the approved design of “${from.title}”?` : `What should look different in “${from.title}”?`;
+    if (from) $("#rq-problem-label").textContent = issue ? `What should the design of “${from.title}” solve?` : again ? "What should change?" : `What should look different in “${from.title}”?`;
     f.from.value = from ? from.id : "";
     dlg.returnValue = ""; dlg.showModal();
   }
