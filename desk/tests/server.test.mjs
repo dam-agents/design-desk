@@ -53,7 +53,7 @@ test("only an admin asks for a new person; the owner's ask says so; the agent ca
 
   const people = await d.viewer("alice@example.com", "/api/people");
   assert.deepEqual(people.body.asks.map((a) => a.email).sort(), ["alex@example.com", "dee@example.com"]);
-  assert.deepEqual(people.body.addable, ["designer", "lead-developer", "developer", "pm"]);
+  assert.deepEqual(people.body.addable, ["designer", "pm", "lead-developer", "developer"]);
 
   const enqueue = await d.agent("/agent/enqueue", { kind: "person", card: "C-1" });
   assert.equal(enqueue.status, 400);
@@ -67,7 +67,7 @@ test("a request's options start after triage only for someone who may start them
   assert.equal(designer.status, 201);
   assert.deepEqual([designer.body.card.request.options, designer.body.card.request.grill, designer.body.card.request.auto], [4, true, true]);
   const pm = await file("pat@example.com", {});
-  assert.deepEqual([pm.body.card.request.options, pm.body.card.request.auto], [3, false], "a pm's options wait for a designer");
+  assert.deepEqual([pm.body.card.request.options, pm.body.card.request.auto], [3, true], "a PM starts options too");
   assert.equal((await file("alice@example.com", { options: 0 })).body.card.request.auto, false, "none asked for: nothing starts");
   const bug = await file("alice@example.com", { type: "bug", options: 5, grill: true });
   assert.deepEqual([bug.body.card.request.options, bug.body.card.request.grill, bug.body.card.request.auto], [0, false, false]);
@@ -82,10 +82,10 @@ test("drawing every state of a part is a designer's or developer's, not a viewer
   const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
   assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: asset.id }] })).status, 200);
   const ask = { action: "states", note: "", variant: "v1", part: { selector: "body > button", label: "Button “Upload”" } };
-  const pm = await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask);
-  assert.equal(pm.status, 403);
-  assert.match(pm.body.error, /Only designers can redraw options/);
-  assert.equal((await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask)).status, 403, "a viewer off the roster may not");
+  const viewer = await d.viewer("guest@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(viewer.status, 403, "a viewer off the roster may not");
+  assert.match(viewer.body.error, /Only designers can redraw options/);
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${card.id}/actions`, ask)).status, 200, "a PM changes options too");
   const dev = await d.viewer("bob@example.com", `/api/cards/${card.id}/actions`, ask);
   assert.equal(dev.status, 200, "a developer changes options too");
   assert.deepEqual([dev.body.inbox.kind, dev.body.inbox.variant, dev.body.inbox.part.label], ["states", "v1", "Button “Upload”"]);
@@ -105,7 +105,7 @@ test("For Developers: only a lead developer moves it there, any developer but it
   const me = await d.viewer("lou@example.com", "/api/me");
   assert.deepEqual([me.body.role, me.body.can.size, me.body.can.approve, me.body.can.explore], ["lead-developer", true, false, true], "a roster role with a space reads as lead-developer");
   assert.equal((await approve("dana@example.com")).status, 403, "For Designers: a designer's");
-  for (const email of ["bob@example.com", "alice@example.com", "pat@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
+  for (const email of ["bob@example.com", "alice@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
 
   const marked = await size("lou@example.com", true);
   assert.equal(marked.status, 200);
@@ -113,7 +113,6 @@ test("For Developers: only a lead developer moves it there, any developer but it
   const author = await approve("bob@example.com");
   assert.equal(author.status, 403);
   assert.match(author.body.error, /You filed this request/);
-  assert.equal((await approve("pat@example.com")).status, 403, "a PM is no developer");
   assert.equal((await approve("guest@example.com")).status, 403);
   const ok = await approve("dana@example.com");
   assert.equal(ok.status, 200);

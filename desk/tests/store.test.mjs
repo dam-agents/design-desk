@@ -22,7 +22,10 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   assert.equal(can("designer", "queue"), true);
   for (const a of ["explore", "revise", "refresh", "history", "change", "figma", "share", "add", "draw"]) assert.equal(can("developer", a), true, a);
   for (const a of ["approve", "close", "reopen", "queue", "handle", "choose", "decide"]) assert.equal(can("developer", a), false, a);
-  assert.equal(can("pm", "explore"), false);
+  assert.equal(can("guest", "explore"), false);
+  // A PM moves a request along: everything a lead developer may, and closing, reopening and live prototypes.
+  for (const a of ["explore", "revise", "size", "skip", "close", "reopen", "build"]) assert.equal(can("pm", a), true, a);
+  for (const a of ["approve", "queue", "handle", "choose", "decide", "people"]) assert.equal(can("pm", a), false, a);
   assert.equal(can("admin", "add"), true);
 });
 
@@ -198,7 +201,8 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   const dana = { email: "dana@example.com", role: "developer" };
   assert.equal(can("lead-developer", "size"), true);
   assert.equal(can("admin", "size"), true);
-  for (const r of ["designer", "developer", "pm", "guest"]) assert.equal(can(r, "size"), false, r);
+  assert.equal(can("pm", "size"), true);
+  for (const r of ["designer", "developer", "guest"]) assert.equal(can(r, "size"), false, r);
   assert.equal(can("lead-developer", "approve"), false, "a developer approves only a request For Developers, per card");
   assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", also: [], role: "lead-developer" }]);
 
@@ -212,7 +216,7 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   assert.deepEqual(marked.size, { small: true, by: { email: "lee@example.com", role: "lead-developer" }, at: marked.size.at });
   assert.equal(s.attentionOf(marked), null, "a request For Developers waits for a developer, not a designer");
   assert.throws(() => s.act(card.id, bob, "approve"), (e) => e.status === 403 && /You filed this request/.test(e.message));
-  assert.throws(() => s.act(card.id, { email: "pat@example.com", role: "pm" }, "approve"), (e) => e.status === 403);
+  assert.throws(() => s.act(card.id, { email: "gus@example.com", role: "guest" }, "approve"), (e) => e.status === 403);
   const ok = s.act(card.id, dana, "approve");
   assert.equal(ok.inbox.kind, "handoff");
   assert.deepEqual(ok.card.approved, { by: { email: "dana@example.com", role: "developer" }, at: ok.card.approved.at, small: true });
@@ -236,7 +240,7 @@ test("the developer spec waits for a person: edit keeps every version, changes g
   s.upsertCard({ id: card.id, status: "spec", spec: { asset: first, review: "draft", acceptance: [{ given: "the header", when: "the page opens", then: "it is grey" }] } });
   s.done(ok.inbox.id, "s2", "review");
   assert.throws(() => s.specAction(card.id, { agent: true }, { action: "send" }), (e) => e.status === 403, "Design Desk never sends it itself");
-  assert.throws(() => s.specAction(card.id, { email: "pat@example.com", role: "pm" }, { action: "send" }), (e) => e.status === 403, "only who may approve");
+  assert.throws(() => s.specAction(card.id, { email: "gus@example.com", role: "guest" }, { action: "send" }), (e) => e.status === 403, "only who may approve");
   const edited = s.specAction(card.id, alice, { action: "edit", text: "# Spec v2, by Alice" }).card;
   assert.notEqual(edited.spec.asset, first);
   assert.deepEqual(edited.spec.history.map((x) => x.asset), [first], "the version it replaces stays");
@@ -281,8 +285,8 @@ test("deciding straight away: a designer or lead developer approves without opti
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };
   const dana = { email: "dana@example.com", role: "developer" };
-  for (const r of ["admin", "designer", "lead-developer"]) assert.equal(can(r, "skip"), true, r);
-  for (const r of ["developer", "pm", "guest"]) assert.equal(can(r, "skip"), false, r);
+  for (const r of ["admin", "designer", "pm", "lead-developer"]) assert.equal(can(r, "skip"), true, r);
+  for (const r of ["developer", "guest"]) assert.equal(can(r, "skip"), false, r);
 
   const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
   assert.throws(() => s.act(card.id, lee, "approve"), /still checking/, "not before it is checked");
@@ -1069,7 +1073,7 @@ test("a screen keeps its earlier pictures; a designer asks for an element's hist
   assert.equal(s.getCard(el.id).waiting[0].scope, "history");
   assert.throws(() => s.act(el.id, alice, "refresh"), /already working/);
   assert.equal(can("developer", "history"), true);
-  assert.equal(can("pm", "history"), false);
+  assert.equal(can("guest", "history"), false);
   assert.equal(can("designer", "history"), true);
 });
 
@@ -1473,7 +1477,7 @@ test("drop-option: a designer closes an option's tab; the last, approved and pre
 });
 
 test("the new actions' roles: drawing is a designer's or developer's, removing an option a designer's", () => {
-  for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("pm", a), false, a); }
+  for (const a of ["explore", "revise"]) { assert.equal(can("developer", a), true, a); assert.equal(can("guest", a), false, a); }
   assert.equal(can("designer", "choose"), true);
   assert.equal(can("developer", "choose"), false);
 });

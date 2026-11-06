@@ -20,7 +20,7 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
-- `prototype_requesters` (`designer, admin`; roles read as in `## Desk people`, so `lead developer`
+- `prototype_requesters` (`designer, pm, admin`; roles read as in `## Desk people`, so `lead developer`
   is `lead-developer`), `max_prototypes` (`2`; `0` = none),
   `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
@@ -49,7 +49,7 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   `max_issue_drawings` (`5`) — issues drawn a day.
 - `digest` (`desk`) — where the weekly UX digest goes: `desk` | `slack` (the Desk and the
   bound channel) | `disabled`.
-- `slack_polls` (`disabled`) — `enabled`: designers and developers share options in Slack for 👍 / 👎 / ⚠️ votes
+- `slack_polls` (`disabled`) — `enabled`: designers, PMs and developers share options in Slack for 👍 / 👎 / ⚠️ votes
   and replies (the `slack-polls` skill); `slack_poll_channel` — where (empty: the bound channel); a request from Slack votes in its own thread.
 - `slack_send` (`disabled`) — `enabled`: **Send to Slack… → Send the designs** posts pictures of a request's
   options to `slack_poll_channel` (the `slack-polls` skill → Send); a request from Slack has the

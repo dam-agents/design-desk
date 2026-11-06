@@ -13,7 +13,10 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 1. The role `lead` is now `admin`. Rewrite each `lead` row of `## Desk people` and a `lead` in
    `prototype_requesters` as `admin` with `design config write` (a `lead` left there still
    reads as `admin`, so nothing breaks meanwhile).
-2. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+2. A PM now may do all a lead developer may, and close, reopen and delete requests and build
+   live prototypes. `prototype_requesters` defaults to `designer, pm, admin`: where the key
+   is set, ask the operator whether to add `pm` (`design config write`).
+3. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
    ([docs/desk.md](docs/desk.md) → **Publishing the page**), and restart the Desk server
    (`rc-service --user design-desk-server restart`): roles stored as `lead` on votes and
    decisions read as `admin` from then on.

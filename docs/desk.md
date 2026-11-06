@@ -296,14 +296,15 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | everyone | read, mark reviewed, ask, comment |
 | `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
-| `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
-| a request's author; `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
-| a request's author; `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
+| `pm`, `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
+| a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
-| `lead-developer`, `admin` | move a request between For Developers and For Designers |
-| `lead-developer`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
-| `designer`, `admin` | also decide: approve, close and reopen, choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
-| roles in `prototype_requesters` | start a live prototype |
+| `lead-developer`, `pm`, `admin` | move a request between For Developers and For Designers |
+| `lead-developer`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
+| `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
+| `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
+| roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
 | `admin` | also ask you to add a person to the list ([People](#people)) |
 
 The page's **People** tab shows the roster, each role's actions and an admin's asks to add
@@ -338,7 +339,7 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 
 ### Deciding straight away
 
-A designer, an admin or a lead developer (`skip`) may skip the options, the vote and the live
+A designer, a PM, an admin or a lead developer (`skip`) may skip the options, the vote and the live
 prototype once Design Desk has checked a request:
 
 - **Approve** at any open step from Checking on (the same **Approve…** before options: the spec then comes from the request);
@@ -346,7 +347,7 @@ prototype once Design Desk has checked a request:
   in the person's words ([handoff.md](handoff.md)). A lead developer does not overrule a
   decision in force: that stays a designer's.
 - **Close…** is one button and one dialog: **Just close it** (a designer; `close`), or **Close
-  it and record a decision** (a designer or a lead developer; `POST /api/cards/<id>/decide {text}`): the request closes with
+  it and record a decision** (a designer, a PM or a lead developer; `POST /api/cards/<id>/decide {text}`): the request closes with
   `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.
 - **While the live prototype is up**, the page folds the options (and building again) under it,
@@ -367,7 +368,7 @@ votes, the presentation, every state of an element and the spec's own review sta
 
 ### Deleting a request
 
-A designer or an admin (`close`) deletes a closed request for good from its **⋯** menu:
+A designer, a PM or an admin (`close`) deletes a closed request for good from its **⋯** menu:
 **Delete this request…** asks first, then `DELETE /api/cards/<id>` removes the card, its
 conversations, its pictures and its finished items. The store refuses an open request, one
 whose live prototype is still on, and one with an item not yet done (a teardown included), so
@@ -668,7 +669,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue.
 - **Comments on options** are pinned to an element and its view; people reply, mark them
-  done or reopen them, and a designer or developer presses **Work it in** (one, or every open one) to turn
+  done or reopen them, and a designer, PM or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). The workspace's
   **Comments** switch hides the pins from the design only (`desk-notes` in the browser's local
   storage); a pin's click opens its comment, switching Open / Done to the tab it is on. No option is
@@ -682,7 +683,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   closed it. People's own actions set the rest through the server.
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
-  they fine-tune the options, until its author, a designer, a developer or an admin presses **Ask for
+  they fine-tune the options, until its author, a designer, a PM, a developer or an admin presses **Ask for
   feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Team feedback Build a live prototype, else Contact a developer, else Approve…, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.

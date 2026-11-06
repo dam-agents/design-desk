@@ -89,7 +89,7 @@ config_json() {
       max_changes_per_run: ($max_changes_per_run | tonumber? // 10),
       profile: ($profile | if . == "" then "auto" else . end),
       default_style: ($default_style | if . == "" then "auto" else . end),
-      prototype_requesters: ($prototype_requesters | if . == "" then "designer, admin" else . end),
+      prototype_requesters: ($prototype_requesters | if . == "" then "designer, pm, admin" else . end),
       max_prototypes: ($max_prototypes | tonumber? // 2),
       prototype_expiry_days: ($prototype_expiry_days | tonumber? // 7),
       prototype_remote: ($prototype_remote | if . == "" then "none" else . end),

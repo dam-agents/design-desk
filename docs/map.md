@@ -41,7 +41,7 @@ is turned on), and again on request ("rebuild the product map"):
 
 ## A screen someone added (`map_due`)
 
-A designer or developer pressed **+ Add**: the card (`status: building`) has `wanted` — `part` (the screen
+A designer, PM or developer pressed **+ Add**: the card (`status: building`) has `wanted` — `part` (the screen
 in their words), `where` (their clicks or an address), `show` (what the pictures should
 have) — and maybe their screenshot.
 

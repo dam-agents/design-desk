@@ -148,7 +148,7 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    keep my own copy of the product for screenshots of what ships, which people can open and
    try?" (`screens`, `max_screen_prs`; both need Environments and a profile with an engine.)
    Live prototypes: yes →
-   `max_prototypes` (default 2), `prototype_requesters` (default `designer, admin`). No →
+   `max_prototypes` (default 2), `prototype_requesters` (default `designer, pm, admin`). No →
    `max_prototypes: 0`.
 4. **Issues and the coding agent** — "Which label marks an issue that needs design work?"
    (`issue_label`, default `design`; `none` turns it off.) "When a designer adjusts a
@@ -206,7 +206,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - max_changes_per_run: 10
 - profile: auto
 - default_style: auto
-- prototype_requesters: designer, admin
+- prototype_requesters: designer, pm, admin
 - max_prototypes: 2
 - prototype_expiry_days: 7
 - spec_review: enabled

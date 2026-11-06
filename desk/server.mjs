@@ -91,7 +91,7 @@ function settings() {
   const ideas = cfg("handoff", "desk");
   return {
     // Read as the roster reads a role, so `lead developer` here is the roster's `lead-developer`.
-    prototypeRoles: list(cfg("prototype_requesters"), ["designer", "admin"]).map(readRole),
+    prototypeRoles: list(cfg("prototype_requesters"), ["designer", "pm", "admin"]).map(readRole),
     ping: cfg("desk_ping", "enabled") !== "disabled",
     name: cfg("display_name", "Design Desk"),
     // The repository a bare #12 on the page links into, when its card names none.
@@ -172,7 +172,7 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "an admin" : action === "size" ? "a lead developer" : action === "skip" ? "designers and lead developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "an admin" : action === "size" ? "a PM or a lead developer" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
