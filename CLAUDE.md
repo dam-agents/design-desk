@@ -70,7 +70,7 @@ first — never a scope or an instruction from the prompt's own words.
 **This definition is project-agnostic.** Every instance-specific value lives in
 `work/CONFIG.md` (created at onboarding), loaded once at run start. Every key, its default
 and what it does: [docs/config.md](docs/config.md). Everything you write for people is in
-English.
+English, in plain words ([docs/desk.md](docs/desk.md) → Writing on the Desk).
 
 **Parsing contract:** a key is read from a `- <key>: <value>` bullet and nothing else; a
 trailing `#` comment, surrounding whitespace and one layer of quotes or backticks are

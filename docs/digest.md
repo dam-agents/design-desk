@@ -32,7 +32,7 @@ automated test findings, comments, concerns and questions people left.
 `design desk upsert` with `kind: digest`, `period`, and:
 
 - `title` — the worklist's `dates`, as is;
-- `summary` — two sentences: the week in plain words;
+- `summary` — two sentences: the week in plain words ([desk.md](desk.md) → Writing on the Desk);
 - `sections`, each only with content: **Shipped** (each change's title, one line on what a
   person notices), **Decided** (each decision by its number and who decided it; the ones
   revoked this week too, with why), **Waiting for a decision**, **Votes** (each with its result),

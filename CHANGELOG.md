@@ -18,6 +18,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    agent manifest ([docs/manifest.md](docs/manifest.md) → **Write, check, publish**): it lists
    the page and its `design-decisions` contract once published.
 
+## 1.57.3 — 2026-11-06
+
+**Upgrade:**
+Nothing — the docs are re-read per run.
+
 ## 1.57.2 — 2026-11-06
 
 **Upgrade:**

@@ -43,7 +43,7 @@ Every entry carries the issue's `title`, `url`, `author`, `updated`, `bucket`,
    archive the entry's `card` when it has one (`{id, status: "archived"}`); next issue.
 4. Yes → `design desk upsert` with `kind: issue`, `status: open`, the entry's `bucket`, and
    `source: {repo, issue, url, author, assignees, milestone, labels, updated}`; with the
-   `explain` skill's plain words:
+   `explain` skill's plain words ([desk.md](desk.md) → Writing on the Desk):
    - `title` — what a person will be able to do or see, in the product's words, not the
      issue's title; at most 90 characters;
    - `summary` — one sentence: the problem it solves; at most 180;
