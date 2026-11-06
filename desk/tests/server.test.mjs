@@ -105,7 +105,7 @@ test("For Developers: only a lead developer moves it there, any developer but it
   const me = await d.viewer("lou@example.com", "/api/me");
   assert.deepEqual([me.body.role, me.body.can.size, me.body.can.approve, me.body.can.explore], ["lead-developer", true, false, true], "a roster role with a space reads as lead-developer");
   assert.equal((await approve("dana@example.com")).status, 403, "For Designers: a designer's");
-  for (const email of ["bob@example.com", "alice@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
+  for (const email of ["bob@example.com", "guest@example.com"]) assert.equal((await size(email, true)).status, 403, email);
 
   const marked = await size("lou@example.com", true);
   assert.equal(marked.status, 200);

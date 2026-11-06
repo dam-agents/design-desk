@@ -3484,9 +3484,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   // For Developers or For Designers, who chose, and who approved (docs/desk.md → For Developers or For Designers).
-  // The lead developer's button sits under More, while the request is open and not yet approved.
+  // The button to move it sits under More, while the request is open and not yet approved.
   function sizeLine(c) {
-    // The tab already says where it was filed: only a later move by a lead developer is named here.
+    // The tab already says where it was filed: only a later move by a designer, a PM or a lead developer is named here.
     const sz = c.size?.filed ? null : c.size, ap = c.approved;
     const said = sz ? `<span class="chip ${sz.small ? "info" : ""}" title="${sz.small ? "Any developer but the person who filed it approves it, without a designer" : "A designer, a PM or a lead developer approves it"}">${sz.small ? "For Developers — a developer approves" : "For Designers"}</span> <span class="hint">${who(sz.by)} chose · ${esc(when(sz.at))}</span>` : "";
     // Who approved is in the request's steps (Approved · by …), not on a line of its own.

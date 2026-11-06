@@ -269,9 +269,10 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tadmin", "pat@example.com\tPM"]);
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["admin your role", "designer", "PM", "lead developer", "developer", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer and a PM can, and:\s+Ask Design Desk to add people to the list/, "only an admin adds people");
+    assert.match(await panel(0), /Everything a designer can, and:\s+Ask Design Desk to add people to the list/, "only an admin adds people");
     assert.doesNotMatch(await panel(0), /Move a request/, "moving a request between the tabs is named once, under a PM and a lead developer");
-    assert.match(await panel(1), /Everything a developer can, and:\s+Approve designs[\s\S]*Build live prototypes/, "a role names the largest one below it");
+    assert.match(await panel(1), /Everything a PM can, and:\s+Approve designs[\s\S]*Add a decision/, "a role names the largest one below it");
+    assert.doesNotMatch(await panel(1), /Move a request|Build live prototypes/, "a designer's card does not repeat a PM's");
     assert.match(await panel(2), /Everything a lead developer can, and:\s+Close, reopen and delete requests\s+Build live prototypes/, "a PM moves a request along, under a designer");
     assert.doesNotMatch(await panel(2), /Approve designs|Choose what|Record a decision/, "approving against a decision stays a designer's");
     assert.match(await panel(3), /Everything a developer can, and:\s+Move a request to For Developers/, "a lead developer says what is For Developers");

@@ -201,8 +201,8 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   const dana = { email: "dana@example.com", role: "developer" };
   assert.equal(can("lead-developer", "size"), true);
   assert.equal(can("admin", "size"), true);
-  assert.equal(can("pm", "size"), true);
-  for (const r of ["designer", "developer", "guest"]) assert.equal(can(r, "size"), false, r);
+  for (const r of ["designer", "pm"]) assert.equal(can(r, "size"), true, r);
+  for (const r of ["developer", "guest"]) assert.equal(can(r, "size"), false, r);
   assert.equal(can("lead-developer", "approve"), false, "a developer approves only a request For Developers, per card");
   assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", also: [], role: "lead-developer" }]);
 
