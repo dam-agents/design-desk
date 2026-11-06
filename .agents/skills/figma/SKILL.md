@@ -18,7 +18,16 @@ and that the operator connects it (below).
 
 ## The connection
 
-Preferred: Figma's remote MCP server, `https://mcp.figma.com/mcp`, added on the platform as
+What each connection does; Differences (Compare with the product) read Figma with `design
+figma` alone, so they need the token:
+
+| Connection | Import from Figma | Differences (compare) | Send to Figma | Code links |
+| --- | --- | --- | --- | --- |
+| MCP server only | yes | **no** | yes | read and write (Code Connect) |
+| Token only | yes | yes | no | read (Dev Mode links) |
+| Both | yes | yes | yes | read and write |
+
+Figma's remote MCP server, `https://mcp.figma.com/mcp`, added on the platform as
 a **Custom MCP** connection with OAuth and granted to this agent. Its tools carry the work:
 
 | Need | Tool |
@@ -49,7 +58,8 @@ platform injects on the wire. `design figma` reads it:
 | A picture of a frame | `design figma render <frame-url> <out.png>` |
 
 The picture comes from Figma's storage host, which the egress must allow as well as
-`api.figma.com`. REST cannot create layers: Send to Figma needs the MCP server. Figma limits
+`api.figma.com`; `design figma render` names the host when it cannot reach it (today
+`figma-alpha-api.s3.us-west-2.amazonaws.com`). REST cannot create layers: Send to Figma needs the MCP server. Figma limits
 REST calls per seat, hardest for View and Collab seats: the token's owner needs a Dev or Full
 seat, and a run checks only what it must (Compare with the product → When).
 

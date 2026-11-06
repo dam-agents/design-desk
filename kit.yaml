@@ -58,7 +58,8 @@ connections:
       MCP connection to import frames from Figma and send design options back as
       editable layers, or a read-only personal access token as a Custom Header
       connection (X-Figma-Token, api.figma.com) to import frames and show on the Desk
-      where the product differs from its design in Figma; then set figma to enabled.
+      where the product differs from its design in Figma (only the token does that);
+      then set figma to enabled.
 
 channels:
   - type: slack

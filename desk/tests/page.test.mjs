@@ -1923,3 +1923,83 @@ test("a preview of a design shows neither the review bar nor the hotspots' outli
     await chrome.close();
   }
 });
+
+// Differences from Figma (docs/desk.md → Differences from Figma): a screen and a request
+// compared with their frames, an admin with Figma on for the Desk.
+const FIGMA = `<script>
+window.posts = [];
+const frame = { url: "https://www.figma.com/design/AbC123/App?node-id=12-40", name: "Agents list", version: "9f2c", edited: "2026-11-04T10:00:00Z" };
+const diffs = [{ part: "Rows", what: "less space between rows", severity: "minor", figma: "gap 16px", product: "gap 12px" },
+  { part: "Header", what: "the title is smaller", severity: "major", figma: "24 / 500", product: "20 / 500" }];
+const row = { verdict: "differs", count: 2, frame: "Agents list", checked: "2026-11-05T10:00:00Z" };
+const cards = [
+  { id: "C-1", kind: "screen", title: "Agents list", status: "current", path: "/agents", figma: row, figma_check: { verdict: "differs", frame, checked: "2026-11-05T10:00:00Z", differences: diffs } },
+  { id: "C-2", kind: "request", title: "Bigger send button", status: "feedback", request: { problem: "Too small.", figma: frame.url }, triage: { verdict: "design" },
+    variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }], figma: row,
+    figma_check: { verdict: "differs", variant: "v1", frame, checked: "2026-11-05T10:00:00Z", differences: diffs } },
+];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") {
+    posts.push({ path, body: JSON.parse(body || "{}") });
+    // The Desk keeps the person's choice: /api/me answers it from then on, as the server does.
+    if (path === "/api/prefs") window.figmaPref = JSON.parse(body).figma;
+    return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/prefs" ? { figma: window.figmaPref } : { figma_check: {} }) };
+  }
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? null, can: { handle: true, revise: true, figma: true, request: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
+    : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" }
+    : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("Differences from Figma: the Product page lists what is in the product, a box folds to one line, × and Work into the design send, the menu switch hides it", (t) => open(t, FIGMA, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#product`);
+  await desk.click('[data-filter="productFilter:differences"]');
+  await desk.waitForSelector("#list .row");
+  assert.deepEqual(await desk.$$eval("#list .row [data-card]", (xs) => xs.map((x) => x.dataset.card)), ["C-1"], "a screen is listed; a request is not");
+  assert.match(await desk.textContent("#list .row"), /2 differences[\s\S]*Screen[\s\S]*Agents list/);
+  // A row opens its comparison: the status box, then the table with the major one first.
+  await desk.click('#list [data-card="C-1"]');
+  await desk.waitForSelector("#detail .status");
+  assert.match(await desk.textContent("#detail .status"), /2 differences from Figma[\s\S]*Open in Figma[\s\S]*Open the screen/);
+  assert.deepEqual(await desk.$$eval("#detail .ft-r .ft-d b", (xs) => xs.map((x) => x.textContent)), ["Header", "Rows"], "major first");
+
+  // On the screen itself: folded to one line with the counts; × takes one off for everyone.
+  await desk.goto(`${base}#C-1`);
+  await desk.waitForSelector("[data-figbox]");
+  assert.equal(await desk.$eval("[data-figbox]", (x) => x.open), false, "folded at first");
+  assert.match(await desk.textContent("[data-figbox] summary"), /2 differences from Figma: Agents list[\s\S]*1 major[\s\S]*1 minor/);
+  await desk.click("[data-figbox] summary");
+  await desk.click('[data-figbox] [data-fig-dismiss="Rows"]');
+  await desk.waitForFunction(() => posts.some((p) => p.path.endsWith("/figma-dismiss")));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path.endsWith("/figma-dismiss"))), { path: "/api/cards/C-1/figma-dismiss", body: { part: "Rows", on: true } });
+
+  // On a request: tick the differences to work in; only the ticked ones go, on the option.
+  await desk.goto(`${base}#C-2`);
+  await desk.waitForSelector("[data-figbox]");
+  await desk.click("[data-figbox] summary");
+  await desk.click("[data-fig-pick]");
+  await desk.waitForSelector("[data-fig-d]");
+  await desk.uncheck('[data-fig-d="0"]');
+  await desk.click("[data-fig-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-2/threads"));
+  const note = await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-2/threads").body);
+  assert.deepEqual([note.kind, note.anchor.variant], ["change", "v1"]);
+  assert.match(note.text, /Header: the title is smaller/);
+  assert.doesNotMatch(note.text, /Rows/, "an unticked one stays out");
+
+  // The Figma switch in the menu: off, no Differences page and no box, saved for this person.
+  await desk.click("#me");
+  assert.equal(await desk.getAttribute("#figma", "aria-pressed"), "true", "on by default");
+  await desk.click("#figma");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/prefs").body), { figma: false });
+  assert.equal(await desk.locator("[data-figbox]").count(), 0, "no box");
+  await desk.goto(`${base}#product`);
+  await desk.waitForSelector('[data-filter="productFilter:screens"]');
+  assert.equal(await desk.locator('[data-filter="productFilter:differences"]').count(), 0, "no Differences page");
+}));

@@ -87,3 +87,61 @@ test("Figma's refusals in plain words", async () => {
   await assert.rejects(get("/v1/files/x", { fetchImpl: answer(500) }), /Figma answered 500/, "any other failure is not taken for an answer");
   assert.deepEqual(await get("/v1/files/x", { fetchImpl: answer(200) }), {});
 });
+
+// The command over a stand-in for Figma's API (FIGMA_API): what each `design figma` command
+// asks for, prints, and says when Figma refuses.
+import { createServer } from "node:http";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const run = promisify(execFile);
+const design = new URL("../bin/design.mjs", import.meta.url).pathname;
+
+async function figmaStub(t) {
+  const seen = [];
+  const server = createServer((req, res) => {
+    seen.push({ url: req.url, token: req.headers["x-figma-token"] || null });
+    const json = (code, body) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
+    const u = new URL(req.url, "http://stub");
+    if (u.pathname === "/v1/files/AbC123" && u.searchParams.get("depth") === "3")
+      return json(200, { name: "Agents app", version: "77", lastModified: "2026-11-04T10:00:00Z", document: { children: [{ name: "Screens", children: [frame] }] } });
+    if (u.pathname === "/v1/files/AbC123/components") return json(200, { meta: { components: [{ name: "Send button", node_id: "30:2", description: "Primary" }] } });
+    if (u.pathname === "/v1/files/AbC123/dev_resources") return json(403, { err: "no Dev Mode" });
+    if (u.pathname === "/v1/files/AbC123/nodes") return json(200, { name: "Agents app", version: "77", lastModified: "2026-11-04T10:00:00Z", nodes: { [u.searchParams.get("ids")]: { document: frame, components: { c1: { name: "Agent row" } } } } });
+    if (u.pathname === "/v1/images/AbC123") return json(200, { images: { [u.searchParams.get("ids")]: `http://127.0.0.1:${server.address().port}/img/frame.png` } });
+    if (u.pathname === "/img/frame.png") { res.writeHead(200, { "content-type": "image/png" }); return res.end(Buffer.from("PNGDATA")); }
+    return json(404, { err: "not found" });
+  });
+  await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
+  t.after(() => server.close());
+  const env = { ...process.env, FIGMA_API: `http://127.0.0.1:${server.address().port}`, FIGMA_TOKEN: "test-token" };
+  const figma = async (...args) => JSON.parse((await run(process.execPath, [design, "figma", ...args], { env })).stdout);
+  const fails = (...args) => run(process.execPath, [design, "figma", ...args], { env }).then(() => assert.fail("it should fail"), (e) => e.stderr);
+  return { seen, figma, fails };
+}
+
+const FILE = "https://www.figma.com/design/AbC123/Agents-app";
+const FRAME = `${FILE}?node-id=12-40`;
+
+test("design figma: link, frames, components (code links refused said so), frame and render over the API", async (t) => {
+  const { seen, figma, fails } = await figmaStub(t);
+  assert.deepEqual(await figma("link", FRAME), { key: "AbC123", node: "12:40", url: FRAME });
+  const frames = await figma("frames", FILE, "--name", "agents");
+  assert.deepEqual([frames.version, frames.frames.map((f) => f.name)], ["77", ["Agents list"]]);
+  const comps = await figma("components", FILE);
+  assert.match(comps.code_links, /^unavailable: Figma refused \(403\)/, "a refusal of the Dev Mode links is said, not taken for none");
+  assert.deepEqual(comps.components.map((c) => [c.name, c.node, c.code]), [["Send button", "30:2", []]]);
+  const f = await figma("frame", FRAME);
+  assert.deepEqual([f.name, f.edited, f.components[0].name, f.hash], ["Agents list", "2026-11-04T10:00:00Z", "Agent row", summarize(frame, { c1: { name: "Agent row" } }).hash]);
+  const out = join(mkdtempSync(join(tmpdir(), "figma-render-")), "frame.png");
+  assert.deepEqual(await figma("render", FRAME, out, "--scale", "1"), { file: out, node: "12:40", scale: 1 });
+  assert.equal(readFileSync(out, "utf8"), "PNGDATA");
+  assert.ok(seen.some((r) => r.url.startsWith("/v1/images/AbC123?ids=12%3A40&format=png&scale=1")), "the picture asked at the scale given");
+  assert.ok(seen.filter((r) => r.url.startsWith("/v1/")).every((r) => r.token === "test-token"), "the token goes with every API call");
+  assert.match(await fails("frame", FILE), /names no frame/);
+  assert.match(await fails("frame", "https://www.figma.com/design/Gone99/X?node-id=1-1"), /no such file or node \(404\)/);
+  assert.match(await fails("link", "https://example.com/x"), /not a Figma link/);
+});

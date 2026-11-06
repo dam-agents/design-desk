@@ -15,11 +15,14 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    ([docs/desk.md](docs/desk.md) → **Publishing the page**). The store keeps `figma_check` on
    items and the Figma switch per person.
 2. Only with `figma: enabled`: Figma's REST API now reads frames and compares the product with
-   them (Product → Differences). Ask the owner to add a read-only Figma personal access token
-   as a Custom Header connection `X-Figma-Token` for `api.figma.com`, from an account with a
-   Dev or Full seat, unless the Figma MCP server already works; allow `api.figma.com` and
-   Figma's image host in the egress. Check it with `design figma frames <a file link>`.
-   Nothing to do with `figma: disabled`.
+   them (Product → Differences). Differences need the token even where the Figma MCP server
+   works: the MCP server alone imports and sends layers back, the token alone imports and
+   shows Differences, both do all of it (the `figma` skill → The connection). Ask the owner to
+   add a read-only Figma personal access token as a Custom Header connection `X-Figma-Token`
+   for `api.figma.com`, from an account with a Dev or Full seat, and to allow `api.figma.com`
+   and Figma's image host (today `figma-alpha-api.s3.us-west-2.amazonaws.com`; `design figma
+   render` names it if refused) in the egress. Check it with `design figma frames <a file
+   link>`. Nothing to do with `figma: disabled`.
 
 ## 1.59.0 — 2026-11-06
 

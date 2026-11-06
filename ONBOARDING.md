@@ -183,11 +183,14 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    editable layers." Yes → ask the owner to add Figma's MCP server
    (`https://mcp.figma.com/mcp`) as a Custom MCP connection with OAuth and grant it to this
    agent, and a Figma personal access token (read only, from an account with a Dev or Full
-   seat) as a Custom Header connection `X-Figma-Token` for `api.figma.com`; either alone
-   works, the token without layers sent back. Allow `api.figma.com` and Figma's image host in
-   the egress if they are not on it. Then set `figma: enabled` and check `design figma frames
-   <a file link>`; ask for a file the exports should go to (`figma_file`, may stay empty).
-   No → `figma: disabled`.
+   seat) as a Custom Header connection `X-Figma-Token` for `api.figma.com`. Tell the owner
+   what each gives (the `figma` skill → The connection): the MCP server alone imports and
+   sends layers back but shows **no Differences**; the token alone imports and shows
+   Differences but sends nothing back; both do all of it. With the token, allow
+   `api.figma.com` and Figma's image host (`design figma render` names it if refused; today
+   `figma-alpha-api.s3.us-west-2.amazonaws.com`) in the egress if they are not on it. Then set
+   `figma: enabled` and check `design figma frames <a file link>`; ask for a file the exports
+   should go to (`figma_file`, may stay empty). No → `figma: disabled`.
 10. **Public manifest and peers** (`agent_manifest`) — not a question: write `dam` and tell the
     operator: "I publish my public interface (triggers, skills, blocks I read and write,
     channels, public pages) as a public manifest that people and other agents can read. It

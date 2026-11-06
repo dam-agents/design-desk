@@ -61,9 +61,12 @@ export async function main(_cmd, args) {
       const r = await get(`/v1/images/${l.key}?ids=${encodeURIComponent(l.node)}&format=png&scale=${scale}`);
       const src = r.images?.[l.node];
       if (!src) fail(`Figma drew no picture of ${l.node}${r.err ? `: ${r.err}` : ""}`);
-      // The picture comes from Figma's storage host, not the API: the egress must allow it.
-      const img = await fetch(src);
-      if (!img.ok) fail(`the picture could not be downloaded (${img.status}); is Figma's image host allowed?`);
+      // The picture comes from Figma's storage host, not the API: the egress must allow it, so a
+      // refusal names that host.
+      const host = new URL(src).host;
+      let img;
+      try { img = await fetch(src); } catch (e) { fail(`the picture could not be downloaded from ${host} (${e.cause?.code || e.message}); allow ${host} in the egress`); }
+      if (!img.ok) fail(`the picture could not be downloaded from ${host} (${img.status}); allow ${host} in the egress`);
       writeFileSync(pos[1], Buffer.from(await img.arrayBuffer()));
       return out({ file: pos[1], node: l.node, scale });
     }
