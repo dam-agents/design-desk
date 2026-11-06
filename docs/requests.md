@@ -47,7 +47,8 @@ The person deciding sees it on the card, and every later step builds on it.
    asserts it, an architecture page that describes it, an issue closed as not planned →
    deliberate. No discussion anywhere, or a later change that broke an earlier intent →
    accidental.
-6. **Record it on the card** with the `explain` skill, in plain words: `research: {verdict,
+6. **Record it on the card** with the `explain` skill, in plain words ([desk.md](desk.md) →
+   Writing on the Desk): `research: {verdict,
    summary, links}`. `verdict`: `clear`, `duplicate`, `deliberate`, `collision` (someone is
    changing it now) or `unclear`. The Desk shows only the summary, with no label for the
    verdict, open near the top, so the summary says the verdict in words; it is this short report, one line each, every source linked in `links`:
@@ -109,7 +110,7 @@ The person deciding should know it before a single variant exists.
      new action;
    - `product` — the request changes what the product does or who it is for; it needs a
      decision before design work makes sense.
-4. Write `triage` on the card, with its check against the decisions ([desk.md](desk.md) → Decisions → The check): `verdict`, `reasons` (one plain sentence, only when the verdict
+4. Write `triage` on the card, in plain words ([desk.md](desk.md) → Writing on the Desk), with its check against the decisions ([desk.md](desk.md) → Decisions → The check): `verdict`, `reasons` (one plain sentence, only when the verdict
    needs it) and `cannot`: only what the person asked for — in the issue, the request or
    their answers — that a design change cannot do, each with its reason in their terms; never
    a part nobody asked for. The Desk names every verdict in the request's steps (no label
@@ -374,7 +375,8 @@ A request with a Slack `origin` (a bug, a design someone asked for) is answered 
 thread they started: `reply` with `chatId` = `origin.chat` and `threadTs` =
 `origin.thread_ts`, never a new post, whatever `notify` says. Every reply names the card
 (`C-<n>`) and links it; attach a PNG of the design or screen whenever the step has one. One
-text reply per step, in the words the Desk shows:
+text reply per step, in the words the Desk shows and in plain words ([desk.md](desk.md) →
+Writing on the Desk):
 
 - after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.",
   with each decision in force it goes against by its `D-<n>`;
