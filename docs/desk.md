@@ -96,8 +96,7 @@ served by the Desk server through the platform's Artifact API relay.
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
   button). An option's design (the mockup) starts folded; it opens with a click, and a user
   story played opens it, and All elements stays open. Nothing names a role a request needs:
-  no **Needs a designer** filter, line or heading, no **Needs a developer** label (what a design
-  change cannot do still folds under the status). A request offers no rename. Switching the mode
+  no **Needs a designer** filter, line or heading. A request offers no rename. Switching the mode
   starts an option's sections again as the mode has them. The tab
   intros and How it works, its drawings included, leave out what it hides.
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and

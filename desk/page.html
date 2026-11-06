@@ -3229,8 +3229,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const tr = c.triage;
     if (!tr) return "";
     const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
-    // Simple mode names no role a request needs: no Needs a developer.
-    if (!title || tr.verdict === "design" || (simple() && tr.verdict === "needs-developer")) return "";
+    // Needs a developer has no label: the steps name it and what a design change cannot do folds under the status.
+    if (!title || tr.verdict === "design" || tr.verdict === "needs-developer") return "";
     return `<span class="chip warn" title="${esc([text, ...(tr.reasons || [])].join(" "))}">${esc(title)}</span>`;
   }
   function cannotFold(c) {

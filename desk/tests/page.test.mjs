@@ -1614,7 +1614,7 @@ window.platform = { async request({ method, path, body }) {
 } };
 </script>`;
 
-test("lists show the newest first; a folded box stays folded on another option; a verdict other than design is a label by the title, every verdict is in the steps", (t) => open(t, FOLD, async (desk) => {
+test("lists show the newest first; a folded box stays folded on another option; neither Design only nor Needs a developer is a label by the title, every verdict is in the steps", (t) => open(t, FOLD, async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   await desk.goto(`${base}#C-2`);
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-2");
@@ -1622,9 +1622,8 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.deepEqual(await rows(), ["C-3", "C-2", "C-1", "C-6"], "requests by the day they came, not by their last update");
   assert.equal(await desk.locator("#list .chip", { hasText: "Design only" }).count(), 0, "no Design only label in the list");
 
-  const chip = desk.locator("#detail .sub .chip", { hasText: "Needs a developer" });
-  assert.equal(await chip.count(), 1, "the verdict is a label beside the title");
-  assert.match(await chip.evaluate((x) => x.title || x.dataset.tip || ""), /price per seat is not in the data/, "its reasons are on hover");
+  assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Needs a developer" }).count(), 0, "no Needs a developer label beside the title");
+  assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Needs a developer/, "the steps name it");
   assert.equal(await desk.locator(".made-col h4", { hasText: "What can be done" }).count(), 0, "no What can be done in the box");
   assert.doesNotMatch(await desk.textContent(".made-col"), /deliberate decision/, "no label on what is already known");
   assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");

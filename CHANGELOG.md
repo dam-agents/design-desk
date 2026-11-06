@@ -14,7 +14,8 @@ Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.ht
 ([docs/desk.md](docs/desk.md) → **Publishing the page**); the server is unchanged. The page
 looks the same everywhere: the Presentation's rows carry the state dot and red ! of every list,
 a screen's, an element's and a decision's page open with the status box (their buttons in it), an
-issue's GitHub link is a pill as a change's PR is, and colours and type sizes come from the
+issue's GitHub link is a pill as a change's PR is, a request's page no longer has a
+Needs a developer label under its title (its steps name it), and colours and type sizes come from the
 page's tokens. Nothing else to do.
 
 ## 1.51.0 — 2026-11-06
