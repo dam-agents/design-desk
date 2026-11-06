@@ -3394,6 +3394,21 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
 
   // The developer spec: open while it waits for a person; who wrote this version, earlier ones a
   // click away; Edit turns it into its own text to change (docs/handoff.md → Review before it goes).
+  // Where the spec goes, after its name: the issue or pull request it went to, else the issue it
+  // came from, else a GitHub issue in the product's repository; nothing when it stays on the Desk.
+  function specTarget(c) {
+    // Plain text: the whole line opens and folds the spec, so no link sits in it.
+    const a = (url, text) => esc(text);
+    const sent = ghRef(c.spec?.issue_url || c.spec?.pr_url);
+    if (sent) return ` for ${a(c.spec.issue_url || c.spec.pr_url, `${sent.pr ? "PR" : "issue"} #${sent.n}`)}`;
+    const route = S.me?.handoff?.[c.request?.type || "idea"];
+    if (route === "desk") return "";
+    const from = S.cards.find((x) => x.id === c.request?.from), src = ghRef(from?.source?.url || c.origin?.url);
+    const issueNo = src && !src.pr ? src.n : from?.kind === "issue" ? from.source?.issue : null;
+    const repo = repoOf(from?.kind === "issue" ? from : c), name = repo ? repo.replace(/^https?:\/\/[^/]+\//, "") : "";
+    if (c.request?.type === "feature" && issueNo) return ` for ${a("", `GitHub issue #${issueNo}${name ? ` in ${name}` : ""}`)}`;
+    return repo ? ` for a GitHub issue in ${a(repo, name)}` : " for a GitHub issue";
+  }
   function specPanel(c) {
     const sp = c.spec, review = c.status === "spec" && sp.review === "draft";
     const versions = [...(sp.history || []), { asset: sp.asset, at: sp.at, by: sp.by }];
@@ -3406,7 +3421,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const list = versions.length > 1 ? `<p class="hint spec-versions">Versions: ${versions.map((x, i) => `<button data-spec-view="${esc(x.asset)}" aria-pressed="${x === shown}">${i + 1} · ${esc(by(x))}</button>`).join(", ")}</p>` : "";
     const edit = S.specEdit === c.id ? `<div class="spec-edit"><textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="spec-preview" id="spec-preview" aria-label="How it reads"></div></div><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
     const tools = review && canApprove(c) && S.specEdit !== c.id ? `<div class="actions spec-tools"><button class="btn small" data-spec-edit title="Change the text here; it becomes the newest version">✎ Edit</button><button class="btn small" data-spec-changes title="Say what to change; Design Desk rewrites it and brings it back here">Ask for changes…</button></div>` : "";
-    return `<details class="fold"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec ${state}</summary><div class="panel">
+    return `<details class="fold"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
       <div class="spec-head"><p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(by(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p>${tools}</div>${list}
       ${edit || `<div id="spec-body" data-asset="${esc(shown.asset)}">…</div>`}</div></details>`;
   }
@@ -3609,7 +3624,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     foldsFor(c);
     return `${backBar()}
       <h2 class="renamable">${txt(c.title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
-      <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
+      <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
       ${renderStatus(c)}${shippedLine(c)}
