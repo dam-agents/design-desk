@@ -366,8 +366,9 @@ request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
 On a wide window the list folds away with an arrow halfway down its edge and comes back with
-it; each browser remembers it (`desk-list-folded` in local storage). Where there is no arrow
-(a phone's width, Guide, People) a folded list still shows.
+it; each browser remembers it (`desk-list-folded` in local storage). At a phone's width there is
+no arrow and a folded list shows while no item is open; Guide and People have no list, and the
+fold applies again on leaving them.
 
 ## Read and unread
 

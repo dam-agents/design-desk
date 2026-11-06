@@ -1115,6 +1115,11 @@ for (const [label, triage, me, sel] of PILLS) {
     await desk.waitForSelector("#detail .steppill");
     assert.equal(await desk.locator(`#detail .steppill ${sel}`).count(), 1, `the pill holds ${label}`);
     assert.equal(await desk.locator("#detail .steppill .step-next").count(), 1, "one move, no more");
+    // The state's ⓘ draws every way on: a move the viewer may make plainly, one they may not
+    // greyed with why and who can.
+    const help = await desk.textContent("#detail .s-word .info .tip");
+    if (me.can.approve) assert.doesNotMatch(help, /✕ Approve…/, "an approver's help offers Approve…");
+    else assert.match(help, /✕ Approve…Not now: A designer or a lead developer approves it/, "anyone else's says who approves it");
   }));
 }
 
