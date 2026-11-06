@@ -288,6 +288,44 @@ test("simple mode: each person's own choice, kept on the Desk apart from day or 
   assert.equal((await d.viewer("alice@example.com", "/api/prefs", { simple: null })).body.simple, null, "null: the role decides again");
 });
 
+test("the Figma switch: each person shows or hides the comparisons with Figma, kept on the Desk", async (t) => {
+  const d = await desk(t);
+  const me = async (email) => (await d.viewer(email, "/api/me")).body;
+  assert.equal((await me("alice@example.com")).figma_pref, null, "no choice: shown while the Desk has Figma on");
+  await d.viewer("alice@example.com", "/api/prefs", { simple: true });
+  const saved = await d.viewer("alice@example.com", "/api/prefs", { figma: false });
+  assert.deepEqual([saved.status, saved.body.figma, saved.body.simple], [200, false, true], "only the key sent changes");
+  assert.deepEqual([(await me("alice@example.com")).figma_pref, (await me("bob@example.com")).figma_pref], [false, null], "not anyone else's");
+  assert.equal((await d.viewer("bob@example.com", "/api/prefs", { figma: "off" })).status, 400);
+  assert.equal((await d.viewer("alice@example.com", "/api/prefs", { figma: null })).body.figma, null, "null: shown again");
+});
+
+test("a difference from Figma: only who may mark things handled takes it off, only with Figma on; the agent writes a decision's", async (t) => {
+  const frame = { url: "https://www.figma.com/design/AbC123/App?node-id=12-40", name: "Agents list", version: "9f2c" };
+  const check = { verdict: "differs", frame, differences: [{ part: "Header", what: "the title is smaller", severity: "major" }, { part: "Rows", what: "less space", severity: "minor" }] };
+  const d = await desk(t, "- figma: enabled\n");
+  const { body: { card } } = await d.agent("/agent/cards", { kind: "screen", title: "Agents list", path: "/agents", figma_check: check });
+  const off = (email, role) => d.viewer(email, `/api/cards/${card.id}/figma-dismiss`, { part: "Rows" }, role);
+  assert.equal((await off("guest@example.com")).status, 403, "a viewer may not");
+  assert.equal((await off("bob@example.com")).status, 403, "a developer may not");
+  const done = await off("alice@example.com");
+  assert.deepEqual([done.status, done.body.figma_check.dismissed.map((x) => x.part)], [200, ["Rows"]], "a designer may");
+  const row = (await d.viewer("alice@example.com", "/api/cards")).body.cards.find((c) => c.id === card.id);
+  assert.equal(row.figma.count, 1, "off the count");
+  assert.equal((await d.viewer("alice@example.com", `/api/cards/${card.id}/figma-dismiss`, { part: "Rows", on: false })).body.figma_check.dismissed, undefined, "brought back");
+  // A decision a frame goes against: written by the agent only.
+  const dec = (await d.agent("/agent/decisions", { concepts: ["header"], text: "Titles are 20 px.", author: { login: "alice" }, origin: { kind: "chat" } })).body.decision;
+  assert.equal((await d.viewer("alice@example.com", `/agent/decisions/${dec.id}/figma`, { figma_check: check })).status, 401, "not a person's route");
+  const put = await d.agent(`/agent/decisions/${dec.id}/figma`, { figma_check: check });
+  assert.deepEqual([put.status, put.body.decision.figma_check.differences.length], [200, 2]);
+  assert.equal((await d.agent(`/agent/decisions/${dec.id}/figma`, { figma_check: null })).body.decision.figma_check, undefined, "null clears it");
+  // With Figma off for the Desk, nobody takes one off.
+  const plain = await desk(t);
+  const { body: { card: c2 } } = await plain.agent("/agent/cards", { kind: "screen", title: "Agents list", path: "/agents", figma_check: check });
+  const refused = await plain.viewer("alice@example.com", `/api/cards/${c2.id}/figma-dismiss`, { part: "Rows" });
+  assert.deepEqual([refused.status, refused.body.error], [400, "Figma is not connected to this Desk yet."]);
+});
+
 test("read and unread: the first open marks an item read for that person alone", async (t) => {
   const d = await desk(t);
   const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." })).body.card.id;

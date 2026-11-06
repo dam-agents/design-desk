@@ -66,7 +66,8 @@ have) — and maybe their screenshot.
 A designer, PM or developer pressed **Check again** on a screen. Claim the item, take the
 screen's pictures again with its recipe (**Build it** step 2), and `design desk upsert` them
 with the card's `id`: the same pictures mark it `checked`, new ones redraw it (`drawn`, its
-earlier pictures kept in `history`). A screen that is gone from the product → `status: stale`
+earlier pictures kept in `history`). Redrawn, with `figma: enabled`: compare it with its frame
+in Figma (the `figma` skill → Compare with the product). A screen that is gone from the product → `status: stale`
 and one section saying where it went. Then `design desk done I-<n> --session <id> --outcome
 checked` (or `redrawn`, `stale`).
 

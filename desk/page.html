@@ -83,11 +83,12 @@
   .theme svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
   .theme[aria-current="true"] { background: var(--soft); border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   /* Simple mode in your menu: its words, then an on/off switch, on in the accent. */
-  #simple { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  #simple .sw { position: relative; flex: none; width: 28px; height: 16px; border-radius: 8px; background: var(--line); transition: background .15s; }
-  #simple .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
-  #simple[aria-pressed="true"] .sw { background: var(--accent); }
-  #simple[aria-pressed="true"] .sw::after { transform: translateX(12px); }
+  #simple, #figma { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  #figma[hidden] { display: none; }
+  #simple .sw, #figma .sw { position: relative; flex: none; width: 28px; height: 16px; border-radius: 8px; background: var(--line); transition: background .15s; }
+  #simple .sw::after, #figma .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+  #simple[aria-pressed="true"] .sw, #figma[aria-pressed="true"] .sw { background: var(--accent); }
+  #simple[aria-pressed="true"] .sw::after, #figma[aria-pressed="true"] .sw::after { transform: translateX(12px); }
   .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
   .banner.warn { background: var(--warn-soft); }
   /* A tab's intro: what it shows, what you can do, the steps; in the empty pane beside the list, folded per browser. */
@@ -290,6 +291,35 @@
   .row.item.fromdesign { border-left: 3px dashed var(--waiting); }
   .designbox { padding: 10px 14px; border-radius: var(--radius); border: 1px dashed var(--waiting); background: var(--waiting-soft); max-width: var(--measure); margin: 10px 0; }
   .designbox p { margin: 2px 0; }
+  /* Where the product differs from its Figma frame: the warning's ink, one line per difference. */
+  .figbox { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); max-width: var(--measure); margin: 10px 0; }
+  .figbox p { margin: 2px 0; }
+  .figbox > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .figbox > summary::-webkit-details-marker { display: none; }
+  .figbox > summary::after { content: "+"; margin-left: auto; color: var(--muted); font-size: var(--fs-head, 17px); line-height: 1; }
+  .figbox[open] > summary::after { content: "−"; }
+  .figbox[open] > summary { margin-bottom: 6px; }
+  .figbox > summary a { color: var(--ink); text-decoration-color: color-mix(in srgb, var(--ink) 35%, transparent); text-underline-offset: 2px; }
+  .figbox > summary a:hover { text-decoration-color: var(--ink); }
+  .figdiffs .two { max-width: 760px; margin-top: 8px; gap: 12px; }
+  .figbox figure, .figdiffs figure { margin: 0; } .figbox figcaption, .figdiffs figcaption { font-size: var(--fs-meta, 12px); color: var(--muted); }
+  .figbox img, .figdiffs img { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  .figbox .actions { margin: 6px 0 0; align-items: center; } .figbox .actions .hint { margin: 0; }
+  .ftab { margin: 8px 0; max-width: 980px; }
+  .ft-h, .ft-r { display: grid; grid-template-columns: auto minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 28px; gap: 0 14px; }
+  .ft-x .btn { background: none; border: 0; box-shadow: none; padding: 2px 6px; min-width: 0; color: var(--muted); font-size: 16px; line-height: 1; } .ft-x .btn:hover { color: var(--ink); }
+  .ft-off { margin: 4px 0 8px; }
+  .ft-h { font-size: var(--fs-meta, 12.5px); color: var(--muted); padding: 0 0 6px; }
+  .ft-r { border-top: 1px solid color-mix(in srgb, var(--muted) 22%, transparent); padding: 10px 0; align-items: start; }
+  .ft-d p { margin: 0; line-height: 1.45; } .ft-c code { font-size: var(--fs-meta, 12.5px); color: var(--ink); }
+  .ft-c figure { margin: 6px 0 0; } .ft-c img { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #fff; display: block; }
+  .fd-k { display: flex; align-items: center; gap: 6px; min-height: 20px; } .fd-k .chip { min-width: 48px; justify-content: center; }
+  label.fd-k { cursor: pointer; } label.fd-k input { width: auto; margin: 0; }
+  @media (max-width: 700px) { .ft-h { display: none; } .ft-r { grid-template-columns: auto 1fr 28px; gap: 8px 12px; } .ft-c { grid-column: 1 / -1; } .ft-x { grid-column: 3; grid-row: 1; } }
+  .figdiffs { display: grid; gap: 20px; margin: 8px 0 12px; max-width: var(--measure); } .figdiffs p { margin: 0; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; border: 1px solid var(--line); vertical-align: -1px; margin-right: 4px; }
+  .row .prov .fig-n { color: var(--warn); font-weight: 500; }
+  .row .prov .fig-ok { color: var(--ok); }
   .diffs { display: grid; gap: 12px; margin: 8px 0 0; }
   .diffs .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .diffs figure { margin: 0; } .diffs figcaption { font-size: var(--fs-meta, 12px); color: var(--muted); }
@@ -975,7 +1005,7 @@
     <nav id="nav" aria-label="Desk"></nav>
     <div class="grow"></div>
     <div class="search"><input class="goto" id="goto" type="search" placeholder="Search, or C-12, D-3, #4512" role="combobox" aria-expanded="false" aria-controls="hits" aria-label="Search the Desk: words, an item's number like C-12, a decision's like D-3, a GitHub issue or pull request number, or a link" title="Search requests, changes, issues, screens, elements and decisions. A number opens its item: C-12, D-3, or a GitHub issue or pull request like #4512" autocomplete="off" spellcheck="false" /><div id="hits" role="listbox" hidden></div></div>
-    <details class="more me-menu"><summary class="me" id="me" aria-label="Your menu"></summary><div class="menu"><button class="btn" id="help" type="button" data-tab="guide" title="How Design Desk works, with a picture of each flow">? How it works</button><button class="btn" id="simple" type="button" aria-pressed="false"></button><button class="btn" id="theme" type="button"></button></div></details>
+    <details class="more me-menu"><summary class="me" id="me" aria-label="Your menu"></summary><div class="menu"><button class="btn" id="help" type="button" data-tab="guide" title="How Design Desk works, with a picture of each flow">? How it works</button><button class="btn" id="simple" type="button" aria-pressed="false"></button><button class="btn" id="figma" type="button" aria-pressed="true" hidden></button><button class="btn" id="theme" type="button"></button></div></details>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
   </header>
   <div class="banners" id="banners"></div>
@@ -1381,6 +1411,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too, but not the handled ones", "issueFilter:handled": "Issues a designer marked handled: design has nothing to do with them; they leave the other lists",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
       "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
+      "productFilter:differences": "Where the product differs from its design in Figma: screens, elements, changes, requests and decisions",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions in force that someone other than a designer made, waiting for a designer to approve them", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
@@ -1597,7 +1628,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // ---------- state ----------
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
-  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -2177,14 +2208,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
         "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in; parts of approved designs, not in the product yet, are marked <b>✎ From an approved design</b>.",
         "<b>Decisions</b>: everything the team decided, each with its number (D-3), who decided it and where; revoked ones too.",
+        ...(figmaOn() ? ["<b>Differences</b>: where the screens, elements and shipped changes differ from their design in Figma, each with both pictures side by side. The same box shows on each of them, on a request and on a decision."] : []),
         "<b>History</b>: one page a week, named by its dates: the week's UX changes, the decisions taken and the themes in people's feedback.",
         "Earlier looks of a screen or part: step back through them, or put one next to now."],
-      can: [["Switch between <b>Screens</b>, <b>Elements</b>, <b>Decisions</b> and <b>History</b>."],
+      can: [[`Switch between <b>Screens</b>, <b>Elements</b>, <b>Decisions</b>${figmaOn() ? ", <b>Differences</b>" : ""} and <b>History</b>.`],
         ["<b>Ask about this screen</b>: why it works the way it does.", "ask"],
         ["<b>+ Add</b> a screen or part that is missing.", "add"],
         ["<b>Revoke</b> a decision that no longer holds, or restore it.", "decide"],
         ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
-      steps: ["Pick Screens, Elements, Decisions or History.", "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
+      steps: [`Pick Screens, Elements, Decisions${figmaOn() ? ", Differences" : ""} or History.`, "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
   });
   // Each tab's help draws its own flow from How it works: a request, a shipped change, an issue.
   const FLOW_OF = { requests: FLOW_REQUEST, new: FLOW_CHANGE, issues: FLOW_ISSUE };
@@ -2291,6 +2323,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (S.tab === "new") return newCards(S.newFilter);
     // History: the weekly digests, the newest week first (docs/digest.md).
     if (S.tab === "product" && S.productFilter === "history") return S.cards.filter((c) => c.kind === "digest").sort((a, b) => String(b.period || b.created).localeCompare(String(a.period || a.created)));
+    // Differences: what Design Desk compared with Figma, the differing first (only with Figma on).
+    if (S.tab === "product" && S.productFilter === "differences") return figmaOn() ? figmaCards(S.figFilter) : [];
     if (S.tab === "product" && S.productFilter !== "decisions") {
       const kind = S.productFilter === "elements" ? "element" : "screen";
       // One Design Desk could not add stays a week, so the person who asked sees why.
@@ -2376,6 +2410,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const main = $("#main");
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
+    // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
+    if (S.productFilter === "differences" && !figmaOn()) S.productFilter = "screens";
     const cards = visibleCards();
 
     // A tab's pages (Product's four, Requests and its presentation) are tabs; filters narrow the page's list.
@@ -2386,10 +2422,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // Requests: For Designers and For Developers, each with its open count, and the presentation.
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
-      : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ["history", "History"]], (k) => S.productFilter === k, add) : "";
+      : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["ready", "Ready", requestCards("ready").length], ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET, handled: "Handled" }).map(([k, l]) => [k, l, issueCards(k).length]))
+      : S.tab === "product" && S.productFilter === "differences" ? seg("figFilter", [["differs", "Differs from Figma", figmaCards("differs").length], ["matches", "Matches", figmaCards("matches").length], ["all", "All", figmaCards("all").length]])
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
     const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
@@ -2401,7 +2438,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "ready" ? "Nothing waits for anyone to act right now." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
-      product: S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
+      product: S.productFilter === "differences" ? (S.figFilter === "matches" ? "Nothing matches its Figma frame yet." : S.figFilter === "differs" && figmaCards("all").length ? "Nothing differs from Figma." : "Nothing is compared with Figma yet. Design Desk compares a screen, an element, a change or a request with its frame once it has a Figma link.")
+        : S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
@@ -2410,7 +2448,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues" || S.tab === "product";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${rowDot(c)}</div>${againstDot(c)}</button>
-      ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("");
+      ${S.tab === "product" && S.productFilter === "differences" ? figmaFacts(c) : sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("");
   }
 
   // ---------- people ----------
@@ -2535,6 +2573,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
       ${(d.pictures || []).length ? `<h3>Pictures</h3>${shots(d.pictures.map((asset) => ({ asset, caption: "" })))}` : ""}
+      ${figmaBox(d, "decision")}
       ${(d.replaces || []).length ? `<h3>It replaces</h3><ul>${d.replaces.map((id) => `<li>${decRef(id)}</li>`).join("")}</ul>` : ""}
       ${refs ? `<h3>What refers to it</h3><ul>${refs}</ul>` : ""}`;
   }
@@ -3043,6 +3082,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : ""}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
       ${renderInstance(c)}
+      ${figmaBox(c)}
       ${(c.elements || []).length ? `<h3>Parts it changed</h3><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div>` : ""}
       ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
       ${renderImpact(c.impact)}
@@ -3095,7 +3135,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
-      ${c.status === "dropped" ? "" : `<h3>Screens</h3>${renderLooks(c)}
+      ${c.status === "dropped" ? "" : `<h3>Screens</h3>${renderLooks(c)}${figmaBox(c)}
       ${els.length ? `<h3>Parts on this screen</h3><div class="actions">${els.map((e) => `<button class="anchor" data-card="${esc(e.id)}">${esc(e.title)}</button>`).join("")}</div>` : ""}
       <h3>Why it is like this</h3><div id="timeline" class="section"><p class="hint">Loading the decisions and changes…</p></div>`}
       ${sections(c)}${renderImpact(c.impact)}
@@ -3149,6 +3189,86 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       <div class="diffs">${k.differences.map((d) => `<div><p><b>${esc(d.element)}</b>${d.card ? ` <button class="anchor" data-ref="${esc(d.card)}">${esc(d.card)}</button>` : ""}: ${txt(d.what)}</p>${d.design || d.shipped ? `<div class="two">${fig(d.design, "The approved design")}${fig(d.shipped, "As it shipped")}</div>` : ""}</div>`).join("")}</div>
       <p class="hint">A designer decides whether it stays: ask for a fix with Adjust the design, or accept it with Mark handled.</p></div>`;
   }
+  // ---------- compared with Figma ----------
+  // Where an item differs from its frame in Figma (the figma skill), shown only with Figma on for
+  // the Desk and for this person (the Figma switch in their menu): one line per difference with
+  // Figma's value and the product's, a colour with its swatch, and both pictures when there are.
+  const figmaOn = () => Boolean(S.me?.figma) && S.me?.figma_pref !== false;
+  // What is in the product already: a screen, an element, a shipped change (Product → Differences).
+  const FIG_KINDS = ["screen", "element", "change"];
+  const swatched = (v) => esc(v).replace(/#[0-9a-f]{6}\b/gi, (h) => `<span class="swatch" style="background:${h}"></span>${h}`);
+  const FIG_NEXT = {
+    decision: "Figma goes against this decision. A designer updates Figma, or revokes the decision.",
+  };
+  const figPic = (id, cap) => (id ? `<figure data-zoom="${esc(id)}"><img alt="${esc(cap)}" data-asset="${esc(id)}" /><figcaption>${esc(cap)}</figcaption></figure>` : `<div class="nopic hint">${esc(cap)}: no picture</div>`);
+  const figPics = (a, b) => (a || b ? `<div class="two">${figPic(a, "In Figma")}${figPic(b, "In the product")}</div>` : "");
+  // The differences as a table, the major ones first: what differs, then Figma's side and the
+  // product's side, each its value over its picture; on a request each row can be ticked to work
+  // it into the option (the tick keeps the difference's own place in the list).
+  const figCell = (v, shot, cap) => `<div class="ft-c"><code>${swatched(v || "—")}</code>${shot ? `<figure data-zoom="${esc(shot)}"><img alt="${esc(cap)}" data-asset="${esc(shot)}" /></figure>` : ""}</div>`;
+  // What people took off the table (the ×) stays off it; a person who may mark things handled
+  // takes one off, or brings them back under the table.
+  const figOff = (k) => new Set((k.dismissed || []).map((d) => d.part));
+  const figShown = (k) => (k.differences || []).filter((d) => !figOff(k).has(d.part));
+  const figTable = (x, picking = false) => {
+    const k = x.figma_check, off = figOff(k), mayOff = can("handle") && !picking;
+    const head = `<div class="ft-h" role="row"><span role="columnheader" aria-label="Severity"></span><span role="columnheader">Difference</span><span role="columnheader">In Figma</span><span role="columnheader">In the product</span><span role="columnheader" aria-label="Remove"></span></div>`;
+    const rows = k.differences.map((d, i) => [d, i]).filter(([d]) => !off.has(d.part)).sort(([a], [b]) => (sevOf(a) === "major" ? 0 : 1) - (sevOf(b) === "major" ? 0 : 1)).map(([d, i]) => `<div class="ft-r" role="row"><div class="ft-s">${picking ? `<label class="fd-k"><input type="checkbox" data-fig-d="${i}" checked aria-label="${esc(d.part)}" />${sevChip(sevOf(d))}</label>` : `<span class="fd-k">${sevChip(sevOf(d))}</span>`}</div><div class="ft-d"><p><b>${esc(d.part)}</b>: ${txt(d.what)}</p></div>${figCell(d.figma, d.figma_shot, "In Figma")}${figCell(d.product, d.product_shot, "In the product")}<div class="ft-x">${mayOff ? `<button class="btn small" data-fig-dismiss="${esc(d.part)}" data-fig-of="${esc(x.id)}" aria-label="Remove ${esc(d.part)} from the table" title="Takes it off the table for everyone; it stays off until the frame in Figma changes">×</button>` : ""}</div></div>`).join("");
+    const gone = k.dismissed || [];
+    const back = gone.length ? `<p class="hint ft-off">Removed: ${gone.map((d) => `${esc(d.part)}${d.by ? ` (${isMe(d.by.email) ? "you" : esc(d.by.name || nameOf(d.by.email))})` : ""}`).join(", ")}${can("handle") ? ` · <button class="anchor-text" data-fig-restore="${esc(x.id)}">Bring ${gone.length === 1 ? "it" : "them"} back</button>` : ""}</p>` : "";
+    return `${rows ? `<div class="ftab" role="table">${head}${rows}</div>` : ""}${back}`;
+  };
+  const figFrame = (k) => (k.frame?.url ? `<a href="${safeUrl(k.frame.url)}" target="_blank" rel="noopener noreferrer">${esc(k.frame.name || "the frame")}&nbsp;↗</a>` : esc(k.frame?.name || ""));
+  const figWhen = (k) => [k.frame?.edited ? `Figma frame edited ${esc(day(k.frame.edited))}` : "", k.checked ? `checked ${esc(day(k.checked))}` : ""].filter(Boolean).join(" · ");
+  // How much a difference matters: major a person would notice in use, minor a small value apart.
+  const FIG_SEV = { major: ["bad", "Major", "A person would notice it: a different layout, a missing state, a different behaviour on screen"],
+    minor: ["", "Minor", "A small value apart: a shade of a colour, a few pixels of size or spacing"] };
+  const sevOf = (d) => (d.severity === "major" ? "major" : "minor");
+  const sevChip = (sev, n = null) => { const [cls, word, tip] = FIG_SEV[sev]; return `<span class="chip ${cls}" title="${esc(tip)}">${n == null ? word : `${n} ${word.toLowerCase()}`}</span>`; };
+  const sevChips = (ds) => ["major", "minor"].map((sev) => [sev, ds.filter((d) => sevOf(d) === sev).length]).filter(([, n]) => n).map(([sev, n]) => sevChip(sev, n)).join(" ");
+  // Folded to one line everywhere: the count and how much they matter; a person opens it.
+  function figmaBox(x, kind = x.kind) {
+    const k = x.figma_check;
+    if (!k || !figmaOn()) return "";
+    const when = figWhen(k);
+    const shown = figShown(k);
+    if (k.verdict !== "differs" || !shown.length)
+      return `<p class="hint" style="max-width:var(--measure)"><span class="chip ok" title="Design Desk compared it with its frame in Figma">✓ Matches Figma</span> ${figFrame(k)}${when ? ` · ${when}` : ""}.</p>${(k.dismissed || []).length ? figTable(x) : ""}`;
+    // On a request a person picks the differences to work into the option; Design Desk redraws it.
+    const request = kind === "request", picking = request && S.figPick === x.id;
+    const mayWork = request && can("revise") && !locked(x) && k.variant;
+    const foot = picking ? `<div class="actions"><button class="btn small primary" data-fig-send>Send to Design Desk</button><button class="btn small" data-fig-cancel>Cancel</button><span class="hint">Design Desk redraws the option with the ticked changes; it becomes its next version.</span></div>`
+      : `<div class="actions">${mayWork ? `<button class="btn small primary" data-fig-pick>Work into the design</button>` : ""}${FIG_KINDS.includes(kind) ? `<button class="btn small" data-fig-open="${esc(x.id)}">Compare side by side</button>` : ""}${when || FIG_NEXT[kind] ? `<span class="hint">${when ? `${when}. ` : ""}${FIG_NEXT[kind] || ""}</span>` : ""}</div>`;
+    const n = shown.length;
+    return `<details class="figbox" data-figbox${picking || S.figKeep === x.id ? " open" : ""}><summary><span>⚠ <b>${plural(n, "difference", "differences")} from ${k.frame?.url ? `<a href="${safeUrl(k.frame.url)}" target="_blank" rel="noopener noreferrer" title="Opens the frame in Figma">Figma: ${esc(k.frame.name || "the frame")}&nbsp;↗</a>` : `Figma${k.frame?.name ? `: ${esc(k.frame.name)}` : ""}`}</b></span>${sevChips(shown)}</summary>
+      ${figTable(x, picking)}${foot}</details>`;
+  }
+  // Product → Differences, one item: what differs, where each side is, and both pictures.
+  function renderFigmaPage(c) {
+    const k = c.figma_check, n = figShown(k).length, differs = k.verdict === "differs" && n;
+    const src = c.source || {};
+    // The header in every item's style: the title, then the status box with the facts and both sides.
+    const kv = (key, v) => `<span><span class="k">${key}:</span> <b>${v}</b></span>`;
+    const meta = [k.frame?.edited ? kv("Figma frame edited", esc(day(k.frame.edited))) : "", k.checked ? kv("checked", esc(day(k.checked))) : ""].join("");
+    const pill = c.kind === "change" && src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
+    const buttons = `${k.frame?.url ? `<a class="btn" href="${safeUrl(k.frame.url)}" target="_blank" rel="noopener noreferrer" title="Opens ${esc(k.frame.name || "the frame")} in Figma">Open in Figma ↗</a>` : ""}<button class="btn" data-ref="${esc(c.id)}" title="Opens it where it is on the Desk">${{ screen: "Open the screen", element: "Open the element", change: "Open the PR change" }[c.kind] || "Open it"}</button>`;
+    const box = ghStatus(differs ? "waiting" : "approved", differs ? `${plural(n, "difference", "differences")} from Figma` : "Matches Figma",
+      `Design Desk compared it with ${k.frame?.name ? `"${k.frame.name}"` : "its frame"} in Figma`, meta, buttons, "", { pill, inline: true });
+    return `${backBar()}
+      <h2>${txt(c.title)}${num(c)}</h2>
+      ${box}
+      ${k.frame?.shot || k.product_shot ? `<h3>The whole ${c.kind === "element" ? "element" : "screen"}</h3><div class="figdiffs">${figPics(k.frame?.shot, k.product_shot)}</div>` : ""}
+      ${differs || (k.dismissed || []).length ? `<h3>What differs</h3>${figTable(c)}` : ""}`;
+  }
+  // On a list row: how many differences, or that it matches.
+  const figmaFacts = (c) => {
+    const f = c.figma;
+    if (!f) return "";
+    const what = f.verdict === "differs" ? `<span class="fig-n">⚠ ${plural(f.count, "difference", "differences")}</span>` : `<span class="fig-ok">✓ Matches</span>`;
+    return `<div class="prov">${what}<span>${esc(KIND_NAME[c.kind] || c.kind)}</span>${f.frame ? `<span>Figma: <span class="when">${esc(f.frame)}</span></span>` : ""}${f.checked ? `<span>checked ${esc(day(f.checked))}</span>` : ""}</div>`;
+  };
+  const figmaCards = (which) => newestFirst(S.cards.filter((c) => c.figma && FIG_KINDS.includes(c.kind) && (which === "all" || (which === "differs") === (c.figma.verdict === "differs"))));
+
   // On a request sent to developers: the change that shipped it, as designed or not.
   function shippedLine(c) {
     const sh = c.kind === "request" ? shippedOf(c.id) : null;
@@ -3194,7 +3314,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${c.status === "dropped" ? "" : `${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:0;list-style:none">${c.states.map((x, k) => `<li id="no-${esc(c.id)}-${k + 1}">${subTag(c, k + 1)} <b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
-      ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<p class="hint">Not drawn yet.</p>`}`}
+      ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<p class="hint">Not drawn yet.</p>`}${figmaBox(c)}`}
       ${sections(c)}${renderImpact(c.impact)}
       ${src.file ? `<details class="fold"><summary>For developers</summary><p class="sub"><code>${esc(src.file)}</code>${src.export ? ` · <code>${esc(src.export)}</code>` : ""}${src.commit ? ` · ${esc(src.commit)}` : ""}</p></details>` : ""}
       ${renderThreads(c)}`;
@@ -3599,7 +3719,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
-      ${againstBox(c, v.id)}${simple() ? "" : whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
+      ${simple() ? "" : whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
         <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
@@ -3609,6 +3729,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${renderPolls(c)}${renderCouncils(c)}
       ${renderOptionElements(c, v)}
       ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`)}
+      ${againstBox(c, v.id)}${c.figma_check?.variant === v.id ? figmaBox(c) : ""}
       ${renderStories(c, v)}</div>`;
   }
 
@@ -4492,9 +4613,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       return;
     }
     const keep = $("#composer-text")?.value || "";
-    d.innerHTML = { change: renderChange, element: renderElement, screen: renderScreen, digest: renderDigest, issue: renderIssue }[S.card.kind]?.(S.card) ?? renderRequest(S.card);
+    // On Product → Differences an item opens as its comparison with Figma.
+    const figPage = S.tab === "product" && S.productFilter === "differences" && S.card.figma_check && figmaOn();
+    d.innerHTML = figPage ? renderFigmaPage(S.card) : { change: renderChange, element: renderElement, screen: renderScreen, digest: renderDigest, issue: renderIssue }[S.card.kind]?.(S.card) ?? renderRequest(S.card);
     // Screens, elements and digests have no place of their own for the decisions they follow.
-    if (["screen", "element", "digest"].includes(S.card.kind)) d.insertAdjacentHTML("beforeend", followsLine(S.card));
+    if (!figPage && ["screen", "element", "digest"].includes(S.card.kind)) d.insertAdjacentHTML("beforeend", followsLine(S.card));
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
     clampBriefs();
@@ -4905,7 +5028,38 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (ds.approveDecision) { await api("POST", `/api/decisions/${ds.approveDecision}/approve`, {}); toast(`${ds.approveDecision} is approved.`); await refreshList(); await openDecision(ds.approveDecision); return; }
     // An item opens on its own tab, as a link to it does: a PR on PR Changes, an issue on Issues,
     // so the menu says where you are; an item whose tab is hidden (simple mode) lights none.
+    // Figma: a box's comparison opens on Product → Differences; on a request, the differences to work in.
+    if (ds.figOpen) { S.tab = "product"; S.productFilter = "differences"; S.figFilter = "all"; S.decision = null; S.ws.open = false; renderNav(); await openCard(ds.figOpen); renderList(); return; }
+    // A difference off the table, or every removed one back (docs/desk.md → Differences from Figma).
+    if (ds.figDismiss || ds.figRestore) {
+      const id = ds.figOf || ds.figRestore, base = id.startsWith("D-") ? "decisions" : "cards";
+      const item = id.startsWith("D-") ? S.decision : S.card;
+      const parts = ds.figDismiss ? [ds.figDismiss] : (item?.figma_check?.dismissed || []).map((d) => d.part);
+      for (const part of parts) await api("POST", `/api/${base}/${id}/figma-dismiss`, { part, on: Boolean(ds.figDismiss) });
+      S.figKeep = id;
+      if (ds.figDismiss) toast(`${ds.figDismiss} is off the table for everyone. It comes back if the frame in Figma changes.`);
+      await refreshList();
+      if (id.startsWith("D-")) await openDecision(id); else await openCard(id);
+      return;
+    }
+    if ("figPick" in ds) { S.figPick = S.card?.id || null; renderDetail(); return; }
+    if ("figCancel" in ds) { S.figPick = null; renderDetail(); return; }
+    if ("figSend" in ds) {
+      const c = S.card, k = c?.figma_check;
+      const picked = [...document.querySelectorAll("[data-fig-d]:checked")].map((x) => k.differences[Number(x.dataset.figD)]).filter(Boolean);
+      if (!picked.length) { toast("Tick at least one difference to work into the design."); return; }
+      const line = (d) => `- ${d.part}: ${d.what}${d.figma || d.product ? ` (Figma: ${d.figma || "none"}; now: ${d.product || "none"})` : ""}`;
+      const text = `Work these differences from the Figma frame "${k.frame?.name || "Figma"}" into this option:\n${picked.map(line).join("\n")}`;
+      await api("POST", `/api/cards/${c.id}/threads`, { kind: "change", text, anchor: { variant: k.variant } });
+      S.figPick = null;
+      toast(`Sent to Design Desk: ${plural(picked.length, "change", "changes")}. The option's next version shows up here when it is drawn.`);
+      await openCard(c.id);
+      return;
+    }
     if (ds.card) {
+      S.figKeep = null;
+      // A row of Differences opens its item beside the list, which stays.
+      if (S.tab === "product" && S.productFilter === "differences" && visibleCards().some((x) => x.id === ds.card)) { await openCard(ds.card); renderList(); return; }
       if (S.cards.some((x) => x.id === ds.card)) await goTo({ id: ds.card }); else await openCard(ds.card);
       if (ds.madeBy) { showBeforeAfter(S.card, ds.madeBy); renderDetail(); }
       return;
@@ -5528,6 +5682,25 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     renderNav(); renderList(); renderDetail();
   });
   renderSimple();
+  // The Figma switch, beside simple mode and only on a Desk with Figma on: each person shows or
+  // hides the comparisons with Figma (Product → Differences and the boxes on items) for themselves,
+  // kept for them on the Desk like simple mode. On until they turn it off.
+  function renderFigmaSwitch() {
+    const b = $("#figma"), on = figmaOn();
+    b.hidden = !S.me?.figma;
+    b.innerHTML = `<span>Figma</span><span class="sw" aria-hidden="true"></span>`;
+    b.setAttribute("aria-pressed", String(on));
+    b.title = on ? "Figma is on for you. Turn it off to hide Differences and the comparisons with Figma on items"
+      : "Figma is off for you. Turn it on to see where the product differs from its design in Figma";
+  }
+  $("#figma").addEventListener("click", () => {
+    if (!S.me) return;
+    const on = !figmaOn();
+    S.me.figma_pref = on; S.figPick = null;
+    if (!on && S.productFilter === "differences") { S.productFilter = "screens"; S.card = null; }
+    api("POST", "/api/prefs", { figma: on }).catch(() => toast("Switched here only: the Desk couldn't save it for your other devices yet."));
+    renderFigmaSwitch(); renderNav(); renderList(); renderDetail();
+  });
   $("#request-dialog").addEventListener("close", guard(async (e) => {
     if (e.target.returnValue !== "send") return;
     const f = $("#request-form");
@@ -5570,7 +5743,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   async function start() {
     if (!bridge) { $("#detail").innerHTML = `<div class="panel">The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.</div>`; $("#main").classList.add("has-detail"); return; }
     S.me = await api("GET", "/api/me");
-    applyMyTheme(); applyMySimple();
+    applyMyTheme(); applyMySimple(); renderFigmaSwitch();
     // The ask button counts each page's messages, so the person's asks are read before it is drawn.
     await loadAsks().catch(() => {});
     applyMe();

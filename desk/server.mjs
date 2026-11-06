@@ -177,7 +177,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
+    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });
@@ -211,7 +211,7 @@ async function viewerRoute(req, res, url, who) {
   // (docs/desk.md → The menu); only the keys sent change.
   if (m === "POST" && p[1] === "prefs") {
     if (!b || typeof b !== "object" || Array.isArray(b)) throw new DeskError(400, "prefs must be an object");
-    return send(res, 200, store.setPrefs(actor, Object.fromEntries(["theme", "simple"].filter((k) => Object.hasOwn(b, k)).map((k) => [k, b[k] ?? null]))));
+    return send(res, 200, store.setPrefs(actor, Object.fromEntries(["theme", "simple", "figma"].filter((k) => Object.hasOwn(b, k)).map((k) => [k, b[k] ?? null]))));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note, typeof b.variant === "string" ? b.variant : null), s, who)); }
   if (m === "DELETE" && p[1] === "cards" && p[2] && !p[3]) { need("close"); return send(res, 200, store.deleteRequest(p[2], actor)); }
@@ -221,6 +221,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "presented") return send(res, 200, store.markPresented(p[2], actor, b.presented !== false));
   if (m === "POST" && p[1] === "cards" && p[3] === "ack") { need("ack"); return send(res, 200, store.ack(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "handled") { need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
+  // A difference from Figma taken off an item's table, or brought back (docs/desk.md → Differences from Figma).
+  if (m === "POST" && (p[1] === "cards" || p[1] === "decisions") && p[3] === "figma-dismiss") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.dismissFigma(p[2], actor, b.part, b.on !== false)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "threads") {
     need(b.kind === "question" ? "ask" : b.kind === "change" ? "change" : "comment");
     const { kind, text, anchor } = b;
@@ -369,6 +371,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text, shots: b.shots ?? null }));
   if (m === "POST" && p[1] === "cards" && p[3] === "ask") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "asks", text: b.text, step: b.step, questions: b.questions || null }));
   if (m === "POST" && p[1] === "decisions" && !p[2]) return send(res, 201, store.addDecision(b));
+  // A decision a Figma frame goes against (the figma skill → Compare with the product).
+  if (m === "POST" && p[1] === "decisions" && p[3] === "figma") return send(res, 200, store.setDecisionFigma(p[2], b.figma_check ?? null));
   // The agent revokes only in the name of the person who did, with where they said it.
   if (m === "POST" && p[1] === "decisions" && p[3] === "revoke") return send(res, 200, store.revokeDecision(p[2], { agent: true }, { reason: b.reason, replaced_by: b.replaced_by || null, by: b.by, origin: b.origin }));
   if (m === "POST" && p[1] === "cards" && p[3] === "polls" && !p[4]) return send(res, 201, store.openPoll(p[2], b));

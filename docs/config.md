@@ -57,8 +57,11 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 - `slack_council` (`disabled`) — `enabled`: anyone in a request's Slack thread asks for changes
   and gets new options or versions back there (the `slack-council` skill); `council_sync_min`
   (`30`) — how often an open thread is read for asks that do not mention the agent.
-- `figma` (`disabled`) — `enabled` once Figma is connected (the `figma` skill); `figma_file` —
-  a Figma file link that exports go to (empty: a new file per request).
+- `figma` (`disabled`) — `enabled` once Figma is connected (the `figma` skill): imports, exports
+  and the comparisons with Figma on the Desk (Product → Differences, the box on items;
+  [desk.md](desk.md) → Differences from Figma), each person able to hide them with the Figma
+  switch in their menu. `figma_file` — a Figma file link that exports go to (empty: a new
+  file per request).
 - `## Skills` table, `| action | skill |`: another installed skill for an action
   ([actions.md](actions.md)); it wins over the product profile's choice.
 - `request_skills` (`copy, impact, brand, walkthrough, figma`), never asked — the installed

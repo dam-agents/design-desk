@@ -63,6 +63,8 @@ The profile lists the elements worth having under `catalog.elements`
 7. **Publish.** Upload the sheet (`--kind report`, under 720 KB; split into two sheets past
    that) and the light shot's top as the thumbnail (`--kind screen`), then
    `design desk upsert` with `kind: element` and the fields above, `status: current`.
+   With `figma: enabled`, compare the drawing with the element's frame in Figma (the `figma`
+   skill → Compare with the product), finding the frame first when it has none.
 8. `design desk done I-<n> --session <id> --outcome drawn`.
 
 ## Keeping it current

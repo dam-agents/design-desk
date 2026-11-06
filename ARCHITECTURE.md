@@ -101,8 +101,10 @@ These parts are written against the platform's documented contracts but were not
 - The Desk page against the real Artifact API relay (the server and the store have offline tests).
 
 - Figma through the platform: Figma's remote MCP server admits only some MCP clients, so a
-  Custom MCP connection with OAuth may be refused; the REST fallback reads frames but cannot
-  write layers, and `generate_figma_design` is limited to some clients.
+  Custom MCP connection with OAuth may be refused; the REST reads (`design figma`, tested
+  against recorded answers only) cannot write layers, and `generate_figma_design` is limited
+  to some clients. Finding a screen's frame in a team's files and the REST rate limits of a
+  real seat were not tried.
 - Pictures attached to GitHub issues with `gh … --attach`, which needs a GitHub CLI that has it.
 - The screens instance end to end: an install of the default branch in an Environment, the
   demo data a recipe makes through the product's screens, and the capture over the tunnel.
