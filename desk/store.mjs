@@ -1090,6 +1090,49 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // ---------- the developer spec, read by a person before it goes ----------
+  // Design Desk writes the spec as a draft (`spec.review: "draft"`); a person reads it, edits
+  // it, asks for changes, or sends it. Only a send lets it leave the Desk (docs/handoff.md →
+  // Review before it goes). Every version stays: an edit or a rewrite keeps the one it replaces.
+  specAction(cardId, who, { action, text = "", note = "" } = {}) {
+    const c = this.card(cardId);
+    if (who?.agent) throw forbidden("A person reads the spec and sends it; Design Desk writes it.");
+    if (c.kind !== "request" || c.status !== "spec" || !c.spec?.asset) throw bad("There is no developer spec to look at yet.");
+    if (!["draft", "changes"].includes(c.spec.review || "")) throw bad(c.spec.review === "sent" ? "This spec is already on its way to developers." : "This spec is not waiting for a review.");
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "handoff")) throw bad(BUSY);
+    if ((c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open")) throw bad("Answer Design Desk's questions first; the spec takes your answers in.");
+    const may = can(who?.role, "approve") || can(who?.role, "skip") || (c.approved?.small && DEVELOPERS.includes(who?.role) && !isAuthor(c, who));
+    if (!may) throw forbidden("Only the people who may approve this request read and send its spec.");
+    const at = this.clock();
+    if (action === "edit") {
+      const body = clean(text, 60000, "spec");
+      const id = this.addAsset({ card: c.id, kind: "spec", name: "spec.md", contentType: "text/markdown", data: body, encoding: "utf8" }).asset.id;
+      c.spec = { ...c.spec, history: [...(c.spec.history || []), { asset: c.spec.asset, at: c.spec.at || c.updated, by: c.spec.by || { agent: true } }].slice(-20), asset: id, at, by: person(who), review: "draft" };
+      c.updated = at;
+      this.save();
+      return { card: c };
+    }
+    if (action === "changes") {
+      const ask = clean(note, 2000, "what to change");
+      c.spec = { ...c.spec, review: "changes", asked: { by: person(who), at, note: ask } };
+      c.updated = at;
+      const item = this.enqueue("handoff", cardId, null, who, ask);
+      item.scope = "spec-revise";
+      this.save();
+      return { card: c, inbox: item };
+    }
+    if (action === "send") {
+      c.spec = { ...c.spec, review: "sent", sent: { by: person(who), at } };
+      c.updated = at;
+      const item = this.enqueue("handoff", cardId, null, who, c.approved?.variant || "");
+      item.scope = "deliver";
+      if (c.approved?.implement) item.implement = true;
+      this.save();
+      return { card: c, inbox: item };
+    }
+    throw bad("unknown spec action");
+  }
+
   // A person hands the drawn options of a Desk request to the team: from here people vote and
   // comment, as on a request from Slack (docs/desk.md → Team feedback).
   openFeedback(cardId, who) {
@@ -1431,6 +1474,13 @@ export class Store {
         // The agent's brief for the call: what is on the table and what to decide.
         if (!next.agenda) throw bad("a brief belongs to a card on the agenda");
         next.agenda = { ...next.agenda, brief: clean(fields.brief, 1500, "brief") };
+      }
+      else if (k === "spec") {
+        // A rewrite keeps the version it replaces, a person's edit included (specAction).
+        const was = c?.spec, now = cleanLinks(k, fields.spec);
+        next.spec = now && was?.asset && now.asset && now.asset !== was.asset
+          ? { ...now, history: [...(was.history || []), { asset: was.asset, at: was.at || c.updated, by: was.by || { agent: true } }].slice(-20), at: this.clock(), by: { agent: true } }
+          : now && was ? { ...now, history: now.history || was.history, ...(was.sent && !now.sent ? { sent: was.sent } : {}) } : now;
       }
       else next[k] = cleanLinks(k, fields[k]);
     }

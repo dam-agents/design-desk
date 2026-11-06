@@ -1,7 +1,7 @@
 // design desk <command> — the agent's side of the Desk. Every write goes through the
 // Desk server (its store has one writer), authenticated by work/desk/.agent-token.
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { WORK, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
 import { ADDABLE_ROLES, rosterOf } from "../../desk/store.mjs";
@@ -57,6 +57,8 @@ const USAGE = `usage: design desk <command>
   decisions [--concept <c>] [--q <words>] [--state active|revoked]
                                            earlier decisions, newest first
   fetch <A-n> <file>                       save an asset (an option's page, a screen) to a file
+  bundle <C-n> <dir>                       the handoff bundle of an approved request (docs/handoff.md →
+                                           The bundle): spec.md, design.json, mockup.html, states/, shots/
   poll-open <C-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
                                            [{variant, ts}], closes, url, channel}
   poll-update <C-n> <P-n> [--synced <iso>] [--result <text>]
@@ -149,6 +151,45 @@ async function shotsArg(file) {
 // is now: the row already there with that role is `added` (a run that wrote it and died
 // before done); otherwise the asker is the owner or still a lead, and the role one a lead
 // may give. `{ write: true }` when the row is still to be added.
+// The handoff bundle of an approved request (docs/handoff.md → The bundle): what a developer and
+// a coding agent build from, the same for any product. `design` is design.json; `files` the
+// assets to save beside it, each at its path in the bundle. Pure: the card in, the plan out.
+export function bundleOf(card) {
+  const pick = card.live_pick?.variant || card.approved?.variant;
+  const v = (card.variants || []).find((x) => x.id === pick) || (card.variants || [])[0] || null;
+  const version = card.live_pick?.variant === v?.id ? card.live_pick.version : card.approved?.version || v?.version || 1;
+  const files = [];
+  if (card.spec?.asset) files.push({ path: "spec.md", asset: card.spec.asset });
+  const mockup = card.live_pick?.variant === v?.id ? card.live_pick.asset : v?.asset;
+  if (mockup) files.push({ path: "mockup.html", asset: mockup });
+  const slug = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "state";
+  const states = (v?.states || []).map((x) => {
+    const page = `states/${x.id}-${slug(x.name)}.html`, shot = x.shot ? `shots/${x.id}-${slug(x.name)}.png` : null;
+    files.push({ path: page, asset: x.asset });
+    if (shot) files.push({ path: shot, asset: x.shot });
+    return { id: x.id, name: x.name, part: x.part, element: x.element || null, when: x.how || "", use: x.use || "", stories: x.stories || [], page, shot, selector: x.selector || null };
+  });
+  const design = {
+    format: "design-desk/handoff@1",
+    request: { id: card.id, title: card.title, type: card.request?.type || "idea", problem: card.request?.problem || "", vision: card.request?.vision || "" },
+    approved: { option: v ? { id: v.id, name: v.name, version } : null, by: card.approved?.by?.email || null, at: card.approved?.at || null, straight_to_implementation: Boolean(card.approved?.implement) },
+    // What a design change can and cannot do here: the parts a developer adds beyond the look.
+    boundary: { verdict: card.triage?.verdict || null, can: card.triage?.can || [], needs_developer: card.triage?.cannot || [] },
+    mockup: mockup ? "mockup.html" : null,
+    elements: (v?.elements || []).map((e) => ({ id: e.id, name: e.name, change: e.change, what: e.how || "", selector: e.selector || null, view: e.view_name || e.view || null,
+      product_element: e.element || null, states: states.filter((x) => x.element === e.id).map((x) => x.id) })),
+    states,
+    stories: (card.issue_brief?.stories || []).map((x) => ({ id: x.id, text: x.text, met: (v?.stories || []).find((k) => k.story === x.id)?.met || null })),
+    // Written by Design Desk with the spec (docs/handoff.md → The bundle): each checks one thing a person can see.
+    acceptance: card.spec?.acceptance || [],
+    decisions: (v?.reasons || []).map((r) => ({ decision: r.decision, how: r.how })),
+    prototype: card.prototype?.branch || card.prototype?.patch ? { branch: card.prototype.branch || null, patch: card.prototype.patch ? "prototype.patch" : null, note: "A starting point; not reviewed as production code." } : null,
+    desk: card.link || null,
+  };
+  if (card.prototype?.patch) files.push({ path: "prototype.patch", asset: card.prototype.patch });
+  return { design, files };
+}
+
 export function personVerdict(item, text) {
   const { email, role } = item.person;
   const roster = rosterOf(tableIn(text, "Desk people"));
@@ -273,6 +314,19 @@ export async function main(_cmd, argv) {
     case "decision": return out(await call("POST", "/agent/decisions", JSON.parse(readArg(pos[0]))));
     case "decision-show": return out(await call("GET", `/agent/decisions/${encodeURIComponent(pos[0] || "")}`));
     case "decision-revoke": return out(await call("POST", `/agent/decisions/${encodeURIComponent(pos[0] || "")}/revoke`, JSON.parse(readArg(pos[1]))));
+    case "bundle": {
+      if (!pos[0] || !pos[1]) fail("usage: design desk bundle <C-n> <dir>");
+      const { card } = await call("GET", `/agent/cards/${pos[0]}`);
+      if (card.kind !== "request" || !card.approved) fail(`${pos[0]} is not an approved request`);
+      const { design, files } = bundleOf(card);
+      for (const d of ["", "states", "shots"]) mkdirSync(join(pos[1], d), { recursive: true });
+      for (const f of files) {
+        const a = await call("GET", `/agent/assets/${f.asset}`);
+        writeFileSync(join(pos[1], f.path), Buffer.from(a.data, a.encoding === "base64" ? "base64" : "utf8"));
+      }
+      writeFileSync(join(pos[1], "design.json"), `${JSON.stringify(design, null, 2)}\n`);
+      return out({ bundle: pos[1], files: ["design.json", ...files.map((f) => f.path)], acceptance: design.acceptance.length });
+    }
     case "fetch": {
       const a = await call("GET", `/agent/assets/${pos[0]}`);
       if (!pos[1]) fail("usage: design desk fetch <A-n> <file>");

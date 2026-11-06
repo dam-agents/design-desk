@@ -196,6 +196,37 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   assert.equal(s.setSize(card.id, lee, false).card.size.small, false);
 });
 
+test("the developer spec waits for a person: edit keeps every version, changes go back to Design Desk, only a send lets it go", () => {
+  const s = fresh();
+  const shot = () => s.addAsset({ kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec v1", encoding: "utf8" }).asset.id;
+  const { card, inbox: item } = s.createRequest(bob, { title: "Calmer header", problem: "Too loud." });
+  s.claim(item.id, "s1"); s.done(item.id, "s1", "triaged");
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] } });
+  const ok = s.act(card.id, alice, "approve");
+  s.claim(ok.inbox.id, "s2");
+  const first = shot();
+  s.upsertCard({ id: card.id, status: "spec", spec: { asset: first, review: "draft", acceptance: [{ given: "the header", when: "the page opens", then: "it is grey" }] } });
+  s.done(ok.inbox.id, "s2", "review");
+  assert.throws(() => s.specAction(card.id, { agent: true }, { action: "send" }), (e) => e.status === 403, "Design Desk never sends it itself");
+  assert.throws(() => s.specAction(card.id, { email: "pat@example.com", role: "pm" }, { action: "send" }), (e) => e.status === 403, "only who may approve");
+  const edited = s.specAction(card.id, alice, { action: "edit", text: "# Spec v2, by Alice" }).card;
+  assert.notEqual(edited.spec.asset, first);
+  assert.deepEqual(edited.spec.history.map((x) => x.asset), [first], "the version it replaces stays");
+  assert.equal(edited.spec.review, "draft");
+  assert.equal(edited.spec.acceptance.length, 1, "an edit keeps the acceptance criteria");
+  const asked = s.specAction(card.id, alice, { action: "changes", note: "The error state needs its own picture." });
+  assert.equal(asked.inbox.scope, "spec-revise");
+  assert.throws(() => s.specAction(card.id, alice, { action: "send" }), /not waiting|already|still/i, "not while Design Desk rewrites it");
+  s.claim(asked.inbox.id, "s3");
+  const third = shot();
+  s.upsertCard({ id: card.id, spec: { ...s.card(card.id).spec, asset: third, review: "draft" } });
+  s.done(asked.inbox.id, "s3", "review");
+  assert.deepEqual(s.card(card.id).spec.history.map((x) => x.asset), [first, edited.spec.asset], "the rewrite keeps Alice's version too");
+  const sent = s.specAction(card.id, alice, { action: "send" });
+  assert.deepEqual([sent.inbox.kind, sent.inbox.scope, sent.card.spec.review], ["handoff", "deliver", "sent"]);
+  assert.throws(() => s.specAction(card.id, alice, { action: "edit", text: "late" }), /already on its way|in progress|still/i);
+});
+
 test("For Developers: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };

@@ -13,7 +13,19 @@ The `deliver` action ([docs/actions.md](../../../docs/actions.md)). Reads `hando
 `work/CONFIG.md`. The spec is written and uploaded ([docs/handoff.md](../../../docs/handoff.md)
 steps 1 to 3); the **Approve** on the Desk (a designer's, or a developer's on a request For Developers,
 [docs/desk.md](../../../docs/desk.md) → For Developers or For Designers), with their name on the item, is the
-approval to send it.
+approval to send it, and with `spec_review` on, **Send to developers** on the spec too (a
+`deliver` item). Send the spec's newest version as it is: a person may have edited it.
+
+## The bundle
+
+Every delivery carries the bundle ([docs/handoff.md](../../../docs/handoff.md) step 5), so a
+coding agent builds from the same design as a person:
+- `design.json` in the body, folded: `<details><summary>For a coding agent: design.json</summary>`
+  and the JSON in a fenced block; cut `states[].page` and `shot` paths to names when the folder
+  is not pushed;
+- the pushed `handoff/C-<n>/` folder's link, when `prototype_remote` is set;
+- one line for the agent: build from `design.json` and `mockup.html`, check each state against
+  `shots/`, tick every acceptance line in the pull request.
 
 ## The pictures
 
