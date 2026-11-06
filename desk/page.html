@@ -154,6 +154,9 @@
   /* In the list a card's title is the one black line; where it came from and who asked are grey and plain under it. */
   .row .prov .src { padding: 0; border: 0; background: none; color: var(--muted); font-weight: 400; gap: 0; }
   /* In the list only Slack and the Desk show their icon, beside their name. */
+  /* A word and its value sit on one text baseline; an icon in the value is centred on it. */
+  .prov > span:has(> .k) { display: inline-flex; align-items: baseline; gap: 0 .3em; }
+  .row .prov .src { align-items: baseline; } .prov > span > .role-ic, .row .prov .src > svg { align-self: center; } .prov > span > .role-ic { margin-right: -.1em; }
   .row .prov .src { gap: 4px; } .prov .src:not([data-k="slack"], [data-k="pr"], [data-k="issue"]) > svg { display: none; }
   /* The provenance reads from: … by: … based on: …, the joining words grey, what they name in ink. */
   .prov .k { color: var(--muted); }
