@@ -4754,8 +4754,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       await refreshList(); await openDecision(d.id); return;
     }
     if (ds.restore) { await api("POST", `/api/decisions/${ds.restore}/restore`, {}); await refreshList(); await openDecision(ds.restore); return; }
+    // An item opens on its own tab, as a link to it does: a PR on PR Changes, an issue on Issues,
+    // so the menu says where you are; an item whose tab is hidden (simple mode) lights none.
     if (ds.card) {
-      await openCard(ds.card);
+      if (S.cards.some((x) => x.id === ds.card)) await goTo({ id: ds.card }); else await openCard(ds.card);
       if (ds.madeBy) { showBeforeAfter(S.card, ds.madeBy); renderDetail(); }
       return;
     }

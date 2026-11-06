@@ -1123,6 +1123,18 @@ for (const [label, triage, me, sel] of PILLS) {
   }));
 }
 
+// An item opened from another one's link opens on its own tab: the menu says where you are.
+test("a link to an issue opens it under Issues, and the menu says so", (t) => open(t, BRIDGE_STORIES
+  .replace(': path === "/api/cards/r7"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/r7"'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('#list [data-card="r7"]');
+  await desk.waitForSelector('#detail .linked [data-card="is1"]');
+  assert.equal(await desk.getAttribute('#nav [data-tab="requests"]', "aria-current"), "true");
+  await desk.click('#detail .linked [data-card="is1"]');
+  await desk.waitForFunction(() => document.querySelector('#nav [data-tab="issues"]')?.getAttribute("aria-current") === "true");
+  assert.equal(await desk.getAttribute('#nav [data-tab="requests"]', "aria-current"), "false", "Requests is no longer lit");
+}));
+
 // A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
 test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
   await desk.setViewportSize({ width: 1300, height: 800 });
