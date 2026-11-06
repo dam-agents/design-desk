@@ -22,7 +22,7 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
 - `prototype_requesters` (`designer, lead`; roles read as in `## Desk people`, so `lead developer`
   is `lead-developer`), `max_prototypes` (`2`; `0` = none),
-  `prototype_expiry_days` (`7`), `prototype_remote` (`none` | the repo a prototype branch
+  `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
   proposals; `issue_writeback` (`enabled`) — a feature's design goes back into its issue;
   `implementer` — `pr-comment` (default) | `issue`, how an adjustment or a bug reaches the
@@ -67,5 +67,8 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
 - `## Desk people` table, `| email | role |`: `lead`, `designer`, `lead-developer`, `developer` or `pm`;
+  one person's `email` cell may list several addresses, separated by commas — the one they sign in
+  to the Desk with and the one Slack or GitHub knows them by — and every one counts as them;
+  an optional third column `| name |` gives the name the Desk shows instead of the address;
   anyone else on the share list is a `guest`; the owner is always `lead`. A lead may ask
   on the Desk for a new row ([desk.md](desk.md) → People).

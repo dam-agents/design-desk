@@ -206,6 +206,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - prototype_requesters: designer, lead
 - max_prototypes: 2
 - prototype_expiry_days: 7
+- spec_review: enabled
 - prototype_remote: none
 - handoff: desk
 - desk_ping: enabled
