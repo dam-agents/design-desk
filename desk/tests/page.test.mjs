@@ -1138,6 +1138,47 @@ test("a folded list leaves Guide and a narrow window their page", (t) => open(t,
   assert.notEqual(await desk.$eval("#list", (l) => getComputedStyle(l).display), "none", "with no item open there, the folded list shows");
 }));
 
+// A decision a developer made waits for a designer's approval; one of the design side does not.
+const APPROVALS = `<script>
+const calls = [];
+const decisions = [{ id: "D-1", text: "Search sits in the header", status: "active", side: "design", at: "2026-10-01T00:00:00Z", concepts: ["search"], author: { name: "Alice" } },
+  { id: "D-2", text: "Limits reset weekly", status: "active", side: "developer", unapproved: true, at: "2026-10-02T00:00:00Z", concepts: ["limits"], author: { login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" } }];
+const cards = [{ id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows D-2.", source: { repo: "acme/widgets", pr: 45 } }];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { decide: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] }
+    : path.endsWith("/approve") ? { decision: { ...decisions[1], unapproved: false, approved: { by: { email: "d@example.com" }, at: "2026-11-06T10:00:00Z" } } }
+    : path.startsWith("/api/decisions/") ? { decision: decisions.find((d) => d.id === path.slice(15)), refs: [] }
+    : path.startsWith("/api/decisions") ? { decisions: /state=unapproved/.test(path) ? decisions.filter((d) => d.unapproved) : decisions }
+    : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a decision someone other than a designer made says Not approved in its peek, its row and its page; a designer approves it there; Not approved filters", (t) => open(t, APPROVALS, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#C-1`);
+  await desk.waitForSelector('#detail a[data-ref="D-2"]');
+  await desk.hover('#detail a[data-ref="D-2"]');
+  await desk.waitForFunction(() => /Limits reset weekly/.test(document.querySelector("#peek")?.textContent || ""));
+  assert.match(await desk.textContent("#peek"), /Not approved/, "the peek says it");
+  await desk.mouse.move(0, 0);
+  await desk.goto(`${base}#D-2`);
+  await desk.waitForSelector("#detail [data-approve-decision]");
+  assert.match(await desk.textContent("#detail .status"), /Not approved/, "its status box says it");
+  assert.match(await desk.textContent('#list [data-decision="D-2"]'), /Not approved/, "its dot says it");
+  assert.doesNotMatch(await desk.textContent('#list [data-decision="D-1"]'), /Not approved/, "a designer's does not");
+  await desk.click("#detail [data-approve-decision]");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/decisions/D-2/approve"));
+  await desk.click('[data-dstate="unapproved"]');
+  await desk.waitForFunction(() => calls.some((c) => /state=unapproved/.test(c.path)));
+  await desk.waitForSelector('#list [data-decision="D-2"]');
+  assert.equal(await desk.$('#list [data-decision="D-1"]'), null, "the filter lists only the ones waiting");
+}));
+
 // An option that names the decisions it rests on, one of them revoked.
 const BRIDGE_WHY = BRIDGE_STORIES
   .replace('{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };', `{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }],

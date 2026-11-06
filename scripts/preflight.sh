@@ -534,6 +534,7 @@ inbox_mode() {
       drawings_due: pick(["draw"]),
       people_due: [ pick(["person"])[] | select(.person != null) ],
       decisions_due: pick(["decision"]),
+      checks_due: pick(["decision-check"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,

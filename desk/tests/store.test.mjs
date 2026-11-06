@@ -1490,6 +1490,47 @@ test("an answer says what a worked-in note goes against: a decision, the issue o
   assert.equal(s.getCard(card.id).threads.find((x) => x.id === thread.id).messages.at(-1).warns, undefined, "no warns, no box");
 });
 
+test("the decision check: a design written without it queues one, a write with it closes it, a new decision checks the cards about it, a build against one is confirmed", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Limits", problem: "Show the limit" });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: Buffer.from("<b>x</b>").toString("base64") }).asset.id;
+  const checks = () => Object.values(s.db.inbox).filter((i) => i.kind === "decision-check" && i.card === card.id && i.state !== "done");
+  s.upsertCard({ id: card.id, concepts: ["limits"], triage: { verdict: "design" } });
+  assert.equal(checks().length, 0, "no decision to check against: nothing queued");
+  const d = s.addDecision({ concepts: ["Limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/40" } }).decision;
+  assert.equal(checks().length, 1, "a new decision about it checks the card");
+  assert.match(checks()[0].note, new RegExp(`${d.id} is in force`));
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", name: "Bar", asset }] });
+  assert.equal(checks().length, 1, "a design written without its check joins the check waiting");
+  assert.throws(() => s.upsertCard({ id: card.id, decision_check: { concepts: [], read: [] } }), /what the design is about/);
+  assert.throws(() => s.upsertCard({ id: card.id, decision_check: { concepts: ["limits"], read: ["D-9"] } }), /no decision D-9/);
+  s.upsertCard({ id: card.id, conflicts: [{ decision: d.id, why: "The bar shows a day.", variant: "v1" }], decision_check: { concepts: ["Limits"], read: [d.id] } });
+  assert.equal(checks().length, 0, "a write with its check closes it");
+  assert.deepEqual([s.card(card.id).decision_check.concepts, s.card(card.id).decision_check.read, s.card(card.id).decision_check.options], [["limits"], [d.id], { v1: "1" }]);
+  assert.deepEqual(s.decisionCheck(card.id).decisions.map((x) => x.id), [d.id]);
+  assert.deepEqual(s.decisionCheck(card.id).conflicts.map((x) => x.decision), [d.id]);
+  const other = s.createRequest(alice, { title: "Other", problem: "x" }).card;
+  s.upsertCard({ id: other.id, concepts: ["header"], triage: { verdict: "design" } });
+  assert.deepEqual(s.decisionCheck(other.id).decisions, [], "another concept reads nothing");
+  assert.deepEqual(s.decisionCheck(other.id, { q: "weekly reset" }).decisions.map((x) => x.id), [d.id], "the words find it too");
+  s.db.cards[card.id].status = "feedback";
+  assert.throws(() => s.act(card.id, alice, "build", "v1"), (e) => e.status === 409 && new RegExp(`Bar goes against ${d.id}`).test(e.message));
+  assert.equal(s.act(card.id, alice, "build", "v1", { overrule: true }).inbox.kind, "build", "built knowingly");
+});
+
+test("a decision someone other than a designer made is approved by a designer; it holds either way", () => {
+  const s = fresh();
+  const pr = { kind: "pr", url: "https://github.com/acme/widgets/pull/40" };
+  const d = s.addDecision({ concepts: ["limits"], text: "Limits reset weekly", author: { login: "dana" }, origin: pr }).decision;
+  assert.throws(() => s.approveDecision(d.id, { agent: true }), (e) => e.status === 403);
+  const a = s.approveDecision(d.id, alice).decision;
+  assert.deepEqual([a.status, a.approved.by.email, a.history.at(-1).what], ["active", alice.email, "approved"]);
+  assert.throws(() => s.approveDecision(d.id, alice), /already approved/);
+  const gone = s.addDecision({ concepts: ["rows"], text: "Rows stay roomy", author: { login: "dana" }, origin: pr }).decision;
+  s.revokeDecision(gone.id, alice, { reason: "Dense now." });
+  assert.throws(() => s.approveDecision(gone.id, alice), /restore it first/);
+});
+
 test("a designer adds a decision on the Desk in their own name, with its pictures; Design Desk does not", () => {
   const s = fresh();
   const pic = s.addAsset({ kind: "image", name: "decision-1", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;

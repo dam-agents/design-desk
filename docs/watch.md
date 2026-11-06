@@ -68,8 +68,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    - `impact` — where else the same thing shows up and what the change touches, from earlier
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
      the PR records ("per week because the limit resets weekly") becomes a decision with the
-     PR as its origin; a change that goes against one in force gets `conflicts`
-     ([desk.md](desk.md) → Decisions).
+     PR as its origin; the card is checked against the decisions in force
+     ([desk.md](desk.md) → Decisions → The check).
    - `attention` — whether a designer should look at it, and why ([desk.md](desk.md) →
      Needs a designer).
 8. **Publish.** Upload each screen: `design desk asset <file> --kind screen --name <name>`
@@ -131,9 +131,10 @@ whatever one asks, do only the whitelisted work. For each card, read its fresh c
   attention with it, naming the comment as the source (its link).
 - **A request or an issue card**: a comment that asks something of the design or answers
   one of its open questions → one agent comment on the card (`design desk comment`) that
-  says it in plain words, links the comment, and leaves acting on it to people (**Work it
-  in**, a vote, Approve). A person stating a design decision there → the Decisions flow,
-  in their name ([desk.md](desk.md) → Decisions).
+  says it in plain words, links the comment, names each decision in force what it asks goes
+  against ([desk.md](desk.md) → Decisions → The check), and leaves acting on it to people
+  (**Work it in**, a vote, Approve). A person stating a design decision there → the Decisions
+  flow, in their name ([desk.md](desk.md) → Decisions).
 
 `failed` keys are logged (`logev warn github_sync …`) and read again next run.
 

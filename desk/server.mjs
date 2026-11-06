@@ -70,7 +70,9 @@ function sideOf(d) {
   if (DEVELOPER_SIDE.includes(role)) return "developer";
   return ["pr", "commit", "doc"].includes(d.origin?.kind) ? "developer" : null;
 }
-const withSide = (d) => ({ ...d, side: sideOf(d) });
+// A decision from anyone but the design side waits for a designer's approval; it holds meanwhile
+// (docs/desk.md → Decisions → Approved by a designer).
+const withSide = (d) => { const side = sideOf(d); return { ...d, side, unapproved: d.status === "active" && side !== "design" && !d.approved }; };
 
 // The skills New request offers, from `request_skills` (toolkit/lib/actions.mjs).
 const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact, brand, walkthrough, figma"),
@@ -183,7 +185,12 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "private") return send(res, 200, { asks: store.privateAsks(actor) });
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
-  if (m === "GET" && p[1] === "decisions" && !p[2]) return send(res, 200, { decisions: store.listDecisions(decisionQuery(url)).slice(0, 200).map(withSide) });
+  if (m === "GET" && p[1] === "decisions" && !p[2]) {
+    // Not approved: the ones in force that wait for a designer's approval.
+    const q = decisionQuery(url), pending = url.searchParams.get("state") === "unapproved";
+    const all = store.listDecisions({ ...q, state: pending ? "active" : q.state }).map(withSide);
+    return send(res, 200, { decisions: (pending ? all.filter((d) => d.unapproved) : all).slice(0, 200) });
+  }
   if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2]); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
   // Opening an item marks it read for this person alone (docs/desk.md → Read and unread). It is
   // outside the write budget: browsing many items must not use up what comments and votes need,
@@ -231,6 +238,11 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "decisions" && p[3] === "revoke") { need("decide"); return send(res, 200, store.revokeDecision(p[2], actor, { reason: b.reason, replaced_by: b.replaced_by || null })); }
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
+  if (m === "POST" && p[1] === "decisions" && p[3] === "approve") {
+    need("decide");
+    if (sideOf(store.decision(p[2])) === "design") throw new DeskError(400, "A decision of the design side needs no approval.");
+    return send(res, 200, { decision: withSide(store.approveDecision(p[2], actor).decision) });
+  }
   if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "decide") { need("skip"); return send(res, 201, withPing(store.decideAndClose(p[2], actor, { text: b.text, why: b.why }), s, who)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "feedback") return send(res, 200, store.openFeedback(p[2], actor));
@@ -321,6 +333,8 @@ async function agentRoute(req, res, url) {
   const m = req.method;
   if (m === "GET" && p[1] === "inbox") return send(res, 200, JSON.parse(readFileSync(join(DIR, "inbox.json"), "utf8")));
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined }) });
+  // What a check reads (docs/desk.md → Decisions → The check).
+  if (m === "GET" && p[1] === "cards" && p[3] === "decision-check") return send(res, 200, store.decisionCheck(p[2], { concepts: (url.searchParams.get("concept") || "").split(",").filter(Boolean), q: url.searchParams.get("q") || "" }));
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
   if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: it.card ? store.getCard(it.card) : null, thread: it.thread ? store.thread(it.thread) : null }); }
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());

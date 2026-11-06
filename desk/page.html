@@ -658,7 +658,7 @@
   .sdot[data-s="pr-merged"] .tag, .sdot[data-s="issue-designed"] .tag { --t: var(--gh-merged); }
   .sdot[data-s="decided"] .tag { --t: var(--decided); } .sdot[data-s="declined"] .tag { --t: var(--closed); }
   /* Product: a screen's or an element's drawing, and a decision in force or revoked. */
-  .sdot[data-s="map-current"] .tag, .sdot[data-s="in-force"] .tag { --t: var(--approved); } .sdot[data-s="map-stale"] .tag { --t: var(--waiting); }
+  .sdot[data-s="map-current"] .tag, .sdot[data-s="in-force"] .tag { --t: var(--approved); } .sdot[data-s="map-stale"] .tag, .sdot[data-s="unapproved"] .tag { --t: var(--waiting); }
   .sdot[data-s="map-building"] .tag { --t: var(--accent); } .sdot[data-s="map-dropped"] .tag, .sdot[data-s="revoked"] .tag { --t: var(--closed); }
   /* A card that goes against a decision in force: a red ! in the row's right edge, under its state
      dot. Pointing at it unfolds it leftwards, as the dot does, into "Goes against D-n". */
@@ -1154,6 +1154,7 @@
     "follow-up": "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
     explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
+    "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
     revise: "Changing the design as you asked.",
     alternatives: "Drawing other ways the part you picked could look, as you described it. They appear above the design; pick the one to keep.",
     states: "Drawing every state of this element. Each state appears here and in the design workspace as it is drawn, with the use case it covers.",
@@ -1350,7 +1351,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
       "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
-    dstate: (v) => ({ active: "Decisions that hold today", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
+    dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions in force that someone other than a designer made, waiting for a designer to approve them", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
     decision: (v) => `Opens decision ${v}`,
     ref: (v) => `Opens ${v}`,
@@ -1888,7 +1889,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   function peekDecision(d) {
     return `<div class="t"><b class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text || d.id)}</b>${num(d)}</div>
-        <div class="sub">${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.author ? `<span>by ${authorIcon(d)}${named(d.author)}</span>` : ""}</div>
+        <div class="sub">${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.unapproved ? `<span class="chip warn" title="${esc(NOT_APPROVED_TIP)}">Not approved</span>` : ""}${d.author ? `<span>by ${authorIcon(d)}${named(d.author)}</span>` : ""}</div>
         ${(d.concepts || []).length ? `<p class="hint">About: ${esc(d.concepts.join(", "))}</p>` : ""}`;
   }
   function peekIssue(c) {
@@ -2421,10 +2422,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The presentation", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
   const named = (a) => a ? esc(a.name || a.login || a.email || "someone") : "";
   // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
+  // Where a decision stands: revoked, in force, or in force but not yet approved by a designer.
+  const NOT_APPROVED_TIP = "It holds, but someone other than a designer made it; a designer approves it";
+  const decState = (d) => d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"]
+    : d.unapproved ? ["unapproved", "Not approved", `${NOT_APPROVED_TIP}.`] : ["in-force", "In force", "This decision holds today; anything against it warns"];
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
     const list = $("#list");
-    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["revoked", "Revoked"], ["", "All"]], "dstate")}</div></div>`;
+    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["unapproved", "Not approved"], ["revoked", "Revoked"], ["", "All"]], "dstate")}</div></div>`;
     // As every list on the Desk: its words, its number and a dot for where it stands; a red ! under the
     // dot when it goes against a decision in force; then when it was decided, where, and by whom.
     const row = (d) => {
@@ -2432,13 +2437,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const where = esc(o.label || ORIGIN_KIND[o.kind] || "Source");
       const src = o.url ? `<a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${where}&nbsp;↗</a>` : where;
       const against = [...new Set((d.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
-      const state = d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"] : ["in-force", "In force", "This decision holds today; anything against it warns"];
+      const state = decState(d);
       return `<div class="row item side-${esc(d.side || "none")}"><button class="open" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}<span class="sdot" data-s="${state[0]}"><span class="chip tag" title="${esc(state[2])}"><span class="w">${state[1]}</span></span></span></div>${againstDot({ against })}</button>
       <div class="prov">${d.at ? `<span><span class="k">decided:</span> <span class="when" title="${esc(when(d.at))}">${esc(dayWord(d.at))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${k}">${icon(k)}${src}</span></span>${d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b></span>` : ""}</div></div>`;
     };
     // One list, the newest first.
     const rows = newestFirst(S.decisions).map(row).join("");
-    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : S.decisionState === "unapproved" ? "Every decision in force is a designer's or approved by one." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
     allDecs = null;
@@ -2476,11 +2481,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const rv = d.revoked;
     // Who decided it and where, in the status box as a change's PR and author are.
     const meta = [d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` (${esc(d.author.login)})` : ""}</span>` : "",
-      d.origin ? `<span><span class="k">from:</span> ${originText(d.origin)}</span>` : ""].join("");
+      d.origin ? `<span><span class="k">from:</span> ${originText(d.origin)}</span>` : "",
+      d.approved ? `<span><span class="k">approved:</span> <b>${named(d.approved.by)}</b> · ${esc(day(d.approved.at))}</span>` : ""].join("");
+    const st = decState(d);
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}${titleLink(d)}</h2>
       <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).length ? `<span title="What it is about">${esc(d.concepts.join(", "))}</span>` : ""}</div>
-      ${ghStatus(d.status === "revoked" ? "closed" : "approved", d.status === "revoked" ? "Revoked" : "In force", d.status === "revoked" ? "It no longer holds; it stays here crossed out, with the reason" : "This decision holds today; anything against it warns", meta,
-        can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "", { inline: true })}
+      ${ghStatus(d.status === "revoked" ? "closed" : d.unapproved ? "waiting" : "approved", st[1], st[2], meta,
+        can("decide") ? (d.status === "active" ? `${d.unapproved ? `<button class="btn primary" data-approve-decision="${esc(d.id)}">Approve</button>` : ""}<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "", { inline: true })}
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
@@ -2493,6 +2500,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // A cited decision no longer in force is crossed out and says so.
   const citeRef = (c, id) => c.cited?.[id]?.status === "revoked" ? `<span class="revoked-text">${decRef(id)}</span> <span class="chip bad" title="This decision no longer holds">revoked</span>` : decRef(id);
   const followsLine = (c) => (c.decisions || []).length ? `<p class="hint">Follows ${c.decisions.map((id) => citeRef(c, id)).join(", ")}</p>` : "";
+  // The decisions in force a build of this option goes against: its own and the request's.
+  const buildAgainst = (c, variant) => [...new Set((c.conflicts || []).filter((x) => x.status === "active" && (!x.variant || x.variant === variant)).map((x) => x.decision))];
   function againstBox(c, variant = null) {
     const xs = (c.conflicts || []).filter((x) => x.status === "active" && (variant ? x.variant === variant : !x.variant));
     return xs.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("");
@@ -4503,9 +4512,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       return;
     }
     if (name === "build") {
-      res = await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with made-up data, that everyone on the list can open. The first one can take up to an hour.", ok: "Build it",
+      const against = buildAgainst(c, null);
+      res = await ask({ title: "Build a live prototype", body: `Design Desk makes a private copy of the product with made-up data, that everyone on the list can open. The first one can take up to an hour.${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Build it only if the team means to try it anyway.` : ""}`, ok: "Build it",
         check: "Ask me first if anything is unclear (a short form; you can leave any answer to Design Desk)", checked: true,
-        send: (a) => post("", { ask_first: a.check }) });
+        ...(against.length ? { check2: `I know it goes against ${against.join(", ")}` } : {}),
+        send: (a) => { if (against.length && !a.check2) throw new Error(`Tick that you know it goes against ${against.join(", ")}.`); return post("", { ask_first: a.check, ...(against.length ? { overrule: true } : {}) }); } });
       if (!res) return;
     }
     // Every state of one element of an option, from its dialog (docs/requests.md → Every state of a part).
@@ -4674,7 +4685,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (!v) return;
     // The option's version and each state's: the store refuses a build of anything newer.
     const states = Object.fromEntries((v.states || []).map((x) => [x.id, x.version || 1]));
-    const res = await api("POST", `/api/cards/${c.id}/actions`, { action: "build", note: v.id, variant: v.id, version: v.version || 1, states, ask_first: S.ws.askFirst !== false });
+    // An option that goes against a decision in force goes live only knowingly (docs/desk.md → Decisions → The check).
+    const against = buildAgainst(c, v.id);
+    if (against.length && !await ask({ title: `Build ${v.name} anyway?`, body: `⚠ **${v.name} goes against ${against.join(", ")}.** Read why above; build it only if the team means to try it anyway.`, ok: "Build it live", check: `I know it goes against ${against.join(", ")}`,
+      send: async (a) => { if (!a.check) throw new Error(`Tick that you know it goes against ${against.join(", ")}.`); return true; } })) return;
+    const res = await api("POST", `/api/cards/${c.id}/actions`, { action: "build", note: v.id, variant: v.id, version: v.version || 1, states, ask_first: S.ws.askFirst !== false, ...(against.length ? { overrule: true } : {}) });
     S.ws.open = false; S.ws.check = false; renderWorkspace();
     if (res.inbox) toast(`Building ${v.name}, version ${v.version || 1}. This page updates by itself.`);
     await refreshList(); await openCard(c.id);
@@ -4750,6 +4765,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       await refreshList(); await openDecision(d.id); return;
     }
     if (ds.restore) { await api("POST", `/api/decisions/${ds.restore}/restore`, {}); await refreshList(); await openDecision(ds.restore); return; }
+    if (ds.approveDecision) { await api("POST", `/api/decisions/${ds.approveDecision}/approve`, {}); toast(`${ds.approveDecision} is approved.`); await refreshList(); await openDecision(ds.approveDecision); return; }
     if (ds.card) {
       await openCard(ds.card);
       if (ds.madeBy) { showBeforeAfter(S.card, ds.madeBy); renderDetail(); }
@@ -4959,7 +4975,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       else {
         // Every decision, revoked ones too: not the list the Decisions page filters.
         const every = await api("GET", "/api/decisions?state=").then((r) => r.decisions || [], () => []);
-        for (const d of byNum(every)) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : "" });
+        for (const d of byNum(every)) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : d.unapproved ? "Not approved" : "" });
       }
     }
     if (!byHash) ghHits();
@@ -4977,7 +4993,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       for (const c of S.cards) { const h = hay(c); if (words.every((w) => h.includes(w))) card(c); }
       try {
         const ds = (await api("GET", `/api/decisions?q=${encodeURIComponent(q)}`)).decisions || [];
-        for (const d of ds) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : "" });
+        for (const d of ds) push({ id: d.id, kind: "Decision", title: d.text, why: d.status === "revoked" ? "Revoked" : d.unapproved ? "Not approved" : "" });
       } catch {}
     }
     return seq === searchSeq ? out.slice(0, 30) : null;

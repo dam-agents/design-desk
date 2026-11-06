@@ -12,7 +12,9 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
 ## Build (`prototypes_due`, a `build` item)
 
 1. **Check.** Claim the item. The card's `triage.verdict` is `design` (the server refuses a
-   build otherwise; re-check anyway). Count cards with `prototype.state` `live` or
+   build otherwise; re-check anyway). An option against a decision in force goes live only
+   when the person confirmed it (the store refuses otherwise); the prototype's comment names
+   each `D-<n>` it goes against ([desk.md](desk.md) → Decisions → The check). Count cards with `prototype.state` `live` or
    `building`: at `max_prototypes`, answer on the card with a comment naming the
    prototypes that hold the places and stop (`done --outcome "no free place"`). Only open
    requests count; a closed one's prototype waits for its expiry teardown.
