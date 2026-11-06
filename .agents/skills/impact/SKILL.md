@@ -54,8 +54,9 @@ Then read, do not count:
 - For each place, say what a change would do to it: words that would stop matching, a colour
   whose meaning would change, a rule that would be broken. A test that checks the old text is
   noted for the spec, not shown here.
-- Then what has to change behind the screens for the change to be possible: the data, the
-  rules, the other systems. That becomes **Under the hood** below.
+- Then whether the product would have to work differently for the change to be possible: its
+  logic, how a feature works, its architecture, its security, a feature to rebuild. That becomes
+  **Under the hood** below; a new field or endpoint does not.
 
 A decision without a source is not a decision here: write what you found and where, or leave
 it out.
@@ -77,9 +78,11 @@ The same holds for an earlier decision's `text`: say what was decided and why it
 in one plain sentence ("Spend limits start again every Monday, for everyone at once").
 
 **Under the hood (`behind`).** A short text, not a list: one to three small paragraphs, at most
-about 120 words, on what has to happen behind the screens before the change can be made — the
-data the product would need to keep, a rule that would have to change, another system that
-would have to learn the new thing, and that a developer does it. Write it for someone who knows
+about 120 words, on whether the change needs more than a new look — and how big that is. Say
+when the product would have to **work differently**: its logic or rules, how a feature works,
+how its parts fit together (its architecture), who may see or do what (security), or a feature
+that would have to be rebuilt. Leave out the small plumbing a developer adds on the way — a new
+field, a parameter, an endpoint, an API: that belongs in the spec. Write it for someone who knows
 nothing about how software works, and explain as you would to a friend: an everyday comparison
 helps where the idea is abstract ("the list only shows what the server sends, like a shop
 window shows only what the stockroom has"). No code words here either. When nothing has to
@@ -93,7 +96,7 @@ On a card, one `design desk upsert` with:
   "concept": "an agent's weekly spend",
   "places": [{"where": "Agents list", "how": "the amount on each row, amber near the limit", "kind": "screen"},
              {"where": "Slack spend alert", "how": "“Agent X reached its spend limit”", "kind": "message"}],
-  "behind": {"text": "Today the list only knows this week's total. To show a daily bar, the product has to start keeping each day's spend too — think of a till that only prints the week's sum and now has to keep every receipt. A developer adds that; once it exists, the bar is a design change.",
+  "behind": {"text": "Today the product only counts spend per week, and the weekly limit is built on that. A daily bar means it has to start counting each day, and the limit has to decide whether a day or a week counts — like a household budget that suddenly needs a daily allowance too. That is a change to how spending works, so a developer and the product owner decide it first.",
              "sources": [{"label": "pull request #5810", "url": "https://github.com/…"}]},
   "decisions": [{"id": "D-7", "when": "2026-09-14"},
                 {"text": "Spend limits reset every Monday (UTC) for everyone.", "when": "2026-09-14",

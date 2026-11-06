@@ -64,8 +64,7 @@ The person deciding sees it on the card, and every later step builds on it.
    question it raises (`design desk agenda` → [desk.md](desk.md) → The presentation), and the
    triage says what that means for the request.
 8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
-   else the same thing shows up, what has to happen under the hood (a short plain text, not a
-   list), and the earlier decisions about it, written as `impact` on the card. A deliberate behaviour you found becomes a decision,
+   else the same thing shows up, X   list), and the earlier decisions about it, written as `impact` on the card. A deliberate behaviour you found becomes a decision,
    and the request is checked against the decisions in force ([desk.md](desk.md) → Decisions → The check). A request
    that switched `impact` off (`request.skills`, Variants below) skips this step.
 9. **The issue.** A request from an issue (`request.from` an issue card, or an `origin` of
