@@ -964,6 +964,33 @@ test("a pull request link previews its change", async (t) => {
   }
 });
 
+// Two requests from one issue: each on its own line, and at a phone's width the title cuts
+// short so its number and state stay inside the box.
+test("two requests from an issue: one line each, inside the box at a phone's width", async (t) => {
+  const issues = `const issue = { id: "is1", kind: "issue", status: "open", title: "See what each agent spends", bucket: "sprint", needs: ["A spend column"], sketches: 0,
+    source: { repo: "acme/widgets", issue: 41, url: "https://github.com/acme/widgets/issues/41", author: "alice" }, waiting: [], threads: [] };
+  const one = { id: "r9", kind: "request", title: "Spend column options for the agents list and its totals", status: "triage", from: "is1", by: { email: "lead@example.com" } };
+  const two = { id: "r10", kind: "request", title: "A calmer spend chip", status: "feedback", from: "is1", by: { email: "lead@example.com" } };`;
+  const bridge = BRIDGE.replace("const digest =", `${issues}\nconst digest =`)
+    .replace("cards: [change, earlier, digest, ...requests]", "cards: [change, earlier, digest, ...requests, issue, one, two]")
+    .replace(': path === "/api/cards/ch1"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/ch1"');
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-tab="issues"]');
+    await desk.click('.row.item [data-card="is1"]');
+    await desk.waitForSelector("#detail .linked");
+    await desk.setViewportSize({ width: 380, height: 800 });
+    assert.equal(await desk.$eval("#detail .linked", (l) => l.classList.contains("many")), true, "two requests: the list form");
+    assert.equal(await desk.locator("#detail .linked .lk").count(), 2, "one line per request");
+    const out = await desk.$eval("#detail .linked", (l) => { const box = l.getBoundingClientRect(); return [...l.querySelectorAll(".lk .chip")].filter((c) => c.getBoundingClientRect().right > box.right + 0.5).length; });
+    assert.equal(out, 0, "every state chip ends inside the box");
+  } finally {
+    await run.close();
+  }
+});
+
 // The Issues tab: the sprint's issues first, what the UI will need in each row, and an
 // issue's Draw it and Design this.
 test("the Issues tab lists the planned issues; Draw it and Design this act once", async (t) => {
