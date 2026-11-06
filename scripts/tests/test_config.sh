@@ -51,4 +51,14 @@ for row in '| lou@example.com | Lead developer |' $'| lou@example.com | lead\tde
     *) printf '%s' "$out" | grep -q '^ok  *desk_people_roles' || { echo "  ✗ verify passes '$row': $out"; FAILS=$((FAILS+1)); } ;;
   esac
 done
+# decisions_page takes dam, and public as the 1.58.0 spelling of dam; anything else fails.
+for v in dam public on; do
+  printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' "- decisions_page: $v" > "$WORK_DIR/CONFIG.md"
+  out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)"
+  if [ "$v" = on ]; then
+    printf '%s' "$out" | grep -q '^FAIL config_decisions_page' || { echo "  ✗ verify names an unknown decisions_page: $out"; FAILS=$((FAILS+1)); }
+  else
+    printf '%s' "$out" | grep -q '^FAIL config_decisions_page' && { echo "  ✗ verify passes decisions_page '$v': $out"; FAILS=$((FAILS+1)); }
+  fi
+done
 finish
