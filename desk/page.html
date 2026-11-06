@@ -3067,7 +3067,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${c.group || c.path ? `<div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}</div>` : ""}
-      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
+      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open the product ↗</a>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
