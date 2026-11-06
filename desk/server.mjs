@@ -202,6 +202,7 @@ async function viewerRoute(req, res, url, who) {
     return send(res, 200, store.setPrefs(actor, Object.fromEntries(["theme", "simple"].filter((k) => Object.hasOwn(b, k)).map((k) => [k, b[k] ?? null]))));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "agenda") { need("queue"); return send(res, 200, withPing(store.queueForCall(p[2], actor, b.note, typeof b.variant === "string" ? b.variant : null), s, who)); }
+  if (m === "DELETE" && p[1] === "cards" && p[2] && !p[3]) { need("close"); return send(res, 200, store.deleteRequest(p[2], actor)); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "suggestion") return send(res, 200, store.dismissSuggestion(p[2], actor));
   if (m === "DELETE" && p[1] === "cards" && p[3] === "agenda") return send(res, 200, store.unqueue(p[2], actor));
   if (m === "POST" && p[1] === "calls") return send(res, 200, store.closeCall(actor, b));
@@ -220,6 +221,14 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "threads" && p[3] === "reopen") { need("comment"); return send(res, 200, withPing(store.reopenThread(p[2], actor), s, who)); }
   // Decisions (docs/desk.md → Decisions): Design Desk records one from a comment; a designer revokes or restores one.
   if (m === "POST" && p[1] === "threads" && p[3] === "decision") { need("decide"); return send(res, 201, withPing(store.proposeDecision(p[2], actor, { message: b.message, note: b.note }), s, who)); }
+  // A designer or a lead adds a decision in their own name, with up to two pictures (docs/desk.md → Decisions).
+  if (m === "POST" && p[1] === "decisions" && !p[2]) {
+    need("decide");
+    const images = Array.isArray(b.images) ? b.images.slice(0, 2) : [];
+    for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be added");
+    const ids = images.map((im, i) => store.addAsset({ kind: "image", name: `decision-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id);
+    return send(res, 201, store.recordDecision(actor, { text: b.text, why: b.why, concepts: b.concepts, pictures: ids }));
+  }
   if (m === "POST" && p[1] === "decisions" && p[3] === "revoke") { need("decide"); return send(res, 200, store.revokeDecision(p[2], actor, { reason: b.reason, replaced_by: b.replaced_by || null })); }
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }

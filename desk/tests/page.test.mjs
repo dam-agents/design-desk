@@ -1349,10 +1349,16 @@ test("a decision: what goes against it warns with a link to it; a designer revok
     assert.match(await desk.textContent("#detail"), /Follows D-2 revoked/, "a cited decision no longer in force says so");
     assert.equal(await desk.locator('#detail .impact [data-ref="D-2"]').count(), 1, "the impact cites a decision by its number");
     await desk.click('#detail .against [data-ref="D-1"]');
-    await desk.waitForSelector("text=Who decided");
-    assert.match(await desk.textContent("#detail"), /Developer Dana[\s\S]*PR #40[\s\S]*A new header ch1[\s\S]*goes against it/, "it says a developer decided it");
+    await desk.waitForSelector("#detail .status .s-meta");
+    assert.match(await desk.textContent("#detail .status .s-meta"), /by:\s*Dana \(dana\)[\s\S]*from:\s*Pull request — PR #40/, "the status box says who decided it and where, on its line");
+    assert.equal(await desk.locator('#detail .status .s-meta .role-ic').getAttribute("data-tip") ?? await desk.locator('#detail .status .s-meta .role-ic').getAttribute("title"), "A developer", "a developer's icon by the name");
+    assert.match(await desk.textContent("#detail"), /A new header ch1[\s\S]*goes against it/);
     assert.match(await desk.textContent('.row.item:has([data-decision="D-1"])'), /The header stays one line[\s\S]*In force[\s\S]*decided:[\s\S]*from: PR #40[\s\S]*by: Dana/, "a decision's row is drawn as every list's");
-    assert.match(await desk.textContent("#list"), /From developers 1[\s\S]*The header stays one line/, "the list keeps developers' decisions apart");
+    assert.equal(await desk.locator("#list .side-head").count(), 0, "one list, not kept apart by who decided");
+    await desk.locator('.row.item:has([data-decision="D-1"]) .prov > span', { hasText: "by:" }).click();
+    assert.match(await desk.textContent("#list .pf-bar"), /Filtered by\s*by:\s*Dana/, "a value in a row filters the list by it");
+    await desk.click("#list [data-pf-clear]");
+    assert.equal(await desk.locator("#list .pf-bar").count(), 0, "its × shows every row again");
     await desk.click('[data-revoke="D-1"]');
     await desk.fill("#confirm-form [name=note]", "Two lines are fine now");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Revoke it" }).click();
@@ -1620,7 +1626,7 @@ window.platform = { async request({ method, path, body }) {
 } };
 </script>`;
 
-test("lists show the newest first; a folded box stays folded on another option; a verdict other than design is a label by the title, every verdict is in the steps", (t) => open(t, FOLD, async (desk) => {
+test("lists show the newest first; a folded box stays folded on another option; neither Design only nor Needs a developer is a label by the title, every verdict is in the steps", (t) => open(t, FOLD, async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   await desk.goto(`${base}#C-2`);
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-2");
@@ -1628,12 +1634,14 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.deepEqual(await rows(), ["C-3", "C-2", "C-1", "C-6"], "requests by the day they came, not by their last update");
   assert.equal(await desk.locator("#list .chip", { hasText: "Design only" }).count(), 0, "no Design only label in the list");
 
-  const chip = desk.locator("#detail .sub .chip", { hasText: "Needs a developer" });
-  assert.equal(await chip.count(), 1, "the verdict is a label beside the title");
-  assert.match(await chip.evaluate((x) => x.title || x.dataset.tip || ""), /price per seat is not in the data/, "its reasons are on hover");
+  assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Needs a developer" }).count(), 0, "no Needs a developer label beside the title");
+  assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Needs a developer/, "the steps name it");
   assert.equal(await desk.locator(".made-col h4", { hasText: "What can be done" }).count(), 0, "no What can be done in the box");
   assert.doesNotMatch(await desk.textContent(".made-col"), /deliberate decision/, "no label on what is already known");
   assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");
+  await desk.click(".steppill [data-dev-ask]");
+  assert.equal(await desk.$eval("#dev-parts", (d) => d.open), true, "the step Contact a developer opens what design cannot do");
+  assert.equal(await desk.locator("#dev-parts [data-dev-copy]").count(), 1, "with a question for a developer to copy");
 
   await desk.click('[data-brief-toggle="made"]');
   assert.equal(await desk.locator(".made-col.clamped").count(), 1, "folded");
