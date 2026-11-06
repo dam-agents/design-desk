@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole } from "./store.mjs";
+import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -46,17 +46,17 @@ const log = (level, event, msg) => {
   try { process.stderr.write(`${new Date().toISOString()} ${level} ${event} ${msg}\n`); } catch {}
 };
 
-// The roster: `## Desk people` in work/CONFIG.md, | email | role |. Re-read on every
-// request: it is small, and an edit by the operator takes effect at once.
+// The roster: `## Desk people` in work/CONFIG.md, | email | role |; one person's row may
+// list several addresses (docs/config.md). Re-read on every request: it is small, and an
+// edit by the operator takes effect at once.
+const roster = () => rosterOf(cfgTable("Desk people"));
+const rowOf = (email) => personOf(roster(), email);
 function roleOf(caller) {
   if (caller.role === "owner") return "lead";
   if (!caller.email) return "guest";
-  const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === caller.email);
-  const role = readRole(row?.role);
+  const role = rowOf(caller.email)?.role;
   return ROLES.includes(role) ? role : "guest";
 }
-
-const roster = () => rosterOf(cfgTable("Desk people"));
 
 // Who a decision came from (docs/desk.md → Decisions → Who decided): the design side
 // (a designer, a PM, a lead) or a developer. The role the record names, else the author's
@@ -65,7 +65,7 @@ const roster = () => rosterOf(cfgTable("Desk people"));
 const DESIGN_SIDE = ["lead", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
 function sideOf(d) {
   const email = String(d.author?.email || "").toLowerCase();
-  const role = readRole(d.author?.role) || (email ? readRole(cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === email)?.role) : null);
+  const role = readRole(d.author?.role) || (email ? rowOf(email)?.role || null : null);
   if (DESIGN_SIDE.includes(role)) return "design";
   if (DEVELOPER_SIDE.includes(role)) return "developer";
   return ["pr", "commit", "doc"].includes(d.origin?.kind) ? "developer" : null;
@@ -81,14 +81,13 @@ const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact
 // The roster role of a person met in Slack, by the email the workspace discloses.
 function slackRole(email) {
   if (!email) return "slack";
-  const row = cfgTable("Desk people").find((r) => (r.email || "").toLowerCase() === String(email).toLowerCase());
-  const role = readRole(row?.role);
+  const role = rowOf(email)?.role;
   return ROLES.includes(role) && role !== "guest" ? role : "slack";
 }
 
 function settings() {
   const list = (v, d) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
-  const lead = cfgTable("Desk people").find((r) => (r.role || "").toLowerCase() === "lead");
+  const lead = roster().find((r) => r.role === "lead");
   const ideas = cfg("handoff", "desk");
   return {
     // Read as the roster reads a role, so `lead developer` here is the roster's `lead-developer`.
@@ -144,7 +143,10 @@ function callerOf(req) {
   const email = String(req.headers["x-platform-caller-email"] || "").trim().toLowerCase() || null;
   const sub = String(req.headers["x-platform-caller-sub"] || "");
   const caller = { role, email, sub };
-  return { ...caller, deskRole: roleOf(caller) };
+  // Every address the person goes by: the one they signed in with first, then their row's others.
+  const row = email ? rowOf(email) : null;
+  const emails = row ? [email, ...[row.email, ...row.also].filter((e) => e !== email)] : email ? [email] : [];
+  return { ...caller, emails, deskRole: roleOf(caller) };
 }
 
 async function body(req) {
@@ -164,7 +166,7 @@ const send = (res, status, obj) => {
 
 async function viewerRoute(req, res, url, who) {
   const s = settings();
-  const actor = { email: who.email, sub: who.sub, role: who.deskRole };
+  const actor = { email: who.email, emails: who.emails, sub: who.sub, role: who.deskRole };
   const need = (action) => {
     if (can(who.deskRole, action, s.prototypeRoles)) return;
     const verb = VERBS[action] || "do that";
@@ -175,7 +177,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
+    return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });

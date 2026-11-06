@@ -67,5 +67,8 @@ file is unchanged; exit 3 means another writer came first (a lead's roster row t
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
 - `## Desk people` table, `| email | role |`: `lead`, `designer`, `lead-developer`, `developer` or `pm`;
+  one person's `email` cell may list several addresses, separated by commas — the one they sign in
+  to the Desk with and the one Slack or GitHub knows them by — and every one counts as them;
+  an optional third column `| name |` gives the name the Desk shows instead of the address;
   anyone else on the share list is a `guest`; the owner is always `lead`. A lead may ask
   on the Desk for a new row ([desk.md](desk.md) → People).

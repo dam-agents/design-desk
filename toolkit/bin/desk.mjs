@@ -4,7 +4,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import { WORK, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
-import { ADDABLE_ROLES, rosterOf } from "../../desk/store.mjs";
+import { ADDABLE_ROLES, rosterOf, personOf } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
@@ -230,9 +230,9 @@ export function bundleOf(card) {
 export function personVerdict(item, text) {
   const { email, role } = item.person;
   const roster = rosterOf(tableIn(text, "Desk people"));
-  const on = roster.find((r) => r.email === email);
+  const on = personOf(roster, email);
   if (on) return { outcome: on.role === role ? "added" : `not added: ${email} is already on the list.` };
-  const asker = roster.find((r) => r.email === String(item.by?.email || "").toLowerCase());
+  const asker = personOf(roster, item.by?.email);
   if (!item.by?.owner && asker?.role !== "lead") return { outcome: `not added: ${item.by?.email || "the person who asked"} is no longer a lead.` };
   if (!ADDABLE_ROLES.includes(role)) return { outcome: `not added: a lead cannot give the role ${role}.` };
   return { write: true };

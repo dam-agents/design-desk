@@ -94,14 +94,24 @@ export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.ma
 // hyphens (`Lead developer` → `lead-developer`). scripts/verify-onboarding.sh reads it the same way.
 export const readRole = (r) => String(r || "").trim().toLowerCase().replace(/\s+/g, "-");
 
-// The roster as the server reads a role (`## Desk people` rows): the first row of an email
-// counts, and an unknown role is a guest's.
+// A row's emails: one person may sign in to the Desk with one address and meet Design Desk in
+// Slack with another, so the email cell holds every address of theirs, separated by commas.
+export const emailsOf = (cell) => String(cell || "").split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter(Boolean);
+// The roster as the server reads a role (`## Desk people` rows): `email` is a row's first
+// address, `also` its others, `name` the optional third column; the first row of an address counts, and an unknown role is a guest's.
 export function rosterOf(rows) {
   const seen = new Set();
-  return rows.map((r) => ({ email: String(r.email || "").trim().toLowerCase(), role: readRole(r.role) }))
-    .filter((r) => r.email && !seen.has(r.email) && seen.add(r.email))
-    .map((r) => ({ email: r.email, role: ROLES.includes(r.role) ? r.role : "guest" }));
+  return rows.map((r) => ({ emails: emailsOf(r.email), role: readRole(r.role), name: String(r.name || "").trim().slice(0, 80) }))
+    .map((r) => ({ ...r, emails: r.emails.filter((e) => !seen.has(e) && seen.add(e)) }))
+    .filter((r) => r.emails.length)
+    .map((r) => ({ email: r.emails[0], also: r.emails.slice(1), role: ROLES.includes(r.role) ? r.role : "guest", ...(r.name ? { name: r.name } : {}) }));
 }
+// The names the roster gives, by every address: the page shows a name where it has one.
+export const namesOf = (roster) => Object.fromEntries(roster.filter((r) => r.name).flatMap((r) => [r.email, ...(r.also || [])].map((e) => [e, r.name])));
+// The roster row of an address, any of its emails.
+export const personOf = (roster, email) => { const e = String(email || "").trim().toLowerCase(); return e ? roster.find((r) => r.email === e || (r.also || []).includes(e)) || null : null; };
+// Every address a caller goes by: the one they signed in with and their row's others.
+const addressesOf = (who) => [who?.email, ...(who?.emails || [])].map((e) => String(e || "").toLowerCase()).filter(Boolean);
 
 // The roles a lead may ask Design Desk to give a new person (docs/desk.md → People);
 // making a lead stays the operator's.
@@ -821,7 +831,7 @@ export class Store {
   renameRequest(cardId, who, title, { manage = false } = {}) {
     const c = this.card(cardId);
     if (c.kind !== "request") throw bad("only a request is renamed here");
-    const mine = [c.created_by?.email, c.origin?.email].some((x) => x && who?.email && String(x).toLowerCase() === String(who.email).toLowerCase());
+    const mine = [c.created_by?.email, c.origin?.email].some((x) => x && addressesOf(who).includes(String(x).toLowerCase()));
     if (!mine && !manage) throw forbidden("Only the person who filed it, a designer or a lead can rename this request.");
     c.title = clean(title, LIMITS.title, "title");
     c.renamed = { by: person(who), at: this.clock() };
@@ -1005,7 +1015,7 @@ export class Store {
     const e = clean(String(email ?? ""), 254, "email").toLowerCase();
     if (!EMAIL.test(e)) throw bad("That is not an email address.");
     if (!ADDABLE_ROLES.includes(role)) throw bad(`role must be one of ${ADDABLE_ROLES.join(", ")}`);
-    const on = roster.find((r) => r.email === e);
+    const on = personOf(roster, e);
     if (on) throw bad(`${e} is already on the list.`);
     if (Object.values(this.db.inbox).some((i) => i.kind === "person" && i.state !== "done" && i.person?.email === e)) throw bad(BUSY);
     const it = this.enqueue("person", null, null, who);
@@ -1319,7 +1329,7 @@ export class Store {
   unqueue(cardId, who) {
     const c = this.card(cardId);
     if (c.agenda?.status !== "queued") throw bad("it is not on the presentation");
-    const mine = c.agenda.by?.email && c.agenda.by.email === who.email;
+    const mine = Boolean(c.agenda.by?.email) && addressesOf(who).includes(String(c.agenda.by.email).toLowerCase());
     if (!mine && !can(who.role, "close")) throw forbidden("Only the person who added it, or a designer, can take it off the presentation.");
     c.agenda = { ...c.agenda, status: "removed", removed_at: this.clock() };
     this.save();
@@ -2049,8 +2059,8 @@ function mustBeChecked(c, verb) {
 const designLocked = (c) => c.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
 const LOCKED = "This design is approved, so it no longer changes. To change it, start a new request from this one.";
 const isAuthor = (c, who) => {
-  const me = String(who?.email || "").toLowerCase();
-  return Boolean(me) && [c.created_by?.email, c.origin?.email].some((x) => String(x || "").toLowerCase() === me);
+  const me = addressesOf(who);
+  return me.length > 0 && [c.created_by?.email, c.origin?.email].some((x) => me.includes(String(x || "").toLowerCase()));
 };
 const cleanEmail = (v) => {
   const e = String(v).trim().toLowerCase();
