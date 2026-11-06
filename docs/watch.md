@@ -47,8 +47,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    when it is missing, so never leave it out.
    Look at every screen before you use it (Read the image): a sign-in page, an error or
    an empty frame is not a screen of the change.
-7. **Write the card** with the `explain` skill: short, structured, only what a designer acts
-   on. The store refuses longer text (`LIMITS.change`, `desk/store.mjs`). A card holds:
+7. **Write the card** with the `explain` skill, in plain words ([desk.md](desk.md) → Writing on
+   the Desk): short, structured, only what a designer acts on. The store refuses longer text (`LIMITS.change`, `desk/store.mjs`). A card holds:
    - `title` — what a person can now do or see, in the product's words, not the PR title;
      at most 90 characters;
    - `summary` — one sentence, the gist; at most 180 characters;

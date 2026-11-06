@@ -15,7 +15,8 @@ sent; the developer or coding agent gets only answers.
    revise), it is what the prototype shows: the card's `live_pick` — its option, `version` and
    assets (`live_pick.asset`, `states[].asset`), which `approved.variant` and `approved.version`
    repeat; write the spec from those, not from a newer version drawn since.
-2. Write `/tmp/design-desk-c<n>/spec.md`, with these sections:
+2. Write `/tmp/design-desk-c<n>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
+   Desk): a developer reads it, but so do the designers who approved it. These sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in the requester's words, the decisions taken on the Desk (which
      variant, which concerns changed it), each with who decided.

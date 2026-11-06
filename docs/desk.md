@@ -403,7 +403,7 @@ A `questions_due` item points at a thread: on a card, or a private ask about a D
 
 1. Find the answer in the product: the card's sources first, then the profile's
    architecture pages and the code at the default branch (`scripts/checkout.sh`).
-2. Answer with the `explain` skill: the direct answer in the first
+2. Answer with the `explain` skill, in plain words ([Writing on the Desk](#writing-on-the-desk)): the direct answer in the first
    sentence, then only what the person needs; under 200 words; one offer to go deeper.
    **Show, don't only tell:** put in the pictures that make the answer obvious, as
    `![caption](asset:A-12)` lines, with the asset's real number,: the product's own screens and element drawings already
@@ -578,6 +578,19 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
 
 ## Writing on the Desk
 
+- **Plain words: the one rule for every text people read** — cards, answers, triage
+  reasons, research, Slack replies, digests, the spec, and comments:
+  - Write for someone who has never seen the code. Everyday words and the product's own
+    names; a term the reader may not know gets a few words of explanation the first time.
+  - Short sentences, one idea each. Separate points as bullets, not a paragraph. The answer
+    or the gist comes first.
+  - Show it: an example, a before and after, the screen it happens on. A picture or a small
+    diagram (`![caption](asset:A-<n>)`: a flow, before → after) only when it makes the
+    point clearer than words; never for decoration.
+  - Brief: say each thing once; leave out what a picture already shows and what only a
+    developer needs (API, internals, review history). Long → cut it.
+  - Before you publish, read it as a new teammate would: clear on the first read, with no
+    question left about what it means?
 - Everything on the Desk is for people who do not read code: the product's own words, no
   file paths, no jargon the profile's glossary does not define. Never write an inbox item or
   thread id (`I-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
