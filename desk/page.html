@@ -452,6 +452,8 @@
   .ask-panel footer { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 8px; }
   .ask-panel footer .starters { margin: 0; }
   .ask-panel footer textarea { min-height: 52px; }
+  /* The hint in the empty box is quieter than what a person types. */
+  .ask-panel footer textarea::placeholder { font-size: var(--fs-meta); }
   .ask-panel footer .bar { display: flex; justify-content: flex-end; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
@@ -2262,7 +2264,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     building: ["Being drawn", "Design Desk is drawing it now"], dropped: ["Not drawn", "Design Desk could not draw it from the product"] };
   const mapDot = (c) => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return `<span class="sdot" data-s="map-${esc(c.status || "current")}"><span class="chip tag${c.status === "building" ? " busy" : ""}" title="${esc(tip)}"><span class="w">${esc(w)}</span></span></span>`; };
   // The decisions in force a card goes against, in its list row: a red ! that unfolds into their numbers.
-  const againstDot = (c) => (c.against || []).length ? `<span class="sdot vdot"><span class="chip tag" title="It goes against a decision in force: a designer approves it only knowingly"><span class="w">Goes against ${esc(c.against.join(", "))}</span></span></span>` : "";
+  // The label names at most three, then +N: it unfolds to a fixed width. The hint names them all.
+  const againstDot = (c) => { const ids = c.against || []; if (!ids.length) return "";
+    const shown = ids.length > 3 ? `${ids.slice(0, 3).join(", ")} +${ids.length - 3}` : ids.join(", ");
+    return `<span class="sdot vdot"><span class="chip tag" title="${esc(`It goes against ${ids.join(", ")}, in force: a designer approves it only knowingly`)}"><span class="w">Goes against ${esc(shown)}</span></span></span>`; };
   // A row's state dot, whatever the item: a request's state, a PR's or an issue's, a drawing's.
   const rowDot = (c) => c.kind === "change" || c.kind === "issue" ? ghDot(c) : c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : c.kind === "screen" || c.kind === "element" ? mapDot(c) : "";
 

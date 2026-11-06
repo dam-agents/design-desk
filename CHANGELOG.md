@@ -32,13 +32,13 @@ page's tokens. Nothing else to do.
 **Upgrade:**
 Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
 Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
-([docs/desk.md](docs/desk.md) → **Publishing the page**). A card in any list that goes against a
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A card in any list but the Presentation that goes against a
 decision in force shows a red ! under its state dot that unfolds into `Goes against D-<n>`
 (`GET /api/cards` adds `against`, the decisions' numbers; `GET /api/decisions` adds each
 conflict's `status`). Product's Screens, Elements, Decisions and History rows look like the other
 lists: a state dot and a `created:`/`decided:` `from:` `by:` line, in place of the summary and the
 chips. A folded request text or From Design Desk keeps two whole lines and half of the third,
-not counting a heading. Nothing else to do.
+not counting a heading; the private ask's placeholder is in the smaller meta size. Nothing else to do.
 
 ## 1.50.0 — 2026-11-05
 

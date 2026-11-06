@@ -341,7 +341,8 @@ as large as the dot on the request's page and level with the title's first line,
 its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
-dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`. Product's
+dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`
+(at most three numbers, then `+N`; the hint names them all). Product's
 lists are drawn the same way: a screen's and an element's dot says whether its drawing is up to
 date, out of date, being drawn or not drawn, and its line says `created: <when> from: Design
 Desk by: product map` (or the person who added it; an element from an approved design is
