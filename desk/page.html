@@ -3219,7 +3219,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (c.status === "declined") return "";
     const v = c.triage?.verdict, n = (c.variants || []).length;
     const steps = [["check", "Filed", (v && VERDICT[typeOf(c)][v]?.[0]) || "Design Desk checks it"], ["options", "Options drawn", n ? plural(n, "option", "options") : "a few options"], ["feedback", "Team feedback", "votes and comments"],
-      ...(v && v !== "design" ? [] : [["live", "Tried live", "optional"]]), ["approved", "Approved", "by a designer or a lead developer", true],
+      ...(v && v !== "design" ? [] : [["live", "Tried live", "optional"]]), ["approved", "Approved", c.approved && c.status !== "declined" ? `${c.approved.variant ? `${optionName(c, c.approved.variant)} · ` : ""}by ${c.approved.by?.email && c.approved.by.email === S.me?.email ? "you" : c.approved.by?.email || "someone"}${c.approved.small ? " for developers" : ""}${c.approved.at ? ` · ${day(c.approved.at)}` : ""}` : "by a designer or a lead developer", true],
       // With the spec read before it goes, writing it and sending it are two steps; Send is a person's, like Approve.
       ...(S.me?.spec_review ? [["spec", "Spec written", "you read and edit it"], ["sent", "Sent to developers", "only when you press Send", true]] : [["sent", "To developers", "after approval"]])];
     const at = { triage: "check", variants: "options", feedback: "feedback", prototype: "live", testing: "live", spec: S.me?.spec_review && c.spec?.review !== "sent" ? "spec" : "sent", "handed-off": "sent" }[c.status];
@@ -3443,7 +3443,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // The tab already says where it was filed: only a later move by a lead developer is named here.
     const sz = c.size?.filed ? null : c.size, ap = c.approved;
     const said = sz ? `<span class="chip ${sz.small ? "info" : ""}" title="${sz.small ? "Any developer but the person who filed it approves it, without a designer" : "A designer or a lead developer approves it"}">${sz.small ? "For Developers — a developer approves" : "For Designers"}</span> <span class="hint">${who(sz.by)} chose · ${esc(when(sz.at))}</span>` : "";
-    const approved = ap && c.status !== "declined" ? `<span class="chip ok" title="Approved: Design Desk writes the developer spec from it">✓ Approved</span> <span class="hint">${ap.variant ? `${esc(optionName(c, ap.variant))} · ` : ""}by ${who(ap.by)}${ap.small ? " for developers" : ""}${ap.implement ? ", straight to the coding agent" : ""} · ${esc(when(ap.at))}</span>` : c.decided && c.status === "declined" ? `<span class="chip ok" title="Closed with a decision, recorded under Product → Decisions">✓ Decided</span> <span class="hint">by ${who(c.decided.by)} · ${esc(when(c.decided.at))}: ${esc(c.decided.text)}</span>` : "";
+    // Who approved is in the request's steps (Approved · by …), not on a line of its own.
+    const approved = c.decided && c.status === "declined" ? `<span class="chip ok" title="Closed with a decision, recorded under Product → Decisions">✓ Decided</span> <span class="hint">by ${who(c.decided.by)} · ${esc(when(c.decided.at))}: ${esc(c.decided.text)}</span>` : "";
     return said || approved ? `<div class="hint size">${said ? `<div>${said}</div>` : ""}${approved ? `<div>${approved}</div>` : ""}</div>` : "";
   }
 
