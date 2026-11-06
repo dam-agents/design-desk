@@ -477,7 +477,8 @@ private ask only its owner. The events:
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
-line of what was said. A click opens the item. **For you** keeps what the person filed, voted on,
+line of what was said. A click opens the item: a decision on its page, a message with the
+conversation unfolded and scrolled to its thread. **For you** keeps what the person filed, voted on,
 approved or wrote in. The red count is what is newer than the person last opened the bell;
 opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
 `seen: {<person>: at}`), outside the write budget like reading an item.

@@ -5813,8 +5813,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     $("#notes").querySelectorAll("[data-only]").forEach((b) => b.addEventListener("click", () => { S.notes.only = b.dataset.only === "1"; renderNotes(); }));
     $("#notes").querySelectorAll("[data-note]").forEach((b) => b.addEventListener("click", guard(async () => {
       const x = list[Number(b.dataset.note)];
+      // A message opens its item with the conversation unfolded, scrolled to its thread.
       const to = target(x.item);
-      if (to) await goTo(to);
+      if (!to) return;
+      if (x.thread) S.convoOpen = true;
+      if (!(await goTo(to)) || !x.thread) return;
+      const th = document.getElementById(`th-${x.thread}`);
+      if (th) { th.scrollIntoView({ block: "center" }); th.classList.add("flash"); setTimeout(() => th.classList.remove("flash"), 2000); }
     })));
   }
   $("#bell").addEventListener("toggle", guard(async () => {
