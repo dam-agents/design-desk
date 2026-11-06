@@ -4,8 +4,8 @@ description: >-
   For a UI change, shipped or proposed, find everywhere the same thing shows up — not only
   the same component, but every place people meet the same data or idea: other screens, the
   command line, Slack or email messages, documents — and what a change to it touches,
-  grounded in earlier decisions. Writes the "Where else this shows up, and what it touches"
-  section of a Desk card, or answers in chat. Use for every change card, for every request
+  grounded in earlier decisions. Writes the "Where else this shows up", "Under the hood" and "Earlier decisions"
+  sections of a Desk card, or answers in chat. Use for every change card, for every request
   ahead of its options unless the request switched impact off, and when someone asks "where else is this?" or "what would this
   affect?".
 ---
@@ -54,6 +54,8 @@ Then read, do not count:
 - For each place, say what a change would do to it: words that would stop matching, a colour
   whose meaning would change, a rule that would be broken. A test that checks the old text is
   noted for the spec, not shown here.
+- Then what has to change behind the screens for the change to be possible: the data, the
+  rules, the other systems. That becomes **Under the hood** below.
 
 A decision without a source is not a decision here: write what you found and where, or leave
 it out.
@@ -71,6 +73,19 @@ not read code. Write each one like a short note to a colleague:
   the old text is a developer's to-do: it goes in the spec, not here.
 - **Only what a designer can act on.** Leave out an effect that only a developer would notice.
 
+The same holds for an earlier decision's `text`: say what was decided and why it still matters,
+in one plain sentence ("Spend limits start again every Monday, for everyone at once").
+
+**Under the hood (`behind`).** A short text, not a list: one to three small paragraphs, at most
+about 120 words, on what has to happen behind the screens before the change can be made — the
+data the product would need to keep, a rule that would have to change, another system that
+would have to learn the new thing, and that a developer does it. Write it for someone who knows
+nothing about how software works, and explain as you would to a friend: an everyday comparison
+helps where the idea is abstract ("the list only shows what the server sends, like a shop
+window shows only what the stockroom has"). No code words here either. When nothing has to
+change behind the screens, say so in one sentence: it is good news for the designer. Name
+where you found it in `sources`.
+
 On a card, one `design desk upsert` with:
 
 ```json
@@ -78,8 +93,8 @@ On a card, one `design desk upsert` with:
   "concept": "an agent's weekly spend",
   "places": [{"where": "Agents list", "how": "the amount on each row, amber near the limit", "kind": "screen"},
              {"where": "Slack spend alert", "how": "“Agent X reached its spend limit”", "kind": "message"}],
-  "affects": [{"what": "The spend alert in Slack", "why": "it says “near its limit”; use other words in the list and the two stop agreeing",
-               "source": {"label": "pull request #5810", "url": "https://github.com/…"}}],
+  "behind": {"text": "Today the list only knows this week's total. To show a daily bar, the product has to start keeping each day's spend too — think of a till that only prints the week's sum and now has to keep every receipt. A developer adds that; once it exists, the bar is a design change.",
+             "sources": [{"label": "pull request #5810", "url": "https://github.com/…"}]},
   "decisions": [{"id": "D-7", "when": "2026-09-14"},
                 {"text": "Spend limits reset every Monday (UTC) for everyone.", "when": "2026-09-14",
                  "source": {"label": "pull request #5810", "url": "https://github.com/…"}}]}}
@@ -91,9 +106,10 @@ its `card` id, and the page opens it from there. A screen with no card yet: leav
 the store links the screen of that name, or adds a card the next run draws
 ([map.md](../../../docs/map.md) → A screen someone added). A decision on the Desk is cited by its `id`;
 one found elsewhere by its words and source. At most 30
-places, 20 effects, 20 decisions; the most important first.
+places and 20 decisions; the most important first. A card written before `behind` keeps its
+`affects` list until the next run writes `behind` instead.
 
-In chat, the same three lists in plain words.
+In chat, the places, what has to happen under the hood and the earlier decisions, in plain words.
 
 ## 5. Keep the decisions
 

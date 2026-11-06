@@ -1741,3 +1741,12 @@ test("Where else this shows up: a screen opens its card in Product, and one Prod
   const again = s.upsertCard({ id: req.id, impact: { concept: "an agent's weekly spend", places: [{ where: "Billing", kind: "screen" }] } }).card.impact;
   assert.equal(again.places[0].card, added.id, "written again: the same card, no twin");
 });
+
+test("Under the hood: a short plain text with its sources; a plain string is its text", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "A daily bar", problem: "Show each day's spend." });
+  const im = s.upsertCard({ id: card.id, impact: { concept: "an agent's spend", places: [], behind: { text: "The product only keeps the week's total today.", sources: [{ label: "PR #5", url: "https://example.com/pr/5" }] } } }).card.impact;
+  assert.deepEqual(im.behind, { text: "The product only keeps the week's total today.", sources: [{ label: "PR #5", url: "https://example.com/pr/5", card: null }] });
+  assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x", behind: "Nothing changes behind the screens." } }).card.impact.behind.text, "Nothing changes behind the screens.");
+  assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x" } }).card.impact.behind, undefined, "none written: none shown");
+});

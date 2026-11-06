@@ -2432,6 +2432,9 @@ function cleanImpact(o, cards, decisions = {}) {
     concept: clean(o.concept, 120, "impact concept"),
     places: list(o.places, 30, (x) => ({ where: clean(x.where, 160, "place"), how: optText(x.how, 400, "how"), screen: optText(x.screen, 120, "screen"), card: ["screen", "element"].includes(own(cards, x.card)?.kind) ? x.card : null, kind: ["screen", "component", "message", "email", "document", "other"].includes(x.kind) ? x.kind : "screen" })),
     affects: list(o.affects, 20, (x) => ({ what: clean(x.what, 200, "affected"), why: optText(x.why, 600, "why"), source: x.source ? cleanSource(x.source, cards) : null })),
+    // Under the hood: what has to happen behind the screens for the change to be possible, as a
+    // short plain text for someone who does not know the code, with where it comes from.
+    ...(o.behind ? (({ text, sources }) => ({ behind: { text: clean(text, 1500, "behind"), sources: list(sources, 5, (x) => cleanSource(x, cards)) } }))(typeof o.behind === "string" ? { text: o.behind } : o.behind) : {}),
     // A decision on the Desk is cited by its number; one found elsewhere, by its words and source.
     decisions: list(o.decisions, 20, (x) => {
       if (x.id != null && !own(decisions, String(x.id))) throw bad(`impact: no decision ${x.id}`);
