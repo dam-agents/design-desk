@@ -1349,6 +1349,10 @@ test("a decision: what goes against it warns with a link to it; a designer revok
     assert.match(await desk.textContent("#detail"), /A new header ch1[\s\S]*goes against it/);
     assert.match(await desk.textContent('.row.item:has([data-decision="D-1"])'), /The header stays one line[\s\S]*In force[\s\S]*decided:[\s\S]*from: PR #40[\s\S]*by: Dana/, "a decision's row is drawn as every list's");
     assert.equal(await desk.locator("#list .side-head").count(), 0, "one list, not kept apart by who decided");
+    await desk.locator('.row.item:has([data-decision="D-1"]) .prov > span', { hasText: "by:" }).click();
+    assert.match(await desk.textContent("#list .pf-bar"), /Filtered by\s*by:\s*Dana/, "a value in a row filters the list by it");
+    await desk.click("#list [data-pf-clear]");
+    assert.equal(await desk.locator("#list .pf-bar").count(), 0, "its × shows every row again");
     await desk.click('[data-revoke="D-1"]');
     await desk.fill("#confirm-form [name=note]", "Two lines are fine now");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Revoke it" }).click();

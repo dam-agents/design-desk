@@ -144,10 +144,17 @@
   .prov .when { color: var(--ink); font-weight: 500; }
   .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta, 12.5px); }
   .row .prov a, .row .prov button { pointer-events: auto; }
+  /* A value with its word filters the list: it keeps its colour and underlines on hover. */
+  .row .prov > span:has(> .k) { pointer-events: auto; cursor: pointer; }
+  .row .prov > span:has(> .k):hover > :not(.k) { text-decoration: underline; text-underline-offset: 2px; }
+  .pf-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 6px 6px 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); font-size: var(--fs-meta); }
+  .pf-bar .k { color: var(--muted); } .pf-bar b { font-weight: 600; }
+  .pf-bar [data-pf-clear] { font-size: var(--fs-ui); line-height: 1; padding: 2px 8px; color: var(--muted); }
+  .pf-bar [data-pf-clear]:hover { color: var(--ink); }
   /* In the list a card's title is the one black line; where it came from and who asked are grey and plain under it. */
   .row .prov .src { padding: 0; border: 0; background: none; color: var(--muted); font-weight: 400; gap: 0; }
   /* In the list only Slack and the Desk show their icon, beside their name. */
-  .row .prov .src { gap: 4px; } .row .prov .src:not([data-k="slack"], [data-k="desk"]) > svg { display: none; }
+  .row .prov .src { gap: 4px; } .prov .src:not([data-k="slack"], [data-k="pr"], [data-k="issue"]) > svg { display: none; }
   /* The provenance reads from: … by: … based on: …, the joining words grey, what they name in ink. */
   .prov .k { color: var(--muted); }
   .row .prov .src, .row .prov b, .row .prov .anchor { color: var(--ink); }
@@ -1676,7 +1683,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const role = ROLE[c.created_by?.role] || "";
     return `<span class="face" aria-hidden="true">${esc((name.replace(/^[^A-Za-z0-9]+/, "")[0] || "?").toUpperCase())}</span>
       <span class="ask-who"><b>${esc(name)}</b> ${bug ? "reported" : "asked"}${role ? `, ${esc(role)}` : ""}, from</span>
-      <span class="prov"><span class="src">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
+      <span class="prov"><span class="src" data-k="${p.kind}">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
   }
   const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
   function origin(c, { parts = false } = {}) {
@@ -2263,7 +2270,27 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // A filter too wide for the list fades at its edge.
   const markScrolls = (root) => root.querySelectorAll(".filters").forEach((f) => f.classList.toggle("scrolls", f.scrollWidth > f.clientWidth + 1 && f.scrollLeft + f.clientWidth < f.scrollWidth - 1));
   document.addEventListener("scroll", (e) => { if (e.target.matches?.(".filters")) markScrolls(e.target.parentElement); }, true);
-  function renderList() {
+  // A value in a row's source line filters its list to the rows with the same value
+  // (docs/desk.md → Lists): `from: Slack`, `by: alice`, `created: Today`. The bar on top names it,
+  // and its × shows every row again. It holds for the tab's page it was set on.
+  const pfView = () => S.tab + (S.tab === "product" ? `:${S.productFilter}` : S.tab === "requests" && S.reqFilter === "presentation" ? ":presentation" : "");
+  const pfKey = (sp) => sp.querySelector(":scope > .k")?.textContent.replace(/:\s*$/, "").trim() || "";
+  const pfValue = (sp) => { const x = sp.cloneNode(true); x.querySelector(":scope > .k")?.remove(); return x.textContent.replace(/\s+/g, " ").trim(); };
+  function applyRowFilter() {
+    const list = $("#list");
+    list.querySelector(".pf-bar")?.remove();
+    if (!S.pf || S.pf.view !== pfView()) return;
+    let shown = 0;
+    for (const row of list.querySelectorAll(".row.item")) {
+      const hit = [...row.querySelectorAll(".prov > span")].some((sp) => pfKey(sp) === S.pf.k && pfValue(sp) === S.pf.v);
+      row.hidden = !hit; if (hit) shown++;
+    }
+    const bar = `<div class="pf-bar"><span>Filtered by <span class="k">${esc(S.pf.k)}:</span> <b>${esc(S.pf.v)}</b>${shown ? "" : " — nothing here matches"}</span><button class="linkbtn" data-pf-clear aria-label="Clear the filter" title="Show every item again">×</button></div>`;
+    const head = list.querySelector(":scope > .listhead");
+    if (head) head.insertAdjacentHTML("afterend", bar); else list.insertAdjacentHTML("afterbegin", bar);
+  }
+  function renderList() { renderListRows(); applyRowFilter(); }
+  function renderListRows() {
     const list = $("#list");
     const main = $("#main");
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
@@ -4535,6 +4562,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     await openCard(c.id);
   }
 
+  // A value in a row's source line: filter the list by it. A link in it still opens.
+  document.addEventListener("click", (e) => {
+    const sp = !e.target.closest("a, button") && e.target.closest("#list .row.item .prov > span");
+    if (!sp || !pfKey(sp)) return;
+    e.preventDefault();
+    S.pf = { view: pfView(), k: pfKey(sp), v: pfValue(sp) };
+    renderList();
+  });
   document.addEventListener("click", guard(async (e) => {
     const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
       || e.target.closest(".row.item > .meta")?.parentElement.querySelector(":scope > .open");
@@ -4564,6 +4599,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
     if ("addDecision" in ds) { openDecisionDialog(); return; }
+    if ("pfClear" in ds) { S.pf = null; renderList(); return; }
     if (ds.dstate !== undefined) { S.decisionState = ds.dstate; S.decision = null; await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decide) {
       const [th, i] = ds.decide.split(":");

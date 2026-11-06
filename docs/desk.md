@@ -63,7 +63,10 @@ served by the Desk server through the platform's Artifact API relay.
 - **Lists.** Every row on every list, the Presentation's included, is its title (one or two lines)
   with its number and its corner dot (a red **!** under the dot when it goes against a decision),
   bold until the person first opens it, and one line under it — where it came from, or a
-  screen's or part's summary — and no chips. A row with no state of its own (a week of History)
+  screen's or part's summary — and no chips. A value in that line with its word (`created:`,
+  `from:`, `by:`, `decided:`, `in:` …) stays in ink and underlines on hover; a click filters the
+  list to the rows with the same value, under a **Filtered by** bar whose **×** shows every row
+  again (a link in the value still opens). The filter holds on that tab's page. A row with no state of its own (a week of History)
   keeps its number where the others have it. Every list on the left shows the newest item first: a change by the day it
   shipped, a decision by the day it was made, any other item by the day it came onto the Desk.
   The Presentation keeps the order a designer set.
@@ -585,8 +588,8 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:
   <card>` (`<when>`: Today, Yesterday or the date it came, the exact time on hover; with no person behind it,
   the run that filed it is the author: `by: hourly check`, `by: daily issue read`; an issue not yet
-  designed adds where the team planned it: `in: This sprint`, or the sprint's milestone, `in: Sprint 12`), the joining words grey and what they name in ink; Slack and the Desk (a desk with a
-  screen) show their icon beside their name. A change card shows its `source` (the PR,
+  designed adds where the team planned it: `in: This sprint`, or the sprint's milestone, `in: Sprint 12`), the joining words grey and what they name in ink; only Slack and GitHub (a pull request,
+  an issue) show their icon beside their name. A change card shows its `source` (the PR,
   without an arrow, and its author; when it shipped is on its page); a request filed on the Desk, the person who filed it. A
   request you file carries `origin`: `channel`, one of `slack` (a Slack message), `github`
   (an issue or PR), `chat` (the operator asked you in the direct session) or `agent` (your own);

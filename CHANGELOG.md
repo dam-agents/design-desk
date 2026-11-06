@@ -23,7 +23,8 @@ refers to by number and the start of its text, Product → Decisions is one list
 **+ Add** (a designer or a lead records a decision with up to two pictures, `POST /api/decisions`),
 a decision's box names who decided it and where, each role has an icon by a person's name (the
 header, People, decisions), a closed request can be deleted from its ⋯ menu
-(`DELETE /api/cards/<id>`), and colours and type sizes come from the
+(`DELETE /api/cards/<id>`), a click on a value in a row's source line filters its list by it
+(a Filtered by bar with ×), only Slack and GitHub show a source icon, and colours and type sizes come from the
 page's tokens. Nothing else to do.
 
 ## 1.51.0 — 2026-11-06
