@@ -588,7 +588,10 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
     diagram (`![caption](asset:A-<n>)`: a flow, before → after) only when it makes the
     point clearer than words; never for decoration.
   - Brief: say each thing once; leave out what a picture already shows and what only a
-    developer needs (API, internals, review history). Long → cut it.
+    developer needs (API, internals, review history). Long → cut it. The developer spec is
+    the exception: its sections keep what a developer builds from (styles, tokens, patch
+    files, tests to update), and these rules govern only how it is worded
+    ([handoff.md](handoff.md) step 2).
   - Before you publish, read it as a new teammate would: clear on the first read, with no
     question left about what it means?
 - Everything on the Desk is for people who do not read code: the product's own words, no
