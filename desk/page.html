@@ -2448,7 +2448,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return `<h2>People and roles</h2>
       <div class="sec-head"><h3>People</h3>${can("people") ? `<button class="btn small primary" data-add-person style="margin-left:auto">+ Add a person</button>` : ""}</div>
       ${rows ? `<table class="people"><thead><tr><th>Email</th><th>Role</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">Nobody has a role yet.</div>`}
-      <p class="sub">The Desk's owner is always an admin. Anyone else the Desk is shared with is a viewer.</p>
+      <p class="sub">The Desk's owner is always an admin. Anyone else the Desk is shared with is a viewer. To get another role${can("people") ? "" : " or to add someone"}, ask ${esc(contact())}.</p>
       ${asked ? `<h3>Asked to add</h3><table class="people"><thead><tr><th>Email</th><th>Role</th><th>Where it stands</th></tr></thead><tbody>${asked}</tbody></table>` : ""}
       <h3>Roles</h3>
       <div class="roles">${roles}</div>`;
