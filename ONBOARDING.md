@@ -191,7 +191,7 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
     manifest link into `work/PEERS.md` (`docs/manifest.md` → **Peers**); none is a fine answer.
 11. **Decisions page** (`decisions_page`) — "Should I publish the team's design decisions,
     without names, as one public text page that coding agents read before they change the
-    screens?" Yes → `public` ([docs/decisions-page.md](docs/decisions-page.md)); default `off`.
+    screens?" Yes → `dam` ([docs/decisions-page.md](docs/decisions-page.md)); default `off`.
 
 Write the file in exactly this shape with `design config write` (a restored file included;
 [docs/config.md](docs/config.md) → Writing the file), then `bash "$HOME/scripts/verify-onboarding.sh"

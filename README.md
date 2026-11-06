@@ -97,7 +97,7 @@ chat. The list, with defaults: [`docs/config.md`](docs/config.md).
 The audit also rewrites and publishes the agent's public manifest and checks the peers named
 in `work/PEERS.md`: [`docs/manifest.md`](docs/manifest.md).
 
-With `decisions_page: public`, the daily issues run publishes every design decision, without
+With `decisions_page: dam`, the daily issues run publishes every design decision, without
 names, as one public text page for coding agents: [`docs/decisions-page.md`](docs/decisions-page.md).
 
 Idle runs wake no model: each schedule's Precheck decides first.

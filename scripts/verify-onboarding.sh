@@ -134,7 +134,7 @@ else
   enum dispatch enabled disabled
   enum audit_report enabled disabled
   enum agent_manifest dam off
-  enum decisions_page off public
+  enum decisions_page off dam public
   enum log_level info debug
   enum figma enabled disabled
   enum screens enabled disabled

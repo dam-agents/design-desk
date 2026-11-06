@@ -22,6 +22,14 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    (`rc-service --user design-desk-server restart`): roles stored as `lead` on votes and
    decisions read as `admin` from then on.
 
+## 1.58.1 — 2026-11-06
+
+**Upgrade:**
+1. `decisions_page` takes `dam`, like `agent_manifest` (the page is DAM's public artifact);
+   `public`, the 1.58.0 spelling, still reads as `dam`. If `work/CONFIG.md` has
+   `decisions_page: public`, rewrite it: `design config write decisions_page dam`.
+2. Run `bash "$HOME/scripts/verify-onboarding.sh" --config`.
+
 ## 1.58.0 — 2026-11-06
 
 **Upgrade:**

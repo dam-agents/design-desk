@@ -104,9 +104,9 @@ assert "an undatable issue is read last, an offset one by its instant" \
 
 # A failing GitHub is an error, never a quiet pass.
 assert "a failed list is an error" '.error != null' "$(STUB_GH_FAIL=1 bash "$ROOT/scripts/preflight.sh" issues)"
-# The decisions page (docs/decisions-page.md): off by default; public renders every decision
+# The decisions page (docs/decisions-page.md): off by default; dam renders every decision
 # without names or links, is due until its hash is recorded, and runs with the Issues page off.
-printf -- '- display_name: Acme Desk\n- decisions_page: public\n\n## Desk people\n\n| email | role |\n|---|---|\n| dana@acme.test | Designer |\n| ola@acme.test | Admin |\n' > "$WORK_DIR/CONFIG.md"
+printf -- '- display_name: Acme Desk\n- decisions_page: dam\n\n## Desk people\n\n| email | role |\n|---|---|\n| dana@acme.test | Designer |\n| ola@acme.test | Admin |\n' > "$WORK_DIR/CONFIG.md"
 mkdir -p "$DESK_DIR"
 cat > "$DESK_DIR/db.json" <<'JSON'
 {"cards":{},"inbox":{},"decisions":{
@@ -117,7 +117,13 @@ cat > "$DESK_DIR/db.json" <<'JSON'
  "D-12":{"id":"D-12","concepts":["lists"],"text":"Lists show at most 50 rows.","author":{"name":"Xavier","role":"lead"},"origin":{"kind":"desk"},"at":"2026-10-09T10:00:00Z","recorded":"2026-10-09T10:00:00Z","status":"active"}}}
 JSON
 dp="$(bash "$ROOT/scripts/preflight.sh" issues)"
-assert "the page alone is due with the Issues page off" '.nothing_to_do == false and .title == "Publish the design decisions" and .read_set == ["docs/decisions-page.md"] and (.decisions_page_due[0] | .artifact == null and (.sha | startswith("sha256:")))' "$dp"
+assert "the page alone is due with the Issues page off" '.nothing_to_do == false and .config.decisions_page == "dam" and .title == "Publish the design decisions" and .read_set == ["docs/decisions-page.md"] and (.decisions_page_due[0] | .artifact == null and (.sha | startswith("sha256:")))' "$dp"
+# The 1.58.0 value public still reads as dam: the same page is due.
+cp "$WORK_DIR/CONFIG.md" "$STUB_DIR/config.dam"
+sed 's/^- decisions_page: dam$/- decisions_page: public/' "$STUB_DIR/config.dam" > "$WORK_DIR/CONFIG.md"
+dpub="$(bash "$ROOT/scripts/preflight.sh" issues)"
+assert "public (1.58.0) reads as dam, the same page due" ".config.decisions_page == \"dam\" and [.decisions_page_due[] | .sha] == $(jq -c '[.decisions_page_due[] | .sha]' <<<"$dp")" "$dpub"
+cp "$STUB_DIR/config.dam" "$WORK_DIR/CONFIG.md"
 page="$(cat "$WORK_DIR/decisions-page.md")"
 assert "in force by number, a role and a kind, a developer's not approved yet, revoked in one line" \
   '(index("### D-2") < index("### D-10")) and test("Decided 2026-10-05 by a designer, from the Desk. Replaces D-1.") and test("from a pull request. Not approved yet.") and test("Tables never scroll sideways.") and test("- D-1 \\(send button\\): The send button is blue. Revoked 2026-10-05: Replaced by D-2.\n")' "$(jq -Rs . <<<"$page")"
@@ -128,7 +134,7 @@ jq -n --arg sha "$(jq -r '.decisions_page_due[0].sha' <<<"$dp")" '{id: "a1", url
 assert "an unchanged page is not due" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" issues)"
 jq '.decisions["D-10"].approved = {"at": "2026-11-02T00:00:00Z"}' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
 assert "a change makes it due on its artifact" '.decisions_page_due[0].artifact == "a1"' "$(bash "$ROOT/scripts/preflight.sh" issues)"
-assert "the audit warns when it waits past two days" '[.checks[] | select(.id == "decisions_page") | .status] == ["warn"]' "$(bash "$ROOT/scripts/preflight.sh" audit 2>/dev/null)"
+assert "the audit warns when it waits past two days" '[.checks[] | select(.id == "decisions_page") | [.status, (.detail | test("last published at 2026-11-01"))]] == [["warn", true]]' "$(bash "$ROOT/scripts/preflight.sh" audit 2>/dev/null)"
 printf -- '- display_name: Acme Desk\n' > "$WORK_DIR/CONFIG.md"
 assert "off by default" '.nothing_to_do == true and .decisions_page_due == null' "$(bash "$ROOT/scripts/preflight.sh" issues)"
 finish
