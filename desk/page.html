@@ -1579,6 +1579,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // people list, such as the one Slack knows you by (docs/config.md → Desk people).
   const isMe = (e) => Boolean(e) && (S.me?.emails?.length ? S.me.emails : [S.me?.email]).some((x) => x && String(x).toLowerCase() === String(e).toLowerCase());
   const filedIt = (c) => [c.created_by?.email, c.origin?.email].some(isMe);
+  // A person as the Desk names them: you, else their name from the people list, else the
+  // address (or the name a channel gave) as it is.
+  const nameOf = (e) => S.me?.names?.[String(e || "").toLowerCase()] || e;
+  const personName = (e, fallback = "someone") => isMe(e) ? "you" : e ? nameOf(e) : fallback;
   // Going against a decision in force stays a designer's call, For Developers included.
   // A designer or a lead developer approves at any step once it is checked (docs/desk.md → Deciding straight away).
   const canApprove = (c) => can("approve") || (!(c.conflicts || []).some((x) => x.status === "active")
@@ -1698,8 +1702,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const decRole = (d) => ROLE_ICON[d.author?.role] ? [d.author.role, ""] : d.side === "developer" ? ["developer", "A developer"] : d.side === "design" ? ["designer", "A designer, a PM or a lead"] : [null, ""];
   const authorIcon = (d) => { const [r, tip] = decRole(d); return r ? roleIcon(r, tip) : ""; };
   const who = (by) => by?.agent ? "<b>Design Desk</b>"
-    : by?.via === "slack" ? `<b>${esc(by.name || by.email || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
-    : `<b>${esc(isMe(by?.email) ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
+    : by?.via === "slack" ? `<b>${esc(isMe(by.email) ? "you" : by.name || nameOf(by.email) || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
+    : `<b>${esc(personName(by?.email))}</b> · ${esc(roleName(by?.role))}`;
   // Where a card came from and who started it (docs/desk.md → Where a card came from): the
   // source with its link, the author, and for what a run filed on its own, the event it acted on.
   const ICON = {
@@ -1750,11 +1754,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     else if (o.automated) {
       [kind, src, author] = ["test", "Automated test", o.tool || ""];
       event = out(o.url, esc([o.check && `${o.check} check`, o.build && `build ${o.build}`, o.ref].filter(Boolean).join(" · ") || "a test finding"));
-    } else if (o.channel === "slack") [kind, src, author] = ["slack", out(o.url, "Slack"), isMe(o.email) || isMe(o.reporter) ? "you" : o.reporter];
-    else if (o.channel === "github") [kind, src, author] = [o.kind === "pr" ? "pr" : "issue", out(o.url, num(o.kind === "pr" ? "PR" : "Issue", o.number)), isMe(o.email) || isMe(o.reporter) ? "you" : o.reporter];
-    else if (o.channel === "chat") [kind, src, author] = ["chat", "Chat with Design Desk", isMe(o.email) || isMe(o.reporter) ? "you" : o.reporter];
+    } else if (o.channel === "slack") [kind, src, author] = ["slack", out(o.url, "Slack"), isMe(o.email) || isMe(o.reporter) ? "you" : (o.email && S.me?.names?.[o.email.toLowerCase()]) || nameOf(o.reporter)];
+    else if (o.channel === "github") [kind, src, author] = [o.kind === "pr" ? "pr" : "issue", out(o.url, num(o.kind === "pr" ? "PR" : "Issue", o.number)), isMe(o.email) || isMe(o.reporter) ? "you" : (o.email && S.me?.names?.[o.email.toLowerCase()]) || nameOf(o.reporter)];
+    else if (o.channel === "chat") [kind, src, author] = ["chat", "Chat with Design Desk", isMe(o.email) || isMe(o.reporter) ? "you" : (o.email && S.me?.names?.[o.email.toLowerCase()]) || nameOf(o.reporter)];
     else if (by.agent) [kind, src, author] = ["agent", "Design Desk", o.reporter];
-    else [kind, src, author] = ["desk", "Desk", isMe(by.email) ? "you" : by.email || "someone"];
+    else [kind, src, author] = ["desk", "Desk", personName(by.email)];
     // Filed with no person asking: by one of Design Desk's runs, or from an automated test.
     // With no person behind it, the run that filed it is its author: `by: hourly check`.
     const machine = !author && run && !o.automated;
@@ -2387,7 +2391,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (P.error) return `<h2>People and roles</h2><div class="panel">${esc(P.error)}</div>`;
     const order = Object.keys(ROLE_ABOUT);
     const people = [...P.people].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.email.localeCompare(b.email));
-    const rows = people.map((x) => `<tr><td>${esc(x.email)}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
+    const rows = people.map((x) => `<tr><td>${x.name ? `<b>${esc(x.name)}</b> ` : ""}${esc(x.email)}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
     const shown = order.filter((r) => P.roles[r]);
     const may = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a])).map(([, words]) => words)]));
     // Each role says only what it adds to the largest roles below it that it covers; a role
@@ -2422,7 +2426,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
 
   // ---------- decisions (docs/desk.md → Decisions) ----------
   const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The presentation", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
-  const named = (a) => a ? esc(a.name || a.login || a.email || "someone") : "";
+  const named = (a) => a ? esc(a.name || a.login || (a.email ? nameOf(a.email) : "someone")) : "";
   // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
@@ -2526,7 +2530,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const l = S.cards.find((x) => x.id === c.id) || c;
     return `<div class="row item${l.read === false ? " unread" : ""}"><button class="open" ${jump ? `data-jump="${esc(c.id)}" aria-current="${S.jump === c.id}"` : `data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"`}><div class="t"><span>${title}</span>${num(c)}${rowDot(l)}</div>${againstDot(l)}</button>${facts ? `<div class="prov">${facts}</div>` : ""}</div>`;
   };
-  const addedBy = (a) => a.agenda.by?.email ? (isMe(a.agenda.by.email) ? "You" : a.agenda.by.email) : "Design Desk";
+  const addedBy = (a) => a.agenda.by?.email ? (isMe(a.agenda.by.email) ? "You" : nameOf(a.agenda.by.email)) : "Design Desk";
   function renderAgendaList(filters = "") {
     const items = S.agenda, ideas = suggested(), done = S.presented || [];
     $("#list").innerHTML = filters + (items.length ? `<div class="side-head">To present · in this order</div>${items.map((a, i) => agendaRow(a, `${i + 1}. ${esc(a.title)}`,
@@ -2617,7 +2621,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // pull request or the issue, or one AI drew, which is never a real screen.
   const FROM = { pr: "Screenshot from the pull request", issue: "Screenshot from the GitHub issue", instance: "Real screen, taken on Design Desk's copy of the product", prototype: "Real screen, taken on the live prototype",
     rebuild: "AI drawing from the code, not a real screen", sketch: "AI sketch, not a real screen", test: "Screenshot from an automated test" };
-  const fromOf = (s) => s.source === "person" ? `Added by ${isMe(s.by?.email) ? "you" : (s.by?.email || "someone")}` : FROM[s.source] || "Where it came from is not recorded";
+  const fromOf = (s) => s.source === "person" ? `Added by ${personName(s.by?.email)}` : FROM[s.source] || "Where it came from is not recorded";
   const marksOf = (ms) => (ms || []).map((m) => `<span class="mark" style="left:${m.x * 100}%;top:${m.y * 100}%;width:${m.w * 100}%;height:${m.h * 100}%"></span>`).join("");
   // `frame`: the picture the marks were measured on, when it is another one (a "before" picture
   // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
@@ -2962,7 +2966,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         const [o, word, tip] = src.merged_at ? ["gh-merged", "Merged", "Its pull request is merged: the change is in the product"] : src.draft ? ["gh-draft", "Draft", "Its pull request is a draft: not ready for review, not in the product yet"] : ["gh-open", "Open", "Its pull request is open: not in the product yet"];
         // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
         const kv = (k, v, cls = "") => `<span><span class="k">${k}:</span> <b${cls ? ` class="${cls}"` : ""}>${v}</b></span>`;
-        const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : isMe(hb?.email) ? "You" : hb?.name || hb?.email || "someone";
+        const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : isMe(hb?.email) ? "You" : hb?.name || personName(hb?.email);
         const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : "", src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
         const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
         const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
@@ -5348,7 +5352,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function applyMe() {
     $("#new-request").hidden = !can("request");
     document.title = S.me?.name || "Design Desk";
-    $("#me").innerHTML = S.me ? `${esc(S.me.email || "")} · ${roleIcon(S.me.role)}${esc(roleName(S.me.role))}` : "";
+    $("#me").innerHTML = S.me ? `${esc(S.me.name || S.me.email || "")} · ${roleIcon(S.me.role)}${esc(roleName(S.me.role))}` : "";
     renderBanners();
   }
 

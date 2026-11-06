@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf } from "./store.mjs";
+import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -172,7 +172,7 @@ async function viewerRoute(req, res, url, who) {
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
-    return send(res, 200, { email: who.email, emails: who.emails, key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
+    return send(res, 200, { email: who.email, emails: who.emails, name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, due_days: s.dueDays, link: s.link, skills: offerSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });

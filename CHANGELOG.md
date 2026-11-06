@@ -16,6 +16,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    ([docs/desk.md](docs/desk.md) → **Publishing the page**).
 3. Optional: on the row of anyone who uses Slack under another address than the Desk's, add
    that address to the `email` cell, separated by a comma.
+   To show names instead of addresses, add a third column `| name |` to the table.
 
 ## 1.53.0 — 2026-11-06
 

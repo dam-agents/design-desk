@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, abilities, rosterOf, personOf, elementsOf } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, abilities, rosterOf, personOf, namesOf, elementsOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -36,6 +36,8 @@ test("one person's row may list every address they go by, and each counts as the
   assert.deepEqual(roster, [{ email: "lukas@example.com", also: ["lukas.j@work.example.com"], role: "lead" }], "an address already on a row counts once");
   assert.equal(personOf(roster, "LUKAS.J@work.example.com")?.role, "lead", "the Slack address finds the row");
   assert.equal(personOf(roster, "nobody@example.com"), null);
+  const named = rosterOf([{ email: "lukas@example.com, lukas.j@work.example.com", role: "lead", name: " Lukas " }]);
+  assert.deepEqual(namesOf(named), { "lukas@example.com": "Lukas", "lukas.j@work.example.com": "Lukas" }, "a name, by every address of the row");
   // The author never approves their request For Developers, by any of their addresses.
   const s = fresh();
   const { card } = s.createRequest({ agent: true }, { title: "Overflow", problem: "Runs over.", origin: { channel: "slack", reporter: "Lukas", email: "lukas.j@work.example.com" } });

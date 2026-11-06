@@ -96,14 +96,16 @@ export const readRole = (r) => String(r || "").trim().toLowerCase().replace(/\s+
 // Slack with another, so the email cell holds every address of theirs, separated by commas.
 export const emailsOf = (cell) => String(cell || "").split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter(Boolean);
 // The roster as the server reads a role (`## Desk people` rows): `email` is a row's first
-// address, `also` its others; the first row of an address counts, and an unknown role is a guest's.
+// address, `also` its others, `name` the optional third column; the first row of an address counts, and an unknown role is a guest's.
 export function rosterOf(rows) {
   const seen = new Set();
-  return rows.map((r) => ({ emails: emailsOf(r.email), role: readRole(r.role) }))
+  return rows.map((r) => ({ emails: emailsOf(r.email), role: readRole(r.role), name: String(r.name || "").trim().slice(0, 80) }))
     .map((r) => ({ ...r, emails: r.emails.filter((e) => !seen.has(e) && seen.add(e)) }))
     .filter((r) => r.emails.length)
-    .map((r) => ({ email: r.emails[0], also: r.emails.slice(1), role: ROLES.includes(r.role) ? r.role : "guest" }));
+    .map((r) => ({ email: r.emails[0], also: r.emails.slice(1), role: ROLES.includes(r.role) ? r.role : "guest", ...(r.name ? { name: r.name } : {}) }));
 }
+// The names the roster gives, by every address: the page shows a name where it has one.
+export const namesOf = (roster) => Object.fromEntries(roster.filter((r) => r.name).flatMap((r) => [r.email, ...(r.also || [])].map((e) => [e, r.name])));
 // The roster row of an address, any of its emails.
 export const personOf = (roster, email) => { const e = String(email || "").trim().toLowerCase(); return e ? roster.find((r) => r.email === e || (r.also || []).includes(e)) || null : null; };
 // Every address a caller goes by: the one they signed in with and their row's others.

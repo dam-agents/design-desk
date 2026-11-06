@@ -1132,6 +1132,15 @@ test("a request from Slack names you by the address Slack knows you by", (t) => 
   await desk.waitForSelector('.row.item:has([data-card="r7"]) .prov');
   assert.match(await desk.textContent('.row.item:has([data-card="r7"]) .prov'), /by:\s*you/i, "by: you, not the Slack address");
 }));
+test("a request from Slack names its author by the people list's name, not the address", (t) => open(t, BRIDGE_STORIES
+  .replace('prototype: { state: "none" }, threads: [],', 'prototype: { state: "none" }, threads: [], origin: { channel: "slack", reporter: "dana.k@work.example.com", email: "dana.k@work.example.com" },')
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', '{ role: "designer", email: "alice@example.com", names: { "dana.k@work.example.com": "Dana Kovar" }, can: { vote: true, comment: true } }'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.waitForSelector('.row.item:has([data-card="r7"]) .prov');
+  const line = await desk.textContent('.row.item:has([data-card="r7"]) .prov');
+  assert.match(line, /by:\s*Dana Kovar/);
+  assert.doesNotMatch(line, /dana\.k@/, "no address where a name is known");
+}));
 
 // A folded list folds only where its arrow is: Guide keeps its page, and so does a phone's width.
 test("a folded list leaves Guide and a narrow window their page", (t) => open(t, BRIDGE_STORIES, async (desk) => {
