@@ -1327,7 +1327,7 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
 
 test("a decision: what goes against it warns with a link to it; a designer revokes it with a reason", async (t) => {
   const decision = `const decision = { id: "D-1", concepts: ["header"], text: "The header stays one line", why: "", author: { name: "Dana", login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" }, at: "2026-10-01T00:00:00Z", status: "active", side: "developer" };`;
-  const bridge = BRIDGE.replace("const digest =", `${decision}\nchange.conflicts = [{ decision: "D-1", why: "It wraps the header to two lines.", text: decision.text, status: "active" }];\nchange.decisions = ["D-2"]; change.cited = { "D-2": { text: "Headers use the brand colour", status: "revoked" } };\nchange.impact = { concept: "the header", places: [], decisions: [{ id: "D-2", when: "2026-09-01" }] };\nconst digest =`)
+  const bridge = BRIDGE.replace("const digest =", `${decision}\nchange.conflicts = [{ decision: "D-1", why: "It wraps the header to two lines.", text: decision.text, status: "active" }];\nchange.against = ["D-1"]; earlier.against = ["D-10", "D-11", "D-12", "D-13"];\nchange.decisions = ["D-2"]; change.cited = { "D-2": { text: "Headers use the brand colour", status: "revoked" } };\nchange.impact = { concept: "the header", places: [], decisions: [{ id: "D-2", when: "2026-09-01" }] };\nconst digest =`)
     .replace("can: { request: true,", "can: { decide: true, request: true,")
     .replace(': path === "/api/cards/ch1"', ': path === "/api/decisions/D-1" ? { decision, refs: [{ id: "ch1", kind: "change", title: "A new header", how: "conflicts" }] }\n    : path.startsWith("/api/decisions?") ? { decisions: [decision] }\n    : path === "/api/cards/ch1"');
   const run = await launch(t, bridge);
@@ -1335,15 +1335,30 @@ test("a decision: what goes against it warns with a link to it; a designer revok
   const { desk, posts } = run;
   try {
     await desk.click('[data-tab="new"]');
+    assert.equal(await desk.textContent('.row.item:has([data-card="ch1"]) .vdot'), "Goes against D-1", "the list row has a red ! that unfolds into it");
+    assert.equal(await desk.locator(".row.item .vdot").count(), 1, "only on what goes against a decision");
+    await desk.click('[data-tab="product"]');
+    await desk.click('[data-filter="productFilter:history"]');
+    const many = '.row.item:has([data-card="d0"]) .vdot';
+    assert.equal(await desk.textContent(many), "Goes against D-10, D-11, D-12 +1", "the label names three, then +N");
+    assert.match(await desk.getAttribute(`${many} .tag`, "data-tip") || await desk.getAttribute(`${many} .tag`, "title"), /D-10, D-11, D-12, D-13/, "the hint names them all");
+    await desk.click('[data-tab="new"]');
     await desk.click('[data-card="ch1"]');
     await desk.waitForSelector("#detail .against");
     assert.match(await desk.textContent("#detail .against"), /Goes against D-1: The header stays one line[\s\S]*wraps the header/);
     assert.match(await desk.textContent("#detail"), /Follows D-2 revoked/, "a cited decision no longer in force says so");
     assert.equal(await desk.locator('#detail .impact [data-ref="D-2"]').count(), 1, "the impact cites a decision by its number");
     await desk.click('#detail .against [data-ref="D-1"]');
-    await desk.waitForSelector("text=Who decided");
-    assert.match(await desk.textContent("#detail"), /Developer Dana[\s\S]*PR #40[\s\S]*A new header ch1[\s\S]*goes against it/, "it says a developer decided it");
-    assert.match(await desk.textContent("#list"), /From developers 1[\s\S]*The header stays one line/, "the list keeps developers' decisions apart");
+    await desk.waitForSelector("#detail .status .s-meta");
+    assert.match(await desk.textContent("#detail .status .s-meta"), /by:\s*Dana \(dana\)[\s\S]*from:\s*Pull request — PR #40/, "the status box says who decided it and where, on its line");
+    assert.equal(await desk.locator('#detail .status .s-meta .role-ic').getAttribute("data-tip") ?? await desk.locator('#detail .status .s-meta .role-ic').getAttribute("title"), "A developer", "a developer's icon by the name");
+    assert.match(await desk.textContent("#detail"), /A new header ch1[\s\S]*goes against it/);
+    assert.match(await desk.textContent('.row.item:has([data-decision="D-1"])'), /The header stays one line[\s\S]*In force[\s\S]*decided:[\s\S]*from: PR #40[\s\S]*by: Dana/, "a decision's row is drawn as every list's");
+    assert.equal(await desk.locator("#list .side-head").count(), 0, "one list, not kept apart by who decided");
+    await desk.locator('.row.item:has([data-decision="D-1"]) .prov > span', { hasText: "by:" }).click();
+    assert.match(await desk.textContent("#list .pf-bar"), /Filtered by\s*by:\s*Dana/, "a value in a row filters the list by it");
+    await desk.click("#list [data-pf-clear]");
+    assert.equal(await desk.locator("#list .pf-bar").count(), 0, "its × shows every row again");
     await desk.click('[data-revoke="D-1"]');
     await desk.fill("#confirm-form [name=note]", "Two lines are fine now");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Revoke it" }).click();
@@ -1611,7 +1626,7 @@ window.platform = { async request({ method, path, body }) {
 } };
 </script>`;
 
-test("lists show the newest first; a folded box stays folded on another option; a verdict other than design is a label by the title, every verdict is in the steps", (t) => open(t, FOLD, async (desk) => {
+test("lists show the newest first; a folded box stays folded on another option; neither Design only nor Needs a developer is a label by the title, every verdict is in the steps", (t) => open(t, FOLD, async (desk) => {
   const base = desk.url().replace(/[?#].*$/, "");
   await desk.goto(`${base}#C-2`);
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-2");
@@ -1619,12 +1634,14 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.deepEqual(await rows(), ["C-3", "C-2", "C-1", "C-6"], "requests by the day they came, not by their last update");
   assert.equal(await desk.locator("#list .chip", { hasText: "Design only" }).count(), 0, "no Design only label in the list");
 
-  const chip = desk.locator("#detail .sub .chip", { hasText: "Needs a developer" });
-  assert.equal(await chip.count(), 1, "the verdict is a label beside the title");
-  assert.match(await chip.evaluate((x) => x.title || x.dataset.tip || ""), /price per seat is not in the data/, "its reasons are on hover");
+  assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Needs a developer" }).count(), 0, "no Needs a developer label beside the title");
+  assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Needs a developer/, "the steps name it");
   assert.equal(await desk.locator(".made-col h4", { hasText: "What can be done" }).count(), 0, "no What can be done in the box");
   assert.doesNotMatch(await desk.textContent(".made-col"), /deliberate decision/, "no label on what is already known");
   assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");
+  await desk.click(".steppill [data-dev-ask]");
+  assert.equal(await desk.$eval("#dev-parts", (d) => d.open), true, "the step Contact a developer opens what design cannot do");
+  assert.equal(await desk.locator("#dev-parts [data-dev-copy]").count(), 1, "with a question for a developer to copy");
 
   await desk.click('[data-brief-toggle="made"]');
   assert.equal(await desk.locator(".made-col.clamped").count(), 1, "folded");

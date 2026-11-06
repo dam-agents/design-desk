@@ -42,7 +42,7 @@
   a { color: var(--accent); }
   .app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
-  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .01em; }
+  header h1 { font-size: var(--fs-read); margin: 0; font-weight: 600; letter-spacing: .01em; }
   /* Requests leads the menu; the other tabs are smaller, their counts grey. */
   nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
   nav button { border: 0; background: transparent; padding: 5px 10px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 13px; }
@@ -64,6 +64,8 @@
   /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
   .num { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: .7em; white-space: nowrap; margin-left: .45em; }
   .row .t .num { margin-left: auto; font-size: 11px; flex: none; }
+  /* A row with no state (a week of History) keeps its number where every other row has it, left of the dot. */
+  .row .t .num:last-child { margin-right: 18px; }
   /* Search across the Desk: items, decisions, numbers and GitHub issues and pull requests. */
   header .search { position: relative; }
   header .goto { width: clamp(15ch, 16vw, 28ch); padding: 5px 10px; font-size: 13px; transition: width .15s; }
@@ -76,7 +78,7 @@
   #hits .hit .num { font-size: 11px; }
   #hits .hit .why { grid-column: 2 / 4; font-size: 12px; color: var(--muted); }
   #hits .none { padding: 8px 10px; color: var(--muted); font-size: 13px; }
-  .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: 15px; line-height: 1; }
+  .theme { width: 32px; height: 32px; padding: 0; justify-content: center; font-size: var(--fs-read); line-height: 1; }
   .theme.help { font-size: 18px; font-weight: 700; }
   .theme svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
   .theme[aria-current="true"] { background: var(--soft); border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
@@ -86,14 +88,11 @@
   #simple .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
   #simple[aria-pressed="true"] .sw { background: var(--accent); }
   #simple[aria-pressed="true"] .sw::after { transform: translateX(12px); }
-  .done-list .row { color: var(--muted); padding: 8px 12px; }
-  /* What Design Desk only suggests is greyed, below what a designer put on the presentation. */
-  .ideas-list .row { color: var(--muted); } .ideas-list .row .t { font-weight: 500; }
   .banner { padding: 8px 20px; font-size: 13px; border-bottom: 1px solid var(--line); background: var(--info-soft); }
   .banner.warn { background: var(--warn-soft); }
   /* A tab's intro: what it shows, what you can do, the steps; in the empty pane beside the list, folded per browser. */
   .intro { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-size: 13px; padding: 14px 18px; max-width: 900px; margin: 0 auto; }
-  .intro > summary { list-style: none; cursor: pointer; margin: 0; display: flex; gap: 8px; align-items: baseline; font-size: 14px; color: var(--muted); }
+  .intro > summary { list-style: none; cursor: pointer; margin: 0; display: flex; gap: 8px; align-items: baseline; font-size: var(--fs-ui); color: var(--muted); }
   .intro > summary::-webkit-details-marker { display: none; }
   .intro[open] > summary { margin-bottom: 8px; }
   .intro > summary b { color: var(--ink); }
@@ -112,7 +111,7 @@
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
   /* What a button or label does, the moment the pointer is on it (docs/desk.md → Tooltips). */
-  #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
+  #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
   #tip .opens { color: var(--tip-opens); font-weight: 600; }
   .btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
@@ -131,7 +130,7 @@
   .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
   /* A title is bold until this person first opens the item (docs/desk.md → Read and unread). */
   .row .t { font-weight: 400; display: flex; gap: 8px; align-items: baseline; } .row.unread .t { font-weight: 600; }
-  .row .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .row .s { color: var(--muted); font-size: var(--fs-meta); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .row .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
   /* A label in the list sits above the card's button, so its own line shows on it alone; a click on it still opens the card. */
   .row.item > .meta { position: relative; z-index: 1; pointer-events: none; }
@@ -145,10 +144,20 @@
   .prov .when { color: var(--ink); font-weight: 500; }
   .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta, 12.5px); }
   .row .prov a, .row .prov button { pointer-events: auto; }
+  /* A value with its word filters the list: it keeps its colour and underlines on hover. */
+  .row .prov > span:has(> .k) { pointer-events: auto; cursor: pointer; }
+  .row .prov > span:has(> .k):hover > :not(.k) { text-decoration: underline; text-underline-offset: 2px; }
+  .pf-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 6px 6px 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); font-size: var(--fs-meta); }
+  .pf-bar .k { color: var(--muted); } .pf-bar b { font-weight: 600; }
+  .pf-bar [data-pf-clear] { font-size: var(--fs-ui); line-height: 1; padding: 2px 8px; color: var(--muted); }
+  .pf-bar [data-pf-clear]:hover { color: var(--ink); }
   /* In the list a card's title is the one black line; where it came from and who asked are grey and plain under it. */
   .row .prov .src { padding: 0; border: 0; background: none; color: var(--muted); font-weight: 400; gap: 0; }
   /* In the list only Slack and the Desk show their icon, beside their name. */
-  .row .prov .src { gap: 4px; } .row .prov .src:not([data-k="slack"], [data-k="desk"]) > svg { display: none; }
+  /* A word and its value sit on one text baseline; an icon in the value is centred on it. */
+  .prov > span:has(> .k) { display: inline-flex; align-items: baseline; gap: 0 .3em; }
+  .row .prov .src { align-items: baseline; } .prov > span > .role-ic, .row .prov .src > svg { align-self: center; } .prov > span > .role-ic { margin-right: -.1em; }
+  .row .prov .src { gap: 4px; } .prov .src:not([data-k="slack"], [data-k="pr"], [data-k="issue"]) > svg { display: none; }
   /* The provenance reads from: … by: … based on: …, the joining words grey, what they name in ink. */
   .prov .k { color: var(--muted); }
   .row .prov .src, .row .prov b, .row .prov .anchor { color: var(--ink); }
@@ -165,8 +174,11 @@
   .sub + .prov { margin-top: 8px; }
   .row.overdue { border-left: 3px solid var(--bad); }
   /* Whose decision it is: the design side (designers, PMs, leads) blue, developers amber. */
-  .row.side-design { border-left: 3px solid var(--accent); } .row.side-developer { border-left: 3px solid var(--warn); }
-  .chip.side-design { background: var(--info-soft); color: var(--accent); } .chip.side-developer { background: var(--warn-soft); color: var(--warn); }
+  .bad-text { color: var(--bad); }
+  /* inline-block, not inline-flex: a flex box puts a line break into the text a reader or a copy gets. */
+  .role-ic { display: inline-block; line-height: 0; vertical-align: -2px; margin-right: 3px; color: var(--muted); }
+  .role-ic svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  #dev-parts .panel > ul { margin: 0; } #dev-parts .panel > .actions { margin: 12px 0 0 40px; }
   .side-head { display: flex; gap: 8px; align-items: baseline; margin: 14px 4px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .side-head .n { font-weight: 400; }
   .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; background: var(--soft); color: var(--muted); white-space: nowrap; }
@@ -193,7 +205,7 @@
   .filters::-webkit-scrollbar { display: none; }
   /* A filter wider than the list scrolls sideways; its edge fades so the rest shows it is there. */
   .filters.scrolls { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
-  .filters .btn { flex: none; gap: 5px; white-space: nowrap; height: 26px; padding: 0 10px; border: 0; background: none; color: var(--muted); border-radius: 7px; font-size: 12.5px; font-weight: 500; }
+  .filters .btn { flex: none; gap: 5px; white-space: nowrap; height: 26px; padding: 0 10px; border: 0; background: none; color: var(--muted); border-radius: 7px; font-size: var(--fs-meta); font-weight: 500; }
   .filters .btn:hover { color: var(--ink); background: color-mix(in srgb, var(--panel) 55%, transparent); }
   .filters .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .filters .btn.on { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.08); }
@@ -202,8 +214,8 @@
   h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
   .lead { font-size: 16px; margin: 10px 0 18px; max-width: var(--measure); }
-  .sub { color: var(--muted); font-size: 12.5px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  .hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 0; }
+  .sub { color: var(--muted); font-size: var(--fs-meta); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .hint { color: var(--muted); font-size: var(--fs-meta); margin: 4px 0 0; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; align-items: center; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
   .section { margin: 0 0 14px; max-width: var(--measure); }
@@ -225,11 +237,12 @@
   h3.made { border-top: 1px solid var(--line); padding-top: 18px; }
   /* Sections stand side by side once each still gets a comfortable line. */
   .secs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 64ch), 1fr)); gap: 0 32px; align-items: start; }
-  .section h4 { margin: 0 0 4px; font-size: 14.5px; }
+  /* An item's sub-headings, one size everywhere: under h3, above the reading text. */
+  .section h4 { margin: 0 0 4px; font-size: var(--fs-read); font-weight: 600; }
   details.sec > summary { cursor: pointer; list-style: none; } details.sec > summary::-webkit-details-marker { display: none; }
   details.sec > summary h4::before { content: "▸ "; color: var(--muted); } details.sec[open] > summary h4::before { content: "▾ "; }
   .sec-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; } .sec-head .chip a, .sec-head .chip .anchor { font-size: inherit; padding: 0; background: none; }
-  .md p { margin: 0 0 8px; } .md ul { margin: 0 0 8px; padding-left: 20px; } .md code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+  .md p { margin: 0 0 8px; } .md ul { margin: 0 0 8px; padding-left: 20px; } .md code { font-family: var(--mono); font-size: var(--fs-meta); background: var(--soft); padding: 1px 4px; border-radius: 4px; }
   .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--shot-w)), 1fr)); gap: 12px; }
   .shots.stages { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
   @media (max-width: 640px) { .shots.stages { grid-template-columns: 1fr; } .shot-gap { display: none; } }
@@ -237,7 +250,7 @@
   .shot img { display: block; width: 100%; min-height: 120px; background: var(--soft); object-fit: cover; object-position: top; max-height: var(--shot-h); }
   .shot figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); }
   /* The design catalog: one part in each state, a picture of it alone beside what it covers. */
-  .catalog { margin: 0 0 14px; } .catalog h4 { margin: 8px 0; font-size: 14px; }
+  .catalog { margin: 0 0 14px; } .catalog h4 { margin: 8px 0; font-size: var(--fs-ui); }
   .catalog ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--shot-w) * 1.6)), 1fr)); gap: 12px; }
   .catalog li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 10px; }
   .catalog .shot img { min-height: 0; max-height: 220px; object-fit: contain; object-position: center; padding: 8px; box-sizing: border-box; }
@@ -277,7 +290,7 @@
   .canvas { position: relative; line-height: 0; }
   .mark { position: absolute; display: none; border: 3px solid #e8a400; border-radius: 4px; background: rgba(232, 164, 0, .12); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); margin: -4px; padding: 4px; box-sizing: content-box; pointer-events: none; }
   body.outline .mark { display: block; } body.outline figure[data-frame] .mark { display: none; }
-  .outline-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); margin: -4px 0 10px; cursor: pointer; }
+  .outline-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: var(--fs-meta); color: var(--muted); margin: -4px 0 10px; cursor: pointer; }
   .outline-toggle input { margin: 0; padding: 0; width: auto; accent-color: #e8a400; }
   .zoom { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: grid; place-items: center; padding: 24px; z-index: 80; cursor: zoom-out; }
   .zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; background: #fff; }
@@ -301,7 +314,7 @@
   .catalog li.addstate.done > div { padding: 16px; text-align: center; } .catalog li.addstate.done b { color: var(--approved); }
   .catalog li[data-zoom]:hover, .catalog li[data-zoom-snip]:hover { border-color: var(--accent); }
   .steps { display: flex; gap: 0; margin: 14px 0 6px; flex-wrap: wrap; }
-  .step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; padding: 4px 10px 4px 0; }
+  .step { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: var(--fs-meta); padding: 4px 10px 4px 0; }
   .step::after { content: "›"; margin-left: 8px; opacity: .5; } .step:last-child::after { content: ""; }
   .step .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); font-size: 11px; }
   .step.done { color: var(--ink); } .step.done .n { background: var(--ok-soft); color: var(--ok); }
@@ -323,13 +336,13 @@
   .asks fieldset.q { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; display: grid; gap: 4px; }
   .asks legend { font-weight: 600; padding: 0; }
   .asks fieldset.q label { display: flex; gap: 8px; align-items: baseline; } .asks fieldset.q input[type=radio] { width: auto; }
-  fieldset.skills { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; } fieldset.skills legend { font-size: 12.5px; color: var(--muted); padding: 0; margin-bottom: 4px; }
+  fieldset.skills { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; } fieldset.skills legend { font-size: var(--fs-meta); color: var(--muted); padding: 0; margin-bottom: 4px; }
   label.switch { display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--ink); cursor: pointer; } label.switch small { display: block; color: var(--muted); font-size: 12px; }
   label.switch input { appearance: none; -webkit-appearance: none; flex: none; width: 34px; height: 20px; padding: 0; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; }
   label.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
   label.switch input:checked { background: var(--accent); } label.switch input:checked::after { transform: translateX(14px); }
   label.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  label.switch.ws-switch { gap: 6px; font-size: 12.5px; margin-left: 4px; } label.switch.ws-switch input { width: 28px; height: 16px; } label.switch.ws-switch input::after { width: 12px; height: 12px; } label.switch.ws-switch input:checked::after { transform: translateX(12px); }
+  label.switch.ws-switch { gap: 6px; font-size: var(--fs-meta); margin-left: 4px; } label.switch.ws-switch input { width: 28px; height: 16px; } label.switch.ws-switch input::after { width: 12px; height: 12px; } label.switch.ws-switch input:checked::after { transform: translateX(12px); }
   /* New request: how many options (none to five), and questions first. */
   .for-pick { display: grid; gap: 6px; margin-bottom: 4px; } .for-pick .tabs { margin: 0; }
   .count-pick { display: grid; gap: 4px; } .count-pick .row2 { display: flex; gap: 12px; align-items: center; }
@@ -347,14 +360,14 @@
   /* The option's sections — All elements, its design, User stories — share one heading and fold with +/−. */
   details.fold.big.sect { border-top: 0; max-width: none; margin: 14px 0 0; }
   details.fold.big.sect > summary { padding: 0 0 8px; gap: 12px; align-items: baseline; }
-  details.fold.big.sect > summary h3 { font-size: 14px; font-weight: 700; letter-spacing: 0; }
+  details.fold.big.sect > summary h3 { font-size: var(--fs-ui); font-weight: 700; letter-spacing: 0; }
   details.fold.big.sect > summary h3 .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
   details.fold.big.sect > summary .hint { margin: 0; }
   details.fold.big.sect > summary::after { font-size: 16px; }
   details.fold.big.sect[open] { padding-bottom: 4px; }
   .stories ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px; }
   .stories li { display: flex; }
-  .stories ol button { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 12px 34px 12px 14px; cursor: pointer; font: inherit; font-size: 14px; line-height: 1.5; color: var(--ink); display: flex; gap: 10px; align-items: flex-start; }
+  .stories ol button { position: relative; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 12px 34px 12px 14px; cursor: pointer; font: inherit; font-size: var(--fs-ui); line-height: 1.5; color: var(--ink); display: flex; gap: 10px; align-items: flex-start; }
   .stories ol button:hover { border-color: var(--accent); }
   .stories ol button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .stories ol button .txt { flex: 1; }
@@ -367,6 +380,7 @@
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
   details.more .menu { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; width: max-content; max-width: min(460px, calc(100vw - 32px)); display: grid; gap: 2px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   details.more .menu .btn { border: 0; justify-content: flex-start; width: 100%; text-align: left; white-space: nowrap; }
+  .btn.danger { color: var(--bad); }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
   .two ul { margin: 4px 0 0; padding-left: 18px; }
   /* An open item's text blocks share one width, the reading measure; only the designs run wider. */
@@ -393,7 +407,7 @@
   .tally { display: flex; gap: 6px; flex-wrap: wrap; }
   .threads { display: grid; gap: 10px; max-width: var(--measure); }
   .thread { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-  .thread .head { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .thread .head { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: var(--fs-meta); color: var(--muted); flex-wrap: wrap; }
   .anchor { font-size: 12px; background: var(--soft); padding: 1px 8px; border-radius: 999px; cursor: pointer; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; }
   .msg { padding: 10px 12px; } .msg + .msg { border-top: 1px dashed var(--line); }
   .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 3px; } .msg.agent { background: var(--soft); }
@@ -414,7 +428,7 @@
     background: linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 5px, var(--muted) 5px 6px, transparent 6px) no-repeat; opacity: .5; }
   .ask-grip:hover { opacity: 1; }
   .ask-panel header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-  .ask-ctx { padding: 8px 12px; background: var(--soft); font-size: 12.5px; border-bottom: 1px solid var(--line); }
+  .ask-ctx { padding: 8px 12px; background: var(--soft); font-size: var(--fs-meta); border-bottom: 1px solid var(--line); }
   .ask-body { flex: 1; overflow: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
   .ask-body .hint { line-height: 1.5; margin: 0; }
   .ask-about { align-self: center; font-size: 11.5px; color: var(--muted); background: var(--soft); padding: 2px 10px; border-radius: 999px; margin: 6px 0 2px; }
@@ -439,6 +453,8 @@
   .ask-panel footer { border-top: 1px solid var(--line); padding: 10px 12px; display: grid; gap: 8px; }
   .ask-panel footer .starters { margin: 0; }
   .ask-panel footer textarea { min-height: 52px; }
+  /* The hint in the empty box is quieter than what a person types. */
+  .ask-panel footer textarea::placeholder { font-size: var(--fs-meta); }
   .ask-panel footer .bar { display: flex; justify-content: flex-end; }
   .composer .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .pending { color: var(--warn); font-size: 12px; }
@@ -449,15 +465,15 @@
   #peek.snip iframe { width: 100%; height: 100%; border: 0; display: block; }
   #peek .t { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
   #peek .sub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; color: var(--muted); font-size: 12px; }
-  #peek p { margin: 8px 0 0; } #peek h4 { margin: 10px 0 2px; font-size: 12.5px; } #peek ul { margin: 0; padding-left: 18px; }
+  #peek p { margin: 8px 0 0; } #peek h4 { margin: 10px 0 2px; font-size: var(--fs-meta); } #peek ul { margin: 0; padding-left: 18px; }
   .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; z-index: 90; max-width: calc(100% - 32px); }
   dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }
   dialog::backdrop { background: rgba(0,0,0,.35); }
   dialog form { padding: 20px; display: grid; gap: 10px; }
-  dialog h2 { font-size: 18px; } label { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
-  .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: 12.5px; color: var(--muted); display: grid; gap: 8px; }
+  dialog h2 { font-size: 18px; } label { font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 4px; }
+  .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 8px; }
   .thumbs { display: flex; gap: 8px; flex-wrap: wrap; } .thumbs img { height: 64px; border-radius: 6px; border: 1px solid var(--line); }
-  .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 14px; } .choices input { width: auto; } .choices .rn { white-space: nowrap; flex: none; }
+  .choices { display: grid; gap: 6px; } .choices label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: var(--fs-ui); } .choices input { width: auto; } .choices .rn { white-space: nowrap; flex: none; }
   /* The roles read as a table: the radio, the role's name, then its description in one column. */
   #pe-roles { grid-template-columns: auto max-content 1fr; column-gap: 10px; }
   #pe-roles label { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
@@ -467,7 +483,7 @@
      blue Design Desk at work, amber waits on the team, violet live, green approved, red closed. */
   .guide figure.flow { margin: 12px 0 20px; }
   .guide figure.flow svg, .intro figure.flow svg { display: block; width: 100%; max-width: 860px; height: auto; color: var(--muted); }
-  .guide figure.flow figcaption, .intro figure.flow figcaption { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  .guide figure.flow figcaption, .intro figure.flow figcaption { margin-top: 6px; font-size: var(--fs-meta); color: var(--muted); }
   .flow text { fill: var(--ink); font: 600 13px var(--font); text-anchor: middle; }
   .flow .f-sub { fill: var(--muted); font-weight: 400; font-size: 11.5px; }
   .flow .f-lbl { fill: var(--muted); font-weight: 400; font-size: 11px; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
@@ -526,7 +542,7 @@
   .ws-stage .frame { flex: 1; height: auto; min-height: 0; }
   .ws-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; }
   .sel { padding: 10px 12px; border-radius: var(--radius); border: 2px solid var(--accent); background: var(--info-soft); }
-  .sel { position: relative; } .sel .sel-x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 14px; line-height: 1; cursor: pointer; }
+  .sel { position: relative; } .sel .sel-x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: var(--fs-ui); line-height: 1; cursor: pointer; }
   .sel .sel-x:hover { background: var(--soft); color: var(--ink); }
   .sel.none { border-style: dashed; border-color: var(--line); background: transparent; }
   .sel textarea { background: var(--panel); }
@@ -536,7 +552,7 @@
   .dtag.gone { border-color: var(--bad); color: var(--bad); text-decoration: line-through; }
   .why-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0; max-width: var(--measure); }
   .why-strip .k, .why .k, .why-sel .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-  .why-strip button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 2px 10px 2px 3px; cursor: pointer; font-size: 12.5px; }
+  .why-strip button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 2px 10px 2px 3px; cursor: pointer; font-size: var(--fs-meta); }
   .why-strip button:hover { border-color: var(--why); background: var(--why-soft); }
   .why-strip button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34ch; }
   .why { display: grid; gap: 8px; }
@@ -550,8 +566,8 @@
   .reason .how { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
   .reason .parts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
   .reason .parts .btn::before { content: "◆"; color: var(--why); margin-right: 4px; font-size: 9px; }
-  .reason .more { display: inline-block; margin-top: 6px; font-size: 12.5px; }
-  .reason .gone-note { margin: 6px 0 0; font-size: 12.5px; color: var(--bad); }
+  .reason .more { display: inline-block; margin-top: 6px; font-size: var(--fs-meta); }
+  .reason .gone-note { margin: 6px 0 0; font-size: var(--fs-meta); color: var(--bad); }
   .ws-side .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; } .ws-side .link:hover { text-decoration: underline; }
   .why-sel { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
   .why-sel button { display: flex; gap: 6px; align-items: flex-start; text-align: left; border: 0; background: none; padding: 2px 0; cursor: pointer; font-size: 13px; }
@@ -562,11 +578,11 @@
   .note[aria-current="true"] { border-color: var(--accent); }
   .note .h { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
   .note .n { font-weight: 700; color: var(--ink); }
-  .note .a { font-size: 12.5px; background: var(--soft); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
-  .note .m { font-size: 12.5px; margin-top: 6px; } .note .m .who { font-size: 11.5px; color: var(--muted); }
+  .note .a { font-size: var(--fs-meta); background: var(--soft); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+  .note .m { font-size: var(--fs-meta); margin-top: 6px; } .note .m .who { font-size: 11.5px; color: var(--muted); }
   .note .reply { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; } .note .reply input { flex: 1 1 140px; min-width: 0; }
   .note.done { opacity: .72; }
-  .changed { margin-top: 8px; } .changed h4 { font-size: 12.5px; }
+  .changed { margin-top: 8px; } .changed h4 { font-size: var(--fs-meta); }
   .note .changed .shots { grid-template-columns: 1fr 1fr; gap: 6px; } .note .changed .shot img { min-height: 60px; }
   @media (max-width: 860px) {
     main { grid-template-columns: 1fr; }
@@ -581,6 +597,8 @@
   :root { --approved: #1f6b45; --approved-soft: #e2f1e8; --waiting: #9c5c00; --waiting-soft: #fbefd6;
     --decided: #33557f; --decided-soft: #e4ebf5; --closed: #8a2a22; --closed-soft: #f8e4e1;
     --canvas: #edebe7; --dot: #d6d4cd;
+    /* A pull request's and an issue's state in GitHub's own colours, the same in both modes. */
+    --gh-open: #2da44e; --gh-draft: #8c959f; --gh-merged: #8957e5;
     --fs-title: 26px; --fs-head: 17px; --fs-read: 15px; --fs-ui: 14px; --fs-meta: 12.5px; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --approved: #74d3a2; --approved-soft: #1b2e23; --waiting: #f0c060; --waiting-soft: #33291a;
     --decided: #9bb8e0; --decided-soft: #1d2633; --closed: #ff8f85; --closed-soft: #3a1f1d; --canvas: #232321; --dot: #383835; } }
@@ -619,9 +637,19 @@
   .sdot[data-s="prototype"] .tag { --t: var(--live); } .sdot[data-s="testing"] .tag { --t: #c43d8f; }
   .sdot[data-s="spec"] .tag { --t: #3fa35f; } .sdot[data-s="handed-off"] .tag { --t: var(--approved); }
   /* A PR's and an issue's state, in GitHub's colours: draft grey, open green, merged and done purple. */
-  .sdot[data-s="pr-draft"] .tag { --t: #8c959f; } .sdot[data-s="pr-open"] .tag, .sdot[data-s="issue-open"] .tag { --t: #2da44e; }
-  .sdot[data-s="pr-merged"] .tag, .sdot[data-s="issue-designed"] .tag { --t: #8957e5; }
+  .sdot[data-s="pr-draft"] .tag { --t: var(--gh-draft); } .sdot[data-s="pr-open"] .tag, .sdot[data-s="issue-open"] .tag { --t: var(--gh-open); }
+  .sdot[data-s="pr-merged"] .tag, .sdot[data-s="issue-designed"] .tag { --t: var(--gh-merged); }
   .sdot[data-s="decided"] .tag { --t: var(--decided); } .sdot[data-s="declined"] .tag { --t: var(--closed); }
+  /* Product: a screen's or an element's drawing, and a decision in force or revoked. */
+  .sdot[data-s="map-current"] .tag, .sdot[data-s="in-force"] .tag { --t: var(--approved); } .sdot[data-s="map-stale"] .tag { --t: var(--waiting); }
+  .sdot[data-s="map-building"] .tag { --t: var(--accent); } .sdot[data-s="map-dropped"] .tag, .sdot[data-s="revoked"] .tag { --t: var(--closed); }
+  /* A card that goes against a decision in force: a red ! in the row's right edge, under its state
+     dot. Pointing at it unfolds it leftwards, as the dot does, into "Goes against D-n". */
+  .row.item > .open .vdot { --dd: 10px; --dh: 20px; position: absolute; z-index: 2; right: 12px; top: calc(10px + max(var(--dh), 1lh)); width: var(--dd); height: var(--dh); }
+  .row.item:has(.vdot) > .prov { padding-right: 18px; }
+  .vdot .tag { --t: var(--bad); background: transparent; font-weight: 600; }
+  .row .sdot.vdot:hover .tag, .row .open:focus-visible .vdot .tag { background: var(--bad-soft); }
+  .row .sdot.vdot .tag::before { content: "!"; width: auto; height: auto; border-radius: 0; background: none; box-shadow: none; font-size: var(--fs-ui); font-weight: 800; line-height: 1; }
   @media (prefers-reduced-motion: reduce) { .sdot .tag, .sdot .tag::before, .sdot .tag .w { transition: none; } }
   .chip.ok { background: var(--approved-soft); color: var(--approved); } .chip.warn { background: var(--waiting-soft); color: var(--waiting); }
   /* The status strip: where the request stands, its word in the state's ink, a coloured edge. */
@@ -629,13 +657,13 @@
   .status[data-o="waiting"] { --o: var(--waiting); --os: var(--waiting-soft); } .status[data-o="approved"] { --o: var(--approved); --os: var(--approved-soft); }
   .status[data-o="decided"] { --o: var(--decided); --os: var(--decided-soft); } .status[data-o="closed"] { --o: var(--closed); --os: var(--closed-soft); }
   /* A change's PR and an issue, in GitHub's colours, the same as their dots in the list. */
-  .status[data-o="gh-open"] { --o: #2da44e; --os: color-mix(in srgb, #2da44e 16%, transparent); } .status[data-o="gh-draft"] { --o: #8c959f; --os: color-mix(in srgb, #8c959f 16%, transparent); }
-  .status[data-o="gh-merged"] { --o: #8957e5; --os: color-mix(in srgb, #8957e5 16%, transparent); }
+  .status[data-o="gh-open"] { --o: var(--gh-open); --os: color-mix(in srgb, var(--gh-open) 16%, transparent); } .status[data-o="gh-draft"] { --o: var(--gh-draft); --os: color-mix(in srgb, var(--gh-draft) 16%, transparent); }
+  .status[data-o="gh-merged"] { --o: var(--gh-merged); --os: color-mix(in srgb, var(--gh-merged) 16%, transparent); }
   .s-pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: var(--o); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; text-decoration: none; white-space: nowrap; } a.s-pill:hover { opacity: .88; }
   .status .s-meta .k { color: var(--muted); } .status .s-meta b { font-weight: 500; color: var(--ink); } .status .s-meta b.late { color: var(--closed); }
   .ai-tag { display: inline-grid; place-items: center; margin-left: 5px; padding: 0 4px; border-radius: 4px; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; line-height: 14px; color: var(--accent); background: var(--info-soft); vertical-align: 1px; }
   /* The presentation's items: a heading with its buttons, the facts line, what the meeting decides. */
-  .agenda-item { scroll-margin-top: 16px; border-radius: 8px; transition: background .4s ease; }
+  .agenda-item { scroll-margin-top: 16px; transition: background .4s ease; }
   .agenda-item.hit { animation: ag-hit 1.6s ease-out; } @keyframes ag-hit { 0%, 30% { background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 14%, transparent); } 100% { background: transparent; box-shadow: 0 0 0 8px transparent; } }
   @media (prefers-reduced-motion: reduce) { .agenda-item.hit { animation: none; outline: 2px solid var(--accent); outline-offset: 6px; } }
   .agenda-item { padding: 14px 0; border-bottom: 1px solid var(--line); max-width: var(--measure); } .agenda-item:last-child { border-bottom: 0; }
@@ -654,9 +682,7 @@
   .step.done .n { background: var(--ink); color: var(--panel); box-shadow: none; }
   .step.now .n { background: none; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
   /* Approve is the one green button. */
-  .btn[data-act="approve"] { background: var(--approved); border-color: var(--approved); color: #fff; }
-  :root[data-theme="dark"] .btn[data-act="approve"] { color: #10241a; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn[data-act="approve"] { color: #10241a; } }
+  .btn[data-act="approve"] { background: var(--approved); border-color: var(--approved); color: var(--panel); }
   .btn[data-act="approve"]:hover { opacity: .88; background: var(--approved); }
   /* Design options: the tabs stay; each carries a square number, so "option 2" is easy to say. */
   .ono { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; margin-right: 8px; border-radius: 5px; background: var(--muted); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; vertical-align: 1px; }
@@ -727,7 +753,7 @@
   .filters .btn.on .n { color: var(--muted); }
   /* The request's head: a face, who asked and from where, the fold on the right. */
   .brief > .brief-k.brief-k { cursor: default; margin: 0 0 8px;  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; text-transform: none; letter-spacing: 0; font-size: var(--fs-ui); font-weight: 400; color: var(--muted); }
-  .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: #fff; font-size: var(--fs-meta); font-weight: 600; flex: none; }
+  .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; flex: none; }
   .brief-k .ask-who b { color: var(--ink); font-weight: 600; }
   .brief-k .prov { font-size: var(--fs-meta); }
   .brief-k .ask-when { white-space: nowrap; }
@@ -778,7 +804,8 @@
   .top2, .standing .status { max-width: none; }
   /* Folded, the request keeps two whole lines and a third that fades out; the link under it shows the rest. */
   .brief { padding-bottom: 10px; }
-  .brief.clamped .brief-body { max-height: calc(3 * 1.55em); overflow: hidden; -webkit-mask-image: linear-gradient(#000 calc(2 * 1.55em), transparent); mask-image: linear-gradient(#000 calc(2 * 1.55em), transparent); }
+  /* Headings do not count: `clampBriefs` measures where the text's own lines fall (--clip, --fade). */
+  .brief.clamped .brief-body { max-height: var(--clip, calc(3 * 1.55em)); overflow: hidden; -webkit-mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); }
   .brief-toggle { border: 0; background: none; padding: 4px 0 0; color: var(--accent); cursor: pointer; font-size: var(--fs-ui); }
   .brief-toggle:hover { text-decoration: underline; }
   .brief-body { font-size: var(--fs-read); line-height: 1.55; }
@@ -795,7 +822,7 @@
   /* What Design Desk found, without a box: each part a heading and its text, what folds a quiet
      line with its count in a grey pill; then Show or Hide. */
   .made-col.brief { margin-top: 14px; border: 0; border-radius: 0; background: none; padding: 0; }
-  .made-col .made-sec h4 { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+  .made-col .made-sec h4 { font-size: var(--fs-read); font-weight: 600; margin: 0 0 6px; }
   .made-col details.fold { max-width: none; }
   .made-col details.fold > summary { font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
   .made-col details.fold > summary .cnt { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); font-size: 12px; line-height: 18px; }
@@ -847,7 +874,7 @@
   .note:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
   .note[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .note .h { font-size: var(--fs-ui); gap: 8px; margin-bottom: 6px; }
-  .note .n { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-grid; place-items: center; font-size: var(--fs-meta); font-weight: 700; flex: none; }
+  .note .n { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: inline-grid; place-items: center; font-size: var(--fs-meta); font-weight: 700; flex: none; }
   .note.done .n { background: var(--muted); }
   .note .a, .note .m { font-size: var(--fs-ui); }
   @media (max-width: 860px) { #workspace { inset: 0; border-radius: 0; border: 0; } }
@@ -972,6 +999,21 @@
     <div class="drop">
       <span>Paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="sh-file" hidden multiple /></label>. Four at most.</span>
       <div class="thumbs" id="sh-thumbs"></div>
+    </div>
+    <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="decision-dialog">
+  <form method="dialog" id="decision-form">
+    <h2>Add a decision</h2>
+    <p class="sub">It is recorded in your name, as decided on the Desk. Design Desk then warns when a change or an option goes against it.</p>
+    <label><span>What was decided</span><textarea name="text" maxlength="600" required placeholder="e.g. The send button is always on the right."></textarea></label>
+    <label><span>What it is about — a few words, separated by commas</span><input name="concepts" maxlength="300" required placeholder="e.g. send button, composer" /></label>
+    <label><span>Why (optional)</span><textarea name="why" maxlength="1500" placeholder="e.g. Thumb reach on phones."></textarea></label>
+    <div class="drop">
+      <span>Pictures (optional, up to 2): paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="dc-file" hidden multiple /></label>.</span>
+      <div class="thumbs" id="dc-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
@@ -1130,11 +1172,11 @@
     [["ack", "ask", "comment"], "Read everything, ask and comment"],
     [["vote", "request", "follow-up", "screens"], "Vote on options, send requests and bug reports, add screenshots"],
     [["explore", "revise", "refresh"], "Start design options and change them in the workspace"],
-    [["approve", "close", "reopen"], "Approve designs, close and reopen requests"],
+    [["approve", "close", "reopen"], "Approve designs, close, reopen and delete requests"],
     [["queue"], "Choose what the presentation shows"],
     [["change"], "Note changes on a product element"],
     [["handle"], "Mark changes handled"],
-    [["decide"], "Record a decision from a comment, revoke and restore decisions"],
+    [["decide"], "Add a decision or record one from a comment, revoke and restore decisions"],
     [["add"], "Add a missing screen or part to Product"],
     [["history"], "Draw how a screen or part looked before"],
     [["draw"], "Draw an issue: how it looks now and a sketch of how it could look"],
@@ -1274,9 +1316,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too, but not the handled ones", "issueFilter:handled": "Issues a designer marked handled: design has nothing to do with them; they leave the other lists",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
-      "productFilter:decisions": "Every decision the team made, kept apart by who made it", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
+      "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
-    dside: (v) => ({ "": "Every decision, kept apart by who made it", design: "Only what designers, PMs and leads decided", developer: "Only what developers decided: in code, a pull request or on the Desk" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
     decision: (v) => `Opens decision ${v}`,
@@ -1492,7 +1533,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // ---------- state ----------
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
-  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisionSide: "", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1608,6 +1649,19 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   const roleName = (r) => ROLE[r] || r;
+  // Each role's icon, shown by a person's name: in the header, on People and by a decision's author.
+  const ROLE_ICON = {
+    lead: '<path d="M2.5 13h11M3 13 2 5.5l3.5 3L8 3l2.5 5.5 3.5-3-1 7.5"/>',
+    designer: '<path d="M10.5 2.2l3.3 3.3-8 8H2.5v-3.3zM8.8 3.9l3.3 3.3"/>',
+    pm: '<rect x="3.2" y="2.8" width="9.6" height="11.7" rx="1.3"/><path d="M6 2.8V1.8h4v1M5.8 7.2h4.4M5.8 10.2h4.4"/>',
+    "lead-developer": '<path d="M5.3 7 2.3 10l3 3M10.7 7l3 3-3 3M5 5.2h6l.6-3.4L9.8 3.2 8 1.6 6.2 3.2 4.4 1.8z"/>',
+    developer: '<path d="M5.3 4.5 1.8 8l3.5 3.5M10.7 4.5 14.2 8l-3.5 3.5M9.2 2.8 6.8 13.2"/>',
+    guest: '<path d="M1.5 8s2.4-4.6 6.5-4.6 6.5 4.6 6.5 4.6-2.4 4.6-6.5 4.6S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>',
+  };
+  const roleIcon = (r, tip = "") => ROLE_ICON[r] ? `<span class="role-ic" title="${esc(tip || roleName(r))}"><svg viewBox="0 0 16 16" aria-hidden="true">${ROLE_ICON[r]}</svg></span>` : "";
+  // A decision's author's role, else the side the server read for them.
+  const decRole = (d) => ROLE_ICON[d.author?.role] ? [d.author.role, ""] : d.side === "developer" ? ["developer", "A developer"] : d.side === "design" ? ["designer", "A designer, a PM or a lead"] : [null, ""];
+  const authorIcon = (d) => { const [r, tip] = decRole(d); return r ? roleIcon(r, tip) : ""; };
   const who = (by) => by?.agent ? "<b>Design Desk</b>"
     : by?.via === "slack" ? `<b>${esc(by.name || by.email || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
     : `<b>${esc(by?.email && by.email === S.me?.email ? "you" : (by?.email || "someone"))}</b> · ${esc(roleName(by?.role))}`;
@@ -1626,7 +1680,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     auto: '<path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/>',
   };
   // The runs that file on their own (store.mjs ORIGIN_JOBS), in the team's words.
-  const JOB = { watch: "hourly check", digest: "weekly digest", issues: "daily issue read" };
+  const JOB = { watch: "hourly check", digest: "weekly digest", issues: "daily issue read", map: "product map" };
   // A request's head, as on the prototype: who asked, their role, where it came from (with its
   // icon) and when; the request's own words fold under it.
   function askHead(c, bug) {
@@ -1635,7 +1689,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const role = ROLE[c.created_by?.role] || "";
     return `<span class="face" aria-hidden="true">${esc((name.replace(/^[^A-Za-z0-9]+/, "")[0] || "?").toUpperCase())}</span>
       <span class="ask-who"><b>${esc(name)}</b> ${bug ? "reported" : "asked"}${role ? `, ${esc(role)}` : ""}, from</span>
-      <span class="prov"><span class="src">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
+      <span class="prov"><span class="src" data-k="${p.kind}">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
   }
   const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
   function origin(c, { parts = false } = {}) {
@@ -1649,10 +1703,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       // The PR as a plain link and no shipped date: the row stays short; the change's page has both.
       [kind, src, author, run] = ["pr", s.url ? `<a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${num("PR", s.pr)}</a>` : num("PR", s.pr), s.author, "watch"];
       event = "";
-    } else if (c.kind === "digest") [kind, src, run, event] = ["digest", "Design Desk", "digest", esc(c.period || "")];
+    } else if (c.kind === "digest") [kind, src, run] = ["digest", "Design Desk", "digest"];
+    // A screen or an element: Design Desk's map of the product, or a part a person added with + Add.
+    else if ((c.kind === "screen" || c.kind === "element") && !by.email) [kind, src, run] = ["agent", c.design ? "an approved design" : "Design Desk", c.design ? "" : "map"];
     else if (c.kind === "issue") {
       const s = c.source || {};
-      [kind, src, author, run] = ["issue", out(s.url, num("Issue", s.issue)), s.author, s.author ? "" : "issues"];
+      // As a change's PR: a plain link, the row stays short.
+      [kind, src, author, run] = ["issue", s.url ? `<a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${num("Issue", s.issue)}</a>` : num("Issue", s.issue), s.author, s.author ? "" : "issues"];
       event = (s.assignees || []).length ? `assigned to ${esc(s.assignees.join(", "))}` : "";
     }
     else if (o.automated) {
@@ -1673,7 +1730,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const auto = machine ? event : run || o.automated ? `<span class="auto" title="Filed on its own, not by a person">${icon("auto")}<span>Automatic${what ? ` · ${what}` : ""}</span></span>` : event;
     // The card it came out of: the change a proposal or a touch-up started from.
     // Named by its kind and number, its title on hover: a title can be long or the agent's own.
-    const parent = S.cards.find((x) => x.id === (o.event?.card || from));
+    const parent = S.cards.find((x) => x.id === (o.event?.card || c.design?.card || from));
     const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="${esc(parent.title)}">${esc(({ change: "Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
     // Where the team planned an issue, as one more word of the line: `in: This sprint`.
     const planned = c.kind === "issue" && !c.designed && c.bucket ? `<span title="Where the team planned this issue"><span class="k">in:</span> <b>${esc(c.bucket === "sprint" && c.source?.milestone ? c.source.milestone : BUCKET[c.bucket] || c.bucket)}</b></span>` : "";
@@ -1799,7 +1856,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   function peekDecision(d) {
     return `<div class="t"><b class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text || d.id)}</b>${num(d)}</div>
-        <div class="sub">${sideChip(d)}${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.author ? `<span>by ${named(d.author)}</span>` : ""}</div>
+        <div class="sub">${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.author ? `<span>by ${authorIcon(d)}${named(d.author)}</span>` : ""}</div>
         ${(d.concepts || []).length ? `<p class="hint">About: ${esc(d.concepts.join(", "))}</p>` : ""}`;
   }
   function peekIssue(c) {
@@ -2093,7 +2150,29 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const kind = t.dataset.briefToggle;
     b.classList.toggle("clamped", folded); S.folds[kind === "made" ? "made" : "brief"] = folded;
     t.outerHTML = briefToggle(folded, kind === "made" ? "made" : kind === "bug");
+    clampBriefs();
   }, true);
+  // Folded, a brief keeps two whole lines of its text and half of the third, whatever stands
+  // above them: a heading is shown whole and not counted as a line.
+  function clampBriefs() {
+    for (const body of document.querySelectorAll(".brief.clamped .brief-body")) {
+      const top = body.getBoundingClientRect().top, lines = [];
+      const walk = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => n.textContent.trim() && !n.parentElement.closest("h3, h4, .brief-toggle") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+      const r = document.createRange();
+      for (let n; (n = walk.nextNode()) && lines.length < 3;) {
+        r.selectNodeContents(n);
+        for (const b of r.getClientRects()) if (b.height && !lines.some((l) => Math.abs(l.top - b.top) < b.height / 2)) lines.push({ top: b.top, bottom: b.bottom });
+      }
+      lines.sort((a, b) => a.top - b.top);
+      // Fewer than three lines: nothing to fold away.
+      if (lines.length < 3) { body.style.setProperty("--clip", "none"); body.style.setProperty("--fade", "100%"); continue; }
+      // Everything above the third line stays whole; the third fades out over its upper three quarters.
+      const third = lines[2];
+      body.style.setProperty("--fade", `${Math.round(third.top - top)}px`);
+      body.style.setProperty("--clip", `${Math.round(third.top + (third.bottom - third.top) * 0.75 - top)}px`);
+    }
+  }
+  addEventListener("resize", () => clampBriefs());
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
@@ -2181,6 +2260,18 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
 
+  // A screen's or an element's drawing in the list, as a request's state: up to date, out of date, being drawn, or not drawn.
+  const MAP_STATE = { current: ["Up to date", "Drawn from the product as it is now"], stale: ["Out of date", "The product changed since it was drawn; Update the drawing draws it again"],
+    building: ["Being drawn", "Design Desk is drawing it now"], dropped: ["Not drawn", "Design Desk could not draw it from the product"] };
+  const mapDot = (c) => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return `<span class="sdot" data-s="map-${esc(c.status || "current")}"><span class="chip tag${c.status === "building" ? " busy" : ""}" title="${esc(tip)}"><span class="w">${esc(w)}</span></span></span>`; };
+  // The decisions in force a card goes against, in its list row: a red ! that unfolds into their numbers.
+  // The label names at most three, then +N: it unfolds to a fixed width. The hint names them all.
+  const againstDot = (c) => { const ids = c.against || []; if (!ids.length) return "";
+    const shown = ids.length > 3 ? `${ids.slice(0, 3).join(", ")} +${ids.length - 3}` : ids.join(", ");
+    return `<span class="sdot vdot"><span class="chip tag" title="${esc(`It goes against ${ids.join(", ")}, in force: a designer approves it only knowingly`)}"><span class="w">Goes against ${esc(shown)}</span></span></span>`; };
+  // A row's state dot, whatever the item: a request's state, a PR's or an issue's, a drawing's.
+  const rowDot = (c) => c.kind === "change" || c.kind === "issue" ? ghDot(c) : c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : c.kind === "screen" || c.kind === "element" ? mapDot(c) : "";
+
   // One filter: a segmented control, its choice marked; the key is S's, or a data- action.
   // A tab's or a filter's words, with its count in a quiet pill.
   const counted = (l, n) => `${esc(l)}${n ? ` <span class="n">${n}</span>` : ""}`;
@@ -2188,7 +2279,27 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // A filter too wide for the list fades at its edge.
   const markScrolls = (root) => root.querySelectorAll(".filters").forEach((f) => f.classList.toggle("scrolls", f.scrollWidth > f.clientWidth + 1 && f.scrollLeft + f.clientWidth < f.scrollWidth - 1));
   document.addEventListener("scroll", (e) => { if (e.target.matches?.(".filters")) markScrolls(e.target.parentElement); }, true);
-  function renderList() {
+  // A value in a row's source line filters its list to the rows with the same value
+  // (docs/desk.md → Lists): `from: Slack`, `by: alice`, `created: Today`. The bar on top names it,
+  // and its × shows every row again. It holds for the tab's page it was set on.
+  const pfView = () => S.tab + (S.tab === "product" ? `:${S.productFilter}` : S.tab === "requests" && S.reqFilter === "presentation" ? ":presentation" : "");
+  const pfKey = (sp) => sp.querySelector(":scope > .k")?.textContent.replace(/:\s*$/, "").trim() || "";
+  const pfValue = (sp) => { const x = sp.cloneNode(true); x.querySelector(":scope > .k")?.remove(); return x.textContent.replace(/\s+/g, " ").trim(); };
+  function applyRowFilter() {
+    const list = $("#list");
+    list.querySelector(".pf-bar")?.remove();
+    if (!S.pf || S.pf.view !== pfView()) return;
+    let shown = 0;
+    for (const row of list.querySelectorAll(".row.item")) {
+      const hit = [...row.querySelectorAll(".prov > span")].some((sp) => pfKey(sp) === S.pf.k && pfValue(sp) === S.pf.v);
+      row.hidden = !hit; if (hit) shown++;
+    }
+    const bar = `<div class="pf-bar"><span>Filtered by <span class="k">${esc(S.pf.k)}:</span> <b>${esc(S.pf.v)}</b>${shown ? "" : " — nothing here matches"}</span><button class="linkbtn" data-pf-clear aria-label="Clear the filter" title="Show every item again">×</button></div>`;
+    const head = list.querySelector(":scope > .listhead");
+    if (head) head.insertAdjacentHTML("afterend", bar); else list.insertAdjacentHTML("afterbegin", bar);
+  }
+  function renderList() { renderListRows(); applyRowFilter(); }
+  function renderListRows() {
     const list = $("#list");
     const main = $("#main");
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
@@ -2198,7 +2309,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // A tab's pages (Product's four, Requests and its presentation) are tabs; filters narrow the page's list.
     const pages = (key, opts, on, extra = "") => `<nav class="subtabs" aria-label="Pages">${opts.map(([k, l, n]) => `<button class="${on(k) ? "on" : ""}" data-filter="${key}:${k}" aria-current="${on(k) ? "page" : "false"}">${counted(l, n)}</button>`).join("")}${extra}</nav>`;
     const reqList = S.reqFilter !== "presentation";
-    const add = S.tab === "product" && ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>` : "";
+    const add = S.tab !== "product" ? "" : ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>`
+      : S.productFilter === "decisions" && can("decide") ? `<button class="btn small primary" data-add-decision title="Record a decision the team made, in your name">+ Add</button>` : "";
     // Requests: For Designers and For Developers, each with its open count, and the presentation.
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
@@ -2222,10 +2334,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
-    // PR Changes, Requests and Issues say where each came from, without a description; screens and elements are Design Desk's own map.
-    const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues";
+    // Every list says where each item came from, without a description, Product included.
+    const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "issues" || S.tab === "product";
     list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${c.kind === "change" || c.kind === "issue" ? ghDot(c) : ""}${c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : ""}</div></button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${rowDot(c)}</div>${againstDot(c)}</button>
       ${sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("");
   }
 
@@ -2240,7 +2352,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (P.error) return `<h2>People and roles</h2><div class="panel">${esc(P.error)}</div>`;
     const order = Object.keys(ROLE_ABOUT);
     const people = [...P.people].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.email.localeCompare(b.email));
-    const rows = people.map((x) => `<tr><td>${esc(x.email)}${x.email === S.me?.email ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${esc(roleName(x.role))}</td></tr>`).join("");
+    const rows = people.map((x) => `<tr><td>${esc(x.email)}${x.email === S.me?.email ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
     const shown = order.filter((r) => P.roles[r]);
     const may = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a])).map(([, words]) => words)]));
     // Each role says only what it adds to the largest roles below it that it covers; a role
@@ -2254,14 +2366,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const more = same ? [] : may[r].filter((w) => !below.some((b) => may[b].includes(w)));
       const names = (rs) => rs.map((b) => esc(roleName(b))).join(" or ");
       const list = same ? `<p>Same as a ${names([same])}.</p>` : below.length ? `<p>Everything a ${names(below)} can, and:</p>` : "";
-      return `<div class="panel"><h4>${esc(roleName(r))}${S.me?.role === r ? ` <span class="chip" title="The role you have on this Desk">your role</span>` : ""}</h4><p>${esc(ROLE_ABOUT[r])}</p>${list}${more.length ? `<ul>${more.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
+      return `<div class="panel"><h4>${roleIcon(r)}${esc(roleName(r))}${S.me?.role === r ? ` <span class="chip" title="The role you have on this Desk">your role</span>` : ""}</h4><p>${esc(ROLE_ABOUT[r])}</p>${list}${more.length ? `<ul>${more.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
     }).join("");
     // A lead's asks to add someone: waiting, added, or not added with Design Desk's reason.
     const asked = (P.asks || []).map((a) => {
       const chip = a.state !== "done" ? `<span class="chip info" title="Design Desk is putting them on the list; this page updates by itself">● Design Desk is adding them</span>`
         : a.outcome === "added" ? `<span class="chip ok" title="They are on the list with the role asked for">✓ Added</span>` : `<span class="chip warn" title="Design Desk could not add it; open it to see why">Not added</span>`;
       const why = a.state === "done" && a.outcome !== "added" ? ` ${esc(String(a.outcome || "").replace(/^not added:\s*/i, ""))}` : "";
-      return `<tr><td>${esc(a.email)}</td><td>${esc(roleName(a.role))}</td><td>${chip}${why}<div class="sub">${esc(a.by || "A lead")} asked · ${esc(when(a.created))}</div></td></tr>`;
+      return `<tr><td>${esc(a.email)}</td><td>${roleIcon(a.role)}${esc(roleName(a.role))}</td><td>${chip}${why}<div class="sub">${esc(a.by || "A lead")} asked · ${esc(when(a.created))}</div></td></tr>`;
     }).join("");
     return `<h2>People and roles</h2>
       <p class="lead">Who has which role on this Desk, and what each role can do. ${can("people") ? "Add someone with <b>+ Add a person</b>; Design Desk puts them on the list. " : ""}${esc(contact())} changes roles${can("people") ? "" : " and adds people"}.</p>
@@ -2277,21 +2389,24 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const ORIGIN_KIND = { pr: "Pull request", issue: "Issue", commit: "Commit", doc: "Architecture page", slack: "Slack", desk: "A comment on the Desk", call: "The presentation", approval: "An approval on the Desk", chat: "Chat with Design Desk", other: "Source" };
   const named = (a) => a ? esc(a.name || a.login || a.email || "someone") : "";
   // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
-  const SIDE = { design: ["Designer or PM", "Decided by a designer, a PM or a lead"], developer: ["Developer", "Decided by a developer: in code, a pull request or on the Desk"], "": ["Not known who", "The Desk does not know this person's role"] };
-  const sideChip = (d) => { const [l, t] = SIDE[d.side || ""]; return `<span class="chip side-${esc(d.side || "none")}" title="${esc(t)}">${esc(l)}</span>`; };
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   function renderDecisionList(filters) {
     const list = $("#list");
-    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["revoked", "Revoked"], ["", "All"]], "dstate")}${seg("decisionSide", [["", "Everyone"], ["design", "Design and PM"], ["developer", "Developers"]], "dside")}</div></div>`;
-    const row = (d) => `<button class="row side-${esc(d.side || "none")}" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}</div>
-      <div class="meta">${sideChip(d)}<span class="chip" title="The day it was decided">${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad" title="It no longer holds; it stays here crossed out, with the reason">Revoked</span>` : ""}${(d.conflicts || []).length ? `<span class="chip bad" title="It contradicts these decisions; a designer settles which holds">⚠ Goes against ${esc(d.conflicts.map((x) => x.decision).join(", "))}</span>` : ""}${d.author ? `<span class="chip" title="Who made the decision">by ${named(d.author)}</span>` : ""}${(d.concepts || []).slice(0, 2).map((x) => `<span class="chip" title="What it is about">${esc(x)}</span>`).join("")}</div></button>`;
-    // Kept apart: the design side's decisions, then developers', then those whose author's role is unknown.
-    const shown = S.decisions.filter((d) => !S.decisionSide || (d.side || "") === S.decisionSide);
-    const rows = ["design", "developer", ""].map((k) => {
-      const xs = newestFirst(shown.filter((d) => (d.side || "") === k));
-      return xs.length ? `<div class="side-head">${esc(k === "design" ? "From designers and PMs" : k === "developer" ? "From developers" : "Not known who")} <span class="n">${xs.length}</span></div>${xs.map(row).join("")}` : "";
-    }).join("");
-    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionSide && S.decisions.length ? "No decision matches." : S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
+    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["revoked", "Revoked"], ["", "All"]], "dstate")}</div></div>`;
+    // As every list on the Desk: its words, its number and a dot for where it stands; a red ! under the
+    // dot when it goes against a decision in force; then when it was decided, where, and by whom.
+    const row = (d) => {
+      const o = d.origin || {}, k = { pr: "pr", commit: "pr", issue: "issue", slack: "slack", chat: "chat", call: "chat", desk: "desk", approval: "desk", doc: "digest" }[o.kind] || "agent";
+      const where = esc(o.label || ORIGIN_KIND[o.kind] || "Source");
+      const src = o.url ? `<a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${where}&nbsp;↗</a>` : where;
+      const against = [...new Set((d.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
+      const state = d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"] : ["in-force", "In force", "This decision holds today; anything against it warns"];
+      return `<div class="row item side-${esc(d.side || "none")}"><button class="open" data-decision="${esc(d.id)}" aria-current="${S.decision?.id === d.id}"><div class="t"><span class="${d.status === "revoked" ? "revoked-text" : ""}">${esc(d.text || d.id)}</span>${num(d)}<span class="sdot" data-s="${state[0]}"><span class="chip tag" title="${esc(state[2])}"><span class="w">${state[1]}</span></span></span></div>${againstDot({ against })}</button>
+      <div class="prov">${d.at ? `<span><span class="k">decided:</span> <span class="when" title="${esc(when(d.at))}">${esc(dayWord(d.at))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${k}">${icon(k)}${src}</span></span>${d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b></span>` : ""}</div></div>`;
+    };
+    // One list, the newest first.
+    const rows = newestFirst(S.decisions).map(row).join("");
+    list.innerHTML = `${bar}${rows || `<div class="empty">${S.decisionState === "revoked" ? "No decision has been revoked." : "No decisions recorded yet. Approved designs, outcomes of the presentation, comments a designer records and deliberate behaviour Design Desk finds land here."}</div>`}`;
   }
   async function loadDecisions() {
     allDecs = null;
@@ -2303,33 +2418,43 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     try { r = await api("GET", `/api/decisions/${encodeURIComponent(id)}`); } catch { toast(`There is no decision numbered ${id} on the Desk.`); return false; }
     S.tab = "product"; S.productFilter = "decisions"; S.card = null; S.ws.open = false;
     S.decision = { ...r.decision, refs: r.refs || [] };
-    if (!S.decisions.some((x) => x.id === id)) { S.decisionState = ""; S.decisionSide = ""; }
+    if (!S.decisions.some((x) => x.id === id)) S.decisionState = "";
     await loadDecisions();
     renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
     return true;
   }
   function originLine(o) {
-    if (!o) return `<p class="hint">Where it was decided was not recorded.</p>`;
+    return o ? `<p>${originText(o)}</p>` : `<p class="hint">Where it was decided was not recorded.</p>`;
+  }
+  function originText(o) {
+    // Added on the Desk itself: the Desk is where it was decided.
+    if (o.kind === "desk" && !o.card && !o.url) return `<b>${esc(o.label || "On the Desk")}</b>`;
     const card = o.card && S.cards.find((x) => x.id === o.card);
     const where = o.url ? `<a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.label || ORIGIN_KIND[o.kind] || "source")} ↗</a>`
       : card ? `<button class="anchor" data-card="${esc(card.id)}">${esc(o.label || card.title)} ${esc(card.id)}</button>` : esc(o.label || "");
-    return `<p><b>${esc(ORIGIN_KIND[o.kind] || "Source")}</b>${where ? ` — ${where}` : ""}${o.url && card ? ` · on <button class="anchor" data-card="${esc(card.id)}">${esc(card.id)}</button>` : ""}</p>`;
+    return `<b>${esc(ORIGIN_KIND[o.kind] || "Source")}</b>${where ? ` — ${where}` : ""}${o.url && card ? ` · on <button class="anchor" data-card="${esc(card.id)}">${esc(card.id)}</button>` : ""}`;
   }
   function renderDecision(d) {
     const HOW = { conflicts: "goes against it", cites: "follows it", replaces: "replaces it", shapes: "a design option follows it" };
-    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, r.title, r.status === "revoked") : `<button class="anchor" data-card="${esc(r.id)}">${esc(r.title)} ${esc(r.id)}</button>`} — <span class="${r.how === "conflicts" ? "chip warn" : "chip"}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
+    // Plain words, no labels: a decision by its number and the start of its text (the peek shows
+    // all of it on hover), anything else by its title and number; then how it refers to this one.
+    const short = (t) => { const x = String(t || ""); return x.length > 60 ? x.slice(0, 57).replace(/\s+\S*$/, "") + "…" : x; };
+    const refs = (d.refs || []).map((r) => `<li>${r.kind === "decision" ? decRef(r.id, short(r.title), r.status === "revoked") : `<a href="#${esc(r.id)}" data-card="${esc(r.id)}">${esc(r.title)}</a> ${num(r)}`} — <span class="${r.how === "conflicts" ? "bad-text" : ""}">${esc(HOW[r.how] || r.how)}</span>${(r.options || []).length ? ` <span class="hint" style="display:inline">◆ ${esc(r.options.join(", "))}</span>` : ""}</li>`).join("");
     const against = (d.conflicts || []).filter((x) => x.status === "active");
     const rv = d.revoked;
+    // Who decided it and where, in the status box as a change's PR and author are.
+    const meta = [d.author ? `<span><span class="k">by:</span> ${authorIcon(d)}<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` (${esc(d.author.login)})` : ""}</span>` : "",
+      d.origin ? `<span><span class="k">from:</span> ${originText(d.origin)}</span>` : ""].join("");
     return `${backBar()}<h2 class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text)}${num(d)}${titleLink(d)}</h2>
-      <div class="sub"><span>${esc(day(d.at))}</span>${d.status === "revoked" ? `<span class="chip bad" title="It no longer holds; it stays here crossed out, with the reason">Revoked</span>` : `<span class="chip ok" title="This decision holds today; anything against it warns">In force</span>`}${(d.concepts || []).map((x) => `<span class="chip" title="What it is about">${esc(x)}</span>`).join("")}</div>
+      <div class="sub"><span>${esc(day(d.at))}</span>${(d.concepts || []).length ? `<span title="What it is about">${esc(d.concepts.join(", "))}</span>` : ""}</div>
+      ${ghStatus(d.status === "revoked" ? "closed" : "approved", d.status === "revoked" ? "Revoked" : "In force", d.status === "revoked" ? "It no longer holds; it stays here crossed out, with the reason" : "This decision holds today; anything against it warns", meta,
+        can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : "", "", { inline: true })}
       ${rv ? `<div class="against"><p><b>Revoked</b> by ${named(rv.by)} · ${esc(day(rv.at))}</p><p>${txt(rv.reason)}</p>${rv.replaced_by ? `<p>Replaced by ${decRef(rv.replaced_by)}</p>` : ""}${rv.origin ? originLine(rv.origin) : ""}</div>` : ""}
       ${against.map((x) => `<div class="against"><p>⚠ <b>Goes against ${decRef(x.decision)}</b>: ${txt(x.text)}</p><p class="hint">${txt(x.why)}</p></div>`).join("")}
-      <div class="actions">${can("decide") ? (d.status === "active" ? `<button class="btn" data-revoke="${esc(d.id)}">Revoke…</button>` : `<button class="btn" data-restore="${esc(d.id)}">Restore</button>`) : ""}</div>
-      <h3>Who decided</h3><p>${sideChip(d)} ${d.author ? `<b>${named(d.author)}</b>${d.author.login && d.author.name ? ` <span class="sub" style="display:inline">(${esc(d.author.login)})</span>` : ""}` : `<span class="hint">Not recorded.</span>`}</p>
-      <h3>Where it was decided</h3>${originLine(d.origin)}
       ${d.why ? `<h3>Why</h3>${md(d.why)}` : ""}
+      ${(d.pictures || []).length ? `<h3>Pictures</h3>${shots(d.pictures.map((asset) => ({ asset, caption: "" })))}` : ""}
       ${(d.replaces || []).length ? `<h3>It replaces</h3><ul>${d.replaces.map((id) => `<li>${decRef(id)}</li>`).join("")}</ul>` : ""}
-      <h3>What refers to it</h3>${refs ? `<ul>${refs}</ul>` : `<p class="hint">Nothing on the Desk refers to it yet.</p>`}`;
+      ${refs ? `<h3>What refers to it</h3><ul>${refs}</ul>` : ""}`;
   }
   // The decisions in force a card goes against: on the card, and on the option it names.
   // The decisions a card follows, by their numbers.
@@ -2361,7 +2486,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const pkv = (k, v) => `<span><span class="k">${k}:</span> <b>${v}</b></span>`;
   // A row of what is to present or suggested stays on the presentation page and jumps to its item;
   // a presented one opens its card.
-  const agendaRow = (c, title, facts, jump = false) => `<div class="row item"><button class="open" ${jump ? `data-jump="${esc(c.id)}" aria-current="${S.jump === c.id}"` : `data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"`}><div class="t"><span>${title}</span>${num(c)}</div></button>${facts ? `<div class="prov">${facts}</div>` : ""}</div>`;
+  // As every list: the item's state dot in the corner, a red ! under it, bold until first opened.
+  const agendaRow = (c, title, facts, jump = false) => {
+    const l = S.cards.find((x) => x.id === c.id) || c;
+    return `<div class="row item${l.read === false ? " unread" : ""}"><button class="open" ${jump ? `data-jump="${esc(c.id)}" aria-current="${S.jump === c.id}"` : `data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"`}><div class="t"><span>${title}</span>${num(c)}${rowDot(l)}</div>${againstDot(l)}</button>${facts ? `<div class="prov">${facts}</div>` : ""}</div>`;
+  };
   const addedBy = (a) => a.agenda.by?.email ? (a.agenda.by.email === S.me?.email ? "You" : a.agenda.by.email) : "Design Desk";
   function renderAgendaList(filters = "") {
     const items = S.agenda, ideas = suggested(), done = S.presented || [];
@@ -2781,6 +2910,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${!inline && meta ? `<p class="hint s-meta">${meta}</p>` : ""}
     </div>`;
   }
+  // A screen's or an element's drawing, in the same box: its word as its dot says it in the list.
+  const MAP_TONE = { current: "approved", stale: "waiting", building: "checking", dropped: "closed" };
+  const mapStatus = (c, buttons) => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, "", buttons, ""); };
   function renderChange(c) {
     const src = c.source || {};
     return `${backBar()}
@@ -2823,17 +2955,20 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         const plan = c.bucket === "sprint" && src.milestone ? src.milestone : BUCKET[c.bucket] || "Issue";
         const [o, word, tip] = c.handled ? ["gh-draft", "Handled", "A designer marked it handled: design has nothing to do with it; it left the other lists"] : c.designed ? ["gh-merged", "Designed", "A request on the Desk designed it and sent it to developers: done on the design side"]
           : !open ? ["gh-draft", "Closed", "It left the team's plan or was closed on GitHub"] : ["gh-open", plan, "Where the team planned this issue; open on GitHub"];
-        const meta = [src.issue ? `<a href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(src.issue)} ↗</a>` : "", src.author ? `<span>by ${esc(src.author)}</span>` : "", (src.assignees || []).length ? `<span>assigned to ${esc(src.assignees.join(", "))}</span>` : "", c.bucket === "sprint" && src.milestone ? "" : src.milestone ? `<span>${esc(src.milestone)}</span>` : ""].join("");
+        // As on a change: the issue a pill on the state's line, the facts after it in the list's style.
+        const kv = (k, v) => `<span><span class="k">${k}:</span> <b>${v}</b></span>`;
+        const pill = src.issue ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the issue on GitHub">Issue #${esc(src.issue)} ↗</a>` : `<span class="s-pill">Issue #${esc(src.issue)}</span>`) : "";
+        const meta = [src.author ? kv("by", esc(src.author)) : "", (src.assignees || []).length ? kv("assigned to", esc(src.assignees.join(", "))) : "", c.bucket === "sprint" && src.milestone ? "" : src.milestone ? kv("milestone", esc(src.milestone)) : ""].join("");
         const design = open && !c.handled && can("follow-up") ? `<button class="btn${c.designed ? "" : " primary"}" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : "";
         const handle = can("handle") ? (c.handled ? `<button class="btn" data-handle="0" title="It comes back to the lists">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing to do with this issue: it leaves the lists for Handled">Mark handled</button>`) : "";
-        return ghStatus(o, word, tip, meta, design + handle, open ? agendaButton(c) : "");
+        return ghStatus(o, word, tip, meta, design + handle, open ? agendaButton(c) : "", { pill, inline: true });
       })()}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.designed ? `<div class="sent"><b>✓ Already through Design Desk — done on the design side.</b><p><button class="anchor" data-card="${esc(c.designed.card)}">${esc(c.designed.title)}</button>${num({ id: c.designed.card })} was sent to developers${c.designed.at ? ` on ${esc(day(c.designed.at))}` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
       ${againstBox(c)}${followsLine(c)}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
-      ${working(c).map((k) => `<div class="working" style="max-width:80ch"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
       ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch)}<p class="hint">A sketch${c.style ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
         : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>${can("draw") && !busy && open && !c.designed ? `<div class="actions"><button class="btn" data-act="draw">Draw it</button></div>` : ""}`}
@@ -2848,12 +2983,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const open = c.instance?.url && c.path ? `${c.instance.url.replace(/\/$/, "")}${c.path}` : null;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
-      <div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}${c.status === "stale" ? `<span class="chip warn" title="The product changed after these pictures were taken; they may not match it">changed since these pictures</span>` : ""}</div>
+      ${c.group || c.path ? `<div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}</div>` : ""}
+      ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}${agendaButton(c)}`)}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
-      ${c.status === "dropped" ? "" : `<div class="actions">${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer">Open it in Design Desk's copy ↗</a>` : ""}${agendaButton(c)}</div>
-      <h3>Screens</h3>${renderLooks(c)}
+      ${c.status === "dropped" ? "" : `<h3>Screens</h3>${renderLooks(c)}
       ${els.length ? `<h3>Parts on this screen</h3><div class="actions">${els.map((e) => `<button class="anchor" data-card="${esc(e.id)}">${esc(e.title)}</button>`).join("")}</div>` : ""}
       <h3>Why it is like this</h3><div id="timeline" class="section"><p class="hint">Loading the decisions and changes…</p></div>`}
       ${sections(c)}${renderImpact(c.impact)}
@@ -2945,15 +3080,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const designs = S.cards.filter((x) => x.kind === "element" && x.design?.of === c.id);
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
-      <div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.status === "stale" ? `<span class="chip warn" title="Update the drawing draws it again from the product as it is">out of date: the product changed since it was drawn</span>` : ""}</div>
+      ${c.group ? `<div class="sub"><span class="chip" title="Where in the product it belongs">${esc(c.group)}</span></div>` : ""}
+      ${mapStatus(c, c.status === "dropped" ? "" : `${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}`)}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${designs.map((x) => `<div class="designbox"><p>✎ An approved design changes it: <button class="anchor" data-ref="${esc(x.id)}">${esc(x.title)}</button>${num(x)}, from ${reqRef(x.design.card)}. Until that ships, the drawing below is the product as it is.</p></div>`).join("")}
       ${renderWanted(c)}
-      ${c.status === "dropped" ? "" : `<div class="actions">${can("refresh") && c.status !== "building" ? `<button class="btn" data-act="refresh">Update the drawing</button>` : ""}${can("history") && c.sheet && c.status !== "building" ? `<button class="btn" data-act="history">${(c.history || []).length ? "Draw older versions" : "Draw how it looked before"}</button>` : ""}${agendaButton(c)}</div>
-      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${c.status === "dropped" ? "" : `${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:0;list-style:none">${c.states.map((x, k) => `<li id="no-${esc(c.id)}-${k + 1}">${subTag(c, k + 1)} <b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
-      ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<div class="panel hint">Not drawn yet.</div>`}`}
+      ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<p class="hint">Not drawn yet.</p>`}`}
       ${sections(c)}${renderImpact(c.impact)}
       ${src.file ? `<details class="fold"><summary>For developers</summary><p class="sub"><code>${esc(src.file)}</code>${src.export ? ` · <code>${esc(src.export)}</code>` : ""}${src.commit ? ` · ${esc(src.commit)}` : ""}</p></details>` : ""}
       ${renderThreads(c)}`;
@@ -3111,8 +3246,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
+      // No live prototype for a request with parts a design change cannot do: the step is to
+      // ask a developer about them, and it opens them (simple mode names no role a request needs).
+      const dev = !simple() && (c.triage?.cannot || []).length ? `<button class="step-next" data-dev-ask title="Opens the parts a design change cannot do, with a question for a developer to copy">Contact a developer</button>` : "";
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
-        step: design && canBuild() ? sb("build", "Build a live prototype") : "",
+        step: design && canBuild() ? sb("build", "Build a live prototype") : dev,
         buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
     }
     return { text: "", buttons: "" };
@@ -3135,7 +3273,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       : undo + (can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "");
     // A closed request keeps its presentation actions; only the design actions leave.
     const size = can("size") && !closed(c) && c.status !== "spec" && !c.approved ? (c.size?.small ? `<button class="btn" data-size="designer">For Designers</button>` : `<button class="btn" data-size="small">For Developers</button>`) : "";
-    const items = (nx.more || "") + call + size + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
+    // A closed request can be deleted for good, behind a confirmation (docs/desk.md → Deleting a request).
+    const del = c.status === "declined" && can("close") ? `<button class="btn danger" data-act="delete">Delete this request…</button>` : "";
+    const items = (nx.more || "") + call + size + del + (closed(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`);
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status]; const tip = c.status === "declined" ? [own, nx.sub].filter(Boolean).join(" ") : [nx.text, nx.sub].filter(Boolean).join(" ") || own; return tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
@@ -3164,14 +3304,20 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const tr = c.triage;
     if (!tr) return "";
     const [title, text] = VERDICT[typeOf(c)][tr.verdict] || ["", ""];
-    // Simple mode names no role a request needs: no Needs a developer.
-    if (!title || tr.verdict === "design" || (simple() && tr.verdict === "needs-developer")) return "";
+    // Needs a developer has no label: the steps name it and what a design change cannot do folds under the status.
+    if (!title || tr.verdict === "design" || tr.verdict === "needs-developer") return "";
     return `<span class="chip warn" title="${esc([text, ...(tr.reasons || [])].join(" "))}">${esc(title)}</span>`;
   }
   function cannotFold(c) {
     const xs = c.triage?.cannot || [];
     if (!xs.length) return "";
-    return `<details class="fold"><summary>${simple() ? "What a design change cannot do, and why" : `${plural(xs.length, "part needs a developer", "parts need a developer")}: what a design change cannot do, and why`}</summary><div class="panel"><ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul></div></details>`;
+    return `<details class="fold" id="dev-parts"><summary>${simple() ? "What a design change cannot do, and why" : `${plural(xs.length, "part needs a developer", "parts need a developer")}: what a design change cannot do, and why`}</summary><div class="panel"><ul>${xs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>${simple() ? "" : `<div class="actions"><button class="btn small" data-dev-copy title="Copies a link to this request, what it is about and these parts, to paste to a developer in Slack or a message">Copy a question for a developer</button></div>`}</div></details>`;
+  }
+  // A question for a developer about the parts a design change cannot do: a link, the request in a line, the parts.
+  function devQuestion(c) {
+    const xs = c.triage?.cannot || [];
+    return [`A question about ${c.id}: ${c.title}`, itemLink(c), `It is at ${stateWord(c)}. Design Desk says these parts need a developer:`,
+      ...xs.map((x) => `- ${x}`), "", "Can these be built, and roughly how big is each?"].join("\n");
   }
 
   // What Design Desk found before drawing; the summary says it in words, with no label.
@@ -3244,7 +3390,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       <div class="vbar">
         <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
-        ${slackModes(c).length ? `<button class="btn small" data-act="slack">Send to Slack…</button>` : ""}
+        ${c.status === "feedback" && slackModes(c).length ? `<button class="btn small" data-act="slack">Send to Slack…</button>` : ""}
         ${voteButtons(c, v.id, mine)}
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
@@ -3309,7 +3455,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     foldsFor(c);
     return `${backBar()}
-      <h2 class="renamable">${txt(c.title)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}${num(c)}${titleLink(c)}</h2>
+      <h2 class="renamable">${txt(c.title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : TYPE[r.type] ? `<span class="chip" title="Where this request came from">${esc(TYPE[r.type])}</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
@@ -4068,6 +4214,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (S.tab === "product" && S.productFilter === "decisions") {
       d.innerHTML = S.decision ? renderDecision(S.decision) : `<p class="pick">Every decision the team made about the product, with where it was made. Pick one, or search for one at the top.</p>${renderIntro()}`;
       $("#main").classList.toggle("has-detail", Boolean(S.decision));
+      // A decision's pictures load as a card's do.
+      if (S.decision?.pictures?.length) loadPictures(d);
       return;
     }
     if (!S.card) {
@@ -4082,6 +4230,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (["screen", "element", "digest"].includes(S.card.kind)) d.insertAdjacentHTML("beforeend", followsLine(S.card));
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
+    clampBriefs();
     if (S.card.kind === "screen") loadTimeline(S.card);
   }
 
@@ -4163,17 +4312,18 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return true;
   }
   // The frame may not get the clipboard: the browser's own copy, else the link shown to copy by hand.
-  async function copyLink(c) {
-    const link = itemLink(c);
-    try { await navigator.clipboard.writeText(link); toast(`Copied the link to ${c.id}.`); return; } catch {}
+  const copyLink = (c) => copyText(itemLink(c), `the link to ${c.id}`);
+  async function copyText(text, what) {
+    const done = () => toast(`Copied ${what}.`);
+    try { await navigator.clipboard.writeText(text); done(); return; } catch {}
     const t = document.createElement("textarea");
-    t.value = link; t.readOnly = true; t.style.cssText = "position:fixed;top:0;opacity:0";
+    t.value = text; t.readOnly = true; t.style.cssText = "position:fixed;top:0;opacity:0";
     document.body.append(t); t.select();
     let copied = false;
     try { copied = document.execCommand("copy"); } catch {}
     t.remove();
-    if (copied) { toast(`Copied the link to ${c.id}.`); return; }
-    await ask({ title: `The link to ${c.id}`, body: `The browser did not let the Desk copy it. Select it and copy it:\n\n\`${link}\``, ok: "Done", send: () => null });
+    if (copied) { done(); return; }
+    await ask({ title: what[0].toUpperCase() + what.slice(1), body: `The browser did not let the Desk copy it. Select it and copy it:\n\n\`\`\`\n${text}\n\`\`\``, ok: "Done", send: () => null });
   }
 
   // ---------- events ----------
@@ -4191,6 +4341,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     }
     if (name === "not-now") { await api("DELETE", `/api/cards/${c.id}/suggestion`); await refreshList(); await openCard(c.id); return; }
     if (name === "unqueue") { await api("DELETE", `/api/cards/${c.id}/agenda`); await refreshList(); await openCard(c.id); return; }
+    if (name === "delete") {
+      const r = await ask({ title: `Delete ${c.id} for good?`, body: "The request, its options, comments and pictures are deleted for everyone. This cannot be undone; the decisions recorded from it stay.", ok: "Delete it", send: () => api("DELETE", `/api/cards/${c.id}`) });
+      if (!r) return;
+      toast(`Deleted ${c.id}.`);
+      S.card = null; history.replaceState(null, "", location.pathname + location.search);
+      await refreshList(); renderDetail(); return;
+    }
     if (name === "clear-call") {
       const r = await ask({ title: "Mark all as presented?", body: "Everything on the presentation is marked as presented today, for everyone.", ok: "Mark all as presented", send: () => api("POST", "/api/calls", {}) });
       if (!r) return;
@@ -4414,6 +4571,14 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     await openCard(c.id);
   }
 
+  // A value in a row's source line: filter the list by it. A link in it still opens.
+  document.addEventListener("click", (e) => {
+    const sp = !e.target.closest("a, button") && e.target.closest("#list .row.item .prov > span");
+    if (!sp || !pfKey(sp)) return;
+    e.preventDefault();
+    S.pf = { view: pfView(), k: pfKey(sp), v: pfValue(sp) };
+    renderList();
+  });
   document.addEventListener("click", guard(async (e) => {
     const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
       || e.target.closest(".row.item > .meta")?.parentElement.querySelector(":scope > .open");
@@ -4442,7 +4607,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       S.justRead.clear();
       S[k] = v; if (FILTERS[k]) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
-    if (ds.dside !== undefined) { S.decisionSide = ds.dside; renderList(); return; }
+    if ("addDecision" in ds) { openDecisionDialog(); return; }
+    if ("pfClear" in ds) { S.pf = null; renderList(); return; }
     if (ds.dstate !== undefined) { S.decisionState = ds.dstate; S.decision = null; await loadDecisions(); renderList(); renderDetail(); return; }
     if (ds.decide) {
       const [th, i] = ds.decide.split(":");
@@ -4488,6 +4654,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { S.convoOpen = true; await post(ds.post); return; }
+    if ("devAsk" in ds) { const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
+    if ("devCopy" in ds) { await copyText(devQuestion(S.card), "a question for a developer"); return; }
     if ("teamFeedback" in ds) { await api("POST", `/api/cards/${S.card.id}/feedback`); toast("The team can vote and comment on the options now."); await openCard(S.card.id); await refreshList(); return; }
     if ("askOpen" in ds) { S.ask.open = true; await loadAsks(); renderAsk(); $("#ask-text")?.focus(); return; }
     if ("askClose" in ds) { S.ask.open = false; renderAsk(); return; }
@@ -4908,10 +5076,29 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     await refreshList(); renderNav(); renderBanners(); await openCard(r.card.id);
   }));
 
+  // ---------- the Add a decision dialog (docs/desk.md → Decisions) ----------
+  const decPics = [];
+  const addDecPic = (f) => addPicture(f, decPics, "#dc-thumbs", 2);
+  function openDecisionDialog() {
+    $("#decision-form").reset(); decPics.length = 0; $("#dc-thumbs").innerHTML = "";
+    const dlg = $("#decision-dialog"); dlg.returnValue = ""; dlg.showModal();
+  }
+  $("#dc-file").addEventListener("change", guard(async (e) => { for (const f of e.target.files) await addDecPic(f); e.target.value = ""; }));
+  $("#decision-dialog").addEventListener("paste", guard(async (e) => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) { e.preventDefault(); await addDecPic(it.getAsFile()); } }));
+  $("#decision-dialog").addEventListener("close", guard(async (e) => {
+    if (e.target.returnValue !== "send") return;
+    const f = $("#decision-form");
+    const body = { text: f.text.value.trim(), why: f.why.value.trim(), concepts: f.concepts.value.split(",").map((x) => x.trim()).filter(Boolean), images: decPics.map(({ contentType, data }) => ({ contentType, data })) };
+    const r = await sendOrReopen(e.target, () => api("POST", "/api/decisions", body));
+    toast(`Added as ${r.decision.id}.`);
+    S.decisionState = "active";
+    await openDecision(r.decision.id);
+  }));
+
   // ---------- the Add a person dialog ----------
   function openPersonDialog() {
     $("#person-form").reset();
-    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> <span class="rn">${esc(roleName(r))}</span> <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
+    $("#pe-roles").innerHTML = (S.people?.addable || []).map((r, i) => `<label><input type="radio" name="role" value="${r}" ${i ? "" : "checked"} required /> <span class="rn">${roleIcon(r)}${esc(roleName(r))}</span> <span class="sub">${esc(ROLE_ABOUT[r])}</span></label>`).join("");
     const dlg = $("#person-dialog"); dlg.returnValue = ""; dlg.showModal();
   }
   $("#person-dialog").addEventListener("close", guard(async (e) => {
@@ -5037,7 +5224,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function applyMe() {
     $("#new-request").hidden = !can("request");
     document.title = S.me?.name || "Design Desk";
-    $("#me").textContent = S.me ? `${S.me.email || ""} · ${roleName(S.me.role)}` : "";
+    $("#me").innerHTML = S.me ? `${esc(S.me.email || "")} · ${roleIcon(S.me.role)}${esc(roleName(S.me.role))}` : "";
     renderBanners();
   }
 

@@ -7,10 +7,43 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.50.1 — 2026-11-05
+## 1.52.1 — 2026-11-06
 
 **Upgrade:**
 Nothing — scripts are re-read per run.
+
+## 1.52.0 — 2026-11-06
+
+**Upgrade:**
+Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**), and restart the Desk server
+(`rc-service --user design-desk-server restart`): it adds a decision and deletes a request. The page
+looks the same everywhere: the Presentation's rows carry the state dot and red ! of every list,
+a screen's, an element's and a decision's page open with the status box (their buttons in it), an
+issue's GitHub link is a pill as a change's PR is, a request's page no longer has a
+Needs a developer label under its title (its steps name it), Send to Slack… shows only at Team
+feedback, a request with parts a design change cannot do and no live prototype to build has the
+next step Contact a developer (it opens those parts, with a question for a developer to copy), a decision's page drops its labels and its empty headings and names a decision it
+refers to by number and the start of its text, Product → Decisions is one list with
+**+ Add** (a designer or a lead records a decision with up to two pictures, `POST /api/decisions`),
+a decision's box names who decided it and where, each role has an icon by a person's name (the
+header, People, decisions), a closed request can be deleted from its ⋯ menu
+(`DELETE /api/cards/<id>`), a click on a value in a row's source line filters its list by it
+(a Filtered by bar with ×), only Slack and GitHub show a source icon, and colours and type sizes come from the
+page's tokens. Nothing else to do.
+
+## 1.51.0 — 2026-11-06
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the
+Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). A card in any list but the Presentation that goes against a
+decision in force shows a red ! under its state dot that unfolds into `Goes against D-<n>`
+(`GET /api/cards` adds `against`, the decisions' numbers; `GET /api/decisions` adds each
+conflict's `status`). Product's Screens, Elements, Decisions and History rows look like the other
+lists: a state dot and a `created:`/`decided:` `from:` `by:` line, in place of the summary and the
+chips. A folded request text or From Design Desk keeps two whole lines and half of the third,
+not counting a heading; the private ask's placeholder is in the smaller meta size. Nothing else to do.
 
 ## 1.50.0 — 2026-11-05
 
