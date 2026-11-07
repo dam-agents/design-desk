@@ -232,7 +232,7 @@ Figma link field either.
   screens, elements and shipped changes (not requests or decisions), filtered **Differs from
   Figma** (the default), **Matches**, **Closed** (only while one is) and **All**. Each row
   reads like a request's: the red **!** of a decision conflict, its words (**N differences
-  from Figma**) on hover, and under the title `checked: … type: … frame: …`. A row opens its
+  from Figma**) on hover, none once closed, and under the title `checked: … type: … frame: …`. A row opens its
   comparison page: the title, a status box with how many differ, the frame's dates, the pull
   request of a change, **Open in Figma ↗** and **Open the screen / element / PR change**, and
   under **⋯** **Close** and **Add to presentation**; then the whole screen or element from

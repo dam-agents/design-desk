@@ -2458,11 +2458,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // The red ! under a row's state: it goes against a decision in force, or, on Product →
   // Differences, it differs from its frame in Figma; its words open on hover.
   const againstDot = (c) => { const ids = c.against || [];
-    const fig = S.tab === "product" && S.productFilter === "differences" && c.figma?.verdict === "differs" ? plural(c.figma.count, "difference", "differences") + " from Figma" : "";
-    if (!ids.length && !fig) return "";
+    // A closed comparison keeps no !: nobody needs to act on it.
+    const n = S.tab === "product" && S.productFilter === "differences" && c.figma?.verdict === "differs" && !c.figma.closed ? c.figma.count : 0;
+    if (!ids.length && !n) return "";
     const shown = ids.length > 3 ? `${ids.slice(0, 3).join(", ")} +${ids.length - 3}` : ids.join(", ");
-    const words = [fig, ids.length && `Goes against ${shown}`].filter(Boolean).join(" · ");
-    const title = [fig && `It ${fig.replace(/ from Figma$/, "")} from its frame in Figma`, ids.length && `It goes against ${ids.join(", ")}, in force: a designer approves it only knowingly`].filter(Boolean).join(". ");
+    const words = [n && `${plural(n, "difference", "differences")} from Figma`, ids.length && `Goes against ${shown}`].filter(Boolean).join(" · ");
+    const title = [n && `It differs from its frame in Figma in ${plural(n, "place", "places")}`, ids.length && `It goes against ${ids.join(", ")}, in force: a designer approves it only knowingly`].filter(Boolean).join(". ");
     return `<span class="sdot vdot"><span class="chip tag" title="${esc(title)}"><span class="w">${esc(words)}</span></span></span>`; };
   // A row's state dot, whatever the item: a request's state, a PR's or an issue's, a drawing's.
   const rowDot = (c) => c.kind === "change" || c.kind === "issue" ? ghDot(c) : c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : c.kind === "screen" || c.kind === "element" ? mapDot(c) : "";
@@ -2501,6 +2502,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
     if (S.productFilter === "differences" && !figmaOn()) S.productFilter = "screens";
+    // Closed is drawn only while one is closed: reopening the last one goes back to Differs.
+    if (S.figFilter === "closed" && !figmaCards("closed").length) S.figFilter = "differs";
     const cards = visibleCards();
 
     // A tab's pages (Product's four, Requests and its presentation) are tabs; filters narrow the page's list.

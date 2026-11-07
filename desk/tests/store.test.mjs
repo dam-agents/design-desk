@@ -1585,7 +1585,7 @@ test("an item read against its frame in Figma: what differs, how much, each side
   const { card } = s.upsertCard({ id: screen.id, figma_check: { verdict: "differs", frame, product_shot: pic, differences: [diff, { ...diff, part: "Header", severity: "major" }] } });
   assert.deepEqual([card.figma_check.differences.length, card.figma_check.frame.edited, Boolean(card.figma_check.checked)], [2, "2026-11-04T10:00:00.000Z", true]);
   const row = s.listCards({ kind: "screen" })[0];
-  assert.deepEqual(row.figma, { verdict: "differs", count: 2, frame: "Agents list", checked: card.figma_check.checked });
+  assert.deepEqual(row.figma, { verdict: "differs", count: 2, frame: "Agents list", checked: card.figma_check.checked, closed: false });
   // On a request it belongs to the option it compared.
   const { card: r } = s.createRequest(alice, { title: "Bigger send", problem: "Too small." });
   s.upsertCard({ id: r.id, variants: [{ id: "v1", name: "Calm", asset: page }] });
@@ -1612,7 +1612,7 @@ test("an item read against its frame in Figma: what differs, how much, each side
   assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { ...check, differences: [diff, { ...diff, severity: "major" }] } }), /named twice/);
   s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: "a7b1" } } });
   s.dismissFigma(screen.id, alice, "Header"); s.dismissFigma(screen.id, alice, "Stopped dot");
-  assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked }, "all off: it matches");
+  assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked, closed: false }, "all off: it matches");
   s.dismissFigma(screen.id, alice, "Header", false);
   assert.equal(s.listCards({ kind: "screen" })[0].figma.count, 1, "brought back");
   s.upsertCard({ id: screen.id, figma_check: null });

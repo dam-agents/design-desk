@@ -769,18 +769,20 @@ export class Store {
         continue;
       }
       // `marks`: every message the row folds, for the page to light them all.
-      // `id`: the row's lead event; a newer message on a folded row makes it a new, unread row.
-      const lead = { id: [x.event, x.item || x.thread || "", x.at, x.msg ?? ""].join("|"), ...x, count: 1, people: x.by ? [x.by] : [], ...(x.thread ? { marks: [[x.thread, x.msg]] } : {}) };
+      const lead = { ...x, count: 1, people: x.by ? [x.by] : [], ...(x.thread ? { marks: [[x.thread, x.msg]] } : {}) };
       if (k) open.set(k, lead);
       rows.push(lead);
     }
+    // `id`: the row's lead event, its thread and how many it folds, so a newer message on a
+    // folded row, or a new thread in the same second, is a new, unread row.
+    for (const x of rows) x.id = [x.event, x.item || "", x.at, x.thread || "", x.msg ?? "", x.count].join("|");
     const seen = (key && own(this.db.seen, key)) || null, noted = new Set((key && own(this.db.noted, key)) || []);
     for (const x of rows) x.read = Boolean(seen && x.at <= seen) || noted.has(x.id);
     return { items: rows.slice(0, limit), seen, unread: rows.filter((x) => x.for_you && !x.read).length };
   }
 
-  // A person clicked one row: read for them alone. Kept only while the row is unread by `seen`
-  // and still in the bell, so the list stays short; a row read already writes nothing.
+  // A person clicked one row: read for them alone. An id is kept while its row is still in the
+  // bell and newer than `seen`, so the list stays short; a row read already writes nothing.
   markNoteRead(who, id) {
     const key = viewerKey(who);
     if (!key) return { read: false };
@@ -788,7 +790,8 @@ export class Store {
     const row = items.find((x) => x.id === String(id || ""));
     if (!row) throw bad("That notification is not in the bell.");
     if (row.read) return { read: true };
-    const keep = new Set(items.filter((x) => !x.read).map((x) => x.id));
+    const seen = own(this.db.seen, key) || null;
+    const keep = new Set(items.filter((x) => !seen || x.at > seen).map((x) => x.id));
     const ids = [...((own(this.db.noted, key)) || []).filter((x) => keep.has(x)), row.id];
     Object.defineProperty(this.db.noted, key, { value: ids, enumerable: true, writable: true, configurable: true });
     this.save();

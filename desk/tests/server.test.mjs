@@ -365,9 +365,19 @@ test("notifications: the bell lists what others did; a click reads one row, Mark
   assert.equal((await d.viewer("alice@example.com", `/api/notifications/read?id=${encodeURIComponent(first.items[0].id)}`, {})).body.read, true);
   assert.deepEqual([(await bell("alice@example.com")).unread, (await bell("alice@example.com")).items[0].read], [0, true]);
   assert.equal((await d.viewer("alice@example.com", "/api/notifications/read?id=nope", {})).status, 400, "only a row in the bell");
-  // A newer message is a new, unread row; Mark as read reads every one.
+  // A comment on another of her requests is a second row; reading it keeps the first one read.
+  const id2 = (await d.viewer("alice@example.com", "/api/requests", { problem: "The rows shout." })).body.card.id;
+  await d.viewer("bob@example.com", `/api/cards/${id2}/threads`, { kind: "comment", text: "Loud indeed." });
+  const second = await bell("alice@example.com");
+  const fresh = second.items.find((x) => x.item === id2 && x.event === "comment");
+  assert.deepEqual([second.unread, fresh.read], [1, false], "the new row is unread");
+  await d.viewer("alice@example.com", `/api/notifications/read?id=${encodeURIComponent(fresh.id)}`, {});
+  const both = await bell("alice@example.com");
+  assert.deepEqual([both.unread, both.items.filter((x) => x.for_you).every((x) => x.read)], [0, true], "a second click keeps the first row read");
+  // A newer message on a read row, even in the same second, makes it a new, unread row.
   await d.viewer("bob@example.com", `/api/cards/${id}/threads`, { kind: "comment", text: "Still busy." });
-  assert.equal((await bell("alice@example.com")).unread, 1);
+  assert.equal((await bell("alice@example.com")).unread, 1, "the folded row is new again");
+  // Mark as read reads every one.
   assert.ok((await d.viewer("alice@example.com", "/api/notifications/seen", {})).body.seen);
   assert.equal((await bell("alice@example.com")).unread, 0);
 });
