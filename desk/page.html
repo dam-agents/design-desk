@@ -70,30 +70,30 @@
   details.bell > summary svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
   details.bell .badge { position: absolute; top: 1px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 600; line-height: 16px; text-align: center; border: 2px solid var(--panel); }
   details.bell .menu.notes { left: auto; right: 0; width: min(420px, calc(100vw - 24px)); max-width: none; padding: 0; gap: 0; overflow: hidden; }
-  .notes .nh { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px 14px; border-bottom: 1px solid var(--line); }
-  .notes .nh b { font-size: 14px; flex: 1; }
-  .notes .nh .tabs2 { display: flex; gap: 2px; background: var(--soft); padding: 2px; border-radius: 7px; }
-  .notes .nh .tabs2 button { border: 0; background: transparent; padding: 2px 9px; border-radius: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
-  .notes .nh .tabs2 button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
-  .notes .nl { max-height: min(560px, 70vh); overflow-y: auto; }
-  .notes .day { padding: 8px 14px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-  .notes .note { --c: var(--muted); display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 10px; width: 100%; padding: 9px 14px 9px 12px; border: 0; border-left: 3px solid transparent; background: transparent; text-align: left; cursor: pointer; font-size: 13px; line-height: 1.4; }
-  .notes .note:hover { background: var(--soft); }
-  .notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
-  .notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
-  .notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #notes .nh { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px 14px; border-bottom: 1px solid var(--line); }
+  #notes .nh b { font-size: 14px; flex: 1; }
+  #notes .nh .tabs2 { display: flex; gap: 2px; background: var(--soft); padding: 2px; border-radius: 7px; }
+  #notes .nh .tabs2 button { border: 0; background: transparent; padding: 2px 9px; border-radius: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  #notes .nh .tabs2 button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+  #notes .nl { max-height: min(560px, 70vh); overflow-y: auto; }
+  #notes .day { padding: 8px 14px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  #notes .note { --c: var(--muted); display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 10px; width: 100%; padding: 9px 14px 9px 12px; border: 0; border-left: 3px solid transparent; background: transparent; text-align: left; cursor: pointer; font-size: 13px; line-height: 1.4; }
+  #notes .note:hover { background: var(--soft); }
+  #notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
+  #notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+  #notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   /* A row is at most three lines: what and who, the item, what was said; each line cuts with … */
-  .notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .notes .note .ev span { font-weight: 400; color: var(--muted); }
-  .notes .note time { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
-  .notes .note .ti { grid-column: 2 / span 2; display: flex; gap: 8px; align-items: baseline; min-width: 0; color: var(--ink); }
-  .notes .note .ti span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .notes .note .ti .num { margin-left: auto; flex: none; font-size: 11px; }
-  .notes .note .ti em { font-style: normal; color: var(--muted); }
-  .notes .note .q { grid-column: 2 / span 2; margin-top: 3px; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
-  .notes .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
-  .notes .note[data-g="talk"] { --c: var(--accent); } .notes .note[data-g="agent"] { --c: var(--why); } .notes .note[data-g="new"] { --c: var(--live); }
-  .notes .note[data-g="design"] { --c: #e0701a; } .notes .note[data-g="ok"] { --c: var(--approved); } .notes .note[data-g="decision"] { --c: var(--decided); } .notes .note[data-g="closed"] { --c: var(--closed); }
+  #notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #notes .note .ev span { font-weight: 400; color: var(--muted); }
+  #notes .note time { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  #notes .note .ti { grid-column: 2 / span 2; display: flex; gap: 8px; align-items: baseline; min-width: 0; color: var(--ink); }
+  #notes .note .ti span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #notes .note .ti .num { margin-left: auto; flex: none; font-size: 11px; }
+  #notes .note .ti em { font-style: normal; color: var(--muted); }
+  #notes .note .q { grid-column: 2 / span 2; margin-top: 3px; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
+  #notes .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+  #notes .note[data-g="talk"] { --c: var(--accent); } #notes .note[data-g="agent"] { --c: var(--why); } #notes .note[data-g="new"] { --c: var(--live); }
+  #notes .note[data-g="design"] { --c: #e0701a; } #notes .note[data-g="ok"] { --c: var(--approved); } #notes .note[data-g="decision"] { --c: var(--decided); } #notes .note[data-g="closed"] { --c: var(--closed); }
   .intro figure.flow { margin: 14px 0 4px; }
   /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
   .num { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: .7em; white-space: nowrap; margin-left: .45em; }
@@ -5876,6 +5876,20 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       if (ask?.context?.variant && c && (c.variants || []).some((v) => v.id === ask.context.variant)) { S.variant = ask.context.variant; renderDetail(); }
       S.ask.open = true; await loadAsks(); renderAsk();
       return spot(document.querySelector(`#ask [data-m="${CSS.escape(`${x.thread}:${x.msg ?? 0}`)}"]`) || $("#ask .ask-panel"), "nearest");
+    }
+    // A note from the design workspace opens there, on its option, state and part, the note
+    // picked with its whole conversation; a done one shows under All.
+    const an = th?.anchor;
+    if (an?.variant && (c?.variants || []).some((v) => v.id === an.variant)) {
+      S.variant = an.variant;
+      S.ws = { ...S.ws, open: true, check: false, version: null, edit: null, alt: null, note: th.id, state: an.state || null,
+        filter: th.state === "resolved" ? "all" : S.ws.filter || "open",
+        selected: an.selector ? { selector: an.selector, text: an.text || "", tag: an.tag || "", label: an.label || an.text || "an element", view: an.view, view_name: an.view_name } : null };
+      renderDetail(); renderWorkspace();
+      const li = document.querySelector(`[data-ws-note="${CSS.escape(th.id)}"]`), ms = li ? [...li.querySelectorAll(".m")] : [];
+      for (const [tid, m] of (x.marks || []).slice(1)) if (tid === th.id && ms[m]) spot(ms[m], "nearest");
+      spot(ms[x.msg ?? 0] || li, "nearest");
+      return;
     }
     const variant = x.variant || th?.anchor?.variant;
     if (c && variant && variant !== S.variant && (c.variants || []).some((v) => v.id === variant)) { S.variant = variant; renderDetail(); }

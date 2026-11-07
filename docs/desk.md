@@ -485,7 +485,8 @@ says how many (3 new messages) and who, two names and then +N, and shows the new
 For you, private or neither, never a mix, and the count counts rows.
 
 A click lands on the source, not only its item, and every fold around it opens: a message with
-its conversation unfolded and scrolled to it (a row of several lights each); a private answer in
+its conversation unfolded and scrolled to it (a row of several lights each); a note from the
+design workspace in the workspace, on its option, state and part, the note picked; a private answer in
 the private chat, on the option it was asked about; options drawn, a vote or an approval on that
 option's tab (its votes, or the request's state); a spec unfolded; a request on its text; a
 decision on its page, a revoked one on why. The place pulses twice and fades out, 3 seconds

@@ -2028,8 +2028,13 @@ window.posts = [];
 const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
 const thread = { id: "t1", card: "C-1", kind: "comment", state: "open", messages: [{ by: { email: "pat@example.com" }, at: ago(5), text: "Looks good" }] };
 const cards = [{ id: "C-1", kind: "change", title: "A new header", status: "open", summary: "The header changed.", source: { repo: "acme/widgets", pr: 45 }, threads: [thread] },
-  { id: "C-2", kind: "request", title: "Calmer list", status: "triage", request: { problem: "Too loud." } }];
+  { id: "C-2", kind: "request", title: "Calmer list", status: "triage", request: { problem: "Too loud." } },
+  { id: "C-3", kind: "request", title: "Quieter rows", status: "feedback", triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, request: { problem: "Rows shout." },
+    variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }],
+    threads: [{ id: "t2", card: "C-3", kind: "comment", state: "open", anchor: { variant: "v1", selector: "button", text: "Send", label: "The send button" },
+      messages: [{ by: { email: "pat@example.com" }, at: ago(3), text: "Too big" }] }] }];
 const items = [
+  { at: ago(3), event: "comment", item: "C-3", kind: "request", title: "Quieter rows", by: { email: "pat@example.com" }, detail: "Too big", thread: "t2", msg: 0, for_you: false, count: 1, people: [{ email: "pat@example.com" }], marks: [["t2", 0]] },
   { at: ago(5), event: "comment", item: "C-1", kind: "change", title: "A new header", by: { email: "pat@example.com" }, detail: "Looks good", thread: "t1", msg: 0, for_you: true, count: 1, people: [{ email: "pat@example.com" }], marks: [["t1", 0]] },
   { at: ago(9), event: "new-request", item: "C-2", kind: "request", title: "Calmer list", by: { email: "pat@example.com" }, for_you: false, count: 1, people: [{ email: "pat@example.com" }] }];
 window.platform = { async request({ method, path }) {
@@ -2037,7 +2042,8 @@ window.platform = { async request({ method, path }) {
   const answer = path === "/api/me" ? { role: "designer", email: "a@example.com", key: "a@example.com", can: { comment: true } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
     : path === "/api/notifications" ? { items, seen: null, unread: 1 }
-    : path === "/api/cards/C-1" ? { card: cards[0] } : path === "/api/cards/C-2" ? { card: cards[1] } : {};
+    : path === "/api/cards/C-1" ? { card: cards[0] } : path === "/api/cards/C-2" ? { card: cards[1] } : path === "/api/cards/C-3" ? { card: cards[2] }
+    : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
@@ -2052,13 +2058,21 @@ test("the bell counts what is For you, opens on it, marks it seen, shows All on 
   assert.equal(await desk.locator("#notes [data-note]").count(), 1);
   assert.match(await desk.textContent("#notes [data-note]"), /New comment[\s\S]*PR change:[\s\S]*A new header/, "what happened, the kind in grey, the title");
   await desk.click('#notes [data-only="0"]');
-  assert.equal(await desk.locator("#notes [data-note]").count(), 2, "All shows the rest too");
+  assert.equal(await desk.locator("#notes [data-note]").count(), 3, "All shows the rest too");
   assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), true, "a tab keeps the panel open");
   await desk.click('#notes [data-only="1"]');
   await desk.click("#notes [data-note]");
   await desk.waitForSelector('#th-t1 [data-m="0"].spot');
   assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), false, "the panel closes");
   assert.equal(await desk.evaluate(() => document.querySelector("[data-convo]").open), true, "the conversation is unfolded");
+  // A note from the design workspace opens the workspace on its option, its note picked and lit;
+  // the bell's row styles stay in the bell.
+  await desk.click("#bell-btn");
+  await desk.click('#notes [data-only="0"]');
+  await desk.click('#notes [data-note="0"]');
+  await desk.waitForSelector('[data-ws-note="t2"][aria-current="true"] .m.spot');
+  assert.notEqual(await desk.$eval('[data-ws-note="t2"]', (li) => getComputedStyle(li).display), "grid", "a workspace note is not drawn as a bell row");
+  await desk.click("[data-ws-close]");
   // The shared click-away rule: a menu button without data-keep closes its menu.
   await desk.click("#me");
   assert.equal(await desk.evaluate(() => document.querySelector(".me-menu").open), true);
