@@ -837,6 +837,8 @@
   details.convo > summary::before { content: "▸"; font-size: var(--fs-meta); } details.convo[open] > summary::before { content: "▾"; }
   details.convo > summary .cnt { color: var(--muted); }
   details.convo .threads { margin-top: 10px; }
+  /* Designs: the questions for the designer sit under their box, as the conversation does on a request. */
+  .composer + .threads, .design-asks { margin-top: 14px; }
   .thread { border-radius: 10px; }
   .thread .head { font-size: var(--fs-meta); }
   .msg .who { font-size: var(--fs-meta); color: var(--muted); } .msg .who b { color: var(--ink); }
@@ -2974,7 +2976,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     }).join("");
     // The designer answers in the thread; only who sees Designs asks.
     if (designs) return `${can("designs") ? `<div class="composer" id="composer"><textarea id="composer-text" maxlength="4000" placeholder="Ask the designer how something is meant…"></textarea>
-        <div class="bar"><button class="btn primary" data-post="designer">Ask the designer</button></div></div>` : ""}${rows ? `<div class="threads">${rows}</div>` : ""}`;
+        <div class="bar"><button class="btn primary" data-post="designer">Ask the designer</button></div></div>` : ""}${rows ? `<div class="threads design-asks">${rows}</div>` : ""}`;
     const open = threads.filter((th) => th.state !== "resolved").length;
     // The conversation folds under the box, as on the prototype; it stays as the reader left it.
     const convo = threads.length ? `<details class="convo" data-convo${S.convoOpen ? " open" : ""}><summary>Show the conversation <span class="cnt">${plural(threads.length, "thread", "threads")}${open ? ` · ${open} open` : ""}</span></summary><div class="threads">${rows}</div></details>` : "";
