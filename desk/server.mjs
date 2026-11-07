@@ -124,7 +124,7 @@ function settings() {
 const VERBS = { ack: "mark changes as seen", handle: "mark changes and issues as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "remove a design option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
-  draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk" };
+  draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk", designs: "see Designs", built: "mark designs done" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -172,7 +172,7 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "an admin" : action === "size" ? "designers, PMs and lead developers" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "an admin" : action === "size" ? "designers, PMs and lead developers" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : action === "built" ? "developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
@@ -225,6 +225,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "calls") return send(res, 200, store.closeCall(actor, b));
   if (m === "POST" && p[1] === "cards" && p[3] === "presented") return send(res, 200, store.markPresented(p[2], actor, b.presented !== false));
   if (m === "POST" && p[1] === "cards" && p[3] === "ack") { need("ack"); return send(res, 200, store.ack(p[2], actor)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "built") { need("built"); return send(res, 200, store.markBuilt(p[2], actor, b.built !== false)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "handled") { need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
   // A difference from Figma taken off an item's table, or brought back (docs/desk.md → Differences from Figma).
   if (m === "POST" && p[1] === "cards" && p[3] === "figma-close") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.closeFigma(p[2], actor, b.on !== false)); }
@@ -232,7 +233,9 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "threads") {
     need(b.kind === "question" ? "ask" : b.kind === "change" ? "change" : "comment");
     const { kind, text, anchor } = b;
-    return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor }), s, who));
+    // A question for the designer, from Designs (docs/desk.md → Designs).
+    const dev = b.dev === true && can(who.deskRole, "designs", s.prototypeRoles);
+    return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor, dev }), s, who));
   }
   if (m === "POST" && p[1] === "private") { need("ask"); return send(res, 201, withPing(store.openPrivate(actor, { text: b.text, starter: typeof b.starter === "string" ? b.starter : null, context: b.context }), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need("comment"); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }

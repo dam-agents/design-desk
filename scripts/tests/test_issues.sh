@@ -131,7 +131,7 @@ assert "in force by number, a role and a kind, a developer's not approved yet, r
 assert "an admin decides on the design side, by the roster or by the role a decision kept as lead before 1.59.0" \
   'test("### D-11[^#]*Decided 2026-10-08 by an admin, from the Desk\\.") and test("### D-12[^#]*Decided 2026-10-09 by an admin, from the Desk\\.") and (test("### D-1[12][^#]*Not approved yet") | not)' "$(jq -Rs . <<<"$page")"
 assert "no name, login, e-mail, Slack id or link" '(test("Xavier|bob|dana|alice@|U0123ABCD|https?://") | not) and test("\\[e-mail\\]")' "$(jq -Rs . <<<"$page")"
-# Every shape that leaked before 1.62.1, through text, why, concepts and revoked.reason (issue #83).
+# Every shape that leaked before 1.63.1, through text, why, concepts and revoked.reason (issue #83).
 assert "links, Slack forms, e-mails in any case, keys and the roster's and store's names are masked" \
   '(test("(?i)https?:|www\\.|acme\\.(com|test)|<[@#]|U0999|carol|jones|kowalski|dana|xavier|bob|github_pat|sk-ant|AKIA|xoxb") | not)
    and test("Why: Ask \\[e-mail\\] or \\[person\\]\\. \\[person\\] said so; \\[link\\] with \\[person\\] and \\[person\\], \\[key\\]\\.\n")

@@ -858,7 +858,7 @@ digest_mode() {
       revoked: [ (.decisions // {})[] | select(.revoked.at | inweek) | {id, text, reason: .revoked.reason, replaced_by: .revoked.replaced_by} ],
       feedback: ([ ($cards[] | select(.kind == "request" and .request.type == "bug" and (.created | within($month)))
                    | {card: .id, kind: (if .origin.automated then "test finding" else "bug" end), text: ((.title + ": " + (.request.problem // ""))[0:240])}),
-                 (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.created | within($month)) and (.messages[0].by.agent != true))
+                 (.threads[]? | select((.kind == "comment" or .kind == "concern" or .kind == "question") and (.dev != true) and (.created | within($month)) and (.messages[0].by.agent != true))
                    | {card, kind, text: (.messages[0].text[0:240])}) ] | .[0:150])
     }' "$DB" 2>/dev/null)" || fail_out "cannot read the Desk store at $DB"
   if [ "$(jq -r .done <<<"$out")" = true ]; then log "the digest of $period is written"; quiet_out; fi
