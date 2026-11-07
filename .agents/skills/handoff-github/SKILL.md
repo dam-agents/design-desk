@@ -60,7 +60,11 @@ product's clone (`bash "$HOME/scripts/checkout.sh" <repo>`), so links it makes t
 repository's own guidelines resolve. Its "get the user's approval" step is the Approve above.
 Every issue, comment or pull request this skill writes carries the hidden marker
 `<!-- design-desk card=C-<n> -->`; before writing, search for it (`gh search issues` or the
-thread's comments) and edit what it finds instead of writing a second one.
+thread's comments) and edit what it finds instead of writing a second one. A send after a
+reopen (the card has `sends`; send `k` = `sends` + 1) writes the marker
+`<!-- design-desk card=C-<n> send=<k> -->` and searches for exactly that one: an earlier
+send's write (no `send=`, or another number) is never edited, and the send is always a new
+issue ([docs/handoff.md](../../../docs/handoff.md) step 6), whatever the type below says.
 Every call names the repository with `-R <[host/]owner/name>`.
 
 ## Nothing to ask
@@ -107,3 +111,11 @@ origin issue (`feature`) or to the issue filed above; with no issue filed (`pr-c
 
 Record ordering: create the issue, comment or pull request first and write its URL to the
 card right after; the marker search prevents a duplicate and finds a lost URL.
+
+**Closing the earlier send** (the item's `close_earlier`, [docs/handoff.md](../../../docs/handoff.md)
+step 6): only after the new issue's URL is on the card, only the URL the item names, in the
+same repository. Read it (`gh issue view` / `gh pr view` with `--json state`); open → one
+comment linking the new issue, then `gh issue close` (an issue) or `gh pr close` (only a
+`design-desk/` draft pull request carrying this card's marker; any other is left open);
+closed or merged → nothing. Put the outcome on the card as one agent comment; a refused
+close is reported and never fails the delivery.

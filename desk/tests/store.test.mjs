@@ -339,6 +339,15 @@ test("a person switches off a live prototype: a teardown, the request stays wher
   const r = s.act(card.id, alice, "switch-off");
   assert.deepEqual([r.inbox.kind, r.card.status], ["teardown", "testing"]);
   assert.throws(() => s.act(card.id, alice, "switch-off"), /already|working/i, "one teardown at a time");
+  // Not once the design is approved: Build it again could not follow.
+  const sent = s.createRequest(bob, { title: "Approved one", problem: "x" }).card;
+  s.upsertCard({ id: sent.id, status: "spec", triage: { verdict: "design", reasons: ["Only the look."] }, prototype: { state: "live", url: "https://example.com/q" } });
+  assert.throws(() => s.act(sent.id, alice, "switch-off"), /no live prototype on/);
+  // Not while a build of it waits.
+  const building = s.createRequest(bob, { title: "Rebuilding", problem: "x" }).card;
+  s.upsertCard({ id: building.id, status: "testing", triage: { verdict: "design", reasons: ["Only the look."] }, prototype: { state: "live", url: "https://example.com/r" } });
+  s.enqueue("build", building.id, null, alice);
+  assert.throws(() => s.act(building.id, alice, "switch-off"), /building this prototype again/);
 });
 
 test("while its prototype is live, approve takes live_pick back at feedback; an option taken off leaves live_pick and its waiting build", () => {
@@ -514,7 +523,43 @@ test("only an admin reopens a request sent to developers: back before the vote w
   assert.deepEqual(s.listCards().find((x) => x.id === card.id).sends.map((x) => x.built), [rec.built.at], "the list names the earlier record");
   // Approved again: the new send may close the earlier issue, when the person ticks it.
   s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Look only."] } });
-  assert.equal(s.act(card.id, alice, "approve", "v1", { closeEarlier: true }).inbox.close_earlier, "https://github.com/acme/widgets/issues/142");
+  const approved = s.act(card.id, alice, "approve", "v1", { closeEarlier: true }).inbox;
+  assert.equal(inbox(s).open.find((i) => i.id === approved.id).close_earlier, "https://github.com/acme/widgets/issues/142", "the agent reads it in inbox.json");
+  // Send to developers carries it too.
+  s.claim(approved.id, "s1"); s.done(approved.id, "s1", "spec written");
+  s.upsertCard({ id: card.id, status: "spec", spec: { asset: page } });
+  const sentAgain = s.specAction(card.id, alice, { action: "send", closeEarlier: true }).inbox;
+  assert.equal(inbox(s).open.find((i) => i.id === sentAgain.id).close_earlier, "https://github.com/acme/widgets/issues/142");
+  assert.equal(inbox(s).open.find((i) => i.id === sentAgain.id).scope, "deliver");
+  // Sent and reopened again: the second record holds only the questions asked since.
+  s.claim(sentAgain.id, "s2"); s.done(sentAgain.id, "s2", "sent");
+  s.upsertCard({ id: card.id, status: "handed-off", spec: { asset: page, issue_url: "https://github.com/acme/widgets/issues/150" } });
+  const ask2 = s.openThread(card.id, bob, { text: "Mobile?", dev: true }).thread;
+  const again = s.act(card.id, { email: "ann@example.com", role: "admin" }, "reopen");
+  assert.deepEqual(again.card.sends.map((x) => x.threads), [[ask.id], [ask2.id]]);
+});
+
+test("a send after a reopen closes only an issue or pull request; a reopen with no options goes back to triage", () => {
+  const s = fresh();
+  const admin = { email: "ann@example.com", role: "admin" };
+  const sentWith = (spec, variants = []) => {
+    const { card } = s.createRequest(alice, { title: "Header", problem: "Too loud." });
+    s.upsertCard({ id: card.id, status: "handed-off", triage: { verdict: "design", reasons: ["Look only."] }, variants, spec });
+    Object.assign(s.card(card.id), { approved: { by: alice, at: "2026-11-05T09:00:00Z" } });
+    return card.id;
+  };
+  // No options: back to triage, checked again.
+  const bare = sentWith({ pr_url: "https://github.com/acme/widgets/pull/7" });
+  const r = s.act(bare, admin, "reopen");
+  assert.deepEqual([r.card.status, r.inbox.kind], ["triage", "request"]);
+  // A pull request's URL when there is no issue.
+  s.claim(r.inbox.id, "s1"); s.done(r.inbox.id, "s1", "triaged");
+  assert.equal(s.act(bare, alice, "approve", "", { closeEarlier: true }).inbox.close_earlier, "https://github.com/acme/widgets/pull/7");
+  // A comment on the origin issue is never closed: its issue is not the send's own.
+  const feature = sentWith({ issue_url: "https://github.com/acme/widgets/issues/5#issuecomment-99" });
+  s.act(feature, admin, "reopen");
+  const item = s.act(feature, alice, "approve", "", { closeEarlier: true }).inbox;
+  assert.equal(item.close_earlier, undefined);
 });
 
 test("an approved design is final: nothing changes it; a new request starts from it", () => {

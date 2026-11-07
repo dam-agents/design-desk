@@ -175,6 +175,27 @@ test("straight to implementation where the spec reaches GitHub: the approval and
   assert.deepEqual([ok.body.card.approved.implement, ok.body.inbox.implement], [true, true]);
 });
 
+test("a request sent, reopened by an admin and sent again: Approve and Send to developers both pass close_earlier on", async (t) => {
+  const d = await desk(t, "- handoff: issue\n\n");
+  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "The header shouts.", options: 0 })).body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id, triage: { verdict: "design", reasons: ["Only the look."] } })).status, 200);
+  const first = (await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header." })).body.inbox.id;
+  const finish = async (item) => { await d.agent(`/agent/items/${item}/claim`, { session: "s1" }); await d.agent(`/agent/items/${item}/done`, { session: "s1" }); };
+  await finish(first);
+  assert.equal((await d.agent("/agent/cards", { id, status: "handed-off", spec: { issue_url: "https://github.com/acme/widgets/issues/142" } })).status, 200);
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "reopen" })).status, 403, "only an admin reopens a sent request");
+  const reopened = await d.viewer("lee@example.com", `/api/cards/${id}/actions`, { action: "reopen" });
+  assert.deepEqual([reopened.status, reopened.body.card.sends.length], [200, 1]);
+  await finish(reopened.body.inbox.id);
+  const again = await d.viewer("lou@example.com", `/api/cards/${id}/actions`, { action: "approve", note: "Grey header.", close_earlier: true });
+  assert.equal(again.body.inbox.close_earlier, "https://github.com/acme/widgets/issues/142");
+  await finish(again.body.inbox.id);
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec", encoding: "utf8" });
+  assert.equal((await d.agent("/agent/cards", { id, status: "spec", spec: { asset: asset.id } })).status, 200);
+  const sent = await d.viewer("lou@example.com", `/api/cards/${id}/spec`, { action: "send", close_earlier: true });
+  assert.deepEqual([sent.status, sent.body.inbox.close_earlier], [200, "https://github.com/acme/widgets/issues/142"]);
+});
+
 test("prototype_requesters reads a role as the roster does: `Lead developer` is lead-developer", async (t) => {
   const d = await desk(t, "- prototype_requesters: designer, Lead developer\n\n");
   const build = async (email) => (await d.viewer(email, "/api/me")).body.can.build;
@@ -419,6 +440,9 @@ test("a PM moves a request along — size, close, reopen, build by default — a
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "close" })).body.card.status, "declined", "a PM does");
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "reopen" })).status, 403, "a developer does not reopen it");
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "reopen" })).body.card.status, "triage", "a PM does");
+  // Switching off a live prototype is a builder's: a developer gets 403, a PM the store's answer.
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "switch-off" })).status, 403);
+  assert.match((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "switch-off" })).body.error, /no live prototype/);
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/presented`, {})).status, 403, "marking an item presented stays a designer's");
   assert.equal((await d.viewer("pat@example.com", "/api/calls", {})).status, 403, "and so does marking the presentation presented");
 });

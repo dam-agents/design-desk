@@ -1262,7 +1262,9 @@ export class Store {
     const kinds = { explore: "explore", "add-option": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "switch-off": "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
     // A person switches off a live prototype before its expiry; the request stays where it is (docs/prototype.md → Teardown).
-    if (action === "switch-off" && !["live", "building"].includes(c.prototype?.state)) throw bad("This request has no live prototype on.");
+    // Only while the request is still being designed, so Build it again can follow.
+    if (action === "switch-off" && !(["prototype", "testing"].includes(c.status) && c.prototype?.state === "live")) throw bad("This request has no live prototype on to switch off.");
+    if (action === "switch-off" && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "build")) throw bad("Design Desk is building this prototype again. Switch it off once that is done.");
     // Every state of one part of an option: the option and the part a person picked.
     const stateOf = action === "states" ? (c.variants || []).find((v) => v.id === variant) : null;
     if (action === "states" && !stateOf) throw bad("Pick the design option whose states to draw.");
@@ -2331,8 +2333,12 @@ function mustBeChecked(c, verb) {
 // disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
 // An approved design is final: from Approve on (the spec, sent to developers) nothing changes
 // it; a change is a new request made from it (docs/desk.md → Approved is final).
-// The issue or pull request of a request's last earlier send (docs/desk.md → Designs).
-const earlierSend = (c) => { const s = (c.sends || []).slice(-1)[0]; return s?.spec?.issue_url || s?.spec?.pr_url || null; };
+// The issue or pull request of a request's last earlier send, which a new send may close
+// (docs/handoff.md, step 6): never a comment, whose issue is not the send's own.
+const earlierSend = (c) => {
+  const s = (c.sends || []).slice(-1)[0], url = s?.spec?.issue_url || s?.spec?.pr_url || "";
+  return /^https:\/\/[^\s#?]+\/(issues|pull)\/\d+$/.test(url) ? url : null;
+};
 const designLocked = (c) => c.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
 const LOCKED = "This design is approved, so it no longer changes. To change it, start a new request from this one.";
 const isAuthor = (c, who) => {

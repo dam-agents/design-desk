@@ -2063,8 +2063,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const g = S.gh[ref.key], what = `${ref.pr ? "PR" : "Issue"} #${ref.n}`;
     const state = g ? (GH_STATE[g.state]?.[0] || g.state || "?") : "not read by Design Desk yet";
     const who = g ? ((g.assignees || []).length ? g.assignees.join(", ") : "nobody") : "unknown";
-    return { url, what, open: !g || ["open", "draft"].includes(g.state),
-      line: `**The earlier send:** [${what}](${url}) · ${state} · assignee: ${who}`,
+    // A comment on an issue is not the send's own issue: shown, never offered to close.
+    const comment = /#issuecomment-/.test(url);
+    return { url, what, open: !comment && (!g || ["open", "draft"].includes(g.state)),
+      line: `**The earlier send:** ${comment ? `a comment on [${what}](${url})` : `[${what}](${url})`} · ${state} · assignee: ${who}`,
       check: `Close ${what} on GitHub, with a link to the new one` };
   }
   async function ghLoad(keys) {
@@ -3616,7 +3618,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (c.status === "spec") return { text: "", buttons: "" };
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
-      return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
+      // The expiry is its date only once it passed: a person may switch it off before (docs/prototype.md → Teardown).
+      return { text: failed ? "This try didn't work." : Date.parse(p.expires) <= Date.now() ? `This prototype was switched off on ${day(p.expires)} to free its place.` : "This prototype was switched off.",
         sub: failed ? "Design Desk wrote why in the comments below." : "", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (live(c)) {
@@ -3923,7 +3926,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const g = p.guard && !p.guard.ok ? `<dt>Look-only check</dt><dd><span class="chip warn" title="Design Desk only changes how the product looks; a developer builds the rest">Part of this would change what the product does, so it was left out of the prototype. The developer spec lists it.</span></dd>` : "";
     return `<h3>Live prototype</h3>${livePickLine(c)}<div class="panel proto"><b>${esc(msg)}</b>
       ${p.state === "live" ? `<p class="hint">You may first be asked to sign in with your usual account; then sign in to the product with the demo account below, not your own. Everything in it is made-up data; nothing you do reaches real customers. Can't open it? Ask ${esc(contact())} to add you.</p>` : ""}
-      ${p.state === "live" && (p.url || can("build")) ? `<div class="actions">${p.url ? `<a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open the prototype ↗</a>` : ""}${can("build") && !working(c).includes("teardown") ? `<button class="btn" data-switch-off title="Switches the prototype off now, before ${p.expires ? esc(when(p.expires)) : "its expiry"}; the request stays where it is, and you can build it again">Switch it off…</button>` : ""}</div>` : ""}
+      ${p.state === "live" && (p.url || (can("build") && live(c))) ? `<div class="actions">${p.url ? `<a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open the prototype ↗</a>` : ""}${can("build") && live(c) && !working(c).some((k) => ["build", "teardown"].includes(k)) ? `<button class="btn" data-switch-off title="Switches the prototype off now, before ${p.expires ? esc(when(p.expires)) : "its expiry"}; the request stays where it is, and you can build it again">Switch it off…</button>` : ""}</div>` : ""}
       <dl class="kv">${p.login ? `<dt>Demo account</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}</dd>` : ""}
       ${p.expires && p.state === "live" ? `<dt>Available until</dt><dd>${esc(when(p.expires))}</dd>` : ""}${g}</dl></div>`;
   }
