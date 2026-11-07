@@ -2015,7 +2015,7 @@ test("Designs: a developer marks a design done and asks its designer, who gets i
   assert.equal(s.notifications(alice).items.find((x) => x.event === "built").designs, true);
   s.markBuilt(card.id, bob, false);
   assert.equal(s.listCards({ kind: "request" })[0].built, null);
-  // A summary written later (the 1.62.0 backfill) keeps when the request was sent.
+  // A summary written later (the 1.63.0 backfill) keeps when the request was sent.
   s.db.cards[card.id].updated = "2026-10-01T09:00:00.000Z";
   s.upsertCard({ id: card.id, dev_summary: "- Sticky on scroll (Alice)." });
   assert.deepEqual([s.getCard(card.id).updated, s.getCard(card.id).dev_summary.text], ["2026-10-01T09:00:00.000Z", "- Sticky on scroll (Alice)."]);
