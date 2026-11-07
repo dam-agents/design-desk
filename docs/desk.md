@@ -488,8 +488,8 @@ A click lands on the source, not only its item, and every fold around it opens: 
 its conversation unfolded and scrolled to it (a row of several lights each); a private answer in
 the private chat, on the option it was asked about; options drawn, a vote or an approval on that
 option's tab (its votes, or the request's state); a spec unfolded; a request on its text; a
-decision on its page, a revoked one on why. The place glows for 10 seconds, and the glow keeps
-its place when the page draws again. A public notification closes the private chat, which would
+decision on its page, a revoked one on why. The place pulses twice and fades out, 3 seconds
+in all, and the glow keeps its place when the page draws again. A public notification closes the private chat, which would
 cover it. The bell opens on **For you**: what the person
 filed, voted on, approved or wrote in; **All** shows the rest too. The red count is what is For
 you and newer than the person last opened the bell;

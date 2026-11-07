@@ -495,9 +495,12 @@
   textarea { min-height: 64px; resize: vertical; }
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
   .subno { font: 600 11.5px/1 var(--mono, ui-monospace, monospace); background: var(--soft); color: var(--ink); padding: 2px 6px; border-radius: 6px; text-decoration: none; margin-right: 4px; }
-  /* Where a notification led: a ring and a tint that hold, then fade out over the last seconds. */
-  .spot { animation: spot 10s ease-out; border-radius: 6px; }
-  @keyframes spot { 0%, 70% { box-shadow: 0 0 0 3px var(--accent), inset 0 0 0 999px color-mix(in srgb, var(--accent) 12%, transparent); } 100% { box-shadow: 0 0 0 3px transparent, inset 0 0 0 999px transparent; } }
+  /* Where a notification led: a ring and a tint pulse twice, then fade out; 3 seconds in all. */
+  .spot { animation: spot 3s ease-in-out; border-radius: 6px; }
+  @keyframes spot {
+    0%, 30%, 60% { box-shadow: 0 0 0 3px var(--accent), inset 0 0 0 999px color-mix(in srgb, var(--accent) 14%, transparent); }
+    15%, 45% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 0 999px color-mix(in srgb, var(--accent) 5%, transparent); }
+    100% { box-shadow: 0 0 0 3px transparent, inset 0 0 0 999px transparent; } }
   @media (prefers-reduced-motion: reduce) { .spot { animation: none; box-shadow: 0 0 0 3px var(--accent); } }
   .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
   .starters { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -5847,7 +5850,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   // A click on a notification lands on its source, not only its item: the option drawn, voted
   // on or approved (its tab picked), the message itself (its conversation or private chat
-  // opened), the spec, the decision; every fold around it opens, and it glows for 10 seconds.
+  // opened), the spec, the decision; every fold around it opens, and it pulses twice and fades.
   async function openNote(x) {
     for (const o of spots.splice(0)) document.querySelector(o.path)?.classList.remove("spot");
     const to = x.item ? target(x.item) : null;
@@ -5884,7 +5887,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     for (const [tid, m] of (x.marks || []).slice(1)) { const o = q(`#th-${CSS.escape(tid)} [data-m="${m}"]`); if (o) { spot(o); } }
     spot(el);
   }
-  // Brings a place into view, opening every fold around it, and lights it for 10 seconds; the
+  // Brings a place into view, opening every fold around it, and lights it for 3 seconds; the
   // page redraws on its own meanwhile, so the light finds the place again by its path.
   const spots = [];
   function spot(el, block = "center") {
@@ -5904,7 +5907,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   setInterval(() => {
     for (let i = spots.length - 1; i >= 0; i--) {
       // Another item opened: its page has other places at the same path.
-      const x = spots[i], el = document.querySelector(x.path), gone = Date.now() - x.from >= 10000 || x.on !== (S.card?.id || S.decision?.id || "");
+      const x = spots[i], el = document.querySelector(x.path), gone = Date.now() - x.from >= 3000 || x.on !== (S.card?.id || S.decision?.id || "");
       if (gone) { el?.classList.remove("spot"); spots.splice(i, 1); continue; }
       // A redrawn place lights again where its glow was, not from the start.
       if (el && !el.classList.contains("spot")) { el.style.animationDelay = `-${Date.now() - x.from}ms`; el.classList.add("spot"); }
