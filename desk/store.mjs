@@ -372,6 +372,9 @@ export class Store {
   // ---------- reads ----------
 
   listCards({ kind, status, viewer } = {}) {
+    // One index of the pull requests sent requests are built by, for the whole list.
+    let index = null;
+    const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
     return Object.values(this.db.cards)
       .filter((c) => (!kind || c.kind === kind) && (!status || c.status === status))
       .sort((a, b) => b.updated.localeCompare(a.updated))
@@ -405,7 +408,7 @@ export class Store {
         attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
         // The decisions in force it goes against, by number: the list's red ! (docs/desk.md → Decisions).
         against: [...new Set(this.activeConflicts(c).map((x) => x.decision))],
-        designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c),
+        designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: builds(c),
         // An element from an approved design, not from the product (docs/catalog.md → From approved designs).
         design: c.design ? { card: c.design.card, option: c.design.option, version: c.design.version, change: c.design.change, of: c.design.of } : null,
         design_check: c.design_check ? { verdict: c.design_check.verdict, request: c.design_check.request, differences: c.design_check.differences.map((x) => ({ element: x.element, card: x.card })) } : null,
@@ -432,15 +435,23 @@ export class Store {
   }
 
   // The request a change's pull request builds: its spec went to this pull request, or to the
-  // issue whose pull requests (the Desk's GitHub copy, `linked`) include it. Newest send first.
-  buildsOf(c) {
+  // issue whose pull requests (the Desk's GitHub copy, `linked`) include it. The newest send
+  // wins. The index maps each such pull request's key to its request, built once per read.
+  buildsIndex() {
+    const index = new Map();
+    const sent = Object.values(this.db.cards).filter((x) => x.kind === "request" && x.spec)
+      .sort((a, b) => b.updated.localeCompare(a.updated));
+    for (const r of sent) {
+      const keys = [issueKey(r.spec.pr_url), ...(own(this.db.github, issueKey(r.spec.issue_url) || "")?.linked || []).map((p) => issueKey(p.url))];
+      for (const k of keys) if (k && !index.has(k)) index.set(k, r);
+    }
+    return index;
+  }
+
+  buildsOf(c, index = null) {
     if (c.kind !== "change") return null;
     const key = issueKey(c.source?.url) || (c.source?.repo && c.source?.pr ? `${String(c.source.repo).toLowerCase()}#${c.source.pr}` : null);
-    if (!key) return null;
-    const r = Object.values(this.db.cards)
-      .filter((x) => x.kind === "request" && x.spec && (issueKey(x.spec.pr_url) === key
-        || (own(this.db.github, issueKey(x.spec.issue_url) || "")?.linked || []).some((p) => issueKey(p.url) === key)))
-      .sort((a, b) => b.updated.localeCompare(a.updated))[0];
+    const r = key && (index || this.buildsIndex()).get(key);
     return r ? { card: r.id, title: r.title, at: r.updated, url: r.spec.issue_url || r.spec.pr_url || null } : null;
   }
 

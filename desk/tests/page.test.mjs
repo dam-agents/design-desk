@@ -1706,7 +1706,8 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   assert.equal(await count("details.fold[open] #spec-body"), 1, "the spec it will send is open to read");
 
   // docs/issues.md → On the Desk: the sent issue is linked both ways and leaves the open lists.
-  assert.match(await card("dana", "C-7"), /Sent to developers[\s\S]*Issue #31 on GitHub[\s\S]*Build the spend column/);
+  assert.match(await card("dana", "C-7"), /Sent to developers[\s\S]*Issue #31 ↗[\s\S]*see it in Issues\s*C-8/);
+  assert.equal(await count('.follow-prs [data-card="C-8"]'), 1, "the issue's row links its card on Issues");
   assert.match(await card("dana", "C-8"), /Already through Design Desk[\s\S]*Sent/);
   assert.equal(await count('[data-act="draw"]'), 0, "a designed issue is not drawn");
   await desk.click('[data-tab="issues"]');
@@ -1715,6 +1716,46 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   await desk.click('[data-filter="issueFilter:all"]');
   assert.deepEqual((await desk.$$eval("#list button.open[data-card]", (xs) => xs.map((x) => x.dataset.card))).sort(), ["C-8", "C-9"], "All keeps it, with its Designed dot");
   assert.equal(await desk.locator('.row.item:has([data-card="C-8"]) .sdot[data-s="issue-designed"]').count(), 1);
+}));
+
+// docs/desk.md → GitHub on the Desk: the sent box's rows, and a pull request's card back to the request.
+const FOLLOW = `<script>
+const at = "2026-11-03T10:00:00Z", triage = { verdict: "design", reasons: [] }, bob = { email: "bob@example.com", role: "designer" };
+const cards = [
+  { id: "C-1", kind: "request", title: "Waiting", status: "handed-off", updated: at, triage, created_by: bob, spec: { issue_url: "https://github.com/acme/w/issues/31" } },
+  { id: "C-2", kind: "request", title: "Being built", status: "handed-off", updated: at, triage, created_by: bob, spec: { issue_url: "https://github.com/acme/w/issues/32" } },
+  { id: "C-3", kind: "change", title: "Spend column", status: "new", source: { repo: "acme/w", pr: 50, url: "https://github.com/acme/w/pull/50" },
+    builds: { card: "C-2", title: "Being built", at, url: "https://github.com/acme/w/issues/32" } },
+];
+const records = [
+  { key: "acme/w#31", kind: "issue", state: "open", assignees: [], labels: [], linked: [] },
+  { key: "acme/w#32", kind: "issue", state: "open", assignees: ["dana"], labels: [], linked: [{ title: "Spend column", url: "https://github.com/acme/w/pull/50", state: "merged", author: "dana" }] },
+];
+window.platform = { async request({ method, path }) {
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "bob@example.com", can: {} }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path.startsWith("/api/github") ? { records } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("Sent to developers: one row per issue and pull request; a pull request's card links its request", (t) => open(t, FOLLOW, async (desk) => {
+  const base = desk.url().replace(/[?#].*$/, "");
+  const rows = async (id) => {
+    await desk.goto(`${base}#${id}`);
+    await desk.waitForFunction((n) => document.querySelector("#detail h2 .num")?.textContent === n && document.querySelectorAll("#detail .follow-prs li").length > 1, id);
+    return desk.$$eval("#detail .follow-prs li", (xs) => xs.map((x) => [x.firstElementChild, x.lastElementChild].map((e) => e.textContent.replace(/\s+/g, " ").trim()).join(" | ")));
+  };
+  assert.deepEqual(await rows("C-1"), ["Open | Issue #31 ↗", "None | Pull request"], "no pull request yet is a grey None row; no read time");
+  assert.equal(await desk.locator("#detail .follow-prs .chip:not([data-o])").count(), 1, "None has no state colour");
+  assert.doesNotMatch(await desk.textContent("#detail"), /When it ships|No pull request builds it yet|on GitHub ↗/, "the old lines are gone");
+  assert.deepEqual(await rows("C-2"), ["Open | Issue #32 ↗·assigned to dana", "Merged | PR #50 ↗·Spend column·by dana·see it in PR ChangesC-3"], "each pull request on its own row, linked to its card");
+  assert.equal(await desk.getAttribute('#detail .follow-prs a[href$="/pull/50"]', "href"), "https://github.com/acme/w/pull/50");
+  await desk.click('#detail .follow-prs [data-card="C-3"]');
+  await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-3");
+  assert.match(await desk.textContent("#detail"), /Builds a design from Design Desk[\s\S]*Being built[\s\S]*Issue #32 ↗/, "the change card links the request it builds");
+  assert.equal(await desk.locator('#detail .sent [data-card="C-2"]').count(), 1);
 }));
 
 // Deciding straight away (docs/desk.md → Deciding straight away): the lead developer's buttons,
