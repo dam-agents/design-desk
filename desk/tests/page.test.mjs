@@ -820,7 +820,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
 const PEEKS = `<script>
 const cards = [
   { id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows C-2 and D-1.", source: { repo: "acme/widgets", pr: 45 } },
-  { id: "C-2", kind: "request", title: "Calmer empty list", status: "feedback", summary: "The list is too loud.", request: { problem: "Too loud." },
+  { id: "C-2", kind: "request", title: "Calmer empty list", status: "feedback", summary: "The list is too loud.", request: { problem: "Too loud. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next." },
+    research: { summary: "The empty list was drawn in 2024 for the launch. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next.", links: [] },
     variants: [{ id: "v1", name: "Quiet", asset: "A-1", version: 1 }],
     threads: [{ id: "t1", card: "C-2", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#kit", text: "Kit <\\/script> update", label: "Text" },
       messages: [{ by: { name: "Pat" }, at: "2026-11-01T10:00:00Z", text: "Too bright here." }] }] },
@@ -1148,14 +1149,14 @@ for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
 }
 
 // At Team feedback the step pill always offers a move on: a live prototype for Design only,
-// else a developer for parts design cannot do, else Approve…, else Send to Slack….
+// else a developer for parts design cannot do, else Approve, else Send to Slack….
 const BRIDGE_PILL = (triage, me) => BRIDGE_STORIES
   .replace('triage: { verdict: "design", reasons: [] }', `triage: ${JSON.stringify(triage)}`)
   .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me));
 const PILLS = [
   ["Build a live prototype", { verdict: "design", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, '[data-act="build"]'],
   ["Contact a developer", { verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, "[data-dev-ask]"],
-  ["Approve…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
+  ["Approve", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
   ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
 ];
 for (const [label, triage, me, sel] of PILLS) {
@@ -1169,8 +1170,8 @@ for (const [label, triage, me, sel] of PILLS) {
     // The state's ⓘ draws every way on: a move the viewer may make plainly, one they may not
     // greyed with why and who can.
     const help = await desk.textContent("#detail .s-word .info .tip");
-    if (me.can.approve) assert.doesNotMatch(help, /✕ Approve…/, "an approver's help offers Approve…");
-    else assert.match(help, /✕ Approve…Not now: A designer, a PM or a lead developer approves it/, "anyone else's says who approves it");
+    if (me.can.approve) assert.doesNotMatch(help, /✕ Approve/, "an approver's help offers Approve");
+    else assert.match(help, /✕ ApproveNot now: A designer, a PM or a lead developer approves it/, "anyone else's says who approves it");
   }));
 }
 
@@ -1838,8 +1839,8 @@ window.calls = [];
 const at = (d) => "2026-11-0" + d + "T10:00:00Z";
 const triage = { verdict: "needs-developer", reasons: ["The price per seat is not in the data."], cannot: ["Show the price per seat: the screen has no such number."] };
 const full = { id: "C-2", kind: "request", title: "Clearer plan cards", status: "feedback", created: at(2), updated: at(9), triage, prototype: { state: "none" }, threads: [],
-  request: { type: "idea", problem: "The plan cards are hard to compare." },
-  research: { verdict: "deliberate", summary: "The cards were made so on purpose.", links: [] },
+  request: { type: "idea", problem: "The plan cards are hard to compare. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next." },
+  research: { verdict: "deliberate", summary: "The cards were made so on purpose. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next.", links: [] },
   variants: [{ id: "v1", name: "Quiet", asset: "A-1" }, { id: "v2", name: "Bold", asset: "A-1" }] };
 const plain = { id: "C-6", kind: "request", title: "Softer colours", status: "feedback", created: "2026-10-31T10:00:00Z", updated: at(7), triage: { verdict: "design", reasons: [] },
   prototype: { state: "none" }, threads: [], request: { type: "idea", problem: "Softer colours." } };
@@ -1885,6 +1886,8 @@ test("lists show the newest first; a folded box stays folded on another option; 
 
   await desk.goto(`${base}#C-6`);
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-6");
+  assert.equal(await desk.locator(".top2 > .brief:not(.made-col) .brief-toggle:not([hidden])").count(), 0, "a request of one short line has nothing to fold: no Show or Hide");
+  assert.equal(await desk.locator(".top2 > .brief.clamped").count(), 0, "and it is never folded");
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Design only" }).count(), 0, "no Design only label by the title");
   assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Design only/, "the steps name the verdict");
 
@@ -1946,7 +1949,7 @@ window.platform = { async request({ method, path, body }) {
     return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/prefs" ? { figma: window.figmaPref } : { figma_check: {} }) };
   }
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? null, can: { handle: true, revise: true, figma: true, request: true } }
+  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? true, can: { handle: true, revise: true, figma: true, request: true } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
     : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" }
     : one ? { card: one } : {};
@@ -1994,7 +1997,7 @@ test("Differences from Figma: the Product page lists what is in the product, a b
 
   // The Figma switch in the menu: off, no Differences page and no box, saved for this person.
   await desk.click("#me");
-  assert.equal(await desk.getAttribute("#figma", "aria-pressed"), "true", "on by default");
+  assert.equal(await desk.getAttribute("#figma", "aria-pressed"), "true", "on: this person turned it on");
   await desk.click("#figma");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/prefs").body), { figma: false });
@@ -2002,4 +2005,138 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   await desk.goto(`${base}#product`);
   await desk.waitForSelector('[data-filter="productFilter:screens"]');
   assert.equal(await desk.locator('[data-filter="productFilter:differences"]').count(), 0, "no Differences page");
+}));
+
+// A person who never chose: /api/me answers no choice (null), and Figma is off for them.
+const FIGMA_UNSET = FIGMA.replace("figma_pref: window.figmaPref ?? true", "figma_pref: window.figmaPref ?? null");
+test("Figma with no choice saved: the switch is off, no Differences page, until the person turns it on", (t) => open(t, FIGMA_UNSET, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#product`);
+  await desk.waitForSelector('[data-filter="productFilter:screens"]');
+  assert.equal(await desk.locator('[data-filter="productFilter:differences"]').count(), 0, "no Differences page");
+  await desk.click("#me");
+  assert.equal(await desk.getAttribute("#figma", "aria-pressed"), "false", "off: no choice saved");
+  await desk.click("#figma");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/prefs").body), { figma: true });
+  await desk.waitForSelector('[data-filter="productFilter:differences"]');
+}));
+
+// The bell: a comment For you and a new request for everyone; opening it marks it seen.
+const BELL = `<script>
+window.posts = [];
+const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
+const thread = { id: "t1", card: "C-1", kind: "comment", state: "open", messages: [{ by: { email: "pat@example.com" }, at: ago(5), text: "Looks good" }] };
+const cards = [{ id: "C-1", kind: "change", title: "A new header", status: "open", summary: "The header changed.", source: { repo: "acme/widgets", pr: 45 }, threads: [thread] },
+  { id: "C-2", kind: "request", title: "Calmer list", status: "triage", request: { problem: "Too loud." } },
+  { id: "C-3", kind: "request", title: "Quieter rows", status: "feedback", triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, request: { problem: "Rows shout." },
+    variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }],
+    threads: [{ id: "t2", card: "C-3", kind: "comment", state: "open", anchor: { variant: "v1", selector: "button", text: "Send", label: "The send button" },
+      messages: [{ by: { email: "pat@example.com" }, at: ago(3), text: "Too big" }] }] }];
+const items = [
+  { at: ago(3), event: "comment", item: "C-3", kind: "request", title: "Quieter rows", by: { email: "pat@example.com" }, detail: "Too big", thread: "t2", msg: 0, for_you: false, count: 1, people: [{ email: "pat@example.com" }], marks: [["t2", 0]] },
+  { at: ago(5), event: "comment", item: "C-1", kind: "change", title: "A new header", by: { email: "pat@example.com" }, detail: "Looks good", thread: "t1", msg: 0, for_you: true, count: 1, people: [{ email: "pat@example.com" }], marks: [["t1", 0]] },
+  { at: ago(9), event: "new-request", item: "C-2", kind: "request", title: "Calmer list", by: { email: "pat@example.com" }, for_you: false, count: 1, people: [{ email: "pat@example.com" }] }];
+window.platform = { async request({ method, path }) {
+  if (method === "POST") { posts.push(path); return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/notifications/seen" ? { seen: items[0].at } : {}) }; }
+  const answer = path === "/api/me" ? { role: "designer", email: "a@example.com", key: "a@example.com", can: { comment: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
+    : path === "/api/notifications" ? { items, seen: null, unread: 1 }
+    : path === "/api/cards/C-1" ? { card: cards[0] } : path === "/api/cards/C-2" ? { card: cards[1] } : path === "/api/cards/C-3" ? { card: cards[2] }
+    : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+test("the bell counts what is For you, opens on it, marks it seen, shows All on a click, and a row lands on its message; a menu button without data-keep still closes its menu", (t) => open(t, BELL, async (desk) => {
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
+  assert.equal(await desk.textContent("#bell-count"), "1", "the count is what is For you");
+  await desk.click("#bell-btn");
+  await desk.waitForFunction(() => posts.includes("/api/notifications/seen"));
+  assert.equal(await desk.locator("#bell-count").isHidden(), true, "no count while open");
+  assert.equal(await desk.getAttribute('#notes [data-only="1"]', "aria-pressed"), "true", "it opens on For you");
+  assert.equal(await desk.locator("#notes [data-note]").count(), 1);
+  assert.match(await desk.textContent("#notes [data-note]"), /New comment[\s\S]*PR change:[\s\S]*A new header/, "what happened, the kind in grey, the title");
+  await desk.click('#notes [data-only="0"]');
+  assert.equal(await desk.locator("#notes [data-note]").count(), 3, "All shows the rest too");
+  assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), true, "a tab keeps the panel open");
+  await desk.click('#notes [data-only="1"]');
+  await desk.click("#notes [data-note]");
+  await desk.waitForSelector('#th-t1 [data-m="0"].spot');
+  assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), false, "the panel closes");
+  assert.equal(await desk.evaluate(() => document.querySelector("[data-convo]").open), true, "the conversation is unfolded");
+  // A note from the design workspace opens the workspace on its option, its note picked and lit;
+  // the bell's row styles stay in the bell.
+  await desk.click("#bell-btn");
+  await desk.click('#notes [data-only="0"]');
+  await desk.click('#notes [data-note="0"]');
+  await desk.waitForSelector('[data-ws-note="t2"][aria-current="true"] .m.spot');
+  assert.notEqual(await desk.$eval('[data-ws-note="t2"]', (li) => getComputedStyle(li).display), "grid", "a workspace note is not drawn as a bell row");
+  await desk.click("[data-ws-close]");
+  // The shared click-away rule: a menu button without data-keep closes its menu.
+  await desk.click("#me");
+  assert.equal(await desk.evaluate(() => document.querySelector(".me-menu").open), true);
+  await desk.click("#theme");
+  await desk.waitForFunction(() => !document.querySelector(".me-menu").open);
+}));
+
+// Every landing of a notification (docs/desk.md → Notifications): its option's tab, its votes,
+// the spec, a revoked decision's why, a private answer in the chat, every message a row folds.
+const LANDINGS = `<script>
+window.posts = [];
+const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
+const card = { id: "C-3", kind: "request", title: "Quieter rows", status: "feedback", triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, request: { problem: "Rows shout." },
+  variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }, { id: "v2", name: "Bold", asset: "A-1", version: 1 }],
+  votes: { v2: { "pat@example.com": { vote: "prefer", role: "designer", at: ago(8) } } },
+  spec: { asset: "A-2", at: ago(7), by: { agent: true } },
+  threads: [{ id: "t3", card: "C-3", kind: "comment", state: "open", messages: [{ by: { email: "pat@example.com" }, at: ago(4), text: "First" }, { by: { email: "kim@example.com" }, at: ago(3), text: "Second" }] }] };
+const ask = { id: "p1", kind: "private", state: "answered", created: ago(6), context: { card: "C-3", variant: "v2", label: "C-3 Quieter rows · Bold" },
+  messages: [{ by: { email: "a@example.com" }, at: ago(6), text: "Why bold?" }, { by: { agent: true }, at: ago(5), text: "It reads at a glance." }] };
+const decision = { id: "D-1", text: "Soft badges", status: "revoked", at: ago(60), concepts: [], revoked: { by: { email: "pat@example.com" }, at: ago(2), reason: "Changed our mind" } };
+const row = (x) => ({ kind: "request", item: "C-3", title: "Quieter rows", by: { email: "pat@example.com" }, for_you: false, count: 1, people: [{ email: "pat@example.com" }], ...x });
+const items = [row({ at: ago(9), event: "options-drawn", variant: "v2", by: { agent: true } }), row({ at: ago(8), event: "vote", variant: "v2" }), row({ at: ago(7), event: "spec", by: { agent: true } }),
+  { at: ago(2), event: "revoked", item: "D-1", kind: "decision", title: "Soft badges", by: { email: "pat@example.com" }, detail: "Changed our mind", for_you: false, count: 1, people: [] },
+  row({ at: ago(5), event: "answer", by: { agent: true }, thread: "p1", msg: 1, private: true, for_you: true }),
+  row({ at: ago(3), event: "reply", thread: "t3", msg: 1, count: 2, marks: [["t3", 1], ["t3", 0]] })];
+window.platform = { async request({ method, path }) {
+  if (method === "POST") { posts.push(path); return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/notifications/seen" ? { seen: ago(0) } : {}) }; }
+  const answer = path === "/api/me" ? { role: "designer", email: "a@example.com", key: "a@example.com", can: { comment: true, ask: true, vote: true } }
+    : path === "/api/cards" ? { cards: [card] } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
+    : path === "/api/notifications" ? { items, seen: null, unread: 1 } : path === "/api/private" ? { asks: [ask] }
+    : path === "/api/cards/C-3" ? { card } : path === "/api/decisions/D-1" ? { decision, refs: [] } : path.startsWith("/api/decisions") ? { decisions: [decision] }
+    : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" }
+    : path === "/api/assets/A-2" ? { id: "A-2", contentType: "text/markdown", encoding: "utf8", data: "# The spec" } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+test("a notification lands on its source: the option's tab, the votes, the spec (lit again after a redraw, dark after 3 s), a revoked decision's why, a private answer, every message of a folded row", (t) => open(t, LANDINGS, async (desk) => {
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
+  const land = async (i) => {
+    if (!(await desk.evaluate(() => document.querySelector("#bell").open))) await desk.click("#bell-btn");
+    await desk.click('#notes [data-only="0"]');
+    await desk.click(`#notes [data-note="${i}"]`);
+  };
+  await land(0);
+  await desk.waitForSelector('.vtabs [data-variant="v2"].spot');
+  assert.equal(await desk.getAttribute('.vtabs [data-variant="v2"]', "aria-pressed"), "true", "options drawn: their tab is picked");
+  await land(1);
+  await desk.waitForSelector(".vbar .votes.spot");
+  await land(2);
+  await desk.waitForSelector("#spec.spot");
+  assert.equal(await desk.$eval("#spec", (d) => d.open), true, "the spec unfolds");
+  // The page draws again: the glow finds the spec anew; then it ends.
+  await desk.evaluate(() => { document.querySelector("#spec").dataset.old = "1"; });
+  await desk.click('[data-variant="v1"]');
+  await desk.waitForSelector("#spec.spot:not([data-old])");
+  await desk.waitForFunction(() => !document.querySelector(".spot"), null, { timeout: 6000 });
+  await land(3);
+  await desk.waitForSelector(".against.spot");
+  assert.match(await desk.textContent(".against.spot"), /Changed our mind/, "a revoked decision: why it was revoked");
+  await land(4);
+  await desk.waitForSelector('#ask [data-m="p1:1"].spot');
+  await land(5);
+  await desk.waitForSelector('#th-t3 [data-m="1"].spot');
+  assert.equal(await desk.locator('#th-t3 [data-m="0"].spot').count(), 1, "a folded row lights every message it holds");
+  assert.equal(await desk.locator("#ask .ask-panel").count(), 0, "a public notification closes the private chat");
 }));

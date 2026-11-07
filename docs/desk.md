@@ -76,7 +76,10 @@ served by the Desk server through the platform's Artifact API relay.
   request's own text and From Design Desk show whole the first time a person opens the
   request in that browser, and folded on every later visit (`desk-seen-requests`). Folded, each
   keeps two whole lines of its text and half of the third; a heading above them shows whole and
-  is not counted.
+  is not counted. A box with under three lines of text, no picture and nothing folded inside has
+  nothing to hide: it shows whole, with no Show or Hide link. Folding and unfolding glide in a
+  fifth of a second, so what stands under the box moves rather than jumps; folded from below,
+  the page brings the box's top back into view.
 - **Search.** The header's one search finds words in every item's title, summary and source
   and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
   decision's (`D-3`), and while one is typed (`C-`, `C-1`, `D-`) every item or decision whose
@@ -86,7 +89,9 @@ served by the Desk server through the platform's Artifact API relay.
   GitHub, in the profile's repository (`repos`); a Desk number with no item says so.
 - **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
   answer); **PR Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
-  with grey counts, then **Product** and **People**. **How it works** opens from the question
+  with grey counts, then **Product** and **People**; **+ New request** follows behind one more
+  separator. The bell at the far right, after the person's name, opens
+  [Notifications](#notifications). **How it works** opens from the question
   mark next to the day and night switch, with a picture each of how a request, an issue and a
   shipped pull request move. The switch keeps each person's choice on the Desk
   (`POST /api/prefs {theme}`, `theme` in `GET /api/me`; null follows the system), so it follows
@@ -113,7 +118,7 @@ served by the Desk server through the platform's Artifact API relay.
   **Figma**, a switch under simple mode in the same style, shows only on a Desk with `figma:
   enabled`: off, that person sees no Differences page and no box of differences from Figma
   anywhere. Kept on the Desk like simple mode (`POST /api/prefs {figma}`, `figma_pref` in
-  `GET /api/me`); with no choice (null) it is on.
+  `GET /api/me`); with no choice (null) it is off.
   The Desk opens on Requests.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
@@ -199,8 +204,8 @@ served by the Desk server through the platform's Artifact API relay.
 With `figma: enabled`, Design Desk compares an item with its frame in Figma and keeps what
 differs on the item as `figma_check` (the `figma` skill → Compare with the product): a screen,
 an element and a shipped change against their frames, a request's option against the frame
-its Figma link names, and a decision a frame goes against. Each person can hide all of it
-with the Figma switch in their menu.
+its Figma link names, and a decision a frame goes against. Each person sees it only once they
+turn on the Figma switch in their menu; it is off until they do.
 
 - **The box** sits under the item's pictures (a change's and a screen's screens, an
   element's drawing, an option's design, a decision's pictures), below a decision conflict
@@ -382,7 +387,7 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 A designer, a PM, an admin or a lead developer (`skip`) may skip the options, the vote and the live
 prototype once Design Desk has checked a request:
 
-- **Approve** at any open step from Checking on (the same **Approve…** before options: the spec then comes from the request);
+- **Approve** at any open step from Checking on (the same **Approve** before options: the spec then comes from the request);
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
   in the person's words ([handoff.md](handoff.md)). A PM or a lead developer does not overrule a
   decision in force: that stays a designer's.
@@ -457,6 +462,43 @@ them alone (`POST /api/cards/<id>/read` from the page; the list's `read`; the st
 `reads: {<person>: {<card>: at}}`). Later opens and new activity change nothing. The **Unread**
 filter keeps an item just opened, no longer bold, until the person changes the filter or the tab. You read
 without marking anything.
+
+## Notifications
+
+The bell at the far right of the header, right of the person's name, lists what happened on the Desk in the
+last 30 days, newest first, at most 50 (`GET /api/notifications`). Nothing new is logged: each
+event is read from what the store keeps anyway. A person never sees their own doings, and a
+private ask only its owner: Design Desk's answers to it are theirs alone, and for them. The events:
+
+| Event | When |
+| --- | --- |
+| New request, New PR change, New issue | an item is created |
+| New comment, New question, New reply | a message in a conversation |
+| Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
+| New options drawn, Options redrawn | a run draws options, or new versions of them |
+| New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
+| New decision, Decision revoked | a decision is added or revoked |
+
+Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
+how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
+line of what was said. Messages on one item in one day fold into one row, and so do votes: it
+says how many (3 new messages) and who, two names and then +N, and shows the newest; a row is
+For you, private or neither, never a mix, and the count counts rows.
+
+A click lands on the source, not only its item, and every fold around it opens: a message with
+its conversation unfolded and scrolled to it (a row of several lights each); a note from the
+design workspace in the workspace, on its option, state and part, the note picked; a private answer in
+the private chat, on the option it was asked about; options drawn, a vote or an approval on that
+option's tab (its votes, or the request's state); a spec unfolded; a request on its text; a
+decision on its page, a revoked one on why. The place pulses twice and fades out, 3 seconds
+in all, and the glow keeps its place when the page draws again. A public notification closes the private chat, which would
+cover it. The bell opens on **For you**: what the person
+filed, voted on, approved or wrote in; **All** shows the rest too. The red count is what is For
+you and newer than the person last opened the bell;
+opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
+`seen: {<person>: at}`, the newest event's time), outside the write budget like reading an item:
+opening it again with nothing new writes nothing. Everything on an item that is the person's,
+its messages included, is For you.
 
 ## Claims
 
@@ -688,6 +730,14 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   or `owner/name#12`; the page links it to GitHub.
 - When a step cannot go on without a person, ask once, with a suggested answer:
   `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
+- <a id="the-questions-form"></a>**The questions form** shows four parts and nothing else:
+  the `text`, each question, its options, and the `suggested` one marked **recommended**.
+  The `text` is one or two short sentences of what it is about, only what the question needs;
+  it never repeats the question, never says that the step waits or where the card is (the page
+  shows both), and has no heading. A question is one sentence; an option a few words, its
+  consequence after a colon when it is not plain. `why` is not shown: put what matters in the
+  `text`. A question nobody answers is left to Design Desk, which takes `suggested`;
+  **Leave it to Design Desk** leaves them all.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
 - **Where a card came from.** Every row in PR Changes, Requests, Issues and Product shows its source, its author and,
   for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:
@@ -724,7 +774,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
   they fine-tune the options, until its author, a designer, a PM, a developer or an admin presses **Ask for
-  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Team feedback Build a live prototype, else Contact a developer, else Approve…, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Team feedback Build a live prototype, else Contact a developer, else Approve, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and

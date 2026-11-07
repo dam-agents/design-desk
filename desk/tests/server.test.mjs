@@ -291,13 +291,13 @@ test("simple mode: each person's own choice, kept on the Desk apart from day or 
 test("the Figma switch: each person shows or hides the comparisons with Figma, kept on the Desk", async (t) => {
   const d = await desk(t);
   const me = async (email) => (await d.viewer(email, "/api/me")).body;
-  assert.equal((await me("alice@example.com")).figma_pref, null, "no choice: shown while the Desk has Figma on");
+  assert.equal((await me("alice@example.com")).figma_pref, null, "no choice: hidden until they turn it on");
   await d.viewer("alice@example.com", "/api/prefs", { simple: true });
   const saved = await d.viewer("alice@example.com", "/api/prefs", { figma: false });
   assert.deepEqual([saved.status, saved.body.figma, saved.body.simple], [200, false, true], "only the key sent changes");
   assert.deepEqual([(await me("alice@example.com")).figma_pref, (await me("bob@example.com")).figma_pref], [false, null], "not anyone else's");
   assert.equal((await d.viewer("bob@example.com", "/api/prefs", { figma: "off" })).status, 400);
-  assert.equal((await d.viewer("alice@example.com", "/api/prefs", { figma: null })).body.figma, null, "null: shown again");
+  assert.equal((await d.viewer("alice@example.com", "/api/prefs", { figma: null })).body.figma, null, "null: no choice, hidden again");
 });
 
 test("a difference from Figma: only who may mark things handled takes it off, only with Figma on; the agent writes a decision's", async (t) => {
@@ -335,6 +335,21 @@ test("read and unread: the first open marks an item read for that person alone",
   assert.deepEqual([await read("alice@example.com"), await read("bob@example.com")], [true, false], "only for the one who opened it");
   assert.equal((await d.viewer("guest@example.com", `/api/cards/${id}/read`, {})).status, 200, "a guest reads too");
   assert.equal((await d.viewer("alice@example.com", "/api/cards/C-999/read", {})).status, 404);
+});
+
+test("notifications: the bell lists what others did and opening it marks it seen", async (t) => {
+  const d = await desk(t);
+  const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." })).body.card.id;
+  const bell = async (email) => (await d.viewer(email, "/api/notifications")).body;
+  assert.deepEqual((await bell("alice@example.com")).items, [], "not her own request");
+  // Bob sees it under All, but it is not for him, so his count stays 0.
+  const bob = await bell("bob@example.com");
+  assert.deepEqual([bob.items[0].event, bob.items[0].item, bob.items[0].for_you, bob.unread], ["new-request", id, false, 0]);
+  // Bob's comment on Alice's request is for her and counts.
+  await d.viewer("bob@example.com", `/api/cards/${id}/threads`, { kind: "comment", text: "Busy indeed." });
+  assert.equal((await bell("alice@example.com")).unread, 1);
+  assert.ok((await d.viewer("alice@example.com", "/api/notifications/seen", {})).body.seen);
+  assert.equal((await bell("alice@example.com")).unread, 0);
 });
 
 test("team feedback: a Desk request waits for a person to ask the team, one from Slack goes on by itself", async (t) => {

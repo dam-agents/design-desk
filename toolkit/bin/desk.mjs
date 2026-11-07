@@ -45,7 +45,7 @@ const USAGE = `usage: design desk <command>
   ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
       [--form]                             their answer re-queues the step (request explore revise states
                                            build handoff figma catalog map); --form: the file is
-                                           JSON {text, questions: [{text, why, options, suggested}]},
+                                           JSON {text, questions: [{text, options, suggested}]},
                                            a form
   decision <decision.json|->               record a decision (docs/desk.md → Decisions): {concepts, text,
                                            why, author: {name, login, email, role}, origin: {kind, label, url,
