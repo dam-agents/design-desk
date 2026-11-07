@@ -58,11 +58,13 @@ fi
 REMOTE_URL="${WORK_BACKUP_REMOTE:-https://github.com/$GITHUB_REPO_WORK}"
 
 # (Re)seed a usable clone in $LOCAL. tmpfs may be empty (fresh boot), stale, or
-# half-written (interrupted run) — validate and re-clone defensively.
+# half-written (interrupted run) — validate and re-clone defensively. The clone holds
+# the tip only (--depth 1): the backup's history keeps every old output/ and logs/ and
+# only grows, so a full clone would outgrow /dev/shm.
 seed_clone() {
   if ! ( cd "$LOCAL" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1 ); then
     rm -rf "$LOCAL" 2>/dev/null || true
-    if ! git clone -q "$REMOTE_URL" "$LOCAL" 2>/dev/null; then
+    if ! git clone -q --depth 1 --branch "$BRANCH" "$REMOTE_URL" "$LOCAL" 2>/dev/null; then
       # empty/nonexistent remote (first-ever backup): start a fresh repo
       rm -rf "$LOCAL" 2>/dev/null || true
       mkdir -p "$LOCAL" || return 1
@@ -72,7 +74,7 @@ seed_clone() {
   ( cd "$LOCAL" || exit 1
     git config user.name  "design-desk"              2>/dev/null || true
     git config user.email "design-desk@agents.local" 2>/dev/null || true
-    if git fetch -q origin "$BRANCH" 2>/dev/null; then
+    if git fetch -q --depth 1 origin "$BRANCH" 2>/dev/null; then
       git checkout -q -B "$BRANCH" FETCH_HEAD 2>/dev/null
     else
       git checkout -q -B "$BRANCH" 2>/dev/null || true
@@ -89,7 +91,19 @@ sync_state() {
   # and keep the one it has.
   ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' \
       --exclude='./output' --exclude='./logs' -f - . ) \
-    | ( cd "$LOCAL" && tar -xf - ) || return 1
+    | ( cd "$LOCAL" && tar -xf - )
+  copy_ok state "${PIPESTATUS[@]}"
+}
+
+# copy_ok <label> <tar -c status> <tar -x status>: both ends of a copy pipe. A reader that
+# failed (status 2: a file it could not read) or an extractor that failed is a failed copy,
+# never a good one with files missing. Status 1 (a file changed while read) copied the rest.
+copy_ok() {
+  local label="$1" c="${2:-1}" x="${3:-1}"
+  if [ "$c" -ge 2 ] || [ "$x" -ne 0 ]; then
+    say "$label: copy failed (tar $c/$x)."; logev warn work_backup "$label: copy failed (tar exit $c/$x)"; return 1
+  fi
+  [ "$c" -eq 1 ] && logev warn work_backup "$label: a file changed while it was copied"
   return 0
 }
 
@@ -122,7 +136,9 @@ EOF
   for d in $BULK; do rm -rf "${LOCAL:?}/$d" 2>/dev/null || true; done
   if [ -n "$dirs" ]; then
     # shellcheck disable=SC2086 # $dirs is a list of fixed names
-    ( cd "$WORK" && tar -c -X "$skip" -f - $dirs ) | ( cd "$LOCAL" && tar -xf - ) || { rm -f "$skip"; return 1; }
+    # --no-wildcards: the skip list holds exact names; a name with [ or * is no pattern.
+    ( cd "$WORK" && tar -c --no-wildcards -X "$skip" -f - $dirs ) | ( cd "$LOCAL" && tar -xf - )
+    copy_ok bulk "${PIPESTATUS[@]}" || { rm -f "$skip"; return 1; }
   fi
   rm -f "$skip"; return 0
 }
@@ -156,21 +172,34 @@ persist() {
 }
 
 # The state first, then the bulk set: a bulk set that fails never blocks the state.
+# One final outcome per persist — the line the audit and the monitor read:
+#   info  "backup ok: …"      every part pushed or had nothing new
+#   warn  "backup ok: …"      the bulk set was skipped (too large for the clone)
+#   error "backup failed: …"  a part failed after its retries
 do_persist() {
-  push_part state sync_state . ':(exclude)output' ':(exclude)logs'
-  push_part bulk sync_bulk output logs
+  local state bulk
+  push_part state sync_state . ':(exclude)output' ':(exclude)logs'; state="$PART"
+  push_part bulk sync_bulk output logs; bulk="$PART"
+  local summary="state $state, bulk $bulk"
+  case "$state $bulk" in
+    (*failed*)  say "backup failed: $summary."; logev error work_backup "backup failed: $summary — retry next run" ;;
+    (*skipped*) logev warn work_backup "backup ok: $summary (output/ and logs/ too large for the clone)" ;;
+    (*)         logev info work_backup "backup ok: $summary" ;;
+  esac
   return 0
 }
 
 # push_part <label> <sync function> <pathspec...>: commit and push one part of work/,
-# re-seeding from the remote tip on a rejected push.
+# re-seeding from the remote tip on a rejected push. Sets PART to pushed, unchanged,
+# skipped or failed.
+PART=""
 push_part() {
   local label="$1" sync="$2" attempt=0 rc; shift 2
   while [ "$attempt" -lt "$RETRIES" ]; do
     attempt=$((attempt + 1))
     seed_clone || { logev warn work_backup "$label: seed failed (attempt $attempt)"; continue; }
     "$sync"; rc=$?
-    if [ "$rc" -eq 43 ]; then return 0; fi   # skipped, and said why
+    if [ "$rc" -eq 43 ]; then PART=skipped; return 0; fi   # skipped, and said why
     [ "$rc" -eq 0 ] || { logev warn work_backup "$label: sync failed (attempt $attempt)"; continue; }
     ( cd "$LOCAL" || exit 1
       # A path neither in work/ nor in the backup is no pathspec git accepts: leave it out.
@@ -184,17 +213,17 @@ push_part() {
       if git diff --cached --quiet; then exit 42; fi   # nothing to persist
       git commit -q -m "chore(work): persist $label $(date -u +%Y-%m-%dT%H:%M:%SZ)" || exit 3
     ); rc=$?
-    if [ "$rc" -eq 42 ]; then say "$label: nothing to persist."; return 0; fi
+    if [ "$rc" -eq 42 ]; then say "$label: nothing to persist."; PART=unchanged; return 0; fi
     if [ "$rc" -ne 0 ]; then logev warn work_backup "$label: commit failed (attempt $attempt)"; continue; fi
     if ( cd "$LOCAL" && git push -q origin "HEAD:$BRANCH" 2>/dev/null ); then
-      say "$label: pushed (attempt $attempt)."; logev info work_backup "pushed work/ $label (attempt $attempt)"; return 0
+      say "$label: pushed (attempt $attempt)."; logev info work_backup "$label: pushed (attempt $attempt)"; PART=pushed; return 0
     fi
     say "$label: push rejected (attempt $attempt) — re-seeding from remote tip."
     logev warn work_backup "$label: push rejected (attempt $attempt) — retrying"
   done
-  say "$label: push failed after $RETRIES attempt(s); state is safe on work/, retry next run."
-  logev error work_backup "$label: push failed after $RETRIES attempts — retry next run"
-  return 0
+  say "$label: failed after $RETRIES attempt(s); the data is safe on work/, retry next run."
+  logev warn work_backup "$label: failed after $RETRIES attempts"
+  PART=failed; return 0
 }
 
 restore() {
@@ -203,9 +232,9 @@ restore() {
   # existing files
   # with the same names are overwritten, nothing is deleted.
   if ( cd "$LOCAL" && git rev-parse HEAD >/dev/null 2>&1 ); then
-    ( cd "$LOCAL" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' -f - . ) | ( cd "$WORK" && tar -xf - ) \
-      && { say "restored work/ from remote."; logev info work_backup "restored work/ from remote"; } \
-      || { say "restore copy failed."; logev warn work_backup "restore copy failed"; }
+    ( cd "$LOCAL" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' -f - . ) | ( cd "$WORK" && tar -xf - )
+    if copy_ok restore "${PIPESTATUS[@]}"; then say "restored work/ from remote."; logev info work_backup "restored work/ from remote"
+    else say "restore copy failed."; fi
   else
     say "remote is empty — nothing to restore."
   fi

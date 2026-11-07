@@ -170,12 +170,13 @@ else
 fi
 
 # ---------------------------------------------------------- backup failing ----
-# the oldest backup error after the last successful push, once it is 6 h old
+# the oldest backup error after the last good persist ("backup ok", work-backup.sh), once
+# it is 6 h old
 BACKUP_REPO="${GITHUB_REPO_WORK:-$(cfg work_repo 2>/dev/null)}"; [ "$BACKUP_REPO" = none ] && BACKUP_REPO=""
 if [ -n "$BACKUP_REPO" ]; then
   ERR="$(events_since $(( NOW_EPOCH - 86400 )) | jq -sc "$EP"'
     [.[] | select(.event == "work_backup")] | sort_by(.ts | ep)
-    | (map(select(.msg | startswith("pushed"))) | last) as $ok
+    | (map(select(.msg | startswith("backup ok"))) | last) as $ok
     | [.[] | select(.level == "error" and ($ok == null or (.ts | ep) > ($ok.ts | ep)))] | first')"
   if [ -n "$ERR" ] && [ "$ERR" != null ] \
      && [ $(( NOW_EPOCH - $(printf '%s' "$ERR" | jq -r "$EP"'.ts | ep') )) -ge 21600 ]; then

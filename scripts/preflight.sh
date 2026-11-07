@@ -745,10 +745,11 @@ HTML
   local repo="${GITHUB_REPO_WORK:-$(cfg work_repo)}" lastb last_ts
   case "$repo" in
     (""|none|off|disabled) check backup ok "not configured (work/ is local only)" ;;
-    (*) lastb="$(grep -h '"event":"work_backup"' "$WORK"/logs/events-*.jsonl 2>/dev/null | grep -E 'pushed work/|push failed after' | tail -1)"
+    (*) lastb="$(grep -h '"event":"work_backup"' "$WORK"/logs/events-*.jsonl 2>/dev/null | grep -E '"msg":"backup (ok|failed): ' | tail -1)"
         last_ts="$(jq -r '.ts // empty' <<<"$lastb" 2>/dev/null)"
         case "$lastb" in
           (*'"level":"error"'*) check backup fail "the last backup to $repo failed ($last_ts): $(jq -r .msg <<<"$lastb" 2>/dev/null) — check that the GitHub connection can write to $repo" ;;
+          (*'"level":"warn"'*) check backup warn "the last backup to $repo ($last_ts) left out work/output and work/logs: $(jq -r .msg <<<"$lastb" 2>/dev/null) — they are larger than the backup clone's free space (docs/persistence.md)" ;;
           ("") check backup warn "configured ($repo), but no backup is logged in the last 14 days" ;;
           (*) if [ $((NOW_EPOCH - $(iso2epoch "$last_ts"))) -gt $((2 * 86400)) ]; then check backup warn "the last backup to $repo was at $last_ts, more than two days ago"
               else check backup ok "last backup to $repo at $last_ts"; fi ;;

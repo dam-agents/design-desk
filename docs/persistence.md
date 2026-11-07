@@ -52,7 +52,12 @@ and `logs/` on their own, so a failure there never blocks the state. In the seco
 file over 50 MB (`WORK_BACKUP_MAX_FILE_MB`) stays out, and `output/` and `logs/` stay out
 whole when they need more than the clone's free space (twice their size: the copy and its
 git object); the backup then keeps their last copy. Each skip logs a `work_backup` warning
-that names the path.
+that names the path. A copy whose `tar` cannot read a file fails and is retried, never
+pushed with the file missing. The clone holds only the newest commit (`--depth 1`), so the
+backup's growing history never has to fit in `/dev/shm`. Each persist ends with one
+`work_backup` outcome line that the audit and the monitor read: `backup ok: …` (a `warn`
+when `output/` and `logs/` were skipped), or `backup failed: …` (an `error`) when either
+push failed.
 
 `restore` is the inverse — remote → `work/` (data only, never a `.git`) — run once on a
 fresh machine (`ONBOARDING.md` Step 2a).

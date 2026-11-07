@@ -14,7 +14,7 @@ no external call, no write beyond its own ledger and log. An idle fire starts no
 | `model_recovered` | the outage is over and its `model_unavailable` went out while it was open | — (once per outage) |
 | `classifier_spike` | `classifier_alert_threshold` (missing = `20`; `0`/`off` disables) `classifier_block` events in 24 h | — (once per UTC day) |
 | `heartbeat_gap` | no gate tick of the inbox schedule for `heartbeat_gap_min` (missing = `60`) | the gate ticks again |
-| `backup_failing` | a backup error no later push cleared for 6 h (only with a state remote) | the next push |
+| `backup_failing` | a backup error (a persist whose state or bulk push failed: `backup failed: …`) that no later `backup ok` cleared for 6 h (only with a state remote) | the next `backup ok` persist |
 
 Domain conditions:
 

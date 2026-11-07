@@ -10,7 +10,7 @@ The pass checks, among others, the GitHub login, the Desk server, the toolchain
 (`design doctor`, then a real wireframe build and screenshot), the saved brand and repo
 profiles, the ledger, live prototypes against `max_prototypes`, the disk and what fills it
 (`work/output`, the Desk, checkouts, toolchains), the Desk store against its 50 MB limit, the
-last backup (failed, missing, or older than two days), the decisions page
+last backup (failed, missing, older than two days, or without `work/output` and `work/logs`), the decisions page
 ([decisions-page.md](decisions-page.md)), and the version.
 
 ## Judgment checks
