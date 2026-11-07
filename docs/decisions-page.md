@@ -9,9 +9,15 @@ must look. Only with `decisions_page: dam` (default `off`; `public`, the first s
 `preflight.sh issues` renders it once a day into `work/decisions-page.md`, deterministically
 from the Desk store: the decisions in force (text, why, concepts, when, who decided as a
 **role**, where as a **kind**, what it replaces, Not approved yet), an index by concept, and
-the revoked ones in one line each. It holds no names, logins, e-mails, links or pictures; the
-renderer masks an e-mail, a Slack mention or a token in the text. Never edit the file: a
-change to the page is a change to the renderer.
+the revoked ones in one line each. It holds no names, logins, e-mails, links, keys or pictures.
+The renderer redacts every free text (a decision's text, why, concepts, a revoke's reason):
+every link (`https://…`, `www.…`, a Slack `<…|…>` link), every Slack `<@…>`, `<#…>` or `<!…>`
+form, an e-mail in any case, an `@handle`, every known key or token shape, and every name the
+roster (its `name` column and addresses) and the Desk store (each person's name, login and
+address, whole and in parts) hold. It fails closed: when the names cannot be read, or the
+finished page still holds a link, an address, a mention or a key, the page is not due and the
+audit warns until the text is fixed on the Desk. Never edit the file: a change to the page is
+a change to the renderer.
 
 ## `decisions_page_due` (the issues run)
 
