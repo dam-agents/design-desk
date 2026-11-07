@@ -333,32 +333,32 @@ watch_mode() {
 DEC_KEYS='(?<![A-Za-z0-9_-])(?:xox[a-z]-[A-Za-z0-9-]+|xapp-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]+|sk-(proj-)?[A-Za-z0-9_-]{20,}|[rs]k_(live|test)_[A-Za-z0-9]{10,}|(AKIA|ASIA)[A-Z0-9]{16}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*|-----BEGIN [A-Z ]*PRIVATE KEY-----)'
 decisions_page() {
   DEC_DUE='[]' DEC_BLOCKED=''
-  local CONF="$1" DB="$DESK_DIR/db.json" PAGE="$WORK/decisions-page.md" REC="$WORK/decisions-page.json" roster rnames names sha old
+  local CONF="$1" DB="$DESK_DIR/db.json" PAGE="$WORK/decisions-page.md" REC="$WORK/decisions-page.json" roster rnames sha old
   [ "$(jq -r .decisions_page <<<"$CONF")" = dam ] || { return; }
   [ -f "$DB" ] || { log "decisions page: no Desk store yet"; return; }
   # Every name the roster and the store hold, masked in the free text: a roster row's name and
   # address, and the name, login and address of every person the store keeps, whole and in parts.
   rnames="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $4}' \
     | jq -R 'split("\t") | (.[1] // ""), (.[0] | split(",")[] | split("@")[0])' | jq -sc .)" \
-  && names="$(jq -c --argjson rn "${rnames:-[]}" '
+  && jq -c --argjson rn "${rnames:-[]}" '
       [ .. | objects | select(has("email") or has("emails") or has("login") or has("sub") or has("role"))
         | .name, .login, .display_name, .handle, ((.email, (.emails // [])[]?) | strings | split("@")[0]) ] + $rn
       | [ .[] | strings | gsub("^\\s+|\\s+$"; "") | select(length > 0) | ., splits("[\\s._+-]+") ]
-      | map(select(length >= 3)) | unique | sort_by(-length)' "$DB")" && [ -n "$names" ] \
-  || { DEC_BLOCKED="cannot read the names to mask from the roster or the Desk store at $DB"; log "decisions page: $DEC_BLOCKED — not published"; return; }
+      | map(select(length >= 3)) | unique | sort_by(-length)' "$DB" > "$PAGE.names" && [ -s "$PAGE.names" ] \
+  || { rm -f "$PAGE.names"; DEC_BLOCKED="cannot read the names to mask from the roster or the Desk store at $DB"; log "decisions page: $DEC_BLOCKED — not published"; return; }
   # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
   # A row's email cell may list several addresses, each of them that person's (docs/config.md).
   roster="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
     | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
         | .[0] | split(",")[] | gsub("^\\s+|\\s+$"; "") | ascii_downcase | select(length > 0) | {key: ., value: $r}' | jq -sc 'reverse | from_entries')"
-  jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" --argjson names "$names" --arg keys "$DEC_KEYS" '
+  jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" --slurpfile names "$PAGE.names" --arg keys "$DEC_KEYS" '
     def esc: gsub("(?<c>[\\\\^$.|?*+()\\[\\]{}/-])"; "\\\(.c)");
     # Slack forms, links, e-mails in any case, keys, @handles, then every known name.
     def scrub: gsub("<@[^>]*>"; "[person]") | gsub("<[#!][^>]*>"; "[mention]") | gsub("<[^<>]*://[^<>]*>"; "[link]")
       | gsub("\\b([a-z][a-z0-9+.-]*://|www\\.)[^\\s<>]*[^\\s<>.,;:!?)\\]\"'"'"']"; "[link]"; "i")
       | gsub("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"; "[e-mail]") | gsub($keys; "[key]")
       | gsub("(?<![\\w.])@[A-Za-z0-9][A-Za-z0-9_.-]*"; "[person]")
-      | reduce $names[] as $n (.; gsub("(?<p>^|[^\\p{L}\\p{N}_])" + ($n | esc) + "(?![\\p{L}\\p{N}_])"; "\(.p)[person]"; "i"));
+      | reduce $names[0][] as $n (.; gsub("(?<p>^|[^\\p{L}\\p{N}_])" + ($n | esc) + "(?![\\p{L}\\p{N}_])"; "\(.p)[person]"; "i"));
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub;
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
@@ -396,7 +396,8 @@ decisions_page() {
         ($off[] | "- \(.id) (\((.concepts // []) | map(line) | join(", "))): \(.text | line) Revoked \(.revoked.at // "" | day)"
           + (if ((.revoked.reason // "") | line) != "" then ": \(.revoked.reason | line | rtrimstr("."))." else "." end)
           + (if .revoked.replaced_by and ((.revoked.reason // "") | contains("Replaced by") | not) then " Replaced by \(.revoked.replaced_by)." else "" end))
-      else empty end)' "$DB" > "$PAGE.tmp" 2>/dev/null || { rm -f "$PAGE.tmp"; DEC_BLOCKED="cannot read the Desk store at $DB"; log "decisions page: $DEC_BLOCKED"; return; }
+      else empty end)' "$DB" > "$PAGE.tmp" 2>/dev/null || { rm -f "$PAGE.tmp" "$PAGE.names"; DEC_BLOCKED="cannot read the Desk store at $DB"; log "decisions page: $DEC_BLOCKED"; return; }
+  rm -f "$PAGE.names"
   # Fail closed: a link, a Slack form, an address or handle, or a key left anywhere on the
   # finished page (an id, a field the redaction missed) keeps it from being due.
   if ! jq -Rse --arg keys "$DEC_KEYS" 'test("://|www\\.|<[@#!]|@[A-Za-z0-9]|" + $keys; "i") | not' "$PAGE.tmp" >/dev/null 2>&1; then
