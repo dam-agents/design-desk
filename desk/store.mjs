@@ -232,7 +232,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {}, seen: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {}, seen: {}, noted: {} };
 }
 
 // The bell's events that fold into one row per item and day, with their count.
@@ -707,8 +707,9 @@ export class Store {
   // What happened lately on the Desk, newest first, for the bell (docs/desk.md → Notifications).
   // Nothing new is logged: each event is read from what the store keeps anyway (a card's
   // creation, a message, a drawn option, a vote, an approval, a spec, a decision). A person
-  // never sees their own doings, nor another person's private ask. `since` is when they last
-  // opened the bell: newer events For you are unread (the bell's count).
+  // never sees their own doings, nor another person's private ask. A row is read once its
+  // person clicked it (`noted`, its id) or marked all as read (`seen`, the newest row then);
+  // the unread rows For you are the bell's count.
   notifications(who, { limit = 50, days = 30 } = {}) {
     const key = viewerKey(who);
     const mine = new Set([who?.email, ...(who?.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
@@ -790,11 +791,32 @@ export class Store {
       if (k) open.set(k, lead);
       rows.push(lead);
     }
-    const seen = (key && own(this.db.seen, key)) || null;
-    return { items: rows.slice(0, limit), seen, unread: rows.filter((x) => x.for_you && (!seen || x.at > seen)).length };
+    // `id`: the row's lead event, its thread and how many it folds, so a newer message on a
+    // folded row, or a new thread in the same second, is a new, unread row.
+    for (const x of rows) x.id = [x.event, x.item || "", x.at, x.thread || "", x.msg ?? "", x.count].join("|");
+    const seen = (key && own(this.db.seen, key)) || null, noted = new Set((key && own(this.db.noted, key)) || []);
+    for (const x of rows) x.read = Boolean(seen && x.at <= seen) || noted.has(x.id);
+    return { items: rows.slice(0, limit), seen, unread: rows.filter((x) => x.for_you && !x.read).length };
   }
 
-  // A person opened the bell: what is there now counts as seen, for them alone. `seen` is the
+  // A person clicked one row: read for them alone. An id is kept while its row is still in the
+  // bell and newer than `seen`, so the list stays short; a row read already writes nothing.
+  markNoteRead(who, id) {
+    const key = viewerKey(who);
+    if (!key) return { read: false };
+    const { items } = this.notifications(who, { limit: 500 });
+    const row = items.find((x) => x.id === String(id || ""));
+    if (!row) throw bad("That notification is not in the bell.");
+    if (row.read) return { read: true };
+    const seen = own(this.db.seen, key) || null;
+    const keep = new Set(items.filter((x) => !seen || x.at > seen).map((x) => x.id));
+    const ids = [...((own(this.db.noted, key)) || []).filter((x) => keep.has(x)), row.id];
+    Object.defineProperty(this.db.noted, key, { value: ids, enumerable: true, writable: true, configurable: true });
+    this.save();
+    return { read: true };
+  }
+
+  // Mark as read in the bell: what is there now counts as read, for them alone. `seen` is the
   // newest event's time, so opening it again with nothing new writes nothing: the route sits
   // outside the write budget and must not save the store on every call.
   markSeen(who) {
@@ -804,6 +826,7 @@ export class Store {
     const at = this.notifications(who).items.reduce((m, x) => (x.at > m ? x.at : m), was || "");
     if (!at || at === was) return { seen: was };
     Object.defineProperty(this.db.seen, key, { value: at, enumerable: true, writable: true, configurable: true });
+    if (own(this.db.noted, key)) delete this.db.noted[key];
     this.save();
     return { seen: at };
   }
@@ -2223,6 +2246,18 @@ export class Store {
     return { figma_check: k };
   }
 
+  // The whole comparison off Product → Differences for everyone, or back (`on: false`); it
+  // comes back on its own once the frame in Figma changes (keepDismissed).
+  closeFigma(id, who, on = true) {
+    const x = this.card(id);
+    const k = x.figma_check;
+    if (!k) throw bad("Nothing here is compared with Figma.");
+    if (on) k.closed = { by: person(who), at: this.clock() }; else delete k.closed;
+    x.updated = this.clock();
+    this.save();
+    return { figma_check: k };
+  }
+
   addAsset({ card = null, kind, name, contentType, data, encoding = "base64" }) {
     if (!["screen", "variant", "spec", "patch", "image", "report"].includes(kind)) throw bad("unknown asset kind");
     if (!/^[\w.+-]+\/[\w.+-]+$/.test(contentType || "")) throw bad("contentType is not a media type");
@@ -2650,16 +2685,17 @@ function cleanFigmaSearch(o, threads, at) {
 function figmaRow(k) {
   const off = new Set((k.dismissed || []).map((d) => d.part));
   const count = (k.differences || []).filter((d) => !off.has(d.part)).length;
-  return { verdict: count ? k.verdict : "matches", count, frame: k.frame?.name || "", checked: k.checked || null };
+  return { verdict: count ? k.verdict : "matches", count, frame: k.frame?.name || "", checked: k.checked || null, closed: Boolean(k.closed) };
 }
 
 // A new comparison keeps the differences people took off the table while the frame is the
 // same one, unedited: the same url and the same version, which must be known on both sides
-// (a frame without one never keeps a removal). Only those still in it stay off.
+// (a frame without one never keeps a removal). Only those still in it stay off. A closed
+// comparison stays closed on the same terms.
 function keepDismissed(prev, next) {
-  const same = prev?.dismissed?.length && prev.frame?.url === next.frame.url && Boolean(next.frame.version) && prev.frame?.version === next.frame.version;
-  const kept = same ? prev.dismissed.filter((d) => next.differences.some((x) => x.part === d.part)) : [];
-  return kept.length ? { ...next, dismissed: kept } : next;
+  const same = prev?.frame?.url === next.frame.url && Boolean(next.frame.version) && prev?.frame?.version === next.frame.version;
+  const kept = same && prev.dismissed?.length ? prev.dismissed.filter((d) => next.differences.some((x) => x.part === d.part)) : [];
+  return { ...next, ...(kept.length ? { dismissed: kept } : {}), ...(same && prev.closed ? { closed: prev.closed } : {}) };
 }
 
 // Where else the same thing shows up, what a change to it touches, and the earlier

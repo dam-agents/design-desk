@@ -206,7 +206,8 @@ With `figma: enabled`, Design Desk compares an item with its frame in Figma and 
 differs on the item as `figma_check` (the `figma` skill → Compare with the product): a screen,
 an element and a shipped change against their frames, a request's option against the frame
 its Figma link names, and a decision a frame goes against. Each person sees it only once they
-turn on the Figma switch in their menu; it is off until they do.
+turn on the Figma switch in their menu; it is off until they do. With it off, the new request form has no
+Figma link field either.
 
 - **The box** sits under the item's pictures (a change's and a screen's screens, an
   element's drawing, an option's design, a decision's pictures), below a decision conflict
@@ -229,11 +230,18 @@ turn on the Figma switch in their menu; it is off until they do.
   option (a `change` thread anchored to it), which Design Desk works in as its next version.
 - **Product → Differences** lists what is in the product already, compared with Figma:
   screens, elements and shipped changes (not requests or decisions), filtered **Differs from
-  Figma** (the default), **Matches** and **All**; each row says how many differences, what it
-  is, its frame and when it was checked. A row opens its comparison page: the title, a status
-  box with how many differ, the frame's dates, the pull request of a change, **Open in Figma
-  ↗** and **Open the screen / element / PR change**; then the whole screen or element from each
-  side, and the table.
+  Figma** (the default), **Matches**, **Closed** (only while one is) and **All**. Each row
+  reads like a request's: the red **!** of a decision conflict, its words (**N differences
+  from Figma**) on hover, none once closed, and under the title `checked: … type: … frame: …`. A row opens its
+  comparison page: the title, a status box with how many differ, the frame's dates, the pull
+  request of a change, **Open in Figma ↗** and **Open the screen / element / PR change**, and
+  under **⋯** **Close** and **Add to presentation**; then the whole screen or element from
+  each side (a side with no picture is an empty box of the same size, its caption under it),
+  and the table.
+- **Close** (whoever may mark items handled) takes the whole comparison off Differs and
+  Matches for everyone, to **Closed** (`POST /api/cards/<id>/figma-close`); it stays closed
+  while the frame is the same and comes back once the frame in Figma changes. **Reopen**
+  puts it back (`{on: false}`).
 - Nothing here says which side is right: a designer decides, and asks for a change, updates
   Figma, or takes a difference off the table.
 
@@ -500,11 +508,13 @@ in all, and the glow keeps its place when the page draws again. A public notific
 cover it. The bell opens on **For you**: what the person
 filed, voted on, approved or wrote in; **All** shows the rest too. In simple mode both leave out
 an issue, a screen, an element and a decision, the pages it hides (Simple mode above). The red
-count is what is For you and newer than the person last opened the bell, in simple mode only
-what it shows;
-opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
-`seen: {<person>: at}`, the newest event's time), outside the write budget like reading an item:
-opening it again with nothing new writes nothing. Everything on an item that is the person's,
+count is the unread rows For you, in simple mode only what it shows. Opening the bell reads
+nothing: a row is read, for that person alone, once they click it (`POST
+/api/notifications/read?id=<row id>`; the store keeps `noted: {<person>: [ids]}`, only rows still
+unread), and **Mark as read** in the bell's header, shown while a row is unread, reads every one
+(`POST /api/notifications/seen`; the store keeps `seen: {<person>: at}`, the newest event's
+time). Both are outside the write budget like reading an item, and a read row writes nothing. A
+newer message on a folded row makes it a new, unread row. Everything on an item that is the person's,
 its messages included, is For you.
 
 ## Designs

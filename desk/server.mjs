@@ -201,9 +201,10 @@ async function viewerRoute(req, res, url, who) {
   // outside the write budget: browsing many items must not use up what comments and votes need,
   // and it writes at most once per person and item.
   if (m === "POST" && p[1] === "cards" && p[3] === "read" && !p[4]) return send(res, 200, store.full() ? { read: false } : store.markRead(p[2], actor));
-  // The bell: what happened lately, for this person (docs/desk.md → Notifications). Opening it
-  // marks it seen; like reading an item, that is outside the write budget.
+  // The bell: what happened lately, for this person (docs/desk.md → Notifications). A click on a
+  // row marks it read, Mark as read all of them; like reading an item, outside the write budget.
   if (m === "GET" && p[1] === "notifications") return send(res, 200, store.notifications(actor));
+  if (m === "POST" && p[1] === "notifications" && p[2] === "read") return send(res, 200, store.full() ? { read: false } : store.markNoteRead(actor, url.searchParams.get("id")));
   if (m === "POST" && p[1] === "notifications" && p[2] === "seen") return send(res, 200, store.full() ? { seen: null } : store.markSeen(actor));
   const b = m === "GET" ? {} : await body(req);
   if (m !== "GET") {
@@ -227,6 +228,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "built") { need("built"); return send(res, 200, store.markBuilt(p[2], actor, b.built !== false)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "handled") { need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
   // A difference from Figma taken off an item's table, or brought back (docs/desk.md → Differences from Figma).
+  if (m === "POST" && p[1] === "cards" && p[3] === "figma-close") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.closeFigma(p[2], actor, b.on !== false)); }
   if (m === "POST" && (p[1] === "cards" || p[1] === "decisions") && p[3] === "figma-dismiss") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.dismissFigma(p[2], actor, b.part, b.on !== false)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "threads") {
     need(b.kind === "question" ? "ask" : b.kind === "change" ? "change" : "comment");

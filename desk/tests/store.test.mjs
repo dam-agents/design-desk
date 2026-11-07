@@ -1585,7 +1585,7 @@ test("an item read against its frame in Figma: what differs, how much, each side
   const { card } = s.upsertCard({ id: screen.id, figma_check: { verdict: "differs", frame, product_shot: pic, differences: [diff, { ...diff, part: "Header", severity: "major" }] } });
   assert.deepEqual([card.figma_check.differences.length, card.figma_check.frame.edited, Boolean(card.figma_check.checked)], [2, "2026-11-04T10:00:00.000Z", true]);
   const row = s.listCards({ kind: "screen" })[0];
-  assert.deepEqual(row.figma, { verdict: "differs", count: 2, frame: "Agents list", checked: card.figma_check.checked });
+  assert.deepEqual(row.figma, { verdict: "differs", count: 2, frame: "Agents list", checked: card.figma_check.checked, closed: false });
   // On a request it belongs to the option it compared.
   const { card: r } = s.createRequest(alice, { title: "Bigger send", problem: "Too small." });
   s.upsertCard({ id: r.id, variants: [{ id: "v1", name: "Calm", asset: page }] });
@@ -1612,7 +1612,7 @@ test("an item read against its frame in Figma: what differs, how much, each side
   assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { ...check, differences: [diff, { ...diff, severity: "major" }] } }), /named twice/);
   s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: "a7b1" } } });
   s.dismissFigma(screen.id, alice, "Header"); s.dismissFigma(screen.id, alice, "Stopped dot");
-  assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked }, "all off: it matches");
+  assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked, closed: false }, "all off: it matches");
   s.dismissFigma(screen.id, alice, "Header", false);
   assert.equal(s.listCards({ kind: "screen" })[0].figma.count, 1, "brought back");
   s.upsertCard({ id: screen.id, figma_check: null });
@@ -1909,6 +1909,35 @@ test("notifications: every event kind, the 30-day window, the row cap, newest fi
   assert.equal(s.notifications(alice).unread, 1);
   s.markSeen(alice);
   assert.equal(saves, 3, "news: one write (the comment saved once too)");
+  assert.equal(s.notifications(alice).unread, 0);
+});
+
+test("notifications: a click reads one row; a repeat click writes nothing, noted keeps only rows still in the bell, Mark as read empties it", () => {
+  let now = Date.UTC(2026, 9, 1);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const tick = (h = 1) => { now += h * 3600e3; return s.clock(); };
+  const pat = { email: "pat@example.com", role: "designer" };
+  const r = s.createRequest(alice, { title: "Mine", problem: "x", screen: "S" }).card;
+  tick(); s.openThread(r.id, pat, { kind: "comment", text: "First" });
+  let saves = 0; const save = s.save.bind(s); s.save = () => { saves += 1; save(); };
+  const row = () => s.notifications(alice).items.find((x) => x.item === r.id && x.for_you);
+  // One row read on its click; a repeat click on a read row returns early, with no save.
+  const first = row().id;
+  assert.equal(s.markNoteRead(alice, first).read, true);
+  assert.equal(saves, 1);
+  assert.equal(s.markNoteRead(alice, first).read, true);
+  assert.equal(saves, 1, "a repeat click writes nothing");
+  assert.deepEqual(s.db.noted[alice.email], [first], "one id, never twice");
+  // A new message on the item is a new row; reading it drops the id that left the bell.
+  tick(); s.openThread(r.id, pat, { kind: "comment", text: "Second" });
+  const next = row().id;
+  assert.notEqual(next, first, "the folded row has a new id");
+  s.markNoteRead(alice, next);
+  assert.deepEqual(s.db.noted[alice.email], [next], "only rows still in the bell stay noted");
+  // Mark as read covers every row with seen, and empties noted.
+  tick(); s.openThread(r.id, pat, { kind: "comment", text: "Third" });
+  s.markSeen(alice);
+  assert.equal(s.db.noted[alice.email], undefined, "Mark as read empties noted");
   assert.equal(s.notifications(alice).unread, 0);
 });
 
