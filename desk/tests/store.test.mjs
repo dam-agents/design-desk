@@ -1253,6 +1253,26 @@ test("an issue a request was sent to developers from, or to, is designed; the re
   assert.equal(s.getCard(sent.id).designed.title, "Spend column");
 });
 
+test("a change whose pull request builds a sent request's issue, or got its spec, links the request", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(Date.UTC(2026, 10, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const pr = (n, url = true) => s.upsertCard({ kind: "change", title: `PR ${n}`, source: { repo: "acme/widgets", pr: n, ...(url ? { url: `https://github.com/acme/widgets/pull/${n}` } : {}) } }).card;
+  const viaIssue = pr(40), direct = pr(41), noUrl = pr(43, false), other = pr(42);
+  const sent = (title, spec) => { const r = s.createRequest(alice, { title, problem: "Why.", type: "feature" }).card; return s.upsertCard({ id: r.id, status: "handed-off", spec }).card; };
+  const r = sent("Spend column", { issue_url: "https://github.com/acme/widgets/issues/31" });
+  assert.equal(s.getCard(viaIssue.id).builds, null, "not before the Desk read the issue's pull requests");
+  s.putGithub([{ key: "acme/widgets#31", kind: "issue", title: "Spend column", state: "open", linked: [
+    { title: "Build it", url: "https://github.com/Acme/Widgets/pull/40", state: "open" }, { title: "No url", url: "https://github.com/acme/widgets/pull/43", state: "open" }] }]);
+  assert.deepEqual(s.getCard(viaIssue.id).builds, { card: r.id, title: "Spend column", at: s.getCard(r.id).updated, url: "https://github.com/acme/widgets/issues/31" },
+    "a pull request listed under the spec's issue; builds names the issue the spec went to");
+  assert.equal(s.getCard(noUrl.id).builds?.card, r.id, "a change with no source url is matched by its repo and number");
+  const r2 = sent("Tidy", { pr_url: "https://github.com/acme/widgets/pull/41" });
+  assert.equal(s.getCard(direct.id).builds.url, "https://github.com/acme/widgets/pull/41", "the spec's own pull request, named by its url");
+  const r3 = sent("Spend column again", { issue_url: "https://github.com/acme/widgets/issues/31" });
+  const rows = Object.fromEntries(s.listCards({ kind: "change" }).map((c) => [c.id, c.builds?.card || null]));
+  assert.deepEqual(rows, { [viaIssue.id]: r3.id, [direct.id]: r2.id, [noUrl.id]: r3.id, [other.id]: null }, "the newest send wins; an unrelated pull request links nothing");
+});
+
 test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   const s = fresh();
   const pm = { email: "pat@example.com", role: "pm" };

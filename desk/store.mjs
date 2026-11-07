@@ -372,6 +372,9 @@ export class Store {
   // ---------- reads ----------
 
   listCards({ kind, status, viewer } = {}) {
+    // One index of the pull requests sent requests are built by, for the whole list.
+    let index = null;
+    const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
     return Object.values(this.db.cards)
       .filter((c) => (!kind || c.kind === kind) && (!status || c.status === status))
       .sort((a, b) => b.updated.localeCompare(a.updated))
@@ -405,7 +408,7 @@ export class Store {
         attention: this.attentionOf(c), conflicts: this.activeConflicts(c).length,
         // The decisions in force it goes against, by number: the list's red ! (docs/desk.md → Decisions).
         against: [...new Set(this.activeConflicts(c).map((x) => x.decision))],
-        designed: this.designedOf(c), sent_card: this.sentCardOf(c),
+        designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: builds(c),
         // An element from an approved design, not from the product (docs/catalog.md → From approved designs).
         design: c.design ? { card: c.design.card, option: c.design.option, version: c.design.version, change: c.design.change, of: c.design.of } : null,
         design_check: c.design_check ? { verdict: c.design_check.verdict, request: c.design_check.request, differences: c.design_check.differences.map((x) => ({ element: x.element, card: x.card })) } : null,
@@ -429,6 +432,27 @@ export class Store {
       .filter((x) => x.kind === "request" && x.status === "handed-off" && (x.request?.from === c.id || (key && issueKey(x.spec?.issue_url) === key)))
       .sort((a, b) => b.updated.localeCompare(a.updated))[0];
     return r ? { card: r.id, title: r.title, at: r.updated, url: r.spec?.issue_url || r.spec?.pr_url || null } : null;
+  }
+
+  // The request a change's pull request builds: its spec went to this pull request, or to the
+  // issue whose pull requests (the Desk's GitHub copy, `linked`) include it. The newest send
+  // wins. The index maps each such pull request's key to its request, built once per read.
+  buildsIndex() {
+    const index = new Map();
+    const sent = Object.values(this.db.cards).filter((x) => x.kind === "request" && x.spec)
+      .sort((a, b) => b.updated.localeCompare(a.updated));
+    for (const r of sent) {
+      const keys = [issueKey(r.spec.pr_url), ...(own(this.db.github, issueKey(r.spec.issue_url) || "")?.linked || []).map((p) => issueKey(p.url))];
+      for (const k of keys) if (k && !index.has(k)) index.set(k, r);
+    }
+    return index;
+  }
+
+  buildsOf(c, index = null) {
+    if (c.kind !== "change") return null;
+    const key = issueKey(c.source?.url) || (c.source?.repo && c.source?.pr ? `${String(c.source.repo).toLowerCase()}#${c.source.pr}` : null);
+    const r = key && (index || this.buildsIndex()).get(key);
+    return r ? { card: r.id, title: r.title, at: r.updated, url: r.spec.issue_url || r.spec.pr_url || null } : null;
   }
 
   // The Issues card of the issue a request's spec went to, once the issues run carded it.
@@ -476,7 +500,7 @@ export class Store {
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), designed: this.designedOf(c), sent_card: this.sentCardOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.

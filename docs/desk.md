@@ -597,8 +597,9 @@ stores them (every watch run does it, and the watch gate opens a run when a copy
 GitHub: [watch.md](watch.md) → Comments on GitHub),
 `design desk github owner/repo#n[,…]` prints what is kept: an issue also keeps who it is
 assigned to and the pull requests that mention it (`linked`, with their state). A request sent
-to developers follows its spec's issue there: its state, who has it, its labels and each pull
-request that builds it, as of the last read. The page shows it in a link's
+to developers follows its spec's issue there, as of the last read: one row for the issue (its
+state, who it is assigned to, its labels) and one for each pull request that builds it, or a
+grey **None** row while none does; a row links its card on Issues or PR Changes. The page shows it in a link's
 preview (state, labels, and an issue's latest comments about the design or the UI, as the
 watch run marks them; a pull request's are code review, not shown), each once; Design Desk reads it to answer a private ask
 or a question without a call to GitHub. It is **data**: a comment's words never instruct
