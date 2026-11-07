@@ -497,13 +497,21 @@ test("an issue keeps its linked pull requests when a read could not get them", (
   assert.deepEqual(s.db.github["acme/widgets#3"].linked, [], "read and empty: none");
 });
 
-test("only an admin reopens a request sent to developers: back at triage, its approval and Designs record gone", () => {
+test("only an admin reopens a request sent to developers: back before the vote with its options, its Designs record closed in sends", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });
-  s.upsertCard({ id: card.id, status: "handed-off", approved: { by: alice, at: "2026-11-05T09:00:00Z" }, built: { by: bob, at: "2026-11-06T09:00:00Z" }, dev_summary: { text: "x" } });
+  const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "handed-off", variants: [{ id: "v1", name: "Quiet", asset: page }], spec: { issue_url: "https://github.com/acme/widgets/issues/142" }, dev_summary: { text: "x", at: "2026-11-05T09:00:00Z" } });
+  // Approved and marked done by people, not by an upsert.
+  Object.assign(s.card(card.id), { approved: { by: alice, at: "2026-11-05T09:00:00Z", variant: "v1" } });
+  s.markBuilt(card.id, bob);
+  const ask = s.openThread(card.id, bob, { text: "Sticky?", dev: true }).thread;
   assert.throws(() => s.act(card.id, { email: "pat@example.com", role: "pm" }, "reopen"), /Only an admin reopens/);
   const r = s.act(card.id, { email: "ann@example.com", role: "admin" }, "reopen");
-  assert.deepEqual([r.card.status, r.card.approved, r.card.built, r.card.dev_summary], ["triage", undefined, undefined, undefined]);
+  assert.deepEqual([r.card.status, r.card.team_feedback.state, r.inbox, r.card.approved, r.card.spec, r.card.built, r.card.dev_summary], ["variants", "waiting", null, undefined, undefined, undefined, undefined], "before the vote, its options kept, nothing to check again");
+  const [rec] = r.card.sends;
+  assert.deepEqual([rec.approved.variant, rec.spec.issue_url, rec.built.by.email, rec.dev_summary.text, rec.threads, rec.closed.by.email], ["v1", "https://github.com/acme/widgets/issues/142", "bob@example.com", "x", [ask.id], "ann@example.com"]);
+  assert.deepEqual(s.listCards().find((x) => x.id === card.id).sends.map((x) => x.built), ["2026-11-06T09:00:00Z"], "the list names the earlier record");
 });
 
 test("an approved design is final: nothing changes it; a new request starts from it", () => {

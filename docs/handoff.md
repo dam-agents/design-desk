@@ -92,7 +92,12 @@ card the people who may approve it read the spec, and:
    prototype's, else `design-desk/c<n>-handoff` from the default branch), run `design guard`
    on that exact diff ([boundary.md](boundary.md)), and push only when it passes; a refusal
    pushes nothing, and the delivery carries `design.json` in the issue alone.
-6. Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
+6. A request sent before, reopened by an admin and approved again (`sends` not empty) is sent
+   anew: a **new** issue, or pull request, with this spec — never a comment on an earlier
+   send's issue, a `feature` included — naming the earlier one (`sends[].spec.issue_url`).
+   Its first send's issue stays as it is.
+
+   Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
    [actions.md](actions.md); the bundled one is
    [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)), with the approved option's
    pictures attached, by the request's type:

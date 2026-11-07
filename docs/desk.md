@@ -415,8 +415,11 @@ prototype once Design Desk has checked a request:
 From **Approve** on (the spec, and once it went to developers) a request's design no longer
 changes: the store refuses Draw design options, one more option, a redraw, Work it in, other
 ways a part could look, removing an option, a live prototype, a Figma import, and Reopen of
-one sent to developers, save an admin's (**Reopen…** under ⋯, behind a confirmation: the
-approval goes, the issue or pull request on GitHub stays as it is). The design options say so (🔒 Approved), and **New request from this…**
+one sent to developers, save an admin's (**Reopen…** under ⋯, behind a confirmation): the
+request goes back to before the team's vote with its options (`variants`, `team_feedback`
+waiting; none drawn → triage), its approval, spec, `built` and `dev_summary` move into a closed
+record in `sends`, and the issue or pull request on GitHub stays as it is. A new approval
+sends it anew, with a new issue ([handoff](handoff.md), step 6) and a new Designs record. The design options say so (🔒 Approved), and **New request from this…**
 (under ⋯, and in that line) starts a request whose `request.from` is this one, of the same
 type; its dialog asks which options carry over (the approved one ticked) and how many new ones
 to draw besides (none by default). Comments,
@@ -533,7 +536,10 @@ messages are For you for the designer who approved the request, or every `design
 `admin` when a non-designer approved it, and land on `#designs/C-<n>`: they open the page
 without the menu. The request shows the same thread as *Developer asks*, and for a role that sees Designs its
 step pill holds **Show the design**, which opens it here. Answer nothing on it:
-it is between people.
+it is between people. Each closed record of a request reopened after it was sent (`sends`)
+stays under **Done** as its own row (`C-<n>~<k>`, **· earlier send**), read-only: **Closed**,
+who reopened it and when, its issue, its summary and its questions, with no box to ask and no
+Mark as done.
 
 ## Claims
 

@@ -2194,12 +2194,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const presenting = () => S.tab === "requests" && S.reqFilter === "presentation";
   // Every card's number is its id; its link is the Desk's link with the number, on the
   // presentation the presentation's: #C-12, #presentation/C-12 (docs/desk.md → Links to an item).
-  const num = (c) => (c?.id ? `<span class="num">${esc(c.id)}</span>` : "");
+  // An earlier Designs record of a reopened request shows its request's number.
+  const num = (c) => (c?.id ? `<span class="num">${esc(c.base || c.id)}${c.send ? " · earlier send" : ""}</span>` : "");
   // The item's link, as an icon beside its number: copies a link that opens it.
   const LINK_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>`;
   const PEN_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const titleLink = (c) => (c && itemLink(c) ? `<button class="linkbtn" data-copy-link aria-label="Copy a link to ${esc(c.id)}" title="A link that opens ${esc(c.id)}: paste it in Slack, an issue or a message">${LINK_ICON}</button>` : "");
-  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${presenting() ? "presentation/" : S.tab === "designs" ? "designs/" : ""}${c.id}` : "");
+  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${presenting() ? "presentation/" : S.tab === "designs" ? "designs/" : ""}${c.base || c.id}` : "");
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
   const backBar = () => {
     const decisions = S.tab === "product" && S.productFilter === "decisions";
@@ -2415,7 +2416,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   S.ws.notes = store.get("desk-notes") !== "0";
 
   // Designs: requests approved and sent to developers; To build, or marked done (docs/desk.md → Designs).
-  const designCards = (filter) => S.cards.filter((c) => c.kind === "request" && c.status === "handed-off" && Boolean(c.built) === (filter === "done"));
+  // A request reopened after it was sent keeps each earlier record, closed, under Done: its row is `C-<n>~<k>`.
+  const designCards = (filter) => S.cards.flatMap((c) => c.kind !== "request" ? [] : [
+    ...(c.status === "handed-off" && Boolean(c.built) === (filter === "done") ? [c] : []),
+    ...(filter === "done" ? (c.sends || []).map((s, k) => ({ ...c, id: `${c.id}~${k + 1}`, base: c.id, send: k + 1, status: "handed-off", built: s.closed?.at || null })).reverse() : [])]);
+  // An earlier record of a reopened request: the request as it is, with what that send had.
+  const sendOf = (id) => { const m = /^(C-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
   function visibleCards() {
     if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "designs") return designCards(S.designFilter);
@@ -2977,7 +2983,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
 
   function renderThreads(c, { skipAsks = false, designs = false } = {}) {
     // On Designs only the questions for the designer, open, under their own box.
-    const threads = (c.threads || []).filter((th) => !(skipAsks && th.kind === "asks" && th.state === "open") && (!designs || th.dev));
+    const earlier = new Set(c.send ? [] : (c.sends || []).flatMap((s) => s.threads || []));
+    const threads = (c.threads || []).filter((th) => !(skipAsks && th.kind === "asks" && th.state === "open") && (!designs || (th.dev && !earlier.has(th.id))));
     const label = { question: ["Question", "info"], comment: ["Comment", ""], concern: ["Concern", "warn"], change: ["Change", "info"], asks: ["Design Desk asks", "warn"] };
     const KIND_TIP = { question: "A question to Design Desk; it answers right here", comment: "A comment for the team; Design Desk reads it when it changes the design", concern: "Someone is worried about an option", change: "A note asking Design Desk to change the design", asks: "Design Desk needs an answer before it can go on" };
     // Newest first: the conversation whose last message is latest leads.
@@ -3002,7 +3009,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${mini ? "</details>" : "</article>"}`;
     }).join("");
     // The designer answers in the thread; only who sees Designs asks.
-    if (designs) return `${can("designs") ? `<div class="composer" id="composer"><textarea id="composer-text" maxlength="4000" placeholder="Ask the designer how something is meant…"></textarea>
+    if (designs) return `${can("designs") && !c.send ? `<div class="composer" id="composer"><textarea id="composer-text" maxlength="4000" placeholder="Ask the designer how something is meant…"></textarea>
         <div class="bar"><button class="btn primary" data-post="designer" title="The designer who approved it gets a notification and answers here">Ask the designer</button></div></div>` : ""}${rows ? `<div class="threads design-asks">${rows}</div>` : ""}`;
     const open = threads.filter((th) => th.state !== "resolved").length;
     // The conversation folds under the box, as on the prototype; it stays as the reader left it.
@@ -3744,7 +3751,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // A closed request can be deleted for good, behind a confirmation (docs/desk.md → Deleting a request).
     const del = c.status === "declined" && can("close") ? `<button class="btn danger" data-act="delete">Delete this request…</button>` : "";
     // Only an admin reopens a request sent to developers (docs/desk.md → Approved designs no longer change).
-    const reopenSent = c.status === "handed-off" && S.me?.role === "admin" ? `<button class="btn" data-act="reopen" title="Opens it again at the first step; the approval goes, and what went to GitHub stays there">Reopen…</button>` : "";
+    const reopenSent = c.status === "handed-off" && S.me?.role === "admin" ? `<button class="btn" data-act="reopen" title="Opens it again before the team's vote, with its options; its Designs record closes, and what went to GitHub stays there">Reopen…</button>` : "";
     const items = (nx.more || "") + call + size + reopenSent + del + (closed(c) || locked(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`) + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
@@ -3958,7 +3965,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const url = c.spec?.issue_url || c.spec?.pr_url, m = url && /\/(issues|pull)\/(\d+)/.exec(url);
     const figma = v?.figma_url || c.request?.figma;
     const out = (href, words, tip) => `<a class="btn" href="${safeUrl(href)}" target="_blank" rel="noopener noreferrer" title="${esc(tip)}">${esc(words)} ↗</a>`;
-    const done = !can("built") ? "" : c.built ? `<button class="btn" data-built="0" title="Puts it back under To build">Not done yet</button>` : `<button class="btn primary" data-built="1" title="It is built: it moves under Done, and its designer sees it">Mark as done</button>`;
+    const done = !can("built") || c.send ? "" : c.built ? `<button class="btn" data-built="0" title="Puts it back under To build">Not done yet</button>` : `<button class="btn primary" data-built="1" title="It is built: it moves under Done, and its designer sees it">Mark as done</button>`;
     // Who approved it and when; once built, who marked it done too.
     const fact = (k, x) => x?.at ? `<span><span class="k">${k}</span> <b>${esc(personName(x.by?.email, "someone"))}</b> · ${esc(day(x.at))}</span>` : "";
     // The pull request it comes from: a request started from a PR change, or one filed from a PR.
@@ -3966,12 +3973,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const prUrl = [from?.kind === "change" ? from.source?.url : null, c.origin?.url].find((u) => /\/pull\/\d+/.test(u || "") && u !== url);
     const pr = prUrl ? out(prUrl, "PR", "The pull request this design comes from, on GitHub") : "";
     // Back to the request it was approved on, on Requests.
-    const back = `<button class="btn" data-show-request="${esc(c.id)}" title="Opens the request on Requests: its options, votes and comments">Open the request</button>`;
+    const back = `<button class="btn" data-show-request="${esc(c.base || c.id)}" title="Opens the request on Requests: its options, votes and comments">Open the request</button>`;
     const buttons = `${back}${url ? out(url, m?.[1] === "pull" ? "PR" : "Issue", "Where the design was sent to developers, on GitHub") : ""}${pr}${figma ? out(figma, "Figma", "The design in Figma") : ""}${done}`;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
-      <div class="status" data-o="approved"><div class="s-line"><div class="s-word"><span class="s-mark"></span>${c.built ? "Done" : "Approved"}</div>
-        <span class="hint s-meta">${fact("approved by", c.approved)}${fact("done by", c.built)}</span></div>
+      <div class="status" data-o="approved"><div class="s-line"><div class="s-word"><span class="s-mark"></span>${c.send ? "Closed" : c.built ? "Done" : "Approved"}</div>
+        <span class="hint s-meta">${fact("approved by", c.approved)}${fact("done by", c.built)}${fact("reopened by", c.closed)}</span></div>
+        ${c.send ? `<p class="hint">An earlier send: the request was reopened, so this design no longer goes to developers.</p>` : ""}
         ${buttons ? `<div class="next"><div class="actions">${buttons}</div></div>` : ""}</div>
       ${v ? `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>` : ""}
       ${c.dev_summary?.text ? `<h3>UX decisions<span class="ai-tag" title="Design Desk summed up what the team decided on the request">AI</span></h3><div class="section">${md(c.dev_summary.text)}</div>` : ""}
@@ -4822,7 +4830,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     renderNav(); renderList();
   }
   async function openCard(id, { quiet = false } = {}) {
-    const { card } = await api("GET", `/api/cards/${encodeURIComponent(id)}`);
+    const past = sendOf(id);
+    let { card } = await api("GET", `/api/cards/${encodeURIComponent(past ? past.base : id)}`);
+    if (past) {
+      const s = (card.sends || [])[past.k - 1];
+      if (!s) throw new Error(`There is no earlier record ${id} on the Desk.`);
+      card = { ...card, id, base: card.id, send: past.k, status: "handed-off", approved: s.approved, spec: s.spec, dev_summary: s.dev_summary, built: s.built, closed: s.closed, threads: (card.threads || []).filter((th) => s.threads.includes(th.id)) };
+    }
     const before = S.card;
     if (before?.id !== card.id) { S.folds.card = null; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
@@ -4868,6 +4882,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     $("#present")?.remove();
     if (to.decision) return openDecision(to.decision);
     if (!to.id) { if (to.tab === "presentation") { S.reqFilter = "presentation"; await showTab("requests"); } else await showTab(to.tab); return true; }
+    // An earlier, closed record of a reopened request opens on Designs → Done.
+    if (sendOf(to.id)) { S.tab = "designs"; S.designFilter = "done"; S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); await openCard(to.id); renderList(); return true; }
     if (!S.cards.some((x) => x.id === to.id)) await refreshList();
     const c = S.cards.find((x) => x.id === to.id);
     if (!c) { toast(`There is nothing numbered ${to.id} on the Desk.`); return false; }
@@ -4939,9 +4955,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const post = (note, more = {}) => api("POST", `/api/cards/${c.id}/actions`, { action: name, note, ...more });
     // A request sent to developers reopens only knowingly: its approval goes, GitHub keeps what it got.
     if (name === "reopen" && c.status === "handed-off") {
-      const r = await ask({ title: "Reopen a request sent to developers?", body: "It goes back to the first step and its approval goes; the design can change again. The issue or pull request on GitHub stays as it is: tell the developers there.", ok: "Reopen", send: () => post() });
+      const r = await ask({ title: "Reopen a request sent to developers?", body: "It goes back to before the team's vote, with its design options; its approval goes and the design can change again. Its record on Designs closes; a new approval sends it again, with a new record. The issue or pull request on GitHub stays as it is: tell the developers there.", ok: "Reopen", send: () => post() });
       if (!r) return;
-      toast("Reopened. Design Desk checks it again.");
+      toast("Reopened, before the team's vote. Its record on Designs is closed.");
       await refreshList(); await openCard(c.id); return;
     }
     let res = null;
@@ -5275,7 +5291,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       // A row of Differences opens its item beside the list, which stays.
       if (S.tab === "product" && S.productFilter === "differences" && visibleCards().some((x) => x.id === ds.card)) { await openCard(ds.card); renderList(); return; }
       // On Designs an item stays on Designs: its row, or a link to another design.
-      if (S.cards.some((x) => x.id === ds.card)) await goTo({ id: ds.card, ...(S.tab === "designs" ? { tab: "designs" } : {}) }); else await openCard(ds.card);
+      if (S.cards.some((x) => x.id === ds.card) || sendOf(ds.card)) await goTo({ id: ds.card, ...(S.tab === "designs" ? { tab: "designs" } : {}) }); else await openCard(ds.card);
       if (ds.madeBy) { showBeforeAfter(S.card, ds.madeBy); renderDetail(); }
       return;
     }

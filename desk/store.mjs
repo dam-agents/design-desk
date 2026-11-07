@@ -414,6 +414,8 @@ export class Store {
         figma: c.figma_check ? figmaRow(c.figma_check) : null,
         // An approved design a developer marked done (docs/desk.md → Designs).
         built: c.built?.at || null,
+        // Earlier Designs records of a request sent, reopened and sent again (docs/desk.md → Designs).
+        sends: (c.sends || []).map((s) => ({ closed: s.closed, built: s.built?.at || null })),
       }));
   }
 
@@ -1296,6 +1298,21 @@ export class Store {
     if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");
     if (action === "reopen") {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
+      // A request sent to developers: its Designs record closes as it was (`sends`), and the
+      // request goes back to before the vote with its options; a new approval sends it anew
+      // (docs/desk.md → Designs).
+      if (c.status === "handed-off") {
+        const at = this.clock();
+        c.sends = [...(c.sends || []), { approved: c.approved || null, spec: c.spec || null, dev_summary: c.dev_summary || null, built: c.built || null,
+          threads: (c.threads || []).filter((t) => this.db.threads[t]?.dev && !(c.sends || []).some((s) => s.threads.includes(t))), closed: { by: person(who), at } }];
+        for (const k of ["overruled", "approved", "decided", "built", "dev_summary", "spec"]) delete c[k];
+        if ((c.variants || []).length) Object.assign(c, { status: "variants", team_feedback: { state: "waiting", since: at } });
+        else c.status = "triage";
+        c.updated = at;
+        const item = (c.variants || []).length ? null : this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
+        this.save();
+        return { card: c, inbox: item };
+      }
       c.status = "triage";
       delete c.overruled;
       delete c.approved;
