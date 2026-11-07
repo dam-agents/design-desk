@@ -117,6 +117,11 @@ person's **Draw it** tries again.
   purple Designed dot), and its card links the
   request. The pre-flight never offers it to draw. An issue Design Desk opened itself (its
   body carries the card's marker) is read like any other, so it lands there linked.
+- **The pull request that builds it.** A change card whose pull request a sent request's spec
+  went to (`spec.pr_url`), or one of the pull requests the Desk's GitHub copy lists under the
+  spec's issue (`linked`), carries `builds` (the request, its title and date): its page links
+  the request, and the request's Sent to developers box links that change card next to the
+  pull request's row.
 - **Handled.** A designer marks an issue **Handled** on its page when design has nothing to do
   with it (`POST /api/cards/<id>/handled`, the card's `handled: {by, at}`; its `status` stays the
   run's): it leaves every list but **Handled**, and the pre-flight never offers it to draw. **Not

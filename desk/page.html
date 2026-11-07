@@ -887,7 +887,9 @@
   .spec-versions button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .spec-versions button:hover { text-decoration: underline; }
   .spec-versions button[aria-pressed="true"] { color: var(--ink); font-weight: 600; cursor: default; text-decoration: none; }
   .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-  .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, #1a7f37 14%, var(--panel)); color: #1a7f37; } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, #8250df 14%, var(--panel)); color: #8250df; }
+  .follow-prs li { display: grid; grid-template-columns: 60px 1fr; column-gap: 10px; align-items: baseline; } .follow-prs .chip { justify-content: center; }
+  .follow-prs li > span:last-child { color: var(--muted); } .follow-prs .ttl { color: var(--ink); } .follow-prs .sep { margin: 0 6px; } .follow-prs .nw { white-space: nowrap; }
+  .follow-prs .anchor { font: inherit; background: none; padding: 0; border-radius: 0; color: var(--accent); text-decoration: underline; max-width: none; } .follow-prs .num { font-size: .8em; } .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, #1a7f37 14%, var(--panel)); color: #1a7f37; } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, #8250df 14%, var(--panel)); color: #8250df; }
   .spec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; } .spec-head .hint { margin: 0; } .spec-tools { margin: 0; }
   /* The approved note reads on the heading's line, after it, in the hints' size. */
   h3 .locked-note { font-weight: 400; font-size: var(--fs-meta); margin-left: 10px; }
@@ -3221,6 +3223,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c), { pill, inline: true });
       })()}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
+      ${c.builds ? `<div class="sent"><b>Builds a design from Design Desk</b><p>This pull request builds <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}${c.builds.url && ghRef(c.builds.url) && !ghRef(c.builds.url).pr ? `, sent to developers as <a href="${safeUrl(c.builds.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(ghRef(c.builds.url).n)} ↗</a>` : ""}; its design and spec are there.</p></div>` : ""}
       ${requestsFrom(c)}
       ${attentionLine(c)}
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
@@ -3952,6 +3955,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${renderStatus(c)}${shippedLine(c)}
       ${c.status === "spec" && c.spec?.review === "draft" && c.spec?.asset ? specPanel(c) : ""}
       ${cannotFold(c)}
+      ${live(c) ? renderPrototype(c) : ""}
       </div>
       <div class="top2">
       <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c, bug)}</div><div class="brief-body">
@@ -3965,7 +3969,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${renderGrill(c)}
       ${shots(found)}
       </div>${briefToggle(S.folds.made, "made")}</div></div>
-      ${live(c) ? `${renderPrototype(c)}<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${canBuild() ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>`
+      ${live(c) ? `<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${canBuild() ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>`
         : `${renderOptions(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
       ${c.spec?.asset && !(c.status === "spec" && c.spec?.review === "draft") ? specPanel(c) : ""}
@@ -4025,16 +4029,24 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const what = m ? `${m[1] === "pull" ? "PR" : "Issue"} #${m[2]}` : c.spec?.pr_url ? "The pull request" : "The issue";
     const card = c.sent_card && S.cards.find((x) => x.id === c.sent_card);
     return `<div class="sent"><b>Sent to developers${sent && c.updated ? ` on ${esc(day(c.updated))}` : ""}</b>
-      ${url ? `<p><a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(what)} on GitHub ↗</a>${card ? ` · on the Issues page: <button class="anchor" data-card="${esc(card.id)}">${esc(card.title)}</button>${num(card)}` : ""}</p>` : ""}
-      ${followWork(url, c)}
-      ${sent ? `<p class="hint">When it ships, it appears under PR Changes.</p>` : ""}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
+      ${followWork(url, c, what, card)}${more ? `<div class="actions">${more}</div>` : ""}</div>`;
   }
   // Where the work stands on GitHub, as the Desk's copy has it (docs/desk.md → GitHub on the
   // Desk): the issue's state, who has it, its labels, and every pull request that builds it.
   const GH_STATE = { open: ["Open", "gh-open"], closed: ["Closed", "gh-draft"], merged: ["Merged", "gh-merged"], draft: ["Draft", "gh-draft"] };
-  function followWork(url, c) {
+  // One row per item, in one form: a state label, the GitHub link (Issue #n ↗ or PR #n ↗), then
+  // grey facts and the item's card on the Desk. The labels share a width, so the links align.
+  // No pull request yet is a grey None row.
+  function followWork(url, c, what = "", card = null) {
+    const gh = (u, text) => `<a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer">${esc(text)} ↗</a>`;
+    const desk = (x, page) => `see it in <span class="nw"><button class="anchor" data-card="${esc(x.id)}" title="Its card on the Desk: ${esc(x.title)}">${esc(page)}</button>${num(x)}</span>`;
+    const chip = (word, o = "", tip = "") => `<span class="chip"${o ? ` data-o="${o}"` : ""}${tip ? ` title="${esc(tip)}"` : ""}>${esc(word)}</span>`;
+    const row = (label, main, facts = []) => `<li>${label}<span>${main}${facts.filter(Boolean).map((f) => `<span class="sep">·</span>${f}`).join("")}</span></li>`;
+    const list = (rows) => `<div class="follow"><ul class="follow-prs">${rows.join("")}</ul></div>`;
+    const onIssues = card ? desk(card, "Issues") : "";
     const ref = ghRef(url);
-    if (!ref) return "";
+    if (!url) return "";
+    if (!ref) return list([row(chip("Sent"), gh(url, what), [onIssues])]);
     // Read again at most once a minute while the request is open: the page refreshes itself.
     S.ghRead ||= {};
     const stale = ref.key in S.gh && Date.now() - (S.ghRead[ref.key] || 0) > 60000;
@@ -4043,17 +4055,19 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const was = JSON.stringify(S.gh[ref.key] ?? null);
       if (stale) delete S.gh[ref.key];
       ghLoad([ref.key]).then(() => { if (S.card?.id === c.id && JSON.stringify(S.gh[ref.key] ?? null) !== was) renderDetail(); }).catch(() => {});
-      if (!stale) return `<p class="hint">Reading where it stands…</p>`;
+      if (!stale) return list([row(chip("…", "", "Reading where it stands on GitHub"), gh(url, what), [onIssues])]);
       S.gh[ref.key] = JSON.parse(was);
     }
     const g = S.gh[ref.key];
-    if (!g) return `<p class="hint">Design Desk has not read it on GitHub yet; its next check does.</p>`;
-    const pill = (st) => { const [w, o] = GH_STATE[st] || [st || "?", "gh-draft"]; return `<span class="chip" data-o="${o}">${esc(w)}</span>`; };
-    const who = (g.assignees || []).length ? ` · with ${esc(g.assignees.join(", "))}` : "";
-    const prs = (g.linked || []).map((p) => `<li>${pill(p.state)} <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.title)} ↗</a>${p.author ? ` <span class="hint">by ${esc(p.author)}</span>` : ""}</li>`).join("");
+    if (!g) return list([row(chip("?", "", "Design Desk has not read it on GitHub yet; its next check does"), gh(url, what), [onIssues])]);
+    const state = (st) => { const [w, o] = GH_STATE[st] || [st || "?", "gh-draft"]; return chip(w, o); };
+    const people = (xs, k) => (xs || []).length ? `${k} <span class="ttl">${esc(xs.join(", "))}</span>` : "";
+    // A pull request already on PR Changes links to its card there.
+    const prCard = (u) => { const k = ghRef(u)?.key, x = k && S.cards.find((y) => y.kind === "change" && ghRef(y.source?.url)?.key === k); return x ? desk(x, "PR Changes") : ""; };
+    const prs = (g.linked || []).map((p) => { const n = ghRef(p.url)?.n; return row(state(p.state), gh(p.url, n ? `PR #${n}` : "Pull request"), [p.title ? `<span class="ttl">${esc(p.title)}</span>` : "", people(p.author ? [p.author] : [], "by"), prCard(p.url)]); });
     const agent = c.spec?.sent?.implement || c.approved?.implement;
-    return `<div class="follow"><p>${pill(g.state)} ${esc(g.kind === "pr" ? "The pull request" : "The issue")}${who}${(g.labels || []).length ? ` · <span class="hint">${esc(g.labels.join(", "))}</span>` : ""}${g.fetched ? ` <span class="hint">· read ${esc(when(g.fetched))}</span>` : ""}</p>
-      ${prs ? `<p class="hint" style="margin:6px 0 2px">Pull requests that build it</p><ul class="follow-prs">${prs}</ul>` : g.kind === "issue" && g.state === "open" ? `<p class="hint">No pull request builds it yet${agent ? ": the coding agent opens one once it starts" : ""}.</p>` : ""}</div>`;
+    const none = g.kind === "issue" ? [row(chip("None", "", agent ? "The coding agent opens one once it starts" : "No pull request builds it yet"), "Pull request")] : [];
+    return list([row(state(g.state), gh(url, what), [people(g.assignees, "assigned to"), (g.labels || []).length ? esc(g.labels.join(", ")) : "", g.kind === "pr" ? prCard(url) : onIssues]), ...(prs.length ? prs : none)]);
   }
   // An issue or a change that already has a request (one not closed) offers no Design this or
   // Adjust the design: the line A request from this links to it. One closed or sent to developers brings the button back.

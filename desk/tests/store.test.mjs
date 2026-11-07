@@ -1253,6 +1253,21 @@ test("an issue a request was sent to developers from, or to, is designed; the re
   assert.equal(s.getCard(sent.id).designed.title, "Spend column");
 });
 
+test("a change whose pull request builds a sent request's issue, or got its spec, links the request", () => {
+  const s = fresh();
+  const pr = (n) => s.upsertCard({ kind: "change", title: `PR ${n}`, source: { repo: "acme/widgets", pr: n, url: `https://github.com/acme/widgets/pull/${n}` } }).card;
+  const viaIssue = pr(40), direct = pr(41), other = pr(42);
+  const r = s.createRequest(alice, { title: "Spend column", problem: "No spend.", type: "feature" }).card;
+  s.upsertCard({ id: r.id, status: "handed-off", spec: { issue_url: "https://github.com/acme/widgets/issues/31" } });
+  assert.equal(s.getCard(viaIssue.id).builds, null, "not before the Desk read the issue's pull requests");
+  s.putGithub([{ key: "acme/widgets#31", kind: "issue", title: "Spend column", state: "open", linked: [{ title: "Build it", url: "https://github.com/Acme/Widgets/pull/40", state: "open" }] }]);
+  assert.equal(s.getCard(viaIssue.id).builds.card, r.id, "a pull request listed under the spec's issue");
+  const r2 = s.createRequest(alice, { title: "Tidy", problem: "Messy.", type: "feature" }).card;
+  s.upsertCard({ id: r2.id, status: "handed-off", spec: { pr_url: "https://github.com/acme/widgets/pull/41" } });
+  const rows = Object.fromEntries(s.listCards({ kind: "change" }).map((c) => [c.id, c.builds?.card || null]));
+  assert.deepEqual(rows, { [viaIssue.id]: r.id, [direct.id]: r2.id, [other.id]: null }, "the spec's own pull request too; an unrelated one links nothing");
+});
+
 test("Draw it: a designer or a PM queues a drawing of an issue, once", () => {
   const s = fresh();
   const pm = { email: "pat@example.com", role: "pm" };
