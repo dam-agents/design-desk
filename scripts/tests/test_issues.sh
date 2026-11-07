@@ -145,7 +145,7 @@ assert "a change makes it due on its artifact" '.decisions_page_due[0].artifact 
 assert "the audit warns when it waits past two days" '[.checks[] | select(.id == "decisions_page") | [.status, (.detail | test("last published at 2026-11-01"))]] == [["warn", true]]' "$(bash "$ROOT/scripts/preflight.sh" audit 2>/dev/null)"
 # Fail closed: a link left where no redaction reaches (an id) keeps the page from being due.
 jq '.decisions["D-13"] = {"id": "D-13 https://leak.test", "concepts": ["x"], "text": "x", "status": "active"}' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
-assert "a page that still holds a link is not due, and the log names the decision" '.nothing_to_do == true and (.logs | tostring | test("decision D-13 \\(its id or concepts\\) still holds a link"))' "$(bash "$ROOT/scripts/preflight.sh" issues)"
+assert "a page that still holds a link is not due, and the log names the decision" '.nothing_to_do == true and (.logs | tostring | test("decision D-13 \\(its [a-z ]+\\) still holds a link"))' "$(bash "$ROOT/scripts/preflight.sh" issues)"
 assert "the audit warns that the page published before stays public" '[.checks[] | select(.id == "decisions_page") | [.status, (.detail | test("not updated: decision D-13.*stays public at https://share.test/a/x/raw"))]] == [["warn", true]]' "$(bash "$ROOT/scripts/preflight.sh" audit 2>/dev/null)"
 # A key left only in an id: the gate checks keys too.
 jq '.decisions["D-13"].id = "D-13 AKIAABCDEFGHIJKLMNOP"' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"

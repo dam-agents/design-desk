@@ -422,7 +422,10 @@ decisions_page() {
       reduce split("\n")[] as $l ({id: null, hit: null};
         if .hit then . else
           (if ($l | test("^## ")) then .id = null elif ($l | test("^(### |- )D-")) then .id = ($l | capture("^(### |- )(?<i>D-[A-Za-z0-9]*)").i) else . end)
-          | if ($l | leaks) then .hit = (if .id then "decision \(.id) (its \($l | field))" elif ($l | field) == "index" then "the index by concept" else "the page header" end) else . end end)
+          | if ($l | leaks) then .hit = (if .id then "decision \(.id) (its \($l | field))"
+            elif ($l | field) == "index" then ([$l | sub("^- [^:]*: "; "") | split(", ")[] | select(leaks) | capture("^(?<i>D-[A-Za-z0-9]*)").i] | first) as $i
+              | (if $i then "decision \($i) (its index entry)" else "the index by concept" end)
+            else "the page header" end) else . end end)
       | .hit // empty' "$PAGE.tmp" 2>/dev/null)" || [ -n "$hit" ]; then
     rm -f "$PAGE.tmp"
     if [ -n "$hit" ]; then DEC_BLOCKED="$hit still holds a link, an address, a mention or a key"
