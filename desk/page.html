@@ -42,6 +42,9 @@
   a { color: var(--accent); }
   .app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  /* An open header menu (the bell, your menu) floats above the private chat (75); only while
+     open, so the header never shows through the design workspace (70). */
+  header:has(details.more[open]) { position: relative; z-index: 76; }
   header h1 { font-size: var(--fs-read); margin: 0; font-weight: 600; letter-spacing: .01em; }
   /* Requests leads the menu; the other tabs are smaller, their counts grey. */
   nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
