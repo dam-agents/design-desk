@@ -324,21 +324,41 @@ watch_mode() {
 # The team's decisions as one public text page for coding agents (docs/decisions-page.md).
 # Rendered here, deterministically, into work/decisions-page.md (a cache: the agent
 # publishes it); due when its hash differs from the one last published
-# (work/decisions-page.json). No names, logins, e-mails or links: only roles and kinds.
+# (work/decisions-page.json). No names, logins, e-mails, links or keys: only roles and kinds.
+# Every free text is redacted; the finished page is checked again and, if anything of the
+# kind is left, or the names to mask cannot be read, it is not due (fail closed):
+# DEC_BLOCKED says why, and the audit warns.
 # Prints the `decisions_page_due` array.
+# The key and token shapes the page never carries.
+DEC_KEYS='(?<![A-Za-z0-9_-])(?:xox[a-z]-[A-Za-z0-9-]+|xapp-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]+|sk-(proj-)?[A-Za-z0-9_-]{20,}|[rs]k_(live|test)_[A-Za-z0-9]{10,}|(AKIA|ASIA)[A-Z0-9]{16}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*|-----BEGIN [A-Z ]*PRIVATE KEY-----)'
 decisions_page() {
-  DEC_DUE='[]'
-  local CONF="$1" DB="$DESK_DIR/db.json" PAGE="$WORK/decisions-page.md" REC="$WORK/decisions-page.json" roster sha old
+  DEC_DUE='[]' DEC_BLOCKED=''
+  local CONF="$1" DB="$DESK_DIR/db.json" PAGE="$WORK/decisions-page.md" REC="$WORK/decisions-page.json" roster rnames names sha old
   [ "$(jq -r .decisions_page <<<"$CONF")" = dam ] || { return; }
   [ -f "$DB" ] || { log "decisions page: no Desk store yet"; return; }
+  # Every name the roster and the store hold, masked in the free text: a roster row's name and
+  # address, and the name, login and address of every person the store keeps, whole and in parts.
+  rnames="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $4}' \
+    | jq -R 'split("\t") | (.[1] // ""), (.[0] | split(",")[] | split("@")[0])' | jq -sc .)" \
+  && names="$(jq -c --argjson rn "${rnames:-[]}" '
+      [ .. | objects | select(has("email") or has("emails") or has("login") or has("sub") or has("role"))
+        | .name, .login, .display_name, .handle, ((.email, (.emails // [])[]?) | strings | split("@")[0]) ] + $rn
+      | [ .[] | strings | gsub("^\\s+|\\s+$"; "") | select(length > 0) | ., splits("[\\s._+-]+") ]
+      | map(select(length >= 3)) | unique | sort_by(-length)' "$DB")" && [ -n "$names" ] \
+  || { DEC_BLOCKED="cannot read the names to mask from the roster or the Desk store at $DB"; log "decisions page: $DEC_BLOCKED — not published"; return; }
   # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
   # A row's email cell may list several addresses, each of them that person's (docs/config.md).
   roster="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
     | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
         | .[0] | split(",")[] | gsub("^\\s+|\\s+$"; "") | ascii_downcase | select(length > 0) | {key: ., value: $r}' | jq -sc 'reverse | from_entries')"
-  jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" '
-    def scrub: gsub("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[a-z]{2,}"; "[e-mail]") | gsub("<@[A-Z0-9]+>"; "[person]")
-      | gsub("xox[abposr]-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9]{20,}"; "[token]");
+  jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" --argjson names "$names" --arg keys "$DEC_KEYS" '
+    def esc: gsub("(?<c>[\\\\^$.|?*+()\\[\\]{}/-])"; "\\\(.c)");
+    # Slack forms, links, e-mails in any case, keys, @handles, then every known name.
+    def scrub: gsub("<@[^>]*>"; "[person]") | gsub("<[#!][^>]*>"; "[mention]") | gsub("<[^<>]*://[^<>]*>"; "[link]")
+      | gsub("\\b([a-z][a-z0-9+.-]*://|www\\.)[^\\s<>]*[^\\s<>.,;:!?)\\]\"'"'"']"; "[link]"; "i")
+      | gsub("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"; "[e-mail]") | gsub($keys; "[key]")
+      | gsub("(?<![\\w.])@[A-Za-z0-9][A-Za-z0-9_.-]*"; "[person]")
+      | reduce $names[] as $n (.; gsub("(?<p>^|[^\\p{L}\\p{N}_])" + ($n | esc) + "(?![\\p{L}\\p{N}_])"; "\(.p)[person]"; "i"));
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub;
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
@@ -376,7 +396,13 @@ decisions_page() {
         ($off[] | "- \(.id) (\((.concepts // []) | map(line) | join(", "))): \(.text | line) Revoked \(.revoked.at // "" | day)"
           + (if ((.revoked.reason // "") | line) != "" then ": \(.revoked.reason | line | rtrimstr("."))." else "." end)
           + (if .revoked.replaced_by and ((.revoked.reason // "") | contains("Replaced by") | not) then " Replaced by \(.revoked.replaced_by)." else "" end))
-      else empty end)' "$DB" > "$PAGE.tmp" 2>/dev/null || { rm -f "$PAGE.tmp"; log "decisions page: cannot read the Desk store at $DB"; return; }
+      else empty end)' "$DB" > "$PAGE.tmp" 2>/dev/null || { rm -f "$PAGE.tmp"; DEC_BLOCKED="cannot read the Desk store at $DB"; log "decisions page: $DEC_BLOCKED"; return; }
+  # Fail closed: a link, a Slack form, an address or handle, or a key left anywhere on the
+  # finished page (an id, a field the redaction missed) keeps it from being due.
+  if ! jq -Rse --arg keys "$DEC_KEYS" 'test("://|www\\.|<[@#!]|@[A-Za-z0-9]|" + $keys; "i") | not' "$PAGE.tmp" >/dev/null 2>&1; then
+    rm -f "$PAGE.tmp"; DEC_BLOCKED="the rendered page still holds a link, an address, a mention or a key"
+    log "decisions page: $DEC_BLOCKED — not published (docs/decisions-page.md)"; return
+  fi
   mv "$PAGE.tmp" "$PAGE"
   sha="sha256:$( (sha256sum 2>/dev/null || shasum -a 256) < "$PAGE" | cut -c1-16)"
   old="$(jq -r '.sha // ""' "$REC" 2>/dev/null)"
@@ -657,7 +683,8 @@ audit_mode() {
   local drec="$WORK/decisions-page.json" dat
   if [ "$(jq -r .decisions_page <<<"$CONF")" = dam ]; then
     decisions_page "$CONF"; dat="$(jq -r '.at // ""' "$drec" 2>/dev/null)"
-    if [ "$(jq length <<<"$DEC_DUE")" -eq 0 ]; then check decisions_page ok "$(jq -r '.url // "no Desk store yet"' "$drec" 2>/dev/null || echo 'no Desk store yet')"
+    if [ -n "$DEC_BLOCKED" ]; then check decisions_page warn "the decisions page is not published: $DEC_BLOCKED (docs/decisions-page.md)"
+    elif [ "$(jq length <<<"$DEC_DUE")" -eq 0 ]; then check decisions_page ok "$(jq -r '.url // "no Desk store yet"' "$drec" 2>/dev/null || echo 'no Desk store yet')"
     elif [ -z "$dat" ]; then check decisions_page warn "decisions_page is dam but the page was never published — the issues run publishes it (docs/decisions-page.md)"
     elif [ $((NOW_EPOCH - $(iso2epoch "$dat"))) -gt $((48 * 3600)) ]; then check decisions_page warn "the decisions page changed and was last published at $dat — is design-desk-issues-daily running?"
     else check decisions_page ok "due today, last published $dat"; fi
