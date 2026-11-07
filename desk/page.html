@@ -60,6 +60,8 @@
   details.me-menu > summary.me { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; }
   details.me-menu > summary.me:hover, details.me-menu[open] > summary.me { background: var(--soft); color: var(--ink); }
   details.me-menu > summary.me::after { content: "▾"; font-size: 10px; }
+  /* The gap alone spaces the role's icon: the space after "·" falls away in the flex row. */
+  details.me-menu > summary.me .role-ic { margin: 0; }
   details.me-menu .menu { left: auto; right: 0; min-width: 100%; box-sizing: border-box; }
   details.me-menu .menu .btn[aria-current="true"] { background: var(--soft); font-weight: 600; }
   /* The bell (docs/desk.md → Notifications): one row per event, every row the same five facts. */
@@ -1342,7 +1344,7 @@
   <path class="f-e" d="M510 222 H635" marker-end="url(#fl-req)"/>
   ${full(`<path class="f-e" d="M650 80 H690 V185" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="698" y="150">try it</text>`)}
   <path class="f-e" d="M742 222 H782 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="790" y="170">approved</text>`,
-    `Blue is Design Desk at work, amber waits on the team${full(", violet is live")}, green is approved. A person presses <b>Draw options</b> on a request filed here (one from Slack goes on by itself); a designer, a PM, an admin or a lead developer may instead <b>Approve…</b> right away, without options or a vote. <b>Work it in</b> sends the open comments back for a new version${full("; the live prototype is optional, and only for a request that changes nothing but the look. A request with parts a design change cannot do gets no prototype: <b>Contact a developer</b> opens those parts with a question to copy; it changes nothing on the request")}. A request For Developers is approved by a developer instead of a designer.`);
+    `Blue is Design Desk at work, amber waits on the team${full(", violet is live")}, green is approved. A person presses <b>Draw options</b> on a request filed here (one from Slack goes on by itself); a designer, a PM, an admin or a lead developer may instead <b>Approve</b> right away, without options or a vote. <b>Work it in</b> sends the open comments back for a new version${full("; the live prototype is optional, and only for a request that changes nothing but the look. A request with parts a design change cannot do gets no prototype: <b>Contact a developer</b> opens those parts with a question to copy; it changes nothing on the request")}. A request For Developers is approved by a developer instead of a designer.`);
   const FLOW_ISSUE = () => flow(860, 272, "An issue in the team's plan: once a day Design Desk reads it; if people will see a difference, it sketches how it looks now and how it could look and puts it on Issues. Draw it sketches it again, Design this starts a request, and once that request goes to developers the issue is designed.", `${flowHead("fl-issue")}
   <rect class="f-n" x="10" y="56" width="160" height="60" rx="10"/><text x="90" y="80">A GitHub issue</text><text class="f-sub" x="90" y="98">in the team's plan</text>
   <rect class="f-n f-checking" x="230" y="56" width="160" height="60" rx="10"/><text x="310" y="80">Reads it</text><text class="f-sub" x="310" y="98">will people see it?</text>
@@ -1393,7 +1395,7 @@ ${full(`<p>When you build a live prototype, Design Desk can first ask you a few 
 <p><b>All elements</b>: under each option, a small picture of every part it changes or adds, marked New or Changed. Open one to see it in every state, each as a picture of the part alone with the use case of the brief it covers; with none drawn yet, press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
 ${full(`<p><b>Add to the design catalog</b>: once a design is approved, its elements go to Product → Elements with their states. They are marked <b>✎ From an approved design</b>, apart from the product's own, until the product has them. When the change that builds the design ships, Design Desk compares it with the design: a change that differs says <b>⚠ Differs from the approved design</b> and shows what, side by side.</p>`)}
 ${full(`<p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>`)}
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer, PM or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. No option is picked as the winner: ${simple() ? "Approve asks" : "Approve, Build a live prototype and Add to presentation each ask"} which option. Requests sit in two tabs, <b>For Designers</b> and <b>For Developers</b>: one from Slack starts For Developers unless its message says otherwise, one filed here For Designers unless you switch it in New request. A request For Developers is approved by any developer but the person who filed it, without a designer; a lead developer moves a request between the two under More, and the request shows who chose and who approved it. A designer or lead developer need not wait for a vote${full(" or a live prototype")}: <b>Approve…</b> at any step, or <b>Close…</b> and tick <b>Close it and record a decision</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up.${full(" While a live prototype is up, the options fold under it; Approve approves the option it shows.")} <b>Send to Slack…</b> posts pictures of the options you tick, or asks the team for a vote on them — into the Slack thread the request came from, when it came from Slack.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer, PM or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. No option is picked as the winner: ${simple() ? "Approve asks" : "Approve, Build a live prototype and Add to presentation each ask"} which option. Requests sit in two tabs, <b>For Designers</b> and <b>For Developers</b>: one from Slack starts For Developers unless its message says otherwise, one filed here For Designers unless you switch it in New request. A request For Developers is approved by any developer but the person who filed it, without a designer; a lead developer moves a request between the two under More, and the request shows who chose and who approved it. A designer or lead developer need not wait for a vote${full(" or a live prototype")}: <b>Approve</b> at any step, or <b>Close…</b> and tick <b>Close it and record a decision</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up.${full(" While a live prototype is up, the options fold under it; Approve approves the option it shows.")} <b>Send to Slack…</b> posts pictures of the options you tick, or asks the team for a vote on them — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -2233,7 +2235,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         ["<b>Add to the design catalog</b> once a design is approved: its elements go to Product → Elements, marked as from the approved design.", "add"],
         ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
-        [`Skip the vote${full(" and the live prototype")}: <b>Approve…</b>, or <b>Close…</b> with a decision recorded: what you decided.`, "skip"],
+        [`Skip the vote${full(" and the live prototype")}: <b>Approve</b>, or <b>Close…</b> with a decision recorded: what you decided.`, "skip"],
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
         [simple() ? "Switch between <b>For Designers</b> and <b>For Developers</b>; filter the requests by <b>Open</b> or <b>Closed</b>." : "Switch between <b>For Designers</b>, <b>For Developers</b> and the <b>Presentation</b>; filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>."], LINK],
@@ -3513,7 +3515,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // Ending it: with a decision recorded in the person's name, or closed without one.
     // One Close: just close it, or close it with a decision recorded in the person's name.
     const ends = can("close") || can("skip") ? b("close", "Close…") : "";
-    const skip = (can("skip") && canApprove(c) ? b("approve", "Approve…") : "") + ends;
+    const skip = (can("skip") && canApprove(c) ? b("approve", "Approve") : "") + ends;
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: skip } : { text: none || "Next: a designer, PM or developer starts the design options.", buttons: skip };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
@@ -3531,20 +3533,20 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
       return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
-        sub: failed ? "Design Desk wrote why in the comments below." : "", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        sub: failed ? "Design Desk wrote why in the comments below." : "", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (live(c)) {
       // The next step is to open the live prototype: it sits in the step pill, as Ask for feedback does.
       const open = c.prototype.url ? `<a class="step-next" href="${safeUrl(c.prototype.url)}" target="_blank" rel="noopener noreferrer" title="Opens the live prototype in a new tab">Open the prototype</a>` : "";
       return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c), step: open,
-        buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + ends };
+        buttons: (canApprove(c) ? b("approve", "Approve", true) : "") + ends };
     }
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
       return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, press Ask for feedback." : "The options are drawn. The request's author, a designer, a PM, a developer or an admin asks the team for feedback once they are fine-tuned.",
         step: mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, PMs, developers and admins may on any request"}.">Ask for feedback</button>` : "",
         more: design && canBuild() ? b("build", "Build a live prototype…") : "",
-        buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       // No live prototype for a request with parts a design change cannot do: the step is to
@@ -3553,10 +3555,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       // The pill always holds a move on: with no prototype and nothing for a developer, the
       // next step is approval; for someone who cannot approve, asking the team in Slack.
       const step = design && canBuild() ? sb("build", "Build a live prototype") : dev
-        || (canApprove(c) ? sb("approve", "Approve…") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
+        || (canApprove(c) ? sb("approve", "Approve") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
         // The green Approve stays in the row even when the pill's next move is Approve too.
-        step, buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        step, buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     return { text: "", buttons: "" };
   }
@@ -3570,8 +3572,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const go = (label, sub) => ({ label, ok: true, sub }), no = (label, sub) => ({ label, ok: false, sub });
     const info = (sub) => ({ label: "", ok: true, sub, info: true });
     const ask = `ask ${contact()}`;
-    const approve = () => canApprove(c) ? go("Approve…", S.me?.spec_review ? "Pick the option; Design Desk writes the developer spec for you to read. It goes to developers only when you press Send." : hasOptions ? "Pick the option; Design Desk writes the developer spec and sends it. It can't be taken back." : "Without design options: Design Desk writes the spec from the request and sends it to developers.")
-      : no("Approve…", against ? "A designer approves it: it goes against a decision in force."
+    const approve = () => canApprove(c) ? go("Approve", S.me?.spec_review ? "Pick the option; Design Desk writes the developer spec for you to read. It goes to developers only when you press Send." : hasOptions ? "Pick the option; Design Desk writes the developer spec and sends it. It can't be taken back." : "Without design options: Design Desk writes the spec from the request and sends it to developers.")
+      : no("Approve", against ? "A designer approves it: it goes against a decision in force."
         : c.size?.small ? `For Developers: a developer approves it${(c.created_by?.email || c.origin?.email) ? `, not ${c.created_by?.email || c.origin?.email} who filed it` : ""}.`
         : `A designer, a PM or a lead developer approves it; ${S.me?.role === "guest" ? ask : "tell them in a comment when the team is happy"}.`);
     const close = () => can("close") || can("skip") ? go("Close…", "Nothing goes to developers. You can record a decision with it, in your name.")

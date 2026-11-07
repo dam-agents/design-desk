@@ -386,7 +386,7 @@ worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
 A designer, a PM, an admin or a lead developer (`skip`) may skip the options, the vote and the live
 prototype once Design Desk has checked a request:
 
-- **Approve** at any open step from Checking on (the same **Approve…** before options: the spec then comes from the request);
+- **Approve** at any open step from Checking on (the same **Approve** before options: the spec then comes from the request);
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
   in the person's words ([handoff.md](handoff.md)). A PM or a lead developer does not overrule a
   decision in force: that stays a designer's.
@@ -765,7 +765,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
   they fine-tune the options, until its author, a designer, a PM, a developer or an admin presses **Ask for
-  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Team feedback Build a live prototype, else Contact a developer, else Approve…, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Team feedback Build a live prototype, else Contact a developer, else Approve, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and

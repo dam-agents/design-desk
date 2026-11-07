@@ -1149,14 +1149,14 @@ for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
 }
 
 // At Team feedback the step pill always offers a move on: a live prototype for Design only,
-// else a developer for parts design cannot do, else Approve…, else Send to Slack….
+// else a developer for parts design cannot do, else Approve, else Send to Slack….
 const BRIDGE_PILL = (triage, me) => BRIDGE_STORIES
   .replace('triage: { verdict: "design", reasons: [] }', `triage: ${JSON.stringify(triage)}`)
   .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me));
 const PILLS = [
   ["Build a live prototype", { verdict: "design", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, '[data-act="build"]'],
   ["Contact a developer", { verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, "[data-dev-ask]"],
-  ["Approve…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
+  ["Approve", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
   ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
 ];
 for (const [label, triage, me, sel] of PILLS) {
@@ -1170,8 +1170,8 @@ for (const [label, triage, me, sel] of PILLS) {
     // The state's ⓘ draws every way on: a move the viewer may make plainly, one they may not
     // greyed with why and who can.
     const help = await desk.textContent("#detail .s-word .info .tip");
-    if (me.can.approve) assert.doesNotMatch(help, /✕ Approve…/, "an approver's help offers Approve…");
-    else assert.match(help, /✕ Approve…Not now: A designer, a PM or a lead developer approves it/, "anyone else's says who approves it");
+    if (me.can.approve) assert.doesNotMatch(help, /✕ Approve/, "an approver's help offers Approve");
+    else assert.match(help, /✕ ApproveNot now: A designer, a PM or a lead developer approves it/, "anyone else's says who approves it");
   }));
 }
 
