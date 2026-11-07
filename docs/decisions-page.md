@@ -11,13 +11,16 @@ from the Desk store: the decisions in force (text, why, concepts, when, who deci
 **role**, where as a **kind**, what it replaces, Not approved yet), an index by concept, and
 the revoked ones in one line each. It holds no names, logins, e-mails, links, keys or pictures.
 The renderer redacts every free text (a decision's text, why, concepts, a revoke's reason):
-every link (`https://…`, `www.…`, a Slack `<…|…>` link), every Slack `<@…>`, `<#…>` or `<!…>`
-form, an e-mail in any case, an `@handle`, every known key or token shape, and every name the
-roster (its `name` column and addresses) and the Desk store (each person's name, login and
-address, whole and in parts) hold. It fails closed: when the names cannot be read, or the
-finished page still holds a link, an address, a mention or a key, the page is not due and the
-audit warns until the text is fixed on the Desk. Never edit the file: a change to the page is
-a change to the renderer.
+every link (`https://…`, `www.…`, `host.tld/path`, a Slack `<…|…>` link), every Slack `<@…>`,
+`<#…>` or `<!…>` form, an e-mail in any case, an `@handle` (not `react@18`), a whole private key
+and every known key or token shape, and every name the roster (its `name` column and
+addresses) and the Desk store (a person's name, login and address wherever a record keeps one:
+an author, a reporter, a voter, a GitHub login) hold, whole and in parts of 3 or more
+characters — a shorter name or part, such as `Jo`, stays. It fails closed: when the store or
+the names cannot be read, or the finished page still holds a link, an address, a mention or a
+key, the page is not due, the log names the decision and the field, and the audit warns; the
+page published before stays public until the text is fixed on the Desk. Never edit the file:
+a change to the page is a change to the renderer.
 
 ## `decisions_page_due` (the issues run)
 
