@@ -1951,7 +1951,7 @@ window.platform = { async request({ method, path, body }) {
     return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/prefs" ? { figma: window.figmaPref } : { figma_check: {} }) };
   }
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? true, can: { handle: true, revise: true, figma: true, request: true } }
+  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? true, can: { handle: true, revise: true, figma: true, request: true, queue: true } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
     : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" }
     : path === "/api/assets/A-2" ? { id: "A-2", contentType: "image/png", encoding: "base64", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" }
@@ -1986,6 +1986,7 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   await desk.click('#detail .status [data-fig-close="1"]');
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/figma-close"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/figma-close").body), { on: true });
+  await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => t.textContent.startsWith("Closed for everyone")));
   await desk.waitForSelector('[data-filter="figFilter:closed"]');
   assert.equal(await desk.locator('#list [data-card="C-1"]').count(), 0, "off Differs");
   await desk.click('[data-filter="figFilter:closed"]');
@@ -1995,6 +1996,9 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   await desk.waitForSelector('#detail .status[data-o="closed"]');
   await desk.click("#detail .status .more summary");
   await desk.click('#detail .status [data-fig-close="0"]');
+  await desk.waitForFunction(() => posts.filter((p) => p.path === "/api/cards/C-1/figma-close").length === 2);
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/cards/C-1/figma-close")[1].body), { on: false }, "Reopen sends on: false");
+  await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => t.textContent === "Back on Product → Differences."));
   await desk.waitForFunction(() => !document.querySelector('[data-filter="figFilter:closed"]'));
   assert.equal(await desk.getAttribute('[data-filter="figFilter:differs"]', "aria-pressed"), "true", "back on Differs, a lit filter");
 
@@ -2036,6 +2040,18 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   await desk.goto(`${base}#product`);
   await desk.waitForSelector('[data-filter="productFilter:screens"]');
   assert.equal(await desk.locator('[data-filter="productFilter:differences"]').count(), 0, "no Differences page");
+}));
+
+// Close is for whoever may mark items handled: without it, ⋯ holds no Close.
+const FIGMA_NO_HANDLE = FIGMA.replace("can: { handle: true, ", "can: { ");
+test("Differences from Figma: Close is only for whoever may mark items handled", (t) => open(t, FIGMA_NO_HANDLE, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#product`);
+  await desk.click('[data-filter="productFilter:differences"]');
+  await desk.click('#list [data-card="C-1"]');
+  await desk.waitForSelector("#detail .status");
+  assert.equal(await desk.locator("#detail .status [data-fig-close]").count(), 0, "no Close without handle");
+  assert.equal(await desk.locator('#detail .status [data-act="queue"]').count(), 1, "Add to presentation stays");
 }));
 
 // A person who never chose: /api/me answers no choice (null), and Figma is off for them.
