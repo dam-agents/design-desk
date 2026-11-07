@@ -517,7 +517,7 @@ and who marked it done) holding the links to the issue or pull request it went t
 takes it back); the
 approved option as approved, **UX decisions** (`dev_summary`, the [handoff](handoff.md)'s step 7,
 AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
-comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line, under the open ones. Its
+comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line (its asker — its first words), under the open ones. Its
 messages are For you for the designer who approved the request, or every `designer` and
 `admin` when a non-designer approved it, and land on `#designs/C-<n>`: they open the page
 without the menu. The request shows the same thread as *Developer asks*. Answer nothing on it:

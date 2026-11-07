@@ -842,6 +842,7 @@
   .thread.mini > summary { display: flex; gap: 8px; align-items: center; padding: 8px 12px; cursor: pointer; list-style: none; font-size: var(--fs-meta); }
   .thread.mini > summary::-webkit-details-marker { display: none; }
   .thread.mini > summary .q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .thread.mini > summary .q b { color: var(--ink); font-weight: 600; }
   .thread.mini[open] > summary { border-bottom: 1px solid var(--line); }
   .thread { border-radius: 10px; }
   .thread .head { font-size: var(--fs-meta); }
@@ -2975,7 +2976,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const kind = `<span class="chip ${tone}" title="${esc(KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
       // On Designs a question marked done folds to one line: its first words; a click opens it.
       const mini = designs && th.state === "resolved";
-      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q">${esc(String(th.messages[0]?.text || "").replace(/\s+/g, " "))}</span>${state}</summary>` : `<article class="thread" id="th-${esc(th.id)}">
+      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc((noteBy(th.messages[0]?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/\s+/g, " "))}</span>${state}</summary>` : `<article class="thread" id="th-${esc(th.id)}">
         <div class="head">${kind}${anchor}${state}</div>`}
         ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
