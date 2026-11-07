@@ -106,7 +106,8 @@ served by the Desk server through the platform's Artifact API relay.
   story played opens it, and All elements stays open. Nothing names a role a request needs:
   no **Needs a designer** filter, line or heading. A request offers no rename. Switching the mode
   starts an option's sections again as the mode has them. The tab
-  intros and How it works, its drawings included, leave out what it hides.
+  intros and How it works, its drawings included, leave out what it hides, and so does the bell:
+  no notification about an issue, a screen, an element or a decision, nor in its count.
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
   night (`POST /api/prefs {simple}`, `simple` in `GET /api/me`; only the keys sent change), so
