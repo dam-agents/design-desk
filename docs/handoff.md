@@ -52,9 +52,9 @@ sent; the developer or coding agent gets only answers.
    judgement that changes what gets built (a state, a copy, a breakpoint, an edge case the
    options never showed, which of two readings of a note) and that the card, its threads and
    the answers of an earlier pass do not settle. None → go on. Some → one form,
-   `design desk ask C-<n> <file> --step handoff --form` with `{text, questions: [{text, why,
+   `design desk ask C-<n> <file> --step handoff --form` with `{text, questions: [{text,
    options, suggested}]}`: at most 6 questions, 2–4 concrete options each, `suggested` your
-   pick; the text says the spec waits for these answers and is on the card to read. Keep
+   pick ([The questions form](desk.md#the-questions-form)). Keep
    `status: spec`, `done --outcome asked` and stop. The answer re-queues the handoff with the
    same option; the next pass reads the form's answers, takes `suggested` for a question left
    to Design Desk, rewrites **Settled at handoff**, re-uploads the spec and goes on. Ask once

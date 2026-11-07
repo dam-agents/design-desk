@@ -42,13 +42,18 @@
   a { color: var(--accent); }
   .app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  /* An open header menu (the bell, your menu) floats above the private chat (75); only while
+     open, so the header never shows through the design workspace (70). */
+  header:has(details.more[open]) { position: relative; z-index: 76; }
   header h1 { font-size: var(--fs-read); margin: 0; font-weight: 600; letter-spacing: .01em; }
   /* Requests leads the menu; the other tabs are smaller, their counts grey. */
   nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
   nav button { border: 0; background: transparent; padding: 5px 10px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 13px; }
   nav button.main { padding: 6px 12px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
-  nav .sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
+  nav .sep, header > .head-sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
+  /* New request sits right after the tabs, behind one more separator. */
+  header > .head-sep { margin: 0 -4px; } header > .head-sep[hidden] { display: none; }
   nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--soft); color: var(--muted); font-size: 11px; line-height: 17px; text-align: center; font-weight: 500; }
   nav .main .count { background: var(--accent); color: var(--accent-ink); line-height: 18px; font-weight: 600; }
   nav .main .count.warn { background: var(--warn); color: var(--bg); }
@@ -58,8 +63,42 @@
   details.me-menu > summary.me { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; }
   details.me-menu > summary.me:hover, details.me-menu[open] > summary.me { background: var(--soft); color: var(--ink); }
   details.me-menu > summary.me::after { content: "▾"; font-size: 10px; }
+  /* The gap alone spaces the role's icon: the space after "·" falls away in the flex row. */
+  details.me-menu > summary.me .role-ic { margin: 0; }
   details.me-menu .menu { left: auto; right: 0; min-width: 100%; box-sizing: border-box; }
   details.me-menu .menu .btn[aria-current="true"] { background: var(--soft); font-weight: 600; }
+  /* The bell (docs/desk.md → Notifications): one row per event, every row the same five facts. */
+  details.bell { position: relative; }
+  details.bell > summary { list-style: none; position: relative; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+  details.bell > summary::-webkit-details-marker { display: none; }
+  details.bell > summary:hover, details.bell[open] > summary { background: var(--soft); color: var(--ink); }
+  details.bell > summary svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  details.bell .badge { position: absolute; top: 1px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 600; line-height: 16px; text-align: center; border: 2px solid var(--panel); }
+  details.bell .menu.notes { left: auto; right: 0; width: min(420px, calc(100vw - 24px)); max-width: none; padding: 0; gap: 0; overflow: hidden; }
+  #notes .nh { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px 14px; border-bottom: 1px solid var(--line); }
+  #notes .nh b { font-size: 14px; flex: 1; }
+  #notes .nh .tabs2 { display: flex; gap: 2px; background: var(--soft); padding: 2px; border-radius: 7px; }
+  #notes .nh .tabs2 button { border: 0; background: transparent; padding: 2px 9px; border-radius: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  #notes .nh .tabs2 button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+  #notes .nl { max-height: min(560px, 70vh); overflow-y: auto; }
+  #notes .day { padding: 8px 14px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  #notes .note { --c: var(--muted); display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 10px; width: 100%; padding: 9px 14px 9px 12px; border: 0; border-left: 3px solid transparent; background: transparent; text-align: left; cursor: pointer; font-size: 13px; line-height: 1.4; }
+  #notes .note:hover { background: var(--soft); }
+  #notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
+  #notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+  #notes .note .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* A row is at most three lines: what and who, the item, what was said; each line cuts with … */
+  #notes .note .ev { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #notes .note .ev span { font-weight: 400; color: var(--muted); }
+  #notes .note time { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  #notes .note .ti { grid-column: 2 / span 2; display: flex; gap: 8px; align-items: baseline; min-width: 0; color: var(--ink); }
+  #notes .note .ti span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #notes .note .ti .num { margin-left: auto; flex: none; font-size: 11px; }
+  #notes .note .ti em { font-style: normal; color: var(--muted); }
+  #notes .note .q { grid-column: 2 / span 2; margin-top: 3px; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: italic; }
+  #notes .empty { padding: 28px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+  #notes .note[data-g="talk"] { --c: var(--accent); } #notes .note[data-g="agent"] { --c: var(--why); } #notes .note[data-g="new"] { --c: var(--live); }
+  #notes .note[data-g="design"] { --c: #e0701a; } #notes .note[data-g="ok"] { --c: var(--approved); } #notes .note[data-g="decision"] { --c: var(--decided); } #notes .note[data-g="closed"] { --c: var(--closed); }
   .intro figure.flow { margin: 14px 0 4px; }
   /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
   .num { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: .7em; white-space: nowrap; margin-left: .45em; }
@@ -376,6 +415,7 @@
   .asks .reply { border: 0; padding: 8px 0 0; }
   .asks fieldset.q { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; display: grid; gap: 4px; }
   .asks legend { font-weight: 600; padding: 0; }
+  .asks > p:first-child { margin-top: 0; }
   .asks fieldset.q label { display: flex; gap: 8px; align-items: baseline; } .asks fieldset.q input[type=radio] { width: auto; }
   fieldset.skills { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; } fieldset.skills legend { font-size: var(--fs-meta); color: var(--muted); padding: 0; margin-bottom: 4px; }
   label.switch { display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--ink); cursor: pointer; } label.switch small { display: block; color: var(--muted); font-size: 12px; }
@@ -463,13 +503,21 @@
   textarea { min-height: 64px; resize: vertical; }
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
   .subno { font: 600 11.5px/1 var(--mono, ui-monospace, monospace); background: var(--soft); color: var(--ink); padding: 2px 6px; border-radius: 6px; text-decoration: none; margin-right: 4px; }
+  /* Where a notification led: a ring and a tint pulse twice, then fade out; 3 seconds in all. */
+  .spot { animation: spot 3s ease-in-out; border-radius: 6px; }
+  @keyframes spot {
+    0%, 30%, 60% { box-shadow: 0 0 0 3px var(--accent), inset 0 0 0 999px color-mix(in srgb, var(--accent) 14%, transparent); }
+    15%, 45% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 0 999px color-mix(in srgb, var(--accent) 5%, transparent); }
+    100% { box-shadow: 0 0 0 3px transparent, inset 0 0 0 999px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .spot { animation: none; box-shadow: 0 0 0 3px var(--accent); } }
   .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
   .starters { display: flex; gap: 6px; flex-wrap: wrap; }
   /* Above the design workspace (70) too, below a zoomed picture (80): the private ask works there as well. */
   #ask { position: fixed; right: 16px; bottom: 16px; z-index: 75; }
   .ask-fab { border: 1px solid var(--line); background: var(--ink); color: var(--panel); border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--float); display: inline-flex; gap: 8px; align-items: center; }
-  .ask-panel { width: min(560px, calc(100vw - 32px)); height: min(820px, calc(100vh - 32px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--float); overflow: hidden; }
-  .ask-panel { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
+  /* The private chat stays under the header, so the bell and the menu are never behind it. */
+  .ask-panel { width: min(560px, calc(100vw - 32px)); height: min(820px, calc(100vh - 80px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--float); overflow: hidden; }
+  .ask-panel { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 80px); }
   .ask-grip { position: absolute; left: 0; top: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 1; touch-action: none;
     background: linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 5px, var(--muted) 5px 6px, transparent 6px) no-repeat; opacity: .5; }
   .ask-grip:hover { opacity: 1; }
@@ -807,7 +855,9 @@
   .brief > .brief-k.brief-k { cursor: default; margin: 0 0 8px;  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; text-transform: none; letter-spacing: 0; font-size: var(--fs-ui); font-weight: 400; color: var(--muted); }
   .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; flex: none; }
   .brief-k .ask-who b { color: var(--ink); font-weight: 600; }
-  .brief-k .prov { font-size: var(--fs-meta); }
+  .brief-k .prov { font-size: inherit; }
+  .brief-k .prov .src { padding: 0; border: 0; background: none; font-weight: 400; gap: 4px; }
+  .brief-k .prov .src:not([data-k="slack"], [data-k="pr"], [data-k="issue"]) > svg { display: none; }
   .brief-k .ask-when { white-space: nowrap; }
   /* Where the request stands comes first, right under its title; what was asked follows. */
   .standing { margin: 10px 0 0; } .standing .steps { margin-top: 4px; }
@@ -887,7 +937,8 @@
   .brief.clamped .brief-body { max-height: var(--clip, calc(3 * 1.55em)); overflow: hidden; -webkit-mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); }
   .brief-toggle { border: 0; background: none; padding: 4px 0 0; color: var(--accent); cursor: pointer; font-size: var(--fs-ui); }
   .brief-toggle:hover { text-decoration: underline; }
-  .brief-body { font-size: var(--fs-read); line-height: 1.55; }
+  .brief-body { font-size: var(--fs-read); line-height: 1.55; display: flow-root; }
+  .brief-toggle[hidden] { display: none; }
   /* The votes: two pills with their icon and count, at the right of the option's bar. */
   /* The request's main action under its options: larger, in the accent, before every other button. */
   .vbar .btn.ws-open { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; min-height: 38px; padding: 7px 16px; font-size: 14.5px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
@@ -1003,10 +1054,12 @@
 <div class="app">
   <header>
     <nav id="nav" aria-label="Desk"></nav>
+    <span class="sep head-sep" id="new-request-sep" aria-hidden="true" hidden></span>
+    <button class="btn primary" id="new-request" hidden>+ New request</button>
     <div class="grow"></div>
     <div class="search"><input class="goto" id="goto" type="search" placeholder="Search, or C-12, D-3, #4512" role="combobox" aria-expanded="false" aria-controls="hits" aria-label="Search the Desk: words, an item's number like C-12, a decision's like D-3, a GitHub issue or pull request number, or a link" title="Search requests, changes, issues, screens, elements and decisions. A number opens its item: C-12, D-3, or a GitHub issue or pull request like #4512" autocomplete="off" spellcheck="false" /><div id="hits" role="listbox" hidden></div></div>
     <details class="more me-menu"><summary class="me" id="me" aria-label="Your menu"></summary><div class="menu"><button class="btn" id="help" type="button" data-tab="guide" title="How Design Desk works, with a picture of each flow">? How it works</button><button class="btn" id="simple" type="button" aria-pressed="false"></button><button class="btn" id="figma" type="button" aria-pressed="true" hidden></button><button class="btn" id="theme" type="button"></button></div></details>
-    <button class="btn primary" id="new-request" hidden>+ New request</button>
+    <details class="more bell" id="bell"><summary id="bell-btn" aria-label="Notifications" title="Notifications: what happened lately on the Desk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg><span class="badge" id="bell-count" hidden></span></summary><div class="menu notes" id="notes" role="dialog" aria-label="Notifications"></div></details>
   </header>
   <div class="banners" id="banners"></div>
   <main id="main">
@@ -1298,7 +1351,7 @@
   <path class="f-e" d="M510 222 H635" marker-end="url(#fl-req)"/>
   ${full(`<path class="f-e" d="M650 80 H690 V185" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="698" y="150">try it</text>`)}
   <path class="f-e" d="M742 222 H782 V111" marker-end="url(#fl-req)"/><text class="f-lbl f-start" x="790" y="170">approved</text>`,
-    `Blue is Design Desk at work, amber waits on the team${full(", violet is live")}, green is approved. A person presses <b>Draw options</b> on a request filed here (one from Slack goes on by itself); a designer, a PM, an admin or a lead developer may instead <b>Approve…</b> right away, without options or a vote. <b>Work it in</b> sends the open comments back for a new version${full("; the live prototype is optional, and only for a request that changes nothing but the look. A request with parts a design change cannot do gets no prototype: <b>Contact a developer</b> opens those parts with a question to copy; it changes nothing on the request")}. A request For Developers is approved by a developer instead of a designer.`);
+    `Blue is Design Desk at work, amber waits on the team${full(", violet is live")}, green is approved. A person presses <b>Draw options</b> on a request filed here (one from Slack goes on by itself); a designer, a PM, an admin or a lead developer may instead <b>Approve</b> right away, without options or a vote. <b>Work it in</b> sends the open comments back for a new version${full("; the live prototype is optional, and only for a request that changes nothing but the look. A request with parts a design change cannot do gets no prototype: <b>Contact a developer</b> opens those parts with a question to copy; it changes nothing on the request")}. A request For Developers is approved by a developer instead of a designer.`);
   const FLOW_ISSUE = () => flow(860, 272, "An issue in the team's plan: once a day Design Desk reads it; if people will see a difference, it sketches how it looks now and how it could look and puts it on Issues. Draw it sketches it again, Design this starts a request, and once that request goes to developers the issue is designed.", `${flowHead("fl-issue")}
   <rect class="f-n" x="10" y="56" width="160" height="60" rx="10"/><text x="90" y="80">A GitHub issue</text><text class="f-sub" x="90" y="98">in the team's plan</text>
   <rect class="f-n f-checking" x="230" y="56" width="160" height="60" rx="10"/><text x="310" y="80">Reads it</text><text class="f-sub" x="310" y="98">will people see it?</text>
@@ -1349,7 +1402,7 @@ ${full(`<p>When you build a live prototype, Design Desk can first ask you a few 
 <p><b>All elements</b>: under each option, a small picture of every part it changes or adds, marked New or Changed. Open one to see it in every state, each as a picture of the part alone with the use case of the brief it covers; with none drawn yet, press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
 ${full(`<p><b>Add to the design catalog</b>: once a design is approved, its elements go to Product → Elements with their states. They are marked <b>✎ From an approved design</b>, apart from the product's own, until the product has them. When the change that builds the design ships, Design Desk compares it with the design: a change that differs says <b>⚠ Differs from the approved design</b> and shows what, side by side.</p>`)}
 ${full(`<p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>`)}
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer, PM or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. No option is picked as the winner: ${simple() ? "Approve asks" : "Approve, Build a live prototype and Add to presentation each ask"} which option. Requests sit in two tabs, <b>For Designers</b> and <b>For Developers</b>: one from Slack starts For Developers unless its message says otherwise, one filed here For Designers unless you switch it in New request. A request For Developers is approved by any developer but the person who filed it, without a designer; a lead developer moves a request between the two under More, and the request shows who chose and who approved it. A designer or lead developer need not wait for a vote${full(" or a live prototype")}: <b>Approve…</b> at any step, or <b>Close…</b> and tick <b>Close it and record a decision</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up.${full(" While a live prototype is up, the options fold under it; Approve approves the option it shows.")} <b>Send to Slack…</b> posts pictures of the options you tick, or asks the team for a vote on them — into the Slack thread the request came from, when it came from Slack.</p>
+<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer, PM or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. No option is picked as the winner: ${simple() ? "Approve asks" : "Approve, Build a live prototype and Add to presentation each ask"} which option. Requests sit in two tabs, <b>For Designers</b> and <b>For Developers</b>: one from Slack starts For Developers unless its message says otherwise, one filed here For Designers unless you switch it in New request. A request For Developers is approved by any developer but the person who filed it, without a designer; a lead developer moves a request between the two under More, and the request shows who chose and who approved it. A designer or lead developer need not wait for a vote${full(" or a live prototype")}: <b>Approve</b> at any step, or <b>Close…</b> and tick <b>Close it and record a decision</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up.${full(" While a live prototype is up, the options fold under it; Approve approves the option it shows.")} <b>Send to Slack…</b> posts pictures of the options you tick, or asks the team for a vote on them — into the Slack thread the request came from, when it came from Slack.</p>
 <h3>What it cannot do — a developer has to</h3><ul>
 <li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
 <li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
@@ -1443,7 +1496,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     reopen: "Opens this note again; Design Desk looks at it again",
     workIn: (v) => v.includes(",") ? "Design Desk changes the design as every open comment asks" : "Design Desk changes the design as this comment asks",
     sendForm: "Sends your answers; Design Desk goes on with them",
-    skipForm: "Design Desk takes its suggested answer for every question",
+    skipForm: "Design Desk takes its recommended answer for every question",
     size: (v) => v === "small" ? "Any developer but the person who filed it can then approve it, without a designer" : "A designer, a PM or a lead developer approves it",
     vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : v === "dislike" ? "Your vote against this option; press again to take it back" : "Says this option worries you, and opens a comment to say why; press again to take it back",
     goto: "Opens the design workspace at the part this note is about",
@@ -1599,7 +1652,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const FOLDS = "details.more[open], details.stepper[open]";
   document.addEventListener("click", (e) => {
     for (const d of document.querySelectorAll(FOLDS))
-      if (!d.contains(e.target) || e.target.closest(".menu button")) d.open = false;
+      if (!d.contains(e.target) || e.target.closest(".menu button:not([data-keep])")) d.open = false;
   }, true);
   const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") moreClose(); });
@@ -1791,9 +1844,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function askHead(c, bug) {
     const p = origin(c, { parts: true });
     const name = p.author ? (p.author === "you" ? "You" : p.author) : "Someone";
-    const role = ROLE[c.created_by?.role] || "";
+    // Who and where, in words: no role beside the name, the source as text as in the list's rows.
     return `<span class="face" aria-hidden="true">${esc((name.replace(/^[^A-Za-z0-9]+/, "")[0] || "?").toUpperCase())}</span>
-      <span class="ask-who"><b>${esc(name)}</b> ${bug ? "reported" : "asked"}${role ? `, ${esc(role)}` : ""}, from</span>
+      <span class="ask-who"><b>${esc(name)}</b> ${bug ? "reported" : "asked"}, from</span>
       <span class="prov"><span class="src" data-k="${p.kind}">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
   }
   const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
@@ -2189,7 +2242,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         ["<b>Add to the design catalog</b> once a design is approved: its elements go to Product → Elements, marked as from the approved design.", "add"],
         ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
         ["<b>Approve</b> a design, or close a request.", "approve"],
-        [`Skip the vote${full(" and the live prototype")}: <b>Approve…</b>, or <b>Close…</b> with a decision recorded: what you decided.`, "skip"],
+        [`Skip the vote${full(" and the live prototype")}: <b>Approve</b>, or <b>Close…</b> with a decision recorded: what you decided.`, "skip"],
         ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
         ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
         [simple() ? "Switch between <b>For Designers</b> and <b>For Developers</b>; filter the requests by <b>Open</b> or <b>Closed</b>." : "Switch between <b>For Designers</b>, <b>For Developers</b> and the <b>Presentation</b>; filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>."], LINK],
@@ -2248,26 +2301,37 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   const briefToggle = (folded, kind) => { const what = kind === "made" ? "what Design Desk found" : kind ? "report" : "request";
     return `<button class="brief-toggle" data-brief-toggle="${kind === "made" ? "made" : kind ? "bug" : ""}" title="${kind === "made" ? "Fold or unfold what Design Desk found" : "Fold or unfold what was asked"}">${folded ? (kind === "made" ? `Show ${what}` : `Show the whole ${what}`) : `Hide ${kind === "made" ? what : `the ${what}`}`}</button>`; };
+  // The brief folds and unfolds in a short glide, so what stands under it moves, not jumps;
+  // folded from below, the page brings the brief's top back into view.
   document.addEventListener("click", (e) => {
     const t = e.target.closest?.("[data-brief-toggle]"); if (!t) return;
-    const b = t.closest(".brief"), folded = !b.classList.contains("clamped");
-    const kind = t.dataset.briefToggle;
+    const b = t.closest(".brief"), body = b.querySelector(".brief-body"), folded = !b.classList.contains("clamped");
+    const kind = t.dataset.briefToggle, from = body.getBoundingClientRect().height;
     b.classList.toggle("clamped", folded); S.folds[kind === "made" ? "made" : "brief"] = folded;
     t.outerHTML = briefToggle(folded, kind === "made" ? "made" : kind === "bug");
     clampBriefs();
+    const to = body.getBoundingClientRect().height, calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // A tab in the background holds animations: the glide ends by the clock all the same.
+    if (!calm && Math.abs(to - from) > 2) { const a = body.animate([{ height: `${from}px`, overflow: "hidden" }, { height: `${to}px`, overflow: "hidden" }], { duration: 220, easing: "ease-out" }); setTimeout(() => a.cancel(), 300); }
+    const pane = $("#detail");
+    if (folded && pane && b.getBoundingClientRect().top < pane.getBoundingClientRect().top) b.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
   }, true);
   // Folded, a brief keeps two whole lines of its text and half of the third, whatever stands
   // above them: a heading is shown whole and not counted as a line.
+  // A brief with under three lines of text, no picture and nothing folded inside has nothing
+  // to hide: it shows whole, with no Show or Hide link.
+  const BRIEF_MEDIA = "img, figure, .shots, .shot, iframe, video, details";
   function clampBriefs() {
+    for (const b of document.querySelectorAll(".brief")) {
+      const body = b.querySelector(":scope > .brief-body"), tog = b.querySelector(":scope > .brief-toggle");
+      if (!body || !tog) continue;
+      const short = !body.querySelector(BRIEF_MEDIA) && briefLines(body).length < 3;
+      tog.hidden = short;
+      // The class follows the fold state each time, so it and the link's words always agree.
+      b.classList.toggle("clamped", !short && Boolean(b.classList.contains("made-col") ? S.folds.made : S.folds.brief));
+    }
     for (const body of document.querySelectorAll(".brief.clamped .brief-body")) {
-      const top = body.getBoundingClientRect().top, lines = [];
-      const walk = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => n.textContent.trim() && !n.parentElement.closest("h3, h4, .brief-toggle") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
-      const r = document.createRange();
-      for (let n; (n = walk.nextNode()) && lines.length < 3;) {
-        r.selectNodeContents(n);
-        for (const b of r.getClientRects()) if (b.height && !lines.some((l) => Math.abs(l.top - b.top) < b.height / 2)) lines.push({ top: b.top, bottom: b.bottom });
-      }
-      lines.sort((a, b) => a.top - b.top);
+      const top = body.getBoundingClientRect().top, lines = briefLines(body);
       // Fewer than three lines: nothing to fold away.
       if (lines.length < 3) { body.style.setProperty("--clip", "none"); body.style.setProperty("--fade", "100%"); continue; }
       // Everything above the third line stays whole; the third fades out over its upper three quarters.
@@ -2275,6 +2339,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       body.style.setProperty("--fade", `${Math.round(third.top - top)}px`);
       body.style.setProperty("--clip", `${Math.round(third.top + (third.bottom - third.top) * 0.75 - top)}px`);
     }
+  }
+  // The first three lines of a brief's own text, headings not counted, top to bottom.
+  function briefLines(body) {
+    const lines = [], r = document.createRange();
+    const walk = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => n.textContent.trim() && !n.parentElement.closest("h3, h4, .brief-toggle") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+    for (let n; (n = walk.nextNode()) && lines.length < 3;) {
+      r.selectNodeContents(n);
+      for (const b of r.getClientRects()) if (b.height && !lines.some((l) => Math.abs(l.top - b.top) < b.height / 2)) lines.push({ top: b.top, bottom: b.bottom });
+    }
+    return lines.sort((a, b) => a.top - b.top);
   }
   addEventListener("resize", () => clampBriefs());
 
@@ -2712,15 +2786,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // the two prove the same size.
   const figure = (s, label, frame) => s.no ? `<div id="no-${esc(s.no[0].id)}-${s.no[1]}">${subTag(...s.no)}${plainFigure(s, label, frame)}</div>` : plainFigure(s, label, frame);
   const plainFigure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
-  // The agent's questions as a form: each has its options and "Leave it to Design Desk",
-  // which is picked until a person chooses; one button leaves all of them.
+  // The agent's questions as a form, in four parts and nothing else: what it is about (the
+  // agent's text), each question, its options, and the one Design Desk recommends. A question
+  // nobody answers is left to Design Desk, which takes its recommendation.
   function askForm(th) {
-    const qs = th.questions.map((q, i) => `<fieldset class="q" data-q="${i}"><legend>${i + 1}. ${txt(q.text)}</legend>${q.why ? `<p class="hint">${txt(q.why)}</p>` : ""}
-      ${q.options.map((o) => `<label><input type="radio" name="q-${esc(th.id)}-${i}" value="${esc(o)}" /> ${esc(o)}${o === q.suggested ? ` <span class="chip info" title="Design Desk's suggested answer; it takes it if you leave the question">suggested</span>` : ""}</label>`).join("")}
-      <label><input type="radio" name="q-${esc(th.id)}-${i}" value="" checked /> Leave it to Design Desk</label>
+    const many = th.questions.length > 1;
+    const qs = th.questions.map((q, i) => `<fieldset class="q" data-q="${i}"><legend>${many ? `${i + 1}. ` : ""}${txt(q.text)}</legend>
+      ${q.options.map((o) => `<label><input type="radio" name="q-${esc(th.id)}-${i}" value="${esc(o)}" /> ${esc(o)}${o === q.suggested ? ` <span class="chip info" title="Design Desk takes this one if you leave the question">recommended</span>` : ""}</label>`).join("")}
       <input placeholder="Anything to add? (optional)" data-q-note maxlength="500" /></fieldset>`).join("");
-    return `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk has ${th.questions.length === 1 ? "a question" : "a few questions"} before it goes on. Answer what matters to you; leave the rest to it.</b>${md(th.messages[0].text)}${qs}
-      <div class="actions"><button class="btn small primary" data-send-form="${esc(th.id)}">Send answers</button><button class="btn small" data-skip-form="${esc(th.id)}">Leave it all to Design Desk</button></div></div>`;
+    return `<div class="asks" id="form-${esc(th.id)}">${md(th.messages[0].text)}${qs}
+      <div class="actions"><button class="btn small primary" data-send-form="${esc(th.id)}">${many ? "Send answers" : "Send answer"}</button><button class="btn small" data-skip-form="${esc(th.id)}">Leave it to Design Desk</button></div></div>`;
   }
 
   // A picture that knows where the change is outlines it; one switch, remembered, shows or hides every outline.
@@ -2877,7 +2952,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}" title="${esc(KIND_TIP[th.kind] || "")}">${esc(name)}</span>${anchor}${state}</div>
-        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
+        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
         ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`}
       </article>`;
@@ -2986,7 +3061,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const fit = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
     const move = (m) => {
       panel.style.width = `${fit(w0 + x0 - m.clientX, 300, innerWidth - 32)}px`;
-      panel.style.height = `${fit(h0 + y0 - m.clientY, 320, innerHeight - 32)}px`;
+      panel.style.height = `${fit(h0 + y0 - m.clientY, 320, innerHeight - 80)}px`;
     };
     const up = () => {
       removeEventListener("pointermove", move); removeEventListener("pointerup", up); S.ask.dragging = false;
@@ -3005,9 +3080,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       last = about;
       // Only where the page has its public comments box: the brief goes there as text.
       const brief = S.card && th.context?.card === S.card.id && Boolean($("#composer-text"));
-      return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m) => m.by?.agent
-        ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent"><span class="ask-name">Design Desk</span>${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Writes a note for Design Desk from this answer into this page's public comments box. You edit it there and send it yourself.">Make a brief for the public comments</button>` : ""}</div></div>`
-        : `<div class="ask-msg me">${md(m.text)}<span class="ask-when">${esc(when(m.at))}</span></div>`).join("")}
+      return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m, i) => m.by?.agent
+        ? `<div class="ask-row" data-m="${esc(th.id)}:${i}">${DD_AVATAR}<div class="ask-msg agent"><span class="ask-name">Design Desk</span>${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Writes a note for Design Desk from this answer into this page's public comments box. You edit it there and send it yourself.">Make a brief for the public comments</button>` : ""}</div></div>`
+        : `<div class="ask-msg me" data-m="${esc(th.id)}:${i}">${md(m.text)}<span class="ask-when">${esc(when(m.at))}</span></div>`).join("")}
         ${th.needs_agent ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent typing" role="status" title="Design Desk is answering…"><i></i><i></i><i></i><span class="sr">Design Desk is answering…</span></div></div>` : ""}
 `;
     }).join("");
@@ -3191,9 +3266,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   // ---------- compared with Figma ----------
   // Where an item differs from its frame in Figma (the figma skill), shown only with Figma on for
-  // the Desk and for this person (the Figma switch in their menu): one line per difference with
+  // the Desk and for this person (the Figma switch in their menu, off until they turn it on): one line per difference with
   // Figma's value and the product's, a colour with its swatch, and both pictures when there are.
-  const figmaOn = () => Boolean(S.me?.figma) && S.me?.figma_pref !== false;
+  const figmaOn = () => Boolean(S.me?.figma) && S.me?.figma_pref === true;
   // What is in the product already: a screen, an element, a shipped change (Product → Differences).
   const FIG_KINDS = ["screen", "element", "change"];
   const swatched = (v) => esc(v).replace(/#[0-9a-f]{6}\b/gi, (h) => `<span class="swatch" style="background:${h}"></span>${h}`);
@@ -3449,7 +3524,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // Ending it: with a decision recorded in the person's name, or closed without one.
     // One Close: just close it, or close it with a decision recorded in the person's name.
     const ends = can("close") || can("skip") ? b("close", "Close…") : "";
-    const skip = (can("skip") && canApprove(c) ? b("approve", "Approve…") : "") + ends;
+    const skip = (can("skip") && canApprove(c) ? b("approve", "Approve") : "") + ends;
     if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: skip } : { text: none || "Next: a designer, PM or developer starts the design options.", buttons: skip };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
@@ -3467,20 +3542,20 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) {
       const failed = p.state === "failed";
       return { text: failed ? "This try didn't work." : `This prototype was switched off${p.expires ? ` on ${day(p.expires)}` : ""} to free its place.`,
-        sub: failed ? "Design Desk wrote why in the comments below." : "", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        sub: failed ? "Design Desk wrote why in the comments below." : "", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (live(c)) {
       // The next step is to open the live prototype: it sits in the step pill, as Ask for feedback does.
       const open = c.prototype.url ? `<a class="step-next" href="${safeUrl(c.prototype.url)}" target="_blank" rel="noopener noreferrer" title="Opens the live prototype in a new tab">Open the prototype</a>` : "";
       return { text: "Your turn: try the live prototype and comment below.", sub: canApprove(c) ? "When the team is happy, approve it." : approver(c), step: open,
-        buttons: (canApprove(c) ? b("approve", "Approve…", true) : "") + ends };
+        buttons: (canApprove(c) ? b("approve", "Approve", true) : "") + ends };
     }
     if (held(c)) {
       const mine = can("revise") || filedIt(c);
       return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, press Ask for feedback." : "The options are drawn. The request's author, a designer, a PM, a developer or an admin asks the team for feedback once they are fine-tuned.",
         step: mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, PMs, developers and admins may on any request"}.">Ask for feedback</button>` : "",
         more: design && canBuild() ? b("build", "Build a live prototype…") : "",
-        buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
       // No live prototype for a request with parts a design change cannot do: the step is to
@@ -3489,10 +3564,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       // The pill always holds a move on: with no prototype and nothing for a developer, the
       // next step is approval; for someone who cannot approve, asking the team in Slack.
       const step = design && canBuild() ? sb("build", "Build a live prototype") : dev
-        || (canApprove(c) ? sb("approve", "Approve…") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
+        || (canApprove(c) ? sb("approve", "Approve") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
         // The green Approve stays in the row even when the pill's next move is Approve too.
-        step, buttons: (canApprove(c) ? b("approve", "Approve…") : "") + ends };
+        step, buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     return { text: "", buttons: "" };
   }
@@ -3506,8 +3581,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const go = (label, sub) => ({ label, ok: true, sub }), no = (label, sub) => ({ label, ok: false, sub });
     const info = (sub) => ({ label: "", ok: true, sub, info: true });
     const ask = `ask ${contact()}`;
-    const approve = () => canApprove(c) ? go("Approve…", S.me?.spec_review ? "Pick the option; Design Desk writes the developer spec for you to read. It goes to developers only when you press Send." : hasOptions ? "Pick the option; Design Desk writes the developer spec and sends it. It can't be taken back." : "Without design options: Design Desk writes the spec from the request and sends it to developers.")
-      : no("Approve…", against ? "A designer approves it: it goes against a decision in force."
+    const approve = () => canApprove(c) ? go("Approve", S.me?.spec_review ? "Pick the option; Design Desk writes the developer spec for you to read. It goes to developers only when you press Send." : hasOptions ? "Pick the option; Design Desk writes the developer spec and sends it. It can't be taken back." : "Without design options: Design Desk writes the spec from the request and sends it to developers.")
+      : no("Approve", against ? "A designer approves it: it goes against a decision in force."
         : c.size?.small ? `For Developers: a developer approves it${(c.created_by?.email || c.origin?.email) ? `, not ${c.created_by?.email || c.origin?.email} who filed it` : ""}.`
         : `A designer, a PM or a lead developer approves it; ${S.me?.role === "guest" ? ask : "tell them in a comment when the team is happy"}.`);
     const close = () => can("close") || can("skip") ? go("Close…", "Nothing goes to developers. You can record a decision with it, in your name.")
@@ -3586,7 +3661,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const list = versions.length > 1 ? `<p class="hint spec-versions">Versions: ${versions.map((x, i) => `<button data-spec-view="${esc(x.asset)}" aria-pressed="${x === shown}">${i + 1} · ${esc(by(x))}</button>`).join(", ")}</p>` : "";
     const edit = S.specEdit === c.id ? `<div class="spec-edit"><textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="spec-preview" id="spec-preview" aria-label="How it reads"></div></div><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
     const tools = review && canApprove(c) && S.specEdit !== c.id ? `<div class="actions spec-tools"><button class="btn small" data-spec-edit title="Change the text here; it becomes the newest version">✎ Edit</button><button class="btn small" data-spec-changes title="Say what to change; Design Desk rewrites it and brings it back here">Ask for changes…</button></div>` : "";
-    return `<details class="fold"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
+    return `<details class="fold" id="spec"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
       <div class="spec-head"><p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(by(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p>${tools}</div>${list}
       ${edit || `<div id="spec-body" data-asset="${esc(shown.asset)}">…</div>`}</div></details>`;
   }
@@ -3619,7 +3694,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
-      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
+      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${sizeLine(c)}
@@ -5684,7 +5759,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   renderSimple();
   // The Figma switch, beside simple mode and only on a Desk with Figma on: each person shows or
   // hides the comparisons with Figma (Product → Differences and the boxes on items) for themselves,
-  // kept for them on the Desk like simple mode. On until they turn it off.
+  // kept for them on the Desk like simple mode. Off until they turn it on.
   function renderFigmaSwitch() {
     const b = $("#figma"), on = figmaOn();
     b.hidden = !S.me?.figma;
@@ -5716,11 +5791,170 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }));
 
   function applyMe() {
-    $("#new-request").hidden = !can("request");
+    $("#new-request").hidden = !can("request"); $("#new-request-sep").hidden = !can("request");
     document.title = S.me?.name || "Design Desk";
     $("#me").innerHTML = S.me ? `${esc(S.me.my_name || S.me.email || "")} · ${roleIcon(S.me.role)}${esc(roleName(S.me.role))}` : "";
     renderBanners();
   }
+
+  // ---------- notifications ----------
+  // The bell (docs/desk.md → Notifications): what happened lately, newest first, never your own
+  // doings. Every row says the same things in the same places: what happened and who, when, the
+  // item's title and number, and where it lives (its page and screen).
+  const NOTE = {
+    "new-request": ["New request", "new", '<path d="M12 5v14M5 12h14"/>'],
+    "new-change": ["New PR change", "new", '<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M6 7v10M18 17V10a3 3 0 0 0-3-3h-4M13 4.5 10.5 7l2.5 2.5"/>'],
+    "new-issue": ["New issue", "new", '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>'],
+    "options-drawn": ["New options drawn", "design", '<path d="m12 4 8 4-8 4-8-4z"/><path d="m4 12 8 4 8-4M4 16l8 4 8-4"/>'],
+    "options-redrawn": ["Options redrawn", "design", '<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>'],
+    vote: ["New vote", "design", '<path d="M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7"/>'],
+    approved: ["Option approved", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
+    spec: ["Spec ready", "ok", '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'],
+    decided: ["Closed with a decision", "closed", '<path d="M5 21V4M5 4h12l-2 4 2 4H5"/>'],
+    comment: ["New comment", "talk", '<path d="M4 5h16v11H9l-5 4z"/>'],
+    reply: ["New reply", "talk", '<path d="M10 8 5 12l5 4"/><path d="M5 12h9a5 5 0 0 1 5 5v1"/>'],
+    question: ["New question", "talk", '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 5 .5c0 1.7-2.5 2-2.5 3.5M12 17h.01"/>'],
+    answer: ["Design Desk answered", "agent", '<path d="M4 5h16v11H9l-5 4z"/><path d="m8.5 10.5 2.5 2.5 4.5-4.5"/>'],
+    "agent-asks": ["Design Desk asks", "agent", '<path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v3.5M12 13.5h.01"/>'],
+    "new-decision": ["New decision", "decision", '<path d="M12 3v18M5 7h14M5 7l-2.5 6a2.5 2.5 0 0 0 5 0zM19 7l-2.5 6a2.5 2.5 0 0 0 5 0zM8 21h8"/>'],
+    revoked: ["Decision revoked", "closed", '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>'],
+  };
+  const NOTE_KIND = { request: "Request", change: "PR change", issue: "Issue", screen: "Screen", element: "Element", decision: "Decision" };
+  const noteBy = (by) => !by ? "" : by.agent ? "Design Desk" : by.name && !by.email ? by.name : personName(by.email, by.name || "someone");
+  const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : dayWord(iso) === "Yesterday" ? "Yesterday" : new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric" }); };
+  // For you leads: the bell counts only what is for you (docs/desk.md → Notifications).
+  S.notes = { items: [], seen: null, unread: 0, was: null, only: true };
+  async function loadNotes() {
+    const r = await api("GET", "/api/notifications"), was = JSON.stringify(S.notes.items);
+    Object.assign(S.notes, { items: r.items || [], seen: r.seen, unread: r.unread || 0 });
+    renderBell(JSON.stringify(S.notes.items) !== was);
+  }
+  // An open panel draws again only when the list changed, so a poll keeps the reader's place.
+  function renderBell(changed = false) {
+    const n = $("#bell")?.open ? 0 : S.notes.unread;
+    const b = $("#bell-count");
+    b.hidden = !n; b.textContent = n > 9 ? "9+" : String(n);
+    $("#bell-btn").setAttribute("aria-label", n ? `Notifications: ${n} new` : "Notifications");
+    if ($("#bell").open && changed) renderNotes();
+  }
+  function renderNotes() {
+    // A redraw keeps where the list was scrolled to and which control had the focus.
+    const keep = $("#notes .nl")?.scrollTop || 0, f = document.activeElement?.closest?.("#notes [data-only], #notes [data-note]");
+    const focus = f ? (f.dataset.only ? `[data-only="${f.dataset.only}"]` : `[data-note="${f.dataset.note}"]`) : null;
+    const was = S.notes.was;
+    const list = S.notes.items.filter((x) => !S.notes.only || x.for_you);
+    let lastDay = "";
+    const rows = list.map((x, i) => {
+      const [one, g, icon] = NOTE[x.event] || [x.event, "talk", ""];
+      // A row that folds several messages or votes says how many, and who: two names, then +N.
+      const many = (x.count || 1) > 1, names = (x.people || [x.by]).map(noteBy).filter(Boolean);
+      const label = many ? `${x.count} ${x.event === "vote" ? "new votes" : x.private ? "private answers" : "new messages"}` : x.private ? `${one} privately` : one;
+      const by = many ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""}` : noteBy(x.by), d = dayWord(x.at), head = d !== lastDay ? `<div class="day">${esc(d)}</div>` : "";
+      lastDay = d;
+      return `${head}<button class="note${!was || x.at > was ? " unread" : ""}" data-g="${g}" data-note="${i}">
+        <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>
+        <span class="ev">${esc(label)}${by && !label.startsWith(by) ? ` <span>· ${esc(by)}</span>` : ""}</span><time datetime="${esc(x.at)}" title="${esc(when(x.at))}">${esc(ago(x.at))}</time>
+        <span class="ti"><span>${NOTE_KIND[x.kind] ? `<em>${esc(NOTE_KIND[x.kind])}:</em> ` : ""}${esc(x.title || "Untitled")}</span><span class="num">${esc(x.item || "")}</span></span>
+        ${x.detail ? `<span class="q">${esc(x.detail)}</span>` : ""}</button>`;
+    }).join("");
+    $("#notes").innerHTML = `<div class="nh"><b>Notifications</b><div class="tabs2" role="radiogroup" aria-label="Show">
+      <button type="button" data-keep data-only="1" aria-pressed="${S.notes.only}" title="What you filed, approved, voted on or wrote in: the bell counts these">For you</button><button type="button" data-keep data-only="0" aria-pressed="${!S.notes.only}">All</button></div></div>
+      <div class="nl">${rows || `<div class="empty">${S.notes.only ? "Nothing new on what you filed, voted on or wrote in." : "Nothing happened on the Desk in the last 30 days."}</div>`}</div>`;
+    $("#notes .nl").scrollTop = keep;
+    if (focus) $("#notes").querySelector(focus)?.focus();
+    $("#notes").querySelectorAll("[data-only]").forEach((b) => b.addEventListener("click", () => { S.notes.only = b.dataset.only === "1"; renderNotes(); $("#notes .nl").scrollTop = 0; }));
+    $("#notes").querySelectorAll("[data-note]").forEach((b) => b.addEventListener("click", guard(async () => {
+      $("#bell").open = false;
+      await openNote(list[Number(b.dataset.note)]);
+    })));
+  }
+  // A click on a notification lands on its source, not only its item: the option drawn, voted
+  // on or approved (its tab picked), the message itself (its conversation or private chat
+  // opened), the spec, the decision; every fold around it opens, and it pulses twice and fades.
+  async function openNote(x) {
+    for (const o of spots.splice(0)) document.querySelector(o.path)?.classList.remove("spot");
+    const to = x.item ? target(x.item) : null;
+    // A private ask about a Desk page, not an item, opens its chat where you are.
+    if (!to && !x.private) return;
+    if (x.thread && !x.private) S.convoOpen = true;
+    // The private chat would cover what the notification points at.
+    if (!x.private && S.ask.open) { S.ask.open = false; renderAsk(); }
+    if (to && !(await goTo(to))) return;
+    const c = S.card, th = x.thread ? (c?.threads || []).find((t) => t.id === x.thread) : null;
+    if (x.private) {
+      // A private ask's chat shows the asks about what is open: the option it was asked about first.
+      await loadAsks();
+      const ask = S.ask.asks.find((t) => t.id === x.thread);
+      if (ask?.context?.variant && c && (c.variants || []).some((v) => v.id === ask.context.variant)) { S.variant = ask.context.variant; renderDetail(); }
+      S.ask.open = true; renderAsk();
+      return spot(document.querySelector(`#ask [data-m="${CSS.escape(`${x.thread}:${x.msg ?? 0}`)}"]`) || $("#ask .ask-panel"), "nearest");
+    }
+    // A note from the design workspace opens there, on its option, state and part, the note
+    // picked with its whole conversation; a done one shows under All.
+    const an = th?.anchor;
+    if (an?.variant && (c?.variants || []).some((v) => v.id === an.variant)) {
+      S.variant = an.variant;
+      S.ws = { ...S.ws, open: true, check: false, version: null, edit: null, alt: null, note: th.id, state: an.state || null,
+        filter: th.state === "resolved" ? "all" : S.ws.filter || "open",
+        selected: an.selector ? { selector: an.selector, text: an.text || "", tag: an.tag || "", label: an.label || an.text || "an element", view: an.view, view_name: an.view_name } : null };
+      renderDetail(); renderWorkspace();
+      const li = document.querySelector(`[data-ws-note="${CSS.escape(th.id)}"]`), ms = li ? [...li.querySelectorAll(".m")] : [];
+      for (const [tid, m] of (x.marks || []).slice(1)) if (tid === th.id && ms[m]) spot(ms[m], "nearest");
+      spot(ms[x.msg ?? 0] || li, "nearest");
+      return;
+    }
+    const variant = x.variant || th?.anchor?.variant;
+    if (c && variant && variant !== S.variant && (c.variants || []).some((v) => v.id === variant)) { S.variant = variant; renderDetail(); }
+    const d = $("#detail"), q = (sel) => d.querySelector(sel);
+    const msgOf = (id) => q(`#th-${CSS.escape(id)} [data-m="${x.msg ?? 0}"]`) || q(`#th-${CSS.escape(id)}`) || q(`#form-${CSS.escape(id)}`);
+    const tab = variant && q(`.vtabs [data-variant="${CSS.escape(variant)}"]`);
+    const el = {
+      vote: () => q(".vbar .votes") || tab,
+      approved: () => q(".status") || tab,
+      decided: () => q(".size") || q(".status"),
+      spec: () => q("#spec"),
+      "new-request": () => q(".top2 > .brief"),
+      revoked: () => q(".against") || q("h2"),
+    }[x.event]?.() || (x.thread && msgOf(x.thread)) || (x.event.startsWith("options-") && tab) || q("h2");
+    // The option drawn or approved shows its tab lit with the design under it.
+    if (tab && el !== tab && x.event.startsWith("options-")) spot(tab);
+    // A row that folds several messages lights each of them; the page goes to the newest.
+    for (const [tid, m] of (x.marks || []).slice(1)) { const o = q(`#th-${CSS.escape(tid)} [data-m="${m}"]`); if (o) { spot(o); } }
+    spot(el);
+  }
+  // Brings a place into view, opening every fold around it, and lights it for 3 seconds; the
+  // page redraws on its own meanwhile, so the light finds the place again by its path.
+  const spots = [];
+  function spot(el, block = "center") {
+    if (!el) return;
+    for (let p = el; p; p = p.parentElement?.closest("details")) if (p.tagName === "DETAILS") p.open = true;
+    const b = el.closest(".brief.clamped");
+    if (b) b.querySelector(".brief-toggle")?.click();
+    el.scrollIntoView({ block, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    const parts = [];
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      if (e.id) { parts.unshift(`#${CSS.escape(e.id)}`); break; }
+      parts.unshift(`${e.tagName.toLowerCase()}:nth-child(${[...e.parentElement.children].indexOf(e) + 1})`);
+    }
+    spots.push({ path: parts.join(" > "), from: Date.now(), on: S.card?.id || S.decision?.id || "" });
+    el.classList.add("spot");
+  }
+  setInterval(() => {
+    for (let i = spots.length - 1; i >= 0; i--) {
+      // Another item opened: its page has other places at the same path.
+      const x = spots[i], el = document.querySelector(x.path), gone = Date.now() - x.from >= 3000 || x.on !== (S.card?.id || S.decision?.id || "");
+      if (gone) { el?.classList.remove("spot"); spots.splice(i, 1); continue; }
+      // A redrawn place lights again where its glow was, not from the start.
+      if (el && !el.classList.contains("spot")) { el.style.animationDelay = `-${Date.now() - x.from}ms`; el.classList.add("spot"); }
+    }
+  }, 250);
+  $("#bell").addEventListener("toggle", guard(async () => {
+    if (!$("#bell").open) { renderBell(); return; }
+    // What was new when you opened it stays marked until you close it.
+    S.notes.was = S.notes.seen;
+    renderNotes(); renderBell();
+    if (S.notes.unread) { const r = await api("POST", "/api/notifications/seen"); S.notes.seen = r.seen || S.notes.seen; S.notes.unread = 0; }
+  }));
 
   // One timer: every 15 s, every 4 s while the open request waits for Design Desk.
   let tick = 0;
@@ -5731,6 +5965,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (!fast && tick % 4 !== 0) return;
     try {
       await refreshList();
+      await loadNotes().catch(() => {});
       if (S.card) await openCard(S.card.id, { quiet: true });
       if (S.ask.open || S.ask.asks.some((t) => t.needs_agent)) { await loadAsks(); if (!S.ask.dragging && !$("#ask-text")?.value && !document.activeElement?.closest?.("#ask")) renderAsk(); }
       if (S.tab === "people" && S.people?.asks?.some((a) => a.state !== "done")) { await loadPeople(); if (S.tab === "people") renderDetail(); }
@@ -5748,6 +5983,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     await loadAsks().catch(() => {});
     applyMe();
     await refreshList();
+    await loadNotes().catch(() => {});
     // A link to an item opens it; else the Desk opens on Requests. How it works is under the
     // question mark, and each tab's intro explains it on first use.
     const to = target(location.hash);

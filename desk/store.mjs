@@ -230,8 +230,11 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {}, seen: {} };
 }
+
+// The bell's events that fold into one row per item and day, with their count.
+const NOTE_FAMILY = { comment: "talk", reply: "talk", question: "talk", answer: "talk", "agent-asks": "talk", vote: "vote" };
 
 export class Store {
   constructor(dir, { clock = now } = {}) {
@@ -653,7 +656,7 @@ export class Store {
   prefsOf(who) {
     const key = viewerKey(who);
     const p = (key && own(this.db.prefs, key)) || {};
-    // figma: the Figma comparisons shown to this person (null: shown, when the Desk has Figma on).
+    // figma: the Figma comparisons shown to this person (null: hidden until they turn it on).
     return { theme: p.theme || null, simple: typeof p.simple === "boolean" ? p.simple : null, figma: typeof p.figma === "boolean" ? p.figma : null };
   }
 
@@ -684,6 +687,107 @@ export class Store {
     Object.defineProperty(this.db.reads, key, { value: mine, enumerable: true, writable: true, configurable: true });
     this.save();
     return { read: true };
+  }
+
+  // What happened lately on the Desk, newest first, for the bell (docs/desk.md → Notifications).
+  // Nothing new is logged: each event is read from what the store keeps anyway (a card's
+  // creation, a message, a drawn option, a vote, an approval, a spec, a decision). A person
+  // never sees their own doings, nor another person's private ask. `since` is when they last
+  // opened the bell: newer events For you are unread (the bell's count).
+  notifications(who, { limit = 50, days = 30 } = {}) {
+    const key = viewerKey(who);
+    const mine = new Set([who?.email, ...(who?.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
+    const isMine = (by) => Boolean(by?.email) && mine.has(String(by.email).toLowerCase());
+    const from = new Date(Date.parse(this.clock()) - days * 864e5).toISOString();
+    const out = [];
+    const push = (at, event, item, by, extra = {}, forYou = false) => { if (at && at >= from && !isMine(by)) out.push({ at, event, ...item, by: by || null, ...extra, for_you: forYou }); };
+    const itemOf = (c) => ({ item: c.id, kind: c.kind, title: c.title || "", screen: c.request?.screen || c.path || null, status: c.status });
+    for (const c of Object.values(this.db.cards)) {
+      if (c.status === "archived" || c.kind === "digest") continue;
+      const it = itemOf(c);
+      // Yours: you filed it, approved it, voted on it or wrote in it; everything on it is then
+      // For you, its messages included. The bell's For you shows these alone.
+      const talked = (c.threads || []).some((tid) => (own(this.db.threads, tid)?.messages || []).some((m) => isMine(m.by)));
+      const filed = [c.created_by, c.origin].some(isMine);
+      const yours = filed || isMine(c.approved?.by) || talked || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
+      const author = c.origin?.reporter && c.origin.channel !== "agent" ? { name: c.origin.reporter, email: c.origin.email || null, via: c.origin.channel } : c.created_by;
+      if (["request", "change", "issue"].includes(c.kind)) push(c.created, `new-${c.kind}`, it, author, {}, yours);
+      // Options drawn in one run come as one event: new ones, then redrawn ones.
+      const runs = new Map();
+      for (const v of c.variants || []) {
+        if (!v.drawn) continue;
+        const k = `${v.drawn}|${(v.version || 1) > 1 ? "redrawn" : "drawn"}`;
+        runs.set(k, [...(runs.get(k) || []), v]);
+      }
+      // `variant` names where a click lands: the option drawn, voted on or approved.
+      for (const [k, vs] of runs) { const [at, how] = k.split("|"); push(at, `options-${how}`, it, { agent: true }, { detail: vs.map((v) => v.name).join(", "), variant: vs[0].id }, yours); }
+      for (const [variant, byKey] of Object.entries(c.votes || {})) {
+        const name = (c.variants || []).find((v) => v.id === variant)?.name || variant;
+        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${{ prefer: "Prefers", dislike: "Dislikes", concern: "Has a concern about" }[v.vote] || "Voted on"} ${name}`, variant }, yours);
+      }
+      if (c.approved?.at) push(c.approved.at, "approved", it, c.approved.by, { detail: (c.variants || []).find((v) => v.id === c.approved.variant)?.name || null, variant: c.approved.variant || null }, yours);
+      if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
+      if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
+      for (const tid of c.threads || []) {
+        const t = own(this.db.threads, tid);
+        // A private ask is never in a card's threads: its answers come in the loop below.
+        if (!t || t.kind === "private") continue;
+        (t.messages || []).forEach((m, i) => {
+          const event = i === 0 ? (t.kind === "asks" ? "agent-asks" : t.kind === "question" ? "question" : "comment")
+            : m.by?.agent ? (t.kind === "question" ? "answer" : "reply") : "reply";
+          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i }, yours);
+        });
+      }
+    }
+    // Your private asks live outside the cards: Design Desk's answers to them are yours alone.
+    for (const t of Object.values(this.db.threads)) {
+      if (t.kind !== "private" || !key || t.owner !== key) continue;
+      const c = t.card ? own(this.db.cards, t.card) : null;
+      if (c && (c.status === "archived" || c.kind === "digest")) continue;
+      const it = c ? itemOf(c) : { item: null, kind: null, title: t.context?.label || "The Desk", screen: null, status: null };
+      (t.messages || []).forEach((m, i) => { if (m.by?.agent) push(m.at, "answer", it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i, private: true }, true); });
+    }
+    for (const d of Object.values(this.db.decisions)) {
+      const it = { item: d.id, kind: "decision", title: d.text, screen: null, status: d.status };
+      push(d.recorded || d.at, "new-decision", it, d.author ? { email: d.author.email, name: d.author.name || d.author.login, role: d.author.role } : null);
+      if (d.revoked?.at) push(d.revoked.at, "revoked", it, d.revoked.by || null, { detail: d.revoked.reason || null });
+    }
+    out.sort((a, b) => b.at.localeCompare(a.at) || (b.msg ?? 0) - (a.msg ?? 0));
+    // Messages and votes on one item in one day come as one row: the newest leads, with how
+    // many there are and who wrote them. A row is for you, private or neither, never a mix.
+    const rows = [], open = new Map();
+    for (const x of out) {
+      const fam = NOTE_FAMILY[x.event];
+      const k = fam && x.item ? [x.item, fam, x.at.slice(0, 10), x.for_you, Boolean(x.private)].join("|") : null;
+      const row = k && open.get(k);
+      if (row) {
+        row.count += 1;
+        if (x.thread && row.marks.length < 20) row.marks.push([x.thread, x.msg]);
+        const who = x.by?.agent ? "agent" : String(x.by?.email || x.by?.name || "").toLowerCase();
+        if (!row.people.some((p) => (p.agent ? "agent" : String(p.email || p.name || "").toLowerCase()) === who)) row.people.push(x.by);
+        continue;
+      }
+      // `marks`: every message the row folds, for the page to light them all.
+      const lead = { ...x, count: 1, people: x.by ? [x.by] : [], ...(x.thread ? { marks: [[x.thread, x.msg]] } : {}) };
+      if (k) open.set(k, lead);
+      rows.push(lead);
+    }
+    const seen = (key && own(this.db.seen, key)) || null;
+    return { items: rows.slice(0, limit), seen, unread: rows.filter((x) => x.for_you && (!seen || x.at > seen)).length };
+  }
+
+  // A person opened the bell: what is there now counts as seen, for them alone. `seen` is the
+  // newest event's time, so opening it again with nothing new writes nothing: the route sits
+  // outside the write budget and must not save the store on every call.
+  markSeen(who) {
+    const key = viewerKey(who);
+    if (!key) return { seen: null };
+    const was = own(this.db.seen, key) || null;
+    const at = this.notifications(who).items.reduce((m, x) => (x.at > m ? x.at : m), was || "");
+    if (!at || at === was) return { seen: was };
+    Object.defineProperty(this.db.seen, key, { value: at, enumerable: true, writable: true, configurable: true });
+    this.save();
+    return { seen: at };
   }
 
   privateAsks(who) {
@@ -2310,7 +2414,8 @@ function versionedStates(states, before, at, now, was, option) {
   });
 }
 
-// The agent's form: a few questions, each with its options; the page adds "Leave it to Design Desk".
+// The agent's form: a few questions, each with its options and the suggested one; a question
+// left unanswered goes to Design Desk (docs/desk.md → The questions form).
 function cleanQuestions(list) {
   if (!Array.isArray(list) || !list.length || list.length > 6) throw bad("questions is a list of 1 to 6");
   return list.map((q) => {

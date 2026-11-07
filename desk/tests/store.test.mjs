@@ -1819,3 +1819,146 @@ test("Under the hood: a short plain text with its sources; a plain string is its
   assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x", behind: "Nothing changes behind the screens." } }).card.impact.behind.text, "Nothing changes behind the screens.");
   assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x" } }).card.impact.behind, undefined, "none written: none shown");
 });
+
+test("notifications fold rows: one per item, family and day, at most 20 marks, each person once, votes too; a private answer on an archived card is not news", () => {
+  let now = Date.UTC(2026, 9, 1, 8);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const tick = () => { now += 60e3; return s.clock(); };
+  const pat = { email: "pat@example.com", role: "designer" }, kim = { email: "kim@example.com", role: "pm" }, lee = { email: "lee@example.com", role: "developer" };
+  const { card } = s.createRequest(alice, { title: "Mine", problem: "x", screen: "S" });
+  tick(); const t = s.openThread(card.id, pat, { kind: "comment", text: "1" });
+  for (let n = 2; n <= 25; n++) { tick(); s.reply(t.thread.id, n % 2 ? pat : kim, String(n)); }
+  s.db.cards[card.id].variants = [{ id: "v1", name: "Soft", version: 1 }];
+  for (const who of [pat, kim, lee]) { tick(); s.vote(card.id, who, { variant: "v1", vote: "prefer" }); }
+  const rows = s.notifications(alice).items;
+  const talk = rows.filter((x) => ["comment", "reply"].includes(x.event));
+  assert.equal(talk.length, 1, "25 messages on one item in one day: one row");
+  assert.equal(talk[0].count, 25);
+  assert.equal(talk[0].marks.length, 20, "at most 20 messages to light");
+  assert.deepEqual(talk[0].people.map((p) => p.email), ["pat@example.com", "kim@example.com"], "each person once, newest first");
+  const votes = rows.filter((x) => x.event === "vote");
+  assert.equal(votes.length, 1, "votes fold too");
+  assert.equal(votes[0].count, 3);
+  // The next day starts a new row.
+  now += 864e5; s.reply(t.thread.id, pat, "Next day");
+  assert.equal(s.notifications(alice).items.filter((x) => ["comment", "reply"].includes(x.event)).length, 2);
+  // A private answer on an archived card is not news, for its owner either.
+  const ask = s.openPrivate(alice, { text: "Why?", context: { card: card.id } });
+  tick(); s.answer(ask.thread.id, "Because");
+  assert.equal(s.notifications(alice).items.filter((x) => x.private).length, 1);
+  s.db.cards[card.id].status = "archived";
+  assert.equal(s.notifications(alice).items.filter((x) => x.private).length, 0);
+});
+
+test("notifications: every event kind, the 30-day window, the row cap, newest first, skipped cards, For you from a vote or an approval; seen saves only on news", () => {
+  let now = Date.UTC(2026, 9, 1);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const tick = (h = 1) => { now += h * 3600e3; return s.clock(); };
+  const pat = { email: "pat@example.com", role: "designer" };
+  // Older than the window: never in the bell.
+  const old = s.createRequest(pat, { title: "Old one", problem: "x", screen: "S" }).card;
+  tick(24 * 40);
+  const r1 = s.createRequest(alice, { title: "Mine", problem: "x", screen: "S" }).card;
+  const c1 = s.db.cards[r1.id];
+  c1.variants = [{ id: "v1", name: "Soft", drawn: tick(), version: 1 }, { id: "v2", name: "Bold", drawn: tick(), version: 2 }];
+  tick(); s.vote(r1.id, pat, { variant: "v1", vote: "concern" });
+  c1.approved = { by: pat, at: tick(), variant: "v1" };
+  c1.spec = { at: tick(), asset: "A-1" };
+  c1.decided = { by: pat, at: tick(), text: "Keep it" };
+  tick(); const d = s.addDecision({ concepts: ["badge"], text: "Soft badges", author: { name: "Pat", email: pat.email, role: "designer" }, origin: { kind: "desk", card: r1.id } }).decision;
+  tick(); s.revokeDecision(d.id, pat, { reason: "Changed our mind" });
+  // Pat's request Alice voted on, and one she approved: what Pat does there is for her.
+  tick(); const r2 = s.createRequest(pat, { title: "Voted", problem: "x", screen: "S" }).card;
+  s.db.cards[r2.id].variants = [{ id: "w1", name: "One", version: 1 }];
+  tick(); s.vote(r2.id, alice, { variant: "w1", vote: "prefer" });
+  tick(); s.openThread(r2.id, pat, { kind: "comment", text: "On the one you voted for" });
+  tick(); const r3 = s.createRequest(pat, { title: "Approved", problem: "x", screen: "S" }).card;
+  s.db.cards[r3.id].approved = { by: alice, at: tick(), variant: null };
+  tick(); s.openThread(r3.id, pat, { kind: "comment", text: "On the one you approved" });
+  tick(); const r4 = s.createRequest(pat, { title: "Not yours", problem: "x", screen: "S" }).card;
+  // An archived card and a digest are not news.
+  tick(); const gone = s.createRequest(pat, { title: "Archived", problem: "x", screen: "S" }).card; s.db.cards[gone.id].status = "archived";
+  tick(); const dig = s.createRequest(pat, { title: "Digest", problem: "x", screen: "S" }).card; s.db.cards[dig.id].kind = "digest";
+  tick();
+  const items = s.notifications(alice).items;
+  const ev = (e, item) => items.find((x) => x.event === e && (!item || x.item === item));
+  assert.ok(!items.some((x) => x.item === old.id), "older than 30 days is out");
+  assert.ok(!items.some((x) => [gone.id, dig.id].includes(x.item)), "archived and digest cards are skipped");
+  assert.equal(ev("options-drawn", r1.id).variant, "v1");
+  assert.equal(ev("options-redrawn", r1.id).variant, "v2");
+  assert.equal(ev("vote", r1.id).detail, "Has a concern about Soft");
+  assert.equal(ev("approved", r1.id).detail, "Soft");
+  assert.equal(ev("spec", r1.id).by.agent, true);
+  assert.equal(ev("decided", r1.id).by.email, pat.email);
+  assert.equal(ev("new-decision").item, d.id);
+  assert.equal(ev("revoked").detail, "Changed our mind");
+  for (const e of ["options-drawn", "vote", "approved", "spec", "decided"]) assert.equal(ev(e, r1.id).for_you, true, `${e} on her own request is for her`);
+  assert.equal(ev("comment", r2.id).for_you, true, "a vote makes the request hers");
+  assert.equal(ev("comment", r3.id).for_you, true, "an approval makes the request hers");
+  assert.equal(ev("new-request", r4.id).for_you, false, "a request she never touched is not for her");
+  assert.deepEqual(items.map((x) => x.at), [...items.map((x) => x.at)].sort().reverse(), "newest first");
+  assert.equal(s.notifications(alice, { limit: 3 }).items.length, 3, "at most the cap");
+  // Opening the bell saves the newest event's time; opening it again with nothing new saves nothing.
+  let saves = 0; const save = s.save.bind(s); s.save = () => { saves += 1; save(); };
+  assert.equal(s.markSeen(alice).seen, items[0].at);
+  assert.equal(saves, 1);
+  tick();
+  assert.equal(s.markSeen(alice).seen, items[0].at);
+  assert.equal(saves, 1, "nothing new: no write");
+  tick(); s.openThread(r1.id, pat, { kind: "comment", text: "News" });
+  assert.equal(s.notifications(alice).unread, 1);
+  s.markSeen(alice);
+  assert.equal(saves, 3, "news: one write (the comment saved once too)");
+  assert.equal(s.notifications(alice).unread, 0);
+});
+
+test("notifications: what others did lately, grouped per item, private answers for their owner, For you, seen", () => {
+  const s = fresh();
+  const carol = { email: "carol@example.com", role: "pm" };
+  const { card } = s.createRequest(alice, { title: "Calmer cards", problem: "too loud", screen: "Agents list" });
+  const t = s.openThread(card.id, bob, { kind: "comment", text: "The badges shout." });
+  s.reply(t.thread.id, carol, "Agreed.");
+  const ask = s.openPrivate(bob, { text: "Only mine", context: { card: card.id } });
+  const mine = s.notifications(alice);
+  // Alice's own request is not news to her; Bob's comment and Carol's reply are, as one row on her request.
+  assert.equal(mine.items.length, 1);
+  const talk = mine.items[0];
+  assert.equal(talk.event, "reply"); assert.equal(talk.detail, "Agreed.");
+  assert.equal(talk.count, 2);
+  assert.deepEqual(talk.people.map((p) => p.email), ["carol@example.com", "bob@example.com"]);
+  // The row lands on the newest message and names every message it folds.
+  assert.equal(talk.thread, t.thread.id); assert.equal(talk.msg, 1);
+  assert.deepEqual(talk.marks, [[t.thread.id, 1], [t.thread.id, 0]]);
+  assert.equal(talk.item, card.id); assert.equal(talk.title, "Calmer cards"); assert.equal(talk.screen, "Agents list"); assert.equal(talk.for_you, true);
+  assert.equal(mine.unread, 1);
+  // Carol sees the request and Bob's comment, never her own reply nor Bob's private ask.
+  const hers = s.notifications(carol).items;
+  assert.deepEqual(hers.map((x) => x.event).sort(), ["comment", "new-request"]);
+  assert.ok(hers.every((x) => !x.private));
+  // Design Desk's answer to Bob's private ask is his alone, and for him.
+  s.answer(ask.thread.id, "Only yours");
+  const his = s.notifications(bob).items.find((x) => x.private);
+  assert.equal(his.event, "answer"); assert.equal(his.thread, ask.thread.id); assert.equal(his.msg, 1); assert.equal(his.for_you, true); assert.equal(his.item, card.id);
+  assert.ok(!s.notifications(alice).items.some((x) => x.private));
+  // A new message in a thread she wrote in is for her, folded with Bob's comment.
+  s.reply(t.thread.id, bob, "Thanks");
+  const row = s.notifications(carol).items.find((x) => x.detail === "Thanks");
+  assert.equal(row.for_you, true); assert.equal(row.count, 2); assert.equal(row.msg, 2);
+  // An option drawn and a vote on it name that option, for the click to open its tab.
+  s.db.cards[card.id].variants = [{ id: "v1", name: "Soft", drawn: s.clock(), version: 1 }];
+  s.vote(card.id, bob, { variant: "v1", vote: "prefer" });
+  const now = s.notifications(alice).items;
+  assert.equal(now.find((x) => x.event === "options-drawn").variant, "v1");
+  assert.equal(now.find((x) => x.event === "vote").variant, "v1");
+  // Opening the bell marks it seen, for that person alone.
+  s.markSeen(alice);
+  assert.equal(s.notifications(alice).unread, 0);
+  // Carol wrote in the request, so all of it is for her and counts, a row each: the request,
+  // the talk, the option drawn and the vote.
+  assert.equal(s.notifications(carol).unread, 4);
+  // Dave took no part: he sees all of it under All, and his count stays 0.
+  const dave = s.notifications({ email: "dave@example.com", role: "designer" });
+  assert.ok(dave.items.length > 0 && dave.items.every((x) => !x.for_you));
+  assert.equal(dave.unread, 0);
+  assert.deepEqual(s.markSeen({ agent: true }), { seen: null });
+});
