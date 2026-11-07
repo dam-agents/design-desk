@@ -1936,7 +1936,7 @@ const diffs = [{ part: "Rows", what: "less space between rows", severity: "minor
   { part: "Header", what: "the title is smaller", severity: "major", figma: "24 / 500", product: "20 / 500" }];
 const row = { verdict: "differs", count: 2, frame: "Agents list", checked: "2026-11-05T10:00:00Z" };
 const cards = [
-  { id: "C-1", kind: "screen", title: "Agents list", status: "current", path: "/agents", figma: row, figma_check: { verdict: "differs", frame, checked: "2026-11-05T10:00:00Z", differences: diffs } },
+  { id: "C-1", kind: "screen", title: "Agents list", status: "current", path: "/agents", figma: { ...row }, figma_check: { verdict: "differs", frame: { ...frame, shot: "A-2" }, checked: "2026-11-05T10:00:00Z", differences: diffs } },
   { id: "C-2", kind: "request", title: "Bigger send button", status: "feedback", request: { problem: "Too small.", figma: frame.url }, triage: { verdict: "design" },
     variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }], figma: row,
     figma_check: { verdict: "differs", variant: "v1", frame, checked: "2026-11-05T10:00:00Z", differences: diffs } },
@@ -1946,12 +1946,15 @@ window.platform = { async request({ method, path, body }) {
     posts.push({ path, body: JSON.parse(body || "{}") });
     // The Desk keeps the person's choice: /api/me answers it from then on, as the server does.
     if (path === "/api/prefs") window.figmaPref = JSON.parse(body).figma;
+    // Close keeps its state, as the store does: the list and the page read it back.
+    if (path === "/api/cards/C-1/figma-close") { const on = JSON.parse(body).on; cards[0].figma.closed = on; if (on) cards[0].figma_check.closed = { by: { email: "a@example.com" }, at: "2026-11-06T10:00:00Z" }; else delete cards[0].figma_check.closed; }
     return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/prefs" ? { figma: window.figmaPref } : { figma_check: {} }) };
   }
   const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
-  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? true, can: { handle: true, revise: true, figma: true, request: true } }
+  const answer = path === "/api/me" ? { role: "admin", email: "a@example.com", key: "a@example.com", figma: true, figma_pref: window.figmaPref ?? true, can: { handle: true, revise: true, figma: true, request: true, queue: true } }
     : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
     : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" }
+    : path === "/api/assets/A-2" ? { id: "A-2", contentType: "image/png", encoding: "base64", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" }
     : one ? { card: one } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
@@ -1970,6 +1973,34 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   await desk.waitForSelector("#detail .status");
   assert.match(await desk.textContent("#detail .status"), /2 differences from Figma[\s\S]*Open in Figma[\s\S]*Open the screen/);
   assert.deepEqual(await desk.$$eval("#detail .ft-r .ft-d b", (xs) => xs.map((x) => x.textContent)), ["Header", "Rows"], "major first");
+  // The row's red !: its words open on hover, its tooltip one whole sentence.
+  assert.equal(await desk.textContent('#list [data-card="C-1"] .vdot .w'), "2 differences from Figma");
+  assert.equal(await desk.getAttribute('#list [data-card="C-1"] .vdot .tag', "data-tip"), "It differs from its frame in Figma in 2 places", "the title becomes the Desk's own tooltip");
+  assert.match(await desk.textContent("#list .row .prov"), /checked:[\s\S]*type:[\s\S]*Screen[\s\S]*frame:[\s\S]*Agents list/, "the line under the title reads like a request's");
+  // A side with no picture: an empty box, its caption under it as under a picture.
+  assert.deepEqual(await desk.$$eval("#detail .figdiffs figcaption", (xs) => xs.map((x) => x.textContent)), ["In Figma", "In the product"]);
+  assert.equal(await desk.textContent("#detail .figdiffs .nopic-f .nopic-box"), "No picture");
+  // Under ⋯: Close and Add to presentation. Close moves it to Closed; Reopen the last one goes back to Differs.
+  await desk.click("#detail .status .more summary");
+  assert.equal(await desk.locator('#detail .status .menu [data-act="queue"]').count(), 1, "Add to presentation is under ⋯");
+  await desk.click('#detail .status [data-fig-close="1"]');
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/figma-close"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/figma-close").body), { on: true });
+  await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => t.textContent.startsWith("Closed for everyone")));
+  await desk.waitForSelector('[data-filter="figFilter:closed"]');
+  assert.equal(await desk.locator('#list [data-card="C-1"]').count(), 0, "off Differs");
+  await desk.click('[data-filter="figFilter:closed"]');
+  await desk.waitForSelector('#list [data-card="C-1"]');
+  assert.equal(await desk.locator('#list [data-card="C-1"] .vdot').count(), 0, "a closed one keeps no !");
+  await desk.click('#list [data-card="C-1"]');
+  await desk.waitForSelector('#detail .status[data-o="closed"]');
+  await desk.click("#detail .status .more summary");
+  await desk.click('#detail .status [data-fig-close="0"]');
+  await desk.waitForFunction(() => posts.filter((p) => p.path === "/api/cards/C-1/figma-close").length === 2);
+  assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/cards/C-1/figma-close")[1].body), { on: false }, "Reopen sends on: false");
+  await desk.waitForFunction(() => [...document.querySelectorAll(".toast")].some((t) => t.textContent === "Back on Product → Differences."));
+  await desk.waitForFunction(() => !document.querySelector('[data-filter="figFilter:closed"]'));
+  assert.equal(await desk.getAttribute('[data-filter="figFilter:differs"]', "aria-pressed"), "true", "back on Differs, a lit filter");
 
   // On the screen itself: folded to one line with the counts; × takes one off for everyone.
   await desk.goto(`${base}#C-1`);
@@ -2002,9 +2033,25 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/prefs").body), { figma: false });
   assert.equal(await desk.locator("[data-figbox]").count(), 0, "no box");
+  // The new request form has no Figma link while Figma is off for this person.
+  await desk.click("#new-request");
+  assert.equal(await desk.locator("#rq-figma").isHidden(), true, "no Figma link with Figma off");
+  await desk.keyboard.press("Escape");
   await desk.goto(`${base}#product`);
   await desk.waitForSelector('[data-filter="productFilter:screens"]');
   assert.equal(await desk.locator('[data-filter="productFilter:differences"]').count(), 0, "no Differences page");
+}));
+
+// Close is for whoever may mark items handled: without it, ⋯ holds no Close.
+const FIGMA_NO_HANDLE = FIGMA.replace("can: { handle: true, ", "can: { ");
+test("Differences from Figma: Close is only for whoever may mark items handled", (t) => open(t, FIGMA_NO_HANDLE, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#product`);
+  await desk.click('[data-filter="productFilter:differences"]');
+  await desk.click('#list [data-card="C-1"]');
+  await desk.waitForSelector("#detail .status");
+  assert.equal(await desk.locator("#detail .status [data-fig-close]").count(), 0, "no Close without handle");
+  assert.equal(await desk.locator('#detail .status [data-act="queue"]').count(), 1, "Add to presentation stays");
 }));
 
 // A person who never chose: /api/me answers no choice (null), and Figma is off for them.
@@ -2022,7 +2069,7 @@ test("Figma with no choice saved: the switch is off, no Differences page, until 
   await desk.waitForSelector('[data-filter="productFilter:differences"]');
 }));
 
-// The bell: a comment For you and a new request for everyone; opening it marks it seen.
+// The bell: a comment For you and a new request for everyone; a click on a row reads it.
 const BELL = `<script>
 window.posts = [];
 const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
@@ -2034,9 +2081,9 @@ const cards = [{ id: "C-1", kind: "change", title: "A new header", status: "open
     threads: [{ id: "t2", card: "C-3", kind: "comment", state: "open", anchor: { variant: "v1", selector: "button", text: "Send", label: "The send button" },
       messages: [{ by: { email: "pat@example.com" }, at: ago(3), text: "Too big" }] }] }];
 const items = [
-  { at: ago(3), event: "comment", item: "C-3", kind: "request", title: "Quieter rows", by: { email: "pat@example.com" }, detail: "Too big", thread: "t2", msg: 0, for_you: false, count: 1, people: [{ email: "pat@example.com" }], marks: [["t2", 0]] },
-  { at: ago(5), event: "comment", item: "C-1", kind: "change", title: "A new header", by: { email: "pat@example.com" }, detail: "Looks good", thread: "t1", msg: 0, for_you: true, count: 1, people: [{ email: "pat@example.com" }], marks: [["t1", 0]] },
-  { at: ago(9), event: "new-request", item: "C-2", kind: "request", title: "Calmer list", by: { email: "pat@example.com" }, for_you: false, count: 1, people: [{ email: "pat@example.com" }] }];
+  { id: "n3", at: ago(3), event: "comment", item: "C-3", kind: "request", title: "Quieter rows", by: { email: "pat@example.com" }, detail: "Too big", thread: "t2", msg: 0, for_you: false, count: 1, people: [{ email: "pat@example.com" }], marks: [["t2", 0]] },
+  { id: "n1", at: ago(5), event: "comment", item: "C-1", kind: "change", title: "A new header", by: { email: "pat@example.com" }, detail: "Looks good", thread: "t1", msg: 0, for_you: true, count: 1, people: [{ email: "pat@example.com" }], marks: [["t1", 0]] },
+  { id: "n2", at: ago(9), event: "new-request", item: "C-2", kind: "request", title: "Calmer list", by: { email: "pat@example.com" }, for_you: false, count: 1, people: [{ email: "pat@example.com" }] }];
 window.platform = { async request({ method, path }) {
   if (method === "POST") { posts.push(path); return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/notifications/seen" ? { seen: items[0].at } : {}) }; }
   const answer = path === "/api/me" ? { role: "designer", email: "a@example.com", key: "a@example.com", can: { comment: true } }
@@ -2088,12 +2135,17 @@ test("in simple mode the bell leaves out issues, screens, elements and decisions
   assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-7", "C-8", "C-9", "D-1", "C-2"], "full mode shows every row again");
 }));
 
-test("the bell counts what is For you, opens on it, marks it seen, shows All on a click, and a row lands on its message; a menu button without data-keep still closes its menu", (t) => open(t, BELL, async (desk) => {
+test("the bell counts what is For you, opens on it, reads a row only on its click, shows All on a click, and a row lands on its message; a menu button without data-keep still closes its menu", (t) => open(t, BELL, async (desk) => {
   await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
   assert.equal(await desk.textContent("#bell-count"), "1", "the count is what is For you");
   await desk.click("#bell-btn");
+  assert.equal(await desk.textContent("#bell-count"), "1", "opening it reads nothing");
+  assert.equal(await desk.evaluate(() => posts.length), 0, "and writes nothing");
+  await desk.waitForSelector("#notes [data-note]");
+  assert.equal(await desk.locator("#notes [data-mark-read]").count(), 1, "Mark as read in the header while a row is unread");
+  await desk.click("#notes [data-mark-read]");
   await desk.waitForFunction(() => posts.includes("/api/notifications/seen"));
-  assert.equal(await desk.locator("#bell-count").isHidden(), true, "no count while open");
+  assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), true, "Mark as read keeps the panel open");
   assert.equal(await desk.getAttribute('#notes [data-only="1"]', "aria-pressed"), "true", "it opens on For you");
   assert.equal(await desk.locator("#notes [data-note]").count(), 1);
   assert.match(await desk.textContent("#notes [data-note]"), /New comment[\s\S]*PR change:[\s\S]*A new header/, "what happened, the kind in grey, the title");
@@ -2103,6 +2155,8 @@ test("the bell counts what is For you, opens on it, marks it seen, shows All on 
   await desk.click('#notes [data-only="1"]');
   await desk.click("#notes [data-note]");
   await desk.waitForSelector('#th-t1 [data-m="0"].spot');
+  assert.ok(await desk.evaluate(() => posts.includes("/api/notifications/read?id=n1")), "the click reads that row");
+  assert.equal(await desk.locator("#bell-count").isHidden(), true, "and the count drops");
   assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), false, "the panel closes");
   assert.equal(await desk.evaluate(() => document.querySelector("[data-convo]").open), true, "the conversation is unfolded");
   // A note from the design workspace opens the workspace on its option, its note picked and lit;
