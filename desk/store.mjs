@@ -2414,7 +2414,8 @@ function versionedStates(states, before, at, now, was, option) {
   });
 }
 
-// The agent's form: a few questions, each with its options; the page adds "Leave it to Design Desk".
+// The agent's form: a few questions, each with its options and the suggested one; a question
+// left unanswered goes to Design Desk (docs/desk.md → The questions form).
 function cleanQuestions(list) {
   if (!Array.isArray(list) || !list.length || list.length > 6) throw bad("questions is a list of 1 to 6");
   return list.map((q) => {

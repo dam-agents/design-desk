@@ -729,6 +729,14 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   or `owner/name#12`; the page links it to GitHub.
 - When a step cannot go on without a person, ask once, with a suggested answer:
   `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
+- <a id="the-questions-form"></a>**The questions form** shows four parts and nothing else:
+  the `text`, each question, its options, and the `suggested` one marked **recommended**.
+  The `text` is one or two short sentences of what it is about, only what the question needs;
+  it never repeats the question, never says that the step waits or where the card is (the page
+  shows both), and has no heading. A question is one sentence; an option a few words, its
+  consequence after a colon when it is not plain. `why` is not shown: put what matters in the
+  `text`. A question nobody answers is left to Design Desk, which takes `suggested`;
+  **Leave it to Design Desk** leaves them all.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
 - **Where a card came from.** Every row in PR Changes, Requests, Issues and Product shows its source, its author and,
   for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:

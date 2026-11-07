@@ -412,6 +412,7 @@
   .asks .reply { border: 0; padding: 8px 0 0; }
   .asks fieldset.q { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; display: grid; gap: 4px; }
   .asks legend { font-weight: 600; padding: 0; }
+  .asks > p:first-child { margin-top: 0; }
   .asks fieldset.q label { display: flex; gap: 8px; align-items: baseline; } .asks fieldset.q input[type=radio] { width: auto; }
   fieldset.skills { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; } fieldset.skills legend { font-size: var(--fs-meta); color: var(--muted); padding: 0; margin-bottom: 4px; }
   label.switch { display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--ink); cursor: pointer; } label.switch small { display: block; color: var(--muted); font-size: 12px; }
@@ -1491,7 +1492,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     reopen: "Opens this note again; Design Desk looks at it again",
     workIn: (v) => v.includes(",") ? "Design Desk changes the design as every open comment asks" : "Design Desk changes the design as this comment asks",
     sendForm: "Sends your answers; Design Desk goes on with them",
-    skipForm: "Design Desk takes its suggested answer for every question",
+    skipForm: "Design Desk takes its recommended answer for every question",
     size: (v) => v === "small" ? "Any developer but the person who filed it can then approve it, without a designer" : "A designer, a PM or a lead developer approves it",
     vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : v === "dislike" ? "Your vote against this option; press again to take it back" : "Says this option worries you, and opens a comment to say why; press again to take it back",
     goto: "Opens the design workspace at the part this note is about",
@@ -2780,15 +2781,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // the two prove the same size.
   const figure = (s, label, frame) => s.no ? `<div id="no-${esc(s.no[0].id)}-${s.no[1]}">${subTag(...s.no)}${plainFigure(s, label, frame)}</div>` : plainFigure(s, label, frame);
   const plainFigure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
-  // The agent's questions as a form: each has its options and "Leave it to Design Desk",
-  // which is picked until a person chooses; one button leaves all of them.
+  // The agent's questions as a form, in four parts and nothing else: what it is about (the
+  // agent's text), each question, its options, and the one Design Desk recommends. A question
+  // nobody answers is left to Design Desk, which takes its recommendation.
   function askForm(th) {
-    const qs = th.questions.map((q, i) => `<fieldset class="q" data-q="${i}"><legend>${i + 1}. ${txt(q.text)}</legend>${q.why ? `<p class="hint">${txt(q.why)}</p>` : ""}
-      ${q.options.map((o) => `<label><input type="radio" name="q-${esc(th.id)}-${i}" value="${esc(o)}" /> ${esc(o)}${o === q.suggested ? ` <span class="chip info" title="Design Desk's suggested answer; it takes it if you leave the question">suggested</span>` : ""}</label>`).join("")}
-      <label><input type="radio" name="q-${esc(th.id)}-${i}" value="" checked /> Leave it to Design Desk</label>
+    const many = th.questions.length > 1;
+    const qs = th.questions.map((q, i) => `<fieldset class="q" data-q="${i}"><legend>${many ? `${i + 1}. ` : ""}${txt(q.text)}</legend>
+      ${q.options.map((o) => `<label><input type="radio" name="q-${esc(th.id)}-${i}" value="${esc(o)}" /> ${esc(o)}${o === q.suggested ? ` <span class="chip info" title="Design Desk takes this one if you leave the question">recommended</span>` : ""}</label>`).join("")}
       <input placeholder="Anything to add? (optional)" data-q-note maxlength="500" /></fieldset>`).join("");
-    return `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk has ${th.questions.length === 1 ? "a question" : "a few questions"} before it goes on. Answer what matters to you; leave the rest to it.</b>${md(th.messages[0].text)}${qs}
-      <div class="actions"><button class="btn small primary" data-send-form="${esc(th.id)}">Send answers</button><button class="btn small" data-skip-form="${esc(th.id)}">Leave it all to Design Desk</button></div></div>`;
+    return `<div class="asks" id="form-${esc(th.id)}">${md(th.messages[0].text)}${qs}
+      <div class="actions"><button class="btn small primary" data-send-form="${esc(th.id)}">${many ? "Send answers" : "Send answer"}</button><button class="btn small" data-skip-form="${esc(th.id)}">Leave it to Design Desk</button></div></div>`;
   }
 
   // A picture that knows where the change is outlines it; one switch, remembered, shows or hides every outline.

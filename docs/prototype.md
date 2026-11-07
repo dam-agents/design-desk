@@ -23,9 +23,9 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    **Ask first** — an item with `ask_first` (the designer left "Ask me first" ticked in the final check before Build it live):
    list the design decisions the option and its comments leave open (a missing state, copy,
    a small screen…). None → build. Some → one form, `design desk ask C-<n> <file> --step build
-   --form` with `{text, questions: [{text, why, options, suggested}]}`: at most 6 questions
-   that change what gets built, 2–4 concrete options each, `suggested` your pick; the page
-   adds "Leave it to Design Desk". `done --outcome asked` and stop; the answer re-queues the
+   --form` with `{text, questions: [{text, options, suggested}]}`: at most 6 questions
+   that change what gets built, 2–4 concrete options each, `suggested` your pick
+   ([The questions form](desk.md#the-questions-form)). `done --outcome asked` and stop; the answer re-queues the
    build with the same option. Then a question left to you takes `suggested`, and the
    build's comment on the card names what you chose.
 2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree C-<n> <repo>` → a checkout of the
