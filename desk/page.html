@@ -1343,7 +1343,8 @@
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
     [["share"], "Share options in Slack", "slack"],
-    [["designs", "built"], "See Designs: ask a design's designer, mark it done"],
+    // Designs is a developer's page, not a step up from the role below: each role that has it says so.
+    [["designs", "built"], "See Designs: ask a design's designer, mark it done", null, "Designs"],
     [["people"], "Ask Design Desk to add people to the list"],
   ];
   // How it works: one picture each of how a request, an issue and a shipped pull request move.
@@ -2561,9 +2562,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const people = [...P.people].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.email.localeCompare(b.email));
     const rows = people.map((x) => `<tr><td>${x.name ? `<b>${esc(x.name)}</b> ` : ""}${esc(x.email)}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
     const shown = order.filter((r) => P.roles[r]);
-    const may = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a])).map(([, words]) => words)]));
+    const mayAll = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a]))]));
+    const own = (row) => Boolean(row[3]);
     // Each role says only what it adds to the largest roles below it that it covers; a role
-    // that may do just what a later one may says so.
+    // that may do just what a later one may says so. A role's own page (Designs) is never covered:
+    // each role that has it lists it, and one below it that has it is named "except Designs".
+    const may = Object.fromEntries(shown.map((r) => [r, mayAll[r].filter((x) => !own(x)).map(([, words]) => words)]));
     const covers = (r, b) => may[b].every((w) => may[r].includes(w));
     const roles = shown.map((r, i) => {
       const later = shown.slice(i + 1).filter((b) => covers(r, b));
@@ -2575,9 +2579,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const also = [];
       for (const b of [...smaller].sort((x, y) => may[y].length - may[x].length))
         if (!below.includes(b) && may[b].some((w) => ![...below, ...also].some((c) => may[c].includes(w)))) also.push(b);
-      const more = same ? [] : may[r].filter((w) => ![...below, ...also].some((b) => may[b].includes(w)));
+      const more = same ? [] : mayAll[r].filter((x) => own(x) || ![...below, ...also].some((b) => may[b].includes(x[1]))).map(([, words]) => words);
+      const except = [...new Set([...below, ...also].flatMap((b) => mayAll[b].filter((x) => own(x) && !mayAll[r].includes(x)).map((x) => x[3])))];
       const names = (rs) => rs.map((b) => esc(roleName(b))).join(" or ");
-      const list = same ? `<p>Same as a ${names([same])}.</p>` : below.length ? `<p>Everything a ${names(below)}${also.map((b) => ` and a ${esc(roleName(b))}`).join("")} can, and:</p>` : "";
+      const list = same ? `<p>Same as a ${names([same])}.</p>` : below.length ? `<p>Everything a ${names(below)}${also.map((b) => ` and a ${esc(roleName(b))}`).join("")} can${except.length ? `, except ${esc(except.join(", "))}` : ""}, and:</p>` : "";
       return `<div class="panel"><h4>${roleIcon(r)}${esc(roleName(r))}${S.me?.role === r ? ` <span class="chip" title="The role you have on this Desk">your role</span>` : ""}</h4><p>${esc(ROLE_ABOUT[r])}</p>${list}${more.length ? `<ul>${more.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}</div>`;
     }).join("");
     // An admin's asks to add someone: waiting, added, or not added with Design Desk's reason.
