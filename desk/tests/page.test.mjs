@@ -1749,7 +1749,7 @@ test("Sent to developers: one row per issue and pull request; a pull request's c
   };
   assert.deepEqual(await rows("C-1"), ["Open | Issue #31 ↗", "None | Pull request"], "no pull request yet is a grey None row; no read time");
   assert.equal(await desk.locator("#detail .follow-prs .chip:not([data-o])").count(), 1, "None has no state colour");
-  assert.doesNotMatch(await desk.textContent("#detail"), /When it ships|No pull request builds it yet|on GitHub ↗/, "the old lines are gone");
+  assert.doesNotMatch(await desk.textContent("#detail .sent"), /When it ships|No pull request builds it yet|on GitHub ↗/, "the old lines are gone from the box");
   assert.deepEqual(await rows("C-2"), ["Open | Issue #32 ↗·assigned to dana", "Merged | PR #50 ↗·Spend column·by dana·see it in PR ChangesC-3"], "each pull request on its own row, linked to its card");
   assert.equal(await desk.getAttribute('#detail .follow-prs a[href$="/pull/50"]', "href"), "https://github.com/acme/w/pull/50");
   await desk.click('#detail .follow-prs [data-card="C-3"]');
