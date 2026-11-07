@@ -2199,7 +2199,9 @@ window.platform = { async request({ method, path, body }) {
   const answer = path === "/api/me" ? { role: "${role}", email: "${role}@example.com", key: "${role}@example.com", simple: false, names: { "alice@example.com": "Alice", "dana@example.com": "Dana" },
       can: ${role === "developer" ? `{ comment: true, ask: true, designs: true, built: true }` : `{ comment: true, ask: true, approve: true }`} }
     : path === "/api/cards" ? { cards: [sent, change, open] } : path === "/api/agenda" ? { agenda: [] }
-    : path === "/api/cards/C-1" ? { card } : path === "/api/cards/C-4" ? { card: change } : {};
+    : path === "/api/cards/C-1" ? { card } : path === "/api/cards/C-4" ? { card: change } : path === "/api/cards/C-3" ? { card: { ...open, threads: [] } }
+    : path === "/api/notifications" ? { seen: null, unread: 1, items: [{ at: "2026-11-07T10:00:00Z", event: "dev-question", item: "C-1", kind: "request", title: "Daily limit banner", status: "handed-off",
+        by: { email: "bob@example.com", role: "developer" }, people: [{ email: "bob@example.com" }], count: 1, for_you: true, designs: true, thread: "T-1", msg: 0, marks: [["T-1", 0]], detail: "Is the banner sticky?" }] } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 </script>`;
@@ -2233,11 +2235,24 @@ test("Designs: a developer opens an approved design from its own tab, read-only,
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/threads").body), { kind: "comment", text: "Does it show on mobile?", dev: true });
 }));
 
-test("Designs: a designer has no tab, and opens a design from its link without the box to ask or Mark as done", (t) => open(t, designsBridge("designer"), async (desk) => {
+test("Designs: a designer has no tab, opens a design from its notification or its link, without the box to ask or Mark as done", (t) => open(t, designsBridge("designer"), async (desk) => {
   await desk.waitForSelector('[data-tab="requests"]');
   assert.equal(await desk.locator('[data-tab="designs"]').count(), 0);
+  // A request's comment box: Comment leads, Ask Design Desk is the second button.
+  await desk.evaluate(() => { location.hash = "#C-3"; });
+  await desk.waitForSelector("#composer .bar");
+  assert.deepEqual(await desk.locator("#composer .bar button").allInnerTexts(), ["Comment", "Ask Design Desk"]);
+  assert.deepEqual(await desk.locator("#composer .bar button.primary").evaluateAll((els) => els.map((e) => e.dataset.post)), ["comment"]);
+  // A developer's question lands on Designs, its message lit.
+  await desk.click("#bell-btn");
+  await desk.click('#notes [data-note="0"]');
+  await desk.waitForSelector('#th-T-1 [data-m="0"].spot');
+  assert.ok(await desk.locator("#detail .status").count(), "the design's page, not the request's");
+  assert.equal(await desk.locator("#detail .vtabs").count(), 0);
+  // Its link opens it too: the hash is still the request's from above.
+  await desk.click('[data-tab="requests"]');
   await desk.evaluate(() => { location.hash = "#designs/C-1"; });
-  await desk.waitForSelector("#detail .status");
+  await desk.waitForSelector("#detail .design-asks");
   assert.equal(await desk.locator("#detail [data-built], #detail [data-post]").count(), 0, "the designer answers in the thread");
   assert.equal(await desk.locator("#detail .design-asks article [data-send-reply]").count(), 1);
 }));

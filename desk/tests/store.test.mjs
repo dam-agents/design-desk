@@ -1993,4 +1993,13 @@ test("Designs: a developer marks a design done and asks its designer, who gets i
   s.upsertCard({ id: card.id, summary: "Limits." });
   assert.notEqual(s.getCard(card.id).updated, "2026-10-01T09:00:00.000Z", "any other write moves it");
   assert.throws(() => s.upsertCard({ kind: "change", title: "A change", source: { repo: "acme/widgets", pr: 9 }, dev_summary: "x" }), /dev_summary belongs to a request/);
+  s.upsertCard({ id: card.id, dev_summary: null });
+  assert.equal(s.getCard(card.id).dev_summary, null, "null takes the summary off");
+  // Only a comment asks the designer: a question goes to Design Desk.
+  assert.throws(() => s.openThread(card.id, bob, { kind: "question", text: "Why?", dev: true }), /sent to developers/);
+  // Two questions for the designer in one day fold into one row; a plain comment of the same item and day stays a row of its own.
+  s.openThread(card.id, { email: "dana@example.com", role: "developer" }, { text: "And on mobile?", dev: true });
+  s.openThread(card.id, carol, { text: "Nice work." });
+  const rows = s.notifications(alice).items.filter((x) => ["dev-question", "comment"].includes(x.event));
+  assert.deepEqual(rows.map((x) => [x.event, x.count, Boolean(x.designs)]).sort(), [["comment", 1, false], ["dev-question", 2, true]]);
 });
