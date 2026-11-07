@@ -92,7 +92,30 @@ card the people who may approve it read the spec, and:
    prototype's, else `design-desk/c<n>-handoff` from the default branch), run `design guard`
    on that exact diff ([boundary.md](boundary.md)), and push only when it passes; a refusal
    pushes nothing, and the delivery carries `design.json` in the issue alone.
-6. Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
+6. **A send after a reopen.** A request sent before, reopened by an admin and approved again
+   (`sends` not empty; this is send `k` = `sends` + 1) is sent anew: a **new** issue with this
+   spec — never an edit of, or a comment on, an earlier send's issue, comment or pull request,
+   a `feature` included (its new issue links the origin issue) — naming the earlier one
+   (`sends[-1].spec.issue_url` or `pr_url`). Its marker names the send
+   (`<!-- design-desk card=C-<n> send=<k> -->`), and the search before writing matches only
+   that marker, so an earlier send's write is never found and edited (`handoff-github` → The
+   marker).
+
+   **Closing the earlier send** — only when the item has `close_earlier`, the URL the store
+   copied from the earlier send's `spec.issue_url` or `pr_url` (an issue or pull request in
+   the product's repository, never a comment: the store refuses one), after the person ticked
+   it on Approve or Send with that issue's state and assignee in view. After the new issue is
+   delivered and its URL recorded, never before:
+   - an issue, open → one comment linking the new issue, then `gh issue close`;
+   - a pull request, open, a `design-desk/` draft this Desk opened (its marker) → one comment
+     linking the new issue, then `gh pr close`; any other pull request is left open;
+   - already closed or merged → nothing;
+   - the close refused (no permission, not found) → nothing more.
+   Each outcome goes on the card as one agent comment ("Closed issue #n", "Issue #n was
+   already closed", "Could not close issue #n: <reason>"); a refusal goes to the operator too.
+   A refused close never fails the delivery.
+
+   Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
    [actions.md](actions.md); the bundled one is
    [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)), with the approved option's
    pictures attached, by the request's type:

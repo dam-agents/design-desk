@@ -303,7 +303,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -414,6 +414,8 @@ export class Store {
         figma: c.figma_check ? figmaRow(c.figma_check) : null,
         // An approved design a developer marked done (docs/desk.md → Designs).
         built: c.built?.at || null,
+        // Earlier Designs records of a request sent, reopened and sent again (docs/desk.md → Designs).
+        sends: (c.sends || []).map((s) => ({ closed: s.closed, built: s.built?.at || null })),
       }));
   }
 
@@ -1215,7 +1217,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, closeEarlier = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
     const c = this.card(cardId);
     // Check again: Design Desk takes the screen's pictures again on the live product; the same
     // pictures mark it checked, new ones redraw it (docs/map.md → Check again).
@@ -1248,15 +1250,21 @@ export class Store {
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
-    if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import", "reopen"].includes(action)) throw bad(LOCKED);
+    if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import"].includes(action)) throw bad(LOCKED);
+    // Only an admin reopens a request sent to developers; what went to GitHub stays there (docs/desk.md → Approved designs no longer change).
+    if (action === "reopen" && designLocked(c) && !who?.agent && who?.role !== "admin") throw forbidden("Only an admin reopens a request sent to developers.");
     // Drawing every state of an approved design's element documents it and changes nothing of it,
     // so it stays open once the design went to developers (docs/requests.md → Every state of a part).
     if (closed && action !== "reopen" && !(action === "states" && c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
     // A person picks one of the ways a part could look: it becomes the option's next version.
     if (action === "pick-alternative") return this.pickAlternative(c, who, variant, note);
     if (action === "drop-option") return this.dropOption(c, who, variant);
-    const kinds = { explore: "explore", "add-option": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
+    const kinds = { explore: "explore", "add-option": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "switch-off": "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
+    // A person switches off a live prototype before its expiry; the request stays where it is (docs/prototype.md → Teardown).
+    // Only while the request is still being designed, so Build it again can follow.
+    if (action === "switch-off" && !(["prototype", "testing"].includes(c.status) && c.prototype?.state === "live")) throw bad("This request has no live prototype on to switch off.");
+    if (action === "switch-off" && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "build")) throw bad("Design Desk is building this prototype again. Switch it off once that is done.");
     // Every state of one part of an option: the option and the part a person picked.
     const stateOf = action === "states" ? (c.variants || []).find((v) => v.id === variant) : null;
     if (action === "states" && !stateOf) throw bad("Pick the design option whose states to draw.");
@@ -1292,6 +1300,21 @@ export class Store {
     if (action === "figma-import" && !FIGMA_URL.test(String(note || ""))) throw bad("Paste a link to a Figma frame (https://www.figma.com/…).");
     if (action === "reopen") {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
+      // A request sent to developers: its Designs record closes as it was (`sends`), and the
+      // request goes back to before the vote with its options; a new approval sends it anew
+      // (docs/desk.md → Designs).
+      if (c.status === "handed-off") {
+        const at = this.clock();
+        c.sends = [...(c.sends || []), { approved: c.approved || null, spec: c.spec || null, dev_summary: c.dev_summary || null, built: c.built || null,
+          threads: (c.threads || []).filter((t) => this.db.threads[t]?.dev && !(c.sends || []).some((s) => s.threads.includes(t))), closed: { by: person(who), at } }];
+        for (const k of ["overruled", "approved", "decided", "built", "dev_summary", "spec"]) delete c[k];
+        if ((c.variants || []).length) Object.assign(c, { status: "variants", team_feedback: { state: "waiting", since: at } });
+        else c.status = "triage";
+        c.updated = at;
+        const item = (c.variants || []).length ? null : this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
+        this.save();
+        return { card: c, inbox: item };
+      }
       c.status = "triage";
       delete c.overruled;
       delete c.approved;
@@ -1362,6 +1385,8 @@ export class Store {
     if (action === "build" && askFirst) item.ask_first = true;
     // Straight to the coding agent: the handoff labels its issue (docs/handoff.md, step 5).
     if (action === "approve" && implement) item.implement = true;
+    // Sent before and reopened: the new send closes the earlier issue too (docs/handoff.md, step 6).
+    if (action === "approve" && closeEarlier && earlierSend(c)) item.close_earlier = earlierSend(c);
     if (stateOf) {
       item.variant = stateOf.id; if (part?.label) item.part = cleanPart(part);
       if (elOf) item.element = elOf.key;
@@ -1382,7 +1407,7 @@ export class Store {
   // Design Desk writes the spec as a draft (`spec.review: "draft"`); a person reads it, edits
   // it, asks for changes, or sends it. Only a send lets it leave the Desk (docs/handoff.md →
   // Review before it goes). Every version stays: an edit or a rewrite keeps the one it replaces.
-  specAction(cardId, who, { action, text = "", note = "", implement = null } = {}) {
+  specAction(cardId, who, { action, text = "", note = "", implement = null, closeEarlier = false } = {}) {
     const c = this.card(cardId);
     if (who?.agent) throw forbidden("A person reads the spec and sends it; Design Desk writes it.");
     if (c.kind !== "request" || c.status !== "spec" || !c.spec?.asset) throw bad("There is no developer spec to look at yet.");
@@ -1420,6 +1445,7 @@ export class Store {
       const item = this.enqueue("handoff", cardId, null, who, c.approved?.variant || "");
       item.scope = "deliver";
       if (straight) item.implement = true;
+      if (closeEarlier && earlierSend(c)) item.close_earlier = earlierSend(c);
       this.save();
       return { card: c, inbox: item };
     }
@@ -2307,6 +2333,12 @@ function mustBeChecked(c, verb) {
 // disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
 // An approved design is final: from Approve on (the spec, sent to developers) nothing changes
 // it; a change is a new request made from it (docs/desk.md → Approved is final).
+// The issue or pull request of a request's last earlier send, which a new send may close
+// (docs/handoff.md, step 6): never a comment, whose issue is not the send's own.
+const earlierSend = (c) => {
+  const s = (c.sends || []).slice(-1)[0], url = s?.spec?.issue_url || s?.spec?.pr_url || "";
+  return /^https:\/\/[^\s#?]+\/(issues|pull)\/\d+$/.test(url) ? url : null;
+};
 const designLocked = (c) => c.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
 const LOCKED = "This design is approved, so it no longer changes. To change it, start a new request from this one.";
 const isAuthor = (c, who) => {

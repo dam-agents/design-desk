@@ -2298,6 +2298,14 @@ test("Designs: a developer opens an approved design from its own tab, read-only,
   await desk.click('[data-post="designer"]');
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/threads"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/threads").body), { kind: "comment", text: "Does it show on mobile?", dev: true });
+  // The design and its request open each other: Open the request, then the step pill's Show the design.
+  await desk.click("[data-show-request]");
+  await desk.waitForSelector("#detail .steppill [data-show-design]");
+  assert.equal(await desk.getAttribute('[data-tab="requests"]', "aria-current"), "true", "the request opens on Requests");
+  assert.equal(await desk.textContent("#detail .steppill .step-next"), "Show the design");
+  await desk.click("[data-show-design]");
+  await desk.waitForSelector("#detail [data-show-request]");
+  assert.equal(await desk.getAttribute('[data-tab="designs"]', "aria-current"), "true", "back on Designs");
 }));
 
 test("Designs: a designer has no tab, opens a design from its notification or its link, without the box to ask or Mark as done", (t) => open(t, designsBridge("designer"), async (desk) => {
@@ -2320,4 +2328,81 @@ test("Designs: a designer has no tab, opens a design from its notification or it
   await desk.waitForSelector("#detail .design-asks");
   assert.equal(await desk.locator("#detail [data-built], #detail [data-post]").count(), 0, "the designer answers in the thread");
   assert.equal(await desk.locator("#detail .design-asks article [data-send-reply]").count(), 1);
+  // Its request is a click away; the request's step pill has no Show the design without Designs.
+  await desk.click("[data-show-request]");
+  await desk.waitForSelector("#detail .steppill");
+  assert.equal(await desk.locator("#detail [data-show-design]").count(), 0);
+}));
+
+// A request sent, reopened and sent again (docs/desk.md → Designs, docs/handoff.md step 6); a live prototype switched off (docs/prototype.md → Teardown).
+const sendsBridge = (role, over) => `<script>
+window.posts = [];
+const closed = { by: { email: "lee@example.com", role: "admin" }, at: "2026-11-07T12:00:00Z" };
+const card = { id: "C-1", kind: "request", title: "Daily limit banner", by: { email: "alice@example.com" }, triage: { verdict: "design", reasons: ["Look only."] }, request: { problem: "Limits are missed." },
+  variants: [{ id: "v1", name: "Banner", asset: "A-1" }], threads: [],
+  sends: [{ approved: { by: { email: "alice@example.com", role: "designer" }, at: "2026-11-01T09:00:00Z", variant: "v1" }, spec: { issue_url: "https://github.com/acme/widgets/issues/99" }, dev_summary: { text: "- The first try." }, built: null, threads: [], closed }],
+  ...${JSON.stringify(over)} };
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); return { status: 200, contentType: "application/json", body: JSON.stringify({ card }) }; }
+  const answer = path === "/api/me" ? { role: "${role}", email: "${role}@example.com", key: "${role}@example.com", simple: false, spec_review: true, handoff: { idea: "issue" }, names: {},
+      can: { comment: true, ask: true, designs: true, built: true, build: true, approve: true, skip: true, reopen: true, close: true } }
+    : path === "/api/cards" ? { cards: [{ id: "C-1", kind: "request", title: card.title, status: card.status, built: null, sends: card.sends.map((s) => ({ closed: s.closed, built: null })), by: card.by }] }
+    : path === "/api/agenda" ? { agenda: [] } : path === "/api/private" ? { asks: [] } : path === "/api/notifications" ? { seen: null, unread: 0, items: [] }
+    : path === "/api/cards/C-1" ? { card }
+    : path.startsWith("/api/github") ? { records: [{ key: "acme/widgets#99", kind: "issue", state: "open", assignees: ["dana-dev"], labels: [] }] } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+</script>`;
+
+test("Designs: an earlier send of a reopened request is its own closed row under Done, read-only", (t) => open(t, sendsBridge("developer", { status: "variants", team_feedback: { state: "waiting" } }), async (desk) => {
+  await desk.waitForSelector('[data-tab="designs"]');
+  await desk.click('[data-tab="designs"]');
+  await desk.click('[data-filter="designFilter:done"]');
+  assert.match(await desk.textContent("#list .row.item"), /Daily limit banner\s*C-1 · earlier send/);
+  await desk.click("#list .row.item .open");
+  await desk.waitForSelector("#detail .status");
+  assert.match(await desk.textContent("#detail .status"), /Closed[\s\S]*reopened by/);
+  assert.equal(await desk.getAttribute('#detail .status a.btn:has-text("Issue")', "href"), "https://github.com/acme/widgets/issues/99", "the earlier send's issue");
+  assert.equal(await desk.locator("#detail [data-built], #detail #composer").count(), 0, "no Mark as done, no box to ask");
+}));
+
+test("a send after a reopen shows the earlier issue's state and assignee, and closes it only when ticked", (t) => open(t, sendsBridge("designer", { status: "spec", approved: { by: { email: "designer@example.com", role: "designer" }, at: "2026-11-07T13:00:00Z", variant: "v1" }, spec: { asset: "A-3", review: "draft" } }), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#C-1"; });
+  await desk.click("[data-spec-send]");
+  await desk.waitForSelector("#cf-check3-wrap:not([hidden])");
+  assert.match(await desk.textContent("#confirm-dialog"), /The earlier send:\s*Issue #99 · Open · assignee: dana-dev/);
+  assert.match(await desk.textContent("#cf-check3-label"), /Close Issue #99 on GitHub/);
+  assert.equal(await desk.isChecked('[name="check3"]'), false, "off until ticked");
+  await desk.check('[name="check3"]');
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/spec"));
+  assert.equal(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/spec").body.close_earlier), true);
+}));
+
+test("only an admin reopens a sent request, from ⋯, behind a confirmation", (t) => open(t, sendsBridge("admin", { status: "handed-off", sends: [], approved: { by: { email: "alice@example.com", role: "designer" }, at: "2026-11-05T09:00:00Z", variant: "v1" }, spec: { issue_url: "https://github.com/acme/widgets/issues/142", review: "sent" } }), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#C-1"; });
+  await desk.click("#detail .status details.more > summary");
+  await desk.click('#detail .status [data-act="reopen"]');
+  assert.match(await desk.textContent("#confirm-dialog"), /Reopen a request sent to developers\?[\s\S]*before the team's vote[\s\S]*stays as it is/);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/actions"));
+  assert.equal(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/actions").body.action), "reopen");
+}));
+
+test("a live prototype is switched off behind a confirmation; the demo hint and a passed check do not show", (t) => open(t, sendsBridge("designer", { status: "testing", sends: [], live_pick: { variant: "v1", name: "Banner", version: 1 }, prototype: { state: "live", url: "https://example.com/p", expires: "2030-12-01T10:00:00Z", login: { user: "designer", password: "x", hint: "A demo account of this prototype only." }, guard: { ok: true } } }), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#C-1"; });
+  await desk.waitForSelector("[data-switch-off]");
+  assert.doesNotMatch(await desk.textContent("#detail"), /A demo account of this prototype only|Look-only check/, "no hint, no passed check");
+  await desk.click("[data-switch-off]");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/actions"));
+  assert.equal(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/actions").body.action), "switch-off");
+}));
+
+test("a prototype switched off before its expiry names no date and no cause", (t) => open(t, sendsBridge("designer", { status: "testing", sends: [], prototype: { state: "torn-down", expires: "2030-12-01T10:00:00Z" } }), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#C-1"; });
+  await desk.waitForSelector("#detail .status");
+  const text = await desk.textContent("#detail .status");
+  assert.match(text, /This prototype was switched off\./);
+  assert.doesNotMatch(text, /2030|free its place/);
 }));
