@@ -7,6 +7,11 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.63.2 — 2026-11-07
+
+**Upgrade:**
+Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
 ## 1.63.1 — 2026-11-07
 
 **Upgrade:**

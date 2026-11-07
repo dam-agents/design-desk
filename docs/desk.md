@@ -524,13 +524,14 @@ requests sent to developers (`handed-off`), **To build** and **Done**, nothing e
 shows, read-only: a status strip (**Approved**, or **Done**, with who approved it and when,
 and who marked it done) holding the links to the issue or pull request it went to, the pull request it comes from
 (a PR change it adjusts, or its origin) and the Figma frame, and **Mark as done** (`POST /api/cards/C-<n>/built`, `built: {by, at}`; **Not done yet**
-takes it back); the
+takes it back), and **Open the request**, the same request on Requests; the
 approved option as approved, **UX decisions** (`dev_summary`, the [handoff](handoff.md)'s step 7,
 AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
 comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line (its asker — its first words), under the open ones. Its
 messages are For you for the designer who approved the request, or every `designer` and
 `admin` when a non-designer approved it, and land on `#designs/C-<n>`: they open the page
-without the menu. The request shows the same thread as *Developer asks*. Answer nothing on it:
+without the menu. The request shows the same thread as *Developer asks*, and for a role that sees Designs its
+step pill holds **Show the design**, which opens it here. Answer nothing on it:
 it is between people.
 
 ## Claims

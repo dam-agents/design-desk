@@ -2298,6 +2298,14 @@ test("Designs: a developer opens an approved design from its own tab, read-only,
   await desk.click('[data-post="designer"]');
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/threads"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/threads").body), { kind: "comment", text: "Does it show on mobile?", dev: true });
+  // The design and its request open each other: Open the request, then the step pill's Show the design.
+  await desk.click("[data-show-request]");
+  await desk.waitForSelector("#detail .steppill [data-show-design]");
+  assert.equal(await desk.getAttribute('[data-tab="requests"]', "aria-current"), "true", "the request opens on Requests");
+  assert.equal(await desk.textContent("#detail .steppill .step-next"), "Show the design");
+  await desk.click("[data-show-design]");
+  await desk.waitForSelector("#detail [data-show-request]");
+  assert.equal(await desk.getAttribute('[data-tab="designs"]', "aria-current"), "true", "back on Designs");
 }));
 
 test("Designs: a designer has no tab, opens a design from its notification or its link, without the box to ask or Mark as done", (t) => open(t, designsBridge("designer"), async (desk) => {
@@ -2320,4 +2328,8 @@ test("Designs: a designer has no tab, opens a design from its notification or it
   await desk.waitForSelector("#detail .design-asks");
   assert.equal(await desk.locator("#detail [data-built], #detail [data-post]").count(), 0, "the designer answers in the thread");
   assert.equal(await desk.locator("#detail .design-asks article [data-send-reply]").count(), 1);
+  // Its request is a click away; the request's step pill has no Show the design without Designs.
+  await desk.click("[data-show-request]");
+  await desk.waitForSelector("#detail .steppill");
+  assert.equal(await desk.locator("#detail [data-show-design]").count(), 0);
 }));

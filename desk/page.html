@@ -3568,7 +3568,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     // row, and any other action goes under ⋯ (`more`).
     const sb = (act, label) => `<button class="step-next" data-act="${act}">${esc(label)}</button>`;
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer or a PM reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
-    if (c.status === "handed-off") return { text: "", buttons: "" };
+    // Sent: the next step is the design as developers build it, for who sees Designs (docs/desk.md → Designs).
+    if (c.status === "handed-off") return { text: "", buttons: "", step: can("designs") ? `<button class="step-next" data-show-design="${esc(c.id)}" title="Opens it on Designs, as developers build it">Show the design</button>` : "" };
     if (busy.length) return { text: "", buttons: "" };
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
@@ -3655,7 +3656,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const now = busy.length ? busy.map((k) => WORK[k] || "Design Desk is working on this.").join(" ") : "";
     let paths;
     if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer or a PM reopens it; say so in a comment.")];
-    else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here.")];
+    else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(can("designs") ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
     else if (c.status === "spec") paths = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
       ? [go("Answer Design Desk's questions", "They are in this box; the spec waits for them."), close()]
       : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
@@ -3961,7 +3962,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const from = S.cards.find((x) => x.id === c.request?.from);
     const prUrl = [from?.kind === "change" ? from.source?.url : null, c.origin?.url].find((u) => /\/pull\/\d+/.test(u || "") && u !== url);
     const pr = prUrl ? out(prUrl, "PR", "The pull request this design comes from, on GitHub") : "";
-    const buttons = `${url ? out(url, m?.[1] === "pull" ? "PR" : "Issue", "Where the design was sent to developers, on GitHub") : ""}${pr}${figma ? out(figma, "Figma", "The design in Figma") : ""}${done}`;
+    // Back to the request it was approved on, on Requests.
+    const back = `<button class="btn" data-show-request="${esc(c.id)}" title="Opens the request on Requests: its options, votes and comments">Open the request</button>`;
+    const buttons = `${back}${url ? out(url, m?.[1] === "pull" ? "PR" : "Issue", "Where the design was sent to developers, on GitHub") : ""}${pr}${figma ? out(figma, "Figma", "The design in Figma") : ""}${done}`;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       <div class="status" data-o="approved"><div class="s-line"><div class="s-word"><span class="s-mark"></span>${c.built ? "Done" : "Approved"}</div>
@@ -5173,6 +5176,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (ds.hit) { await openHit(ds.hit); return; }
     if (ds.tab) { e.preventDefault(); await showTab(ds.tab); return; }
     if (ds.ref) { e.preventDefault(); await goTo(target(ds.ref)); return; }
+    // A sent request and its design open each other: Requests ↔ Designs.
+    if (ds.showDesign) { await goTo({ id: ds.showDesign, tab: "designs" }); return; }
+    if (ds.showRequest) { await goTo({ id: ds.showRequest, tab: "requests" }); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.presented) { await markPresented(ds.presented); return; }
     if (ds.notNow) { await api("DELETE", `/api/cards/${encodeURIComponent(ds.notNow)}/suggestion`); await refreshList(); renderDetail(); return; }
