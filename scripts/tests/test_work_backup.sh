@@ -2,8 +2,9 @@
 # work-backup.sh against a fixture work/ and a local bare remote: what a persist backs
 # up and leaves out, what a restore brings back, and that the bulk set (output/, logs/)
 # never blocks the state's push — a failing bulk push once cost the Desk store its
-# backup (PR #86). Each branch of the script has a case that fails when it is reverted,
-# and the audit and the monitor read the one outcome line a persist ends with.
+# backup (PR #86). Each branch of the script has a case that fails when only it is
+# reverted (the unreadable-directory cases need a non-root user), and the audit and the
+# monitor read the one outcome line a persist ends with.
 . "$(dirname "$0")/lib.sh"
 
 is() { if eval "$2"; then echo true; else echo false; fi; }
@@ -117,13 +118,60 @@ check "the small file its pattern would match arrives" '[ -f "$V/output/y/a1Xb c
 # 4g. The clone holds the tip only, so the backup's history never has to fit in /dev/shm.
 rm -rf "$SANDBOX/clone"; echo again > "$WORK_DIR/output/C-1/shot.png"; persist
 check "a fresh clone is shallow" '[ "$(git -C "$SANDBOX/clone" rev-parse --is-shallow-repository)" = true ]'
+# The clone: --depth 1 fetches no older commit, --branch fetches no other branch (the
+# remote's HEAD names "other" here).
+fixture; remote; persist
+other="$(git -C "$SANDBOX/clone" commit-tree "$(git -C "$SANDBOX/clone" mktree </dev/null)" -m other)"
+git -C "$SANDBOX/clone" push -q origin "$other:refs/heads/other" 2>/dev/null
+git -C "$SANDBOX/remote.git" symbolic-ref HEAD refs/heads/other
+echo more > "$WORK_DIR/desk/store.json"; persist
+old="$(git -C "$SANDBOX/remote.git" rev-parse main~1)"
+# A restore seeds a fresh clone and runs no gc, so what the clone fetched stays visible.
+GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.git" WORK_BACKUP_LOCAL="$SANDBOX/clone-r" \
+  WORK_DIR="$SANDBOX/work-r" bash "$ROOT/scripts/work-backup.sh" restore >/dev/null 2>&1
+check "a fresh clone holds no older commit (clone --depth 1)" '! git -C "$SANDBOX/clone-r" cat-file -e "$old^{commit}" 2>/dev/null'
+check "a fresh clone holds no other branch (clone --branch)" '! git -C "$SANDBOX/clone-r" cat-file -e "$other^{commit}" 2>/dev/null'
+# The fetch: another machine pushes twice; this clone fetches the tip, not the commit between.
+GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.git" WORK_BACKUP_LOCAL="$SANDBOX/clone-b" \
+  WORK_DIR="$SANDBOX/work-b" bash -c 'mkdir -p "$WORK_DIR/desk"; for i in 1 2; do echo "$i" > "$WORK_DIR/desk/store.json"; bash "$0" persist; done' \
+  "$ROOT/scripts/work-backup.sh" >/dev/null 2>&1
+mid="$(git -C "$SANDBOX/remote.git" rev-parse main~1)"
+echo after > "$WORK_DIR/desk/store.json"; persist
+check "a fetch holds no commit between the clone's tip and the remote's (fetch --depth 1)" \
+  '! git -C "$SANDBOX/clone" cat-file -e "$mid^{commit}" 2>/dev/null'
+check "a pushed clone keeps no loose blob (gc)" '[ "$(git -C "$SANDBOX/clone" count-objects | cut -d" " -f1)" -eq 0 ]'
+
+# 4i. tar through a stub: TAR_C_EXIT sets the exit status of tar -c after a full copy.
+mkdir -p "$SANDBOX/tarbin"; REALTAR="$(command -v tar)"
+printf '#!/bin/sh\ncase " $* " in (*" -c "*) "%s" "$@"; s=$?; [ "$s" -eq 0 ] && s="${TAR_C_EXIT:-0}"; exit "$s";; esac\nexec "%s" "$@"\n' \
+  "$REALTAR" "$REALTAR" > "$SANDBOX/tarbin/tar"; chmod +x "$SANDBOX/tarbin/tar"
+# Exit 1 (a file changed while read, as a growing log does) copied the rest: ok, with a warning.
+fixture; remote; TAR_C_EXIT=1 PATH="$SANDBOX/tarbin:$PATH" persist; view
+check "tar exit 1 is no failed backup" '[ "$(outcome | cut -d" " -f1-3)" = "info backup ok:" ]'
+check "tar exit 1 logs a warning" 'grep -qs "a file changed while it was copied" "$WORK_DIR"/logs/events-*.jsonl'
+check "tar exit 1 still pushes the copy" '[ -f "$V/desk/store.json" ] && [ -f "$V/output/C-1/shot.png" ]'
+# A restore whose tar -c fails says so and never reports a restore.
+rm -rf "$WORK_DIR"; mkdir -p "$WORK_DIR"
+TAR_C_EXIT=2 PATH="$SANDBOX/tarbin:$PATH" GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.git" \
+  WORK_BACKUP_LOCAL="$SANDBOX/clone3" bash "$ROOT/scripts/work-backup.sh" restore >/dev/null 2>&1
+check "a failed restore copy is logged" 'grep -qs "restore: copy failed" "$WORK_DIR"/logs/events-*.jsonl'
+check "a failed restore copy is no restore" '! grep -qs "restored work/ from remote" "$WORK_DIR"/logs/events-*.jsonl'
+
+# 4j. The retry loop: a remote that refuses the first push of each part takes the second.
+fixture; remote; persist; echo retried > "$WORK_DIR/desk/store.json"; echo retried > "$WORK_DIR/output/C-1/shot.png"
+printf '#!/usr/bin/env bash\nf="$GIT_DIR/refused"; [ -e "$f" ] && { rm "$f"; exit 0; }; touch "$f"; exit 1\n' \
+  > "$SANDBOX/remote.git/hooks/pre-receive"; chmod +x "$SANDBOX/remote.git/hooks/pre-receive"
+GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.git" WORK_BACKUP_LOCAL="$SANDBOX/clone" \
+  WORK_BACKUP_MAX_FILE_MB=1 WORK_BACKUP_RETRIES=2 bash "$ROOT/scripts/work-backup.sh" persist >/dev/null 2>&1; view
+check "a rejected push is retried and lands" '[ "$(cat "$V/desk/store.json")" = retried ] && [ "$(cat "$V/output/C-1/shot.png")" = retried ]'
+check "the retried backup is ok" '[ "$(outcome)" = "info backup ok: state pushed, bulk pushed" ]'
 
 # 4h. A copy tar cannot read fails: nothing is pushed as deleted, and the backup is an error.
 if [ "$(id -u)" -ne 0 ]; then
   fixture; remote; persist
   chmod 000 "$WORK_DIR/output/C-1"; echo new > "$WORK_DIR/logs/run.log"; persist; chmod 755 "$WORK_DIR/output/C-1"; view
   check "an unreadable output dir is not pushed as a deletion" '[ -f "$V/output/C-1/shot.png" ]'
-  check "an unreadable bulk copy is a failed backup" '[ "$(outcome | cut -d" " -f1-3)" = "error backup failed: state" ]'
+  check "an unreadable bulk copy is a failed backup" '[ "$(outcome | cut -d" " -f1-3)" = "error backup failed:" ]'
   chmod 000 "$WORK_DIR/desk"; persist; chmod 755 "$WORK_DIR/desk"; view
   check "an unreadable desk/ is not pushed as a deletion" '[ -f "$V/desk/store.json" ]'
   check "an unreadable state copy is a failed backup" 'outcome | grep -q "^error backup failed: state failed"'

@@ -216,7 +216,10 @@ push_part() {
     if [ "$rc" -eq 42 ]; then say "$label: nothing to persist."; PART=unchanged; return 0; fi
     if [ "$rc" -ne 0 ]; then logev warn work_backup "$label: commit failed (attempt $attempt)"; continue; fi
     if ( cd "$LOCAL" && git push -q origin "HEAD:$BRANCH" 2>/dev/null ); then
-      say "$label: pushed (attempt $attempt)."; logev info work_backup "$label: pushed (attempt $attempt)"; PART=pushed; return 0
+      say "$label: pushed (attempt $attempt)."; logev info work_backup "$label: pushed (attempt $attempt)"; PART=pushed
+      # --depth 1 limits what is fetched; gc drops the blobs this clone committed before.
+      ( cd "$LOCAL" && git gc -q --prune=now 2>/dev/null ) || true
+      return 0
     fi
     say "$label: push rejected (attempt $attempt) — re-seeding from remote tip."
     logev warn work_backup "$label: push rejected (attempt $attempt) — retrying"
