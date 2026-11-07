@@ -332,12 +332,12 @@ watch_mode() {
 # The redaction's one set of rules, for the scrub, the gate and the names: each class has one
 # pattern and one set of flags.
 DEC_JQ="$(cat <<'JQ'
-def dec_link: "\\b(?:[a-z][a-z0-9+.-]*://|www\\.)(?:[^\\s<>]*[^\\s<>.,;:!?)\\]\"'])?|\\b[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.[a-z]{2,}(?::[0-9]+)?/(?:[^\\s<>]*[^\\s<>.,;:!?)\\]\"'])?";
+def dec_link: "\\b[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^\\s<>/][^\\s<>]*|\\b(?:[a-z][a-z0-9+.-]*://|www\\.)(?:[^\\s<>]*[^\\s<>.,;:!?)\\]\"'])?|\\b(?:[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.[a-z]{2,}|localhost|[0-9]{1,3}(?:\\.[0-9]{1,3}){3})(?::[0-9]+)?/(?:[^\\s<>]*[^\\s<>.,;:!?)\\]\"'])?";
 def dec_email: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
 def dec_handle: "(?<![\\w.])@[A-Za-z0-9][A-Za-z0-9_.-]*";
 def dec_slack: "<@[^>]*>|<[#!][^>]*>|<[^<>]*://[^<>]*>";
-def dec_pem: "-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)";
-def dec_keys: "(?<![A-Za-z0-9_-])(?:xox[a-z]-[A-Za-z0-9-]+|xapp-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]+|sk-(?:proj-)?[A-Za-z0-9_-]{20,}|[rs]k_(?:live|test)_[A-Za-z0-9]{10,}|(?:AKIA|ASIA)[A-Z0-9]{16}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]*|-----(?:BEGIN|END) [A-Z ]*PRIVATE KEY-----)";
+def dec_pem: "-{4,5} ?BEGIN [^-]+-{4,5}.*?(?:-{4,5} ?END [^-]+-{4,5}|$)";
+def dec_keys: "(?<![A-Za-z0-9_-])(?:xox[a-z]-[A-Za-z0-9-]+|xapp-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]+|sk-(?:proj-)?[A-Za-z0-9_-]{20,}|[rs]k_(?:live|test)_[A-Za-z0-9]{10,}|(?:AKIA|ASIA)[A-Z0-9]{16}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]*|-{4,5} ?(?:BEGIN|END) [^-]+-{4,5})";
 def esc: gsub("(?<c>[\\\\^$.|?*+()\\[\\]{}/-])"; "\\\(.c)");
 # Slack forms, links (with a scheme, www. or host.tld/path), e-mails in any case, a whole
 # private key, keys, @handles, then every known name ($nre: one alternation, longest first).
@@ -358,10 +358,11 @@ decisions_page() {
   rnames="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $4}' \
     | jq -R 'split("\t") | (.[1] // ""), (.[0] | split(",")[] | split("@")[0])' | jq -sc .)" \
   && jq -c --argjson rn "${rnames:-[]}" "$DEC_JQ"'
-      def pkeys: "author", "by", "reporter", "user", "actor", "voter", "requester", "assignee", "person", "who", "login", "handle", "display_name";
+      def pkeys: "author", "by", "reporter", "user", "actor", "voter", "voters", "requester", "assignee", "assignees", "person", "who", "login", "handle", "display_name", "created_by";
       [ .. | objects
         | (select(has("email") or has("emails") or has("login") or has("sub") or has("role")) | .name),
-          (to_entries[] | select(.key | IN(pkeys)) | .value | if type == "object" then .name, .login, .handle, .display_name else . end),
+          (to_entries[] | select(.key | IN(pkeys)) | .value | (if type == "array" then .[] else . end) | if type == "object" then .name, .login, .handle, .display_name else . end),
+          (keys[] | select(test("^[^@\\s]+@[^@\\s]+$")) | split("@")[0]),
           (to_entries[] | select(.key == "email" or .key == "emails") | .value | (strings, (arrays | .[] | strings)) | split("@")[0]) ] + $rn
       | [ .[] | strings | gsub("^\\s+|\\s+$"; "") | select(length > 0) | ., splits("[\\s._+-]+") ]
       | map(select(length >= 3)) | unique | sort_by(-length) | map(esc) | join("|")

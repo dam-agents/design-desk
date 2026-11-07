@@ -109,11 +109,11 @@ assert "a failed list is an error" '.error != null' "$(STUB_GH_FAIL=1 bash "$ROO
 printf -- '- display_name: Acme Desk\n- decisions_page: dam\n\n## Desk people\n\n| email | role | name |\n|---|---|---|\n| dana@acme.test | Designer | Dana Kowalski |\n| ola@acme.test | Admin | |\n' > "$WORK_DIR/CONFIG.md"
 mkdir -p "$DESK_DIR"
 cat > "$DESK_DIR/db.json" <<'JSON'
-{"cards":{"c1":{"origin":{"channel":"github","reporter":"Quartz Zoe"},"by":"R2(D2)","comments":[{"author":{"login":"zed-qux"}}]}},"inbox":{},"decisions":{
+{"cards":{"c1":{"origin":{"channel":"github","reporter":"Quartz Zoe"},"by":"R2(D2)","comments":[{"author":{"login":"zed-qux"}}],"assignees":[{"login":"novak"}],"votes":{"a":{"guest.maya@acme.test":"yes"}}}},"inbox":{},"decisions":{
  "D-1":{"id":"D-1","concepts":["send button"],"text":"The send button is blue.","author":{"name":"Xavier"},"origin":{"kind":"slack","url":"https://acme.slack.com/p1"},"at":"2026-10-01T10:00:00Z","recorded":"2026-10-01T10:00:00Z","status":"revoked","revoked":{"at":"2026-10-05T10:00:00Z","reason":"Replaced by D-2","replaced_by":"D-2"}},
  "D-2":{"id":"D-2","concepts":["send button","colors"],"text":"The send button uses the primary color.","why":"Ask alice@acme.test or <@U0123ABCD>. Dana said so; <https://acme.slack.com/p2|thread> with @bob and Xavier, AKIAABCDEFGHIJKLMNOP.","author":{"email":"dana@acme.test"},"origin":{"kind":"desk"},"at":"2026-10-05T10:00:00Z","recorded":"2026-10-05T10:00:00Z","status":"active","replaces":["D-1"]},
  "D-10":{"id":"D-10","concepts":["tables"],"text":"Tables\nnever scroll sideways.","why":"Asked by Quartz Zoe, zed-qux and R2(D2), see github.com/acme/internal/pull/9; pin react@18 at 1.5/2. -----BEGIN RSA PRIVATE KEY-----\nMIIBOgIBAAJBAK\nabcd==\n-----END RSA PRIVATE KEY----- done","author":{"login":"bob"},"origin":{"kind":"pr","url":"https://github.com/acme/widgets/pull/9"},"at":"2026-10-07T10:00:00Z","recorded":"2026-10-07T10:00:00Z","status":"active"},
- "D-11":{"id":"D-11","concepts":["lists"],"text":"An empty list says what to do next.","author":{"email":"ola@acme.test"},"origin":{"kind":"desk"},"at":"2026-10-08T10:00:00Z","recorded":"2026-10-08T10:00:00Z","status":"active"},
+ "D-11":{"id":"D-11","concepts":["lists"],"text":"An empty list says what to do next.","why":"Seen at 192.168.1.1/admin, localhost:3000/foo and git@github.com:acme/internal-repo.git; keys -----BEGIN PGP PRIVATE KEY BLOCK-----\nlQOYBF\n-----END PGP PRIVATE KEY BLOCK----- and ---- BEGIN SSH2 ENCRYPTED PRIVATE KEY ----\nAAAAB3\n---- END SSH2 ENCRYPTED PRIVATE KEY ----; asked by Novak and Maya.","author":{"email":"ola@acme.test"},"origin":{"kind":"desk"},"at":"2026-10-08T10:00:00Z","recorded":"2026-10-08T10:00:00Z","status":"active"},
  "D-3":{"id":"D-3","concepts":["Kowalski's menu","<@U0999ZZZZ|carol.jones>"],"text":"Mail Bob@ACME.COM, see HTTPS://acme.test/x or www.acme.test, key github_pat_11ABCDEFGHIJKLMNOPQRSTUV and sk-ant-api03-abcdef and AKIAABCDEFGHIJKLMNOP.","author":{"name":"Carol Jones","email":"carol@acme.test"},"origin":{"kind":"desk"},"at":"2026-10-06T10:00:00Z","recorded":"2026-10-06T10:00:00Z","status":"revoked","revoked":{"at":"2026-10-06T11:00:00Z","reason":"Carol asked at xoxb-1-2-abc and <#C0123|design>; ask Dana Kowalski or bob@acme.test"}},
  "D-12":{"id":"D-12","concepts":["lists"],"text":"Lists show at most 50 rows.","author":{"name":"Xavier","role":"lead"},"origin":{"kind":"desk"},"at":"2026-10-09T10:00:00Z","recorded":"2026-10-09T10:00:00Z","status":"active"}}}
 JSON
@@ -137,6 +137,8 @@ assert "links, Slack forms, e-mails in any case, keys and the roster's and store
    and test("Why: Ask \\[e-mail\\] or \\[person\\]\\. \\[person\\] said so; \\[link\\] with \\[person\\] and \\[person\\], \\[key\\]\\.\n")
    and test("Why: Asked by \\[person\\], \\[person\\] and \\[person\\], see \\[link\\]; pin react@18 at 1\\.5/2\\. \\[key\\] done\n")
    and (test("(?i)quartz|zoe|zed|qux|R2\\(|MIIBOg|PRIVATE|github\\.com") | not)
+   and test("Why: Seen at \\[link\\], \\[link\\] and \\[link\\]; keys \\[key\\] and \\[key\\]; asked by \\[person\\] and \\[person\\]\\.\n")
+   and (test("(?i)192\\.168|localhost|internal-repo|lQOYBF|AAAAB3|novak|maya") | not)
    and test("- D-3 \\(\\[person\\]'"'"'s menu, \\[person\\]\\): Mail \\[e-mail\\], see \\[link\\] or \\[link\\], key \\[key\\] and \\[key\\] and \\[key\\]\\. Revoked 2026-10-06: \\[person\\] asked at \\[key\\] and \\[mention\\]; ask \\[person\\] or \\[e-mail\\]\\.")' "$(jq -Rs . <<<"$page")"
 jq -n --arg sha "$(jq -r '.decisions_page_due[0].sha' <<<"$dp")" '{id: "a1", url: "https://share.test/a/x/raw", sha: $sha, at: "2026-11-01T00:00:00Z"}' > "$WORK_DIR/decisions-page.json"
 assert "an unchanged page is not due" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" issues)"
@@ -150,10 +152,21 @@ assert "the audit warns that the page published before stays public" '[.checks[]
 # A key left only in an id: the gate checks keys too.
 jq '.decisions["D-13"].id = "D-13 AKIAABCDEFGHIJKLMNOP"' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
 assert "a key left in an id keeps the page from being due" '.nothing_to_do == true and (.logs | tostring | test("decision D-13 .*still holds"))' "$(bash "$ROOT/scripts/preflight.sh" issues)"
-# A store that cannot be read is a warning, never a quiet pass.
+# The gate checks every class: a Slack form, an e-mail and a handle left in an id each block the page.
+for leak in '<#C0123|design>' 'x@acme.test' '@zed'; do
+  jq --arg id "D-13 $leak" '.decisions["D-13"].id = $id' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
+  assert "the gate blocks $leak left in an id" '.nothing_to_do == true and (.logs | tostring | test("decision D-13 .*still holds"))' "$(bash "$ROOT/scripts/preflight.sh" issues)"
+done
+# A failed read is a warning, never a quiet pass: each branch says its own reason.
 cp "$DESK_DIR/db.json" "$STUB_DIR/db.good"; printf '{"decisions":' > "$DESK_DIR/db.json"
-assert "an unreadable store is not due and says so" '.nothing_to_do == true and (.logs | tostring | test("cannot read"))' "$(bash "$ROOT/scripts/preflight.sh" issues)"
-assert "the audit warns on an unreadable store" '[.checks[] | select(.id == "decisions_page") | [.status, (.detail | test("not updated: cannot read"))]] == [["warn", true]]' "$(bash "$ROOT/scripts/preflight.sh" audit 2>/dev/null)"
+assert "a store that does not parse stops at the names" '.nothing_to_do == true and (.logs | tostring | test("cannot read the names to mask"))' "$(bash "$ROOT/scripts/preflight.sh" issues)"
+assert "the audit warns on an unreadable store" '[.checks[] | select(.id == "decisions_page") | [.status, (.detail | test("not updated: cannot read the names"))]] == [["warn", true]]' "$(bash "$ROOT/scripts/preflight.sh" audit 2>/dev/null)"
+printf '{"decisions":"none"}' > "$DESK_DIR/db.json"
+assert "a store that parses but does not render is not due" '.nothing_to_do == true and (.logs | tostring | test("cannot read the Desk store at"))' "$(bash "$ROOT/scripts/preflight.sh" issues)"
+cp "$STUB_DIR/db.good" "$DESK_DIR/db.json"
+mkdir -p "$STUB_DIR/jqfail"
+printf '#!/usr/bin/env bash\n[ "$1" = -Rsr ] && exit 5\nexec %q "$@"\n' "$(command -v jq)" > "$STUB_DIR/jqfail/jq" && chmod +x "$STUB_DIR/jqfail/jq"
+assert "a failed check of the rendered page is not due" '.nothing_to_do == true and (.logs | tostring | test("the check of the rendered page failed"))' "$(PATH="$STUB_DIR/jqfail:$PATH" bash "$ROOT/scripts/preflight.sh" issues)"
 mv "$STUB_DIR/db.good" "$DESK_DIR/db.json"
 printf -- '- display_name: Acme Desk\n' > "$WORK_DIR/CONFIG.md"
 assert "off by default" '.nothing_to_do == true and .decisions_page_due == null' "$(bash "$ROOT/scripts/preflight.sh" issues)"
