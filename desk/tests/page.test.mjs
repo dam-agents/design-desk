@@ -2006,3 +2006,62 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   await desk.waitForSelector('[data-filter="productFilter:screens"]');
   assert.equal(await desk.locator('[data-filter="productFilter:differences"]').count(), 0, "no Differences page");
 }));
+
+// A person who never chose: /api/me answers no choice (null), and Figma is off for them.
+const FIGMA_UNSET = FIGMA.replace("figma_pref: window.figmaPref ?? true", "figma_pref: window.figmaPref ?? null");
+test("Figma with no choice saved: the switch is off, no Differences page, until the person turns it on", (t) => open(t, FIGMA_UNSET, async (desk) => {
+  const base = desk.url().replace(/#.*$/, "");
+  await desk.goto(`${base}#product`);
+  await desk.waitForSelector('[data-filter="productFilter:screens"]');
+  assert.equal(await desk.locator('[data-filter="productFilter:differences"]').count(), 0, "no Differences page");
+  await desk.click("#me");
+  assert.equal(await desk.getAttribute("#figma", "aria-pressed"), "false", "off: no choice saved");
+  await desk.click("#figma");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/prefs"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/prefs").body), { figma: true });
+  await desk.waitForSelector('[data-filter="productFilter:differences"]');
+}));
+
+// The bell: a comment For you and a new request for everyone; opening it marks it seen.
+const BELL = `<script>
+window.posts = [];
+const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
+const thread = { id: "t1", card: "C-1", kind: "comment", state: "open", messages: [{ by: { email: "pat@example.com" }, at: ago(5), text: "Looks good" }] };
+const cards = [{ id: "C-1", kind: "change", title: "A new header", status: "open", summary: "The header changed.", source: { repo: "acme/widgets", pr: 45 }, threads: [thread] },
+  { id: "C-2", kind: "request", title: "Calmer list", status: "triage", request: { problem: "Too loud." } }];
+const items = [
+  { at: ago(5), event: "comment", item: "C-1", kind: "change", title: "A new header", by: { email: "pat@example.com" }, detail: "Looks good", thread: "t1", msg: 0, for_you: true, count: 1, people: [{ email: "pat@example.com" }], marks: [["t1", 0]] },
+  { at: ago(9), event: "new-request", item: "C-2", kind: "request", title: "Calmer list", by: { email: "pat@example.com" }, for_you: false, count: 1, people: [{ email: "pat@example.com" }] }];
+window.platform = { async request({ method, path }) {
+  if (method === "POST") { posts.push(path); return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/notifications/seen" ? { seen: items[0].at } : {}) }; }
+  const answer = path === "/api/me" ? { role: "designer", email: "a@example.com", key: "a@example.com", can: { comment: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
+    : path === "/api/notifications" ? { items, seen: null, unread: 1 }
+    : path === "/api/cards/C-1" ? { card: cards[0] } : path === "/api/cards/C-2" ? { card: cards[1] } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+test("the bell counts what is For you, opens on it, marks it seen, shows All on a click, and a row lands on its message; a menu button without data-keep still closes its menu", (t) => open(t, BELL, async (desk) => {
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
+  assert.equal(await desk.textContent("#bell-count"), "1", "the count is what is For you");
+  await desk.click("#bell-btn");
+  await desk.waitForFunction(() => posts.includes("/api/notifications/seen"));
+  assert.equal(await desk.locator("#bell-count").isHidden(), true, "no count while open");
+  assert.equal(await desk.getAttribute('#notes [data-only="1"]', "aria-pressed"), "true", "it opens on For you");
+  assert.equal(await desk.locator("#notes [data-note]").count(), 1);
+  assert.match(await desk.textContent("#notes [data-note]"), /New comment[\s\S]*PR change:[\s\S]*A new header/, "what happened, the kind in grey, the title");
+  await desk.click('#notes [data-only="0"]');
+  assert.equal(await desk.locator("#notes [data-note]").count(), 2, "All shows the rest too");
+  assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), true, "a tab keeps the panel open");
+  await desk.click('#notes [data-only="1"]');
+  await desk.click("#notes [data-note]");
+  await desk.waitForSelector('#th-t1 [data-m="0"].spot');
+  assert.equal(await desk.evaluate(() => document.querySelector("#bell").open), false, "the panel closes");
+  assert.equal(await desk.evaluate(() => document.querySelector("[data-convo]").open), true, "the conversation is unfolded");
+  // The shared click-away rule: a menu button without data-keep closes its menu.
+  await desk.click("#me");
+  assert.equal(await desk.evaluate(() => document.querySelector(".me-menu").open), true);
+  await desk.click("#theme");
+  await desk.waitForFunction(() => !document.querySelector(".me-menu").open);
+}));

@@ -494,7 +494,9 @@ cover it. The bell opens on **For you**: what the person
 filed, voted on, approved or wrote in; **All** shows the rest too. The red count is what is For
 you and newer than the person last opened the bell;
 opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
-`seen: {<person>: at}`), outside the write budget like reading an item.
+`seen: {<person>: at}`, the newest event's time), outside the write budget like reading an item:
+opening it again with nothing new writes nothing. Everything on an item that is the person's,
+its messages included, is For you.
 
 ## Claims
 

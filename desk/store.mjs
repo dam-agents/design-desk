@@ -705,10 +705,11 @@ export class Store {
     for (const c of Object.values(this.db.cards)) {
       if (c.status === "archived" || c.kind === "digest") continue;
       const it = itemOf(c);
-      // Yours: you filed it, voted on it or wrote in it. The bell's For you shows these alone.
-      const talked = new Set((c.threads || []).filter((tid) => (own(this.db.threads, tid)?.messages || []).some((m) => isMine(m.by))));
+      // Yours: you filed it, approved it, voted on it or wrote in it; everything on it is then
+      // For you, its messages included. The bell's For you shows these alone.
+      const talked = (c.threads || []).some((tid) => (own(this.db.threads, tid)?.messages || []).some((m) => isMine(m.by)));
       const filed = [c.created_by, c.origin].some(isMine);
-      const yours = filed || isMine(c.approved?.by) || talked.size > 0 || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
+      const yours = filed || isMine(c.approved?.by) || talked || Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => mine.has(e.toLowerCase())));
       const author = c.origin?.reporter && c.origin.channel !== "agent" ? { name: c.origin.reporter, email: c.origin.email || null, via: c.origin.channel } : c.created_by;
       if (["request", "change", "issue"].includes(c.kind)) push(c.created, `new-${c.kind}`, it, author, {}, yours);
       // Options drawn in one run come as one event: new ones, then redrawn ones.
@@ -729,11 +730,12 @@ export class Store {
       if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
       for (const tid of c.threads || []) {
         const t = own(this.db.threads, tid);
-        if (!t || !sees(t, key || "")) continue;
+        // A private ask is never in a card's threads: its answers come in the loop below.
+        if (!t || t.kind === "private") continue;
         (t.messages || []).forEach((m, i) => {
-          const event = i === 0 ? (t.kind === "asks" ? "agent-asks" : t.kind === "question" || t.kind === "private" ? "question" : "comment")
-            : m.by?.agent ? (t.kind === "question" || t.kind === "private" ? "answer" : "reply") : "reply";
-          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i, private: t.kind === "private" || undefined }, talked.has(t.id) || filed || t.kind === "private" || (t.kind === "asks" && yours));
+          const event = i === 0 ? (t.kind === "asks" ? "agent-asks" : t.kind === "question" ? "question" : "comment")
+            : m.by?.agent ? (t.kind === "question" ? "answer" : "reply") : "reply";
+          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i }, yours);
         });
       }
     }
@@ -774,11 +776,15 @@ export class Store {
     return { items: rows.slice(0, limit), seen, unread: rows.filter((x) => x.for_you && (!seen || x.at > seen)).length };
   }
 
-  // A person opened the bell: what is there now counts as seen, for them alone.
+  // A person opened the bell: what is there now counts as seen, for them alone. `seen` is the
+  // newest event's time, so opening it again with nothing new writes nothing: the route sits
+  // outside the write budget and must not save the store on every call.
   markSeen(who) {
     const key = viewerKey(who);
     if (!key) return { seen: null };
-    const at = this.clock();
+    const was = own(this.db.seen, key) || null;
+    const at = this.notifications(who).items.reduce((m, x) => (x.at > m ? x.at : m), was || "");
+    if (!at || at === was) return { seen: was };
     Object.defineProperty(this.db.seen, key, { value: at, enumerable: true, writable: true, configurable: true });
     this.save();
     return { seen: at };

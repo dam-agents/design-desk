@@ -5745,7 +5745,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   renderSimple();
   // The Figma switch, beside simple mode and only on a Desk with Figma on: each person shows or
   // hides the comparisons with Figma (Product → Differences and the boxes on items) for themselves,
-  // kept for them on the Desk like simple mode. On until they turn it off.
+  // kept for them on the Desk like simple mode. Off until they turn it on.
   function renderFigmaSwitch() {
     const b = $("#figma"), on = figmaOn();
     b.hidden = !S.me?.figma;
@@ -5811,18 +5811,22 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // For you leads: the bell counts only what is for you (docs/desk.md → Notifications).
   S.notes = { items: [], seen: null, unread: 0, was: null, only: true };
   async function loadNotes() {
-    const r = await api("GET", "/api/notifications");
+    const r = await api("GET", "/api/notifications"), was = JSON.stringify(S.notes.items);
     Object.assign(S.notes, { items: r.items || [], seen: r.seen, unread: r.unread || 0 });
-    renderBell();
+    renderBell(JSON.stringify(S.notes.items) !== was);
   }
-  function renderBell() {
+  // An open panel draws again only when the list changed, so a poll keeps the reader's place.
+  function renderBell(changed = false) {
     const n = $("#bell")?.open ? 0 : S.notes.unread;
     const b = $("#bell-count");
     b.hidden = !n; b.textContent = n > 9 ? "9+" : String(n);
     $("#bell-btn").setAttribute("aria-label", n ? `Notifications: ${n} new` : "Notifications");
-    if ($("#bell").open) renderNotes();
+    if ($("#bell").open && changed) renderNotes();
   }
   function renderNotes() {
+    // A redraw keeps where the list was scrolled to and which control had the focus.
+    const keep = $("#notes .nl")?.scrollTop || 0, f = document.activeElement?.closest?.("#notes [data-only], #notes [data-note]");
+    const focus = f ? (f.dataset.only ? `[data-only="${f.dataset.only}"]` : `[data-note="${f.dataset.note}"]`) : null;
     const was = S.notes.was;
     const list = S.notes.items.filter((x) => !S.notes.only || x.for_you);
     let lastDay = "";
@@ -5842,7 +5846,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     $("#notes").innerHTML = `<div class="nh"><b>Notifications</b><div class="tabs2" role="radiogroup" aria-label="Show">
       <button type="button" data-keep data-only="1" aria-pressed="${S.notes.only}" title="What you filed, approved, voted on or wrote in: the bell counts these">For you</button><button type="button" data-keep data-only="0" aria-pressed="${!S.notes.only}">All</button></div></div>
       <div class="nl">${rows || `<div class="empty">${S.notes.only ? "Nothing new on what you filed, voted on or wrote in." : "Nothing happened on the Desk in the last 30 days."}</div>`}</div>`;
-    $("#notes").querySelectorAll("[data-only]").forEach((b) => b.addEventListener("click", () => { S.notes.only = b.dataset.only === "1"; renderNotes(); }));
+    $("#notes .nl").scrollTop = keep;
+    if (focus) $("#notes").querySelector(focus)?.focus();
+    $("#notes").querySelectorAll("[data-only]").forEach((b) => b.addEventListener("click", () => { S.notes.only = b.dataset.only === "1"; renderNotes(); $("#notes .nl").scrollTop = 0; }));
     $("#notes").querySelectorAll("[data-note]").forEach((b) => b.addEventListener("click", guard(async () => {
       $("#bell").open = false;
       await openNote(list[Number(b.dataset.note)]);

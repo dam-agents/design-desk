@@ -1820,6 +1820,68 @@ test("Under the hood: a short plain text with its sources; a plain string is its
   assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x" } }).card.impact.behind, undefined, "none written: none shown");
 });
 
+test("notifications: every event kind, the 30-day window, the row cap, newest first, skipped cards, For you from a vote or an approval; seen saves only on news", () => {
+  let now = Date.UTC(2026, 9, 1);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const tick = (h = 1) => { now += h * 3600e3; return s.clock(); };
+  const pat = { email: "pat@example.com", role: "designer" };
+  // Older than the window: never in the bell.
+  const old = s.createRequest(pat, { title: "Old one", problem: "x", screen: "S" }).card;
+  tick(24 * 40);
+  const r1 = s.createRequest(alice, { title: "Mine", problem: "x", screen: "S" }).card;
+  const c1 = s.db.cards[r1.id];
+  c1.variants = [{ id: "v1", name: "Soft", drawn: tick(), version: 1 }, { id: "v2", name: "Bold", drawn: tick(), version: 2 }];
+  tick(); s.vote(r1.id, pat, { variant: "v1", vote: "concern" });
+  c1.approved = { by: pat, at: tick(), variant: "v1" };
+  c1.spec = { at: tick(), asset: "A-1" };
+  c1.decided = { by: pat, at: tick(), text: "Keep it" };
+  tick(); const d = s.addDecision({ concepts: ["badge"], text: "Soft badges", author: { name: "Pat", email: pat.email, role: "designer" }, origin: { kind: "desk", card: r1.id } }).decision;
+  tick(); s.revokeDecision(d.id, pat, { reason: "Changed our mind" });
+  // Pat's request Alice voted on, and one she approved: what Pat does there is for her.
+  tick(); const r2 = s.createRequest(pat, { title: "Voted", problem: "x", screen: "S" }).card;
+  s.db.cards[r2.id].variants = [{ id: "w1", name: "One", version: 1 }];
+  tick(); s.vote(r2.id, alice, { variant: "w1", vote: "prefer" });
+  tick(); s.openThread(r2.id, pat, { kind: "comment", text: "On the one you voted for" });
+  tick(); const r3 = s.createRequest(pat, { title: "Approved", problem: "x", screen: "S" }).card;
+  s.db.cards[r3.id].approved = { by: alice, at: tick(), variant: null };
+  tick(); s.openThread(r3.id, pat, { kind: "comment", text: "On the one you approved" });
+  tick(); const r4 = s.createRequest(pat, { title: "Not yours", problem: "x", screen: "S" }).card;
+  // An archived card and a digest are not news.
+  tick(); const gone = s.createRequest(pat, { title: "Archived", problem: "x", screen: "S" }).card; s.db.cards[gone.id].status = "archived";
+  tick(); const dig = s.createRequest(pat, { title: "Digest", problem: "x", screen: "S" }).card; s.db.cards[dig.id].kind = "digest";
+  tick();
+  const items = s.notifications(alice).items;
+  const ev = (e, item) => items.find((x) => x.event === e && (!item || x.item === item));
+  assert.ok(!items.some((x) => x.item === old.id), "older than 30 days is out");
+  assert.ok(!items.some((x) => [gone.id, dig.id].includes(x.item)), "archived and digest cards are skipped");
+  assert.equal(ev("options-drawn", r1.id).variant, "v1");
+  assert.equal(ev("options-redrawn", r1.id).variant, "v2");
+  assert.equal(ev("vote", r1.id).detail, "Has a concern about Soft");
+  assert.equal(ev("approved", r1.id).detail, "Soft");
+  assert.equal(ev("spec", r1.id).by.agent, true);
+  assert.equal(ev("decided", r1.id).by.email, pat.email);
+  assert.equal(ev("new-decision").item, d.id);
+  assert.equal(ev("revoked").detail, "Changed our mind");
+  for (const e of ["options-drawn", "vote", "approved", "spec", "decided"]) assert.equal(ev(e, r1.id).for_you, true, `${e} on her own request is for her`);
+  assert.equal(ev("comment", r2.id).for_you, true, "a vote makes the request hers");
+  assert.equal(ev("comment", r3.id).for_you, true, "an approval makes the request hers");
+  assert.equal(ev("new-request", r4.id).for_you, false, "a request she never touched is not for her");
+  assert.deepEqual(items.map((x) => x.at), [...items.map((x) => x.at)].sort().reverse(), "newest first");
+  assert.equal(s.notifications(alice, { limit: 3 }).items.length, 3, "at most the cap");
+  // Opening the bell saves the newest event's time; opening it again with nothing new saves nothing.
+  let saves = 0; const save = s.save.bind(s); s.save = () => { saves += 1; save(); };
+  assert.equal(s.markSeen(alice).seen, items[0].at);
+  assert.equal(saves, 1);
+  tick();
+  assert.equal(s.markSeen(alice).seen, items[0].at);
+  assert.equal(saves, 1, "nothing new: no write");
+  tick(); s.openThread(r1.id, pat, { kind: "comment", text: "News" });
+  assert.equal(s.notifications(alice).unread, 1);
+  s.markSeen(alice);
+  assert.equal(saves, 3, "news: one write (the comment saved once too)");
+  assert.equal(s.notifications(alice).unread, 0);
+});
+
 test("notifications: what others did lately, grouped per item, private answers for their owner, For you, seen", () => {
   const s = fresh();
   const carol = { email: "carol@example.com", role: "pm" };
