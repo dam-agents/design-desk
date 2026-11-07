@@ -422,3 +422,21 @@ test("a PM moves a request along — size, close, reopen, build by default — a
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/presented`, {})).status, 403, "marking an item presented stays a designer's");
   assert.equal((await d.viewer("pat@example.com", "/api/calls", {})).status, 403, "and so does marking the presentation presented");
 });
+
+test("Designs: a developer or an admin marks a design done and asks its designer; a designer does neither", async (t) => {
+  const d = await desk(t);
+  const { card } = (await d.viewer("alice@example.com", "/api/requests", { title: "Daily limits", problem: "People miss the limit." })).body;
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "handed-off" })).status, 200);
+  for (const [email, can] of [["bob@example.com", true], ["lou@example.com", true], ["lee@example.com", true], ["alice@example.com", false], ["pat@example.com", false]])
+    assert.equal((await d.viewer(email, "/api/me")).body.can.designs, can, email);
+  const designer = await d.viewer("alice@example.com", `/api/cards/${card.id}/built`, { built: true });
+  assert.equal(designer.status, 403);
+  assert.match(designer.body.error, /Only developers can mark designs done/);
+  const dev = await d.viewer("bob@example.com", `/api/cards/${card.id}/built`, { built: true });
+  assert.deepEqual([dev.status, dev.body.card.built.by.email], [200, "bob@example.com"]);
+  assert.equal((await d.viewer("bob@example.com", `/api/cards/${card.id}/built`, { built: false })).body.card.built, undefined);
+  const asked = await d.viewer("bob@example.com", `/api/cards/${card.id}/threads`, { kind: "comment", text: "Is it sticky?", dev: true });
+  assert.deepEqual([asked.status, asked.body.thread.dev, asked.body.inbox], [201, true, null], "between people: nothing for the agent");
+  const notDev = await d.viewer("alice@example.com", `/api/cards/${card.id}/threads`, { kind: "comment", text: "A note.", dev: true });
+  assert.equal(notDev.body.thread.dev, undefined, "only who sees Designs asks the designer");
+});

@@ -1342,6 +1342,8 @@ test("a private ask keeps exactly what was open: the option, its state and part,
   assert.deepEqual(inbox(s).open.find((i) => i.id === item.id).context, thread.context, "the agent sees the context with the item");
   assert.deepEqual(s.openPrivate(alice, { text: "x", context: { card: card.id, variant: "v9", state: "s1" } }).thread.context, { card: card.id, page: null, label: "" }, "an unknown option or state is dropped");
   assert.equal(s.openPrivate(alice, { text: "x", context: { page: "product", filter: "elements" } }).thread.context.filter, "elements");
+  const onDesigns = s.openPrivate(alice, { text: "x", context: { page: "designs", filter: "done" } }).thread.context;
+  assert.deepEqual([onDesigns.page, onDesigns.filter], ["designs", "done"], "a private ask from the Designs list keeps its page");
   assert.throws(() => s.openPrivate(alice, { text: "x", context: { decision: "D-9" } }), /no decision/);
 });
 
@@ -1990,4 +1992,53 @@ test("notifications: what others did lately, grouped per item, private answers f
   assert.ok(dave.items.length > 0 && dave.items.every((x) => !x.for_you));
   assert.equal(dave.unread, 0);
   assert.deepEqual(s.markSeen({ agent: true }), { seen: null });
+});
+
+test("Designs: a developer marks a design done and asks its designer, who gets it For you", () => {
+  const s = fresh();
+  const carol = { email: "carol@example.com", role: "designer" };
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  for (const a of ["designs", "built"]) { assert.equal(can("developer", a), true, a); assert.equal(can("lead-developer", a), true, a); assert.equal(can("admin", a), true, a); assert.equal(can("designer", a), false, a); assert.equal(can("pm", a), false, a); }
+  assert.throws(() => s.markBuilt(card.id, bob), /sent to developers/);
+  assert.throws(() => s.openThread(card.id, bob, { text: "Why?", dev: true }), /sent to developers/);
+  s.upsertCard({ id: card.id, status: "handed-off", dev_summary: "- Limits show on the dashboard (Alice)." });
+  s.db.cards[card.id].approved = { by: { email: alice.email, role: "designer" }, at: s.clock() };
+  assert.equal(s.getCard(card.id).dev_summary.text, "- Limits show on the dashboard (Alice).");
+  const { thread } = s.openThread(card.id, bob, { text: "Is the banner sticky?", dev: true });
+  assert.equal(thread.dev, true);
+  const forAlice = s.notifications(alice).items.find((x) => x.thread === thread.id);
+  assert.equal(forAlice.event, "dev-question");
+  assert.deepEqual([forAlice.for_you, forAlice.designs], [true, true], "the approving designer's");
+  assert.equal(s.notifications(carol).items.find((x) => x.thread === thread.id).for_you, false, "another designer's only when a non-designer approved");
+  s.db.cards[card.id].approved.by = { email: bob.email, role: "developer" };
+  assert.equal(s.notifications(carol).items.find((x) => x.thread === thread.id).for_you, true);
+  s.markBuilt(card.id, bob);
+  assert.equal(s.listCards({ kind: "request" })[0].built, s.getCard(card.id).built.at);
+  assert.equal(s.notifications(alice).items.find((x) => x.event === "built").designs, true);
+  s.markBuilt(card.id, bob, false);
+  assert.equal(s.listCards({ kind: "request" })[0].built, null);
+  // A summary written later (the 1.63.0 backfill) keeps when the request was sent.
+  s.db.cards[card.id].updated = "2026-10-01T09:00:00.000Z";
+  s.upsertCard({ id: card.id, dev_summary: "- Sticky on scroll (Alice)." });
+  assert.deepEqual([s.getCard(card.id).updated, s.getCard(card.id).dev_summary.text], ["2026-10-01T09:00:00.000Z", "- Sticky on scroll (Alice)."]);
+  s.upsertCard({ id: card.id, summary: "Limits." });
+  assert.notEqual(s.getCard(card.id).updated, "2026-10-01T09:00:00.000Z", "any other write moves it");
+  assert.throws(() => s.upsertCard({ kind: "change", title: "A change", source: { repo: "acme/widgets", pr: 9 }, dev_summary: "x" }), /dev_summary belongs to a request/);
+  s.upsertCard({ id: card.id, dev_summary: null });
+  assert.equal(s.getCard(card.id).dev_summary, null, "null takes the summary off");
+  // Only a comment asks the designer: a question goes to Design Desk.
+  assert.throws(() => s.openThread(card.id, bob, { kind: "question", text: "Why?", dev: true }), /sent to developers/);
+  // Two questions for the designer in one day fold into one row; a plain comment of the same item and day stays a row of its own.
+  s.openThread(card.id, { email: "dana@example.com", role: "developer" }, { text: "And on mobile?", dev: true });
+  s.openThread(card.id, carol, { text: "Nice work." });
+  const rows = s.notifications(alice).items.filter((x) => ["dev-question", "comment"].includes(x.event));
+  assert.deepEqual(rows.map((x) => [x.event, x.count, Boolean(x.designs)]).sort(), [["comment", 1, false], ["dev-question", 2, true]]);
+  // Done, then declined and reopened: sent again later, it is To build with a new summary, not the old Done.
+  s.upsertCard({ id: card.id, dev_summary: "- Old decisions." });
+  s.markBuilt(card.id, bob);
+  s.upsertCard({ id: card.id, status: "declined" });
+  s.act(card.id, alice, "reopen");
+  assert.deepEqual([s.getCard(card.id).status, s.getCard(card.id).built, s.getCard(card.id).dev_summary], ["triage", undefined, undefined]);
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  assert.equal(s.listCards({ kind: "request" }).find((x) => x.id === card.id).built, null);
 });

@@ -77,6 +77,8 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
     case "decide": return shaper;
     case "build": return prototypeRoles.includes(role);
     case "people": return role === "admin";
+    // Designs: what was approved and sent, for developers to build and mark done (docs/desk.md → Designs).
+    case "designs": case "built": return dev || role === "admin";
     default: return false;
   }
 }
@@ -90,7 +92,7 @@ export const ORIGIN_JOBS = ["watch", "digest"];
 export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk", "call", "approval", "chat"];
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people", "designs", "built"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -150,7 +152,7 @@ const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "priva
 // docs/desk.md → Private asks. The page shows a short label, the agent reads the key.
 const STARTERS = ["explain", "why", "fixed", "options", "ask-team"];
 // The Desk pages a private ask can be about when no item is open.
-const ASK_PAGES = ["new", "requests", "issues", "product", "people", "guide"];
+const ASK_PAGES = ["new", "requests", "designs", "issues", "product", "people", "guide"];
 // Who a viewer is to the store: the key a private ask's `owner` holds.
 const viewerKey = (who) => (who && !who.agent ? who.email || who.sub || null : null);
 // Whether a viewer (their key, or undefined for the agent) may see a conversation.
@@ -234,7 +236,7 @@ export function emptyDb() {
 }
 
 // The bell's events that fold into one row per item and day, with their count.
-const NOTE_FAMILY = { comment: "talk", reply: "talk", question: "talk", answer: "talk", "agent-asks": "talk", vote: "vote" };
+const NOTE_FAMILY = { comment: "talk", reply: "talk", question: "talk", answer: "talk", "agent-asks": "talk", "dev-question": "talk", vote: "vote" };
 
 export class Store {
   constructor(dir, { clock = now } = {}) {
@@ -410,6 +412,8 @@ export class Store {
         in_catalog: c.in_catalog ? c.in_catalog.cards.length : 0,
         // Compared with its Figma frame (the figma skill): Product → Differences lists it.
         figma: c.figma_check ? figmaRow(c.figma_check) : null,
+        // An approved design a developer marked done (docs/desk.md → Designs).
+        built: c.built?.at || null,
       }));
   }
 
@@ -512,8 +516,19 @@ export class Store {
     return { card: c };
   }
 
-  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null, shots = null } = {}) {
+  // A developer marks an approved design built, or takes it back (docs/desk.md → Designs).
+  markBuilt(cardId, who, on = true) {
     const c = this.card(cardId);
+    if (c.kind !== "request" || c.status !== "handed-off") throw bad("Only a design sent to developers is marked done.");
+    if (on) c.built = { by: person(who), at: this.clock() }; else delete c.built;
+    this.save();
+    return { card: c };
+  }
+
+  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null, shots = null, dev = false } = {}) {
+    const c = this.card(cardId);
+    // A developer's question to the designer of an approved design (docs/desk.md → Designs).
+    if (dev && (kind !== "comment" || c.kind !== "request" || c.status !== "handed-off")) throw bad("A question for the designer belongs to a design sent to developers.");
     if (!THREAD_KINDS.includes(kind)) throw bad(`kind must be one of ${THREAD_KINDS.join(", ")}`);
     if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
     if (kind === "private") throw bad("a private ask is opened with openPrivate");
@@ -527,7 +542,7 @@ export class Store {
     const t = {
       id, card: cardId, kind, state: "open", anchor: anchor && kind !== "private" ? cleanAnchor(anchor) : null,
       needs_agent: kind === "question" || kind === "change" || kind === "private", created: this.clock(),
-      ...(kind === "private" ? { owner: viewerKey(who) } : {}),
+      ...(kind === "private" ? { owner: viewerKey(who) } : {}), ...(dev ? { dev: true } : {}),
       messages: [{ by: person(who), at: this.clock(), text: body, ...pictures }],
       // The agent's questions can come as a form; the answer resumes the step with its note.
       ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...resumeOf(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
@@ -729,14 +744,17 @@ export class Store {
       if (c.approved?.at) push(c.approved.at, "approved", it, c.approved.by, { detail: (c.variants || []).find((v) => v.id === c.approved.variant)?.name || null, variant: c.approved.variant || null }, yours);
       if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
       if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
+      if (c.built?.at) push(c.built.at, "built", it, c.built.by, { designs: true }, yours);
+      // A developer's question on Designs is for the designer who approved it, else for every designer (docs/desk.md → Designs).
+      const designer = ["designer", "admin"].includes(c.approved?.by?.role) ? isMine(c.approved.by) : ["designer", "admin"].includes(who?.role);
       for (const tid of c.threads || []) {
         const t = own(this.db.threads, tid);
         // A private ask is never in a card's threads: its answers come in the loop below.
         if (!t || t.kind === "private") continue;
         (t.messages || []).forEach((m, i) => {
-          const event = i === 0 ? (t.kind === "asks" ? "agent-asks" : t.kind === "question" ? "question" : "comment")
+          const event = i === 0 ? (t.dev ? "dev-question" : t.kind === "asks" ? "agent-asks" : t.kind === "question" ? "question" : "comment")
             : m.by?.agent ? (t.kind === "question" ? "answer" : "reply") : "reply";
-          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i }, yours);
+          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i, ...(t.dev ? { designs: true } : {}) }, yours || (t.dev && designer));
         });
       }
     }
@@ -759,7 +777,7 @@ export class Store {
     const rows = [], open = new Map();
     for (const x of out) {
       const fam = NOTE_FAMILY[x.event];
-      const k = fam && x.item ? [x.item, fam, x.at.slice(0, 10), x.for_you, Boolean(x.private)].join("|") : null;
+      const k = fam && x.item ? [x.item, fam, x.at.slice(0, 10), x.for_you, Boolean(x.private), Boolean(x.designs)].join("|") : null;
       const row = k && open.get(k);
       if (row) {
         row.count += 1;
@@ -1278,6 +1296,9 @@ export class Store {
       delete c.overruled;
       delete c.approved;
       delete c.decided;
+      // Designs: sent, done, then declined and reopened, it is not built any more; its next handoff sums it up again.
+      delete c.built;
+      delete c.dev_summary;
       c.updated = this.clock();
       const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
       this.save();
@@ -1658,7 +1679,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -1710,6 +1731,11 @@ export class Store {
       else if (k === "concepts") { if (!Array.isArray(fields.concepts)) throw bad("concepts must be a list"); next.concepts = fields.concepts.slice(0, 10).map((x) => clean(String(x), 80, "concept").toLowerCase()); }
       else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
+      // The UX decisions of an approved design, for developers on Designs (docs/handoff.md, step 7).
+      else if (k === "dev_summary") {
+        if (next.kind !== "request") throw bad("dev_summary belongs to a request");
+        next.dev_summary = fields.dev_summary === null ? null : { text: clean(fields.dev_summary, 4000, "dev_summary"), at: this.clock() };
+      }
       else if (k === "issue_brief" || k === "grill") {
         if (next.kind !== "request") throw bad(`${k} belongs to a request`);
         next[k] = fields[k] === null ? null : k === "grill" ? cleanGrill(fields.grill) : cleanIssueBrief(fields.issue_brief);
@@ -1801,7 +1827,8 @@ export class Store {
     this.keepLook(c, next);
     // A screen's or an element's pictures sent again, new or the same: Design Desk looked at it again.
     if ((next.kind === "screen" || next.kind === "element") && (fields.screens !== undefined || fields.sheet !== undefined)) next.checked = this.clock();
-    next.updated = this.clock();
+    // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk.md → Designs).
+    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
     // A design already in the catalog follows every new version of its option and of its states.
     if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {

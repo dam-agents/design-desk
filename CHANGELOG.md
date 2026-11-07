@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.63.0 — 2026-11-07
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the page ([desk.md](docs/desk.md) → Publishing the page).
+2. Once, for each `handed-off` request without `dev_summary`, write one per
+   [handoff.md](docs/handoff.md) step 7 alone (not step 8: its decision is recorded).
+
 ## 1.62.0 — 2026-11-07
 
 **Upgrade:**

@@ -50,7 +50,7 @@ served by the Desk server through the platform's Artifact API relay.
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
   Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions**,
-  **Differences** (with Figma on, [below](#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Changes: **Open** (not
+  **Differences** (with Figma on, [below](#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
   handled, the default) and **Handled**, Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
   (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
   not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
@@ -360,6 +360,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
 | `admin` | also ask you to add a person to the list ([People](#people)) |
+| `developer`, `lead-developer`, `admin` | see **Designs** in the menu, ask a design's designer, mark a design done ([Designs](#designs)) |
 
 The page's **People** tab shows the roster, each role's actions and an admin's asks to add
 someone, from `GET /api/people`; everyone the Desk is shared with sees it, guests included.
@@ -489,6 +490,7 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 | New options drawn, Options redrawn | a run draws options, or new versions of them |
 | New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
 | New decision, Decision revoked | a decision is added or revoked |
+| Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
@@ -514,6 +516,22 @@ unread), and **Mark as read** in the bell's header, shown while a row is unread,
 time). Both are outside the write budget like reading an item, and a read row writes nothing. A
 newer message on a folded row makes it a new, unread row. Everything on an item that is the person's,
 its messages included, is For you.
+
+## Designs
+
+A menu tab right after Requests, only for `developer`, `lead-developer` and `admin`: the
+requests sent to developers (`handed-off`), **To build** and **Done**, nothing else. An item
+shows, read-only: a status strip (**Approved**, or **Done**, with who approved it and when,
+and who marked it done) holding the links to the issue or pull request it went to, the pull request it comes from
+(a PR change it adjusts, or its origin) and the Figma frame, and **Mark as done** (`POST /api/cards/C-<n>/built`, `built: {by, at}`; **Not done yet**
+takes it back); the
+approved option as approved, **UX decisions** (`dev_summary`, the [handoff](handoff.md)'s step 7,
+AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
+comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line (its asker — its first words), under the open ones. Its
+messages are For you for the designer who approved the request, or every `designer` and
+`admin` when a non-designer approved it, and land on `#designs/C-<n>`: they open the page
+without the menu. The request shows the same thread as *Developer asks*. Answer nothing on it:
+it is between people.
 
 ## Claims
 
@@ -596,7 +614,7 @@ Answer it as a question (above), with these differences:
 1. **Answer about its context, and only that.** The thread's `context` (also on the inbox
    item) is what the person had open when they asked: the item `card`, its option
    `variant`, in the design workspace the `state` and the `part` picked (`selector`,
-   `label`); a recorded `decision` (`D-n`); or the `page` (`new` PR Changes, `requests`, `issues`, `product`, `people`,
+   `label`); a recorded `decision` (`D-n`); or the `page` (`new` PR Changes, `requests`, `designs`, `issues`, `product`, `people`,
    `guide` How it works) and its `filter`. Read exactly that before writing — the card and
    that option, state and part, or that page — and answer about it: "this", "here" and
    "it" mean that. Each item and each Desk page has its own chat and history; within one,
@@ -754,7 +772,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   `text`. A question nobody answers is left to Design Desk, which takes `suggested`;
   **Leave it to Design Desk** leaves them all.
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
-- **Where a card came from.** Every row in PR Changes, Requests, Issues and Product shows its source, its author and,
+- **Where a card came from.** Every row in PR Changes, Requests, Designs, Issues and Product shows its source, its author and,
   for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:
   <card>` (`<when>`: Today, Yesterday or the date it came, the exact time on hover; with no person behind it,
   the run that filed it is the author: `by: hourly check`, `by: daily issue read`; an issue not yet

@@ -35,6 +35,10 @@ out="$(bash "$ROOT/scripts/preflight.sh" digest)"
 assert "work is due" '.nothing_to_do == false and .mode == "digest" and .period == "2026-W45"' "$out"
 assert "named by its days, the year once" '.dates == "29 Oct – 4 Nov 2026"' "$out"
 assert "its items are those days, this morning's wait for next week" '[.changes[].id] == ["C-2", "C-3"]' "$out"
+# A developer's question for the designer on Designs is not feedback on the product.
+jq '.threads = {"T-1":{"id":"T-1","card":"C-3","kind":"comment","created":"2026-11-03T10:00:00Z","messages":[{"by":{"email":"a@example.com"},"text":"Too small."}]},
+  "T-2":{"id":"T-2","card":"C-3","kind":"comment","dev":true,"created":"2026-11-03T11:00:00Z","messages":[{"by":{"email":"b@example.com"},"text":"Is it sticky?"}]}}' "$DESK_DIR/db.json" > "$STUB_DIR/db" && mv "$STUB_DIR/db" "$DESK_DIR/db.json"
+assert "feedback leaves out questions for the designer" '[.feedback[].text] == ["Too small."]' "$(bash "$ROOT/scripts/preflight.sh" digest)"
 
 export FAKE_NOW=1767427200 # Sat 2026-01-03 08:00 UTC
 out2="$(bash "$ROOT/scripts/preflight.sh" digest)"
