@@ -2323,7 +2323,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       if (!body || !tog) continue;
       const short = !body.querySelector(BRIEF_MEDIA) && briefLines(body).length < 3;
       tog.hidden = short;
-      if (short) b.classList.remove("clamped");
+      // The class follows the fold state each time, so it and the link's words always agree.
+      b.classList.toggle("clamped", !short && Boolean(b.classList.contains("made-col") ? S.folds.made : S.folds.brief));
     }
     for (const body of document.querySelectorAll(".brief.clamped .brief-body")) {
       const top = body.getBoundingClientRect().top, lines = briefLines(body);
@@ -5878,9 +5879,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const c = S.card, th = x.thread ? (c?.threads || []).find((t) => t.id === x.thread) : null;
     if (x.private) {
       // A private ask's chat shows the asks about what is open: the option it was asked about first.
+      await loadAsks();
       const ask = S.ask.asks.find((t) => t.id === x.thread);
       if (ask?.context?.variant && c && (c.variants || []).some((v) => v.id === ask.context.variant)) { S.variant = ask.context.variant; renderDetail(); }
-      S.ask.open = true; await loadAsks(); renderAsk();
+      S.ask.open = true; renderAsk();
       return spot(document.querySelector(`#ask [data-m="${CSS.escape(`${x.thread}:${x.msg ?? 0}`)}"]`) || $("#ask .ask-panel"), "nearest");
     }
     // A note from the design workspace opens there, on its option, state and part, the note

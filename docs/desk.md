@@ -89,7 +89,8 @@ served by the Desk server through the platform's Artifact API relay.
   GitHub, in the profile's repository (`repos`); a Desk number with no item says so.
 - **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
   answer); **PR Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
-  with grey counts, then **Product** and **People**. The bell left of the person's name opens
+  with grey counts, then **Product** and **People**; **+ New request** follows behind one more
+  separator. The bell at the far right, after the person's name, opens
   [Notifications](#notifications). **How it works** opens from the question
   mark next to the day and night switch, with a picture each of how a request, an issue and a
   shipped pull request move. The switch keeps each person's choice on the Desk
@@ -203,8 +204,8 @@ served by the Desk server through the platform's Artifact API relay.
 With `figma: enabled`, Design Desk compares an item with its frame in Figma and keeps what
 differs on the item as `figma_check` (the `figma` skill → Compare with the product): a screen,
 an element and a shipped change against their frames, a request's option against the frame
-its Figma link names, and a decision a frame goes against. Each person can hide all of it
-with the Figma switch in their menu.
+its Figma link names, and a decision a frame goes against. Each person sees it only once they
+turn on the Figma switch in their menu; it is off until they do.
 
 - **The box** sits under the item's pictures (a change's and a screen's screens, an
   element's drawing, an option's design, a decision's pictures), below a decision conflict

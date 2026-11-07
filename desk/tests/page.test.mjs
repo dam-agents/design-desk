@@ -2079,3 +2079,64 @@ test("the bell counts what is For you, opens on it, marks it seen, shows All on 
   await desk.click("#theme");
   await desk.waitForFunction(() => !document.querySelector(".me-menu").open);
 }));
+
+// Every landing of a notification (docs/desk.md → Notifications): its option's tab, its votes,
+// the spec, a revoked decision's why, a private answer in the chat, every message a row folds.
+const LANDINGS = `<script>
+window.posts = [];
+const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
+const card = { id: "C-3", kind: "request", title: "Quieter rows", status: "feedback", triage: { verdict: "design", reasons: [] }, prototype: { state: "none" }, request: { problem: "Rows shout." },
+  variants: [{ id: "v1", name: "Calm", asset: "A-1", version: 1 }, { id: "v2", name: "Bold", asset: "A-1", version: 1 }],
+  votes: { v2: { "pat@example.com": { vote: "prefer", role: "designer", at: ago(8) } } },
+  spec: { asset: "A-2", at: ago(7), by: { agent: true } },
+  threads: [{ id: "t3", card: "C-3", kind: "comment", state: "open", messages: [{ by: { email: "pat@example.com" }, at: ago(4), text: "First" }, { by: { email: "kim@example.com" }, at: ago(3), text: "Second" }] }] };
+const ask = { id: "p1", kind: "private", state: "answered", created: ago(6), context: { card: "C-3", variant: "v2", label: "C-3 Quieter rows · Bold" },
+  messages: [{ by: { email: "a@example.com" }, at: ago(6), text: "Why bold?" }, { by: { agent: true }, at: ago(5), text: "It reads at a glance." }] };
+const decision = { id: "D-1", text: "Soft badges", status: "revoked", at: ago(60), concepts: [], revoked: { by: { email: "pat@example.com" }, at: ago(2), reason: "Changed our mind" } };
+const row = (x) => ({ kind: "request", item: "C-3", title: "Quieter rows", by: { email: "pat@example.com" }, for_you: false, count: 1, people: [{ email: "pat@example.com" }], ...x });
+const items = [row({ at: ago(9), event: "options-drawn", variant: "v2", by: { agent: true } }), row({ at: ago(8), event: "vote", variant: "v2" }), row({ at: ago(7), event: "spec", by: { agent: true } }),
+  { at: ago(2), event: "revoked", item: "D-1", kind: "decision", title: "Soft badges", by: { email: "pat@example.com" }, detail: "Changed our mind", for_you: false, count: 1, people: [] },
+  row({ at: ago(5), event: "answer", by: { agent: true }, thread: "p1", msg: 1, private: true, for_you: true }),
+  row({ at: ago(3), event: "reply", thread: "t3", msg: 1, count: 2, marks: [["t3", 1], ["t3", 0]] })];
+window.platform = { async request({ method, path }) {
+  if (method === "POST") { posts.push(path); return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/notifications/seen" ? { seen: ago(0) } : {}) }; }
+  const answer = path === "/api/me" ? { role: "designer", email: "a@example.com", key: "a@example.com", can: { comment: true, ask: true, vote: true } }
+    : path === "/api/cards" ? { cards: [card] } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
+    : path === "/api/notifications" ? { items, seen: null, unread: 1 } : path === "/api/private" ? { asks: [ask] }
+    : path === "/api/cards/C-3" ? { card } : path === "/api/decisions/D-1" ? { decision, refs: [] } : path.startsWith("/api/decisions") ? { decisions: [decision] }
+    : path === "/api/assets/A-1" ? { id: "A-1", contentType: "text/html", encoding: "utf8", data: "<body><button>Send</button></body>" }
+    : path === "/api/assets/A-2" ? { id: "A-2", contentType: "text/markdown", encoding: "utf8", data: "# The spec" } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+test("a notification lands on its source: the option's tab, the votes, the spec (lit again after a redraw, dark after 3 s), a revoked decision's why, a private answer, every message of a folded row", (t) => open(t, LANDINGS, async (desk) => {
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
+  const land = async (i) => {
+    if (!(await desk.evaluate(() => document.querySelector("#bell").open))) await desk.click("#bell-btn");
+    await desk.click('#notes [data-only="0"]');
+    await desk.click(`#notes [data-note="${i}"]`);
+  };
+  await land(0);
+  await desk.waitForSelector('.vtabs [data-variant="v2"].spot');
+  assert.equal(await desk.getAttribute('.vtabs [data-variant="v2"]', "aria-pressed"), "true", "options drawn: their tab is picked");
+  await land(1);
+  await desk.waitForSelector(".vbar .votes.spot");
+  await land(2);
+  await desk.waitForSelector("#spec.spot");
+  assert.equal(await desk.$eval("#spec", (d) => d.open), true, "the spec unfolds");
+  // The page draws again: the glow finds the spec anew; then it ends.
+  await desk.evaluate(() => { document.querySelector("#spec").dataset.old = "1"; });
+  await desk.click('[data-variant="v1"]');
+  await desk.waitForSelector("#spec.spot:not([data-old])");
+  await desk.waitForFunction(() => !document.querySelector(".spot"), null, { timeout: 6000 });
+  await land(3);
+  await desk.waitForSelector(".against.spot");
+  assert.match(await desk.textContent(".against.spot"), /Changed our mind/, "a revoked decision: why it was revoked");
+  await land(4);
+  await desk.waitForSelector('#ask [data-m="p1:1"].spot');
+  await land(5);
+  await desk.waitForSelector('#th-t3 [data-m="1"].spot');
+  assert.equal(await desk.locator('#th-t3 [data-m="0"].spot').count(), 1, "a folded row lights every message it holds");
+  assert.equal(await desk.locator("#ask .ask-panel").count(), 0, "a public notification closes the private chat");
+}));

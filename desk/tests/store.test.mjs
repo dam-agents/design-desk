@@ -1820,6 +1820,36 @@ test("Under the hood: a short plain text with its sources; a plain string is its
   assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x" } }).card.impact.behind, undefined, "none written: none shown");
 });
 
+test("notifications fold rows: one per item, family and day, at most 20 marks, each person once, votes too; a private answer on an archived card is not news", () => {
+  let now = Date.UTC(2026, 9, 1, 8);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const tick = () => { now += 60e3; return s.clock(); };
+  const pat = { email: "pat@example.com", role: "designer" }, kim = { email: "kim@example.com", role: "pm" }, lee = { email: "lee@example.com", role: "developer" };
+  const { card } = s.createRequest(alice, { title: "Mine", problem: "x", screen: "S" });
+  tick(); const t = s.openThread(card.id, pat, { kind: "comment", text: "1" });
+  for (let n = 2; n <= 25; n++) { tick(); s.reply(t.thread.id, n % 2 ? pat : kim, String(n)); }
+  s.db.cards[card.id].variants = [{ id: "v1", name: "Soft", version: 1 }];
+  for (const who of [pat, kim, lee]) { tick(); s.vote(card.id, who, { variant: "v1", vote: "prefer" }); }
+  const rows = s.notifications(alice).items;
+  const talk = rows.filter((x) => ["comment", "reply"].includes(x.event));
+  assert.equal(talk.length, 1, "25 messages on one item in one day: one row");
+  assert.equal(talk[0].count, 25);
+  assert.equal(talk[0].marks.length, 20, "at most 20 messages to light");
+  assert.deepEqual(talk[0].people.map((p) => p.email), ["pat@example.com", "kim@example.com"], "each person once, newest first");
+  const votes = rows.filter((x) => x.event === "vote");
+  assert.equal(votes.length, 1, "votes fold too");
+  assert.equal(votes[0].count, 3);
+  // The next day starts a new row.
+  now += 864e5; s.reply(t.thread.id, pat, "Next day");
+  assert.equal(s.notifications(alice).items.filter((x) => ["comment", "reply"].includes(x.event)).length, 2);
+  // A private answer on an archived card is not news, for its owner either.
+  const ask = s.openPrivate(alice, { text: "Why?", context: { card: card.id } });
+  tick(); s.answer(ask.thread.id, "Because");
+  assert.equal(s.notifications(alice).items.filter((x) => x.private).length, 1);
+  s.db.cards[card.id].status = "archived";
+  assert.equal(s.notifications(alice).items.filter((x) => x.private).length, 0);
+});
+
 test("notifications: every event kind, the 30-day window, the row cap, newest first, skipped cards, For you from a vote or an approval; seen saves only on news", () => {
   let now = Date.UTC(2026, 9, 1);
   const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
