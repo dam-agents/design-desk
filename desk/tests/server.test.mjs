@@ -313,6 +313,18 @@ test("a difference from Figma: only who may mark things handled takes it off, on
   const row = (await d.viewer("alice@example.com", "/api/cards")).body.cards.find((c) => c.id === card.id);
   assert.equal(row.figma.count, 1, "off the count");
   assert.equal((await d.viewer("alice@example.com", `/api/cards/${card.id}/figma-dismiss`, { part: "Rows", on: false })).body.figma_check.dismissed, undefined, "brought back");
+  // The whole comparison closed: only who may mark things handled; kept while the frame is the same.
+  const close = (email, on = true) => d.viewer(email, `/api/cards/${card.id}/figma-close`, { on });
+  assert.equal((await close("bob@example.com")).status, 403, "a developer may not close it");
+  assert.equal((await close("alice@example.com")).body.figma_check.closed.by.email, "alice@example.com", "a designer may");
+  const rowOf = async () => (await d.viewer("alice@example.com", "/api/cards")).body.cards.find((c) => c.id === card.id).figma;
+  assert.equal((await rowOf()).closed, true, "the list knows");
+  await d.agent("/agent/cards", { id: card.id, figma_check: check });
+  assert.equal((await rowOf()).closed, true, "the same frame again: still closed");
+  await d.agent("/agent/cards", { id: card.id, figma_check: { ...check, frame: { ...frame, version: "a1b2" } } });
+  assert.equal((await rowOf()).closed, false, "the frame changed: back");
+  await close("alice@example.com");
+  assert.equal((await close("alice@example.com", false)).body.figma_check.closed, undefined, "reopened");
   // A decision a frame goes against: written by the agent only.
   const dec = (await d.agent("/agent/decisions", { concepts: ["header"], text: "Titles are 20 px.", author: { login: "alice" }, origin: { kind: "chat" } })).body.decision;
   assert.equal((await d.viewer("alice@example.com", `/agent/decisions/${dec.id}/figma`, { figma_check: check })).status, 401, "not a person's route");
@@ -337,7 +349,7 @@ test("read and unread: the first open marks an item read for that person alone",
   assert.equal((await d.viewer("alice@example.com", "/api/cards/C-999/read", {})).status, 404);
 });
 
-test("notifications: the bell lists what others did and opening it marks it seen", async (t) => {
+test("notifications: the bell lists what others did; a click reads one row, Mark as read all of them", async (t) => {
   const d = await desk(t);
   const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." })).body.card.id;
   const bell = async (email) => (await d.viewer(email, "/api/notifications")).body;
@@ -347,6 +359,14 @@ test("notifications: the bell lists what others did and opening it marks it seen
   assert.deepEqual([bob.items[0].event, bob.items[0].item, bob.items[0].for_you, bob.unread], ["new-request", id, false, 0]);
   // Bob's comment on Alice's request is for her and counts.
   await d.viewer("bob@example.com", `/api/cards/${id}/threads`, { kind: "comment", text: "Busy indeed." });
+  const first = await bell("alice@example.com");
+  assert.deepEqual([first.unread, first.items[0].read], [1, false]);
+  // One row read on its click, for her alone.
+  assert.equal((await d.viewer("alice@example.com", `/api/notifications/read?id=${encodeURIComponent(first.items[0].id)}`, {})).body.read, true);
+  assert.deepEqual([(await bell("alice@example.com")).unread, (await bell("alice@example.com")).items[0].read], [0, true]);
+  assert.equal((await d.viewer("alice@example.com", "/api/notifications/read?id=nope", {})).status, 400, "only a row in the bell");
+  // A newer message is a new, unread row; Mark as read reads every one.
+  await d.viewer("bob@example.com", `/api/cards/${id}/threads`, { kind: "comment", text: "Still busy." });
   assert.equal((await bell("alice@example.com")).unread, 1);
   assert.ok((await d.viewer("alice@example.com", "/api/notifications/seen", {})).body.seen);
   assert.equal((await bell("alice@example.com")).unread, 0);
