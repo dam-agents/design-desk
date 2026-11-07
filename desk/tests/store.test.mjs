@@ -1571,6 +1571,60 @@ test("a shipped change read against its approved design: what differs waits for 
   assert.equal(s.listCards({ kind: "change" })[0].design_check, null);
 });
 
+test("an item read against its frame in Figma: what differs, how much, each side; a request names its option", () => {
+  const s = fresh();
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const page = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const frame = { url: "https://www.figma.com/design/AbC123/App?node-id=12-40", name: "Agents list", version: "9f2c", edited: "2026-11-04T10:00:00Z", shot: pic };
+  const diff = { part: "Stopped dot", what: "a different red", severity: "minor", figma: "#E5484D", product: "bad #B3261E", figma_shot: pic, product_shot: pic };
+  const { card: screen } = s.upsertCard({ kind: "screen", title: "Agents list", path: "/agents" });
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { verdict: "differs", frame } }), /say what differs/);
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { verdict: "matches", frame: { ...frame, url: "https://example.com/x" } } }), /link to the frame in Figma/);
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { verdict: "differs", frame, differences: [{ ...diff, severity: "huge" }] } }), /severity must be major or minor/);
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { verdict: "differs", frame, differences: [{ ...diff, figma_shot: page }] } }), /must be an uploaded picture/);
+  const { card } = s.upsertCard({ id: screen.id, figma_check: { verdict: "differs", frame, product_shot: pic, differences: [diff, { ...diff, part: "Header", severity: "major" }] } });
+  assert.deepEqual([card.figma_check.differences.length, card.figma_check.frame.edited, Boolean(card.figma_check.checked)], [2, "2026-11-04T10:00:00.000Z", true]);
+  const row = s.listCards({ kind: "screen" })[0];
+  assert.deepEqual(row.figma, { verdict: "differs", count: 2, frame: "Agents list", checked: card.figma_check.checked });
+  // On a request it belongs to the option it compared.
+  const { card: r } = s.createRequest(alice, { title: "Bigger send", problem: "Too small." });
+  s.upsertCard({ id: r.id, variants: [{ id: "v1", name: "Calm", asset: page }] });
+  assert.throws(() => s.upsertCard({ id: r.id, figma_check: { verdict: "matches", frame } }), /names the option it compares/);
+  assert.equal(s.upsertCard({ id: r.id, figma_check: { verdict: "matches", frame, variant: "v1" } }).card.figma_check.variant, "v1");
+  const issue = s.upsertCard({ kind: "issue", title: "Export as CSV", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 77 } }).card;
+  assert.throws(() => s.upsertCard({ id: issue.id, figma_check: { verdict: "matches", frame } }), /belongs to a change, screen, element, request card/, "not on an issue");
+  // A decision a frame goes against; null clears it.
+  const { decision: dd } = s.addDecision({ concepts: ["send"], text: "The send button is always on the right.", author: { login: "alice" }, origin: { kind: "chat" } });
+  assert.equal(s.setDecisionFigma(dd.id, { verdict: "differs", frame, differences: [{ ...diff, part: "Send button", severity: "major" }] }).decision.figma_check.differences[0].severity, "major");
+  assert.equal(s.setDecisionFigma(dd.id, null).decision.figma_check, undefined);
+  // A person takes a difference off the table: off the count too; it stays off while the frame is
+  // the same, and comes back when the frame changes.
+  assert.throws(() => s.dismissFigma(screen.id, alice, "Footer"), /not in the table/);
+  s.dismissFigma(screen.id, alice, "Stopped dot");
+  assert.deepEqual([s.listCards({ kind: "screen" })[0].figma.count, s.getCard(screen.id).figma_check.dismissed[0].by.email], [1, "alice@example.com"]);
+  const check = { verdict: "differs", frame, product_shot: pic, differences: [diff, { ...diff, part: "Header", severity: "major" }] };
+  assert.equal(s.upsertCard({ id: screen.id, figma_check: check }).card.figma_check.dismissed.length, 1, "the same frame: still off");
+  assert.equal(s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: "a7b1" } } }).card.figma_check.dismissed, undefined, "an edited frame: back on");
+  // Without a version nothing tells an unedited frame, so a removal never outlives the check.
+  s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: null } } });
+  s.dismissFigma(screen.id, alice, "Stopped dot");
+  assert.equal(s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: null } } }).card.figma_check.dismissed, undefined, "no version: back on");
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { ...check, differences: [diff, { ...diff, severity: "major" }] } }), /named twice/);
+  s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: "a7b1" } } });
+  s.dismissFigma(screen.id, alice, "Header"); s.dismissFigma(screen.id, alice, "Stopped dot");
+  assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked }, "all off: it matches");
+  s.dismissFigma(screen.id, alice, "Header", false);
+  assert.equal(s.listCards({ kind: "screen" })[0].figma.count, 1, "brought back");
+  s.upsertCard({ id: screen.id, figma_check: null });
+  assert.equal(s.listCards({ kind: "screen" })[0].figma, null);
+  // The search for a frame is kept, so it runs once; a question names its thread.
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_search: { state: "asked" } }), /names its thread/);
+  assert.throws(() => s.upsertCard({ id: screen.id, figma_search: { state: "maybe" } }), /must be one of none, asked, no/);
+  assert.throws(() => s.upsertCard({ id: r.id, figma_search: { state: "none" } }), /belongs to a screen or an element/);
+  assert.equal(s.upsertCard({ id: screen.id, figma_search: { state: "no" } }).card.figma_search.state, "no");
+  assert.equal(s.upsertCard({ id: screen.id, figma_search: null }).card.figma_search, null);
+});
+
 test("an answer says what a worked-in note goes against: a decision, the issue or a pull request, with its source", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });

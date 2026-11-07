@@ -56,7 +56,10 @@ connections:
     note: >-
       Optional: Figma. Add Figma's MCP server (https://mcp.figma.com/mcp) as a Custom
       MCP connection to import frames from Figma and send design options back as
-      editable layers; then set figma to enabled.
+      editable layers, or a read-only personal access token as a Custom Header
+      connection (X-Figma-Token, api.figma.com) to import frames and show on the Desk
+      where the product differs from its design in Figma (only the token does that);
+      then set figma to enabled.
 
 channels:
   - type: slack

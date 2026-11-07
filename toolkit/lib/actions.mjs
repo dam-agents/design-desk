@@ -27,6 +27,7 @@ export const ACTIONS = {
   "request-intake": { skill: "intake-slack", doc: "docs/requests.md", does: "put a design asked for on a channel on the Desk's queue; answer in its thread" },
   "figma-import": { skill: "figma", does: "bring a Figma frame in as a design option built from the product's parts" },
   "figma-export": { skill: "figma", does: "send a design option to Figma as editable layers" },
+  "figma-compare": { skill: "figma", does: "compare an item with its frame in Figma and put what differs on the Desk" },
   "share-options": { skill: "slack-polls", does: "post a request's options to Slack for votes and comments" },
   "send-designs": { skill: "slack-polls", does: "post pictures of a request's options to its Slack thread or the channel" },
   "poll-sync": { skill: "slack-polls", does: "bring Slack votes and replies to the Desk; close a vote with its result" },

@@ -49,8 +49,8 @@ served by the Desk server through the platform's Artifact API relay.
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
-  Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions** and **History** on
-  Product. What narrows a page's list is one segmented filter under them (Changes: **Open** (not
+  Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions**,
+  **Differences** (with Figma on, [below](#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Changes: **Open** (not
   handled, the default) and **Handled**, Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
   (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
   not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
@@ -110,6 +110,10 @@ served by the Desk server through the platform's Artifact API relay.
   named for them (`desk-simple:<email>`, marked `desk-simple-unsaved:<email>`), and is sent
   again on the next load. Turned on over a hidden tab (an open decision aside) or the
   presentation, the Desk goes to the requests.
+  **Figma**, a switch under simple mode in the same style, shows only on a Desk with `figma:
+  enabled`: off, that person sees no Differences page and no box of differences from Figma
+  anywhere. Kept on the Desk like simple mode (`POST /api/prefs {figma}`, `figma_pref` in
+  `GET /api/me`); with no choice (null) it is on.
   The Desk opens on Requests.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
@@ -189,6 +193,43 @@ served by the Desk server through the platform's Artifact API relay.
   link opens the Desk on its first tab and the number is the way on (Go to). The fix is the
   platform's: its share page forwarding the fragment to the frame. Keep the number in every
   message until then.
+
+## Differences from Figma
+
+With `figma: enabled`, Design Desk compares an item with its frame in Figma and keeps what
+differs on the item as `figma_check` (the `figma` skill → Compare with the product): a screen,
+an element and a shipped change against their frames, a request's option against the frame
+its Figma link names, and a decision a frame goes against. Each person can hide all of it
+with the Figma switch in their menu.
+
+- **The box** sits under the item's pictures (a change's and a screen's screens, an
+  element's drawing, an option's design, a decision's pictures), below a decision conflict
+  of the option. It starts folded to one line: the count, a link to the frame (**N
+  differences from Figma: <frame> ↗**) and the count of **major** and **minor** ones. Open,
+  it is a table: the severity, what differs, then **In Figma** and **In the product**, each
+  its value (a colour with its swatch) over its picture; the major ones first. A screen, an
+  element or a change also offers **Compare side by side**. Nothing differs: one line,
+  **✓ Matches Figma** with the frame.
+- **Severity.** **Major**: a person would notice it in use (layout, a state, words,
+  behaviour on screen). **Minor**: a value a little apart (a shade, a few pixels).
+- **×** at the end of a row (whoever may mark items handled) takes that difference off the
+  table for everyone (`POST /api/cards/<id>/figma-dismiss {part}`, a decision's under
+  `/api/decisions/`); it stays off while the frame is the same and comes back once the
+  frame in Figma changes. Under the table, **Removed: …** names them with who did it;
+  **Bring them back** puts them back (`{part, on: false}`). With every one off, the item
+  matches.
+- **Work into the design**, on a request's box (whoever may change options): each row gets a
+  tick, all ticked; **Send to Design Desk** files the ticked ones as one change note on the
+  option (a `change` thread anchored to it), which Design Desk works in as its next version.
+- **Product → Differences** lists what is in the product already, compared with Figma:
+  screens, elements and shipped changes (not requests or decisions), filtered **Differs from
+  Figma** (the default), **Matches** and **All**; each row says how many differences, what it
+  is, its frame and when it was checked. A row opens its comparison page: the title, a status
+  box with how many differ, the frame's dates, the pull request of a change, **Open in Figma
+  ↗** and **Open the screen / element / PR change**; then the whole screen or element from each
+  side, and the table.
+- Nothing here says which side is right: a designer decides, and asks for a change, updates
+  Figma, or takes a difference off the table.
 
 ## Decisions
 
