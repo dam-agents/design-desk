@@ -850,7 +850,9 @@
   .brief > .brief-k.brief-k { cursor: default; margin: 0 0 8px;  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; text-transform: none; letter-spacing: 0; font-size: var(--fs-ui); font-weight: 400; color: var(--muted); }
   .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; flex: none; }
   .brief-k .ask-who b { color: var(--ink); font-weight: 600; }
-  .brief-k .prov { font-size: var(--fs-meta); }
+  .brief-k .prov { font-size: inherit; }
+  .brief-k .prov .src { padding: 0; border: 0; background: none; font-weight: 400; gap: 4px; }
+  .brief-k .prov .src:not([data-k="slack"], [data-k="pr"], [data-k="issue"]) > svg { display: none; }
   .brief-k .ask-when { white-space: nowrap; }
   /* Where the request stands comes first, right under its title; what was asked follows. */
   .standing { margin: 10px 0 0; } .standing .steps { margin-top: 4px; }
@@ -1837,9 +1839,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   function askHead(c, bug) {
     const p = origin(c, { parts: true });
     const name = p.author ? (p.author === "you" ? "You" : p.author) : "Someone";
-    const role = ROLE[c.created_by?.role] || "";
+    // Who and where, in words: no role beside the name, the source as text as in the list's rows.
     return `<span class="face" aria-hidden="true">${esc((name.replace(/^[^A-Za-z0-9]+/, "")[0] || "?").toUpperCase())}</span>
-      <span class="ask-who"><b>${esc(name)}</b> ${bug ? "reported" : "asked"}${role ? `, ${esc(role)}` : ""}, from</span>
+      <span class="ask-who"><b>${esc(name)}</b> ${bug ? "reported" : "asked"}, from</span>
       <span class="prov"><span class="src" data-k="${p.kind}">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
   }
   const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
