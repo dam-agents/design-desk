@@ -303,7 +303,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -1217,7 +1217,7 @@ export class Store {
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, closeEarlier = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
     const c = this.card(cardId);
     // Check again: Design Desk takes the screen's pictures again on the live product; the same
     // pictures mark it checked, new ones redraw it (docs/map.md → Check again).
@@ -1383,6 +1383,8 @@ export class Store {
     if (action === "build" && askFirst) item.ask_first = true;
     // Straight to the coding agent: the handoff labels its issue (docs/handoff.md, step 5).
     if (action === "approve" && implement) item.implement = true;
+    // Sent before and reopened: the new send closes the earlier issue too (docs/handoff.md, step 6).
+    if (action === "approve" && closeEarlier && earlierSend(c)) item.close_earlier = earlierSend(c);
     if (stateOf) {
       item.variant = stateOf.id; if (part?.label) item.part = cleanPart(part);
       if (elOf) item.element = elOf.key;
@@ -1403,7 +1405,7 @@ export class Store {
   // Design Desk writes the spec as a draft (`spec.review: "draft"`); a person reads it, edits
   // it, asks for changes, or sends it. Only a send lets it leave the Desk (docs/handoff.md →
   // Review before it goes). Every version stays: an edit or a rewrite keeps the one it replaces.
-  specAction(cardId, who, { action, text = "", note = "", implement = null } = {}) {
+  specAction(cardId, who, { action, text = "", note = "", implement = null, closeEarlier = false } = {}) {
     const c = this.card(cardId);
     if (who?.agent) throw forbidden("A person reads the spec and sends it; Design Desk writes it.");
     if (c.kind !== "request" || c.status !== "spec" || !c.spec?.asset) throw bad("There is no developer spec to look at yet.");
@@ -1441,6 +1443,7 @@ export class Store {
       const item = this.enqueue("handoff", cardId, null, who, c.approved?.variant || "");
       item.scope = "deliver";
       if (straight) item.implement = true;
+      if (closeEarlier && earlierSend(c)) item.close_earlier = earlierSend(c);
       this.save();
       return { card: c, inbox: item };
     }
@@ -2328,6 +2331,8 @@ function mustBeChecked(c, verb) {
 // disclosed it; a name or login alone (`origin.reporter`) names no Desk person.
 // An approved design is final: from Approve on (the spec, sent to developers) nothing changes
 // it; a change is a new request made from it (docs/desk.md → Approved is final).
+// The issue or pull request of a request's last earlier send (docs/desk.md → Designs).
+const earlierSend = (c) => { const s = (c.sends || []).slice(-1)[0]; return s?.spec?.issue_url || s?.spec?.pr_url || null; };
 const designLocked = (c) => c.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
 const LOCKED = "This design is approved, so it no longer changes. To change it, start a new request from this one.";
 const isAuthor = (c, who) => {

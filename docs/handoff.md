@@ -95,7 +95,10 @@ card the people who may approve it read the spec, and:
 6. A request sent before, reopened by an admin and approved again (`sends` not empty) is sent
    anew: a **new** issue, or pull request, with this spec — never a comment on an earlier
    send's issue, a `feature` included — naming the earlier one (`sends[].spec.issue_url`).
-   Its first send's issue stays as it is.
+   Its first send's issue stays as it is, unless the item has `close_earlier` (the person
+   ticked it on Approve or Send, seeing that issue's state and assignee): after the new one is
+   delivered, close that issue — only while it is still open — with one comment linking the new
+   one, and say so on the card.
 
    Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
    [actions.md](actions.md); the bundled one is

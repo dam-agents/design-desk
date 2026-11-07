@@ -1238,6 +1238,7 @@
     <label id="cf-url-wrap" hidden><span id="cf-url-label"></span><input name="url" maxlength="500" /></label>
     <label id="cf-check-wrap" class="check" hidden><input type="checkbox" name="check" /> <span id="cf-check-label"></span></label>
     <label id="cf-check2-wrap" class="check" hidden><input type="checkbox" name="check2" /> <span id="cf-check2-label"></span></label>
+    <label id="cf-check3-wrap" class="check" hidden><input type="checkbox" name="check3" /> <span id="cf-check3-label"></span></label>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="cf-ok"></button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
@@ -2053,6 +2054,19 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // GitHub as the Desk keeps it (docs/desk.md → GitHub on the Desk): state, labels and the
   // latest comments, written by Design Desk's watch run.
   S.gh = {};
+  // The issue or pull request of a request's last earlier send, with its state and assignees as
+  // the Desk last read them, for a new send that may close it (docs/handoff.md, step 6).
+  async function earlierIssue(c) {
+    const s = (c.sends || []).slice(-1)[0], url = s?.spec?.issue_url || s?.spec?.pr_url, ref = ghRef(url);
+    if (!ref) return null;
+    try { await ghLoad([ref.key]); } catch { /* shown as not read */ }
+    const g = S.gh[ref.key], what = `${ref.pr ? "PR" : "Issue"} #${ref.n}`;
+    const state = g ? (GH_STATE[g.state]?.[0] || g.state || "?") : "not read by Design Desk yet";
+    const who = g ? ((g.assignees || []).length ? g.assignees.join(", ") : "nobody") : "unknown";
+    return { url, what, open: !g || ["open", "draft"].includes(g.state),
+      line: `**The earlier send:** [${what}](${url}) · ${state} · assignee: ${who}`,
+      check: `Close ${what} on GitHub, with a link to the new one` };
+  }
   async function ghLoad(keys) {
     const want = keys.filter((k) => !(k in S.gh));
     if (!want.length) return;
@@ -2161,7 +2175,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // `choices` the ids ticked; OK waits until one is.
   // `url` is a one-line field's label (a link, or a name with `value` filled in and `max` its length).
   // noteFor: the note shows only while that choice is picked.
-  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, noteFor = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, send }) {
+  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, noteFor = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, check3 = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
@@ -2176,11 +2190,12 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     $("#cf-url-wrap").hidden = !url; $("#cf-url-label").textContent = url || ""; f.url.required = Boolean(url); f.url.value = value; f.url.maxLength = max;
     $("#cf-check-wrap").hidden = !check; $("#cf-check-label").textContent = check || ""; f.check.checked = Boolean(check && checked);
     $("#cf-check2-wrap").hidden = !check2; $("#cf-check2-label").textContent = check2 || ""; f.check2.checked = false;
+    $("#cf-check3-wrap").hidden = !check3; $("#cf-check3-label").textContent = check3 || ""; f.check3.checked = false;
     dlg.returnValue = ""; dlg.showModal();
     return new Promise((resolve) => {
       dlg.onclose = async () => {
         if (dlg.returnValue !== "ok") { resolve(null); return; }
-        const answer = { choice: f.querySelector("input[name=choice]:checked")?.value || null, choices: [...f.querySelectorAll("input[name=choice]:checked")].map((i) => i.value), note: f.note.value.trim(), url: f.url.value.trim(), check: f.check.checked, check2: f.check2.checked };
+        const answer = { choice: f.querySelector("input[name=choice]:checked")?.value || null, choices: [...f.querySelectorAll("input[name=choice]:checked")].map((i) => i.value), note: f.note.value.trim(), url: f.url.value.trim(), check: f.check.checked, check2: f.check2.checked, check3: f.check3.checked };
         try { resolve(await sendOrReopen(dlg, () => send(answer))); } catch (e) { fail(e); }
       };
     });
@@ -4971,10 +4986,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const what = built ? `**${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
       // Straight to the coding agent: its issue gets the agent's label, only where the spec reaches GitHub (docs/handoff.md).
       const github = (S.me?.handoff?.[c.request?.type || "idea"] || "desk") !== "desk";
-      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${S.me?.spec_review ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      // Sent before and reopened: what goes to GitHub now may close the earlier issue (docs/handoff.md, step 6).
+      const earlier = github && !S.me?.spec_review ? await earlierIssue(c) : null;
+      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${S.me?.spec_review ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         ...(github && !S.me?.spec_review ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
-        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? { implement: true } : {}) }) });
+        ...(earlier?.open ? { check3: earlier.check } : {}),
+        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? { implement: true } : {}), ...(a.check3 ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the
@@ -5340,14 +5358,17 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       // Where it goes is the Desk's setting by request type (`handoff`, `issue_writeback`): GitHub,
       // or for an idea or a proposal set to `desk`, the Desk itself, where developers read it.
       const c = S.card, route = S.me?.handoff?.[c.request?.type || "idea"] || "github";
+      // Sent before and reopened: the new issue may close the earlier one (docs/handoff.md, step 6).
+      const earlier = route === "desk" ? null : await earlierIssue(c);
       const choices = route === "desk" ? null : [
         { id: "issue", name: "As an issue for developers", hint: "A developer picks it up and builds it from the spec and the design." },
         { id: "agent", name: "Straight to the coding agent", hint: "The issue gets the coding agent's label, so it starts building; you follow its pull request here." }];
       const r = await ask({ title: route === "desk" ? "Mark the spec ready for developers" : "Send the spec to developers",
         body: route === "desk" ? `This Desk keeps the spec of ${c.request?.type === "proposal" ? "a proposal" : "an idea"} here: developers read it on the Desk, and nothing goes to GitHub. To have it filed on GitHub instead, ask ${contact()} to change where ideas go (the \`handoff\` setting).`
-          : "Design Desk sends the spec as it is now, with the approved design, its pictures and states, to GitHub.",
+          : `Design Desk sends the spec as it is now, with the approved design, its pictures and states, to GitHub.${earlier ? `\n\n${earlier.line}` : ""}`,
         ok: route === "desk" ? "Mark ready" : "Send to developers", choices, pick: choices ? (c.approved?.implement ? "agent" : "issue") : null,
-        send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send", ...(choices ? { implement: a.choice === "agent" } : {}) }) });
+        ...(earlier?.open ? { check3: earlier.check } : {}),
+        send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send", ...(choices ? { implement: a.choice === "agent" } : {}), ...(a.check3 ? { close_earlier: true } : {}) }) });
       if (r) { toast("The spec is on its way to developers."); await openCard(S.card.id); await refreshList(); }
       return;
     }
