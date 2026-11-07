@@ -5,8 +5,14 @@
 # so work/ is a plain data directory and git only ever runs in /dev/shm.
 # Rationale: docs/persistence.md.
 #
-#   work-backup.sh persist   # end of run: snapshot work/ -> commit -> push
+#   work-backup.sh persist   # end of run: snapshot work/ -> commit -> push, in two pushes
 #   work-backup.sh restore   # empty work/: remote state -> work/ (data only)
+#
+# Two pushes: first the state (all of work/ but output/ and logs/), then the bulk set
+# (output/ and logs/) on its own, so a bulk set that cannot be copied or pushed never
+# blocks the Desk store's backup. The bulk push skips a file over the per-file cap and
+# skips the whole set when it does not fit the clone's free space, with a warning that
+# names the path.
 #
 # Durability: nothing authoritative lives on tmpfs — live state is work/
 # (on the machine's disk), history is the remote, the clone is disposable scratch
@@ -27,6 +33,8 @@ BRANCH="${WORK_BACKUP_BRANCH:-main}"
 RETRIES="${WORK_BACKUP_RETRIES:-3}"
 LOCK="$LOCAL.lock"                                # tmpfs too; mtime = acquire time
 LOCK_TTL_MIN="${WORK_BACKUP_LOCK_TTL_MIN:-10}"    # a persist takes seconds
+MAX_FILE_MB="${WORK_BACKUP_MAX_FILE_MB:-50}"      # GitHub warns at 50 MB, refuses 100 MB
+BULK="output logs"                                # the bulk set: pushed after the state
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_JOB="${LOG_JOB:-session}"
@@ -73,15 +81,50 @@ seed_clone() {
   return 0
 }
 
-# Mirror work/ into the clone's worktree (deletions included): wipe all but
-# .git, then lay down the current state. tar keeps this a pure READ of work/.
-sync_in() {
-  find "$LOCAL" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} + 2>/dev/null || true
+# Mirror the state into the clone's worktree (deletions included): wipe all but .git
+# and the bulk set, then lay down the current state. tar keeps this a pure READ of work/.
+sync_state() {
+  find "$LOCAL" -mindepth 1 -maxdepth 1 ! -name .git ! -name output ! -name logs -exec rm -rf {} + 2>/dev/null || true
   # The Desk's agent token stays on this machine; a restore makes the server mint none
   # and keep the one it has.
-  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' -f - . ) \
+  ( cd "$WORK" && tar -c --exclude='./.git' --exclude='./desk/.agent-token' --exclude='./.desk-down-ticks' \
+      --exclude='./output' --exclude='./logs' -f - . ) \
     | ( cd "$LOCAL" && tar -xf - ) || return 1
   return 0
+}
+
+# Mirror the bulk set (output/, logs/) into the clone. A file over MAX_FILE_MB stays out;
+# a set that needs more than the clone's free space (the copy plus its git object, so
+# twice its size) stays out whole and the backup keeps its last copy. Returns 43 then.
+sync_bulk() {
+  local skip="$LOCAL.skip" d f need=0 free have=0 cap_k=$((MAX_FILE_MB * 1024)) dirs=""
+  : > "$skip" || return 1
+  for d in $BULK; do
+    [ -d "$WORK/$d" ] || continue
+    dirs="$dirs ./$d"
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      printf '%s\n' "$f" >> "$skip"
+      say "skipped $f: over ${MAX_FILE_MB} MB."
+      logev warn work_backup "bulk file over ${MAX_FILE_MB} MB not backed up: work/${f#./}"
+    done <<EOF
+$(cd "$WORK" && find "./$d" -type f -size +"${cap_k}k" 2>/dev/null)
+EOF
+    need=$((need + $(cd "$WORK" && find "./$d" -type f ! -size +"${cap_k}k" -exec du -k {} + 2>/dev/null | awk '{s+=$1} END{print s+0}')))
+    [ -d "$LOCAL/$d" ] && have=$((have + $(du -sk "$LOCAL/$d" 2>/dev/null | awk '{print $1+0}')))
+  done
+  free=$(df -Pk "$LOCAL" 2>/dev/null | awk 'NR==2{print $4+0}')
+  if [ -n "$free" ] && [ $((need * 2)) -gt $((free + have)) ]; then
+    say "skipped the bulk set: ${need} KB needs twice that, ${free} KB free."
+    logev warn work_backup "bulk set work/output, work/logs (${need} KB) larger than the clone's free space — not backed up"
+    rm -f "$skip"; return 43
+  fi
+  for d in $BULK; do rm -rf "${LOCAL:?}/$d" 2>/dev/null || true; done
+  if [ -n "$dirs" ]; then
+    # shellcheck disable=SC2086 # $dirs is a list of fixed names
+    ( cd "$WORK" && tar -c -X "$skip" -f - $dirs ) | ( cd "$LOCAL" && tar -xf - ) || { rm -f "$skip"; return 1; }
+  fi
+  rm -f "$skip"; return 0
 }
 
 # Serialize the persist step (lock-or-skip): concurrent sessions share $LOCAL,
@@ -112,27 +155,45 @@ persist() {
   return "$rc"
 }
 
+# The state first, then the bulk set: a bulk set that fails never blocks the state.
 do_persist() {
-  local attempt=0 rc
+  push_part state sync_state . ':(exclude)output' ':(exclude)logs'
+  push_part bulk sync_bulk output logs
+  return 0
+}
+
+# push_part <label> <sync function> <pathspec...>: commit and push one part of work/,
+# re-seeding from the remote tip on a rejected push.
+push_part() {
+  local label="$1" sync="$2" attempt=0 rc; shift 2
   while [ "$attempt" -lt "$RETRIES" ]; do
     attempt=$((attempt + 1))
-    seed_clone || { logev warn work_backup "seed failed (attempt $attempt)"; continue; }
-    sync_in    || { logev warn work_backup "sync failed (attempt $attempt)"; continue; }
+    seed_clone || { logev warn work_backup "$label: seed failed (attempt $attempt)"; continue; }
+    "$sync"; rc=$?
+    if [ "$rc" -eq 43 ]; then return 0; fi   # skipped, and said why
+    [ "$rc" -eq 0 ] || { logev warn work_backup "$label: sync failed (attempt $attempt)"; continue; }
     ( cd "$LOCAL" || exit 1
-      git add -A || exit 3
+      # A path neither in work/ nor in the backup is no pathspec git accepts: leave it out.
+      paths=(); for p in "$@"; do
+        case "$p" in (.|:*) paths+=("$p"); continue;; esac
+        { [ -e "$p" ] || git ls-files --error-unmatch -- "$p" >/dev/null 2>&1; } && paths+=("$p")
+      done
+      [ "${#paths[@]}" -gt 0 ] || exit 42
+      git reset -q 2>/dev/null || true   # an index left by an earlier failed part stays out of this one
+      git add -A -- "${paths[@]}" || exit 3
       if git diff --cached --quiet; then exit 42; fi   # nothing to persist
-      git commit -q -m "chore(work): persist state $(date -u +%Y-%m-%dT%H:%M:%SZ)" || exit 3
+      git commit -q -m "chore(work): persist $label $(date -u +%Y-%m-%dT%H:%M:%SZ)" || exit 3
     ); rc=$?
-    if [ "$rc" -eq 42 ]; then say "nothing to persist."; return 0; fi
-    if [ "$rc" -ne 0 ]; then logev warn work_backup "commit failed (attempt $attempt)"; continue; fi
+    if [ "$rc" -eq 42 ]; then say "$label: nothing to persist."; return 0; fi
+    if [ "$rc" -ne 0 ]; then logev warn work_backup "$label: commit failed (attempt $attempt)"; continue; fi
     if ( cd "$LOCAL" && git push -q origin "HEAD:$BRANCH" 2>/dev/null ); then
-      say "pushed (attempt $attempt)."; logev info work_backup "pushed work/ (attempt $attempt)"; return 0
+      say "$label: pushed (attempt $attempt)."; logev info work_backup "pushed work/ $label (attempt $attempt)"; return 0
     fi
-    say "push rejected (attempt $attempt) — re-seeding from remote tip."
-    logev warn work_backup "push rejected (attempt $attempt) — retrying"
+    say "$label: push rejected (attempt $attempt) — re-seeding from remote tip."
+    logev warn work_backup "$label: push rejected (attempt $attempt) — retrying"
   done
-  say "push failed after $RETRIES attempt(s); state is safe on work/, retry next run."
-  logev error work_backup "push failed after $RETRIES attempts — retry next run"
+  say "$label: push failed after $RETRIES attempt(s); state is safe on work/, retry next run."
+  logev error work_backup "$label: push failed after $RETRIES attempts — retry next run"
   return 0
 }
 
