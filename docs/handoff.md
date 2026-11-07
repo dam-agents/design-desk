@@ -118,7 +118,11 @@ card the people who may approve it read the spec, and:
    ("For a coding agent"), the link to the pushed `handoff/C-<n>/` folder when there is one,
    and one line for the coding agent: build from `design.json` and `mockup.html`, check each
    state against `shots/`, and tick every acceptance line in the pull request.
-7. Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,
+7. Write `dev_summary` (`design desk upsert`): the UX decisions the request's threads, votes,
+   notes and answers settled, for the developer on [Designs](desk.md#designs) — at most six
+   short bullets in plain words, each naming who decided, no restated spec; nothing settled →
+   leave it out.
+   Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,
    what was approved in one sentence, `origin.kind: approval`, the approver as `author`; the
    decisions it was approved against (`overruled`) as its `conflicts`.
 8. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry

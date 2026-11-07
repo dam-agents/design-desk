@@ -1962,3 +1962,28 @@ test("notifications: what others did lately, grouped per item, private answers f
   assert.equal(dave.unread, 0);
   assert.deepEqual(s.markSeen({ agent: true }), { seen: null });
 });
+
+test("Designs: a developer marks a design done and asks its designer, who gets it For you", () => {
+  const s = fresh();
+  const carol = { email: "carol@example.com", role: "designer" };
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  for (const a of ["designs", "built"]) { assert.equal(can("developer", a), true, a); assert.equal(can("lead-developer", a), true, a); assert.equal(can("admin", a), true, a); assert.equal(can("designer", a), false, a); assert.equal(can("pm", a), false, a); }
+  assert.throws(() => s.markBuilt(card.id, bob), /sent to developers/);
+  assert.throws(() => s.openThread(card.id, bob, { text: "Why?", dev: true }), /sent to developers/);
+  s.upsertCard({ id: card.id, status: "handed-off", dev_summary: "- Limits show on the dashboard (Alice)." });
+  s.db.cards[card.id].approved = { by: { email: alice.email, role: "designer" }, at: s.clock() };
+  assert.equal(s.getCard(card.id).dev_summary.text, "- Limits show on the dashboard (Alice).");
+  const { thread } = s.openThread(card.id, bob, { text: "Is the banner sticky?", dev: true });
+  assert.equal(thread.dev, true);
+  const forAlice = s.notifications(alice).items.find((x) => x.thread === thread.id);
+  assert.equal(forAlice.event, "dev-question");
+  assert.deepEqual([forAlice.for_you, forAlice.designs], [true, true], "the approving designer's");
+  assert.equal(s.notifications(carol).items.find((x) => x.thread === thread.id).for_you, false, "another designer's only when a non-designer approved");
+  s.db.cards[card.id].approved.by = { email: bob.email, role: "developer" };
+  assert.equal(s.notifications(carol).items.find((x) => x.thread === thread.id).for_you, true);
+  s.markBuilt(card.id, bob);
+  assert.equal(s.listCards({ kind: "request" })[0].built, s.getCard(card.id).built.at);
+  assert.equal(s.notifications(alice).items.find((x) => x.event === "built").designs, true);
+  s.markBuilt(card.id, bob, false);
+  assert.equal(s.listCards({ kind: "request" })[0].built, null);
+});
