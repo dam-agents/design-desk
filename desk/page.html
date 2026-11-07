@@ -22,9 +22,9 @@
     /* The page grows with the window: text runs wider, the list and pictures get room. */
     --measure: 96ch; --pad-x: 32px; --list-w: 380px; --side-w: 380px; --shot-w: 260px; --shot-h: 260px;
   }
-  @media (min-width: 1280px) { :root { --measure: 112ch; --pad-x: 40px; --list-w: 420px; --side-w: 420px; --shot-w: 300px; --shot-h: 320px; } }
-  @media (min-width: 1600px) { :root { --measure: 132ch; --pad-x: 48px; --list-w: 460px; --side-w: 460px; --shot-w: 340px; --shot-h: 380px; } }
-  @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 520px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
+  @media (min-width: 1280px) { :root { --measure: 112ch; --pad-x: 40px; --list-w: 440px; --side-w: 420px; --shot-w: 300px; --shot-h: 320px; } }
+  @media (min-width: 1600px) { :root { --measure: 132ch; --pad-x: 48px; --list-w: 480px; --side-w: 460px; --shot-w: 340px; --shot-h: 380px; } }
+  @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
@@ -73,16 +73,16 @@
   details.bell > summary::-webkit-details-marker { display: none; }
   details.bell > summary:hover, details.bell[open] > summary { background: var(--soft); color: var(--ink); }
   details.bell > summary svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  details.bell .badge { position: absolute; top: 1px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 600; line-height: 16px; text-align: center; border: 2px solid var(--panel); }
+  details.bell .badge { position: absolute; top: -3px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 600; line-height: 14px; text-align: center; white-space: nowrap; border: 2px solid var(--panel); }
   details.bell .menu.notes { left: auto; right: 0; width: min(420px, calc(100vw - 24px)); max-width: none; padding: 0; gap: 0; overflow: hidden; }
   #notes .nh { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px 14px; border-bottom: 1px solid var(--line); }
   #notes .nh b { font-size: 14px; flex: 1; }
   #notes .nh .tabs2 { display: flex; gap: 2px; background: var(--soft); padding: 2px; border-radius: 7px; }
   #notes .nh .tabs2 button { border: 0; background: transparent; padding: 2px 9px; border-radius: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
   #notes .nh .tabs2 button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
-  #notes .nl { max-height: min(560px, 70vh); overflow-y: auto; }
-  #notes .day { padding: 8px 14px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-  #notes .note { --c: var(--muted); display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 10px; width: 100%; padding: 9px 14px 9px 12px; border: 0; border-left: 3px solid transparent; background: transparent; text-align: left; cursor: pointer; font-size: 13px; line-height: 1.4; }
+  #notes .nl { max-height: min(560px, 70vh); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 8px 10px; }
+  #notes .day { padding: 10px 6px 0; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  #notes .note { --c: var(--muted); display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 10px; width: 100%; padding: 10px 12px 10px 10px; border: 0; border-left: 3px solid transparent; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; font-size: 13px; line-height: 1.4; }
   #notes .note:hover { background: var(--soft); }
   #notes .note.unread { border-left-color: var(--accent); background: color-mix(in srgb, var(--info-soft) 55%, transparent); }
   #notes .note .ic { grid-row: 1 / span 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
@@ -158,7 +158,7 @@
   .btn.small { padding: 3px 9px; font-size: 12px; }
   .btn[disabled] { opacity: .45; cursor: not-allowed; }
   .btn.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  main { display: grid; grid-template-columns: minmax(280px, var(--list-w)) 0 1fr; min-height: 0; }
+  main { display: grid; grid-template-columns: minmax(280px, calc(var(--list-w) + var(--list-dx, 0px))) 0 1fr; min-height: 0; }
   main.wide { grid-template-columns: 1fr; } main.wide .list, main.wide .list-edge { display: none; }
   /* The list folds away with the arrow on its edge, halfway down, as side bars do; the arrow stays to bring it back. */
   main.folded:not(.wide) { grid-template-columns: 0 1fr; } main.folded:not(.wide) .list { display: none; }
@@ -168,6 +168,13 @@
   .list-edge button:hover { color: var(--ink); border-color: var(--ink); }
   .list-edge svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
   main.folded .list-edge svg { transform: rotate(180deg); }
+  /* The edge drags the list up to 30 px wider or narrower; a double click puts it back. */
+  .list-edge .grip { position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; cursor: col-resize; touch-action: none; }
+  .list-edge .grip::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background .15s; }
+  .list-edge .grip:hover::after, .list-edge .grip:focus-visible::after, main.sizing .list-edge .grip::after { background: var(--accent); }
+  .list-edge .grip:focus-visible { outline: none; }
+  main.folded .list-edge .grip { display: none; }
+  main.sizing { cursor: col-resize; user-select: none; }
   .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; background: var(--panel); }
   .detail { overflow: auto; padding: 24px var(--pad-x) 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
@@ -1064,7 +1071,7 @@
   <div class="banners" id="banners"></div>
   <main id="main">
     <section class="list" id="list" aria-label="List"></section>
-    <div class="list-edge"><button id="list-fold" aria-controls="list" aria-expanded="true" title="Hide the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+    <div class="list-edge"><div class="grip" id="list-grip" role="separator" aria-orientation="vertical" aria-controls="list" tabindex="0" title="Drag to make the list wider or narrower; double-click for its usual width"></div><button id="list-fold" aria-controls="list" aria-expanded="true" title="Hide the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div>
     <section class="detail" id="detail"></section>
   </main>
 </div>
@@ -4024,6 +4031,35 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   $("#list-fold").addEventListener("click", () => foldList(!$("#main").classList.contains("folded")));
   try { if (localStorage.getItem("desk-list-folded")) foldList(true); } catch {}
+  // The list's edge drags it smoothly, at most 30 px wider or narrower than the window size gives
+  // it; each viewer's browser remembers how much (desk-list-dx). The arrow keys move it 10 px at a
+  // time; a double click, or Home, puts it back.
+  const LIST_RANGE = 30, LIST_KEY = 10;
+  function sizeList(dx, keep = true) {
+    dx = Math.round(Math.max(-LIST_RANGE, Math.min(LIST_RANGE, dx)));
+    $("#main").style.setProperty("--list-dx", `${dx}px`);
+    const g = $("#list-grip"); g.setAttribute("aria-valuemin", String(-LIST_RANGE)); g.setAttribute("aria-valuemax", String(LIST_RANGE)); g.setAttribute("aria-valuenow", String(dx)); g.setAttribute("aria-valuetext", dx ? `${Math.abs(dx)} px ${dx > 0 ? "wider" : "narrower"}` : "usual width");
+    if (keep) try { localStorage.setItem("desk-list-dx", dx ? String(dx) : ""); } catch {}
+    return dx;
+  }
+  const listDx = () => parseFloat($("#main").style.getPropertyValue("--list-dx")) || 0;
+  $("#list-grip").addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const g = e.currentTarget, x0 = e.clientX, dx0 = listDx();
+    g.setPointerCapture(e.pointerId); $("#main").classList.add("sizing");
+    const move = (m) => sizeList(dx0 + m.clientX - x0);
+    const up = () => { g.removeEventListener("pointermove", move); $("#main").classList.remove("sizing"); };
+    g.addEventListener("pointermove", move);
+    g.addEventListener("pointerup", up, { once: true }); g.addEventListener("pointercancel", up, { once: true });
+  });
+  $("#list-grip").addEventListener("dblclick", () => sizeList(0));
+  $("#list-grip").addEventListener("keydown", (e) => {
+    const to = { ArrowLeft: listDx() - LIST_KEY, ArrowRight: listDx() + LIST_KEY, Home: 0 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault(); sizeList(to);
+  });
+  try { sizeList(Number(localStorage.getItem("desk-list-dx")) || 0, false); } catch { sizeList(0, false); }
   document.addEventListener("click", (e) => { const b = e.target.closest?.("[data-play-ctl]"); if (!b) return; $("#variant-frame")?.contentWindow?.postMessage({ type: `desk-play-${b.dataset.playCtl}` }, "*"); if (b.dataset.playCtl === "stop") storyPlayer(null); });
   // Plays the picked story in the option's design: the frame moves a pointer part by part.
   function playStory() {
@@ -5754,7 +5790,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     S.sect = {};
     saveSimple(on);
     renderSimple(); leaveHidden();
-    renderNav(); renderList(); renderDetail();
+    renderNav(); renderList(); renderDetail(); renderBell();
   });
   renderSimple();
   // The Figma switch, beside simple mode and only on a Desk with Figma on: each person shows or
@@ -5822,6 +5858,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   const NOTE_KIND = { request: "Request", change: "PR change", issue: "Issue", screen: "Screen", element: "Element", decision: "Decision" };
   const noteBy = (by) => !by ? "" : by.agent ? "Design Desk" : by.name && !by.email ? by.name : personName(by.email, by.name || "someone");
   const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : dayWord(iso) === "Yesterday" ? "Yesterday" : new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric" }); };
+  // Simple mode leaves out what lives on the pages it hides: Issues' issues, Product's screens,
+  // elements and decisions (docs/desk.md → Notifications); the count counts what is left.
+  const NOTE_HIDDEN = ["issue", "screen", "element", "decision"];
+  const noteShown = (x) => !(simple() && NOTE_HIDDEN.includes(x.kind));
+  const noteUnread = () => simple() ? S.notes.items.filter((x) => noteShown(x) && x.for_you && (!S.notes.seen || x.at > S.notes.seen)).length : S.notes.unread;
   // For you leads: the bell counts only what is for you (docs/desk.md → Notifications).
   S.notes = { items: [], seen: null, unread: 0, was: null, only: true };
   async function loadNotes() {
@@ -5831,7 +5872,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   // An open panel draws again only when the list changed, so a poll keeps the reader's place.
   function renderBell(changed = false) {
-    const n = $("#bell")?.open ? 0 : S.notes.unread;
+    const n = $("#bell")?.open ? 0 : noteUnread();
     const b = $("#bell-count");
     b.hidden = !n; b.textContent = n > 9 ? "9+" : String(n);
     $("#bell-btn").setAttribute("aria-label", n ? `Notifications: ${n} new` : "Notifications");
@@ -5842,7 +5883,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const keep = $("#notes .nl")?.scrollTop || 0, f = document.activeElement?.closest?.("#notes [data-only], #notes [data-note]");
     const focus = f ? (f.dataset.only ? `[data-only="${f.dataset.only}"]` : `[data-note="${f.dataset.note}"]`) : null;
     const was = S.notes.was;
-    const list = S.notes.items.filter((x) => !S.notes.only || x.for_you);
+    const list = S.notes.items.filter((x) => noteShown(x) && (!S.notes.only || x.for_you));
     let lastDay = "";
     const rows = list.map((x, i) => {
       const [one, g, icon] = NOTE[x.event] || [x.event, "talk", ""];

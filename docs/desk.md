@@ -106,7 +106,8 @@ served by the Desk server through the platform's Artifact API relay.
   story played opens it, and All elements stays open. Nothing names a role a request needs:
   no **Needs a designer** filter, line or heading. A request offers no rename. Switching the mode
   starts an option's sections again as the mode has them. The tab
-  intros and How it works, its drawings included, leave out what it hides.
+  intros and How it works, its drawings included, leave out what it hides, and so does the bell:
+  no notification about an issue, a screen, an element or a decision, nor in its count.
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
   `#people` or `#presentation` their pages. The Desk keeps each person's choice like day or
   night (`POST /api/prefs {simple}`, `simple` in `GET /api/me`; only the keys sent change), so
@@ -451,7 +452,9 @@ request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
 On a wide window the list folds away with an arrow halfway down its edge and comes back with
-it; each browser remembers it (`desk-list-folded` in local storage). At a phone's width there is
+it; each browser remembers it (`desk-list-folded` in local storage). Dragging the edge makes
+the list smoothly wider or narrower, at most 30 px either way from its usual width; the arrow
+keys move the focused edge 10 px at a time, and a double click or Home puts it back. Each browser remembers it too (`desk-list-dx`). At a phone's width there is
 no arrow and a folded list shows while no item is open; Guide and People have no list, and the
 fold applies again on leaving them.
 
@@ -493,8 +496,10 @@ option's tab (its votes, or the request's state); a spec unfolded; a request on 
 decision on its page, a revoked one on why. The place pulses twice and fades out, 3 seconds
 in all, and the glow keeps its place when the page draws again. A public notification closes the private chat, which would
 cover it. The bell opens on **For you**: what the person
-filed, voted on, approved or wrote in; **All** shows the rest too. The red count is what is For
-you and newer than the person last opened the bell;
+filed, voted on, approved or wrote in; **All** shows the rest too. In simple mode both leave out
+an issue, a screen, an element and a decision, the pages it hides (Simple mode above). The red
+count is what is For you and newer than the person last opened the bell, in simple mode only
+what it shows;
 opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps
 `seen: {<person>: at}`, the newest event's time), outside the write budget like reading an item:
 opening it again with nothing new writes nothing. Everything on an item that is the person's,
