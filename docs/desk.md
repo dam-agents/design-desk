@@ -415,7 +415,8 @@ prototype once Design Desk has checked a request:
 From **Approve** on (the spec, and once it went to developers) a request's design no longer
 changes: the store refuses Draw design options, one more option, a redraw, Work it in, other
 ways a part could look, removing an option, a live prototype, a Figma import, and Reopen of
-one sent to developers. The design options say so (🔒 Approved), and **New request from this…**
+one sent to developers, save an admin's (**Reopen…** under ⋯, behind a confirmation: the
+approval goes, the issue or pull request on GitHub stays as it is). The design options say so (🔒 Approved), and **New request from this…**
 (under ⋯, and in that line) starts a request whose `request.from` is this one, of the same
 type; its dialog asks which options carry over (the approved one ticked) and how many new ones
 to draw besides (none by default). Comments,

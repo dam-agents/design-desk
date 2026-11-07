@@ -497,6 +497,15 @@ test("an issue keeps its linked pull requests when a read could not get them", (
   assert.deepEqual(s.db.github["acme/widgets#3"].linked, [], "read and empty: none");
 });
 
+test("only an admin reopens a request sent to developers: back at triage, its approval and Designs record gone", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });
+  s.upsertCard({ id: card.id, status: "handed-off", approved: { by: alice, at: "2026-11-05T09:00:00Z" }, built: { by: bob, at: "2026-11-06T09:00:00Z" }, dev_summary: { text: "x" } });
+  assert.throws(() => s.act(card.id, { email: "pat@example.com", role: "pm" }, "reopen"), /Only an admin reopens/);
+  const r = s.act(card.id, { email: "ann@example.com", role: "admin" }, "reopen");
+  assert.deepEqual([r.card.status, r.card.approved, r.card.built, r.card.dev_summary], ["triage", undefined, undefined, undefined]);
+});
+
 test("an approved design is final: nothing changes it; a new request starts from it", () => {
   const s = fresh();
   const { card, inbox: item } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });
@@ -507,7 +516,7 @@ test("an approved design is final: nothing changes it; a new request starts from
   s.upsertCard({ id: card.id, status: "spec" });
   for (const a of ["revise", "explore", "add-option", "build"]) assert.throws(() => s.act(card.id, alice, a, "more", { variant: "v1" }), /approved, so it no longer changes/, a);
   s.upsertCard({ id: card.id, status: "handed-off" });
-  assert.throws(() => s.act(card.id, alice, "reopen"), /new request from this one/, "a design sent to developers is not reopened");
+  assert.throws(() => s.act(card.id, alice, "reopen"), /Only an admin reopens/, "a designer does not reopen a design sent to developers");
   const next = s.createRequest(alice, { title: "Calmer header, again", problem: "Smaller still.", from: card.id, carry: ["v1"], options: 0, auto: true }).card;
   assert.equal(next.request.from, card.id, "the new request names the approved one it starts from");
   assert.deepEqual(next.variants.map((v) => [v.id, v.name, v.asset, v.carried.card]), [["v1", "Quiet", page, card.id]], "the ticked option carries over as it was");

@@ -1248,7 +1248,9 @@ export class Store {
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
-    if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import", "reopen"].includes(action)) throw bad(LOCKED);
+    if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import"].includes(action)) throw bad(LOCKED);
+    // Only an admin reopens a request sent to developers; what went to GitHub stays there (docs/desk.md → Approved designs no longer change).
+    if (action === "reopen" && designLocked(c) && !who?.agent && who?.role !== "admin") throw forbidden("Only an admin reopens a request sent to developers.");
     // Drawing every state of an approved design's element documents it and changes nothing of it,
     // so it stays open once the design went to developers (docs/requests.md → Every state of a part).
     if (closed && action !== "reopen" && !(action === "states" && c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
