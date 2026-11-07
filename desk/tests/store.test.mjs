@@ -501,7 +501,7 @@ test("only an admin reopens a request sent to developers: back before the vote w
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Calmer header", problem: "Too loud." });
   const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
-  s.upsertCard({ id: card.id, status: "handed-off", variants: [{ id: "v1", name: "Quiet", asset: page }], spec: { issue_url: "https://github.com/acme/widgets/issues/142" }, dev_summary: { text: "x", at: "2026-11-05T09:00:00Z" } });
+  s.upsertCard({ id: card.id, status: "handed-off", variants: [{ id: "v1", name: "Quiet", asset: page }], spec: { issue_url: "https://github.com/acme/widgets/issues/142" }, dev_summary: "x" });
   // Approved and marked done by people, not by an upsert.
   Object.assign(s.card(card.id), { approved: { by: alice, at: "2026-11-05T09:00:00Z", variant: "v1" } });
   s.markBuilt(card.id, bob);
