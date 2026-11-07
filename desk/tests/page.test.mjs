@@ -2252,7 +2252,7 @@ window.platform = { async request({ method, path, body }) {
   if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); return { status: 200, contentType: "application/json", body: JSON.stringify(path.endsWith("/built") ? { card: { ...card, built: { by: { email: "bob@example.com" }, at: "2026-11-07T11:00:00Z" } } } : {}) }; }
   const answer = path === "/api/me" ? { role: "${role}", email: "${role}@example.com", key: "${role}@example.com", simple: false, names: { "alice@example.com": "Alice", "dana@example.com": "Dana" },
       can: ${role === "developer" ? `{ comment: true, ask: true, designs: true, built: true }` : `{ comment: true, ask: true, approve: true }`} }
-    : path === "/api/cards" ? { cards: [sent, change, open] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards" ? { cards: [sent, change, open] } : path === "/api/agenda" ? { agenda: [] } : path === "/api/private" ? { asks: [] }
     : path === "/api/cards/C-1" ? { card } : path === "/api/cards/C-4" ? { card: change } : path === "/api/cards/C-3" ? { card: { ...open, threads: [] } }
     : path === "/api/notifications" ? { seen: null, unread: 1, items: [{ at: "2026-11-07T10:00:00Z", event: "dev-question", item: "C-1", kind: "request", title: "Daily limit banner", status: "handed-off",
         by: { email: "bob@example.com", role: "developer" }, people: [{ email: "bob@example.com" }], count: 1, for_you: true, designs: true, thread: "T-1", msg: 0, marks: [["T-1", 0]], detail: "Is the banner sticky?" }] } : {};
@@ -2265,6 +2265,14 @@ test("Designs: a developer opens an approved design from its own tab, read-only,
   assert.equal(await desk.textContent('[data-tab="designs"] .count'), "1", "the tab counts what is still to build");
   await desk.click('[data-tab="designs"]');
   assert.deepEqual(await desk.locator("#list .row.item .t > span:first-child").allInnerTexts(), ["Daily limit banner"], "only a request sent to developers");
+  // A private ask from the Designs list names the Designs page and its filter.
+  await desk.click('[data-filter="designFilter:done"]');
+  await desk.click("[data-ask-open]");
+  await desk.fill("#ask-text", "What goes here?");
+  await desk.click("[data-ask-send]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/private"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/private").body.context), { page: "designs", filter: "done", label: "Designs page · done" });
+  await desk.click('[data-filter="designFilter:todo"]');
   await desk.click("#list .row.item .open");
   await desk.waitForSelector("#detail .status");
   assert.equal(await desk.getAttribute('[data-tab="designs"]', "aria-current"), "true", "a row opens on Designs, not on Requests");

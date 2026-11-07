@@ -1342,6 +1342,8 @@ test("a private ask keeps exactly what was open: the option, its state and part,
   assert.deepEqual(inbox(s).open.find((i) => i.id === item.id).context, thread.context, "the agent sees the context with the item");
   assert.deepEqual(s.openPrivate(alice, { text: "x", context: { card: card.id, variant: "v9", state: "s1" } }).thread.context, { card: card.id, page: null, label: "" }, "an unknown option or state is dropped");
   assert.equal(s.openPrivate(alice, { text: "x", context: { page: "product", filter: "elements" } }).thread.context.filter, "elements");
+  const onDesigns = s.openPrivate(alice, { text: "x", context: { page: "designs", filter: "done" } }).thread.context;
+  assert.deepEqual([onDesigns.page, onDesigns.filter], ["designs", "done"], "a private ask from the Designs list keeps its page");
   assert.throws(() => s.openPrivate(alice, { text: "x", context: { decision: "D-9" } }), /no decision/);
 });
 
