@@ -22,9 +22,9 @@
     /* The page grows with the window: text runs wider, the list and pictures get room. */
     --measure: 96ch; --pad-x: 32px; --list-w: 380px; --side-w: 380px; --shot-w: 260px; --shot-h: 260px;
   }
-  @media (min-width: 1280px) { :root { --measure: 112ch; --pad-x: 40px; --list-w: 420px; --side-w: 420px; --shot-w: 300px; --shot-h: 320px; } }
-  @media (min-width: 1600px) { :root { --measure: 132ch; --pad-x: 48px; --list-w: 460px; --side-w: 460px; --shot-w: 340px; --shot-h: 380px; } }
-  @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 520px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
+  @media (min-width: 1280px) { :root { --measure: 112ch; --pad-x: 40px; --list-w: 440px; --side-w: 420px; --shot-w: 300px; --shot-h: 320px; } }
+  @media (min-width: 1600px) { :root { --measure: 132ch; --pad-x: 48px; --list-w: 480px; --side-w: 460px; --shot-w: 340px; --shot-h: 380px; } }
+  @media (min-width: 2200px) { :root { --measure: 150ch; --pad-x: 64px; --list-w: 550px; --side-w: 520px; --shot-w: 400px; --shot-h: 440px; } }
   /* Night follows the system unless the header switch chose a mode (data-theme). */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --bg: #151514; --panel: #1e1e1c; --ink: #ecebe7; --muted: #a09f99; --line: #33332f; --soft: #262624;
@@ -158,7 +158,7 @@
   .btn.small { padding: 3px 9px; font-size: 12px; }
   .btn[disabled] { opacity: .45; cursor: not-allowed; }
   .btn.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  main { display: grid; grid-template-columns: minmax(280px, var(--list-w)) 0 1fr; min-height: 0; }
+  main { display: grid; grid-template-columns: minmax(280px, calc(var(--list-w) + var(--list-dx, 0px))) 0 1fr; min-height: 0; }
   main.wide { grid-template-columns: 1fr; } main.wide .list, main.wide .list-edge { display: none; }
   /* The list folds away with the arrow on its edge, halfway down, as side bars do; the arrow stays to bring it back. */
   main.folded:not(.wide) { grid-template-columns: 0 1fr; } main.folded:not(.wide) .list { display: none; }
@@ -168,6 +168,13 @@
   .list-edge button:hover { color: var(--ink); border-color: var(--ink); }
   .list-edge svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
   main.folded .list-edge svg { transform: rotate(180deg); }
+  /* The edge drags the list up to 30 px wider or narrower; a double click puts it back. */
+  .list-edge .grip { position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; cursor: col-resize; touch-action: none; }
+  .list-edge .grip::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background .15s; }
+  .list-edge .grip:hover::after, .list-edge .grip:focus-visible::after, main.sizing .list-edge .grip::after { background: var(--accent); }
+  .list-edge .grip:focus-visible { outline: none; }
+  main.folded .list-edge .grip { display: none; }
+  main.sizing { cursor: col-resize; user-select: none; }
   .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; background: var(--panel); }
   .detail { overflow: auto; padding: 24px var(--pad-x) 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
@@ -1064,7 +1071,7 @@
   <div class="banners" id="banners"></div>
   <main id="main">
     <section class="list" id="list" aria-label="List"></section>
-    <div class="list-edge"><button id="list-fold" aria-controls="list" aria-expanded="true" title="Hide the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div>
+    <div class="list-edge"><div class="grip" id="list-grip" role="separator" aria-orientation="vertical" aria-controls="list" tabindex="0" title="Drag to make the list wider or narrower; double-click for its usual width"></div><button id="list-fold" aria-controls="list" aria-expanded="true" title="Hide the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div>
     <section class="detail" id="detail"></section>
   </main>
 </div>
@@ -4024,6 +4031,35 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   $("#list-fold").addEventListener("click", () => foldList(!$("#main").classList.contains("folded")));
   try { if (localStorage.getItem("desk-list-folded")) foldList(true); } catch {}
+  // The list's edge drags it smoothly, at most 30 px wider or narrower than the window size gives
+  // it; each viewer's browser remembers how much (desk-list-dx). The arrow keys move it 10 px at a
+  // time; a double click, or Home, puts it back.
+  const LIST_RANGE = 30, LIST_KEY = 10;
+  function sizeList(dx, keep = true) {
+    dx = Math.round(Math.max(-LIST_RANGE, Math.min(LIST_RANGE, dx)));
+    $("#main").style.setProperty("--list-dx", `${dx}px`);
+    const g = $("#list-grip"); g.setAttribute("aria-valuemin", String(-LIST_RANGE)); g.setAttribute("aria-valuemax", String(LIST_RANGE)); g.setAttribute("aria-valuenow", String(dx)); g.setAttribute("aria-valuetext", dx ? `${Math.abs(dx)} px ${dx > 0 ? "wider" : "narrower"}` : "usual width");
+    if (keep) try { localStorage.setItem("desk-list-dx", dx ? String(dx) : ""); } catch {}
+    return dx;
+  }
+  const listDx = () => parseFloat($("#main").style.getPropertyValue("--list-dx")) || 0;
+  $("#list-grip").addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const g = e.currentTarget, x0 = e.clientX, dx0 = listDx();
+    g.setPointerCapture(e.pointerId); $("#main").classList.add("sizing");
+    const move = (m) => sizeList(dx0 + m.clientX - x0);
+    const up = () => { g.removeEventListener("pointermove", move); $("#main").classList.remove("sizing"); };
+    g.addEventListener("pointermove", move);
+    g.addEventListener("pointerup", up, { once: true }); g.addEventListener("pointercancel", up, { once: true });
+  });
+  $("#list-grip").addEventListener("dblclick", () => sizeList(0));
+  $("#list-grip").addEventListener("keydown", (e) => {
+    const to = { ArrowLeft: listDx() - LIST_KEY, ArrowRight: listDx() + LIST_KEY, Home: 0 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault(); sizeList(to);
+  });
+  try { sizeList(Number(localStorage.getItem("desk-list-dx")) || 0, false); } catch { sizeList(0, false); }
   document.addEventListener("click", (e) => { const b = e.target.closest?.("[data-play-ctl]"); if (!b) return; $("#variant-frame")?.contentWindow?.postMessage({ type: `desk-play-${b.dataset.playCtl}` }, "*"); if (b.dataset.playCtl === "stop") storyPlayer(null); });
   // Plays the picked story in the option's design: the frame moves a pointer part by part.
   function playStory() {
@@ -5754,7 +5790,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     S.sect = {};
     saveSimple(on);
     renderSimple(); leaveHidden();
-    renderNav(); renderList(); renderDetail(); renderBell(true);
+    renderNav(); renderList(); renderDetail(); renderBell();
   });
   renderSimple();
   // The Figma switch, beside simple mode and only on a Desk with Figma on: each person shows or
