@@ -152,7 +152,7 @@ const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "priva
 // docs/desk.md → Private asks. The page shows a short label, the agent reads the key.
 const STARTERS = ["explain", "why", "fixed", "options", "ask-team"];
 // The Desk pages a private ask can be about when no item is open.
-const ASK_PAGES = ["new", "requests", "issues", "product", "people", "guide"];
+const ASK_PAGES = ["new", "requests", "designs", "issues", "product", "people", "guide"];
 // Who a viewer is to the store: the key a private ask's `owner` holds.
 const viewerKey = (who) => (who && !who.agent ? who.email || who.sub || null : null);
 // Whether a viewer (their key, or undefined for the agent) may see a conversation.
@@ -1273,6 +1273,9 @@ export class Store {
       delete c.overruled;
       delete c.approved;
       delete c.decided;
+      // Designs: sent, done, then declined and reopened, it is not built any more; its next handoff sums it up again.
+      delete c.built;
+      delete c.dev_summary;
       c.updated = this.clock();
       const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
       this.save();

@@ -2222,7 +2222,8 @@ test("Designs: a developer opens an approved design from its own tab, read-only,
   // The open question leads; the done one folds to one line: its asker — its first words.
   assert.deepEqual(await desk.locator("#detail .design-asks > *").evaluateAll((els) => els.map((e) => e.tagName)), ["ARTICLE", "DETAILS"]);
   assert.match(await desk.textContent("#detail .thread.mini > summary"), /Developer asks\s*Dana — Which grey/);
-  const [box, list] = await desk.$$eval("#detail .thread.mini, #detail .design-asks", (els) => els.map((e) => e.getBoundingClientRect().width));
+  // Document order: the list, then the folded question inside it.
+  const [list, box] = await desk.$$eval("#detail .thread.mini, #detail .design-asks", (els) => els.map((e) => e.getBoundingClientRect().width));
   assert.ok(box <= list + 1, "a long folded question keeps to the column");
   const bare = await desk.$$eval("#detail button, #detail a.btn, #detail .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title && !e.dataset.tip && !e.getAttribute("aria-label")).map((e) => e.outerHTML.slice(0, 120)));
   assert.deepEqual(bare, [], "everything says on hover what it does");

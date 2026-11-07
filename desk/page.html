@@ -3021,7 +3021,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         label: [`${S.card.id} ${S.card.title}`, v?.name, st ? `${st.name}${no ? ` (${S.card.id}.${no})` : ""}` : null, part?.label ? `“${part.label}”` : null].filter(Boolean).join(" · ") };
     }
     if (S.decision?.id) return { decision: S.decision.id, label: `Decision ${S.decision.id}` };
-    const filter = { new: S.newFilter, requests: S.reqFilter, issues: S.issueFilter, product: S.productFilter }[S.tab] || "";
+    const filter = { new: S.newFilter, requests: S.reqFilter, designs: S.designFilter, issues: S.issueFilter, product: S.productFilter }[S.tab] || "";
     return { page: S.tab, ...(filter ? { filter } : {}), label: `${TABS[S.tab] || "The Desk"} page${filter ? ` · ${filter}` : ""}` };
   }
   const sameContext = (a, b) => a.card ? a.card === b.card : a.decision ? a.decision === b.decision : !b.card && !b.decision && a.page === b.page;

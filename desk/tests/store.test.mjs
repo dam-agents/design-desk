@@ -2002,4 +2002,12 @@ test("Designs: a developer marks a design done and asks its designer, who gets i
   s.openThread(card.id, carol, { text: "Nice work." });
   const rows = s.notifications(alice).items.filter((x) => ["dev-question", "comment"].includes(x.event));
   assert.deepEqual(rows.map((x) => [x.event, x.count, Boolean(x.designs)]).sort(), [["comment", 1, false], ["dev-question", 2, true]]);
+  // Done, then declined and reopened: sent again later, it is To build with a new summary, not the old Done.
+  s.upsertCard({ id: card.id, dev_summary: "- Old decisions." });
+  s.markBuilt(card.id, bob);
+  s.upsertCard({ id: card.id, status: "declined" });
+  s.act(card.id, alice, "reopen");
+  assert.deepEqual([s.getCard(card.id).status, s.getCard(card.id).built, s.getCard(card.id).dev_summary], ["triage", undefined, undefined]);
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  assert.equal(s.listCards({ kind: "request" }).find((x) => x.id === card.id).built, null);
 });

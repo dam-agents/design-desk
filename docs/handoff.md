@@ -122,10 +122,10 @@ card the people who may approve it read the spec, and:
    notes and answers settled, for the developer on [Designs](desk.md#designs) — at most six
    short bullets in plain words, each naming who decided, no restated spec; nothing settled →
    leave it out.
-   Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,
+8. Record the approval as a decision ([desk.md](desk.md) → Decisions): the impact's concept,
    what was approved in one sentence, `origin.kind: approval`, the approver as `author`; the
    decisions it was approved against (`overruled`) as its `conflicts`.
-8. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
+9. `status: handed-off`; `done --outcome handed-off`. The prototype stays until its expiry
    so the developer can open it; it no longer holds a place, and the expiry pass tears it
    down once the date passes ([prototype.md](prototype.md) → Expiry).
 
