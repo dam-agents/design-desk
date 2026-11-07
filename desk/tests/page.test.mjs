@@ -1975,7 +1975,7 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   assert.deepEqual(await desk.$$eval("#detail .ft-r .ft-d b", (xs) => xs.map((x) => x.textContent)), ["Header", "Rows"], "major first");
   // The row's red !: its words open on hover, its tooltip one whole sentence.
   assert.equal(await desk.textContent('#list [data-card="C-1"] .vdot .w'), "2 differences from Figma");
-  assert.equal(await desk.getAttribute('#list [data-card="C-1"] .vdot .tag', "title"), "It differs from its frame in Figma in 2 places");
+  assert.equal(await desk.getAttribute('#list [data-card="C-1"] .vdot .tag', "data-tip"), "It differs from its frame in Figma in 2 places", "the title becomes the Desk's own tooltip");
   assert.match(await desk.textContent("#list .row .prov"), /checked:[\s\S]*type:[\s\S]*Screen[\s\S]*frame:[\s\S]*Agents list/, "the line under the title reads like a request's");
   // A side with no picture: an empty box, its caption under it as under a picture.
   assert.deepEqual(await desk.$$eval("#detail .figdiffs figcaption", (xs) => xs.map((x) => x.textContent)), ["In Figma", "In the product"]);
