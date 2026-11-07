@@ -512,8 +512,9 @@
   /* Above the design workspace (70) too, below a zoomed picture (80): the private ask works there as well. */
   #ask { position: fixed; right: 16px; bottom: 16px; z-index: 75; }
   .ask-fab { border: 1px solid var(--line); background: var(--ink); color: var(--panel); border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; box-shadow: var(--float); display: inline-flex; gap: 8px; align-items: center; }
-  .ask-panel { width: min(560px, calc(100vw - 32px)); height: min(820px, calc(100vh - 32px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--float); overflow: hidden; }
-  .ask-panel { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
+  /* The private chat stays under the header, so the bell and the menu are never behind it. */
+  .ask-panel { width: min(560px, calc(100vw - 32px)); height: min(820px, calc(100vh - 80px)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--float); overflow: hidden; }
+  .ask-panel { position: relative; max-width: calc(100vw - 32px); max-height: calc(100vh - 80px); }
   .ask-grip { position: absolute; left: 0; top: 0; width: 16px; height: 16px; cursor: nwse-resize; z-index: 1; touch-action: none;
     background: linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 5px, var(--muted) 5px 6px, transparent 6px) no-repeat; opacity: .5; }
   .ask-grip:hover { opacity: 1; }
@@ -3057,7 +3058,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const fit = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
     const move = (m) => {
       panel.style.width = `${fit(w0 + x0 - m.clientX, 300, innerWidth - 32)}px`;
-      panel.style.height = `${fit(h0 + y0 - m.clientY, 320, innerHeight - 32)}px`;
+      panel.style.height = `${fit(h0 + y0 - m.clientY, 320, innerHeight - 80)}px`;
     };
     const up = () => {
       removeEventListener("pointermove", move); removeEventListener("pointerup", up); S.ask.dragging = false;
