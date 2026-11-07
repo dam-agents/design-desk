@@ -48,7 +48,9 @@
   nav button { border: 0; background: transparent; padding: 5px 10px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 13px; }
   nav button.main { padding: 6px 12px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
-  nav .sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
+  nav .sep, header > .head-sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
+  /* New request sits right after the tabs, behind one more separator. */
+  header > .head-sep { margin: 0 -4px; } header > .head-sep[hidden] { display: none; }
   nav .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--soft); color: var(--muted); font-size: 11px; line-height: 17px; text-align: center; font-weight: 500; }
   nav .main .count { background: var(--accent); color: var(--accent-ink); line-height: 18px; font-weight: 600; }
   nav .main .count.warn { background: var(--warn); color: var(--bg); }
@@ -1043,11 +1045,12 @@
 <div class="app">
   <header>
     <nav id="nav" aria-label="Desk"></nav>
+    <span class="sep head-sep" id="new-request-sep" aria-hidden="true" hidden></span>
+    <button class="btn primary" id="new-request" hidden>+ New request</button>
     <div class="grow"></div>
     <div class="search"><input class="goto" id="goto" type="search" placeholder="Search, or C-12, D-3, #4512" role="combobox" aria-expanded="false" aria-controls="hits" aria-label="Search the Desk: words, an item's number like C-12, a decision's like D-3, a GitHub issue or pull request number, or a link" title="Search requests, changes, issues, screens, elements and decisions. A number opens its item: C-12, D-3, or a GitHub issue or pull request like #4512" autocomplete="off" spellcheck="false" /><div id="hits" role="listbox" hidden></div></div>
-    <details class="more bell" id="bell"><summary id="bell-btn" aria-label="Notifications" title="Notifications: what happened lately on the Desk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg><span class="badge" id="bell-count" hidden></span></summary><div class="menu notes" id="notes" role="dialog" aria-label="Notifications"></div></details>
     <details class="more me-menu"><summary class="me" id="me" aria-label="Your menu"></summary><div class="menu"><button class="btn" id="help" type="button" data-tab="guide" title="How Design Desk works, with a picture of each flow">? How it works</button><button class="btn" id="simple" type="button" aria-pressed="false"></button><button class="btn" id="figma" type="button" aria-pressed="true" hidden></button><button class="btn" id="theme" type="button"></button></div></details>
-    <button class="btn primary" id="new-request" hidden>+ New request</button>
+    <details class="more bell" id="bell"><summary id="bell-btn" aria-label="Notifications" title="Notifications: what happened lately on the Desk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg><span class="badge" id="bell-count" hidden></span></summary><div class="menu notes" id="notes" role="dialog" aria-label="Notifications"></div></details>
   </header>
   <div class="banners" id="banners"></div>
   <main id="main">
@@ -5777,7 +5780,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }));
 
   function applyMe() {
-    $("#new-request").hidden = !can("request");
+    $("#new-request").hidden = !can("request"); $("#new-request-sep").hidden = !can("request");
     document.title = S.me?.name || "Design Desk";
     $("#me").innerHTML = S.me ? `${esc(S.me.my_name || S.me.email || "")} · ${roleIcon(S.me.role)}${esc(roleName(S.me.role))}` : "";
     renderBanners();

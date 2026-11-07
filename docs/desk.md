@@ -464,7 +464,7 @@ without marking anything.
 
 ## Notifications
 
-The bell at the top right, left of the person's menu, lists what happened on the Desk in the
+The bell at the far right of the header, right of the person's name, lists what happened on the Desk in the
 last 30 days, newest first, at most 50 (`GET /api/notifications`). Nothing new is logged: each
 event is read from what the store keeps anyway. A person never sees their own doings, and a
 private ask only its owner: Design Desk's answers to it are theirs alone, and for them. The events:
