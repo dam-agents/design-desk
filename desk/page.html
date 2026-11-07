@@ -839,6 +839,7 @@
   details.convo .threads { margin-top: 10px; }
   /* Designs: the questions for the designer sit under their box, as the conversation does on a request. */
   .composer + .threads, .design-asks { margin-top: 14px; }
+  .design-asks { grid-template-columns: minmax(0, 1fr); }
   .thread.mini > summary { display: flex; gap: 8px; align-items: center; padding: 8px 12px; cursor: pointer; list-style: none; font-size: var(--fs-meta); }
   .thread.mini > summary::-webkit-details-marker { display: none; }
   .thread.mini > summary .q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
@@ -1342,6 +1343,7 @@
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
     [["share"], "Share options in Slack", "slack"],
+    [["designs", "built"], "See Designs: ask a design's designer, mark it done"],
     [["people"], "Ask Design Desk to add people to the list"],
   ];
   // How it works: one picture each of how a request, an issue and a shipped pull request move.
@@ -2973,7 +2975,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const on = av ? `Option ${(c.variants || []).indexOf(av) + 1}: ${av.name}` : "A removed option";
       const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
-      const kind = `<span class="chip ${tone}" title="${esc(KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
+      const kind = `<span class="chip ${tone}" title="${esc(th.dev ? "A developer asks the designer how the approved design is meant" : KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
       // On Designs a question marked done folds to one line: its first words; a click opens it.
       const mini = designs && th.state === "resolved";
       return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc((noteBy(th.messages[0]?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/\s+/g, " "))}</span>${state}</summary>` : `<article class="thread" id="th-${esc(th.id)}">
@@ -2985,7 +2987,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     }).join("");
     // The designer answers in the thread; only who sees Designs asks.
     if (designs) return `${can("designs") ? `<div class="composer" id="composer"><textarea id="composer-text" maxlength="4000" placeholder="Ask the designer how something is meant…"></textarea>
-        <div class="bar"><button class="btn primary" data-post="designer">Ask the designer</button></div></div>` : ""}${rows ? `<div class="threads design-asks">${rows}</div>` : ""}`;
+        <div class="bar"><button class="btn primary" data-post="designer" title="The designer who approved it gets a notification and answers here">Ask the designer</button></div></div>` : ""}${rows ? `<div class="threads design-asks">${rows}</div>` : ""}`;
     const open = threads.filter((th) => th.state !== "resolved").length;
     // The conversation folds under the box, as on the prototype; it stays as the reader left it.
     const convo = threads.length ? `<details class="convo" data-convo${S.convoOpen ? " open" : ""}><summary>Show the conversation <span class="cnt">${plural(threads.length, "thread", "threads")}${open ? ` · ${open} open` : ""}</span></summary><div class="threads">${rows}</div></details>` : "";
@@ -3930,15 +3932,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     S.variant = v?.id || null;
     const url = c.spec?.issue_url || c.spec?.pr_url, m = url && /\/(issues|pull)\/(\d+)/.exec(url);
     const figma = v?.figma_url || c.request?.figma;
-    const out = (href, words) => `<a class="btn" href="${safeUrl(href)}" target="_blank" rel="noopener noreferrer">${esc(words)} ↗</a>`;
-    const done = !can("built") ? "" : c.built ? `<button class="btn" data-built="0">Not done yet</button>` : `<button class="btn primary" data-built="1">Mark as done</button>`;
+    const out = (href, words, tip) => `<a class="btn" href="${safeUrl(href)}" target="_blank" rel="noopener noreferrer" title="${esc(tip)}">${esc(words)} ↗</a>`;
+    const done = !can("built") ? "" : c.built ? `<button class="btn" data-built="0" title="Puts it back under To build">Not done yet</button>` : `<button class="btn primary" data-built="1" title="It is built: it moves under Done, and its designer sees it">Mark as done</button>`;
     // Who approved it and when; once built, who marked it done too.
     const fact = (k, x) => x?.at ? `<span><span class="k">${k}</span> <b>${esc(personName(x.by?.email, "someone"))}</b> · ${esc(day(x.at))}</span>` : "";
     // The pull request it comes from: a request started from a PR change, or one filed from a PR.
     const from = S.cards.find((x) => x.id === c.request?.from);
     const prUrl = [from?.kind === "change" ? from.source?.url : null, c.origin?.url].find((u) => /\/pull\/\d+/.test(u || "") && u !== url);
-    const pr = prUrl ? out(prUrl, "PR") : "";
-    const buttons = `${url ? out(url, m?.[1] === "pull" ? "PR" : "Issue") : ""}${pr}${figma ? out(figma, "Figma") : ""}${done}`;
+    const pr = prUrl ? out(prUrl, "PR", "The pull request this design comes from, on GitHub") : "";
+    const buttons = `${url ? out(url, m?.[1] === "pull" ? "PR" : "Issue", "Where the design was sent to developers, on GitHub") : ""}${pr}${figma ? out(figma, "Figma", "The design in Figma") : ""}${done}`;
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       <div class="status" data-o="approved"><div class="s-line"><div class="s-word"><span class="s-mark"></span>${c.built ? "Done" : "Approved"}</div>

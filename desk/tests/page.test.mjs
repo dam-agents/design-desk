@@ -269,7 +269,8 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tadmin", "pat@example.com\tPM"]);
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["admin your role", "designer", "PM", "lead developer", "developer", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer can, and:\s+Ask Design Desk to add people to the list/, "only an admin adds people");
+    assert.match(await panel(0), /Everything a designer and a lead developer can, and:\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
+    assert.doesNotMatch(await panel(1), /See Designs/, "a designer has no Designs in the menu");
     assert.doesNotMatch(await panel(0), /Move a request/, "moving a request between the tabs is named once, under a PM and a lead developer");
     assert.match(await panel(1), /Everything a PM can, and:\s+Approve designs[\s\S]*Add a decision/, "a role names the largest one below it");
     assert.doesNotMatch(await panel(1), /Move a request|Build live prototypes/, "a designer's card does not repeat a PM's");
@@ -278,6 +279,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.match(await panel(3), /Everything a developer can, and:\s+Move a request to For Developers/, "a lead developer says what is For Developers");
     assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
     assert.doesNotMatch(await panel(4), /Approve designs|Choose what|Record a decision/);
+    assert.match(await panel(4), /See Designs: ask a design's designer, mark it done/, "a developer sees Designs");
     assert.doesNotMatch(await panel(5), /Everything|Same as/, "the smallest role lists its own");
 
     // An admin asks Design Desk to add a person with a role; the roles to pick leave out admin.
@@ -2179,4 +2181,63 @@ test("a notification lands on its source: the option's tab, the votes, the spec 
   await desk.waitForSelector('#th-t3 [data-m="1"].spot');
   assert.equal(await desk.locator('#th-t3 [data-m="0"].spot').count(), 1, "a folded row lights every message it holds");
   assert.equal(await desk.locator("#ask .ask-panel").count(), 0, "a public notification closes the private chat");
+}));
+
+// Designs (docs/desk.md → Designs): a developer's tab of approved designs; a designer reaches one only from a notification.
+const designsBridge = (role) => `<script>
+window.posts = [];
+const ask = { id: "T-1", card: "C-1", kind: "comment", dev: true, state: "open", messages: [{ by: { email: "bob@example.com", role: "developer" }, at: "2026-11-07T10:00:00Z", text: "Is the banner sticky?" }] };
+const done = { id: "T-2", card: "C-1", kind: "comment", dev: true, state: "resolved", messages: [{ by: { email: "dana@example.com", role: "developer" }, at: "2026-11-06T10:00:00Z", text: "Which grey is the border? ${"It reads lighter than the rest of the page. ".repeat(4)}" }] };
+const sent = { id: "C-1", kind: "request", title: "Daily limit banner", status: "handed-off", built: null, from: "C-4", by: { email: "alice@example.com" } };
+const change = { id: "C-4", kind: "change", title: "Widgets reorder", status: "new", source: { repo: "acme/widgets", pr: 318, url: "https://github.com/acme/widgets/pull/318" } };
+const open = { id: "C-3", kind: "request", title: "Still open", status: "triage" };
+const card = { ...sent, request: { problem: "Limits are missed.", from: "C-4", figma: "https://www.figma.com/design/abc/Limits" }, variants: [{ id: "v1", name: "Banner", asset: "A-1" }, { id: "v2", name: "Inline", asset: "A-2" }],
+  approved: { by: { email: "alice@example.com", role: "designer" }, at: "2026-11-05T09:00:00Z", variant: "v1" }, spec: { asset: "A-3", review: "sent", issue_url: "https://github.com/acme/widgets/issues/142" },
+  dev_summary: { text: "- Above the widgets, not a toast (Alice).", at: "2026-11-05T09:00:00Z" }, threads: [done, ask] };
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); return { status: 200, contentType: "application/json", body: JSON.stringify(path.endsWith("/built") ? { card: { ...card, built: { by: { email: "bob@example.com" }, at: "2026-11-07T11:00:00Z" } } } : {}) }; }
+  const answer = path === "/api/me" ? { role: "${role}", email: "${role}@example.com", key: "${role}@example.com", simple: false, names: { "alice@example.com": "Alice", "dana@example.com": "Dana" },
+      can: ${role === "developer" ? `{ comment: true, ask: true, designs: true, built: true }` : `{ comment: true, ask: true, approve: true }`} }
+    : path === "/api/cards" ? { cards: [sent, change, open] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/C-1" ? { card } : path === "/api/cards/C-4" ? { card: change } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+</script>`;
+
+test("Designs: a developer opens an approved design from its own tab, read-only, marks it done and asks its designer", (t) => open(t, designsBridge("developer"), async (desk) => {
+  await desk.waitForSelector('[data-tab="designs"]');
+  assert.equal(await desk.textContent('[data-tab="designs"] .count'), "1", "the tab counts what is still to build");
+  await desk.click('[data-tab="designs"]');
+  assert.deepEqual(await desk.locator("#list .row.item .t > span:first-child").allInnerTexts(), ["Daily limit banner"], "only a request sent to developers");
+  await desk.click("#list .row.item .open");
+  await desk.waitForSelector("#detail .status");
+  assert.equal(await desk.getAttribute('[data-tab="designs"]', "aria-current"), "true", "a row opens on Designs, not on Requests");
+  assert.match(await desk.textContent("#detail .status"), /Approved\s*approved by Alice/);
+  assert.deepEqual(await desk.locator("#detail .status a.btn").allInnerTexts(), ["Issue ↗", "PR ↗", "Figma ↗"], "the issue, the PR it comes from, Figma; no numbers");
+  assert.equal(await desk.getAttribute('#detail .status a.btn:has-text("PR")', "href"), "https://github.com/acme/widgets/pull/318");
+  assert.equal(await desk.locator("#detail .vtabs, #detail [data-act], #detail .votes").count(), 0, "read-only: no options to pick, no actions, no votes");
+  assert.match(await desk.textContent("#detail"), /UX decisions\s*AI\s*Above the widgets, not a toast/);
+  // The open question leads; the done one folds to one line: its asker — its first words.
+  assert.deepEqual(await desk.locator("#detail .design-asks > *").evaluateAll((els) => els.map((e) => e.tagName)), ["ARTICLE", "DETAILS"]);
+  assert.match(await desk.textContent("#detail .thread.mini > summary"), /Developer asks\s*Dana — Which grey/);
+  const [box, list] = await desk.$$eval("#detail .thread.mini, #detail .design-asks", (els) => els.map((e) => e.getBoundingClientRect().width));
+  assert.ok(box <= list + 1, "a long folded question keeps to the column");
+  const bare = await desk.$$eval("#detail button, #detail a.btn, #detail .chip", (els) => els.filter((e) => e.getClientRects().length && !e.title && !e.dataset.tip && !e.getAttribute("aria-label")).map((e) => e.outerHTML.slice(0, 120)));
+  assert.deepEqual(bare, [], "everything says on hover what it does");
+  await desk.click("[data-built]");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/built"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/built").body), { built: true });
+  await desk.fill("#composer-text", "Does it show on mobile?");
+  await desk.click('[data-post="designer"]');
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/threads"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/threads").body), { kind: "comment", text: "Does it show on mobile?", dev: true });
+}));
+
+test("Designs: a designer has no tab, and opens a design from its link without the box to ask or Mark as done", (t) => open(t, designsBridge("designer"), async (desk) => {
+  await desk.waitForSelector('[data-tab="requests"]');
+  assert.equal(await desk.locator('[data-tab="designs"]').count(), 0);
+  await desk.evaluate(() => { location.hash = "#designs/C-1"; });
+  await desk.waitForSelector("#detail .status");
+  assert.equal(await desk.locator("#detail [data-built], #detail [data-post]").count(), 0, "the designer answers in the thread");
+  assert.equal(await desk.locator("#detail .design-asks article [data-send-reply]").count(), 1);
 }));
