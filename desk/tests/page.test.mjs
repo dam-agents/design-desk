@@ -2272,6 +2272,8 @@ test("Designs: a developer opens an approved design from its own tab, read-only,
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/private"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/private").body.context), { page: "designs", filter: "done", label: "Designs page · done" });
+  await desk.click("[data-ask-close]");
+  await desk.waitForSelector("#ask .ask-panel", { state: "detached" });
   await desk.click('[data-filter="designFilter:todo"]');
   await desk.click("#list .row.item .open");
   await desk.waitForSelector("#detail .status");
