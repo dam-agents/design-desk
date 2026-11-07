@@ -820,7 +820,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
 const PEEKS = `<script>
 const cards = [
   { id: "C-1", kind: "change", title: "A new header", acked: true, summary: "Follows C-2 and D-1.", source: { repo: "acme/widgets", pr: 45 } },
-  { id: "C-2", kind: "request", title: "Calmer empty list", status: "feedback", summary: "The list is too loud.", request: { problem: "Too loud." },
+  { id: "C-2", kind: "request", title: "Calmer empty list", status: "feedback", summary: "The list is too loud.", request: { problem: "Too loud. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next." },
+    research: { summary: "The empty list was drawn in 2024 for the launch. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next.", links: [] },
     variants: [{ id: "v1", name: "Quiet", asset: "A-1", version: 1 }],
     threads: [{ id: "t1", card: "C-2", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#kit", text: "Kit <\\/script> update", label: "Text" },
       messages: [{ by: { name: "Pat" }, at: "2026-11-01T10:00:00Z", text: "Too bright here." }] }] },
@@ -1838,8 +1839,8 @@ window.calls = [];
 const at = (d) => "2026-11-0" + d + "T10:00:00Z";
 const triage = { verdict: "needs-developer", reasons: ["The price per seat is not in the data."], cannot: ["Show the price per seat: the screen has no such number."] };
 const full = { id: "C-2", kind: "request", title: "Clearer plan cards", status: "feedback", created: at(2), updated: at(9), triage, prototype: { state: "none" }, threads: [],
-  request: { type: "idea", problem: "The plan cards are hard to compare." },
-  research: { verdict: "deliberate", summary: "The cards were made so on purpose.", links: [] },
+  request: { type: "idea", problem: "The plan cards are hard to compare. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next." },
+  research: { verdict: "deliberate", summary: "The cards were made so on purpose. It uses the brightest colour of the product and a big illustration, so people who have nothing to do yet think something broke. Two of them said so in last week's interviews, and support hears it every month. We would like it calm, small and plain, with one quiet line on what comes next.", links: [] },
   variants: [{ id: "v1", name: "Quiet", asset: "A-1" }, { id: "v2", name: "Bold", asset: "A-1" }] };
 const plain = { id: "C-6", kind: "request", title: "Softer colours", status: "feedback", created: "2026-10-31T10:00:00Z", updated: at(7), triage: { verdict: "design", reasons: [] },
   prototype: { state: "none" }, threads: [], request: { type: "idea", problem: "Softer colours." } };
@@ -1885,6 +1886,8 @@ test("lists show the newest first; a folded box stays folded on another option; 
 
   await desk.goto(`${base}#C-6`);
   await desk.waitForFunction(() => document.querySelector("#detail h2 .num")?.textContent === "C-6");
+  assert.equal(await desk.locator(".top2 > .brief:not(.made-col) .brief-toggle:not([hidden])").count(), 0, "a request of one short line has nothing to fold: no Show or Hide");
+  assert.equal(await desk.locator(".top2 > .brief.clamped").count(), 0, "and it is never folded");
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Design only" }).count(), 0, "no Design only label by the title");
   assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Design only/, "the steps name the verdict");
 

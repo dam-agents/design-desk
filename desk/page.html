@@ -495,6 +495,10 @@
   textarea { min-height: 64px; resize: vertical; }
   .composer { display: grid; gap: 8px; max-width: var(--measure); margin-top: 10px; }
   .subno { font: 600 11.5px/1 var(--mono, ui-monospace, monospace); background: var(--soft); color: var(--ink); padding: 2px 6px; border-radius: 6px; text-decoration: none; margin-right: 4px; }
+  /* Where a notification led: a ring and a tint that hold, then fade out over the last seconds. */
+  .spot { animation: spot 10s ease-out; border-radius: 6px; }
+  @keyframes spot { 0%, 70% { box-shadow: 0 0 0 3px var(--accent), inset 0 0 0 999px color-mix(in srgb, var(--accent) 12%, transparent); } 100% { box-shadow: 0 0 0 3px transparent, inset 0 0 0 999px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .spot { animation: none; box-shadow: 0 0 0 3px var(--accent); } }
   .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
   .starters { display: flex; gap: 6px; flex-wrap: wrap; }
   /* Above the design workspace (70) too, below a zoomed picture (80): the private ask works there as well. */
@@ -919,7 +923,8 @@
   .brief.clamped .brief-body { max-height: var(--clip, calc(3 * 1.55em)); overflow: hidden; -webkit-mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); }
   .brief-toggle { border: 0; background: none; padding: 4px 0 0; color: var(--accent); cursor: pointer; font-size: var(--fs-ui); }
   .brief-toggle:hover { text-decoration: underline; }
-  .brief-body { font-size: var(--fs-read); line-height: 1.55; }
+  .brief-body { font-size: var(--fs-read); line-height: 1.55; display: flow-root; }
+  .brief-toggle[hidden] { display: none; }
   /* The votes: two pills with their icon and count, at the right of the option's bar. */
   /* The request's main action under its options: larger, in the accent, before every other button. */
   .vbar .btn.ws-open { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; min-height: 38px; padding: 7px 16px; font-size: 14.5px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
@@ -2281,26 +2286,36 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   const briefToggle = (folded, kind) => { const what = kind === "made" ? "what Design Desk found" : kind ? "report" : "request";
     return `<button class="brief-toggle" data-brief-toggle="${kind === "made" ? "made" : kind ? "bug" : ""}" title="${kind === "made" ? "Fold or unfold what Design Desk found" : "Fold or unfold what was asked"}">${folded ? (kind === "made" ? `Show ${what}` : `Show the whole ${what}`) : `Hide ${kind === "made" ? what : `the ${what}`}`}</button>`; };
+  // The brief folds and unfolds in a short glide, so what stands under it moves, not jumps;
+  // folded from below, the page brings the brief's top back into view.
   document.addEventListener("click", (e) => {
     const t = e.target.closest?.("[data-brief-toggle]"); if (!t) return;
-    const b = t.closest(".brief"), folded = !b.classList.contains("clamped");
-    const kind = t.dataset.briefToggle;
+    const b = t.closest(".brief"), body = b.querySelector(".brief-body"), folded = !b.classList.contains("clamped");
+    const kind = t.dataset.briefToggle, from = body.getBoundingClientRect().height;
     b.classList.toggle("clamped", folded); S.folds[kind === "made" ? "made" : "brief"] = folded;
     t.outerHTML = briefToggle(folded, kind === "made" ? "made" : kind === "bug");
     clampBriefs();
+    const to = body.getBoundingClientRect().height, calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // A tab in the background holds animations: the glide ends by the clock all the same.
+    if (!calm && Math.abs(to - from) > 2) { const a = body.animate([{ height: `${from}px`, overflow: "hidden" }, { height: `${to}px`, overflow: "hidden" }], { duration: 220, easing: "ease-out" }); setTimeout(() => a.cancel(), 300); }
+    const pane = $("#detail");
+    if (folded && pane && b.getBoundingClientRect().top < pane.getBoundingClientRect().top) b.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
   }, true);
   // Folded, a brief keeps two whole lines of its text and half of the third, whatever stands
   // above them: a heading is shown whole and not counted as a line.
+  // A brief with under three lines of text, no picture and nothing folded inside has nothing
+  // to hide: it shows whole, with no Show or Hide link.
+  const BRIEF_MEDIA = "img, figure, .shots, .shot, iframe, video, details";
   function clampBriefs() {
+    for (const b of document.querySelectorAll(".brief")) {
+      const body = b.querySelector(":scope > .brief-body"), tog = b.querySelector(":scope > .brief-toggle");
+      if (!body || !tog) continue;
+      const short = !body.querySelector(BRIEF_MEDIA) && briefLines(body).length < 3;
+      tog.hidden = short;
+      if (short) b.classList.remove("clamped");
+    }
     for (const body of document.querySelectorAll(".brief.clamped .brief-body")) {
-      const top = body.getBoundingClientRect().top, lines = [];
-      const walk = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => n.textContent.trim() && !n.parentElement.closest("h3, h4, .brief-toggle") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
-      const r = document.createRange();
-      for (let n; (n = walk.nextNode()) && lines.length < 3;) {
-        r.selectNodeContents(n);
-        for (const b of r.getClientRects()) if (b.height && !lines.some((l) => Math.abs(l.top - b.top) < b.height / 2)) lines.push({ top: b.top, bottom: b.bottom });
-      }
-      lines.sort((a, b) => a.top - b.top);
+      const top = body.getBoundingClientRect().top, lines = briefLines(body);
       // Fewer than three lines: nothing to fold away.
       if (lines.length < 3) { body.style.setProperty("--clip", "none"); body.style.setProperty("--fade", "100%"); continue; }
       // Everything above the third line stays whole; the third fades out over its upper three quarters.
@@ -2308,6 +2323,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       body.style.setProperty("--fade", `${Math.round(third.top - top)}px`);
       body.style.setProperty("--clip", `${Math.round(third.top + (third.bottom - third.top) * 0.75 - top)}px`);
     }
+  }
+  // The first three lines of a brief's own text, headings not counted, top to bottom.
+  function briefLines(body) {
+    const lines = [], r = document.createRange();
+    const walk = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => n.textContent.trim() && !n.parentElement.closest("h3, h4, .brief-toggle") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+    for (let n; (n = walk.nextNode()) && lines.length < 3;) {
+      r.selectNodeContents(n);
+      for (const b of r.getClientRects()) if (b.height && !lines.some((l) => Math.abs(l.top - b.top) < b.height / 2)) lines.push({ top: b.top, bottom: b.bottom });
+    }
+    return lines.sort((a, b) => a.top - b.top);
   }
   addEventListener("resize", () => clampBriefs());
 
@@ -2910,7 +2935,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       return `<article class="thread" id="th-${esc(th.id)}">
         <div class="head"><span class="chip ${tone}" title="${esc(KIND_TIP[th.kind] || "")}">${esc(name)}</span>${anchor}${state}</div>
-        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
+        ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
         ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`}
       </article>`;
@@ -3038,9 +3063,9 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       last = about;
       // Only where the page has its public comments box: the brief goes there as text.
       const brief = S.card && th.context?.card === S.card.id && Boolean($("#composer-text"));
-      return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m) => m.by?.agent
-        ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent"><span class="ask-name">Design Desk</span>${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Writes a note for Design Desk from this answer into this page's public comments box. You edit it there and send it yourself.">Make a brief for the public comments</button>` : ""}</div></div>`
-        : `<div class="ask-msg me">${md(m.text)}<span class="ask-when">${esc(when(m.at))}</span></div>`).join("")}
+      return `${head ? `<div class="ask-about">About: ${esc(about)}</div>` : ""}${th.messages.map((m, i) => m.by?.agent
+        ? `<div class="ask-row" data-m="${esc(th.id)}:${i}">${DD_AVATAR}<div class="ask-msg agent"><span class="ask-name">Design Desk</span>${md(m.text)}${brief ? `<button class="link ask-brief" data-brief="${esc(th.id)}" title="Writes a note for Design Desk from this answer into this page's public comments box. You edit it there and send it yourself.">Make a brief for the public comments</button>` : ""}</div></div>`
+        : `<div class="ask-msg me" data-m="${esc(th.id)}:${i}">${md(m.text)}<span class="ask-when">${esc(when(m.at))}</span></div>`).join("")}
         ${th.needs_agent ? `<div class="ask-row">${DD_AVATAR}<div class="ask-msg agent typing" role="status" title="Design Desk is answering…"><i></i><i></i><i></i><span class="sr">Design Desk is answering…</span></div></div>` : ""}
 `;
     }).join("");
@@ -3619,7 +3644,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const list = versions.length > 1 ? `<p class="hint spec-versions">Versions: ${versions.map((x, i) => `<button data-spec-view="${esc(x.asset)}" aria-pressed="${x === shown}">${i + 1} · ${esc(by(x))}</button>`).join(", ")}</p>` : "";
     const edit = S.specEdit === c.id ? `<div class="spec-edit"><textarea id="spec-text" class="spec-text" rows="24" aria-label="The developer spec"></textarea><div class="spec-preview" id="spec-preview" aria-label="How it reads"></div></div><div class="actions"><button class="btn primary" data-spec-save>Save this version</button><button class="btn" data-spec-cancel>Cancel</button></div>` : "";
     const tools = review && canApprove(c) && S.specEdit !== c.id ? `<div class="actions spec-tools"><button class="btn small" data-spec-edit title="Change the text here; it becomes the newest version">✎ Edit</button><button class="btn small" data-spec-changes title="Say what to change; Design Desk rewrites it and brings it back here">Ask for changes…</button></div>` : "";
-    return `<details class="fold"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
+    return `<details class="fold" id="spec"${review || S.specEdit === c.id || (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")) ? " open" : ""}><summary>The developer spec${specTarget(c)} ${state}</summary><div class="panel">
       <div class="spec-head"><p class="hint">Version ${versions.indexOf(shown) + 1} of ${versions.length}, by ${esc(by(shown))}${shown.at ? ` · ${esc(when(shown.at))}` : ""}.</p>${tools}</div>${list}
       ${edit || `<div id="spec-body" data-asset="${esc(shown.asset)}">…</div>`}</div></details>`;
   }
@@ -3652,7 +3677,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
-      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
+      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${sizeLine(c)}
@@ -5799,13 +5824,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const list = S.notes.items.filter((x) => !S.notes.only || x.for_you);
     let lastDay = "";
     const rows = list.map((x, i) => {
-      const [label, g, icon] = NOTE[x.event] || [x.event, "talk", ""];
-      const by = noteBy(x.by), d = dayWord(x.at), head = d !== lastDay ? `<div class="day">${esc(d)}</div>` : "";
+      const [one, g, icon] = NOTE[x.event] || [x.event, "talk", ""];
+      // A row that folds several messages or votes says how many, and who: two names, then +N.
+      const many = (x.count || 1) > 1, names = (x.people || [x.by]).map(noteBy).filter(Boolean);
+      const label = many ? `${x.count} ${x.event === "vote" ? "new votes" : x.private ? "private answers" : "new messages"}` : x.private ? `${one} privately` : one;
+      const by = many ? `${names.slice(0, 2).join(", ")}${names.length > 2 ? ` +${names.length - 2}` : ""}` : noteBy(x.by), d = dayWord(x.at), head = d !== lastDay ? `<div class="day">${esc(d)}</div>` : "";
       lastDay = d;
       return `${head}<button class="note${!was || x.at > was ? " unread" : ""}" data-g="${g}" data-note="${i}">
         <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${icon}</svg></span>
         <span class="ev">${esc(label)}${by && !label.startsWith(by) ? ` <span>· ${esc(by)}</span>` : ""}</span><time datetime="${esc(x.at)}" title="${esc(when(x.at))}">${esc(ago(x.at))}</time>
-        <span class="ti"><span>${NOTE_KIND[x.kind] ? `<em>${esc(NOTE_KIND[x.kind])}:</em> ` : ""}${esc(x.title || "Untitled")}</span><span class="num">${esc(x.item)}</span></span>
+        <span class="ti"><span>${NOTE_KIND[x.kind] ? `<em>${esc(NOTE_KIND[x.kind])}:</em> ` : ""}${esc(x.title || "Untitled")}</span><span class="num">${esc(x.item || "")}</span></span>
         ${x.detail ? `<span class="q">${esc(x.detail)}</span>` : ""}</button>`;
     }).join("");
     $("#notes").innerHTML = `<div class="nh"><b>Notifications</b><div class="tabs2" role="radiogroup" aria-label="Show">
@@ -5813,16 +5841,75 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       <div class="nl">${rows || `<div class="empty">${S.notes.only ? "Nothing new on what you filed, voted on or wrote in." : "Nothing happened on the Desk in the last 30 days."}</div>`}</div>`;
     $("#notes").querySelectorAll("[data-only]").forEach((b) => b.addEventListener("click", () => { S.notes.only = b.dataset.only === "1"; renderNotes(); }));
     $("#notes").querySelectorAll("[data-note]").forEach((b) => b.addEventListener("click", guard(async () => {
-      const x = list[Number(b.dataset.note)];
-      // A message opens its item with the conversation unfolded, scrolled to its thread.
-      const to = target(x.item);
-      if (!to) return;
-      if (x.thread) S.convoOpen = true;
-      if (!(await goTo(to)) || !x.thread) return;
-      const th = document.getElementById(`th-${x.thread}`);
-      if (th) { th.scrollIntoView({ block: "center" }); th.classList.add("flash"); setTimeout(() => th.classList.remove("flash"), 2000); }
+      $("#bell").open = false;
+      await openNote(list[Number(b.dataset.note)]);
     })));
   }
+  // A click on a notification lands on its source, not only its item: the option drawn, voted
+  // on or approved (its tab picked), the message itself (its conversation or private chat
+  // opened), the spec, the decision; every fold around it opens, and it glows for 10 seconds.
+  async function openNote(x) {
+    for (const o of spots.splice(0)) document.querySelector(o.path)?.classList.remove("spot");
+    const to = x.item ? target(x.item) : null;
+    // A private ask about a Desk page, not an item, opens its chat where you are.
+    if (!to && !x.private) return;
+    if (x.thread && !x.private) S.convoOpen = true;
+    // The private chat would cover what the notification points at.
+    if (!x.private && S.ask.open) { S.ask.open = false; renderAsk(); }
+    if (to && !(await goTo(to))) return;
+    const c = S.card, th = x.thread ? (c?.threads || []).find((t) => t.id === x.thread) : null;
+    if (x.private) {
+      // A private ask's chat shows the asks about what is open: the option it was asked about first.
+      const ask = S.ask.asks.find((t) => t.id === x.thread);
+      if (ask?.context?.variant && c && (c.variants || []).some((v) => v.id === ask.context.variant)) { S.variant = ask.context.variant; renderDetail(); }
+      S.ask.open = true; await loadAsks(); renderAsk();
+      return spot(document.querySelector(`#ask [data-m="${CSS.escape(`${x.thread}:${x.msg ?? 0}`)}"]`) || $("#ask .ask-panel"), "nearest");
+    }
+    const variant = x.variant || th?.anchor?.variant;
+    if (c && variant && variant !== S.variant && (c.variants || []).some((v) => v.id === variant)) { S.variant = variant; renderDetail(); }
+    const d = $("#detail"), q = (sel) => d.querySelector(sel);
+    const msgOf = (id) => q(`#th-${CSS.escape(id)} [data-m="${x.msg ?? 0}"]`) || q(`#th-${CSS.escape(id)}`) || q(`#form-${CSS.escape(id)}`);
+    const tab = variant && q(`.vtabs [data-variant="${CSS.escape(variant)}"]`);
+    const el = {
+      vote: () => q(".vbar .votes") || tab,
+      approved: () => q(".status") || tab,
+      decided: () => q(".size") || q(".status"),
+      spec: () => q("#spec"),
+      "new-request": () => q(".top2 > .brief"),
+      revoked: () => q(".against") || q("h2"),
+    }[x.event]?.() || (x.thread && msgOf(x.thread)) || (x.event.startsWith("options-") && tab) || q("h2");
+    // The option drawn or approved shows its tab lit with the design under it.
+    if (tab && el !== tab && x.event.startsWith("options-")) spot(tab);
+    // A row that folds several messages lights each of them; the page goes to the newest.
+    for (const [tid, m] of (x.marks || []).slice(1)) { const o = q(`#th-${CSS.escape(tid)} [data-m="${m}"]`); if (o) { spot(o); } }
+    spot(el);
+  }
+  // Brings a place into view, opening every fold around it, and lights it for 10 seconds; the
+  // page redraws on its own meanwhile, so the light finds the place again by its path.
+  const spots = [];
+  function spot(el, block = "center") {
+    if (!el) return;
+    for (let p = el; p; p = p.parentElement?.closest("details")) if (p.tagName === "DETAILS") p.open = true;
+    const b = el.closest(".brief.clamped");
+    if (b) b.querySelector(".brief-toggle")?.click();
+    el.scrollIntoView({ block, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    const parts = [];
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      if (e.id) { parts.unshift(`#${CSS.escape(e.id)}`); break; }
+      parts.unshift(`${e.tagName.toLowerCase()}:nth-child(${[...e.parentElement.children].indexOf(e) + 1})`);
+    }
+    spots.push({ path: parts.join(" > "), from: Date.now(), on: S.card?.id || S.decision?.id || "" });
+    el.classList.add("spot");
+  }
+  setInterval(() => {
+    for (let i = spots.length - 1; i >= 0; i--) {
+      // Another item opened: its page has other places at the same path.
+      const x = spots[i], el = document.querySelector(x.path), gone = Date.now() - x.from >= 10000 || x.on !== (S.card?.id || S.decision?.id || "");
+      if (gone) { el?.classList.remove("spot"); spots.splice(i, 1); continue; }
+      // A redrawn place lights again where its glow was, not from the start.
+      if (el && !el.classList.contains("spot")) { el.style.animationDelay = `-${Date.now() - x.from}ms`; el.classList.add("spot"); }
+    }
+  }, 250);
   $("#bell").addEventListener("toggle", guard(async () => {
     if (!$("#bell").open) { renderBell(); return; }
     // What was new when you opened it stays marked until you close it.

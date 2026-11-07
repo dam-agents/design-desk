@@ -76,7 +76,10 @@ served by the Desk server through the platform's Artifact API relay.
   request's own text and From Design Desk show whole the first time a person opens the
   request in that browser, and folded on every later visit (`desk-seen-requests`). Folded, each
   keeps two whole lines of its text and half of the third; a heading above them shows whole and
-  is not counted.
+  is not counted. A box with under three lines of text, no picture and nothing folded inside has
+  nothing to hide: it shows whole, with no Show or Hide link. Folding and unfolding glide in a
+  fifth of a second, so what stands under the box moves rather than jumps; folded from below,
+  the page brings the box's top back into view.
 - **Search.** The header's one search finds words in every item's title, summary and source
   and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
   decision's (`D-3`), and while one is typed (`C-`, `C-1`, `D-`) every item or decision whose
@@ -464,7 +467,7 @@ without marking anything.
 The bell at the top right, left of the person's menu, lists what happened on the Desk in the
 last 30 days, newest first, at most 50 (`GET /api/notifications`). Nothing new is logged: each
 event is read from what the store keeps anyway. A person never sees their own doings, and a
-private ask only its owner. The events:
+private ask only its owner: Design Desk's answers to it are theirs alone, and for them. The events:
 
 | Event | When |
 | --- | --- |
@@ -477,8 +480,17 @@ private ask only its owner. The events:
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one
-line of what was said. A click opens the item: a decision on its page, a message with the
-conversation unfolded and scrolled to its thread. The bell opens on **For you**: what the person
+line of what was said. Messages on one item in one day fold into one row, and so do votes: it
+says how many (3 new messages) and who, two names and then +N, and shows the newest; a row is
+For you, private or neither, never a mix, and the count counts rows.
+
+A click lands on the source, not only its item, and every fold around it opens: a message with
+its conversation unfolded and scrolled to it (a row of several lights each); a private answer in
+the private chat, on the option it was asked about; options drawn, a vote or an approval on that
+option's tab (its votes, or the request's state); a spec unfolded; a request on its text; a
+decision on its page, a revoked one on why. The place glows for 10 seconds, and the glow keeps
+its place when the page draws again. A public notification closes the private chat, which would
+cover it. The bell opens on **For you**: what the person
 filed, voted on, approved or wrote in; **All** shows the rest too. The red count is what is For
 you and newer than the person last opened the bell;
 opening it marks it seen for them alone (`POST /api/notifications/seen`; the store keeps

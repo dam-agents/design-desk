@@ -233,6 +233,9 @@ export function emptyDb() {
   return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {}, seen: {} };
 }
 
+// The bell's events that fold into one row per item and day, with their count.
+const NOTE_FAMILY = { comment: "talk", reply: "talk", question: "talk", answer: "talk", "agent-asks": "talk", vote: "vote" };
+
 export class Store {
   constructor(dir, { clock = now } = {}) {
     this.dir = dir;
@@ -713,14 +716,15 @@ export class Store {
       for (const v of c.variants || []) {
         if (!v.drawn) continue;
         const k = `${v.drawn}|${(v.version || 1) > 1 ? "redrawn" : "drawn"}`;
-        runs.set(k, [...(runs.get(k) || []), v.name]);
+        runs.set(k, [...(runs.get(k) || []), v]);
       }
-      for (const [k, names] of runs) { const [at, how] = k.split("|"); push(at, `options-${how}`, it, { agent: true }, { detail: names.join(", ") }, yours); }
+      // `variant` names where a click lands: the option drawn, voted on or approved.
+      for (const [k, vs] of runs) { const [at, how] = k.split("|"); push(at, `options-${how}`, it, { agent: true }, { detail: vs.map((v) => v.name).join(", "), variant: vs[0].id }, yours); }
       for (const [variant, byKey] of Object.entries(c.votes || {})) {
         const name = (c.variants || []).find((v) => v.id === variant)?.name || variant;
-        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${{ prefer: "Prefers", dislike: "Dislikes", concern: "Has a concern about" }[v.vote] || "Voted on"} ${name}` }, yours);
+        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${{ prefer: "Prefers", dislike: "Dislikes", concern: "Has a concern about" }[v.vote] || "Voted on"} ${name}`, variant }, yours);
       }
-      if (c.approved?.at) push(c.approved.at, "approved", it, c.approved.by, { detail: (c.variants || []).find((v) => v.id === c.approved.variant)?.name || null }, yours);
+      if (c.approved?.at) push(c.approved.at, "approved", it, c.approved.by, { detail: (c.variants || []).find((v) => v.id === c.approved.variant)?.name || null, variant: c.approved.variant || null }, yours);
       if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
       if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
       for (const tid of c.threads || []) {
@@ -729,19 +733,45 @@ export class Store {
         (t.messages || []).forEach((m, i) => {
           const event = i === 0 ? (t.kind === "asks" ? "agent-asks" : t.kind === "question" || t.kind === "private" ? "question" : "comment")
             : m.by?.agent ? (t.kind === "question" || t.kind === "private" ? "answer" : "reply") : "reply";
-          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, private: t.kind === "private" || undefined }, talked.has(t.id) || filed || t.kind === "private" || (t.kind === "asks" && yours));
+          push(m.at, event, it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i, private: t.kind === "private" || undefined }, talked.has(t.id) || filed || t.kind === "private" || (t.kind === "asks" && yours));
         });
       }
+    }
+    // Your private asks live outside the cards: Design Desk's answers to them are yours alone.
+    for (const t of Object.values(this.db.threads)) {
+      if (t.kind !== "private" || !key || t.owner !== key) continue;
+      const c = t.card ? own(this.db.cards, t.card) : null;
+      if (c && (c.status === "archived" || c.kind === "digest")) continue;
+      const it = c ? itemOf(c) : { item: null, kind: null, title: t.context?.label || "The Desk", screen: null, status: null };
+      (t.messages || []).forEach((m, i) => { if (m.by?.agent) push(m.at, "answer", it, m.by, { detail: String(m.text || "").replace(/\s+/g, " ").slice(0, 140), thread: t.id, msg: i, private: true }, true); });
     }
     for (const d of Object.values(this.db.decisions)) {
       const it = { item: d.id, kind: "decision", title: d.text, screen: null, status: d.status };
       push(d.recorded || d.at, "new-decision", it, d.author ? { email: d.author.email, name: d.author.name || d.author.login, role: d.author.role } : null);
       if (d.revoked?.at) push(d.revoked.at, "revoked", it, d.revoked.by || null, { detail: d.revoked.reason || null });
     }
-    out.sort((a, b) => b.at.localeCompare(a.at));
+    out.sort((a, b) => b.at.localeCompare(a.at) || (b.msg ?? 0) - (a.msg ?? 0));
+    // Messages and votes on one item in one day come as one row: the newest leads, with how
+    // many there are and who wrote them. A row is for you, private or neither, never a mix.
+    const rows = [], open = new Map();
+    for (const x of out) {
+      const fam = NOTE_FAMILY[x.event];
+      const k = fam && x.item ? [x.item, fam, x.at.slice(0, 10), x.for_you, Boolean(x.private)].join("|") : null;
+      const row = k && open.get(k);
+      if (row) {
+        row.count += 1;
+        if (x.thread && row.marks.length < 20) row.marks.push([x.thread, x.msg]);
+        const who = x.by?.agent ? "agent" : String(x.by?.email || x.by?.name || "").toLowerCase();
+        if (!row.people.some((p) => (p.agent ? "agent" : String(p.email || p.name || "").toLowerCase()) === who)) row.people.push(x.by);
+        continue;
+      }
+      // `marks`: every message the row folds, for the page to light them all.
+      const lead = { ...x, count: 1, people: x.by ? [x.by] : [], ...(x.thread ? { marks: [[x.thread, x.msg]] } : {}) };
+      if (k) open.set(k, lead);
+      rows.push(lead);
+    }
     const seen = (key && own(this.db.seen, key)) || null;
-    const items = out.slice(0, limit);
-    return { items, seen, unread: out.filter((x) => x.for_you && (!seen || x.at > seen)).length };
+    return { items: rows.slice(0, limit), seen, unread: rows.filter((x) => x.for_you && (!seen || x.at > seen)).length };
   }
 
   // A person opened the bell: what is there now counts as seen, for them alone.

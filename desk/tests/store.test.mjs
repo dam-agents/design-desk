@@ -1820,30 +1820,50 @@ test("Under the hood: a short plain text with its sources; a plain string is its
   assert.equal(s.upsertCard({ id: card.id, impact: { concept: "x" } }).card.impact.behind, undefined, "none written: none shown");
 });
 
-test("notifications: what others did lately, private asks for their owner, For you, seen", () => {
+test("notifications: what others did lately, grouped per item, private answers for their owner, For you, seen", () => {
   const s = fresh();
   const carol = { email: "carol@example.com", role: "pm" };
   const { card } = s.createRequest(alice, { title: "Calmer cards", problem: "too loud", screen: "Agents list" });
   const t = s.openThread(card.id, bob, { kind: "comment", text: "The badges shout." });
   s.reply(t.thread.id, carol, "Agreed.");
-  s.openPrivate(bob, { text: "Only mine" });
+  const ask = s.openPrivate(bob, { text: "Only mine", context: { card: card.id } });
   const mine = s.notifications(alice);
-  // Alice's own request is not news to her; Bob's comment and Carol's reply are, on her request.
-  assert.deepEqual(mine.items.map((x) => x.event).sort(), ["comment", "reply"]);
-  for (const x of mine.items) { assert.equal(x.item, card.id); assert.equal(x.title, "Calmer cards"); assert.equal(x.screen, "Agents list"); assert.equal(x.for_you, true); }
-  assert.equal(mine.unread, 2);
+  // Alice's own request is not news to her; Bob's comment and Carol's reply are, as one row on her request.
+  assert.equal(mine.items.length, 1);
+  const talk = mine.items[0];
+  assert.equal(talk.event, "reply"); assert.equal(talk.detail, "Agreed.");
+  assert.equal(talk.count, 2);
+  assert.deepEqual(talk.people.map((p) => p.email), ["carol@example.com", "bob@example.com"]);
+  // The row lands on the newest message and names every message it folds.
+  assert.equal(talk.thread, t.thread.id); assert.equal(talk.msg, 1);
+  assert.deepEqual(talk.marks, [[t.thread.id, 1], [t.thread.id, 0]]);
+  assert.equal(talk.item, card.id); assert.equal(talk.title, "Calmer cards"); assert.equal(talk.screen, "Agents list"); assert.equal(talk.for_you, true);
+  assert.equal(mine.unread, 1);
   // Carol sees the request and Bob's comment, never her own reply nor Bob's private ask.
   const hers = s.notifications(carol).items;
   assert.deepEqual(hers.map((x) => x.event).sort(), ["comment", "new-request"]);
   assert.ok(hers.every((x) => !x.private));
-  // A new message in a thread she wrote in is for her.
+  // Design Desk's answer to Bob's private ask is his alone, and for him.
+  s.answer(ask.thread.id, "Only yours");
+  const his = s.notifications(bob).items.find((x) => x.private);
+  assert.equal(his.event, "answer"); assert.equal(his.thread, ask.thread.id); assert.equal(his.msg, 1); assert.equal(his.for_you, true); assert.equal(his.item, card.id);
+  assert.ok(!s.notifications(alice).items.some((x) => x.private));
+  // A new message in a thread she wrote in is for her, folded with Bob's comment.
   s.reply(t.thread.id, bob, "Thanks");
-  assert.equal(s.notifications(carol).items.find((x) => x.detail === "Thanks").for_you, true);
+  const row = s.notifications(carol).items.find((x) => x.detail === "Thanks");
+  assert.equal(row.for_you, true); assert.equal(row.count, 2); assert.equal(row.msg, 2);
+  // An option drawn and a vote on it name that option, for the click to open its tab.
+  s.db.cards[card.id].variants = [{ id: "v1", name: "Soft", drawn: s.clock(), version: 1 }];
+  s.vote(card.id, bob, { variant: "v1", vote: "prefer" });
+  const now = s.notifications(alice).items;
+  assert.equal(now.find((x) => x.event === "options-drawn").variant, "v1");
+  assert.equal(now.find((x) => x.event === "vote").variant, "v1");
   // Opening the bell marks it seen, for that person alone.
   s.markSeen(alice);
   assert.equal(s.notifications(alice).unread, 0);
-  // Carol wrote in the thread, so the request, Bob's comment and his reply are for her and count.
-  assert.equal(s.notifications(carol).unread, 3);
+  // Carol wrote in the request, so all of it is for her and counts, a row each: the request,
+  // the talk, the option drawn and the vote.
+  assert.equal(s.notifications(carol).unread, 4);
   // Dave took no part: he sees all of it under All, and his count stays 0.
   const dave = s.notifications({ email: "dave@example.com", role: "designer" });
   assert.ok(dave.items.length > 0 && dave.items.every((x) => !x.for_you));
