@@ -12,7 +12,7 @@ from the Desk store: the decisions in force (text, why, concepts, when, who deci
 the revoked ones in one line each. It holds no names, logins, e-mails, links, keys or pictures.
 The renderer redacts every free text (a decision's text, why, concepts, a revoke's reason):
 every link (`https://…`, `www.…`, `host/path` for a dotted name, `localhost` or an IP, `user@host:path`, a Slack `<…|…>` link), every Slack `<@…>`,
-`<#…>` or `<!…>` form, an e-mail in any case, an `@handle` (not `react@18`), a whole armored key block (PEM,
+`<#…>` or `<!…>` form, an e-mail in any case or script, an `@handle` (not `react@18`), a whole armored key block (PEM,
 PGP, SSH2) and every known key or token shape, and every name the roster (its `name` column and
 addresses) and the Desk store (a person's name, login and address wherever a record keeps one:
 an author, a reporter, an assignee, a voter's address, a GitHub login) hold, whole and in parts of 3 or more
