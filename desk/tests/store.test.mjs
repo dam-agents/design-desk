@@ -511,7 +511,7 @@ test("only an admin reopens a request sent to developers: back before the vote w
   assert.deepEqual([r.card.status, r.card.team_feedback.state, r.inbox, r.card.approved, r.card.spec, r.card.built, r.card.dev_summary], ["variants", "waiting", null, undefined, undefined, undefined, undefined], "before the vote, its options kept, nothing to check again");
   const [rec] = r.card.sends;
   assert.deepEqual([rec.approved.variant, rec.spec.issue_url, rec.built.by.email, rec.dev_summary.text, rec.threads, rec.closed.by.email], ["v1", "https://github.com/acme/widgets/issues/142", "bob@example.com", "x", [ask.id], "ann@example.com"]);
-  assert.deepEqual(s.listCards().find((x) => x.id === card.id).sends.map((x) => x.built), ["2026-11-06T09:00:00Z"], "the list names the earlier record");
+  assert.deepEqual(s.listCards().find((x) => x.id === card.id).sends.map((x) => x.built), [rec.built.at], "the list names the earlier record");
   // Approved again: the new send may close the earlier issue, when the person ticks it.
   s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: ["Look only."] } });
   assert.equal(s.act(card.id, alice, "approve", "v1", { closeEarlier: true }).inbox.close_earlier, "https://github.com/acme/widgets/issues/142");
