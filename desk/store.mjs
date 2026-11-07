@@ -1255,8 +1255,10 @@ export class Store {
     // A person picks one of the ways a part could look: it becomes the option's next version.
     if (action === "pick-alternative") return this.pickAlternative(c, who, variant, note);
     if (action === "drop-option") return this.dropOption(c, who, variant);
-    const kinds = { explore: "explore", "add-option": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
+    const kinds = { explore: "explore", "add-option": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "switch-off": "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
+    // A person switches off a live prototype before its expiry; the request stays where it is (docs/prototype.md → Teardown).
+    if (action === "switch-off" && !["live", "building"].includes(c.prototype?.state)) throw bad("This request has no live prototype on.");
     // Every state of one part of an option: the option and the part a person picked.
     const stateOf = action === "states" ? (c.variants || []).find((v) => v.id === variant) : null;
     if (action === "states" && !stateOf) throw bad("Pick the design option whose states to draw.");

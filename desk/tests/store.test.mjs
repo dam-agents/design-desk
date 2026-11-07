@@ -331,6 +331,16 @@ test("a live prototype's option is the one approved", () => {
   assert.deepEqual([ok.card.approved.variant, ok.card.approved.version], ["v2", 1], "at the version it was built from");
 });
 
+test("a person switches off a live prototype: a teardown, the request stays where it is; none twice, none without a prototype", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });
+  assert.throws(() => s.act(card.id, alice, "switch-off"), /no live prototype/);
+  s.upsertCard({ id: card.id, status: "testing", triage: { verdict: "design", reasons: ["Only the look."] }, prototype: { state: "live", url: "https://example.com/p" } });
+  const r = s.act(card.id, alice, "switch-off");
+  assert.deepEqual([r.inbox.kind, r.card.status], ["teardown", "testing"]);
+  assert.throws(() => s.act(card.id, alice, "switch-off"), /already|working/i, "one teardown at a time");
+});
+
 test("while its prototype is live, approve takes live_pick back at feedback; an option taken off leaves live_pick and its waiting build", () => {
   const s = fresh();
   const { card } = s.createRequest(bob, { title: "Calmer list", problem: "The list shouts." });

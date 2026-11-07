@@ -106,7 +106,9 @@ The patch and the guard report stay on the card.
 
 ## Teardown (`teardowns_due`)
 
-A closed request, or a handed-off one past its expiry: `proto.sh run C-<n> down` (when the
+A closed request, a handed-off one past its expiry, or one a person switched off on the
+Desk (**Switch it off…** on its live prototype, the `switch-off` action of a role that
+builds; the request keeps its status, and **Build it again** brings it back): `proto.sh run C-<n> down` (when the
 profile has it), `delete_environment`, `proto.sh remove C-<n>` (the worktree and its branch,
 never the patch), `prototype.state: torn-down`. A pushed branch stays; it is the
 developer's.

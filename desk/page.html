@@ -3725,7 +3725,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   document.addEventListener("input", (e) => { if (e.target.id === "spec-text") { S.specDraft = { card: S.card?.id, text: e.target.value }; clearTimeout(specTimer); specTimer = setTimeout(specPreview, 300); } });
 
   // The prototype's demo account in the facts' style: grey words, the values in ink.
-  const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}${l.hint ? `<span>${esc(l.hint)}</span>` : ""}`;
+  const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}`;
   function renderStatus(c) {
     const busy = working(c);
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
@@ -3898,8 +3898,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const g = p.guard ? `<dt>Look-only check</dt><dd>${p.guard.ok ? `<span class="chip ok" title="Design Desk checked that the prototype changes how the product looks, never what it does">✓ only the look changed</span>` : `<span class="chip warn" title="Design Desk only changes how the product looks; a developer builds the rest">Part of this would change what the product does, so it was left out of the prototype. The developer spec lists it.</span>`}</dd>` : "";
     return `<h3>Live prototype</h3>${livePickLine(c)}<div class="panel proto"><b>${esc(msg)}</b>
       ${p.state === "live" ? `<p class="hint">You may first be asked to sign in with your usual account; then sign in to the product with the demo account below, not your own. Everything in it is made-up data; nothing you do reaches real customers. Can't open it? Ask ${esc(contact())} to add you.</p>` : ""}
-      ${p.state === "live" && p.url ? `<div><a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open the prototype ↗</a></div>` : ""}
-      <dl class="kv">${p.login ? `<dt>Demo account</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}${p.login.hint ? ` <span class="sub">${esc(p.login.hint)}</span>` : ""}</dd>` : ""}
+      ${p.state === "live" && (p.url || can("build")) ? `<div class="actions">${p.url ? `<a class="btn primary" href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open the prototype ↗</a>` : ""}${can("build") && !working(c).includes("teardown") ? `<button class="btn" data-switch-off title="Switches the prototype off now, before ${p.expires ? esc(when(p.expires)) : "its expiry"}; the request stays where it is, and you can build it again">Switch it off…</button>` : ""}</div>` : ""}
+      <dl class="kv">${p.login ? `<dt>Demo account</dt><dd><code>${esc(p.login.user || "")}</code>${p.login.password ? ` / <code>${esc(p.login.password)}</code>` : ""}</dd>` : ""}
       ${p.expires && p.state === "live" ? `<dt>Available until</dt><dd>${esc(when(p.expires))}</dd>` : ""}${g}</dl></div>`;
   }
 
@@ -5408,6 +5408,15 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       renderWorkspace(); return;
     }
     if (ds.act) { await act(ds.act); return; }
+    // A live prototype switched off before its expiry; the request stays where it is (docs/prototype.md → Teardown).
+    if ("switchOff" in ds) {
+      const c = S.card;
+      const r = await ask({ title: "Switch off the live prototype?", body: "Its link stops working for everyone. The request stays where it is, and you can build the prototype again.", ok: "Switch it off",
+        send: () => api("POST", `/api/cards/${c.id}/actions`, { action: "switch-off" }) });
+      if (!r) return;
+      toast("Design Desk switches the prototype off in its next check.");
+      await refreshList(); await openCard(c.id); return;
+    }
     // the workspace
     if ("wsClose" in ds) { S.ws.open = false; S.ws.check = false; S.ws.alt = null; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); renderDetail(); return; }
     if (ds.dropOption) {

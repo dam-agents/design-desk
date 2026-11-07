@@ -10,7 +10,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.63.2 — 2026-11-07
 
 **Upgrade:**
-Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the page ([desk.md](docs/desk.md) → Publishing the page).
 
 ## 1.63.1 — 2026-11-07
 
