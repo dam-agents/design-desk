@@ -2048,6 +2048,46 @@ window.platform = { async request({ method, path }) {
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
+// Simple mode and the bell: a row about a page simple mode hides (Issues, Product) leaves the
+// list and the count; switching simple mode off brings them back.
+const SIMPLE_BELL = `<script>
+window.posts = [];
+const ago = (m) => new Date(Date.now() - m * 60e3).toISOString().replace(/\\.\\d{3}Z$/, "Z");
+const row = (m, event, item, kind, title) => ({ at: ago(m), event, item, kind, title, by: { email: "pat@example.com" }, for_you: true, count: 1, people: [{ email: "pat@example.com" }] });
+const items = [row(1, "new-issue", "C-7", "issue", "An issue"), row(2, "comment", "C-8", "screen", "A screen"), row(3, "comment", "C-9", "element", "An element"),
+  row(4, "new-decision", "D-1", "decision", "A decision"), row(5, "new-request", "C-2", "request", "A request")];
+window.platform = { async request({ method, path, body }) {
+  if (method === "POST") { posts.push(path); return { status: 200, contentType: "application/json", body: JSON.stringify(path === "/api/prefs" ? { theme: null, simple: JSON.parse(body).simple } : path === "/api/notifications/seen" ? { seen: items[0].at } : {}) }; }
+  const answer = path === "/api/me" ? { role: "designer", email: "a@example.com", key: "a@example.com", simple: true, can: { comment: true } }
+    : path === "/api/cards" ? { cards: [] } : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
+    : path === "/api/notifications" ? { items, seen: null, unread: items.length } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+test("in simple mode the bell leaves out issues, screens, elements and decisions, in its rows and its count; switching simple mode off brings them back", (t) => open(t, SIMPLE_BELL, async (desk) => {
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
+  assert.equal(await desk.textContent("#bell-count"), "1", "simple mode counts only the request");
+  await desk.click("#me");
+  await desk.click("#simple");
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "5");
+  await desk.click("#me");
+  await desk.click("#simple");
+  await desk.waitForFunction(() => document.querySelector("#bell-count")?.textContent === "1");
+  await desk.click("#bell-btn");
+  for (const only of ["1", "0"]) {
+    await desk.click(`#notes [data-only="${only}"]`);
+    assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-2"], `only the request, ${only === "1" ? "For you" : "All"}`);
+  }
+  // The switch sits in another menu, so the bell closes on its click; open again, every row is back.
+  await desk.click("#me");
+  await desk.click("#simple");
+  await desk.waitForFunction(() => !document.querySelector("#bell").open);
+  await desk.click("#bell-btn");
+  await desk.click('#notes [data-only="0"]');
+  assert.deepEqual(await desk.$$eval("#notes [data-note] .ti .num", (els) => els.map((e) => e.textContent)), ["C-7", "C-8", "C-9", "D-1", "C-2"], "full mode shows every row again");
+}));
+
 test("the bell counts what is For you, opens on it, marks it seen, shows All on a click, and a row lands on its message; a menu button without data-keep still closes its menu", (t) => open(t, BELL, async (desk) => {
   await desk.waitForFunction(() => document.querySelector("#bell-count")?.hidden === false);
   assert.equal(await desk.textContent("#bell-count"), "1", "the count is what is For you");

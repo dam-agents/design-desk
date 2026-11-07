@@ -7,11 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.61.2 — 2026-11-07
+## 1.61.3 — 2026-11-07
 
 **Upgrade:**
 Nothing — scripts are re-read per run. The next issues run renders the decisions page again
 with the stricter redaction and publishes it if it changed.
+
+## 1.61.2 — 2026-11-07
+
+**Upgrade:**
+1. Republish the Desk page: `update_artifact` on `desk_artifact` with `desk/page.html`
+   ([docs/desk.md](docs/desk.md) → **Publishing the page**). Nothing to migrate.
 
 ## 1.61.1 — 2026-11-07
 
