@@ -761,6 +761,10 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   // The agent's question resumes the same option and part.
   s.claim(item.id, "run-2"); s.done(item.id, "run-2", "asked");
   const { thread: q } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "The upload button?", step: "states" });
+  const guest = { email: "guest@example.com", role: "guest" };
+  assert.deepEqual([s.threadNeed(q.id, guest), can("guest", s.threadNeed(q.id, guest)), can("developer", s.threadNeed(q.id, bob))], ["revise", false, true], "an answer that resumes a step takes that step's ability");
+  const { thread: talk } = s.openThread(card.id, alice, { kind: "question", text: "Why blue?" });
+  assert.deepEqual([s.threadNeed(talk.id, guest), s.threadNeed(talk.id, guest, "resolve"), s.threadNeed(talk.id, alice, "resolve")], ["comment", "resolve", "comment"], "a guest replies, marks done only their own");
   const { inbox: resumed } = s.reply(q.id, alice, "Yes.");
   assert.deepEqual([resumed.kind, resumed.variant, resumed.part.label], ["states", "v1", "Button “Upload”"]);
   s.claim(resumed.id, "run-3"); s.done(resumed.id, "run-3", "drew");

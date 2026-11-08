@@ -23,6 +23,20 @@ test("nothing on the page submits a form", () => {
   assert.doesNotMatch(page, /addEventListener\("submit",\s*guard\(/);
 });
 
+// md()'s inline rules (docs/desk.md → Writing on the Desk), run on their own: a construct
+// never lands inside another's attribute, so no person's text becomes markup.
+test("markdown text never becomes an attribute or a handler", () => {
+  const esc = page.match(/const esc = [^\n]+/)[0];
+  const rules = page.match(/const INLINE = [\s\S]*?\n  };\n/)[0];
+  const inline = new Function(`${esc}\n${rules}\nreturn inline;`)();
+  const out = inline("![[x](asset:A-1)](https://a/src/onerror=alert(1)//)");
+  assert.doesNotMatch(out, /<a\b/, "the link stays text after the picture");
+  assert.equal((out.match(/"/g) || []).length % 2, 0);
+  assert.match(out, /<img alt="\[x" data-asset="A-1" \/>/);
+  assert.equal(inline('**a [b](https://x.test/"q) c** `<i>`'), '<b>a <a href="https://x.test/&quot;q" target="_blank" rel="noopener noreferrer">b</a> c</b> <code>&lt;i&gt;</code>');
+  assert.equal(inline("[**b**](https://x.test)"), '<a href="https://x.test" target="_blank" rel="noopener noreferrer"><b>b</b></a>');
+});
+
 test("the new option dialog sends on its close, as the page's other dialogs do", () => {
   const f = page.match(/<dialog id="option-dialog">[\s\S]*?<\/dialog>/)?.[0];
   assert.ok(f, "the page has the option-dialog");

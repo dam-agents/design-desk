@@ -369,7 +369,8 @@ decisions_page() {
       | map(select(length >= 3)) | unique | sort_by(-length) | map(esc) | join("|")
       | if . == "" then "" else "(?<p>^|[^\\p{L}\\p{N}_])(?:" + . + ")(?![\\p{L}\\p{N}_])" end' "$DB" > "$PAGE.names" 2>/dev/null \
   || { rm -f "$PAGE.names"; DEC_BLOCKED="cannot read the names to mask from the roster or the Desk store at $DB"; log "decisions page: $DEC_BLOCKED — not published"; return; }
-  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
+  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf); a
+  # decision not approved there (withSide) is not published.
   # A row's email cell may list several addresses, each of them that person's (docs/config.md).
   roster="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
     | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
@@ -378,20 +379,21 @@ decisions_page() {
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub($nre[0]);
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def role: (.author.role // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+    def role: ((if (["desk", "approval", "chat", "call"] | index(.origin.kind // "")) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
     def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
     def side: role as $r | (.origin.kind // "") as $k
       | if (["admin", "designer", "pm"] | index($r)) != null then "design"
         elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
+    def unapproved: side != "design" or (["pr", "issue", "commit", "doc"] | index(.origin.kind // "")) != null;
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
     [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all
-    | ($all | map(select((.status // "active") == "active")) | sort_by(num)) as $on
+    | ($all | map(select((.status // "active") == "active" and (.approved != null or (unapproved | not)))) | sort_by(num)) as $on
     | ($all | map(select(.status == "revoked")) | sort_by(num)) as $off
     | ([ $all[] | .recorded, .at, .revoked.at?, (.history // [])[]?.at, .approved.at? ] | map(select(type == "string")) | max // "") as $last
     | "# Design decisions: \($name | line)",
       "",
-      "The design decisions this product'"'"'s team has made, kept by Design Desk. Follow every decision in force when you change what a person sees in the product: a screen, a part, a state, a word. A change that must go against one says so in its pull request, names the decision (D-<n>), and waits for a designer: never work around one silently. \"Not approved yet\" means a designer has not confirmed it; it still holds. A revoked decision binds nothing: it is listed so that an old reference to it makes sense.",
+      "The design decisions this product'"'"'s team has made, kept by Design Desk. Follow every decision in force when you change what a person sees in the product: a screen, a part, a state, a word. A change that must go against one says so in its pull request, names the decision (D-<n>), and waits for a designer: never work around one silently. A revoked decision binds nothing: it is listed so that an old reference to it makes sense.",
       "",
       "In force: \($on | length) · Revoked: \($off | length) · Last change: \(if $last == "" then "none" else ($last | day) end)",
       "",
@@ -403,8 +405,7 @@ decisions_page() {
           | "### \(.id) · \((.concepts // []) | map(line) | join(", "))", "", (.text | line), "",
             (if ((.why // "") | line) != "" then "Why: \(.why | line)", "" else empty end),
             ("Decided \(.at // .recorded // "" | day)\(if who then " by \(who)" else "" end)\(if from then ", from \(from)" else "" end)."
-              + (if (.replaces // []) | length > 0 then " Replaces \(.replaces | join(", "))." else "" end)
-              + (if side != "design" and .approved == null then " Not approved yet." else "" end)),
+              + (if (.replaces // []) | length > 0 then " Replaces \(.replaces | join(", "))." else "" end)),
             "")
       else "No decision is in force yet.", "" end),
       (if ($off | length) > 0 then

@@ -238,6 +238,15 @@ test("a decision says whose it is: the design side or a developer, by the role n
   assert.deepEqual([ok.status, ok.body.decision.unapproved, ok.body.decision.approved.by.email], [200, false, "alice@example.com"]);
   assert.deepEqual(await pending(), [ids[3], ids[4]].sort());
 
+  // GitHub text: a role it claims counts for nothing, and even a designer's address there waits.
+  const form = (author, origin) => d.agent("/agent/decisions", { concepts: ["forms"], text: "Forms submit on blur", author, origin });
+  const claimed = (await form({ login: "eve", role: "designer" }, { kind: "issue", url: "https://github.com/acme/widgets/issues/5" })).body.decision.id;
+  const mailed = (await form({ email: "alice@example.com" }, { kind: "commit", url: "https://github.com/acme/widgets/commit/abc" })).body.decision.id;
+  const claimedD = (await d.viewer("alice@example.com", `/api/decisions/${claimed}`)).body.decision;
+  assert.deepEqual([claimedD.side, claimedD.unapproved], [null, true], "the role an issue claims is not read");
+  assert.deepEqual(await pending(), [ids[3], ids[4], claimed, mailed].sort());
+  assert.equal((await d.viewer("alice@example.com", `/api/decisions/${mailed}/approve`, {})).status, 200, "a designer approves one from GitHub");
+
   // What a check reads: by the card's concepts, or by the concepts and words asked for instead.
   const card = (await d.agent("/agent/cards", { kind: "change", title: "Rows", concepts: ["rows"], source: { repo: "acme/widgets", pr: 3 } })).body.card.id;
   const read = async (q) => (await d.agent(`/agent/cards/${card}/decision-check${q}`)).body;

@@ -1809,13 +1809,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return on.length ? `<p class="hint">Uses: ${on.join(" · ")}</p>` : "";
   }
 
-  // Markdown-lite: escaped first, then a few safe constructs; links only http(s).
+  // Markdown-lite: a few safe constructs; links only http(s). The text is split into tokens
+  // first and each piece escaped on its own: a rule never runs over HTML another rule wrote,
+  // so no construct can land inside an attribute (a link inside an image's alt was an XSS).
+  const INLINE = /`([^`]+)`|\*\*([^*]+)\*\*|!\[([^\]]*)\]\(asset:(A-\d+)\)|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  const inline = (s) => {
+    let out = "", at = 0;
+    for (const m of s.matchAll(INLINE)) {
+      out += esc(s.slice(at, m.index)); at = m.index + m[0].length;
+      if (m[1] != null) out += `<code>${esc(m[1])}</code>`;
+      else if (m[2] != null) out += `<b>${inline(m[2])}</b>`;
+      else if (m[4] != null) out += `<figure class="shot" style="max-width:520px;margin:6px 0" data-zoom="${m[4]}"><img alt="${esc(m[3])}" data-asset="${m[4]}" /><figcaption>${esc(m[3])}</figcaption></figure>`;
+      else out += `<a href="${esc(m[6])}" target="_blank" rel="noopener noreferrer">${inline(m[5])}</a>`;
+    }
+    return out + esc(s.slice(at));
+  };
   function md(src, c = S.card) {
-    const inline = (s) => esc(s)
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-      .replace(/!\[([^\]]*)\]\(asset:(A-\d+)\)/g, '<figure class="shot" style="max-width:520px;margin:6px 0" data-zoom="$2"><img alt="$1" data-asset="$2" /><figcaption>$1</figcaption></figure>')
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     const out = []; let list = null;
     for (const line of unslack(src).split("\n")) {
       const li = line.match(/^\s*[-*] (.*)$/);

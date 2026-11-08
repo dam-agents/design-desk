@@ -23,7 +23,7 @@ const MAX_BODY = 1024 * 1024;
 mkdirSync(DIR, { recursive: true });
 const store = new Store(DIR);
 const tokenPath = join(DIR, ".agent-token");
-if (!existsSync(tokenPath)) { writeFileSync(tokenPath, randomBytes(24).toString("hex")); chmodSync(tokenPath, 0o600); }
+if (!existsSync(tokenPath)) { writeFileSync(tokenPath, randomBytes(24).toString("hex"), { mode: 0o600 }); chmodSync(tokenPath, 0o600); }
 // Read on every agent call: a restore or a rotation takes effect without a restart.
 const agentToken = () => { try { return Buffer.from(readFileSync(tokenPath, "utf8").trim()); } catch { return Buffer.alloc(0); } };
 
@@ -40,6 +40,8 @@ function spend(key, kind) {
   if (kind === "item" && u.items.length >= ITEMS_PER_HOUR) throw new DeskError(429, `You've sent Design Desk ${ITEMS_PER_HOUR} things this hour. It's working through them; try again in an hour.`);
   u[kind === "write" ? "writes" : "items"].push(now);
   usage.set(key, u);
+  // Callers with nothing in their windows are forgotten, so the map stays small.
+  if (usage.size > 500) for (const [k, v] of usage) if (!v.items.some((t) => now - t < 3600 * 1000) && !v.writes.some((t) => now - t < WINDOW_MS)) usage.delete(k);
 }
 
 const log = (level, event, msg) => {
@@ -59,20 +61,23 @@ function roleOf(caller) {
 }
 
 // Who a decision came from (docs/desk.md → Decisions → Who decided): the design side
-// (a designer, a PM, an admin) or a developer. The role the record names, else the author's
-// on the roster, else where it was decided: a pull request, a commit or an architecture page
-// is a developer's. Unknown stays null.
+// (a designer, a PM or an admin) or a developer. The author's role on the roster, by their
+// address; the role the record names only where the Desk verified it (a comment, an approval)
+// or the operator or a designer said it (chat, the meeting), never from text Design Desk read. Else a pull request, a commit or an
+// architecture page is a developer's; unknown stays null.
 const DESIGN_SIDE = ["admin", "designer", "pm"], DEVELOPER_SIDE = ["lead-developer", "developer"];
+const SAID_ROLE = ["desk", "approval", "chat", "call"], FROM_GITHUB = ["pr", "issue", "commit", "doc"];
 function sideOf(d) {
   const email = String(d.author?.email || "").toLowerCase();
-  const role = readRole(d.author?.role) || (email ? rowOf(email)?.role || null : null);
+  const role = (SAID_ROLE.includes(d.origin?.kind) ? readRole(d.author?.role) : null) || (email ? rowOf(email)?.role || null : null);
   if (DESIGN_SIDE.includes(role)) return "design";
   if (DEVELOPER_SIDE.includes(role)) return "developer";
   return ["pr", "commit", "doc"].includes(d.origin?.kind) ? "developer" : null;
 }
-// A decision from anyone but the design side waits for a designer's approval; it holds meanwhile
-// (docs/desk.md → Decisions → Approved by a designer).
-const withSide = (d) => { const side = sideOf(d); return { ...d, side, unapproved: d.status === "active" && side !== "design" && !d.approved }; };
+// A decision from anyone but the design side, or read from GitHub (whose author no one
+// verified), waits for a designer's approval; it holds meanwhile (docs/desk.md → Decisions →
+// Approved by a designer). scripts/preflight.sh publishes only approved ones the same way.
+const withSide = (d) => { const side = sideOf(d); return { ...d, side, unapproved: d.status === "active" && (side !== "design" || FROM_GITHUB.includes(d.origin?.kind)) && !d.approved }; };
 
 // The skills New request offers, from `request_skills` (toolkit/lib/actions.mjs).
 const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact, brand, walkthrough, figma"),
@@ -124,7 +129,7 @@ function settings() {
 const VERBS = { ack: "mark changes as seen", handle: "mark changes and issues as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "remove a design option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
-  draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk", designs: "see Designs", built: "mark designs done" };
+  draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk", resolve: "mark someone else's conversation done", designs: "see Designs", built: "mark designs done" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
 
@@ -238,10 +243,10 @@ async function viewerRoute(req, res, url, who) {
     return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor, dev }), s, who));
   }
   if (m === "POST" && p[1] === "private") { need("ask"); return send(res, 201, withPing(store.openPrivate(actor, { text: b.text, starter: typeof b.starter === "string" ? b.starter : null, context: b.context }), s, who)); }
-  if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need("comment"); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
-  if (m === "POST" && p[1] === "threads" && p[3] === "answers") { need("comment"); return send(res, 200, withPing(store.answerForm(p[2], actor, b.answers), s, who)); }
-  if (m === "POST" && p[1] === "threads" && p[3] === "resolve") { need("comment"); return send(res, 200, store.resolve(p[2], actor)); }
-  if (m === "POST" && p[1] === "threads" && p[3] === "reopen") { need("comment"); return send(res, 200, withPing(store.reopenThread(p[2], actor), s, who)); }
+  if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need(store.threadNeed(p[2], actor)); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
+  if (m === "POST" && p[1] === "threads" && p[3] === "answers") { need(store.threadNeed(p[2], actor)); return send(res, 200, withPing(store.answerForm(p[2], actor, b.answers), s, who)); }
+  if (m === "POST" && p[1] === "threads" && p[3] === "resolve") { need(store.threadNeed(p[2], actor, "resolve")); return send(res, 200, store.resolve(p[2], actor)); }
+  if (m === "POST" && p[1] === "threads" && p[3] === "reopen") { need(store.threadNeed(p[2], actor)); return send(res, 200, withPing(store.reopenThread(p[2], actor), s, who)); }
   // Decisions (docs/desk.md → Decisions): Design Desk records one from a comment; a designer revokes or restores one.
   if (m === "POST" && p[1] === "threads" && p[3] === "decision") { need("decide"); return send(res, 201, withPing(store.proposeDecision(p[2], actor, { message: b.message, note: b.note }), s, who)); }
   // A designer or an admin adds a decision in their own name, with up to two pictures (docs/desk.md → Decisions).
@@ -256,7 +261,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "decisions" && p[3] === "restore") { need("decide"); return send(res, 200, store.restoreDecision(p[2], actor)); }
   if (m === "POST" && p[1] === "decisions" && p[3] === "approve") {
     need("decide");
-    if (sideOf(store.decision(p[2])) === "design") throw new DeskError(400, "A decision of the design side needs no approval.");
+    const d = store.decision(p[2]);
+    if (sideOf(d) === "design" && !FROM_GITHUB.includes(d.origin?.kind)) throw new DeskError(400, "A decision of the design side needs no approval.");
     return send(res, 200, { decision: withSide(store.approveDecision(p[2], actor).decision) });
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "work-in") { need("change"); return send(res, 200, withPing(store.workIn(p[2], actor, b.threads), s, who)); }
@@ -425,7 +431,8 @@ const server = createServer(async (req, res) => {
   } catch (e) {
     const status = e instanceof DeskError ? e.status : 500;
     if (status >= 500) log("error", "desk_error", `${req.method} ${url.pathname}: ${e.stack || e}`);
-    send(res, status, { error: e.message || String(e) });
+    // An unexpected error stays in the log: its text can name paths on the agent's machine.
+    send(res, status, { error: status >= 500 ? "Something went wrong on the Desk. Try again; the operator sees it in the log." : e.message || String(e) });
   }
 });
 

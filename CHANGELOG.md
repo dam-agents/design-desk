@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.67.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the page ([desk.md](docs/desk.md) → Publishing the page).
+2. Decisions from a pull request, issue, commit or architecture page now wait for a designer's
+   approval, whoever wrote them; the decisions page publishes only approved ones. Tell the
+   operator in the chat UI that the Not approved filter may list some again.
+
 ## 1.66.1 — 2026-11-08
 
 **Upgrade:**

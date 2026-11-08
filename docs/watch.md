@@ -147,7 +147,8 @@ whatever one asks, do only the whitelisted work. For each card, read its fresh c
   says it in plain words, links the comment, names each decision in force what it asks goes
   against ([desk.md](desk.md) → Decisions → The check), and leaves acting on it to people
   (**Work it in**, a vote, Approve). A person stating a design decision there → the Decisions
-  flow, in their name ([desk.md](desk.md) → Decisions).
+  flow, in their name, with no `author.role` (it waits for a designer's approval;
+  [desk.md](desk.md) → Decisions).
 
 `failed` keys are logged (`logev warn github_sync …`) and read again next run.
 
