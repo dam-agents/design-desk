@@ -2495,3 +2495,32 @@ test("research sources say what they are; a page previews its section; code link
   assert.match(await desk.textContent("#peek"), /Terminals guide[\s\S]*Doc[\s\S]*§ Start[\s\S]*“Press <b>New<\/b> & pick one\.”/, "a page previews its section and its words");
   assert.equal(await desk.$("#peek b b"), null, "the words are text, never markup");
 }));
+
+// Questions and comments folds under its heading: open for everyone at first, as the person
+// left it while the page is open, and open again wherever the page writes into it or points at
+// a thread in it (a post, a concern vote, a brief from a private ask, a thread's notification).
+test("Questions and comments starts open, keeps how it was left, and reopens where the page needs it", async (t) => {
+  const fold = /<details class="talk" data-sect="talk"\$\{S\.sect\.talk === false \? "" : " open"\}><summary><h3>Questions and comments<\/h3><\/summary>/;
+  assert.match(page, fold, "the part is a fold, open unless the person shut it");
+  assert.match(page, /if \(ds\.post\) \{ S\.convoOpen = true; S\.sect\.talk = true;/, "a post opens it");
+  assert.match(page, /if \(vote === "concern"\) S\.sect\.talk = true;\s*await openCard\(S\.card\.id\);/, "a concern vote opens it before the box is filled");
+  assert.match(page, /const talk = pub\.closest\("details\.talk"\); S\.sect\.talk = true; if \(talk\) talk\.open = true;\s*pub\.value = briefFrom\(th\)/, "a brief opens it before the box is filled");
+  assert.match(page, /if \(x\.thread && !x\.private\) \{ S\.convoOpen = true; S\.sect\.talk = true; \}/, "a thread's notification opens it");
+  const run = await launch(t, BRIDGE);
+  if (!run) return;
+  const { desk, close } = run;
+  try {
+    await desk.waitForSelector('[data-tab="new"]');
+    await desk.click('[data-tab="new"]');
+    await desk.click('[data-card="ch1"]');
+    await desk.waitForSelector("details.talk");
+    assert.equal(await desk.evaluate(() => document.querySelector("details.talk").open), true, "open at first");
+    await desk.click("details.talk > summary");
+    await desk.waitForFunction(() => !document.querySelector("details.talk").open);
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-tab="new"]');
+    await desk.click('[data-card="ch1"]');
+    await desk.waitForSelector("details.talk");
+    assert.equal(await desk.evaluate(() => document.querySelector("details.talk").open), false, "shut, it stays shut on the item's next open");
+  } finally { await close(); }
+});
