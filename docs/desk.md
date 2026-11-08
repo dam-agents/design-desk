@@ -98,8 +98,8 @@ served by the Desk server through the platform's Artifact API relay.
   them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
   the server takes it, and sent again on the next load.
   **Simple mode**, a switch in the menu under the person's name (an on/off switch beside its
-  words, in the accent when on), only hides: **Issues**, **Product** and **People** leave the menu, Product's pages their
-  bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
+  words, in the accent when on), only hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
+  request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
   button). An option's design (the mockup) starts folded; it opens with a click, and a user
