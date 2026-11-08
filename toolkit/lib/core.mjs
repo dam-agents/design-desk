@@ -1,8 +1,9 @@
 // Shared paths and helpers for the Design Desk toolkit. Every bin/ script imports this.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, mkdirSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,11 +12,36 @@ export const HOME = process.env.HOME || "/home/agent";
 export const WORK = process.env.WORK_DIR || join(HOME, "work");
 // Persistent: survives hibernation and restarts. Per-repo toolchains and fonts live here.
 export const DATA = process.env.DESIGN_DESK_DATA || join(HOME, ".local/share/design-desk");
-// Ephemeral: emptied at every boot. Fresh clones and build scratch live here.
-export const SCRATCH = process.env.DESIGN_DESK_SCRATCH || "/tmp/design-desk";
 export const req = createRequire(join(TOOLKIT, "package.json"));
 
 export const fail = (msg) => { console.error(`design: ${msg}`); process.exit(1); };
+
+// A directory only this user can enter: made 0700, and refused when another user (or a
+// symlink) already holds the name — a shared /tmp path is someone else's to plant.
+export function privateDir(d) {
+  try { mkdirSync(d, { recursive: true, mode: 0o700 }); } catch (e) { fail(`cannot make ${d}: ${e.message}`); }
+  const st = lstatSync(d);
+  if (!st.isDirectory() || (process.getuid && st.uid !== process.getuid())) fail(`${d} is not this user's own directory — refusing to use it`);
+  if ((st.mode & 0o077) !== 0) chmodSync(d, 0o700);
+  return d;
+}
+// Ephemeral: emptied at every boot. Fresh clones and build scratch live here, per user;
+// every writer takes its folder through `scratch()`, which checks the root is private.
+export const SCRATCH = process.env.DESIGN_DESK_SCRATCH
+  || (process.env.XDG_RUNTIME_DIR ? join(process.env.XDG_RUNTIME_DIR, "design-desk") : join(tmpdir(), `design-desk.${process.getuid ? process.getuid() : "user"}`));
+export const scratch = (...parts) => ensureDir(join(privateDir(SCRATCH), ...parts));
+
+// Repository code (a component bundle, a Tailwind config and its plugins) runs in a child
+// node whose environment holds PATH and nothing else: no token, no session variable.
+// Stopgap (docs/self-modification.md §5a): it still runs as the agent's user and can read
+// what is on disk (~/.config/gh, work/); the real fix is an OS sandbox or an Environment
+// for repository code, which the agent image does not offer yet.
+export function isolatedEnv(home) {
+  return { PATH: [dirname(process.execPath), process.env.PATH || "/usr/bin:/bin"].join(":"), HOME: home, TMPDIR: home, LANG: "C.UTF-8" };
+}
+// A fresh private directory under SCRATCH for one such child (its cwd and HOME).
+export const privateTmp = (prefix) => mkdtempSync(join(privateDir(SCRATCH), `${prefix}-`));
+
 export const warn = (msg) => console.error(`design: warning: ${msg}`);
 export const ensureDir = (d) => { mkdirSync(d, { recursive: true }); return d; };
 export const sh = (cmd, args, opts = {}) =>
@@ -158,12 +184,25 @@ export function chromium() {
   return null;
 }
 
+// Chromium's own sandbox first. Stopgap (docs/self-modification.md §5a): the agent's
+// container (an unprivileged user, no user namespaces, the @sparticuz/chromium build) usually
+// cannot start that sandbox, so a failed launch falls back to --no-sandbox with one warning
+// per process. The fix belongs to the agent image (user namespaces or a setuid sandbox);
+// until then a page rendered here must stay the agent's own HTML. Pages never read sibling
+// files over XHR: no --allow-file-access-from-files.
+let sandboxWarned = false;
 export async function launch() {
   const found = chromium();
   if (!found) fail("no Chromium found — run `bash ~/scripts/install-toolkit.sh` (it installs one), or set CHROMIUM=/path/to/chrome");
   Object.assign(process.env, found.env);
   const { chromium: pw } = req("playwright-core");
-  return pw.launch({ executablePath: found.executablePath, args: ["--no-sandbox", "--disable-gpu", "--allow-file-access-from-files", "--font-render-hinting=none"] });
+  const opts = { executablePath: found.executablePath, args: ["--disable-gpu", "--font-render-hinting=none"] };
+  try { return await pw.launch({ ...opts, chromiumSandbox: true }); }
+  catch (e) {
+    if (!sandboxWarned) warn(`Chromium's sandbox did not start (${String(e.message || e).split("\n")[0].slice(0, 160)}); rendering without it`);
+    sandboxWarned = true;
+    return pw.launch({ ...opts, chromiumSandbox: false });
+  }
 }
 
 // @font-face rules with the font files inlined, so a deliverable never needs a font CDN.
