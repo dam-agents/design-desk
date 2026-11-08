@@ -30,8 +30,8 @@ Before anything is designed, know what is already there: whether the request is 
 where the code came from, who owns it, and whether today's behaviour was someone's decision.
 The person deciding sees it on the card, and every later step builds on it.
 
-1. **Issues.** `gh issue list -R <repo> --state all --limit 30 --search "<keywords>"` with the
-   request's words, the UI text and the component names you find; read the relevant ones
+1. **Issues.** `gh issue list -R <repo> --state all --limit 30 --search "$(cat <keywords file>)"`
+   with the request's words, the UI text and the component names you find; read the relevant ones
    with their comments. A closed `not planned` issue often carries the reason.
 2. **The code.** The few files that implement the screen (the profile's `screens`, then a
    search for the UI text). `request.screen`, the person's answer to "Which screen?", says
@@ -406,7 +406,8 @@ thread they started: `reply` with `chatId` = `origin.chat` and `threadTs` =
 `origin.thread_ts`, never a new post, whatever `notify` says. Every reply names the card
 (`C-<n>`) and links it; attach a PNG of the design or screen whenever the step has one. One
 text reply per step, in the words the Desk shows and in plain words ([desk.md](desk.md) →
-Writing on the Desk):
+Writing on the Desk), people's text escaped (desk.md → Links to an item, Text to Slack); a
+reporter not on the roster gets only the first and the last ([Chat and Slack](#chat-and-slack)):
 
 - after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.",
   with each decision in force it goes against by its `D-<n>`;
@@ -460,11 +461,16 @@ Designer kit made. Pick the skill, build, look, deliver:
 | "This is broken / looks wrong" | [UI bugs](#ui-bugs) → From a channel |
 | "Make it…", "how would it look if…" in a request's thread (`slack_council: enabled`) | `slack-council` |
 
+- **Slack serves the roster only.** A sender not on `## Desk people` ([desk.md](desk.md) →
+  Roles, In Slack) gets one polite line that the Design Desk works for its team, and nothing
+  else: no answer from the code, no picture, no deliverable, no council ask, no queued design.
+  Their UI bug report may still be queued (`bug_reports: enabled`); its thread then hears only
+  that it was queued and, at the end, the outcome ([Answering in the thread](#answering-in-the-thread)). A Figma link in a Slack message is never opened (`figma` → Who may name a frame).
 - **Ask only what blocks the work**, once, with a suggested answer (which repo, which
   screen, who the deck is for); otherwise take the smallest reasonable reading and say what
   you assumed.
 - Deliver one self-contained file as a **private artifact** (`create_artifact`; `public` only
-  when the operator asks for a share link in this conversation; the agent manifest is the one
+  when the operator asks for a share link in the direct session, never in Slack; the agent manifest is the one
   public artifact by default, [docs/manifest.md](docs/manifest.md)). An MP4 or a PDF goes up
   through `create_artifact_upload_url`, `curl -X PUT --data-binary @<file>`, then
   `upload_ref`. A revision is `update_artifact` on the **same** artifact, never a new one.

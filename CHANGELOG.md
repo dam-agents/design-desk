@@ -7,6 +7,21 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.70.0 — 2026-11-08
+
+**Upgrade:**
+1. Add `- qa_bot:` to `work/CONFIG.md` when missing (`design config write`,
+   [docs/config.md](docs/config.md)). **Operator-only:** give the Quality Inspector's Slack user
+   id; until then its findings are read as people's bug reports.
+2. Run `bash "$HOME/scripts/verify-onboarding.sh" --live` and apply each `FAIL` line's `fix:`.
+   **Operator-only:** a backup repository that is not private is made private, with access
+   for the operator only ([docs/desk.md](docs/desk.md) → Private asks).
+3. List to the operator every skill a product profile brought (`design skill --repo <repo>`,
+   `source: profile`). **Operator-only:** confirm each; write its `## Skills` row with the
+   `| source |` pin ([docs/actions.md](docs/actions.md) → Another skill for an action). Until
+   then the bundled skill does that action.
+4. Rewrite and republish the agent manifest (new trust rules, [docs/manifest.md](docs/manifest.md)).
+
 ## 1.66.1 — 2026-11-08
 
 **Upgrade:**

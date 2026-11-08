@@ -13,6 +13,9 @@ The `show` action ([docs/actions.md](../../../docs/actions.md)). It needs the sc
 instance ([docs/screens.md](../../../docs/screens.md)); without one, answer in words and say
 the picture needs `screens: enabled`.
 
+In Slack, only for a person on the roster ([docs/requests.md](../../../docs/requests.md) →
+Chat and Slack).
+
 1. **The state.** Restate in one line what will be on the picture: the screen, the data,
    light or dark, the size ("Home, a new account with no agents, dark, a phone").
    Unclear which screen → ask once with your best guess.

@@ -22,7 +22,7 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
 - `prototype_requesters` (`designer, pm, admin`; roles read as in `## Desk people`, so `lead developer`
   is `lead-developer`), `max_prototypes` (`2`; `0` = none),
-  `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own), `prototype_remote` (`none` | the repo a prototype branch
+  `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own, save a request from Slack), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
   proposals; `issue_writeback` (`enabled`) — a feature's design goes back into its issue;
   `implementer` — `pr-comment` (default) | `issue`, how an adjustment or a bug reaches the
@@ -31,7 +31,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   id, written when it is first published; `desk_link` — its share link, written once the owner
   shared it; items' links are built from it (empty: no **Copy link**,
   [desk.md](desk.md) → Links to an item); `bug_reports` (`enabled`) — Slack messages about
-  a UI bug go on the Desk's queue; `notify` — `disabled` (default) | `slack`:
+  a UI bug go on the Desk's queue; `qa_bot` — the Slack user id whose messages count as
+  automated test findings (empty: none; the `intake-slack` skill); `notify` — `disabled` (default) | `slack`:
   announce new cards and request steps in the bound channel.
 - `run_model` (`default`), `dispatch` (`enabled`), `work_repo` (`none`; env
   `GITHUB_REPO_WORK` wins), `audit_report` (`enabled`), `agent_manifest` (`dam`: publish the
@@ -54,7 +55,7 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 - `slack_send` (`disabled`) — `enabled`: **Send to Slack… → Send the designs** posts pictures of a request's
   options to `slack_poll_channel` (the `slack-polls` skill → Send); a request from Slack has the
   button whatever this says, and its pictures go to its own thread.
-- `slack_council` (`disabled`) — `enabled`: anyone in a request's Slack thread asks for changes
+- `slack_council` (`disabled`) — `enabled`: anyone on the roster in a request's Slack thread asks for changes
   and gets new options or versions back there (the `slack-council` skill); `council_sync_min`
   (`30`) — how often an open thread is read for asks that do not mention the agent.
 - `figma` (`disabled`) — `enabled` once Figma is connected (the `figma` skill): imports, exports
@@ -63,7 +64,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   switch in their menu. `figma_file` — a Figma file link that exports go to (empty: a new
   file per request).
 - `## Skills` table, `| action | skill |`: another installed skill for an action
-  ([actions.md](actions.md)); it wins over the product profile's choice.
+  ([actions.md](actions.md)); it wins over the product profile's choice. A third column
+  `| source |` holds the `<repo>@<sha>` the operator confirmed for a profile's skill.
 - `request_skills` (`copy, impact, brand, walkthrough, figma`), never asked — the installed
   skills a person switches on or off for one request in New request; one not installed is
   not offered, `figma` only with `figma` enabled ([requests.md](requests.md) → Variants).

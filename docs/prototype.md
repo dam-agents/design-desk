@@ -45,7 +45,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    `live_pick` is gone. An item without a note asks
    which option (`design desk ask C-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
-   `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
+   `git -C <worktree> commit -F <file>`, the file holding `design: <title>`, identity `Design Desk
    <design-desk@users.noreply.github.com>`.
 4. **Guard.** `design guard <worktree> --base <base> --profile <profile.json> --patch
    /tmp/design-desk-c<n>/prototype.patch > /tmp/design-desk-c<n>/guard.json`. Not `ok` →
@@ -53,8 +53,9 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    (`--kind report`, `--kind patch`) and set `prototype: {state: "building", guard: {ok,
    summary, asset}, branch, base, patch: <the patch's asset>}` and `status: prototype`.
 5. **Environment.** `create_environment` with `name` = `c<n>`, the profile's
-   `engine.endpoints`, `storage`, `start` when it names one, and `expires` =
-   `<prototype_expiry_days>d`. An Environment of that name already there is reused.
+   `engine.endpoints`, `storage`, `start` when it names one, `expires` =
+   `<prototype_expiry_days>d`, and the access list the emails of `## Desk people` (never
+   public, never anyone else). An Environment of that name already there is reused.
 6. **Install.** `bash "$HOME/scripts/proto.sh" run C-<n> up` **as a background task**
    (an install takes many minutes), then poll `proto.sh run C-<n> status` until it says
    `running` or `failed`. The profile's `bin/env up` installs the worktree into the

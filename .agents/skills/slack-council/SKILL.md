@@ -1,7 +1,7 @@
 ---
 name: slack-council
 description: >-
-  Work a design request with the team in one Slack thread: anyone in the thread asks for a
+  Work a design request with the team in one Slack thread: anyone on the roster asks for a
   change to how it looks, and each ask becomes a new design option or a new version of one,
   answered in the thread with a before/after picture and its consequences, until the thread
   agrees and a designer makes the final pick on the Desk. Use when someone in a Slack thread
@@ -17,7 +17,8 @@ The `council` action ([docs/actions.md](../../../docs/actions.md)). Only with
 deliverable ([docs/requests.md](../../../docs/requests.md) → Chat and Slack).
 
 A council is a request whose discussion happens in one Slack thread. Everyone in the thread
-may ask; the Desk keeps every option and version; the thread sees each round as a picture.
+on the roster may ask ([docs/requests.md](../../../docs/requests.md) → Chat and Slack: anyone
+else's message is not an ask); the Desk keeps every option and version; the thread sees each round as a picture.
 
 ## Asks
 

@@ -25,8 +25,8 @@ Environments.
 ## Bring an instance up to date
 
 1. **Environment.** `list_environments`; missing → `create_environment` with `name` from the
-   table, the profile's `engine.endpoints`, `storage`, and `expires` at the platform's
-   default. On every later use, `update_environment` moves `expires` on, so `main` never lapses.
+   table, the profile's `engine.endpoints`, `storage`, `expires` at the platform's
+   default, and access as a prototype's ([prototype.md](prototype.md) → Build, step 5). On every later use, `update_environment` moves `expires` on, so `main` never lapses.
 2. **Install** as a background task: `bash "$HOME/scripts/screens.sh" sync <repo>` for
    `main`, `… sync <repo> --pr <n>` for an open pull request. It moves the instance's
    worktree to the head and runs the profile's `bin/env up`, which takes the images the

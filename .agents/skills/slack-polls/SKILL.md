@@ -22,6 +22,8 @@ stop).
 thread — every message is a `reply` with `chatId` = `origin.chat` and `threadTs` =
 `origin.thread_ts`, and the poll's `chat` and `root_ts` are that thread's. Any other request
 posts in the channel above (`send_channel_message`; replies under its own opening message).
+Titles, notes and names in every message are escaped first ([docs/desk.md](../../../docs/desk.md)
+→ Links to an item, Text to Slack).
 
 ## Share (`slack_due`, no `scope`; `slack_polls: enabled`)
 

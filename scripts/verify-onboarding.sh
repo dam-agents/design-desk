@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters spec_review max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest decisions_page log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
+KNOWN_KEYS="display_name repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters spec_review max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports qa_bot watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest decisions_page log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -147,7 +147,7 @@ else
   dl="$(cfg desk_link)"; [ -z "$dl" ] || printf '%s' "$dl" | grep -qE '^https?://[^[:space:]#]+$' || fail config_desk_link "desk_link is '$dl'" "the Desk's share link, without #…, or empty"
   if grep -qx '## Skills' "$CONFIG"; then
     shdr="$(sed -n '/^## Skills$/,/^## /p' "$CONFIG" | grep '^|' | head -1 | tr -d ' ')"
-    [ "$shdr" = "|action|skill|" ] && ok skills_header "| action | skill |" || fail skills_header "the Skills table header is '$shdr'" "use | action | skill | (docs/actions.md)"
+    case "$shdr" in "|action|skill|"|"|action|skill|source|") ok skills_header "$shdr" ;; *) fail skills_header "the Skills table header is '$shdr'" "use | action | skill | (and | source | for a profile's pinned skill, docs/actions.md)" ;; esac
   fi
   case "$(cfg default_style)" in ""|auto|brand|carbon|wireframe|repo:*) ;; *) fail config_default_style "default_style is '$(cfg default_style)'" "auto, brand, carbon, wireframe or repo:<owner/name>";; esac
   ds="$(cfg default_style)"
@@ -187,6 +187,14 @@ if [ "$LIVE" = 1 ]; then
     case "$r" in */*/*) h=(--hostname "${r%%/*}"); s="${r#*/}";; *) h=(); s="$r";; esac
     gh api ${h[@]+"${h[@]}"} "repos/$s" --jq .full_name >/dev/null 2>&1 && ok "repo_$s" "readable" || fail "repo_$s" "cannot read $r" "grant the GitHub connection access to it, or fix repos"
   done
+  # The backup holds private asks: its repository must be private (docs/desk.md → Private asks).
+  wr="${GITHUB_REPO_WORK:-$(cfg work_repo)}"
+  case "$wr" in
+    (''|none|off|disabled) ;;
+    (*) case "$wr" in */*/*) h=(--hostname "${wr%%/*}"); s="${wr#*/}";; *) h=(); s="$wr";; esac
+        if [ "$(gh api ${h[@]+"${h[@]}"} "repos/$s" --jq .private 2>/dev/null)" = true ]; then ok work_repo_private "$wr is private"
+        else fail work_repo_private "$wr is not private, or cannot be read" "make it private, with access for the operator only (docs/desk.md → Private asks)"; fi;;
+  esac
   command -v design >/dev/null 2>&1 || PATH="$HOME_DIR/bin:$PATH"
   for r in $(cfg repos | tr ',' ' '); do
     [ "$r" = none ] && continue

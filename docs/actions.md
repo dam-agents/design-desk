@@ -60,7 +60,15 @@ A product's design profile names the skills it brings (`skills` in `profile.json
 
 The order is: the `## Skills` table, then the product's profile, then the bundled skill; a
 chosen skill that is not installed falls back to the next, and `design skill` names what is
-missing and where to install it from. Onboarding installs the skills a profile names.
+missing and where to install it from.
+
+**A profile's skill is the operator's to allow.** It is installed only after the operator
+confirmed it in the direct session, from its `source` pinned to a commit, and the
+confirmation is the action's `## Skills` row with that pin in a third column
+(`| options | dam-prototyper | dam-agents/dam-prototyper@<sha> |`); never from a scheduled
+run. A profile on the default branch whose `source` no longer matches the pin (another
+repository, or another `@<sha>`) is reported to the operator, and the bundled skill does the
+action until they confirm the new one.
 
 A skill that replaces a bundled one keeps the action's contract:
 
