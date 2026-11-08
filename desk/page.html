@@ -1750,11 +1750,11 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       del(k) { mem.set(k, null); try { localStorage.removeItem(k); } catch {} },
     };
   })();
-  // Simple mode (a switch in your menu, kept for you on the Desk) only hides: People, Product and
-  // Issues leave the tabs, Product's pages their bar, the presentation its page and buttons,
+  // Simple mode (a switch in your menu, kept for you on the Desk) only hides: Designs, People,
+  // Product and Issues leave the tabs, a sent request its Show the design, Product's pages their bar, the presentation its page and buttons,
   // and a request its buttons that build a live prototype and an option its Why it looks like
   // this strip (the design workspace keeps it). A link to anything in them still opens it: a D-3 in a request opens the decision.
-  const SIMPLE_HIDES = ["issues", "product", "people"];
+  const SIMPLE_HIDES = ["designs", "issues", "product", "people"];
   // A choice this browser has not saved yet wins (desk-simple-unsaved:<email>), then the person's
   // saved one; with neither, a viewer starts in simple mode and every other role in full mode.
   const simple = () => {
@@ -1763,6 +1763,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     return typeof S.me?.simple === "boolean" ? S.me.simple : S.me?.role === "guest";
   };
   // Nor does it offer to build a live prototype; one already up still shows.
+  // Nor a way to Designs: a link to a design still opens it.
+  const seesDesigns = () => can("designs") && !simple();
   const canBuild = () => can("build") && !simple();
   // Help text only full mode shows: a string, or a list's items (spread).
   const full = (x) => simple() ? (typeof x === "string" ? "" : []) : x;
@@ -3597,7 +3599,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const sb = (act, label) => `<button class="step-next" data-act="${act}">${esc(label)}</button>`;
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer or a PM reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
     // Sent: the next step is the design as developers build it, for who sees Designs (docs/desk.md → Designs).
-    if (c.status === "handed-off") return { text: "", buttons: "", step: can("designs") ? `<button class="step-next" data-show-design="${esc(c.id)}" title="Opens it on Designs, as developers build it">Show the design</button>` : "" };
+    if (c.status === "handed-off") return { text: "", buttons: "", step: seesDesigns() ? `<button class="step-next" data-show-design="${esc(c.id)}" title="Opens it on Designs, as developers build it">Show the design</button>` : "" };
     if (busy.length) return { text: "", buttons: "" };
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
     const none = c.request?.options === 0 ? "No design options were asked for." : "";
@@ -3685,7 +3687,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const now = busy.length ? busy.map((k) => WORK[k] || "Design Desk is working on this.").join(" ") : "";
     let paths;
     if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer or a PM reopens it; say so in a comment.")];
-    else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(can("designs") ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
+    else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(seesDesigns() ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
     else if (c.status === "spec") paths = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
       ? [go("Answer Design Desk's questions", "They are in this box; the spec waits for them."), close()]
       : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
@@ -5925,8 +5927,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const b = $("#simple"), on = simple();
     b.innerHTML = `<span>Simple mode</span><span class="sw" aria-hidden="true"></span>`;
     b.setAttribute("aria-pressed", String(on));
-    b.title = on ? "Simple mode is on. Turn it off to show Issues, Product, People, the presentation and live prototypes again"
-      : "Simple mode is off. Turn it on to hide Issues, Product, People, the presentation and live prototypes";
+    b.title = on ? "Simple mode is on. Turn it off to show Designs, Issues, Product, People, the presentation and live prototypes again"
+      : "Simple mode is off. Turn it on to hide Designs, Issues, Product, People, the presentation and live prototypes";
   }
   let simpleSaves = Promise.resolve(), simpleSeq = 0;
   function saveSimple(on, { quiet = false } = {}) {
