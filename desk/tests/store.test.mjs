@@ -1515,7 +1515,7 @@ test("GitHub on the Desk: every new comment is fresh even past the kept 60, a lo
   assert.equal(s.github(["acme/widgets#7"])[0].comments.length, 60, "the copy keeps the newest 60");
   assert.equal(s.putGithub([{ ...rec, comments: [...rec.comments, ...many], updated: at(71) }]).fresh.length, 0, "a read with nothing new is not fresh, the cut ones included");
   const refs = JSON.parse(readFileSync(join(s.dir, "github-refs.json"), "utf8")).refs;
-  assert.deepEqual(refs, [{ key: "acme/widgets#7", updated: at(71) }]);
+  assert.deepEqual(refs, [{ key: "acme/widgets#7", updated: at(71), tries: 0 }]);
 });
 
 // One more option, three ways of a part, and an option's tab closed (docs/requests.md → Variants).
