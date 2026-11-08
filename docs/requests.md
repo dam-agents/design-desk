@@ -71,7 +71,12 @@ The person deciding sees it on the card, and every later step builds on it.
 
    Never a code file, a commit or a test, in `links` or in the summary: the Desk refuses
    them (a link in the summary, written as a link or bare, is only a GitHub issue or pull
-   request; a file name is refused in any case, a technology's name such as Node.js is not).
+   request; a name with a code file's extension — `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`,
+   `.cjs`, `.css`, `.scss`, `.sass`, `.less`, `.html`, `.py`, `.go`, `.rb`, `.java`, `.kt`,
+   `.kts`, `.scala`, `.swift`, `.rs`, `.vue`, `.svelte`, `.php`, `.c`, `.cc`, `.cpp`, `.h`,
+   `.hpp`, `.cs`, `.dart`, `.lua`, `.sql`, `.yml`, `.yaml`, `.toml`, `.json`, `.sh`, in any
+   case — is refused, with or without a folder; only a bare `.js` name with no folder is not,
+   since that is how a library is named: Node.js, Moment.js, highlight.js).
    What the code shows is said in words and its pull request, issue or doc is the source. On
    a card saved before this rule, the page leaves out a link to code and shows any other link
    as a plain Link.

@@ -16,9 +16,10 @@ const GH = {
 const gh = (args) => { const path = args[args.length - 1]; return path in GH ? { status: 0, stdout: JSON.stringify(GH[path]) } : { status: 1, stderr: "HTTP 404: Not Found\n" }; };
 
 test("github-sync reads each ref with its comments and reviews, posts them, merges fresh, and names a key it cannot read", async () => {
-  const posted = [];
+  const posted = [], failed = [];
   const call = async (method, path, body) => {
     if (method === "GET") return { refs: ["acme/widgets#3", "acme/widgets#7", "acme/widgets#9"] };
+    if (path === "/agent/github/failed") { failed.push(body); return { gave_up: body.keys }; }
     posted.push(body);
     return { fresh: [{ key: "acme/widgets#3", cards: ["C-1"], comments: body.records[0].comments }] };
   };
@@ -30,4 +31,6 @@ test("github-sync reads each ref with its comments and reviews, posts them, merg
   assert.deepEqual([pr.kind, pr.state, pr.comments.map((c) => c.body)], ["pr", "merged", ["[review: APPROVED] Fine."]], "a pull request's reviews with a body are its comments");
   assert.deepEqual([out.synced, out.failed.map((x) => x.key), out.fresh.map((x) => x.key)], [2, ["acme/widgets#9"], ["acme/widgets#3"]]);
   assert.match(out.failed[0].error, /404/);
+  assert.deepEqual(failed, [{ keys: ["acme/widgets#9"] }], "the key it cannot read is counted on the Desk");
+  assert.deepEqual(out.gave_up, ["acme/widgets#9"], "and named when the Desk gives up on it");
 });

@@ -2162,9 +2162,14 @@ test("research links: issues, pull requests, Desk numbers and pages with a secti
   refuse({ links: [{ ref: "D-99" }] }, /no D-99/);
   refuse({ summary: "It lives in src/terminal-harness-menu.tsx." }, /code file/);
   refuse({ summary: "See [the guide](https://github.com/acme/widgets/blob/main/docs/guide.md)." }, /GitHub issue or pull request/);
-  s.upsertCard({ id, research: { ...ok, summary: "Built on Node.js, Next.js and vue.js, e.g. as before." } });
-  for (const name of ["src/components/Menu.tsx", "HarnessMenu.tsx", "User.rb", "index.html", "main.c", "util.h", "Cargo.toml"])
+  // A bare .js name is a library's, whatever library; with a folder it is a file.
+  s.upsertCard({ id, research: { ...ok, summary: "Built on Node.js, Next.js, Moment.js, highlight.js and vue.js (see storybook.js.org), e.g. as before." } });
+  for (const name of ["src/components/Menu.tsx", "HarnessMenu.tsx", "User.rb", "index.html", "main.c", "util.h", "Cargo.toml", "theme.CSS", "build.kts", "app.dart", "init.lua", "src/lib/moment.js"])
     refuse({ summary: `It lives in ${name}.` }, /code file/);
+  // An issue cited only in the summary, as a bare link, is read for its preview too.
+  s.upsertCard({ id, research: { ...ok, summary: "Asked again in https://github.com/acme/widgets/issues/77.", links: [] } });
+  assert.deepEqual(s.githubRefs(id), ["acme/widgets#77"]);
+  s.upsertCard({ id, research: ok });
   refuse({ summary: "See https://github.com/acme/widgets/commit/abc123." }, /GitHub issue or pull request/);
   refuse({ summary: "See https://github.com/acme/widgets/blob/main/src/menu.tsx." }, /GitHub issue or pull request/);
   refuse({ links: [{ label: "Issue #3", url: "https://gitlab.com/acme/widgets/issues/3" }] }, /only an issue/);
@@ -2177,4 +2182,25 @@ test("research links: issues, pull requests, Desk numbers and pages with a secti
   s.upsertCard({ id, research: { ...ok, links: many } });
   assert.equal(s.db.cards[id].research.links.length, 20, "the 21st source is dropped");
   assert.equal(s.db.cards[id].research.links.at(-1).url, "https://github.com/acme/widgets/issues/20");
+});
+
+// A ref github-sync cannot read counts its failed reads; after 3 in a row the watch gate skips it
+// and the answer names it once; a read that works clears it (docs/watch.md → Comments on GitHub).
+test("github refs that cannot be read: counted, given up after 3, cleared by a read", () => {
+  const s = fresh();
+  const who = { email: "o@example.com", role: "admin", deskRole: "admin" };
+  const r = s.createRequest(who, { title: "Pick a harness", problem: "The harness menu is hard to find today when a terminal starts." });
+  const id = r.card?.id || Object.keys(s.db.cards).pop();
+  s.upsertCard({ id, research: { verdict: "clear", summary: "Asked in https://github.com/acme/widgets/issues/50000.", links: [] } });
+  const refs = () => JSON.parse(readFileSync(join(s.dir, "github-refs.json"), "utf8")).refs;
+  assert.deepEqual(refs(), [{ key: "acme/widgets#50000", updated: null, tries: 0 }]);
+  assert.deepEqual(s.failGithub(["acme/widgets#50000", "other/repo#1"]).gave_up, [], "a ref no card cites is not counted");
+  assert.deepEqual(s.failGithub(["acme/widgets#50000"]).gave_up, []);
+  assert.deepEqual(s.failGithub(["acme/widgets#50000"]).gave_up, ["acme/widgets#50000"], "named on the 3rd failed read");
+  assert.deepEqual(s.failGithub(["acme/widgets#50000"]).gave_up, [], "and only then");
+  assert.equal(refs()[0].tries, 4);
+  assert.equal(s.db.gh_failed["other/repo#1"], undefined);
+  assert.throws(() => s.failGithub(["nope"]), /owner\/repo#number/);
+  s.putGithub([{ key: "acme/widgets#50000", kind: "issue", title: "Found", updated: "2026-11-08T10:00:00Z" }]);
+  assert.deepEqual(refs(), [{ key: "acme/widgets#50000", updated: "2026-11-08T10:00:00Z", tries: 0 }], "a read clears the count");
 });

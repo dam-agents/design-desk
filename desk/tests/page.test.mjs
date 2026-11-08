@@ -2462,6 +2462,12 @@ const req = { id: "C-2", kind: "request", title: "Pick a harness", status: "tria
     { label: "0012 Harness", url: "https://github.com/acme/widgets/blob/main/docs/adr/0012-harness.md#decision", section: "Decision", excerpt: "The default starts first." },
     { label: "menu.tsx", url: "https://github.com/acme/widgets/blob/main/src/menu.tsx" },
     { label: "Design note", url: "https://www.figma.com/design/abc/Notes" },
+    { label: "Old guide", url: "https://github.com/acme/widgets/blob/main/docs/old.md" },
+    { ref: "C-99" },
+    { label: "a1b2c3", url: "https://github.com/acme/widgets/commit/a1b2c3" },
+    { label: "raw.ts", url: "https://raw.githubusercontent.com/acme/widgets/main/src/a.ts" },
+    { label: "Menu.TSX", url: "https://github.com/acme/widgets/tree/main/src/Menu.TSX" },
+    { label: "build.kts", url: "https://github.com/acme/widgets/raw/main/build.kts" },
   ] } };
 const cards = [{ id: "C-1", kind: "change", title: "A new header", source: { repo: "acme/widgets", pr: 45 } }, req];
 window.platform = { async request({ path }) {
@@ -2481,7 +2487,9 @@ test("research sources say what they are; a page previews its section; code link
   await desk.waitForSelector(".made-sec ul li");
   const rows = await desk.$$eval(".made-sec ul li", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
   assert.deepEqual(rows, ["Issue · #5", "PR · Menu #6", "PR Change · C-1 A new header", "Decision · D-1 Search sits in the header",
-    "Doc · Terminals guide", "ADR · 0012 Harness", "Link · Design note"], "each starts with its kind; the code file is left out, the older link stays");
+    "Doc · Terminals guide", "ADR · 0012 Harness", "Link · Design note", "Doc · Old guide", "Item · C-99"],
+    "each starts with its kind; a commit and every code file (blob, tree, raw, any case) are left out; the older link and a number no longer on the Desk stay");
+  assert.equal(await desk.$$eval(".made-sec a[data-doc]", (els) => els.map((e) => e.textContent).join("|")), "Terminals guide|0012 Harness", "a page saved with no excerpt previews nothing");
   await desk.hover(".made-sec a[data-doc-kind='Doc']");
   await desk.waitForSelector("#peek");
   assert.match(await desk.textContent("#peek"), /Terminals guide[\s\S]*Doc[\s\S]*§ Start[\s\S]*“Press <b>New<\/b> & pick one\.”/, "a page previews its section and its words");
