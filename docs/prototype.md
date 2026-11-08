@@ -119,4 +119,7 @@ developer's.
 With `prototype_remote` set, push the guarded branch there after step 4:
 `git -C <worktree> push <remote-url> design-desk/c<n>-<slug>`, never another branch name,
 never `--force` onto a branch a person changed. Without it, the patch on the card is the
-prototype's record.
+prototype's record. The pre-push hook (`scripts/git-hooks/pre-push`) refuses another
+repository or host, another branch and any change under `.github/`; it is a local guard only.
+**Operator-only:** the real control is on GitHub — a ruleset or a fine-grained token that lets
+the agent's identity push `design-desk/*` branches and nothing else.

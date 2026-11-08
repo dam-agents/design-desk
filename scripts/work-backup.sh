@@ -35,6 +35,7 @@ LOCK="$LOCAL.lock"                                # tmpfs too; mtime = acquire t
 LOCK_TTL_MIN="${WORK_BACKUP_LOCK_TTL_MIN:-10}"    # a persist takes seconds
 MAX_FILE_MB="${WORK_BACKUP_MAX_FILE_MB:-50}"      # GitHub warns at 50 MB, refuses 100 MB
 BULK="output logs"                                # the bulk set: pushed after the state
+umask 077                                         # the clone and its lock: this user's only
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_JOB="${LOG_JOB:-session}"
@@ -62,6 +63,11 @@ REMOTE_URL="${WORK_BACKUP_REMOTE:-https://github.com/$GITHUB_REPO_WORK}"
 # the tip only (--depth 1): the backup's history keeps every old output/ and logs/ and
 # only grows, so a full clone would outgrow /dev/shm.
 seed_clone() {
+  # The clone holds all of work/ on a shared tmpfs: this user's alone (umask 077 above), and
+  # a name another user or a symlink holds is never used.
+  if [ -L "$LOCAL" ] || { [ -e "$LOCAL" ] && [ ! -O "$LOCAL" ]; }; then
+    say "$LOCAL is not this user's own — refusing it."; logev error work_backup "$LOCAL is not this user's own directory"; return 1
+  fi
   if ! ( cd "$LOCAL" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1 ); then
     rm -rf "$LOCAL" 2>/dev/null || true
     if ! git clone -q --depth 1 --branch "$BRANCH" "$REMOTE_URL" "$LOCAL" 2>/dev/null; then
@@ -71,6 +77,7 @@ seed_clone() {
       ( cd "$LOCAL" && git init -q && git remote add origin "$REMOTE_URL" ) || return 1
     fi
   fi
+  chmod 700 "$LOCAL" 2>/dev/null || true             # a clone made before umask 077
   ( cd "$LOCAL" || exit 1
     git config user.name  "design-desk"              2>/dev/null || true
     git config user.email "design-desk@agents.local" 2>/dev/null || true

@@ -1,24 +1,48 @@
 #!/usr/bin/env bash
 # pre-push — every product checkout of this agent uses this hook (scripts/checkout.sh
 # sets core.hooksPath). It enforces what CLAUDE.md promises: a push goes only to a
-# design-desk/ branch, and only when the operator set prototype_remote.
-# git passes "<local ref> <local sha> <remote ref> <remote sha>" per ref on stdin.
+# design-desk/ branch of the configured repository, only when the operator set
+# prototype_remote, and never with a change under .github/ (a workflow runs with the
+# repository's secrets). A local guard only: the operator's ruleset or token scope is the
+# real control (docs/prototype.md → Push).
+# git passes "<remote name> <url>" as arguments, "<local ref> <local sha> <remote ref>
+# <remote sha>" per ref on stdin.
 WORK="${WORK_DIR:-${HOME:-/home/agent}/work}"
-remote_cfg="$(sed -n 's/^- prototype_remote:[[:space:]]*//p' "$WORK/CONFIG.md" 2>/dev/null | head -1 | sed -e 's/[[:space:]]*#.*$//' -e 's/[[:space:]]*$//')"
+CONFIG="$WORK/CONFIG.md"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$HOOK_DIR/../lib/config.sh" 2>/dev/null || { echo "design-desk: cannot read scripts/lib/config.sh — refusing to push" >&2; exit 1; }
+remote_cfg="$(cfg prototype_remote)"
 if [ -z "$remote_cfg" ] || [ "$remote_cfg" = none ]; then
   echo "design-desk: pushing is off (prototype_remote: none) — the prototype's record is the patch on its Desk card" >&2
   exit 1
 fi
-# The destination must be the configured repository, whatever remote name it has here.
-url="${2:-}"; want="${remote_cfg#*/}"; case "$remote_cfg" in */*/*) ;; *) want="$remote_cfg";; esac
-case "$url" in
-  *"/$want"|*"/$want.git"|*":$want"|*":$want.git") ;;
-  *) echo "design-desk: refusing to push to $url — prototype_remote is $remote_cfg" >&2; exit 1;;
+# The destination must be the configured repository on its host, whatever remote name it
+# has here: https://[user@]host/owner/name[.git], ssh://git@host/owner/name, git@host:owner/name.
+lower() { printf '%s' "$1" | tr 'A-Z' 'a-z'; }
+case "$remote_cfg" in */*/*) want="$remote_cfg";; *) want="github.com/$remote_cfg";; esac
+url="${2:-}"; u="${url%/}"; u="${u%.git}"
+case "$u" in
+  *://*) u="${u#*://}"; u="${u#*@}";;
+  *@*:*) u="${u#*@}"; u="${u/://}";;
+  *) u="";;
 esac
-while read -r _local _lsha remote_ref _rsha; do
+if [ -z "$u" ] || [ "$(lower "$u")" != "$(lower "$want")" ]; then
+  echo "design-desk: refusing to push to $url — prototype_remote is $remote_cfg" >&2; exit 1
+fi
+zero=0000000000000000000000000000000000000000
+while read -r _local lsha remote_ref _rsha; do
   case "$remote_ref" in
     refs/heads/design-desk/*) ;;
     *) echo "design-desk: refusing to push to $remote_ref — only design-desk/ branches (CLAUDE.md → Hard invariants)" >&2; exit 1;;
   esac
+  [ "$lsha" = "$zero" ] && continue   # deleting the branch
+  # Every commit this push brings that the remote does not have yet (merges by their own
+  # changes): none may touch .github/.
+  if ! paths="$(git log --format= --name-only --no-renames --cc "$lsha" --not --remotes 2>/dev/null)"; then
+    echo "design-desk: refusing to push $remote_ref — cannot tell which files $lsha changes" >&2; exit 1
+  fi
+  if printf '%s\n' "$paths" | grep -q '^\.github/'; then
+    echo "design-desk: refusing to push $remote_ref — it changes .github/ (workflows run with the repository's secrets; a prototype changes the look only)" >&2; exit 1
+  fi
 done
 exit 0
