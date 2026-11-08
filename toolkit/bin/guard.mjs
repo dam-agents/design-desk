@@ -6,7 +6,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fail, run } from "../lib/core.mjs";
-import { globRe, judge } from "../lib/guard.mjs";
+import { judge, judgeIgnored, newImportTargets } from "../lib/guard.mjs";
 
 export async function main(_cmd, argv) {
   const pos = []; let base = "", profilePath = "", patch = "";
@@ -33,12 +33,13 @@ export async function main(_cmd, argv) {
   // Intent-to-add makes untracked files part of the diff without staging their content.
   const untracked = git("ls-files", "--others", "--exclude-standard", "-z").split("\0").filter(Boolean);
   if (untracked.length) git("add", "--intent-to-add", "--", ...untracked);
-  const changes = git("diff", "--name-status", "-z", "--find-renames", mergeBase).split("\0").filter(Boolean);
+  // --raw carries the modes: a symbolic link (120000) or a submodule (160000) is refused.
+  const changes = git("diff", "--raw", "-z", "--find-renames", mergeBase).split("\0").filter(Boolean);
   const list = [];
   for (let i = 0; i < changes.length;) {
-    const st = changes[i++];
-    if (st.startsWith("R") || st.startsWith("C")) { const oldPath = changes[i++], path = changes[i++]; list.push({ status: "M", path, oldPath }); }
-    else list.push({ status: st[0], path: changes[i++] });
+    const [oldMode, mode, , , st] = changes[i++].replace(/^:/, "").split(" ");
+    if (st.startsWith("R") || st.startsWith("C")) { const oldPath = changes[i++], path = changes[i++]; list.push({ status: "M", path, oldPath, mode, oldMode }); }
+    else list.push({ status: st[0], path: changes[i++], mode, oldMode });
   }
   const readSide = (side, path) => {
     if (side === "head") { try { return readFileSync(join(dir, path), "utf8"); } catch { return null; } }
@@ -47,14 +48,14 @@ export async function main(_cmd, argv) {
   };
   const result = judge(list, profile, readSide);
   // An ignored file never shows in the diff, yet an install from the worktree ships it
-  // (a .env.local, a build output with secrets). Only dependency and build folders may be there.
-  const okIgnored = /(^|\/)(node_modules|dist|build|out|coverage|\.turbo|\.next|\.cache|\.pnpm-store)\/?$|\.log$/;
-  const okByProfile = (f) => (profile.boundary.ignored_ok || []).some((g) => globRe(g).test(f.replace(/\/$/, "")) || globRe(g).test(f));
-  const ignored = git("ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z").split("\0").filter(Boolean).filter((f) => !okIgnored.test(f) && !okByProfile(f));
+  // (a .env.local, a build output with secrets, code a changed file imports): lib/guard.mjs
+  // → judgeIgnored says which may be there.
+  const entries = git("ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z").split("\0").filter(Boolean);
+  const ignored = judgeIgnored(entries, profile, newImportTargets(list, profile, readSide));
   if (ignored.length) {
     result.ok = false;
-    result.files.push(...ignored.slice(0, 20).map((path) => ({ path, status: "?", verdict: "denied", issues: ["an ignored file in the worktree would ship with the prototype's install"], notes: [], plain: "A file outside version control would be installed with the prototype." })));
-    result.summary = `${result.summary} Ignored files in the worktree: ${ignored.slice(0, 5).join(", ")}.`;
+    result.files.push(...ignored.slice(0, 20).map(({ path, why }) => ({ path, status: "?", verdict: "denied", issues: [why], notes: [], plain: "A file outside version control would be installed with the prototype." })));
+    result.summary = `${result.summary} Ignored files in the worktree: ${ignored.slice(0, 5).map((f) => f.path).join(", ")}.`;
   }
   if (patch) writeFileSync(patch, git("diff", "--binary", mergeBase));
   console.log(JSON.stringify({ base: mergeBase.slice(0, 12), ...result }, null, 1));
