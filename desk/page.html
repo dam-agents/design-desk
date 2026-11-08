@@ -1927,7 +1927,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A request's own item checks it, then draws its options: once an option was drawn after the
   // item was filed, that item's work is done for the person, and its line leaves. An item filed
   // after the newest option (a reopened request, checked again) keeps saying it checks.
-  const workDone = (c, w) => ["request", "follow-up"].includes(w.kind) && (c.variants || []).some((v) => v.drawn && w.created && v.drawn >= w.created);
+  const workDone = (c, w) => ["request", "follow-up"].includes(w.kind) && (c.variants || []).some((v) => !v.by && v.drawn && w.created && v.drawn >= w.created);
   const working = (c) => [...new Set((c.waiting || []).filter((w) => !workDone(c, w)).map(workKind).filter((k) => k !== "question"))];
   // Every open item, a finished request item too: the page polls fast until the item is closed.
   const waitingKinds = (c) => [...new Set((c.waiting || []).map(workKind).filter((k) => k !== "question"))];
