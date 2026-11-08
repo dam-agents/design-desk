@@ -165,7 +165,7 @@ const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
 // so previews and Design Desk's answers read them without a call to GitHub
 // (docs/desk.md → GitHub on the Desk). The agent writes them; people only read them.
 const GH_KEY = /^[\w.-]+\/[\w.-]+#\d+$/;
-const GH = { records: 3000, body: 4000, comments: 60, comment: 1500, perWrite: 100 };
+const GH = { records: 3000, body: 4000, comments: 60, comment: 1500, perWrite: 100, tries: 3 };
 
 export class DeskError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -232,7 +232,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, prefs: {}, reads: {}, seen: {}, noted: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {} };
 }
 
 // The bell's events that fold into one row per item and day, with their count.
@@ -281,10 +281,10 @@ export class Store {
   // inbox.json is what the inbox pre-flight reads: a local file, so an idle tick
   // never wakes the model and never needs the server to answer.
   // github-refs.json is what the watch pre-flight reads: every issue and pull request the
-  // cards point at, with when GitHub last changed the copy kept of it (docs/watch.md →
-  // Comments on GitHub). A local file, like inbox.json.
+  // cards point at, with when GitHub last changed the copy kept of it and how many reads of
+  // it failed in a row (docs/watch.md → Comments on GitHub). A local file, like inbox.json.
   writeGithubRefs() {
-    const refs = this.githubRefs().map((key) => ({ key, updated: own(this.db.github, key)?.updated || null }));
+    const refs = this.githubRefs().map((key) => ({ key, updated: own(this.db.github, key)?.updated || null, tries: own(this.db.gh_failed, key)?.tries || 0 }));
     const p = join(this.dir, "github-refs.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify({ updated: this.clock(), refs }));
     renameSync(tmp, p);
@@ -612,7 +612,7 @@ export class Store {
   githubRefs(card = null) {
     const keys = new Set();
     for (const c of card ? [this.card(card)] : Object.values(this.db.cards).filter((x) => x.status !== "archived"))
-      for (const k of refsOf(c)) keys.add(k);
+      for (const k of [...refsOf(c), ...researchRefs(c)]) keys.add(k);
     return [...keys];
   }
 
@@ -647,12 +647,32 @@ export class Store {
         linked: !Array.isArray(x.linked) ? (was?.linked || []) : x.linked.slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
       };
+      if (own(this.db.gh_failed, key)) delete this.db.gh_failed[key];
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
     }
     const all = Object.values(this.db.github);
     if (all.length > GH.records) for (const x of all.sort((a, b) => a.fetched.localeCompare(b.fetched)).slice(0, all.length - GH.records)) delete this.db.github[x.key];
     this.save();
     return { stored: records.length, fresh };
+  }
+
+  // The refs github-sync could not read (a mistyped number, a private repository): each failed
+  // read counts. After GH.tries in a row the watch gate stops opening a run for it, and the
+  // answer names it once, that time (docs/watch.md → Comments on GitHub). A read clears it.
+  failGithub(keys) {
+    if (!Array.isArray(keys) || !keys.length || keys.length > GH.perWrite) throw bad(`keys: a list of 1 to ${GH.perWrite}`);
+    const live = new Set(this.githubRefs()), gaveUp = [];
+    for (const k of Object.keys(this.db.gh_failed)) if (!live.has(k)) delete this.db.gh_failed[k];
+    for (const raw of keys) {
+      const key = String(raw || "").toLowerCase();
+      if (!GH_KEY.test(key)) throw bad(`keys: "${raw}" is not owner/repo#number`);
+      if (!live.has(key)) continue;
+      const tries = (own(this.db.gh_failed, key)?.tries || 0) + 1;
+      Object.defineProperty(this.db.gh_failed, key, { value: { tries, at: this.clock() }, enumerable: true, writable: true, configurable: true });
+      if (tries === GH.tries) gaveUp.push(key);
+    }
+    this.save();
+    return { gave_up: gaveUp };
   }
 
   github(keys) { return keys.map((k) => own(this.db.github, String(k).toLowerCase())).filter(Boolean); }
@@ -1829,7 +1849,7 @@ export class Store {
       else if (k === "states") next.states = cleanStates(fields.states);
       else if (k === "group") next.group = clean(fields.group, 60, "group");
       else if (k === "elements") { if (!Array.isArray(fields.elements)) throw bad("elements must be a list"); next.elements = fields.elements.slice(0, 30).map((id) => this.card(String(id)).id); }
-      else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets);
+      else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets, this.db);
       else if (k === "origin") next.origin = cleanOrigin(fields.origin, this.db.cards);
       else if (k === "brief") {
         // The agent's brief for the call: what is on the table and what to decide.
@@ -2553,6 +2573,15 @@ function refsOf(c) {
   return [...new Set(out.filter(Boolean))];
 }
 
+// The issues and pull requests a card's research cites, read for their previews only: a comment
+// on one never comes back to this card (cardsOf).
+function researchRefs(c) {
+  const r = c.research;
+  if (!r) return [];
+  const urls = [...(r.links || []).map((l) => l.url), ...[...String(r.summary || "").matchAll(/https?:\/\/[^\s)<>\]]+/g)].map((m) => m[0])];
+  return [...new Set(urls.map(githubKey).filter(Boolean))];
+}
+
 function issueKey(url) {
   const m = /^https?:\/\/[^/]+\/([^/\s]+\/[^/\s]+)\/(?:issues|pull)\/(\d+)/i.exec(String(url || ""));
   return m ? `${m[1].toLowerCase()}#${m[2]}` : null;
@@ -3034,15 +3063,45 @@ function cleanStates(list) {
 }
 
 // What the agent found before designing: the context, the history, the decisions.
-function cleanResearch(r, assets) {
+// Its sources are what a designer can open and read (docs/requests.md → Research, step 6): an
+// issue or a pull request, an item or a decision on the Desk by its number, or a Markdown page
+// (a doc, an ADR) with the section that says it and a short quote of it. A code file is never one.
+const CODE_FILE = /(?<![\w.-])(?:[\w.-]+\/)*[\w-][\w.-]*\.(?:tsx?|jsx?|mjs|cjs|css|scss|sass|less|html?|py|go|rb|java|kt|kts|scala|swift|rs|vue|svelte|php|c|cc|cpp|h|hpp|cs|dart|lua|sql|ya?ml|toml|json|sh)(?![\w-])/gi;
+// A bare `<name>.js` with no folder is how a library is named (Node.js, Moment.js, highlight.js,
+// storybook.js.org): words in a summary, never a code file. With a folder it is a file.
+const LIBRARY_NAME = /^[^/]+\.js$/i;
+// Only a GitHub issue or pull request is a source of that kind: the page previews no other host.
+const githubKey = (url) => (/^https:\/\/(?:www\.)?github\.com\//i.test(String(url || "")) ? issueKey(url) : null);
+function researchLink(l, i, db) {
+  const at = `research link ${i + 1}`;
+  if (l?.ref != null) {
+    const ref = String(l.ref).trim().toUpperCase();
+    if (!/^(?:C-\d+(?:\.\d+)?|D-\d+)$/.test(ref)) throw bad(`${at}: ref is an item's or a decision's number (C-12, C-12.3, D-4)`);
+    // Its words, when none are given: the item's title or the decision's text.
+    const it = db && (ref.startsWith("D-") ? own(db.decisions, ref) : own(db.cards, ref.replace(/\.\d+$/, "")));
+    if (db && !it) throw bad(`${at}: no ${ref} on the Desk`);
+    return { ref, label: optText(l.label, 120, "link label") || String(it?.title || it?.text || ref).replace(/\s+/g, " ").slice(0, 120) };
+  }
+  const url = String(l?.url || "").slice(0, 500);
+  if (githubKey(url)) return { label: clean(l.label, 120, "link label"), url };
+  // A Markdown page: a doc or an ADR, never a code file.
+  if (/^https:\/\/[^/]+\/[^/]+\/[^/]+\/(?:blob|tree)\/[^?#]+\.(?:md|mdx|markdown)(?:[?#]|$)/i.test(url)) {
+    return { label: clean(l.label, 120, "link label"), url, section: clean(l.section, 160, `${at} section`), excerpt: clean(l.excerpt, 600, `${at} excerpt`) };
+  }
+  throw bad(`${at}: only an issue, a pull request, a Desk item or decision ({ref}), or a Markdown page with its section and excerpt; never a code file (${url || "no url"})`);
+}
+function cleanResearch(r, assets, db = null) {
   if (r === null) return null;
   if (typeof r !== "object") throw bad("research must be an object");
   const verdicts = ["clear", "duplicate", "deliberate", "collision", "unclear"];
   if (!verdicts.includes(r.verdict)) throw bad(`research.verdict must be one of ${verdicts.join(", ")}`);
   if (r.asset != null && !own(assets, r.asset)) throw bad(`research: no asset ${r.asset}`);
-  const links = Array.isArray(r.links) ? r.links.slice(0, 20).map((l) => {
-    if (!/^https?:\/\//i.test(String(l.url || ""))) throw bad("research links must be http(s)");
-    return { label: clean(l.label, 120, "link label"), url: String(l.url).slice(0, 500) };
-  }) : [];
-  return { verdict: r.verdict, summary: clean(r.summary, 2000, "research summary"), asset: r.asset ?? null, links, at: optText(r.at, 40, "at") || null };
+  const summary = clean(r.summary, 2000, "research summary");
+  // In the summary a link, written as a link or bare, is a GitHub issue or pull request; a page
+  // goes in links, with its section; a commit or a code file is never one.
+  for (const m of summary.matchAll(/https?:\/\/[^\s)<>\]]+/g)) if (!githubKey(m[0])) throw bad(`a link in the research summary is a GitHub issue or pull request; put a page in links with its section and excerpt (${m[0].slice(0, 200)})`);
+  const file = [...summary.replace(/https?:\/\/[^\s)<>\]]+/g, "").matchAll(CODE_FILE)].map((m) => m[0]).find((f) => !LIBRARY_NAME.test(f));
+  if (file) throw bad(`research summary names a code file (${file}): say where it is on the screen in words, and cite its pull request, issue or doc in links`);
+  const links = Array.isArray(r.links) ? r.links.slice(0, 20).map((l, i) => researchLink(l, i, db)) : [];
+  return { verdict: r.verdict, summary, asset: r.asset ?? null, links, at: optText(r.at, 40, "at") || null };
 }

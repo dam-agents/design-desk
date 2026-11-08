@@ -398,6 +398,7 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   // An ask to add a person carries its payload; only an admin's ask on the page makes one.
   if (m === "GET" && p[1] === "github") { const card = url.searchParams.get("card"); const keys = url.searchParams.get("keys"); return send(res, 200, keys ? { records: store.github(keys.split(",").filter(Boolean)) } : { refs: store.githubRefs(card || null) }); }
+  if (m === "POST" && p[1] === "github" && p[2] === "failed") return send(res, 200, store.failGithub(b.keys));
   if (m === "POST" && p[1] === "github" && p[2] === "marks") return send(res, 200, store.markGithub(b.key, { at: b.at, author: b.author, design: b.design !== false }));
   if (m === "POST" && p[1] === "github") return send(res, 200, store.putGithub(b.records));
   if (m === "POST" && p[1] === "enqueue" && b.kind === "person") throw new DeskError(400, "an ask to add a person comes only from an admin on the People tab");

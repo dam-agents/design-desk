@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.66.0 — 2026-11-08
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): research links
+   are checked (issues, pull requests, Desk numbers, Markdown pages with their section and
+   excerpt; no code files), and a ref whose last 3 reads failed no longer opens a watch run.
+2. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+3. Run `design desk github-sync` once, so the issues and pull requests that research already
+   cites show in their previews.
+
 ## 1.65.3 — 2026-11-08
 
 **Upgrade:**

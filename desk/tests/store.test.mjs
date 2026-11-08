@@ -1515,7 +1515,7 @@ test("GitHub on the Desk: every new comment is fresh even past the kept 60, a lo
   assert.equal(s.github(["acme/widgets#7"])[0].comments.length, 60, "the copy keeps the newest 60");
   assert.equal(s.putGithub([{ ...rec, comments: [...rec.comments, ...many], updated: at(71) }]).fresh.length, 0, "a read with nothing new is not fresh, the cut ones included");
   const refs = JSON.parse(readFileSync(join(s.dir, "github-refs.json"), "utf8")).refs;
-  assert.deepEqual(refs, [{ key: "acme/widgets#7", updated: at(71) }]);
+  assert.deepEqual(refs, [{ key: "acme/widgets#7", updated: at(71), tries: 0 }]);
 });
 
 // One more option, three ways of a part, and an option's tab closed (docs/requests.md → Variants).
@@ -2136,4 +2136,71 @@ test("Designs: a developer marks a design done and asks its designer, who gets i
   assert.deepEqual([s.getCard(card.id).status, s.getCard(card.id).built, s.getCard(card.id).dev_summary], ["triage", undefined, undefined]);
   s.upsertCard({ id: card.id, status: "handed-off" });
   assert.equal(s.listCards({ kind: "request" }).find((x) => x.id === card.id).built, null);
+});
+
+// Research cites what a designer opens: an issue or a pull request, a Desk number, a Markdown page
+// with its section and words; never a code file (docs/requests.md → Research, step 6).
+test("research links: issues, pull requests, Desk numbers and pages with a section; no code files", () => {
+  const s = fresh();
+  const who = { email: "o@example.com", role: "admin", deskRole: "admin" };
+  const r = s.createRequest(who, { title: "Pick a harness", problem: "The harness menu is hard to find today when a terminal starts." });
+  const id = r.card?.id || Object.keys(s.db.cards).pop();
+  const ok = { verdict: "clear", summary: "Asked in [#5](https://github.com/acme/widgets/issues/5); see C-1.", links: [
+    { label: "Issue #5", url: "https://github.com/acme/widgets/issues/5" },
+    { label: "PR #6", url: "https://github.com/acme/widgets/pull/6" },
+    { ref: id.toLowerCase() },
+    { label: "ADR 12", url: "https://github.com/acme/widgets/blob/main/docs/adr/0012-x.md#decision", section: "Decision", excerpt: "It starts on the default." },
+  ] };
+  s.upsertCard({ id, research: ok });
+  const links = s.db.cards[id].research.links;
+  assert.deepEqual(links[2], { ref: id, label: "Pick a harness" });
+  assert.deepEqual(s.githubRefs(id).sort(), ["acme/widgets#5", "acme/widgets#6"]);
+  assert.deepEqual(s.cardsOf("acme/widgets#5"), [], "a cited issue's comments are not the card's news");
+  const refuse = (research, re) => assert.throws(() => s.upsertCard({ id, research: { ...ok, ...research } }), re);
+  refuse({ links: [{ label: "menu", url: "https://github.com/acme/widgets/blob/main/src/menu.tsx" }] }, /never a code file/);
+  refuse({ links: [{ label: "guide", url: "https://github.com/acme/widgets/blob/main/docs/guide.md" }] }, /section/);
+  refuse({ links: [{ ref: "D-99" }] }, /no D-99/);
+  refuse({ summary: "It lives in src/terminal-harness-menu.tsx." }, /code file/);
+  refuse({ summary: "See [the guide](https://github.com/acme/widgets/blob/main/docs/guide.md)." }, /GitHub issue or pull request/);
+  // A bare .js name is a library's, whatever library; with a folder it is a file.
+  s.upsertCard({ id, research: { ...ok, summary: "Built on Node.js, Next.js, Moment.js, highlight.js and vue.js (see storybook.js.org), e.g. as before." } });
+  for (const name of ["src/components/Menu.tsx", "HarnessMenu.tsx", "User.rb", "index.html", "main.c", "util.h", "Cargo.toml", "theme.CSS", "build.kts", "app.dart", "init.lua", "src/lib/moment.js"])
+    refuse({ summary: `It lives in ${name}.` }, /code file/);
+  // An issue cited only in the summary, as a bare link, is read for its preview too.
+  s.upsertCard({ id, research: { ...ok, summary: "Asked again in https://github.com/acme/widgets/issues/77.", links: [] } });
+  assert.deepEqual(s.githubRefs(id), ["acme/widgets#77"]);
+  s.upsertCard({ id, research: ok });
+  refuse({ summary: "See https://github.com/acme/widgets/commit/abc123." }, /GitHub issue or pull request/);
+  refuse({ summary: "See https://github.com/acme/widgets/blob/main/src/menu.tsx." }, /GitHub issue or pull request/);
+  refuse({ links: [{ label: "Issue #3", url: "https://gitlab.com/acme/widgets/issues/3" }] }, /only an issue/);
+  // A numbered part, a folder of pages, an .mdx page; at most 20 sources.
+  const page = (url) => ({ label: "Page", url, section: "Why", excerpt: "Because." });
+  s.upsertCard({ id, research: { ...ok, links: [{ ref: `${id}.2` }, page("https://github.com/acme/widgets/tree/main/docs/adr/README.md"), page("https://github.com/acme/widgets/blob/main/docs/x.mdx#why")] } });
+  assert.deepEqual(s.db.cards[id].research.links.map((l) => l.ref || l.url.split("/").pop()), [`${id}.2`, "README.md", "x.mdx#why"]);
+  refuse({ links: [{ ref: `${id}.2.1` }] }, /ref is/);
+  const many = Array.from({ length: 21 }, (_, i) => ({ label: `Issue #${i + 1}`, url: `https://github.com/acme/widgets/issues/${i + 1}` }));
+  s.upsertCard({ id, research: { ...ok, links: many } });
+  assert.equal(s.db.cards[id].research.links.length, 20, "the 21st source is dropped");
+  assert.equal(s.db.cards[id].research.links.at(-1).url, "https://github.com/acme/widgets/issues/20");
+});
+
+// A ref github-sync cannot read counts its failed reads; after 3 in a row the watch gate skips it
+// and the answer names it once; a read that works clears it (docs/watch.md → Comments on GitHub).
+test("github refs that cannot be read: counted, given up after 3, cleared by a read", () => {
+  const s = fresh();
+  const who = { email: "o@example.com", role: "admin", deskRole: "admin" };
+  const r = s.createRequest(who, { title: "Pick a harness", problem: "The harness menu is hard to find today when a terminal starts." });
+  const id = r.card?.id || Object.keys(s.db.cards).pop();
+  s.upsertCard({ id, research: { verdict: "clear", summary: "Asked in https://github.com/acme/widgets/issues/50000.", links: [] } });
+  const refs = () => JSON.parse(readFileSync(join(s.dir, "github-refs.json"), "utf8")).refs;
+  assert.deepEqual(refs(), [{ key: "acme/widgets#50000", updated: null, tries: 0 }]);
+  assert.deepEqual(s.failGithub(["acme/widgets#50000", "other/repo#1"]).gave_up, [], "a ref no card cites is not counted");
+  assert.deepEqual(s.failGithub(["acme/widgets#50000"]).gave_up, []);
+  assert.deepEqual(s.failGithub(["acme/widgets#50000"]).gave_up, ["acme/widgets#50000"], "named on the 3rd failed read");
+  assert.deepEqual(s.failGithub(["acme/widgets#50000"]).gave_up, [], "and only then");
+  assert.equal(refs()[0].tries, 4);
+  assert.equal(s.db.gh_failed["other/repo#1"], undefined);
+  assert.throws(() => s.failGithub(["nope"]), /owner\/repo#number/);
+  s.putGithub([{ key: "acme/widgets#50000", kind: "issue", title: "Found", updated: "2026-11-08T10:00:00Z" }]);
+  assert.deepEqual(refs(), [{ key: "acme/widgets#50000", updated: "2026-11-08T10:00:00Z", tries: 0 }], "a read clears the count");
 });

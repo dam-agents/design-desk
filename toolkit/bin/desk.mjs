@@ -89,8 +89,9 @@ const USAGE = `usage: design desk <command>
   enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
   github-sync [--card <C-n>]               read every issue and pull request the cards point at (or one
                                            card's) on GitHub with its comments and keep it on the Desk;
-                                           prints {synced, failed, fresh: [{key, cards, comments}]}, the
-                                           comments new since the last read
+                                           prints {synced, failed, gave_up, fresh: [{key, cards, comments}]}:
+                                           the comments new since the last read, and the refs whose 3rd
+                                           read in a row just failed (the watch gate skips them now)
   github <owner/repo#n>[,…]                what the Desk keeps of them
   github-mark <owner/repo#n> --at <iso> --author <login> [--off]
                                            mark an issue's comment as about the design or the UI (the
@@ -289,7 +290,10 @@ export async function githubSync(card, io = { call, gh: undefined }) {
     const r = await io.call("POST", "/agent/github", { records: batch });
     done.push(...batch.map((x) => x.key)); fresh.push(...r.fresh);
   }
-  return { synced: done.length, failed, fresh };
+  // Each failed read counts on the Desk; `gave_up` names the refs that just reached the limit,
+  // which the watch gate no longer opens a run for (docs/watch.md → Comments on GitHub).
+  const gaveUp = failed.length ? (await io.call("POST", "/agent/github/failed", { keys: failed.map((x) => x.key) })).gave_up : [];
+  return { synced: done.length, failed, gave_up: gaveUp, fresh };
 }
 
 // The row goes in through the one writer of work/CONFIG.md (docs/config.md).

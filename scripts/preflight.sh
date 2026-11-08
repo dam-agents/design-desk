@@ -292,11 +292,12 @@ watch_mode() {
     fi
   done
   # The issues and pull requests the Desk's cards point at whose copy on the Desk is behind
-  # GitHub: never read, or changed since (a comment changes it). One search per repository
-  # (docs/watch.md → Comments on GitHub).
+  # GitHub: never read, or changed since (a comment changes it). One search per repository.
+  # A ref never read whose last 3 reads failed (a mistyped number, a private repository) opens
+  # no run (docs/watch.md → Comments on GitHub).
   local gh_due='[]' REFS="$DESK_DIR/github-refs.json" r since hits
   if [ -f "$REFS" ]; then
-    gh_due="$(jq -c '[.refs[] | select(.updated == null) | .key]' "$REFS")"
+    gh_due="$(jq -c '[.refs[] | select(.updated == null and (.tries // 0) < 3) | .key]' "$REFS")"
     for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' "$REFS"); do
       since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' "$REFS")"
       local hostargs=()

@@ -53,11 +53,37 @@ The person deciding sees it on the card, and every later step builds on it.
    changing it now) or `unclear`. The Desk shows only the summary, with no label for the
    verdict, open near the top, so the summary says the verdict in words; it is this short report, one line each, every source linked in `links`:
    - **Already asked for**: duplicates and close issues with their state, or "none found";
-   - **Where it lives**: the screen, in plain words; the code files go in `links` only;
+   - **Where it lives**: the screen, in plain words, never a code file's name;
    - **History**: who added it and why, the last change and what it did;
    - **In flight**: open pull requests and issues on the same area, or "nothing";
    - **Deliberate or a slip**: the verdict and its evidence, one quote or link;
    - **Who to ask**: the people who own the decision, only when the request reverses it.
+
+   **Sources** (`links`, at most 20) are only what a designer opens and reads, and the page
+   starts each with what it is (Issue, PR, Request, Decision, Doc, ADR):
+   - a GitHub issue or pull request: `{label, url}`;
+   - an item or a decision on the Desk, a request, a discussion's card, a decision, by its
+     number: `{ref: "C-12" | "C-12.3" | "D-4", label?}`;
+   - a Markdown page (a doc, an ADR, a design note) on GitHub: `{label, url, section,
+     excerpt}`, the url to the section's heading (`…/docs/x.md#heading`), `section` its
+     heading, `excerpt` the words in it that say it (at most 600 characters), shown in the
+     link's preview.
+
+   Never a code file, a commit or a test, in `links` or in the summary: the Desk refuses
+   them (a link in the summary, written as a link or bare, is only a GitHub issue or pull
+   request; a name with a code file's extension — `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`,
+   `.cjs`, `.css`, `.scss`, `.sass`, `.less`, `.html`, `.py`, `.go`, `.rb`, `.java`, `.kt`,
+   `.kts`, `.scala`, `.swift`, `.rs`, `.vue`, `.svelte`, `.php`, `.c`, `.cc`, `.cpp`, `.h`,
+   `.hpp`, `.cs`, `.dart`, `.lua`, `.sql`, `.yml`, `.yaml`, `.toml`, `.json`, `.sh`, in any
+   case — is refused, with or without a folder; only a bare `.js` name with no folder is not,
+   since that is how a library is named: Node.js, Moment.js, highlight.js).
+   What the code shows is said in words and its pull request, issue or doc is the source. On
+   a card saved before this rule, the page leaves out a link to code and shows any other link
+   as a plain Link.
+
+   Then `design desk github-sync --card <C-n>`: the Desk reads every issue and pull request
+   the research cites, so each link's preview shows its state, labels and latest comments
+   about the design ([desk.md](desk.md) → GitHub on the Desk).
 
    Keep the full notes as an asset (`--kind report`) and set `research.asset`.
 7. A `deliberate`, `duplicate` or `collision` verdict is suggested for the presentation with the
