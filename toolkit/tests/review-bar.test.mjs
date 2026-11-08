@@ -125,11 +125,12 @@ test("design shot --element pictures one part alone, on its view, named after it
     for (const p of ["hover", "error"]) await main("shot", [join(dir, `${p}.html`), out, "--width", "600", "--height", "400", "--element", "#edit", "--pad", "10"]);
   } finally { console.log = log; }
   assert.deepEqual(printed, ["hover", "error"].flatMap((p) => ["light", "dark"].map((th) => join(out, `${p}-element-${th}.png`))));
-  // A PNG names its width and height at bytes 16 and 20: the part and its padding, not the page.
+  // A PNG names its width and height at bytes 16 and 20: the part and its padding, not the page —
+  // at three screen pixels per CSS pixel, so a tile shows it sharp (the part is 120×40 + 10 pad).
   const size = (f) => { const b = readFileSync(f); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
   for (const f of printed) {
     const [w, h] = size(f);
-    assert.ok(w >= 140 && w <= 150 && h >= 60 && h <= 70, `${f} is the part alone (${w}×${h})`);
+    assert.ok(w >= 420 && w <= 450 && h >= 180 && h <= 210, `${f} is the part alone at 3× (${w}×${h})`);
   }
   assert.notDeepEqual(readFileSync(printed[0]), readFileSync(printed[2]), "two states keep two pictures");
   // A part the page does not have, or one that is not shown, is said, not pictured.

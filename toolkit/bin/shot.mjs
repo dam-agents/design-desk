@@ -5,7 +5,9 @@
 // menu or dialog whose trigger --click names. With --element, only that element, padded,
 // light and dark (`<page>-element-<light|dark>.png`, named after the page so the states of a
 // part shot into one directory keep each their own): a part's state for the request's design
-// catalog (docs/requests.md → Every state of a part). Prints one path per line.
+// catalog (docs/requests.md → Every state of a part). An element is shot at three screen pixels
+// per CSS pixel, so a 380–420 px tile shows it sharp rather than enlarging it. Prints one path
+// per line.
 import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ensureDir, fail, launch } from "../lib/core.mjs";
@@ -27,7 +29,9 @@ export async function main(_cmd, argv) {
   if (!page) fail("usage: design shot <page.html> <outdir> [--width N] [--click <selector>]...");
   ensureDir(out);
   const browser = await launch();
-  const pg = await browser.newPage({ viewport: { width, height } });
+  // A part alone is a picture for a tile 380–420 px wide (docs/requests.md → step 4): it is shot at
+  // three screen pixels per CSS pixel, so the tile shows it sharp instead of enlarging a 1× picture.
+  const pg = await browser.newPage({ viewport: { width, height }, ...(element ? { deviceScaleFactor: 3 } : {}) });
   const errors = [];
   pg.on("pageerror", (e) => errors.push(e.message));
   pg.on("console", (m) => m.type() === "error" && errors.push(m.text()));

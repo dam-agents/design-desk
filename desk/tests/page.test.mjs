@@ -1869,6 +1869,10 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.match(await desk.$eval(".ask-panel header .chip", (c) => c.title || c.dataset.tip || ""), /Only you and Design Desk see these.*nothing goes to Slack/, "it says only you see it");
   assert.equal(await desk.$eval(".ask-body", (b) => Math.round(b.scrollTop + b.clientHeight) >= b.scrollHeight - 1), true, "it opens on the newest message");
   assert.equal(await desk.$$eval("[data-ask-starter]", (x) => x.length), 5, "five starters");
+  // One size for both sides: the person's bubble once inherited 12px from the header's `.me` chip
+  // while the answer read at 14px.
+  const sizes = await desk.$$eval(".ask-msg", (x) => x.map((n) => getComputedStyle(n).fontSize));
+  assert.deepEqual(sizes, ["14px", "14px"], "a question and its answer read at the same size");
   await desk.click('[data-ask-starter="fixed"]');
   await desk.waitForFunction(() => posted.length === 1);
   assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
@@ -1876,6 +1880,15 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posted.length === 2);
   assert.deepEqual(await desk.evaluate(() => [posted[1].body.text, posted[1].body.starter]), ["Is the bar too thin?", null], "a question of their own");
+  // A redraw replaces the box; it keeps the caret and the focus of whoever was typing in it.
+  await desk.fill("#ask-text", "Typing while an answer lands");
+  await desk.focus("#ask-text");
+  await desk.evaluate(() => document.querySelector("#ask-text").setSelectionRange(9, 9));
+  await desk.evaluate(() => window.dispatchEvent(new Event("resize")));
+  await desk.waitForTimeout(400);
+  assert.equal(await desk.evaluate(() => document.activeElement?.id), "ask-text", "the box keeps the focus");
+  assert.equal(await desk.evaluate(() => document.querySelector("#ask-text").selectionStart), 9, "and the caret");
+  assert.equal(await desk.inputValue("#ask-text"), "Typing while an answer lands", "and what was typed");
   await desk.click('[data-brief="T-2"]');
   assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");

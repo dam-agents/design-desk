@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.66.2 — 2026-11-06
+
+**Upgrade:**
+Restart the Desk server (`rc-service --user design-desk-server restart`), then republish the Desk
+page: `update_artifact` on `desk_artifact` with `desk/page.html`
+([docs/desk.md](docs/desk.md) → **Publishing the page**). The page gives an element's tile its own
+white margin and reads both sides of the private chat at one size. Element pictures are now shot
+at three screen pixels per CSS pixel (`design shot --element`), so an existing picture drawn
+before this version may need shooting again before it fills a tile sharply.
+
 ## 1.66.1 — 2026-11-08
 
 **Upgrade:**
