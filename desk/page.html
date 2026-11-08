@@ -5404,6 +5404,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     if (ds.brief) {
       const th = S.ask.asks.find((t) => t.id === ds.brief), pub = $("#composer-text");
       if (!th || !pub) return;
+      // The box may sit in a folded Questions and comments: it opens first.
+      const talk = pub.closest("details.talk"); S.sect.talk = true; if (talk) talk.open = true;
       pub.value = briefFrom(th); pub.focus(); $("#composer")?.scrollIntoView({ block: "center" });
       toast("The brief is in this page's public comments box. Edit it; everyone sees it once you press Ask Design Desk.");
       return;
