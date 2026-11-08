@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.70.0 — 2026-11-08
+## 1.70.0 — 2026-11-09
 
 **Upgrade:**
 1. Add `- qa_bot:` to `work/CONFIG.md` when missing (`design config write`,
