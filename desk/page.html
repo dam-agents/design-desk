@@ -1923,13 +1923,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
-  // A request's own item checks it, then draws its options; the card says which part is left, so
-  // a request already checked never shows "Checking your request" beside its next step.
-  const working = (c) => [...new Set(waitingKinds(c).map((k) => {
-    if (!["request", "follow-up"].includes(k) || !c.triage) return k;
-    return (c.variants || []).length || c.request?.options === 0 || c.status !== "triage" ? null : "explore";
-  }).filter(Boolean))];
-  const waitingKinds = (c) => [...new Set((c.waiting || []).map((w) => (w.scope === "history" ? "catalog-history" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind)).filter((k) => k !== "question"))];
+  const workKind = (w) => (w.scope === "history" ? "catalog-history" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind);
+  // A request's own item checks it, then draws its options: once an option was drawn after the
+  // item was filed, that item's work is done for the person, and its line leaves. An item filed
+  // after the newest option (a reopened request, checked again) keeps saying it checks.
+  const workDone = (c, w) => ["request", "follow-up"].includes(w.kind) && (c.variants || []).some((v) => v.drawn && w.created && v.drawn >= w.created);
+  const working = (c) => [...new Set((c.waiting || []).filter((w) => !workDone(c, w)).map(workKind).filter((k) => k !== "question"))];
+  // Every open item, a finished request item too: the page polls fast until the item is closed.
+  const waitingKinds = (c) => [...new Set((c.waiting || []).map(workKind).filter((k) => k !== "question"))];
   const optionName = (c, id) => (c.variants || []).find((v) => v.id === id)?.name || "an option";
 
   // The option designers' votes clearly prefer, a hint only; none on a tie, the only one when
