@@ -130,11 +130,21 @@ served by the Desk server through the platform's Artifact API relay.
   in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and
   rows ease between states, and a toast comes and goes. Nothing waits on an animation; a
   browser without one of these features shows the change at once.
-- **Tab intros.** Every tab but How it works and People has an intro (what it shows, what you can do and,
-  where a tab has a flow, step by step), `INTRO` in `desk/page.html`. It fills the pane beside
-  the list while nothing is open there; People shows its roster and roles, which say the same. It folds; folding one folds every tab's, and the browser keeps the choice
-  (`desk-intro` in its local storage). A change that adds, renames or removes a tab's action
-  updates its intro too.
+- **Tab intros.** Every tab but How it works and People has an intro, `INTRO` in `desk/page.html`
+  (Designs too, for the roles that see it): it explains the process, never what is on the screen. The tab's flow comes first, then its steps
+  in order, in short plain words; each step has the colour of its box in the flow, says who acts,
+  and under **You can** lists only the buttons the person signed in may press there — never one
+  their role may not. A short tip ends it. It fills the pane beside the list while
+  nothing is open there; People shows its roster and roles, which say the same. It folds; folding
+  one folds every tab's, and the browser keeps the choice (`desk-intro` in its local storage). A
+  change that adds, renames or removes a tab's action updates its intro too.
+- **How it works** is built the same way: each process (a request, changing a design, a change
+  that ships, planned work, and Designs for the roles that see it) with its flow, a colour key and
+  its steps, from the same `INTRO`; then what only a developer can do and how long things take.
+- **Redraws keep your place.** The page polls; a menu that did not change is not redrawn, and a
+  redrawn menu or list gives keyboard focus back to the same button. A request's own work line
+  says what is left of it: checking until its triage is on the card, then drawing until its
+  options are, then nothing.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
   works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a
   label by its own `title`. A new button or label gets its line in the same change; a button

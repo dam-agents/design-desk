@@ -143,9 +143,24 @@
   .intro .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 4px 28px; }
   .intro h5 { margin: 4px 0 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .intro ul, .intro ol { margin: 0; padding-left: 18px; } .intro li { margin-bottom: 3px; }
+  /* A process: its flow, a colour key, then the steps, each numbered in the colour of its box. */
+  .process figure.flow figcaption { display: none; }
+  .process .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 10px; font-size: var(--fs-meta); color: var(--muted); }
+  .process .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1.2px solid var(--line); background: var(--soft); }
+  .process ol.steps { list-style: none; padding: 0; margin: 0; counter-reset: st; display: grid; gap: 14px; max-width: 680px; line-height: 22px; }
+  .process ol.steps > li { counter-increment: st; position: relative; padding-left: 36px; margin: 0; min-height: 22px; }
+  .process ol.steps > li::before { content: counter(st); position: absolute; left: 0; top: 0; width: 22px; height: 22px; box-sizing: border-box; border-radius: 50%; display: grid; place-items: center; font-size: 11px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; background: var(--soft); border: 1px solid var(--line); color: var(--ink); }
+  .process [data-tone="checking"]::before { background: var(--info-soft) !important; border-color: var(--accent) !important; }
+  .process [data-tone="waiting"]::before { background: var(--warn-soft) !important; border-color: var(--warn) !important; }
+  .process [data-tone="live"]::before { background: var(--live-soft) !important; border-color: var(--live) !important; }
+  .process [data-tone="approved"]::before { background: var(--ok-soft) !important; border-color: var(--ok) !important; }
+  .process ol.steps .you { font-weight: 600; color: var(--accent); margin-right: -4px; }
+  .process ol.steps .acts { display: flex; flex-wrap: wrap; gap: 2px 16px; margin-top: 4px; color: var(--muted); }
+  .process p.tip { margin: 12px 0 0; color: var(--muted); font-size: var(--fs-meta); }
+  .guide > p.tip { margin-top: 16px; color: var(--muted); font-size: var(--fs-meta); }
+  .guide .process h5 { margin: 12px 0 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
   .pick { color: var(--muted); text-align: center; margin: 0 0 16px; }
   /* People shows at once: its intro on top, beside it on a wide screen. */
-  .intro li.off { color: var(--muted); } .intro li .chip { font-size: 10.5px; padding: 0 6px; margin-left: 4px; }
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
   /* What a button or label does, the moment the pointer is on it (docs/desk.md → Tooltips). */
@@ -1408,46 +1423,25 @@
   ${full(`<path class="f-e f-dash" d="M280 148 V183" marker-end="url(#fl-change)"/><text class="f-lbl f-start" x="288" y="170">screens, parts</text>`)}
   <path class="f-e" d="M540 120 C566 120 562 40 587 40" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 H587" marker-end="url(#fl-change)"/><path class="f-e" d="M540 120 C566 120 562 200 587 200" marker-end="url(#fl-change)"/>`,
     "Every change that ships gets its card with screenshots; a designer marks it handled, or adjusts its design through a new request.");
+  // How it works: the processes, each as a tab's intro draws it (its flow, its steps, the buttons
+  // the person may press), then what Design Desk cannot do and how long things take.
   const GUIDE = () => `<h2>How Design Desk works</h2>
-<p class="lead">Design Desk keeps you up to date with what changes in the product, explains it in plain words, and turns your ideas into design options${full(" and live prototypes")}. It only ever changes how the product <b>looks</b>, never what it <b>does</b>, and it tells you up front what needs a developer.</p>
-<ol>
-<li><b>Requests</b> — describe a problem in your own words. Design Desk checks what can be done, draws the options you asked for (or only checks, if you asked for none), the team votes and comments${full(", and it builds a live prototype you can click through")}. Each request says what happens next and whose turn it is.${FLOW_REQUEST()}</li>
-<li><b>PR Changes</b> — every change to the product's screens, explained, with screenshots, soon after it ships; <b>Outline what changed</b> frames the changed part on them. Each one says where else the same thing shows up and what the change touches${full(" (a screen or a part in Product opens from there)")}, and whether a designer should look at it. It counts the days until a designer marks it handled${S.me?.due_days ? `, and turns red after ${esc(S.me.due_days)} days` : ""}.${FLOW_CHANGE()}</li>
-${full(`<li><b>Issues</b> — what the team plans that will change the screens: the current sprint (with the issues of its epics), the next sprint, issues someone has taken, and the ones labelled for design. Each says in a few words what the UI will need, with a picture of how it looks now and a sketch of how it could look. Design Desk reads the issues once a day and sketches them on its own, the sprint's first; press <b>Draw it</b> to have one sketched now, or <b>Design this</b> to start a request.${FLOW_ISSUE()}</li>`)}
-<li><b>Ask anything</b> on any page: why something works the way it does, what can change, or "show me how it looks when…". The answer appears right below your question, with a picture when it helps.</li>
-</ol>
-${full("<p><b>Needs a designer</b>, at the top of Requests and PR Changes, shows only what waits for a designer's decision.</p>")}
-<p>Every item has a number, in grey by its title, like C-12, and every decision one like D-3. Write it in a comment and it links to that item; the link icon beside its number (<b>Copy link</b> on a narrow screen) gives a link that opens it; <b>Search</b> at the top finds an item by its words, its number, its link, or the number of its GitHub issue or pull request.</p>
-<p>A change card is short: each part says what it is about and where it comes from, and the background folds away until you open it. Click a picture to see it large; with several, the arrows step through them.</p>
-<p>Each row in Requests and PR Changes shows where it came from — Slack, a GitHub issue or pull request, the Desk, an automated test, or Design Desk itself — and who started it. When nobody asked for it, it says <b>Automatic</b> and what it reacted to, such as a pull request that shipped; follow the link to see it.</p>
-<h3>Changing a design</h3>
-${full(`<p>When you build a live prototype, Design Desk can first ask you a few questions about what the design leaves open; answer the ones you care about and leave the rest to it.</p>`)}
-<p>Open a request's <b>design workspace</b>. Click any part of a design option to select it — it gets a blue frame — and write what should change, or switch to <b>Edit text</b> and type the new words right in it. Design Desk changes the option and the new version appears in the same place. Every note keeps its number on the design, so it is always clear what was asked where.</p>
-<p>A design with several screens is clicked through like the product: buttons and links lead to the next screen, and the <b>Show hotspots</b> switch in its top bar (on from the start in designs made since this update) outlines what does something in the prototype — opens a screen, a dialog or a menu. Use <b>Click through</b> to walk it, <b>Select</b> to comment on a part.</p>
-<p><b>One more option</b>: press the <b>+ New option</b> tab after the options. Write what it should look like and have, and pick the option it starts from (or something new). Design Desk draws it next to the others.</p>
-<p><b>Try 3 ways</b>: select a part of an option in the workspace, press <b>Try 3 ways</b> and describe how you picture it. Design Desk draws three ways above the design; click through them and press <b>Use this one</b> on the one to keep. It becomes the option's next version; the one before stays under its versions. A part picked whose element has states drawn shows <b>See every state</b>: they open to look through, with nothing new drawn from there. The ✕ in the corner clears the selection.</p>
-<p><b>All elements</b>: under each option, a small picture of every part it changes or adds, marked New or Changed. Open one to see it in every state, each as a picture of the part alone with the use case of the brief it covers; with none drawn yet, press <b>Draw every state</b>. Design Desk draws it in each state it can be in: hovered, disabled, loading, empty, with an error, with a long name… In the workspace the states sit in a row above the design; step through them one by one, and comment on or change each state like any option. Each keeps its own versions.</p>
-${full(`<p><b>Add to the design catalog</b>: once a design is approved, its elements go to Product → Elements with their states. They are marked <b>✎ From an approved design</b>, apart from the product's own, until the product has them. When the change that builds the design ships, Design Desk compares it with the design: a change that differs says <b>⚠ Differs from the approved design</b> and shows what, side by side.</p>`)}
-${full(`<p><b>What goes live</b>: Build a live prototype asks which option, then shows its latest version with every state for a final check. Click through it; it says what is still open. <b>Build it live</b> builds exactly that version, and the request names it.</p>`)}
-<p>Notes and comments sit beside the design, open ones first: reply, mark one <b>Done</b> or reopen it. The <b>Comments</b> switch hides their numbers on the design when they get in the way. A designer, PM or developer can press <b>Work it in</b> on a comment, or on all open ones, and Design Desk changes the design as they ask. No option is picked as the winner: ${simple() ? "Approve asks" : "Approve, Build a live prototype and Add to presentation each ask"} which option. Requests sit in two tabs, <b>For Designers</b> and <b>For Developers</b>: one from Slack starts For Developers unless its message says otherwise, one filed here For Designers unless you switch it in New request. A request For Developers is approved by any developer but the person who filed it, without a designer; a lead developer moves a request between the two under More, and the request shows who chose and who approved it. A designer or lead developer need not wait for a vote${full(" or a live prototype")}: <b>Approve</b> at any step, or <b>Close…</b> and tick <b>Close it and record a decision</b>, which records the decision in their name. Approve can tick <b>Straight to implementation</b>: the spec goes on a GitHub issue — the one it came from, or a new one with the spec and pictures — with the coding agent's label, when its manifest names one, so the agent picks it up.${full(" While a live prototype is up, the options fold under it; Approve approves the option it shows.")} <b>Send to Slack…</b> posts pictures of the options you tick, or asks the team for a vote on them — into the Slack thread the request came from, when it came from Slack.</p>
-<h3>What it cannot do — a developer has to</h3><ul>
-<li>Change what the product does: what it saves or loads, its rules and checks, who may do what, how it talks to other systems.</li>
-<li>Add a new piece of information the product does not have yet, or remove something a person can do today.</li>
+<p class="lead">Design Desk tells you what changed in the product, explains it in plain words, and turns your ideas into design options${full(" and live prototypes")}. It changes only how the product <b>looks</b>, never what it <b>does</b>.</p>
+<h3>A design request</h3>${process("requests")}
+<h3>Changing a design</h3>${process("workspace")}
+<h3>A change that ships</h3>${process("new")}
+${full(`<h3>Planned work</h3>${process("issues")}`)}
+${seesDesigns() ? `<h3>Sent to developers</h3>${process("designs")}` : ""}
+<h3>What only a developer can do</h3><ul>
+<li>Change what the product does: what it saves, its rules, who may do what.</li>
+<li>Add information the product does not have, or take away something people can do.</li>
 <li>Change anything behind the screens: servers, data, security, settings.</li></ul>
-<p>It still sketches such ideas, and the developer spec names the part a developer has to build.</p>
+<p>Design Desk still sketches such ideas; the developer spec names the part a developer builds.</p>
 <h3>How long things take</h3><ul>
-<li>A question or a small tweak: usually a few minutes.</li>
-<li>Design options: usually well under an hour.</li>
-${full(`<li>The first live prototype of a request: up to an hour; later updates are faster.</li>`)}</ul>
-<p>The page updates by itself; you can close it and come back.</p>
-<h3>Who can do what</h3>
-<p>Your role is shown top right.${full(` <a href="#" data-tab="people">People</a> lists everyone's role and what each role can do;`)} ${esc(S.me?.contact || "the Desk's owner")} changes ${simple() ? "roles" : "them"}.</p>
-<h3>Also here</h3><ul>
-${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose to show at the team's design meeting, each in its final version with a short brief. Press <b>▶ Present</b> in the meeting, then <b>Mark as presented</b>. Design Desk suggests things, a designer adds them.</li>
-<li><b>Product</b> — a map of the product's screens with how to get to each and why it is like it is; its real parts, each shown in every situation it can be in; and every decision the team made, searchable. A screen and a part keep how they looked in earlier versions: step back through them, or put one next to now. A designer, PM or developer adds a missing screen or part with <b>+ Add</b>.</li>
-<li><b>History</b> — under Product, one page a week, named by its dates: what changed in the product's UX that week, the decisions taken, what waits for one, and the themes in people's feedback.</li>
-`)}<li><b>Slack</b> — tell Design Desk in the team channel when something looks broken, or ask it for a design; it puts it here as a request and answers in your thread, the options included. When the Desk's owner turns it on, anyone in a request's thread can ask for changes there and gets each new option or version back as a before and after picture.</li>
-<li><b>Chat</b> — the Desk's owner can do everything here also by talking to Design Desk in its chat.</li></ul>`;
+<li>A question or a small change: a few minutes.</li>
+<li>Design options: well under an hour.</li>
+${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>`)}</ul>
+<p class="tip">The page updates by itself; you can close it and come back. <b>Ask privately</b>, bottom right, asks Design Desk anything about the page you are on.${S.me?.slack ? " In the team's Slack channel, tell Design Desk what looks broken or what you would like designed; it answers in your thread." : ""} Your role is top right${full(`; <a href="#" data-tab="people">People</a> says what each role may do`)}, and ${esc(S.me?.contact || "the Desk's owner")} changes it.</p>`;
 
   // ---------- what a button does, on hover ----------
   // Every button, label and picture says on hover what it does or what it means
@@ -1929,7 +1923,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
-  const working = (c) => [...new Set((c.waiting || []).map((w) => (w.scope === "history" ? "catalog-history" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind)).filter((k) => k !== "question"))];
+  // A request's own item checks it, then draws its options; the card says which part is left, so
+  // a request already checked never shows "Checking your request" beside its next step.
+  const working = (c) => [...new Set(waitingKinds(c).map((k) => {
+    if (!["request", "follow-up"].includes(k) || !c.triage) return k;
+    return (c.variants || []).length || c.request?.options === 0 || c.status !== "triage" ? null : "explore";
+  }).filter(Boolean))];
+  const waitingKinds = (c) => [...new Set((c.waiting || []).map((w) => (w.scope === "history" ? "catalog-history" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind)).filter((k) => k !== "question"))];
   const optionName = (c, id) => (c.variants || []).find((v) => v.id === id)?.name || "an option";
 
   // The option designers' votes clearly prefer, a hint only; none on a tie, the only one when
@@ -2254,9 +2254,13 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const sep = `<span class="sep" aria-hidden="true"></span>`;
     // Designs only for developers and admins; a designer reaches one from a notification (docs/desk.md → Designs).
     const designs = can("designs") ? [[["designs", designCards("todo").length]]] : [];
-    $("#nav").innerHTML = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
+    const html = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.filter(([k]) => !(simple() && SIMPLE_HIDES.includes(k)))).filter((group) => group.length)
       .map((group) => group.map(tab).join("")).join(sep);
+    // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
+    // tooltip stays open and keyboard focus stays where it was.
+    const nav = $("#nav");
+    if (nav.drawn !== html) keepFocus(nav, () => { nav.innerHTML = html; nav.drawn = html; });
     $("#help").setAttribute("aria-current", String(S.tab === "guide"));
   }
 
@@ -2267,77 +2271,85 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     $("#banners").innerHTML = out.join("");
   }
 
-  // Each tab opens with a short intro for first use; How it works is all intro. An action
-  // names what the server must allow (`can`), so a role that may not do it sees so.
+  // Each tab opens with a short intro for first use; How it works is all intro. It explains the
+  // process, not the screen: the tab's flow first, then its steps in order. Each step has the
+  // colour of its box in the flow, says who acts, and under "You can" lists only the buttons the
+  // person signed in may press there (`can`).
   // Every list's items have a number and a link (docs/desk.md → Links to an item).
-  const LINK = ["Each item has its number in grey by its title, like C-12: the link icon beside it sends someone straight to it, and <b>Search</b> at the top finds one by its words, its number or its GitHub issue or pull request number."];
+  const LINK = "Each item has a number, like C-12: <b>Search</b> finds it, the link icon copies a link to it.";
   const INTRO = () => ({
-    new: { about: "what changed in the product's screens, and what a designer should look at",
-      see: ["A card for every change to the product's screens, soon after it ships, with screenshots and what it touches.",
-        "On each row: where it came from and who made it, how long it has been open (red when overdue), and whether it needs a designer."],
-      can: [[`Filter by <b>Open</b>${simple() ? " or" : ","} <b>Handled</b>${full(" or <b>Needs a designer</b>")}. A title is bold until you open it; the dot in its corner is its pull request: Draft, Open or Merged.`],
-        ["A change's title is bold until you open it, for you alone.", "ack"],
-        ["<b>Ask a question</b> about a change; the answer appears below it.", "ask"],
-        ["<b>Add screenshots</b> when a change has none.", "screens"],
-        ["<b>Adjust the design</b>: start a request from a change.", "follow-up"],
-        ["<b>Add to presentation</b>: show it at the next design meeting.", "queue"],
-        ["<b>Mark handled</b> once a designer has dealt with it.", "handle"], LINK],
-      steps: ["Pick a change on the left.", "Read what changed and why; click a picture to see it large.", "Ask what is unclear.", "A designer marks it handled or adjusts the design."] },
-    requests: { about: simple() ? "design requests, from an idea to design options and a developer spec" : "design requests, from an idea to a live prototype and a developer spec",
-      see: ["Every request and where it stands: Checking, Options drawn, Team feedback, Live — try it, Sent to developers.",
-        "On each request: what is already known about it, and what of your ask needs a developer or a decision, and why.",
-        ...full(["<b>Presentation</b>: what designers chose to show at the team's next design meeting, each in its final version with a short brief."]),
-        "Amber count in the menu: a request waits for someone's answer."],
-      can: [["<b>+ New request</b>: suggest a change or report something broken.", "request"],
-        ["Vote on the options with <b>👍</b>, <b>👎</b> or <b>⚠</b> while the team gives feedback, and comment on any part. Votes from Slack count here too.", "vote"],
-        ["<b>Ask for feedback</b>, beside the request's step, once its options are fine-tuned: its author may, whatever their role, and designers, PMs, developers and admins may on any request filed here. One from Slack goes to the team by itself.", "request"],
-        ["<b>Open in the design workspace</b>, under the options: click a part of an option and say what should change.", "revise"],
-        ["<b>+ New option</b>: describe one more option and Design Desk draws it next to the others.", "explore"],
-        ["<b>Try 3 ways</b> on a part in the design workspace: describe it, pick one of three, and it becomes the next version.", "revise"],
-        ["<b>All elements</b> under an option: open a part it changes or adds and press <b>Draw every state</b>; each state shows with the use case it covers, and you step through and change each in the design workspace.", "revise"],
-        ["<b>Add to the design catalog</b> once a design is approved: its elements go to Product → Elements, marked as from the approved design.", "add"],
-        ["<b>Build a live prototype</b>: pick the option, click through its latest version and states once more, then build it.", "build"],
-        ["<b>Approve</b> a design, or close a request.", "approve"],
-        [`Skip the vote${full(" and the live prototype")}: <b>Approve</b>, or <b>Close…</b> with a decision recorded: what you decided.`, "skip"],
-        ["<b>Add to presentation</b>: pick the final version to show at the design meeting.", "queue"],
-        ["<b>▶ Present</b> it in the meeting, then <b>Mark as presented</b>.", "close"],
-        [simple() ? "Switch between <b>For Designers</b> and <b>For Developers</b>; filter the requests by <b>Open</b> or <b>Closed</b>." : "Switch between <b>For Designers</b>, <b>For Developers</b> and the <b>Presentation</b>; filter the requests by <b>Open</b>, <b>Needs a designer</b> or <b>Closed</b>."], LINK],
-      steps: simple() ? ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer, PM or developer refines one.", "Approve it, and it goes to the developers."]
-        : ["Describe the problem in New request.", "Design Desk checks what can be done — after its questions, if you asked for them — and draws the options.", "The team votes and comments; a designer, PM or developer refines one, and a designer adds the final version to the presentation.", "Show it at the design meeting and mark it as presented; approve it, and it goes to the developers."] },
-    issues: { about: "what the team plans that will change the screens",
-      see: ["The open issues that change the screens: the current sprint's (with its epics' issues) first, then the next sprint's, the ones someone has taken and the ones labelled for design.",
-        "On each issue: what the UI will need, a picture of how it looks now and a sketch of how it could look.",
-        "Design Desk reads the issues once a day and sketches them on its own, the sprint's first."],
-      can: [["Filter by <b>This sprint</b>, <b>Next sprint</b>, <b>Assigned</b>, <b>For design</b> or <b>All</b>."],
-        ["<b>Draw it</b>: have an issue without pictures drawn now.", "draw"],
-        ["<b>Design this</b>: start a design request from an issue.", "follow-up"],
-        ["<b>Ask a question</b> about an issue; the answer appears below it.", "ask"], LINK],
-      steps: ["Pick an issue on the left.", "Read what the UI will need and compare now with the sketch.", "Ask what is unclear, or press Draw it for a sketch.", "Press Design this to have Design Desk draw options for it."] },
-    product: { about: "a map of the product: its screens, its parts and the team's decisions",
-      see: ["<b>Screens</b>: every screen, how to get to it and why it is like it is.",
-        "<b>Elements</b>: the product's real parts, each drawn in every situation it can be in; parts of approved designs, not in the product yet, are marked <b>✎ From an approved design</b>.",
-        "<b>Decisions</b>: everything the team decided, each with its number (D-3), who decided it and where; revoked ones too.",
-        ...(figmaOn() ? ["<b>Differences</b>: where the screens, elements and shipped changes differ from their design in Figma, each with both pictures side by side. The same box shows on each of them, on a request and on a decision."] : []),
-        "<b>History</b>: one page a week, named by its dates: the week's UX changes, the decisions taken and the themes in people's feedback.",
-        "Earlier looks of a screen or part: step back through them, or put one next to now."],
-      can: [[`Switch between <b>Screens</b>, <b>Elements</b>, <b>Decisions</b>${figmaOn() ? ", <b>Differences</b>" : ""} and <b>History</b>.`],
-        ["<b>Ask about this screen</b>: why it works the way it does.", "ask"],
-        ["<b>+ Add</b> a screen or part that is missing.", "add"],
-        ["<b>Revoke</b> a decision that no longer holds, or restore it.", "decide"],
-        ["<b>Draw how it looked before</b>, or update a drawing.", "history"]],
-      steps: [`Pick Screens, Elements, Decisions${figmaOn() ? ", Differences" : ""} or History.`, "Open one on the left.", "Look at its pictures and versions; ask what is unclear."] },
+    new: { about: "what changed on the product's screens, and what a designer does with it",
+      steps: [
+        { tone: "checking", text: "A change ships; Design Desk explains it with pictures soon after." },
+        { tone: "waiting", text: "Everyone reads what changed and why. A bold title: you have not opened it yet.",
+          acts: [["<b>Ask</b> what is unclear", "ask"], ["<b>Add screenshots</b> when it has none", "screens"]] },
+        { tone: "approved", text: "A designer deals with it: marks it handled or adjusts the design.",
+          acts: [["<b>Mark handled</b>", "handle"], ["<b>Adjust the design</b>: it becomes a request", "follow-up"], ["<b>Add to presentation</b>", "queue"]] }],
+      tip: `Red: it has waited too long. Filter by <b>Open</b>${simple() ? " or" : ","} <b>Handled</b>${full(" or <b>Needs a designer</b>")}. ${LINK}` },
+    requests: { about: simple() ? "from an idea to design options and a developer spec" : "from an idea to a live prototype and a developer spec",
+      steps: [
+        { tone: "", text: "Someone describes a problem in their own words.", acts: [["<b>+ New request</b>", "request"]] },
+        { tone: "checking", text: "Design Desk checks what can be done as a design and what needs a developer, then draws the options.",
+          acts: [["<b>Draw design options</b>", "explore"], ["<b>+ New option</b>", "explore"]] },
+        { tone: "checking", text: "The request's people fine-tune the options, then ask the team.",
+          acts: [["<b>Open in the design workspace</b>: click a part, say what to change", "revise"], ["<b>Try 3 ways</b> on one part", "revise"], ["<b>Ask for feedback</b>", "request"]] },
+        { tone: "waiting", text: "The team votes and comments.", acts: [["<b>👍</b> <b>👎</b> <b>⚠</b> on each option", "vote"], ["<b>Work it in</b>: a comment changes the design", "change"]] },
+        { tone: "live", text: "Optional: try it in a live prototype.", acts: [["<b>Build a live prototype</b>", "build"]] },
+        { tone: "approved", text: "A designer, PM or lead developer approves one option, or closes the request.",
+          acts: [["<b>Approve</b>", "approve"], ["<b>Close…</b>, with a decision if you like", "skip"], ["<b>Add to presentation</b>, then <b>▶ Present</b>", "queue"]] },
+        { tone: "approved", text: S.me?.spec_review ? "Design Desk writes the developer spec; the approver reads it and presses Send." : "Design Desk writes the developer spec and sends it to developers." }],
+      tip: `An amber number in the menu: a request waits for an answer. ${LINK}` },
+    issues: { about: "planned work that will change the screens",
+      steps: [
+        { tone: "checking", text: "Once a day Design Desk reads the team's plan and sketches what people will see, this sprint's first." },
+        { tone: "waiting", text: "Everyone compares how it looks now with the sketch.", acts: [["<b>Ask</b> about an issue", "ask"], ["<b>Draw it</b> again now", "draw"]] },
+        { tone: "approved", text: "Someone turns it into a design request.", acts: [["<b>Design this</b>", "follow-up"]] }],
+      tip: `Filter by <b>This sprint</b>, <b>Next sprint</b>, <b>Assigned</b>, <b>For design</b> or <b>All</b>. ${LINK}` },
+    designs: { about: "approved designs, while developers build them",
+      steps: [
+        { tone: "approved", text: "A designer, PM or lead developer approves a design; it arrives here under To build, with its spec." },
+        { tone: "waiting", text: "A developer builds it and asks the designer what is unclear.", acts: [["<b>Ask the designer</b>", "designs"]] },
+        { tone: "approved", text: "Once it is built, a developer marks it done; it moves to Done.", acts: [["<b>Mark as done</b>", "built"]] }],
+      tip: `<b>Open the request</b> shows the same design on Requests. ${LINK}` },
+    // Not a tab: how a design changes, in How it works.
+    workspace: { about: "how a design changes",
+      steps: [
+        { tone: "", text: "Someone opens a request's design workspace.", acts: [["<b>Open in the design workspace</b>", "revise"]] },
+        { tone: "", text: "They click a part of an option and say what should change, or type the new words in it.", acts: [["<b>Edit text</b>", "revise"]] },
+        { tone: "checking", text: "Design Desk draws the next version in a few minutes; the earlier ones stay." },
+        { tone: "", text: "Unsure how a part should look? Three ways to pick from, or every state it can be in.", acts: [["<b>Try 3 ways</b>", "revise"], ["<b>Draw every state</b>", "revise"]] },
+        { tone: "waiting", text: "The team comments on any part; a comment can change the design.", acts: [["<b>Work it in</b>", "change"]] }] },
+    product: { about: "the product's screens, parts and decisions, kept up to date",
+      steps: [
+        { tone: "", text: `Pick a section: <b>Screens</b>, <b>Elements</b> (every part in each state), <b>Decisions</b>${figmaOn() ? ", <b>Differences</b> (against Figma)" : ""} or <b>History</b> (one page a week).` },
+        { tone: "", text: "Open one and compare it with how it looked before.", acts: [["<b>Draw how it looked before</b>", "history"]] },
+        { tone: "waiting", text: "Ask why it is like this, or fill a gap.", acts: [["<b>Ask</b>", "ask"], ["<b>+ Add</b> a missing screen or part", "add"], ["<b>Revoke</b> or restore a decision", "decide"]] }],
+      tip: LINK },
   });
   // Each tab's help draws its own flow from How it works: a request, a shipped change, an issue.
   const FLOW_OF = { requests: FLOW_REQUEST, new: FLOW_CHANGE, issues: FLOW_ISSUE };
+  // A colour key for a flow, in the colours of its boxes and its steps' numbers.
+  const LEGEND = () => `<p class="legend"><span data-tone="checking">Design Desk works</span><span data-tone="waiting">waits on the team</span>${full(`<span data-tone="live">live</span>`)}<span data-tone="approved">approved</span></p>`;
+  // A process: its flow, its steps in order and a short tip. Each step lists under "You can"
+  // only the buttons the person signed in may press there.
+  function process(key) {
+    const it = INTRO()[key];
+    if (!it) return "";
+    // A step only about what simple mode hides (a live prototype) leaves with it.
+    const steps = it.steps.filter((s) => !hiddenInSimple(s.text) && !(simple() && s.acts?.length && s.acts.every(([, a]) => SIMPLE_ACTS.includes(a))));
+    const step = (s) => {
+      const mine = (s.acts || []).filter(([words, act]) => !hiddenInSimple(words, act) && can(act));
+      return `<li class="${mine.length ? "mine" : ""}" data-tone="${s.tone}"><div>${s.text}</div>${mine.length ? `<div class="acts"><span class="you">You can:</span>${mine.map(([w]) => `<span>${w}</span>`).join("")}</div>` : ""}</li>`;
+    };
+    const flow = FLOW_OF[key];
+    return `<div class="process">${flow ? flow() + LEGEND() : ""}<h5>Step by step</h5><ol class="steps">${steps.map(step).join("")}</ol>${it.tip ? `<p class="tip">${it.tip}</p>` : ""}</div>`;
+  }
   function renderIntro() {
     const it = INTRO()[S.tab];
     if (!it) return "";
-    const li = ([words, act]) => act && !can(act) ? `<li class="off">${words}<span class="chip" title="Your role may not do this; People says which roles may">not with your role</span></li>` : `<li>${words}</li>`;
     return `<details class="intro" data-intro="${S.tab}"${store.get("desk-intro") === "hidden" ? "" : " open"}>
       <summary title="Shows or hides this tab's help; it stays as you leave it"><span class="i">i</span><span><b>${esc(TABS[S.tab])}</b> — ${esc(it.about)}</span><span class="tog"></span></summary>
-      <div class="cols"><div><h5>What you see here</h5><ul>${it.see.filter((s) => !hiddenInSimple(s)).map((s) => `<li>${s}</li>`).join("")}</ul></div>
-        <div><h5>What you can do</h5><ul>${it.can.filter(([words, act]) => !hiddenInSimple(words, act)).map(li).join("")}</ul></div>
-        ${it.steps ? `<div><h5>Step by step</h5><ol>${it.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}</div>${FLOW_OF[S.tab] ? FLOW_OF[S.tab]() : ""}</details>`;
+      ${process(S.tab)}</details>`;
   }
   // Folding one intro folds every tab's, and it stays so in this browser. Kept on the person's
   // click, not on toggle: a freshly drawn open intro fires a toggle of its own.
@@ -2549,7 +2561,20 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
     const head = list.querySelector(":scope > .listhead");
     if (head) head.insertAdjacentHTML("afterend", bar); else list.insertAdjacentHTML("afterbegin", bar);
   }
-  function renderList() { renderListRows(); applyRowFilter(); }
+  function renderList() { keepFocus($("#list"), () => { renderListRows(); applyRowFilter(); }); }
+  // A redraw keeps the person's place: the button they had focused (by keyboard or a click) is
+  // focused again in the new drawing, found by its data-* attribute, so the poll never drops
+  // keyboard focus to the page.
+  function keepFocus(root, draw) {
+    const a = document.activeElement;
+    const key = a && a !== document.body && root.contains(a) ? [...a.attributes].find((x) => x.name.startsWith("data-")) : null;
+    const sel = key && `${a.tagName.toLowerCase()}[${key.name}="${CSS.escape(key.value)}"]`;
+    const text = a?.textContent.trim();
+    draw();
+    if (!sel || document.contains(a)) return;
+    const same = [...root.querySelectorAll(sel)];
+    (same.find((e) => e.textContent.trim() === text) || same[0])?.focus({ preventScroll: true });
+  }
   function renderListRows() {
     const list = $("#list");
     const main = $("#main");
@@ -2864,7 +2889,10 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // carries the "after" one's marks); they stay hidden, on the card and in the gallery, until
   // the two prove the same size.
   const figure = (s, label, frame) => s.no ? `<div id="no-${esc(s.no[0].id)}-${s.no[1]}">${subTag(...s.no)}${plainFigure(s, label, frame)}</div>` : plainFigure(s, label, frame);
-  const plainFigure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(s.caption)}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
+  // A caption that only repeats its stage ("Before" under Before) is left out, never said twice.
+  const bare = (t) => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const captionBeside = (caption, label) => label && bare(caption) === bare(label) ? "" : caption || "";
+  const plainFigure = (s, label, frame) => `<figure class="shot" data-zoom="${esc(s.asset)}"${s.marks?.length ? ` data-marks="${esc(JSON.stringify(s.marks))}"` : ""}${s.marks?.length && frame ? ` data-frame="${esc(frame)}"` : ""}>${s.marks?.length ? `<div class="pic"><div class="canvas"><img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />${marksOf(s.marks)}</div></div>` : `<img alt="${esc(s.caption)}" data-asset="${esc(s.asset)}" />`}${label || s.caption || fromOf(s) ? `<figcaption>${label ? `<b>${esc(label)}</b> ` : ""}${esc(captionBeside(s.caption, label))}${fromOf(s) ? `<span class="hint" style="display:block;margin:0">${esc(fromOf(s))}</span>` : ""}</figcaption>` : ""}</figure>`;
   // The agent's questions as a form, in four parts and nothing else: what it is about (the
   // agent's text), each question, its options, and the one Design Desk recommends. A question
   // nobody answers is left to Design Desk, which takes its recommendation.
@@ -6225,7 +6253,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   async function poll() {
     tick += 1;
     if (document.hidden) return;
-    const fast = S.card && working(S.card).length > 0;
+    const fast = S.card && waitingKinds(S.card).length > 0;
     if (!fast && tick % 4 !== 0) return;
     try {
       await refreshList();

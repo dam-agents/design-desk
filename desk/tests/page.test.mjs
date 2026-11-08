@@ -372,8 +372,11 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   const intro = "#detail .intro";
   await desk.waitForSelector(`${intro}[data-intro="requests"]`);
   assert.equal(await desk.locator("#banners .intro").count(), 0, "no intro under the menu");
-  assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
-  assert.match(await desk.textContent(`${intro} li.off`), /Vote on the options[\s\S]*not with your role/, "an action the role may not do says so");
+  assert.match(await desk.textContent(intro), /Step by step/);
+  assert.equal(await desk.locator(`${intro} figure.flow`).count(), 1, "the process is drawn first");
+  assert.doesNotMatch(await desk.textContent(intro), /What you see here|not with your role/, "the steps of the process, never a tour of the screen");
+  assert.doesNotMatch(await desk.textContent(`${intro} ol.steps`), /👍/, "an action the role may not do is left out");
+  assert.match(await desk.textContent(`${intro} ol.steps li.mine`), /You can:[\s\S]*New request/, "a step the person acts in lists their buttons");
   for (const tab of ["new", "issues", "product"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"]`);
@@ -393,6 +396,10 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the menu under your name");
   assert.equal(await desk.locator('#detail .guide figure.flow svg[role="img"][aria-label] title').count(), 3, "How it works draws a request, an issue and a shipped change");
+  assert.ok(await desk.locator("#detail .guide .process ol.steps").count() >= 4, "each process in How it works has its steps, a design's changes too");
+  const guideActs = await desk.$$eval("#detail .guide .process .acts", (els) => els.map((e) => e.textContent).join(" "));
+  assert.match(guideActs, /New request/, "How it works lists the buttons the person may press");
+  assert.doesNotMatch(guideActs, /👍/, "and none their role may not");
   await desk.click('[data-tab="new"]');
   await desk.click("#list .row .open");
   await desk.waitForSelector("#detail .crumb", { state: "attached" });
