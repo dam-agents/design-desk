@@ -1695,7 +1695,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     try { data = JSON.parse(res.body || "{}"); } catch { data = {}; }
     if (res.status >= 400 && res.status < 500 && data.error) throw new Said(data.error);
     if (res.status >= 400) throw new Error(`${res.status}`);
-    if (data.ping) { try { bridge.sendPrompt(data.ping); } catch {} }
+    // One platform session per conversation, not one for everything a person asks.
+    if (data.ping) { try { bridge.sendPrompt(data.ping, data.ping_conversation ? { conversation: data.ping_conversation } : undefined); } catch {} }
     return data;
   }
 
