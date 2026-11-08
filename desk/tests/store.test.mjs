@@ -2137,3 +2137,30 @@ test("Designs: a developer marks a design done and asks its designer, who gets i
   s.upsertCard({ id: card.id, status: "handed-off" });
   assert.equal(s.listCards({ kind: "request" }).find((x) => x.id === card.id).built, null);
 });
+
+// Research cites what a designer opens: an issue or a pull request, a Desk number, a Markdown page
+// with its section and words; never a code file (docs/requests.md → Research, step 6).
+test("research links: issues, pull requests, Desk numbers and pages with a section; no code files", () => {
+  const s = fresh();
+  const who = { email: "o@example.com", role: "admin", deskRole: "admin" };
+  const r = s.createRequest(who, { title: "Pick a harness", problem: "The harness menu is hard to find today when a terminal starts." });
+  const id = r.card?.id || Object.keys(s.db.cards).pop();
+  const ok = { verdict: "clear", summary: "Asked in [#5](https://github.com/acme/widgets/issues/5); see C-1.", links: [
+    { label: "Issue #5", url: "https://github.com/acme/widgets/issues/5" },
+    { label: "PR #6", url: "https://github.com/acme/widgets/pull/6" },
+    { ref: id.toLowerCase() },
+    { label: "ADR 12", url: "https://github.com/acme/widgets/blob/main/docs/adr/0012-x.md#decision", section: "Decision", excerpt: "It starts on the default." },
+  ] };
+  s.upsertCard({ id, research: ok });
+  const links = s.db.cards[id].research.links;
+  assert.deepEqual(links[2], { ref: id, label: "Pick a harness" });
+  assert.deepEqual(s.githubRefs(id).sort(), ["acme/widgets#5", "acme/widgets#6"]);
+  assert.deepEqual(s.cardsOf("acme/widgets#5"), [], "a cited issue's comments are not the card's news");
+  const refuse = (research, re) => assert.throws(() => s.upsertCard({ id, research: { ...ok, ...research } }), re);
+  refuse({ links: [{ label: "menu", url: "https://github.com/acme/widgets/blob/main/src/menu.tsx" }] }, /never a code file/);
+  refuse({ links: [{ label: "guide", url: "https://github.com/acme/widgets/blob/main/docs/guide.md" }] }, /section/);
+  refuse({ links: [{ ref: "D-99" }] }, /no D-99/);
+  refuse({ summary: "It lives in src/terminal-harness-menu.tsx." }, /code file/);
+  refuse({ summary: "See [the guide](https://github.com/acme/widgets/blob/main/docs/guide.md)." }, /issue or a pull request/);
+  s.upsertCard({ id, research: { ...ok, summary: "Built on Node.js like the rest." } });
+});

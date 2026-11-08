@@ -979,6 +979,7 @@
   .made-col details.fold > summary .cnt { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); font-size: 12px; line-height: 18px; }
   .brief-k .face.agent { background: var(--ink); color: var(--panel); }
   .made-sec + .made-sec { margin-top: 16px; }
+  .made-sec .src-kind { font-weight: 600; color: var(--ink); }
   .made-sec h4 { margin: 0 0 6px; font-size: var(--fs-ui); font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
   .made-sec ul { margin: 6px 0 8px; padding-left: 20px; }
   .made-sec p { margin: 0 0 6px; }
@@ -2003,6 +2004,8 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   const snipDoc = (html, sel, text, grow) => { const sc = SNIP_SCRIPT(sel, text, grow); return html.includes("</body>") ? html.replace("</body>", `${sc}</body>`) : html + sc; };
   async function peekOf(el) {
+    // A page research cites: its section and the words in it (docs/requests.md → Research).
+    if (el.dataset.doc !== undefined) return { kind: "doc", title: el.dataset.docTitle, what: el.dataset.docKind, section: el.dataset.docSection, excerpt: el.dataset.docExcerpt };
     if (el.dataset.snip !== undefined) {
       if (!el.dataset.snip) return null;
       try { const a = await asset(el.dataset.snip); return { kind: "snip", html: decode(a), sel: el.dataset.snipSel, text: el.dataset.snipText }; } catch { return null; }
@@ -2029,10 +2032,16 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
   function peekLink({ ref, text }) {
     // The link's words name it, less the number they start with: "issue #3853: one account".
-    const what = `${ref.pr ? "Pull request" : "Issue"} #${ref.n}`, title = (text || "").replace(/^(?:issue|pr|pull request)?\s*#?\d+\s*[:·—-]?\s*/i, "");
+    // Its title as the Desk keeps it from GitHub, when it does.
+    const what = `${ref.pr ? "Pull request" : "Issue"} #${ref.n}`, title = S.gh[ref.key]?.title || (text || "").replace(/^(?:issue|pr|pull request)?\s*#?\d+\s*[:·—-]?\s*/i, "");
     return `<div class="t"><b>${esc(title || what)}</b></div>
         <div class="sub"><span>${esc(what)}</span><span>${esc(ref.repo)}</span></div>
         ${S.gh[ref.key] ? "" : `<p class="hint">Not on the Desk: it has no notes on its screens yet. The link opens it on GitHub.</p>`}`;
+  }
+  function peekDoc(d) {
+    return `<div class="t"><b>${esc(d.title || d.what)}</b></div>
+        <div class="sub"><span class="chip">${esc(d.what)}</span>${d.section ? `<span>§ ${esc(d.section)}</span>` : ""}</div>
+        <p>“${esc(d.excerpt)}”</p>`;
   }
   function peekItem(c) {
     return `<div class="t"><b>${txt(c.title)}</b>${num(c)}</div>
@@ -2104,7 +2113,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       const c = await peekOf(el);
       if (peekFor !== el || !el.isConnected || !c || (c.id && !c.sub && (S.card?.id === c.id || S.decision?.id === c.id))) return;
       // What the Desk keeps of its issue or pull request on GitHub, read once per page load.
-      const keys = c.kind === "link" ? [c.ref.key] : c.kind === "snip" || c.kind === "decision" ? [] : refsOf(c);
+      const keys = c.kind === "link" ? [c.ref.key] : ["snip", "decision", "doc"].includes(c.kind) ? [] : refsOf(c);
       await ghLoad(keys).catch(() => {});
       if (peekFor !== el || !el.isConnected) return;
       peekHide();
@@ -2115,7 +2124,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
         box.innerHTML = `<div class="snipbox"><iframe sandbox="allow-scripts" title="The element the note is about"></iframe></div>`;
         const h = snipDoc(c.html, c.sel || "", c.text || "");
         box.querySelector("iframe").srcdoc = h;
-      } else box.innerHTML = (c.sub ? `<p class="hint" style="margin:0 0 4px">Number ${esc(c.sub)} on ${esc(c.id)}</p>` : "") + ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision }[c.kind] || peekItem)(c) + ghPeek(keys);
+      } else box.innerHTML = (c.sub ? `<p class="hint" style="margin:0 0 4px">Number ${esc(c.sub)} on ${esc(c.id)}</p>` : "") + ({ change: peekChange, request: peekRequest, link: peekLink, issue: peekIssue, decision: peekDecision, doc: peekDoc }[c.kind] || peekItem)(c) + ghPeek(keys);
       document.body.append(box);
       const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
       const below = r.bottom + 8 + h <= innerHeight || r.top - 8 - h < 0;
@@ -2123,7 +2132,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       box.style.top = `${below ? r.bottom + 8 : r.top - 8 - h}px`;
     }, TIP_DELAY);
   }
-  const peekTarget = (e) => { const el = e.target.closest?.("[data-snip], [data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']"); return el?.matches(ROW_OPEN) ? null : el; };
+  const peekTarget = (e) => { const el = e.target.closest?.("[data-snip], [data-doc], [data-card], [data-ref], a[href*='/issues/'], a[href*='/pull/']"); return el?.matches(ROW_OPEN) ? null : el; };
   document.addEventListener("mouseover", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekShow(el); });
   document.addEventListener("mouseout", (e) => { const el = peekTarget(e); if (el && !el.contains(e.relatedTarget)) peekHide(); });
   document.addEventListener("focusin", (e) => { const el = peekTarget(e); if (el) peekShow(el); });
@@ -3815,9 +3824,33 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   }
 
   // What Design Desk found before drawing; the summary says it in words, with no label.
+  // Each source starts with what it is (Issue, PR, Request, Decision, Doc, ADR) and previews on
+  // hover: an issue or a PR as the Desk keeps it, an item or a decision by its number, a page
+  // with the section that says it. A code file is never a source (docs/requests.md → Research).
+  const ADR_PATH = /\/(?:adrs?|decisions?)\/|\/adr[-_]?\d|\/\d{3,4}[-_][^/]*\.mdx?(?:[?#]|$)/i;
+  function researchSource(l) {
+    if (l.ref) {
+      const dec = /^D-/.test(l.ref), c = dec ? null : S.cards.find((x) => x.id === l.ref.replace(/\.\d+$/, ""));
+      if (!dec && !c) return null;
+      // Its words beside its number: the label, else the item's title or the decision's text.
+      const words = l.label && l.label !== l.ref ? l.label : c ? c.title : S.decisions?.find((x) => x.id === l.ref)?.text || "";
+      return { kind: dec ? "Decision" : KIND_NAME[c.kind] || "Item", html: `<a href="#${esc(l.ref)}" data-ref="${esc(l.ref)}">${esc(l.ref)}</a>${words ? ` ${txt(words)}` : ""}` };
+    }
+    const gh = ghRef(l.url), url = safeUrl(l.url);
+    if (gh) return { kind: gh.pr ? "PR" : "Issue", label: l.label, html: null, url };
+    if (!/\.(?:md|mdx|markdown)(?:[?#]|$)/i.test(l.url || "") || !l.excerpt) return null;
+    return { kind: ADR_PATH.test(l.url) ? "ADR" : "Doc", label: l.label, url, doc: l };
+  }
   function renderResearch(r) {
     if (!r) return "";
-    return `<section class="made-sec"><h4>What's already known</h4><div>${md(r.summary)}${(r.links || []).length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${r.links.map((l) => `<li><a href="${safeUrl(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a></li>`).join("")}</ul>` : ""}</div></section>`;
+    const items = (r.links || []).map(researchSource).filter(Boolean).map((x) => {
+      // The label without the kind it may start with: "Issue #6275" reads "Issue · #6275".
+      const label = x.label ? esc(String(x.label).replace(new RegExp(`^(?:${x.kind}|pull request)\\b\\s*[:·—-]?\\s*`, "i"), "") || x.label) : "";
+      const docAttrs = x.doc ? ` data-doc data-doc-title="${esc(x.doc.label)}" data-doc-kind="${esc(x.kind)}" data-doc-section="${esc(x.doc.section || "")}" data-doc-excerpt="${esc(x.doc.excerpt)}"` : "";
+      const link = x.html ?? `<a href="${x.url}" target="_blank" rel="noopener noreferrer"${docAttrs}>${label}</a>`;
+      return `<li><span class="src-kind">${esc(x.kind)}</span> · ${link}</li>`;
+    });
+    return `<section class="made-sec"><h4>What's already known</h4><div>${md(r.summary)}${items.length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${items.join("")}</ul>` : ""}</div></section>`;
   }
 
   // 👍, 👎 and ⚠ as pills with their count: grey until someone votes, then green, red or amber.

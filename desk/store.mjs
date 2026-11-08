@@ -612,7 +612,7 @@ export class Store {
   githubRefs(card = null) {
     const keys = new Set();
     for (const c of card ? [this.card(card)] : Object.values(this.db.cards).filter((x) => x.status !== "archived"))
-      for (const k of refsOf(c)) keys.add(k);
+      for (const k of [...refsOf(c), ...researchRefs(c)]) keys.add(k);
     return [...keys];
   }
 
@@ -1829,7 +1829,7 @@ export class Store {
       else if (k === "states") next.states = cleanStates(fields.states);
       else if (k === "group") next.group = clean(fields.group, 60, "group");
       else if (k === "elements") { if (!Array.isArray(fields.elements)) throw bad("elements must be a list"); next.elements = fields.elements.slice(0, 30).map((id) => this.card(String(id)).id); }
-      else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets);
+      else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets, this.db);
       else if (k === "origin") next.origin = cleanOrigin(fields.origin, this.db.cards);
       else if (k === "brief") {
         // The agent's brief for the call: what is on the table and what to decide.
@@ -2553,6 +2553,15 @@ function refsOf(c) {
   return [...new Set(out.filter(Boolean))];
 }
 
+// The issues and pull requests a card's research cites, read for their previews only: a comment
+// on one never comes back to this card (cardsOf).
+function researchRefs(c) {
+  const r = c.research;
+  if (!r) return [];
+  const urls = [...(r.links || []).map((l) => l.url), ...[...String(r.summary || "").matchAll(/\]\((https?:\/\/[^\s)]+)\)/g)].map((m) => m[1])];
+  return [...new Set(urls.map(issueKey).filter(Boolean))];
+}
+
 function issueKey(url) {
   const m = /^https?:\/\/[^/]+\/([^/\s]+\/[^/\s]+)\/(?:issues|pull)\/(\d+)/i.exec(String(url || ""));
   return m ? `${m[1].toLowerCase()}#${m[2]}` : null;
@@ -3034,15 +3043,39 @@ function cleanStates(list) {
 }
 
 // What the agent found before designing: the context, the history, the decisions.
-function cleanResearch(r, assets) {
+// Its sources are what a designer can open and read (docs/requests.md → Research, step 6): an
+// issue or a pull request, an item or a decision on the Desk by its number, or a Markdown page
+// (a doc, an ADR) with the section that says it and a short quote of it. A code file is never one.
+const CODE_FILE = /(?<![\w.-])(?:[\w.-]+\/)*[a-z_][\w.-]*\.(?:tsx?|jsx?|mjs|cjs|css|scss|sass|less|py|go|rb|java|kt|swift|rs|vue|svelte|php|cpp|sql|ya?ml|json|sh)(?![\w-])/;
+function researchLink(l, i, db) {
+  const at = `research link ${i + 1}`;
+  if (l?.ref != null) {
+    const ref = String(l.ref).trim().toUpperCase();
+    if (!/^(?:C-\d+(?:\.\d+)?|D-\d+)$/.test(ref)) throw bad(`${at}: ref is an item's or a decision's number (C-12, C-12.3, D-4)`);
+    // Its words, when none are given: the item's title or the decision's text.
+    const it = db && (ref.startsWith("D-") ? own(db.decisions, ref) : own(db.cards, ref.replace(/\.\d+$/, "")));
+    if (db && !it) throw bad(`${at}: no ${ref} on the Desk`);
+    return { ref, label: optText(l.label, 120, "link label") || String(it?.title || it?.text || ref).replace(/\s+/g, " ").slice(0, 120) };
+  }
+  const url = String(l?.url || "").slice(0, 500);
+  if (issueKey(url)) return { label: clean(l.label, 120, "link label"), url };
+  // A Markdown page: a doc or an ADR, never a code file.
+  if (/^https:\/\/[^/]+\/[^/]+\/[^/]+\/(?:blob|tree)\/[^?#]+\.(?:md|mdx|markdown)(?:[?#]|$)/i.test(url)) {
+    return { label: clean(l.label, 120, "link label"), url, section: clean(l.section, 160, `${at} section`), excerpt: clean(l.excerpt, 600, `${at} excerpt`) };
+  }
+  throw bad(`${at}: only an issue, a pull request, a Desk item or decision ({ref}), or a Markdown page with its section and excerpt; never a code file (${url || "no url"})`);
+}
+function cleanResearch(r, assets, db = null) {
   if (r === null) return null;
   if (typeof r !== "object") throw bad("research must be an object");
   const verdicts = ["clear", "duplicate", "deliberate", "collision", "unclear"];
   if (!verdicts.includes(r.verdict)) throw bad(`research.verdict must be one of ${verdicts.join(", ")}`);
   if (r.asset != null && !own(assets, r.asset)) throw bad(`research: no asset ${r.asset}`);
-  const links = Array.isArray(r.links) ? r.links.slice(0, 20).map((l) => {
-    if (!/^https?:\/\//i.test(String(l.url || ""))) throw bad("research links must be http(s)");
-    return { label: clean(l.label, 120, "link label"), url: String(l.url).slice(0, 500) };
-  }) : [];
-  return { verdict: r.verdict, summary: clean(r.summary, 2000, "research summary"), asset: r.asset ?? null, links, at: optText(r.at, 40, "at") || null };
+  const summary = clean(r.summary, 2000, "research summary");
+  const file = summary.replace(/https?:\/\/\S+/g, "").match(CODE_FILE);
+  if (file) throw bad(`research summary names a code file (${file[0]}): say where it is on the screen in words`);
+  // In the summary a link is an issue or a pull request; a page goes in links, with its section.
+  for (const m of summary.matchAll(/\]\((https?:\/\/[^\s)]+)\)/g)) if (!issueKey(m[1])) throw bad(`a link in the research summary is an issue or a pull request; put a page in links with its section and excerpt (${m[1].slice(0, 200)})`);
+  const links = Array.isArray(r.links) ? r.links.slice(0, 20).map((l, i) => researchLink(l, i, db)) : [];
+  return { verdict: r.verdict, summary, asset: r.asset ?? null, links, at: optText(r.at, 40, "at") || null };
 }

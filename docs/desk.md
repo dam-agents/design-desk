@@ -591,7 +591,8 @@ of the product in that state: the `show` action ([actions.md](actions.md)).
 ## GitHub on the Desk
 
 The Desk keeps a copy of every issue and pull request its cards point at — the card's
-source, where it came from, its spec's issue — with its text, state, labels, comments and a
+source, where it came from, its spec's issue, the ones its research cites (a comment on a cited
+one is never the card's own news) — with its text, state, labels, comments and a
 pull request's reviews: `design desk github-sync [--card C-n]` reads them on GitHub and
 stores them (every watch run does it, and the watch gate opens a run when a copy is behind
 GitHub: [watch.md](watch.md) → Comments on GitHub),
