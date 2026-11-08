@@ -2161,6 +2161,20 @@ test("research links: issues, pull requests, Desk numbers and pages with a secti
   refuse({ links: [{ label: "guide", url: "https://github.com/acme/widgets/blob/main/docs/guide.md" }] }, /section/);
   refuse({ links: [{ ref: "D-99" }] }, /no D-99/);
   refuse({ summary: "It lives in src/terminal-harness-menu.tsx." }, /code file/);
-  refuse({ summary: "See [the guide](https://github.com/acme/widgets/blob/main/docs/guide.md)." }, /issue or a pull request/);
-  s.upsertCard({ id, research: { ...ok, summary: "Built on Node.js like the rest." } });
+  refuse({ summary: "See [the guide](https://github.com/acme/widgets/blob/main/docs/guide.md)." }, /GitHub issue or pull request/);
+  s.upsertCard({ id, research: { ...ok, summary: "Built on Node.js, Next.js and vue.js, e.g. as before." } });
+  for (const name of ["src/components/Menu.tsx", "HarnessMenu.tsx", "User.rb", "index.html", "main.c", "util.h", "Cargo.toml"])
+    refuse({ summary: `It lives in ${name}.` }, /code file/);
+  refuse({ summary: "See https://github.com/acme/widgets/commit/abc123." }, /GitHub issue or pull request/);
+  refuse({ summary: "See https://github.com/acme/widgets/blob/main/src/menu.tsx." }, /GitHub issue or pull request/);
+  refuse({ links: [{ label: "Issue #3", url: "https://gitlab.com/acme/widgets/issues/3" }] }, /only an issue/);
+  // A numbered part, a folder of pages, an .mdx page; at most 20 sources.
+  const page = (url) => ({ label: "Page", url, section: "Why", excerpt: "Because." });
+  s.upsertCard({ id, research: { ...ok, links: [{ ref: `${id}.2` }, page("https://github.com/acme/widgets/tree/main/docs/adr/README.md"), page("https://github.com/acme/widgets/blob/main/docs/x.mdx#why")] } });
+  assert.deepEqual(s.db.cards[id].research.links.map((l) => l.ref || l.url.split("/").pop()), [`${id}.2`, "README.md", "x.mdx#why"]);
+  refuse({ links: [{ ref: `${id}.2.1` }] }, /ref is/);
+  const many = Array.from({ length: 21 }, (_, i) => ({ label: `Issue #${i + 1}`, url: `https://github.com/acme/widgets/issues/${i + 1}` }));
+  s.upsertCard({ id, research: { ...ok, links: many } });
+  assert.equal(s.db.cards[id].research.links.length, 20, "the 21st source is dropped");
+  assert.equal(s.db.cards[id].research.links.at(-1).url, "https://github.com/acme/widgets/issues/20");
 });

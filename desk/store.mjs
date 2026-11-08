@@ -2558,8 +2558,8 @@ function refsOf(c) {
 function researchRefs(c) {
   const r = c.research;
   if (!r) return [];
-  const urls = [...(r.links || []).map((l) => l.url), ...[...String(r.summary || "").matchAll(/\]\((https?:\/\/[^\s)]+)\)/g)].map((m) => m[1])];
-  return [...new Set(urls.map(issueKey).filter(Boolean))];
+  const urls = [...(r.links || []).map((l) => l.url), ...[...String(r.summary || "").matchAll(/https?:\/\/[^\s)<>\]]+/g)].map((m) => m[0])];
+  return [...new Set(urls.map(githubKey).filter(Boolean))];
 }
 
 function issueKey(url) {
@@ -3046,7 +3046,11 @@ function cleanStates(list) {
 // Its sources are what a designer can open and read (docs/requests.md → Research, step 6): an
 // issue or a pull request, an item or a decision on the Desk by its number, or a Markdown page
 // (a doc, an ADR) with the section that says it and a short quote of it. A code file is never one.
-const CODE_FILE = /(?<![\w.-])(?:[\w.-]+\/)*[a-z_][\w.-]*\.(?:tsx?|jsx?|mjs|cjs|css|scss|sass|less|py|go|rb|java|kt|swift|rs|vue|svelte|php|cpp|sql|ya?ml|json|sh)(?![\w-])/;
+const CODE_FILE = /(?<![\w.-])(?:[\w.-]+\/)*[\w-][\w.-]*\.(?:tsx?|jsx?|mjs|cjs|css|scss|sass|less|html?|py|go|rb|java|kt|kts|scala|swift|rs|vue|svelte|php|c|cc|cpp|h|hpp|cs|dart|lua|sql|ya?ml|toml|json|sh)(?![\w-])/gi;
+// Names of technologies, written like a file: words in a summary, never a code file.
+const TECH_NAMES = new Set(["node.js", "next.js", "nuxt.js", "vue.js", "react.js", "angular.js", "ember.js", "backbone.js", "express.js", "nest.js", "three.js", "d3.js", "chart.js", "alpine.js", "solid.js", "deno.js", "bun.js"]);
+// Only a GitHub issue or pull request is a source of that kind: the page previews no other host.
+const githubKey = (url) => (/^https:\/\/(?:www\.)?github\.com\//i.test(String(url || "")) ? issueKey(url) : null);
 function researchLink(l, i, db) {
   const at = `research link ${i + 1}`;
   if (l?.ref != null) {
@@ -3058,7 +3062,7 @@ function researchLink(l, i, db) {
     return { ref, label: optText(l.label, 120, "link label") || String(it?.title || it?.text || ref).replace(/\s+/g, " ").slice(0, 120) };
   }
   const url = String(l?.url || "").slice(0, 500);
-  if (issueKey(url)) return { label: clean(l.label, 120, "link label"), url };
+  if (githubKey(url)) return { label: clean(l.label, 120, "link label"), url };
   // A Markdown page: a doc or an ADR, never a code file.
   if (/^https:\/\/[^/]+\/[^/]+\/[^/]+\/(?:blob|tree)\/[^?#]+\.(?:md|mdx|markdown)(?:[?#]|$)/i.test(url)) {
     return { label: clean(l.label, 120, "link label"), url, section: clean(l.section, 160, `${at} section`), excerpt: clean(l.excerpt, 600, `${at} excerpt`) };
@@ -3072,10 +3076,11 @@ function cleanResearch(r, assets, db = null) {
   if (!verdicts.includes(r.verdict)) throw bad(`research.verdict must be one of ${verdicts.join(", ")}`);
   if (r.asset != null && !own(assets, r.asset)) throw bad(`research: no asset ${r.asset}`);
   const summary = clean(r.summary, 2000, "research summary");
-  const file = summary.replace(/https?:\/\/\S+/g, "").match(CODE_FILE);
-  if (file) throw bad(`research summary names a code file (${file[0]}): say where it is on the screen in words`);
-  // In the summary a link is an issue or a pull request; a page goes in links, with its section.
-  for (const m of summary.matchAll(/\]\((https?:\/\/[^\s)]+)\)/g)) if (!issueKey(m[1])) throw bad(`a link in the research summary is an issue or a pull request; put a page in links with its section and excerpt (${m[1].slice(0, 200)})`);
+  // In the summary a link, written as a link or bare, is a GitHub issue or pull request; a page
+  // goes in links, with its section; a commit or a code file is never one.
+  for (const m of summary.matchAll(/https?:\/\/[^\s)<>\]]+/g)) if (!githubKey(m[0])) throw bad(`a link in the research summary is a GitHub issue or pull request; put a page in links with its section and excerpt (${m[0].slice(0, 200)})`);
+  const file = [...summary.replace(/https?:\/\/[^\s)<>\]]+/g, "").matchAll(CODE_FILE)].map((m) => m[0]).find((f) => !TECH_NAMES.has(f.toLowerCase()));
+  if (file) throw bad(`research summary names a code file (${file}): say where it is on the screen in words`);
   const links = Array.isArray(r.links) ? r.links.slice(0, 20).map((l, i) => researchLink(l, i, db)) : [];
   return { verdict: r.verdict, summary, asset: r.asset ?? null, links, at: optText(r.at, 40, "at") || null };
 }

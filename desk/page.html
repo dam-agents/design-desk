@@ -3827,19 +3827,24 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // Each source starts with what it is (Issue, PR, Request, Decision, Doc, ADR) and previews on
   // hover: an issue or a PR as the Desk keeps it, an item or a decision by its number, a page
   // with the section that says it. A code file is never a source (docs/requests.md → Research).
+  const CODE_LINK = /\/commit\/|^https?:\/\/raw\.githubusercontent\.com\/|\/(?:blob|tree|raw)\/[^?#]*\.(?:tsx?|jsx?|mjs|cjs|css|scss|sass|less|html?|py|go|rb|java|kt|kts|scala|swift|rs|vue|svelte|php|c|cc|cpp|h|hpp|cs|dart|lua|sql|ya?ml|toml|json|sh)(?:[?#]|$)/i;
   const ADR_PATH = /\/(?:adrs?|decisions?)\/|\/adr[-_]?\d|\/\d{3,4}[-_][^/]*\.mdx?(?:[?#]|$)/i;
   function researchSource(l) {
     if (l.ref) {
       const dec = /^D-/.test(l.ref), c = dec ? null : S.cards.find((x) => x.id === l.ref.replace(/\.\d+$/, ""));
-      if (!dec && !c) return null;
+      // A number no longer on the Desk still shows, unlinked.
+      if (!dec && !c) return { kind: "Item", html: esc(l.ref) };
       // Its words beside its number: the label, else the item's title or the decision's text.
       const words = l.label && l.label !== l.ref ? l.label : c ? c.title : S.decisions?.find((x) => x.id === l.ref)?.text || "";
       return { kind: dec ? "Decision" : KIND_NAME[c.kind] || "Item", html: `<a href="#${esc(l.ref)}" data-ref="${esc(l.ref)}">${esc(l.ref)}</a>${words ? ` ${txt(words)}` : ""}` };
     }
     const gh = ghRef(l.url), url = safeUrl(l.url);
     if (gh) return { kind: gh.pr ? "PR" : "Issue", label: l.label, html: null, url };
-    if (!/\.(?:md|mdx|markdown)(?:[?#]|$)/i.test(l.url || "") || !l.excerpt) return null;
-    return { kind: ADR_PATH.test(l.url) ? "ADR" : "Doc", label: l.label, url, doc: l };
+    // A page: with its section and words it previews them; one saved before 1.66.0 may have none.
+    if (/\.(?:md|mdx|markdown)(?:[?#]|$)/i.test(l.url || "")) return { kind: ADR_PATH.test(l.url) ? "ADR" : "Doc", label: l.label, url, doc: l.excerpt ? l : null };
+    // Only a link to code is left out; any other saved before 1.66.0 shows as a plain link.
+    if (CODE_LINK.test(l.url || "")) return null;
+    return { kind: "Link", label: l.label, url };
   }
   function renderResearch(r) {
     if (!r) return "";

@@ -61,7 +61,7 @@ The person deciding sees it on the card, and every later step builds on it.
 
    **Sources** (`links`, at most 20) are only what a designer opens and reads, and the page
    starts each with what it is (Issue, PR, Request, Decision, Doc, ADR):
-   - an issue or a pull request: `{label, url}`;
+   - a GitHub issue or pull request: `{label, url}`;
    - an item or a decision on the Desk, a request, a discussion's card, a decision, by its
      number: `{ref: "C-12" | "C-12.3" | "D-4", label?}`;
    - a Markdown page (a doc, an ADR, a design note) on GitHub: `{label, url, section,
@@ -70,8 +70,11 @@ The person deciding sees it on the card, and every later step builds on it.
      link's preview.
 
    Never a code file, a commit or a test, in `links` or in the summary: the Desk refuses
-   them (a link in the summary is only an issue or a pull request). What the code shows is said in
-   words and its pull request, issue or doc is the source.
+   them (a link in the summary, written as a link or bare, is only a GitHub issue or pull
+   request; a file name is refused in any case, a technology's name such as Node.js is not).
+   What the code shows is said in words and its pull request, issue or doc is the source. On
+   a card saved before this rule, the page leaves out a link to code and shows any other link
+   as a plain Link.
 
    Then `design desk github-sync --card <C-n>`: the Desk reads every issue and pull request
    the research cites, so each link's preview shows its state, labels and latest comments
