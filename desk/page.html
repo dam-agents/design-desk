@@ -295,8 +295,6 @@
   h3.made { border-top: 1px solid var(--line); padding-top: 18px; }
   /* Sections stand side by side once each still gets a comfortable line. */
   .secs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 64ch), 1fr)); gap: 0 32px; align-items: start; }
-  /* A PR change's What changed and why: the same columns, at most three side by side. */
-  .secs.three { grid-template-columns: repeat(auto-fill, minmax(max(min(100%, 64ch), calc((100% - 64px) / 3)), 1fr)); }
   /* An item's sub-headings, one size everywhere: under h3, above the reading text. */
   .section h4 { margin: 0 0 4px; font-size: var(--fs-read); font-weight: 600; }
   /* Questions and comments: its heading folds the part, with +/− at the end of the line. */
@@ -2961,7 +2959,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
   // Every section says what it is and where it comes from. The ones that explain or give
   // context can fold; they show open, so the card reads whole.
   const FOLDED = new Set(["why", "limits", "good-to-know", "context"]);
-  const sections = (c, cls = "") => (c.sections || []).length ? `<div class="secs${cls ? ` ${cls}` : ""}">${c.sections.map((s) => {
+  const sections = (c) => (c.sections || []).length ? `<div class="secs">${c.sections.map((s) => {
     const head = `<h4>${esc(s.title)}</h4>${s.source?.label ? `<span class="chip" title="Where this comes from">Source:${s.source.url || s.source.card ? srcLink(s.source) : ` ${esc(s.source.label)}`}</span>` : ""}`;
     return FOLDED.has(s.key) ? `<details class="section sec" open><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
       : `<div class="section"><div class="sec-head">${head}</div>${md(s.body)}</div>`;
@@ -3242,7 +3240,7 @@ ${full(`<li><b>Presentation</b> — a filter on Requests: what designers chose t
       ${renderInstance(c)}
       ${figmaBox(c)}
       ${(c.elements || []).length ? `<h3>Parts it changed</h3><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div>` : ""}
-      ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c, "three")}` : ""}
+      ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
       ${renderImpact(c.impact)}
       ${renderThreads(c)}`;
   }
