@@ -372,8 +372,11 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   const intro = "#detail .intro";
   await desk.waitForSelector(`${intro}[data-intro="requests"]`);
   assert.equal(await desk.locator("#banners .intro").count(), 0, "no intro under the menu");
-  assert.match(await desk.textContent(intro), /What you see here[\s\S]*What you can do[\s\S]*Step by step/);
-  assert.match(await desk.textContent(`${intro} li.off`), /Vote on the options[\s\S]*not with your role/, "an action the role may not do says so");
+  assert.match(await desk.textContent(intro), /Step by step/);
+  assert.equal(await desk.locator(`${intro} figure.flow`).count(), 1, "the process is drawn first");
+  assert.doesNotMatch(await desk.textContent(intro), /What you see here|not with your role/, "the steps of the process, never a tour of the screen");
+  assert.doesNotMatch(await desk.textContent(`${intro} ol.steps`), /👍/, "an action the role may not do is left out");
+  assert.match(await desk.textContent(`${intro} ol.steps li.mine`), /You can:[\s\S]*New request/, "a step the person acts in lists their buttons");
   for (const tab of ["new", "issues", "product"]) {
     await desk.click(`[data-tab="${tab}"]`);
     await desk.waitForSelector(`${intro}[data-intro="${tab}"]`);
@@ -393,6 +396,10 @@ test("every tab but How it works shows its intro in the empty pane; People besid
   assert.equal(await desk.locator(intro).count(), 0, "How it works is all intro");
   assert.equal(await desk.getAttribute("#help", "aria-current"), "true", "How it works opens from the menu under your name");
   assert.equal(await desk.locator('#detail .guide figure.flow svg[role="img"][aria-label] title').count(), 3, "How it works draws a request, an issue and a shipped change");
+  assert.ok(await desk.locator("#detail .guide .process ol.steps").count() >= 4, "each process in How it works has its steps, a design's changes too");
+  const guideActs = await desk.$$eval("#detail .guide .process .acts", (els) => els.map((e) => e.textContent).join(" "));
+  assert.match(guideActs, /New request/, "How it works lists the buttons the person may press");
+  assert.doesNotMatch(guideActs, /👍/, "and none their role may not");
   await desk.click('[data-tab="new"]');
   await desk.click("#list .row .open");
   await desk.waitForSelector("#detail .crumb", { state: "attached" });
@@ -2524,3 +2531,92 @@ test("Questions and comments starts open, keeps how it was left, and reopens whe
     assert.equal(await desk.evaluate(() => document.querySelector("details.talk").open), false, "shut, it stays shut on the item's next open");
   } finally { await close(); }
 });
+
+// A Desk for the help, the poll and the request work line: one bridge, the person and the cards
+// as each test needs them. `window.more` adds a request, `window.rename` renames one, so a poll
+// redraws the menu or the list.
+const DESK = (me, cards) => `<script>
+const cards = ${JSON.stringify(cards)};
+window.platform = { async request({ path }) {
+  const all = () => [...cards.map((c) => window.rename && c.id === "r2" ? { ...c, title: "Renamed" } : c), ...(window.more ? [{ id: "r9", kind: "request", title: "One more", status: "triage" }] : [])];
+  const answer = path === "/api/me" ? ${JSON.stringify(me)}
+    : path === "/api/cards" ? { cards: all() } : path.startsWith("/api/cards/") ? { card: all().find((c) => c.id === path.split("/")[3]) }
+    : path === "/api/agenda" ? { agenda: [] } : path === "/api/people" ? ${PEOPLE}
+    : path.startsWith("/api/assets/") ? { contentType: "image/svg+xml", encoding: "utf8", data: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"/>' } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+const DESIGNER = { role: "designer", email: "d@example.com", simple: false, can: { request: true } };
+// A request Design Desk is drawing for: the page polls every 4 seconds while it is open.
+const BUSY = { id: "r1", kind: "request", title: "Busy", status: "triage", waiting: [{ kind: "explore", state: "open", created: "2026-11-01T00:00:00Z" }] };
+
+test("a poll redraw keeps keyboard focus, and an unchanged menu is left as it is", (t) => open(t, DESK(DESIGNER, [BUSY, { id: "r2", kind: "request", title: "Other", status: "triage" }]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r1"]');
+  await desk.click('#list [data-card="r1"]');
+  await desk.waitForSelector("#detail .crumb", { state: "attached" });
+  const focused = () => desk.evaluate(() => ({ tab: document.activeElement?.dataset.tab || null, card: document.activeElement?.dataset.card || null }));
+  // Nothing changed: the menu stays the same element, focus with it.
+  await desk.focus('#nav [data-tab="product"]');
+  const before = await desk.$('#nav [data-tab="product"]');
+  await desk.waitForTimeout(6000);
+  assert.equal(await before.evaluate((e) => document.contains(e)), true, "an unchanged menu is not redrawn");
+  assert.equal((await focused()).tab, "product");
+  // A new request changes the count: the menu is drawn anew, and focus comes back to the same tab.
+  await desk.evaluate(() => { window.navProbe = document.querySelector('#nav [data-tab="product"]'); window.more = true; });
+  await desk.waitForFunction(() => !document.contains(window.navProbe), null, { timeout: 10000 });
+  assert.equal((await focused()).tab, "product", "a redrawn menu focuses the same tab again");
+  // A renamed request redraws the list: focus stays on its row.
+  await desk.focus('#list [data-card="r2"]');
+  const row = await desk.$('#list [data-card="r2"]');
+  await desk.evaluate(() => { window.rename = true; });
+  await desk.waitForFunction(() => document.querySelector('#list [data-card="r2"]')?.textContent.includes("Renamed"), null, { timeout: 10000 });
+  assert.equal(await row.evaluate((e) => document.contains(e)), false, "the list was drawn anew");
+  assert.equal((await focused()).card, "r2", "a redrawn list focuses the same row again");
+}));
+
+// A request whose options were drawn after its item was filed: that item's work is done for the
+// person. One reopened and checked again, its item filed after its options: it still checks.
+const OPTION = { id: "v1", name: "Calm", asset: "A-1", version: 1, drawn: "2026-11-02T00:00:00Z" };
+const CHECKED = { kind: "request", status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [OPTION] };
+test("a request's own work line leaves once its options are drawn, and shows again when it is reopened", (t) => open(t, DESK(DESIGNER, [
+  { ...CHECKED, id: "r1", title: "Drawn", waiting: [{ kind: "request", state: "claimed", created: "2026-11-01T00:00:00Z" }] },
+  { ...CHECKED, id: "r2", title: "Reopened", waiting: [{ kind: "request", state: "open", created: "2026-11-05T00:00:00Z" }] }]), async (desk) => {
+  const lines = () => desk.$$eval("#detail .working", (els) => els.map((e) => e.textContent).join(" "));
+  await desk.click('#list [data-card="r1"]');
+  await desk.waitForSelector("#detail .crumb", { state: "attached" });
+  assert.doesNotMatch(await lines(), /Checking your request/, "options drawn after the item: no Checking line");
+  await desk.click('#list [data-card="r2"]');
+  await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent.includes("Reopened"));
+  assert.match(await lines(), /Checking your request/, "a reopened request, checked again, says so");
+}));
+
+test("a caption that only repeats its stage is not said twice", (t) => open(t, DESK(DESIGNER, [{ id: "ch1", kind: "change", title: "Pairs", source: { repo: "acme/widgets", pr: 3 },
+  screens: [{ asset: "A-1", caption: "Before", stage: "before", pair: "home" }, { asset: "A-2", caption: "After the redesign", stage: "after", pair: "home" }] }]), async (desk) => {
+  await desk.click('[data-tab="new"]');
+  await desk.click('#list [data-card="ch1"]');
+  await desk.waitForSelector("#detail figcaption");
+  const caps = await desk.$$eval("#detail figcaption", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+  assert.doesNotMatch(caps[0], /Before Before/, "Before under Before is said once");
+  assert.match(caps[1], /^After After the redesign/, "a caption that says more stays");
+}));
+
+test("How it works and Designs show the developer's process; simple mode leaves out its steps", (t) => open(t, DESK({ role: "developer", email: "dev@example.com", simple: false, can: { request: true, designs: true, built: true } }, []), async (desk) => {
+  await desk.waitForSelector('[data-tab="designs"]');
+  await desk.click('[data-tab="designs"]');
+  await desk.waitForSelector('#detail [data-intro="designs"] ol.steps');
+  assert.match(await desk.textContent('#detail [data-intro="designs"] .acts'), /Ask the designer/, "Designs has its own steps, with the developer's buttons");
+  await desk.click("#me");
+  await desk.click("#help");
+  await desk.waitForSelector("#detail > .guide");
+  const heads = await desk.$$eval("#detail .guide h3", (els) => els.map((e) => e.textContent));
+  assert.ok(heads.includes("Sent to developers"), "a role that sees Designs gets its process in How it works");
+  assert.match(await desk.textContent("#detail .guide"), /Mark as done/);
+}));
+
+test("simple mode leaves the live prototype step out of the help", (t) => open(t, DESK({ ...DESIGNER, simple: true, can: { request: true, build: true } }, [BUSY]), async (desk) => {
+  await desk.waitForSelector('#detail [data-intro="requests"] ol.steps');
+  const steps = await desk.textContent('#detail [data-intro="requests"] ol.steps');
+  assert.match(steps, /New request/);
+  assert.doesNotMatch(steps, /live prototype/i, "a step only about what simple mode hides leaves with it");
+}));
