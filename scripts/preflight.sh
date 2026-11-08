@@ -379,12 +379,12 @@ decisions_page() {
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub($nre[0]);
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def role: ((if (["desk", "approval", "chat", "call"] | index(.origin.kind // "")) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+    def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
     def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
     def side: role as $r | (.origin.kind // "") as $k
       | if (["admin", "designer", "pm"] | index($r)) != null then "design"
         elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
-    def unapproved: side != "design" or (["pr", "issue", "commit", "doc"] | index(.origin.kind // "")) != null;
+    def unapproved: (.origin.kind // "") as $k | side != "design" or (["pr", "issue", "commit", "doc"] | index($k)) != null;
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
     [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all
