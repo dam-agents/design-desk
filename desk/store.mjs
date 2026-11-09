@@ -262,7 +262,15 @@ export class Store {
   load() {
     // A role stored before 1.59.0 as `lead` (a vote, a decision's author, who approved) reads as `admin`.
     this.db = existsSync(this.dbPath) ? JSON.parse(readFileSync(this.dbPath, "utf8"), (k, v) => (k === "role" && v === "lead" ? "admin" : v)) : emptyDb();
+    // A store from before `opened` (who loaded the Desk, docs/desk.md → People) starts it from
+    // what it already knows: an address that set a preference, read the bell or opened an item
+    // did load the Desk. Without this, everyone already on it would read as never having come.
+    const seed = this.db.opened === undefined;
     for (const k of Object.keys(emptyDb())) if (this.db[k] === undefined) this.db[k] = emptyDb()[k];
+    if (seed) for (const k of ["prefs", "seen", "reads"]) for (const key of Object.keys(this.db[k] || {})) {
+      const e = String(key).toLowerCase();
+      if (e.includes("@") && !own(this.db.opened, e)) Object.defineProperty(this.db.opened, e, { value: this.clock(), enumerable: true, writable: true, configurable: true });
+    }
     this.db.seq = { ...emptyDb().seq, ...this.db.seq };
     for (const d of Object.values(this.db.decisions)) upgradeDecision(d);
     this.mtime = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
@@ -419,7 +427,7 @@ export class Store {
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
         for: c.kind === "request" ? (c.size?.small ? "developers" : "designers") : null,
-        // Whether the viewer voted on it: Your turn reads it on a row (docs/desk.md → A request's state in the list).
+        // Whether the viewer voted on it: Your turn reads it on a row (docs/desk.md → Pages and filters).
         voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
@@ -532,13 +540,14 @@ export class Store {
 
   // Work the agent has been asked for on a card and not finished, oldest first.
   waitingFor(cardId, viewer) {
+    const usual = (i) => { const m = this.usualMinutes(i); return m ? { usual_min: m } : {}; };
     return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done" && (!i.thread || sees(this.db.threads[i.thread], viewer)))
       .sort((a, b) => a.created.localeCompare(b.created))
-      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.state === "claimed" ? { started: i.claimed_started || i.claimed_at, ...(this.usualMinutes(i) ? { usual_min: this.usualMinutes(i) } : {}) } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part?.label ? { part: i.part.label } : {}) }));
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.state === "claimed" ? { started: i.claimed_started || i.claimed_at, ...usual(i) } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part?.label ? { part: i.part.label } : {}) }));
   }
 
   // How long Design Desk usually works on an item of this kind: the median of its last ten
-  // finished ones, in minutes; none before three of them (docs/desk.md → A request's state in the list).
+  // finished ones, in minutes; none before three of them (docs/desk.md → Publishing the page).
   usualMinutes(item) {
     const took = Object.values(this.db.inbox).filter((i) => i.state === "done" && i.kind === item.kind && (i.scope || "") === (item.scope || "") && i.claimed_started && i.done_at)
       .sort((a, b) => b.done_at.localeCompare(a.done_at)).slice(0, 10)
@@ -1301,16 +1310,15 @@ export class Store {
       .sort((a, b) => b.created.localeCompare(a.created) || Number(b.id.slice(2)) - Number(a.id.slice(2))).slice(0, 20)
       .map((i) => ({ id: i.id, email: i.person.email, role: i.person.role, by: i.by?.email || null, created: i.created, state: i.state, outcome: i.outcome || null, done_at: i.done_at || null,
         // Added to the list is not shared with: only the owner shares the Desk (docs/desk.md → People).
-        opened: Boolean(own(this.db.opened || {}, String(i.person.email).toLowerCase())) }));
+        opened: Boolean(own(this.db.opened, String(i.person.email).toLowerCase())) }));
   }
 
   // A person loaded the Desk: kept once per address, lower-cased, so People can tell an added
   // person the Desk was shared with from one it was not (docs/desk.md → People). The first
-  // load alone writes; a store from before this record has none and starts one.
+  // load alone writes; a store from before this record starts it when it is read (load).
   markOpened(who) {
-    const fresh = addressesOf(who).filter((e) => !own(this.db.opened || {}, e));
+    const fresh = addressesOf(who).filter((e) => !own(this.db.opened, e));
     if (!fresh.length) return;
-    if (!this.db.opened) this.db.opened = {};
     for (const e of fresh) Object.defineProperty(this.db.opened, e, { value: this.clock(), enumerable: true, writable: true, configurable: true });
     this.save();
   }
