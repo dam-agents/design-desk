@@ -339,7 +339,8 @@ sent to developers too: the states document the approved design and change nothi
    catalog:** shoot the part alone in each state (`design shot <state.html> <dir> --element
    <selector>`, the part's CSS path in that page; the light picture, `<state>-element-light.png`,
    named after the state's page so the states share one directory — the picture is shot at three
-   screen pixels per CSS pixel, so a tile 380–420 px wide shows it sharp) and upload it (`--kind
+   screen pixels per CSS pixel, so a tile 380–420 px wide shows it sharp, or at two or one where a
+   sharper one would pass the Desk's 720 KiB) and upload it (`--kind
    image`); and say which use case of the brief the state serves: the ids of the card's
    `issue_brief.stories` it covers, or, where the brief has no stories or none fits, the use
    case in one plain sentence from the request's own words. A state no use case of the brief

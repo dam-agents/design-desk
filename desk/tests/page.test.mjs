@@ -772,6 +772,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
     assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
     assert.match(await desk.textContent("#detail .elements"), /All elements[\s\S]*Send button[\s\S]*1 state/);
+    // A tile keeps white space around its picture, inside the same 192 px.
+    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["10px", "10px", 192], "a tile pads its picture");
     await desk.click('#detail [data-el="part-send-button"]');
     await desk.waitForSelector("#element-dialog[open] .catalog");
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
@@ -1880,12 +1882,13 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posted.length === 2);
   assert.deepEqual(await desk.evaluate(() => [posted[1].body.text, posted[1].body.starter]), ["Is the bar too thin?", null], "a question of their own");
-  // A redraw replaces the box; it keeps the caret and the focus of whoever was typing in it.
+  // A redraw replaces the box; it keeps the caret and the focus of whoever was typing in it. The
+  // card redraws on a hashchange, as when an answer lands; the box must be a new one after it.
   await desk.fill("#ask-text", "Typing while an answer lands");
   await desk.focus("#ask-text");
-  await desk.evaluate(() => document.querySelector("#ask-text").setSelectionRange(9, 9));
-  await desk.evaluate(() => window.dispatchEvent(new Event("resize")));
-  await desk.waitForTimeout(400);
+  await desk.evaluate(() => { const t = document.querySelector("#ask-text"); t.setSelectionRange(9, 9); t.dataset.before = "1"; });
+  await desk.evaluate(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+  await desk.waitForFunction(() => { const t = document.querySelector("#ask-text"); return t && !t.dataset.before; });
   assert.equal(await desk.evaluate(() => document.activeElement?.id), "ask-text", "the box keeps the focus");
   assert.equal(await desk.evaluate(() => document.querySelector("#ask-text").selectionStart), 9, "and the caret");
   assert.equal(await desk.inputValue("#ask-text"), "Typing while an answer lands", "and what was typed");

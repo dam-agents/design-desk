@@ -140,3 +140,24 @@ test("design shot --element pictures one part alone, on its view, named after it
   const hidden = spawnSync(process.execPath, [join(TOOLKIT, "bin/design.mjs"), "shot", join(dir, "hidden.html"), out, "--element", "#gone"], { encoding: "utf8" });
   assert.match(hidden.stderr, /--element: #gone is not visible/);
 });
+
+test("design shot --element shoots a large part again at a lower scale, so it fits the Desk's 720 KiB", async (t) => {
+  const browser = chromium();
+  if (!browser) return t.skip("no browser here");
+  try { req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  const { main } = await import("../bin/shot.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "dd-element-big-"));
+  // A large gradient with a shadow: at 3× its PNG is far over the Desk's limit (desk/store.mjs LIMITS.assetBytes).
+  writeFileSync(join(dir, "big.html"), `<!doctype html><html><body style="margin:40px">
+<div id="hero" style="width:1000px;height:750px;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.45);
+background:radial-gradient(circle at 30% 20%,#ff6a3d,transparent 60%),radial-gradient(circle at 80% 70%,#3d8bff,transparent 55%),conic-gradient(from 40deg,#ffe66d,#7cffcb,#b07cff,#ffe66d)"></div></body></html>`);
+  const out = join(dir, "shots"), printed = [];
+  const log = console.log; console.log = (p) => printed.push(p);
+  try { await main("shot", [join(dir, "big.html"), out, "--width", "1200", "--height", "900", "--element", "#hero", "--pad", "10"]); } finally { console.log = log; }
+  assert.deepEqual(printed, ["light", "dark"].map((th) => join(out, `big-element-${th}.png`)));
+  for (const f of printed) {
+    const b = readFileSync(f), w = b.readUInt32BE(16);
+    assert.ok(b.length <= 720 * 1024, `${f} fits the Desk (${b.length} bytes)`);
+    assert.ok(w >= 1020 && w < 3 * 1020, `${f} is the part at a lower scale than 3× (${w} px wide)`);
+  }
+});
