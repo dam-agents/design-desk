@@ -806,7 +806,9 @@
   .status[data-o="checking"] { --o: var(--accent); --os: var(--info-soft); } .status[data-o="live"] { --o: var(--live); --os: var(--live-soft); }
   .s-word { position: relative; display: flex; align-items: center; gap: 9px; font-size: var(--fs-head); font-weight: 650; color: var(--o); letter-spacing: -.01em; }
   .s-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--o); flex: none; }
-  .status[data-o="checking"] .s-mark { animation: pulse 1.2s ease-in-out infinite; }
+  /* The mark blinks only while Design Desk is at work, never while it waits on a person. */
+  .status[data-busy] .s-mark { animation: pulse 1.2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .status[data-busy] .s-mark { animation: none; } }
   .status .next, .status .working, .status .sent { background: transparent; border: 0; padding: 0; }
   .status .next b { font-weight: 600; }
   .status .spin { background: var(--o); }
@@ -3906,7 +3908,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const act = asks.length ? `<span class="s-act">${plural(asks.length, "question", "questions")} below</span>`
       : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
       : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
-    return `<div class="status" data-o="${tone(c)}">
+    return `<div class="status" data-o="${tone(c)}"${busy.length ? " data-busy" : ""}>
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
