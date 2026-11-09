@@ -3752,7 +3752,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ends = can("close") || can("skip") ? b("close", "Close…") : "";
     const skip = (can("skip") && canApprove(c) ? b("approve", "Approve") : "") + ends;
     // Every option taken out at Options drawn: as when checked, a person draws them again.
-    if (c.status === "triage" || (c.status === "variants" && !hasOptions)) return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: skip } : { text: none || "Next: a designer, PM or developer starts the design options.", buttons: skip };
+    // Approve: at Checked only for who may skip the options; at Options drawn, as there, for any approver.
+    const row = c.status === "variants" ? (canApprove(c) ? b("approve", "Approve") : "") + ends : skip;
+    if (c.status === "triage" || (c.status === "variants" && !hasOptions)) return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: row } : { text: none || "Next: a designer, PM or developer starts the design options.", buttons: row };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
       return { text: "Before it goes to developers, Design Desk needs your answers above.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "" };
