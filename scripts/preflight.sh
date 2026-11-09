@@ -195,12 +195,12 @@ search() {
   while [ "$page" -le 5 ]; do
     got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="$q" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" || return 1
     jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || return 1
-    [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$1: the search reported incomplete results — the rest come next run"
+    [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && { log "$1: the search reported incomplete results — the rest come next run"; : > "$WORK/.search-partial"; }
     out="$(jq -c --slurpfile more <(jq -c .items <<<"$got") '.items += $more[0]' <<<"$out")"  # a page is too big for an argument
     [ "$(jq '.items | length' <<<"$got")" -eq 100 ] || break
     page=$((page + 1))
   done
-  [ "$page" -gt 5 ] && log "$1: more than 500 results for \"$q\" — the oldest wait for later passes"
+  [ "$page" -gt 5 ] && { log "$1: more than 500 results for \"$q\" — the oldest wait for later passes"; : > "$WORK/.search-partial"; }
   printf '%s' "$out"
 }
 
@@ -216,6 +216,21 @@ watch_mode() {
   [ -n "$SINCE" ] || fail_out "watch_since is not set in work/CONFIG.md — onboarding writes it; without it every merged PR in history would be due"
   since_day="${SINCE%%T*}"
   ensure_ledger
+  # The merged search starts where the ledger may still need it, not at onboarding: two days
+  # before the last pass that left nothing behind (work/.watch-cursor), or at the oldest merge
+  # whose row is still due, in progress or failed under 3 tries, whichever is earlier; never
+  # before watch_since. A pass that deferred a change or got a partial search moves no cursor,
+  # and a cursor written under another watch_since (its second line) is not used: the operator
+  # moved the start, and the search goes back to it once.
+  local CURSOR="$WORK/.watch-cursor" merged_from="$since_day" cur open_min
+  rm -f "$WORK/.search-partial"
+  cur="$(head -1 "$CURSOR" 2>/dev/null)"
+  if [[ "$cur" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$ ]] && [ "$(sed -n 2p "$CURSOR" 2>/dev/null)" = "$SINCE" ]; then
+    merged_from="$(date -u -d "@$(( $(iso2epoch "$cur") - 172800 ))" +%Y-%m-%d 2>/dev/null || echo "$since_day")"
+    open_min="$(awk -F'\t' 'NR>1 { st[$1 "#" $2]=$4; m[$1 "#" $2]=$3; a[$1 "#" $2]=$7 } END { for (k in st) if (m[k] != "" && (st[k] == "due" || st[k] == "in_progress" || (st[k] == "failed" && a[k] + 0 < 3))) print m[k] }' "$LEDGER" | sort | head -1)"
+    [ -n "$open_min" ] && [[ "${open_min%%T*}" < "$merged_from" ]] && merged_from="${open_min%%T*}"
+    [[ "$merged_from" < "$since_day" ]] && merged_from="$since_day"
+  fi
   local DUE ISSUES; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"; ISSUES="$(mktemp "${TMPDIR:-/tmp}/design-desk-issues.XXXXXX")"
   local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0
   # One files call per new candidate; a backlog is spread over passes so a pass stays
@@ -252,7 +267,7 @@ watch_mode() {
     local slug; slug="$(repo_slug "$repo")"
     local hostargs=(); case "$repo" in */*/*) hostargs=(--hostname "${repo%%/*}");; esac
     local items more found
-    found="$(search "$repo" "repo:$slug is:pr is:merged merged:>=$since_day")" \
+    found="$(search "$repo" "repo:$slug is:pr is:merged merged:>=$merged_from")" \
       || fail_out "could not list merged pull requests of $repo (gh api search/issues failed) — is the GitHub connection granted?"
     items="$(jq -c '.items |= map(. + {state: "merged"})' <<<"$found")"
     # Open pull requests too: a developer's UI is seen, and adjusted, before it ships.
@@ -327,13 +342,15 @@ watch_mode() {
   [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
   [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
+  if [ "$deferred" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
+  rm -f "$WORK/.search-partial"
   local arr iss; arr="$(jq -s '.' "$DUE")"; iss="$(jq -s '.' "$ISSUES")"; rm -f "$DUE" "$ISSUES"
   [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || [ "$ngh" -gt 0 ] || quiet_out
   logev info preflight "watch: $ndue changes, $nissues issues, $ngh GitHub copies due"
   jq -n --argjson due "$arr" --argjson issues "$iss" --argjson gh "$gh_due" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     --arg title "$( { jq -r '.[].pr | "#\(.)"' <<<"$arr"; jq -r '.[].issue | "#\(.)"' <<<"$iss"; } | title_for Explain "")" \
     '{mode:"watch", nothing_to_do:false, title:(if ($due | length) + ($issues | length) == 0 then "Read new GitHub comments" else ($title | sub("Explain  "; "Explain ")) end), github_due:$gh,
-      read_set: (["docs/watch.md", ".agents/skills/explain/SKILL.md"] + (if ($issues | length) > 0 then ["docs/requests.md"] else [] end)),
+      read_set: (["docs/watch.md"] + (if ($due | length) + ($issues | length) > 0 then [".agents/skills/explain/SKILL.md"] else [] end) + (if ($issues | length) > 0 then ["docs/requests.md"] else [] end)),
       changes_due:$due, issues_due:$issues, config:$config, logs:$logs}'
 }
 
@@ -720,7 +737,9 @@ inbox_mode() {
       councils_due: $councils,
       expiring_due: $expiring,
       config:$config, logs:$logs }
-    | .read_set = (["docs/desk.md"]
+    # A pass with only chores (a vote to sync, a check to set, a prototype about to expire)
+    # writes nothing people read on the Desk: it reads its own doc or skill, not docs/desk.md.
+    | .read_set = ((if ([$items[] | select(.kind != "ci")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
         + (if (.questions_due | length) > 0 then [".agents/skills/explain/SKILL.md"] else [] end)
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)

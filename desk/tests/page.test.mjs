@@ -2092,7 +2092,7 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
 }));
 
-// docs/desk.md → Lists and Folds stay folded; docs/requests.md → Triage. The page runs where local
+// docs/desk-page.md → Lists and Folds stay folded; docs/requests.md → Triage. The page runs where local
 // storage throws, as in its sandboxed frame.
 const FOLD = `<script>
 Object.defineProperty(window, "localStorage", { get() { throw new DOMException("denied", "SecurityError"); } });
@@ -2436,7 +2436,7 @@ test("the bell counts what is For you, opens on it, reads a row only on its clic
   await desk.waitForFunction(() => !document.querySelector(".me-menu").open);
 }));
 
-// Every landing of a notification (docs/desk.md → Notifications): its option's tab, its votes,
+// Every landing of a notification (docs/desk-page.md → Notifications): its option's tab, its votes,
 // the spec, a revoked decision's why, a private answer in the chat, every message a row folds.
 const LANDINGS = `<script>
 window.posts = [];
@@ -2497,7 +2497,7 @@ test("a notification lands on its source: the option's tab, the votes, the spec 
   assert.equal(await desk.locator("#ask .ask-panel").count(), 0, "a public notification closes the private chat");
 }));
 
-// Designs (docs/desk.md → Designs): a developer's tab of approved designs; a designer reaches one only from a notification.
+// Designs (docs/desk-page.md → Designs): a developer's tab of approved designs; a designer reaches one only from a notification.
 const designsBridge = (role) => `<script>
 window.posts = [];
 const ask = { id: "T-1", card: "C-1", kind: "comment", dev: true, state: "open", messages: [{ by: { email: "bob@example.com", role: "developer" }, at: "2026-11-07T10:00:00Z", text: "Is the banner sticky?" }] };
@@ -2594,7 +2594,7 @@ test("Designs: a designer has no tab, opens a design from its notification or it
   assert.equal(await desk.locator("#detail [data-show-design]").count(), 0);
 }));
 
-// A request sent, reopened and sent again (docs/desk.md → Designs, docs/handoff.md step 6); a live prototype switched off (docs/prototype.md → Teardown).
+// A request sent, reopened and sent again (docs/desk-page.md → Designs, docs/handoff.md step 6); a live prototype switched off (docs/prototype.md → Teardown).
 const sendsBridge = (role, over) => `<script>
 window.posts = [];
 const closed = { by: { email: "lee@example.com", role: "admin" }, at: "2026-11-07T12:00:00Z" };

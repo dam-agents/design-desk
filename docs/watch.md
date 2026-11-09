@@ -10,6 +10,12 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
 
 ## Per change
 
+Steps 1 to 4 read the same things for every change: `bash "$HOME/scripts/change-context.sh"
+<repo> <pr> <worklist>` does them in one call and prints where each lies (`profile`, `pr`,
+`issues`, `diff` of the worklist's `ui_files`, under `/tmp/design-desk-<pr>/`). `outcome:
+"held"` → next change. Read what it wrote, then only what its `missing` names by hand, as the
+steps say; the decision notes of step 4 are always yours to read.
+
 1. **Claim.** `bash "$HOME/scripts/ledger.sh" claim <repo> <pr>`. `"outcome":"held"` → it was
    carded or skipped meanwhile; go to the next change.
 2. **Check out the merge.** `bash "$HOME/scripts/checkout.sh" <repo>` prints
