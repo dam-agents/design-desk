@@ -147,7 +147,7 @@ export const ISSUE_BUCKETS = ["sprint", "next", "assigned", "label"];
 // writes the deadline, `undo_until`, and the page shows Undo only before it
 // (docs/desk.md → The presentation).
 const endOfDay = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? null : new Date(Math.floor(t / 864e5) * 864e5 + 864e5 - 1000).toISOString().replace(/\.\d{3}Z$/, "Z"); };
-const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision", "decision-check"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision", "decision-check", "ci"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "issue", "instance", "person", "prototype", "rebuild", "sketch", "test"];
@@ -562,6 +562,9 @@ export class Store {
     if (c.kind === "issue") { if (on) c.handled = { by: person(who), at: this.clock() }; else delete c.handled; }
     else if (on) { c.status = "handled"; c.handled = { by: person(who), at: this.clock() }; }
     else { c.status = "new"; delete c.handled; }
+    // A change whose pull request Design Desk's check holds (`ci_gate`, docs/watch.md → CI
+    // gate): the check follows the mark, so the run sets it again — passed once handled.
+    if (c.kind === "change" && ["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, on ? "Marked handled: pass the check." : "Marked not handled: hold the check again.");
     this.save();
     return { card: c };
   }
@@ -593,7 +596,7 @@ export class Store {
       id, card: cardId, kind, state: "open", anchor: anchor && kind !== "private" ? cleanAnchor(anchor) : null,
       needs_agent: kind === "question" || kind === "change" || kind === "private", created: this.clock(),
       ...(kind === "private" ? { owner: viewerKey(who) } : {}), ...(dev ? { dev: true } : {}),
-      messages: [{ by: person(who), at: this.clock(), text: body, ...pictures }],
+      messages: [{ by: who?.agent ? this.agentFor(cardId) : person(who), at: this.clock(), text: body, ...pictures }],
       // The agent's questions can come as a form; the answer resumes the step with its note.
       ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...resumeOf(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),
     };
@@ -1680,6 +1683,17 @@ export class Store {
     return open || this.enqueue(kind, card, null, who, note);
   }
 
+  // Design Desk as a message's author, with the person whose item it works on (`for`): the
+  // newest claimed item of the card, or the ones given; none when a run acts on its own
+  // (docs/desk.md → Questions and comments).
+  agentFor(card, items = null) {
+    const xs = (items || Object.values(this.db.inbox).filter((i) => i.card === card && i.state === "claimed"))
+      // A private ask's asker is never named where others read (docs/desk.md → Private asks).
+      .filter((i) => (i.by?.email || i.by?.name) && this.db.threads[i.thread]?.kind !== "private").sort((a, b) => String(b.claimed_at || b.created).localeCompare(String(a.claimed_at || a.created)));
+    const b = xs[0]?.by;
+    return b ? { agent: true, for: { email: b.email || null, ...(b.name ? { name: b.name } : {}) } } : { agent: true };
+  }
+
   enqueue(kind, card, thread, who, note = "") {
     if (!INBOX_KINDS.includes(kind)) throw bad(`unknown inbox kind ${kind}`);
     const id = this.next("item", "I");
@@ -1741,7 +1755,7 @@ export class Store {
     const items = Object.values(this.db.inbox).filter((it) => it.thread === threadId && it.kind === "question" && it.state !== "done");
     const claimed = items.filter((it) => it.state === "claimed");
     const seen = claimed.length ? Math.max(...claimed.map((it) => it.seen ?? t.messages.length)) : t.messages.length;
-    t.messages.push({ by: { agent: true }, at: this.clock(), text: body, ...pictures, ...(against.length ? { warns: against } : {}) });
+    t.messages.push({ by: this.agentFor(t.card, claimed), at: this.clock(), text: body, ...pictures, ...(against.length ? { warns: against } : {}) });
     let waiting = false;
     for (const it of items) {
       if (it.state === "claimed" || (it.msg_count ?? 0) <= seen) { it.state = "done"; it.done_at = this.clock(); it.outcome = "answered"; }
@@ -1773,7 +1787,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -1826,6 +1840,12 @@ export class Store {
       else if (k === "changes") { if (!Array.isArray(fields.changes)) throw bad("changes must be a list"); next.changes = fields.changes.slice(-40).map((id) => this.card(String(id)).id); }
       else if (k === "triage") next.triage = cleanTriage(fields.triage);
       // The UX decisions of an approved design, for developers on Designs (docs/handoff.md, step 7).
+      else if (k === "ci") {
+        // Design Desk's check on the change's pull request (docs/watch.md → CI gate).
+        if (next.kind !== "change") throw bad("ci belongs to a change card");
+        next.ci = fields.ci === null ? null : cleanCi(fields.ci);
+        if (next.ci) next.ci.at = this.clock();
+      }
       else if (k === "dev_summary") {
         if (next.kind !== "request") throw bad("dev_summary belongs to a request");
         next.dev_summary = fields.dev_summary === null ? null : { text: clean(fields.dev_summary, 4000, "dev_summary"), at: this.clock() };
@@ -1929,7 +1949,7 @@ export class Store {
     // A screen's or an element's pictures sent again, new or the same: Design Desk looked at it again.
     if ((next.kind === "screen" || next.kind === "element") && (fields.screens !== undefined || fields.sheet !== undefined)) next.checked = this.clock();
     // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk.md → Designs).
-    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary"].includes(k))) next.updated = this.clock();
+    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
     // A design already in the catalog follows every new version of its option and of its states.
     if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {
@@ -3013,6 +3033,19 @@ function cleanTriage(t) {
 
 // The agent's judgement of a change: a designer should look at it, or it is for
 // information only; either way with its reasons in plain words.
+// Design Desk's check on a change's pull request: failing (held until a designer marks it
+// handled), passing, skipped (judged and never held: it builds a Desk request, it is no longer
+// open, or its status could not be set 3 times), or error (its last status write failed; `tries`
+// counts the failures in a row, and the gate stops at 3), on the commit it was set on
+// (docs/watch.md → CI gate).
+function cleanCi(x) {
+  if (!x || !["failing", "passing", "skipped", "error"].includes(x.state)) throw bad("ci state must be failing, passing, skipped or error");
+  if (x.sha !== undefined && !/^[0-9a-f]{7,40}$/.test(String(x.sha))) throw bad("ci sha must be a commit id");
+  if (x.tries !== undefined && !(Number.isInteger(x.tries) && x.tries >= 1 && x.tries <= 3)) throw bad("ci tries must be 1 to 3");
+  if (x.state === "error" && x.tries === undefined) throw bad("a ci error counts its tries");
+  return { state: x.state, ...(x.sha ? { sha: String(x.sha) } : {}), ...(x.tries ? { tries: x.tries } : {}) };
+}
+
 function cleanAttention(a) {
   if (!a || !["designer", "fyi"].includes(a.level)) throw bad("attention level must be designer or fyi");
   if (!Array.isArray(a.reasons) || !a.reasons.length) throw bad("attention names at least one reason");

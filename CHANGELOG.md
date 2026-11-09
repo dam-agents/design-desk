@@ -12,6 +12,18 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 Nothing — docs and skills are re-read per run.
 
+## 1.73.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page).
+2. Add `- ci_gate: disabled` to `work/CONFIG.md` with `design config write`; ask the operator
+   whether to turn it on ([watch.md](docs/watch.md) → CI gate). Once on, the inbox run also
+   judges the open cards already on the Desk (`ci_due` entries `G-<card>`); nothing to do by
+   hand. `change_auto_handled_days` (14) needs no line.
+3. Run `bash "$HOME/scripts/verify-onboarding.sh" --config` and apply each `FAIL` line's `fix:`.
+4. The kit's description changed: no schedule changes.
+
 ## 1.72.0 — 2026-11-09
 
 **Upgrade:**

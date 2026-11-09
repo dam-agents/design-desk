@@ -62,7 +62,8 @@ served by the Desk server through the platform's Artifact API relay.
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
   Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions**,
   **Differences** (with Figma on, [below](#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
-  handled, the default) and **Handled**, Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
+  handled, the default), **Handled**, **Auto handled** (shipped more than `change_auto_handled_days`, 14,
+  ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
   (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
   not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
   **All** (the default, designed issues too), then the buckets, then **Handled** (what a
@@ -113,10 +114,11 @@ served by the Desk server through the platform's Artifact API relay.
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
-  button). An option's design (the mockup) starts folded; it opens with a click, and a user
-  story played opens it, and All elements stays open. Nothing names a role a request needs:
-  no **Needs a designer** filter, line or heading. A request offers no rename. Switching the mode
-  starts an option's sections again as the mode has them. The tab
+  button). An option's design (the mockup) and All elements start open, as in full mode. A
+  list's filters stay as they are drawn, with their counts and **Needs a designer** among them,
+  but as words, not buttons: nothing is clicked and the list holds every item of its page.
+  Nothing else names a role a request needs: no **Needs a designer** line or heading. A request offers no rename. Switching the mode
+  starts an option's sections again as they first open. The tab
   intros and How it works, its drawings included, leave out what it hides, and so does the bell:
   no notification about an issue, a screen, an element or a decision, nor in its count.
   A link to anything hidden still opens it: a `D-3` in a request opens the decision, and
@@ -635,6 +637,11 @@ A `questions_due` item points at a thread: on a card, or a private ask about a D
 
 A private ask (below) is answered here too, with the rules of its own section.
 
+Every message you write while you hold a claimed item on the card — an answer, a `design desk
+comment` — carries the person who asked for that item (`by: {agent: true, for: {email, name}}`,
+the newest claim's); the page shows it in brackets after Design Desk ("requested by Alice").
+A message of a run acting on its own names no one.
+
 A question that asks to see something ("how does it look when…") is answered with a picture
 of the product in that state: the `show` action ([actions.md](actions.md)).
 
@@ -787,7 +794,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   breaks the product's patterns or its catalog elements, a missing state (empty, loading,
   error), or a screen with an open request or a theme in feedback; else `fyi`. One to five
   reasons, each a short phrase in the product's words that says what to look at ("Check the
-  empty list: it shows nothing", "its own grey instead of the product's"). It leaves the filter once the person saw it or a designer marked it handled.
+  empty list: it shows nothing", "its own grey instead of the product's"). It leaves the filter once the person saw it, a designer marked it handled, or it is auto handled.
   The store adds "Differs from the approved design C-<n>" itself ([watch.md](watch.md) step 11).
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
@@ -842,7 +849,9 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   **Adjust the design**) names that card at its top, and the card lists its requests. While one of them is open, the card offers no **Design this** or **Adjust the design**: the list links to it; a request closed or sent to developers brings the button back.
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
-  as overdue.
+  as overdue. Its **What changed and why** folds, open by default. With `ci_gate` its `ci`
+  (`{state: failing|passing|skipped|error, sha, tries}`, yours to write) shows as its GitHub check; marking it
+  handled, or not, queues a `ci` item (`ci_due`, [watch.md](watch.md) → CI gate).
 - **Comments on options** are pinned to an element and its view; people reply, mark them
   done or reopen them, and a designer, PM or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). The workspace's

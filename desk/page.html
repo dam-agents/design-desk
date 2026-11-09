@@ -284,6 +284,8 @@
   .filters .btn.on { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.08); }
   .filters .btn .n { background: transparent; padding: 0; min-width: 0; color: inherit; opacity: .7; font-weight: 500; }
   .filters .btn.on .n { opacity: 1; }
+  /* Simple mode: the filters only count, so they look the same but take no click. */
+  .filters.static .btn, .filters.static .btn:hover { cursor: default; background: none; color: var(--muted); }
   h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
   .lead { font-size: 16px; margin: 10px 0 18px; max-width: var(--measure); }
@@ -1335,7 +1337,7 @@
     decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
-    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots" };
+    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots", ci: "Updating the check on GitHub" };
   // What an open request waits for when nobody needs to press anything.
   const WAIT_SHORT = { feedback: "The team votes and comments", testing: "The team tries it", triage: "Design Desk checks it soon" };
   const WORK = {
@@ -1344,6 +1346,7 @@
     explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
+    ci: "Setting Design Desk's check on the pull request to follow the handled mark.",
     revise: "Changing the design as you asked.",
     alternatives: "Drawing other ways the part you picked could look, as you described it. They appear above the design; pick the one to keep.",
     states: "Drawing every state of this element. Each state appears here and in the design workspace as it is drawn, with the use case it covers.",
@@ -1519,7 +1522,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     tab: (v) => ({ requests: "Requests: problems and ideas, their design options and live prototypes", new: "PR Changes: what changed in the product's screens, explained, and what a designer should look at",
       issues: "Issues: what the team plans that will change the screens, with sketches", product: "Product: its screens, its parts in every situation, the team's decisions and the weekly history",
       people: "People: who is on the Desk, their roles and what each role can do", guide: "How Design Desk works" }[v]),
-    filter: (v) => ({ "newFilter:open": "PR Changes no designer marked handled yet", "newFilter:handled": "PR Changes a designer marked handled",
+    filter: (v) => ({ "newFilter:open": "PR Changes no designer marked handled yet", "newFilter:handled": "PR Changes a designer marked handled", "newFilter:auto": "PR Changes that shipped long ago and nobody marked handled",
       "newFilter:designer": "Only changes that wait for a designer", "reqFilter:unread": "Requests you have not opened yet", "reqFilter:open": "Requests still being worked on", "reqFilter:ready": "Requests that wait for someone to act: options are drawn, a vote ended or a live prototype is ready", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
       "reqFor:designers": "Requests a designer, a PM or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
       "reqFilter:closed": "Requests sent to developers or closed",
@@ -1896,7 +1899,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A decision's author's role, else the side the server read for them.
   const decRole = (d) => ROLE_ICON[d.author?.role] ? [d.author.role, ""] : d.side === "developer" ? ["developer", "A developer"] : d.side === "design" ? ["designer", "A designer, a PM or an admin"] : [null, ""];
   const authorIcon = (d) => { const [r, tip] = decRole(d); return r ? roleIcon(r, tip) : ""; };
-  const who = (by) => by?.agent ? "<b>Design Desk</b>"
+  // Design Desk's message names, in brackets, the person whose ask it acts on.
+  const who = (by) => by?.agent ? `<b>Design Desk</b>${by.for ? ` (requested by ${esc(isMe(by.for.email) ? "you" : by.for.name || personName(by.for.email))})` : ""}`
     : by?.via === "slack" ? `<b>${esc(isMe(by.email) ? "you" : by.name || nameOf(by.email) || "someone")}</b> · via Slack${by.role && by.role !== "slack" ? ` · ${esc(roleName(by.role))}` : ""}`
     : `<b>${esc(personName(by?.email))}</b> · ${esc(roleName(by?.role))}`;
   // Where a card came from and who started it (docs/desk.md → Where a card came from): the
@@ -2379,7 +2383,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
           acts: [["<b>Ask</b> what is unclear", "ask"], ["<b>Add screenshots</b> when it has none", "screens"]] },
         { tone: "approved", text: "A designer deals with it: marks it handled or adjusts the design.",
           acts: [["<b>Mark handled</b>", "handle"], ["<b>Adjust the design</b>: it becomes a request", "follow-up"], ["<b>Add to presentation</b>", "queue"]] }],
-      tip: `Red: it has waited too long. Filter by <b>Open</b>${simple() ? " or" : ","} <b>Handled</b>${full(" or <b>Needs a designer</b>")}. ${LINK}` },
+      tip: `Red: it has waited too long. ${simple() ? "The list counts what is" : "Filter by"} <b>Open</b>, <b>Handled</b>, <b>Auto handled</b> (shipped more than ${esc(S.me?.auto_days || 14)} days ago and never marked) or <b>Needs a designer</b>. ${LINK}` },
     requests: { about: simple() ? "from an idea to design options and a developer spec" : "from an idea to a live prototype and a developer spec",
       steps: [
         { tone: "", text: "Someone describes a problem in their own words.", acts: [["<b>+ New request</b>", "request"]] },
@@ -2519,7 +2523,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const designerReasons = (c) => {
     if (c.attention?.level !== "designer") return [];
     // A change you opened, or one a designer handled, leaves your Needs a designer.
-    if (!(c.kind === "change" && (c.read || c.acked || c.handled)) && !closed(c)) return c.attention.reasons;
+    if (!(c.kind === "change" && (c.read || c.acked || c.handled || autoHandled(c))) && !closed(c)) return c.attention.reasons;
     return c.suggested ? ["Suggested for the presentation"] : [];
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
@@ -2528,15 +2532,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // else by the day it came onto the Desk (docs/desk.md → Lists).
   const dateOf = (c) => String(c.source?.merged_at || c.created || c.updated || c.at || "");
   const newestFirst = (xs) => [...xs].sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
+  // A change shipped more than `change_auto_handled_days` ago (14) that nobody marked handled is
+  // auto handled: it leaves Open and Needs a designer for Auto handled (docs/desk.md → PR Changes).
+  const autoHandled = (c) => c.kind === "change" && !c.handled && S.me?.auto_days > 0 && Boolean(c.source?.merged_at)
+    && Date.now() - Date.parse(c.source.merged_at) > S.me.auto_days * 864e5;
   const newCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "change"
-    && (filter === "designer" ? forDesigner(c) : filter === "handled" ? Boolean(c.handled) : !c.handled)));
+    && (filter === "all" ? true : filter === "designer" ? forDesigner(c) : filter === "handled" ? Boolean(c.handled) : filter === "auto" ? autoHandled(c) : !c.handled && !autoHandled(c))));
   // Requests sit in two tabs, For Designers and For Developers (docs/desk.md → For Developers or
   // For Designers): every visit starts on the viewer's own, For Developers for a developer or a
   // lead developer, For Designers for everyone else; a tab picked holds until the page is left.
   const reqFor = () => S.reqFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
   const forOf = (c) => c.for || (c.size?.small ? "developers" : "designers");
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
-    && (filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "ready" ? readyToAct(c) : filter === "open" ? !closed(c) : closed(c))));
+    && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "ready" ? readyToAct(c) : filter === "open" ? !closed(c) : closed(c))));
   // Ready: an open request that waits for someone to act — its options are drawn, its vote in Slack
   // ended (or no vote runs), or its live prototype is up; not while Design Desk works or asks.
   function readyToAct(c) {
@@ -2550,7 +2558,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // plan's filters and stays in All with its Designed dot (docs/issues.md → On the Desk).
   const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
       && (filter === "handled" ? Boolean(c.handled) : !c.handled && (filter === "all" || (!c.designed && c.bucket === filter)))));
-  const FILTERS = { newFilter: ["open", "handled", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label", "handled"], elFilter: ["all", "product", "design"], designFilter: ["todo", "done"] };
+  const FILTERS = { newFilter: ["open", "handled", "auto", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label", "handled"], elFilter: ["all", "product", "design"], designFilter: ["todo", "done"] };
   // The browser keeps each filter, but not the Requests tab: that one starts on the viewer's role.
   const KEPT = (k) => k !== "reqFor";
   for (const [k, ok] of Object.entries(FILTERS)) { const v = KEPT(k) && store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
@@ -2566,6 +2574,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An earlier record of a reopened request: the request as it is, with what that send had.
   const sendOf = (id) => { const m = /^(C-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
   function visibleCards() {
+    // Simple mode shows a list's filters as words with counts, not buttons: the list holds everything.
+    if (simple() && S.tab === "new") return newCards("all");
+    if (simple() && S.tab === "requests" && !presenting()) return requestCards("all");
     if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "designs") return designCards(S.designFilter);
     // History: the weekly digests, the newest week first (docs/digest.md).
@@ -2592,8 +2603,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // How long a change has waited for a designer to mark it handled; past `due_days` it is overdue.
   const handledAt = (c) => (typeof c.handled === "string" ? c.handled : c.handled?.at) || null;
   const waited = (c) => Math.max(0, Math.floor(((Date.parse(handledAt(c)) || Date.now()) - Date.parse(c.created)) / 864e5)) || 0;
-  const overdue = (c) => c.kind === "change" && !handledAt(c) && S.me?.due_days > 0 && waited(c) >= S.me.due_days;
+  const overdue = (c) => c.kind === "change" && !handledAt(c) && !autoHandled(c) && S.me?.due_days > 0 && waited(c) >= S.me.due_days;
   const ageChip = (c) => handledAt(c) ? `<span class="chip ok" title="A designer marked it handled: design has nothing more to do with it">✓ Handled</span>`
+    : autoHandled(c) ? `<span class="chip" title="It shipped more than ${esc(S.me.auto_days)} days ago and nobody marked it handled">Auto handled</span>`
     // A change from today needs no chip: its row already says created: Today.
     : !waited(c) && !overdue(c) ? ""
     : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" title="Days since it appeared, until a designer marks it handled${S.me?.due_days ? `; to be handled within ${esc(S.me.due_days)} days` : ""}">${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
@@ -2633,7 +2645,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One filter: a segmented control, its choice marked; the key is S's, or a data- action.
   // A tab's or a filter's words, with its count in a quiet pill.
   const counted = (l, n) => `${esc(l)}${n ? ` <span class="n">${n}</span>` : ""}`;
-  const seg = (key, opts, attr = "filter", value = S[key]) => `<div class="filters" role="group">${opts.map(([k, l, n, x = ""]) => `<button class="btn small ${value === k ? "on" : ""}" data-${attr}="${attr === "filter" ? `${key}:${k}` : k}" aria-pressed="${value === k}">${counted(l, n)}${x}</button>`).join("")}</div>`;
+  // In simple mode a list's filters only count: words, not buttons, and nothing is filtered.
+  const seg = (key, opts, attr = "filter", value = S[key]) => attr === "filter" && simple()
+    ? `<div class="filters static" role="list">${opts.map(([, l, n, x = ""]) => `<span class="btn small" role="listitem">${counted(l, n)}${x}</span>`).join("")}</div>`
+    : `<div class="filters" role="group">${opts.map(([k, l, n, x = ""]) => `<button class="btn small ${value === k ? "on" : ""}" data-${attr}="${attr === "filter" ? `${key}:${k}` : k}" aria-pressed="${value === k}">${counted(l, n)}${x}</button>`).join("")}</div>`;
   // A filter too wide for the list fades at its edge.
   const markScrolls = (root) => root.querySelectorAll(".filters").forEach((f) => f.classList.toggle("scrolls", f.scrollWidth > f.clientWidth + 1 && f.scrollLeft + f.clientWidth < f.scrollWidth - 1));
   document.addEventListener("scroll", (e) => { if (e.target.matches?.(".filters")) markScrolls(e.target.parentElement); }, true);
@@ -2690,7 +2705,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
-    const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ...full([["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])])
+    const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ["auto", "Auto handled", newCards("auto").length], ["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["ready", "Ready", requestCards("ready").length], ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "designs" ? seg("designFilter", [["todo", "To build", designCards("todo").length], ["done", "Done", designCards("done").length]])
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET, handled: "Handled" }).map(([k, l]) => [k, l, issueCards(k).length]))
@@ -2702,11 +2717,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (presenting()) { renderAgendaList(filters); return; }
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
-      new: S.newFilter === "designer" ? waiting : S.newFilter === "handled" ? "No change is marked handled yet." : newCards("handled").length ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
+      new: simple() ? "No changes yet. They appear here soon after they ship." : S.newFilter === "designer" ? waiting : S.newFilter === "handled" ? "No change is marked handled yet." : S.newFilter === "auto" ? "No change is auto handled." : newCards("handled").length || newCards("auto").length ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       designs: S.designFilter === "done" ? "Nothing is marked done yet." : "Nothing to build.",
-      requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "ready" ? "Nothing waits for anyone to act right now." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
+      requests: simple() ? (can("request") ? "No requests. Press New request to describe what you would change." : "No requests.") : S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "ready" ? "Nothing waits for anyone to act right now." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "differences" ? (S.figFilter === "closed" ? "Nothing is closed." : S.figFilter === "matches" ? "Nothing matches its Figma frame yet." : S.figFilter === "differs" && figmaCards("all").length ? "Nothing differs from Figma." : "Nothing is compared with Figma yet. Design Desk compares a screen, an element, a change or a request with its frame once it has a Figma link.")
         : S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
@@ -3361,9 +3376,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         // The facts in the list's style: grey words, the values in ink (docs/desk.md → Where a card came from).
         const kv = (k, v, cls = "") => `<span><span class="k">${k}:</span> <b${cls ? ` class="${cls}"` : ""}>${v}</b></span>`;
         const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : isMe(hb?.email) ? "You" : hb?.name || personName(hb?.email);
-        const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : "", src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
+        // Design Desk's check on GitHub holds an open PR a designer should see until it is marked handled (`ci_gate`, docs/watch.md → CI gate).
+        const ci = c.ci?.state === "failing" ? kv("GitHub check", "held until handled") : c.ci?.state === "passing" ? kv("GitHub check", "passed") : "";
+        const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : autoHandled(c) ? kv("handled", `auto, not marked within ${esc(S.me.auto_days)} days of shipping`) : "", ci, src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
         const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
-        const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it">Mark handled</button>`) : "";
+        const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it${c.ci?.state === "failing" ? ". Design Desk then passes its check on the pull request" : ""}">Mark handled</button>`) : "";
         // As on an issue: the design action first and primary, Mark handled after it.
         const adjust = hasRequest(c) ? "" : (can("follow-up") && !handledAt(c) ? `<button class="btn primary" data-adjust>Adjust the design</button>` : can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "");
         return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c), { pill, inline: true });
@@ -3379,7 +3396,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderInstance(c)}
       ${figmaBox(c)}
       ${(c.elements || []).length ? `<h3>Parts it changed</h3><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div>` : ""}
-      ${(c.sections || []).length ? `<h3>What changed and why</h3>${sections(c)}` : ""}
+      ${(c.sections || []).length ? `<details class="fold big sect changed" data-sect="changed"${S.sect.changed === false ? "" : " open"}><summary><h3>What changed and why</h3></summary>${sections(c)}</details>` : ""}
       ${renderImpact(c.impact)}
       ${renderThreads(c)}`;
   }
@@ -4059,8 +4076,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // its count and half a line, folding with +/−; how a person leaves it holds while the page is
   // open. Elements and the design start open, the stories folded.
   const SECT_OPEN = { elements: true, design: true, stories: false };
-  // Simple mode starts the option's design (the mockup) folded; a story played opens it.
-  const sectOpen = (key) => S.sect[key] ?? (key === "design" && simple() ? false : SECT_OPEN[key]);
+  // The option's design (the mockup) starts open in simple mode too.
+  const sectOpen = (key) => S.sect[key] ?? SECT_OPEN[key];
   const sect = (key, title, n, hint, body) => `<details class="fold big sect ${key}" data-sect="${key}"${key === "stories" ? ' id="stories" data-stories' : ""}${sectOpen(key) ? " open" : ""}><summary><h3>${title}${n != null ? `<span class="n">${n}</span>` : ""}</h3>${hint ? `<span class="hint">${hint}</span>` : ""}</summary>${body}</details>`;
   // The option's design, named for what it is.
   const DRAWN = { wireframe: "Wireframe", mockup: "Mockup", figma: "From Figma", picture: "Pictures" };
@@ -6175,7 +6192,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   $("#simple").addEventListener("click", () => {
     const on = !simple();
     if (S.me) S.me.simple = on;
-    // The option's sections start again as the mode has them: in simple mode the design folded.
+    // The option's sections start again as they first open.
     S.sect = {};
     saveSimple(on);
     renderSimple(); leaveHidden();
