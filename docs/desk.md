@@ -46,7 +46,10 @@ served by the Desk server through the platform's Artifact API relay.
   a dialog button carries `data-close`; Enter in a dialog `input` presses it (a `textarea`
   keeps Enter for a new line), and the work runs on the dialog's `close` event.
   When a dialog's action fails, the dialog opens again with what the person typed or picked.
-  While Design Desk works, the step pill's next move is **Wait**, with a few words on what it does;
+  While Design Desk works, the step pill's next move is **Wait**, with a few words on what it does
+  and how long: *started 4 min ago, usually about 12 min* (the item's `started` and `usual_min`,
+  the median of the last ten finished items of its kind, none before three), or before it started
+  *starting* (the page called Design Desk) or *in the queue, starts within 10 minutes*;
   while it waits on a person it is **Answer**, the questions below. The state's mark pulses only
   while Design Desk works, never while it waits on a person. An open request with no move of the
   viewer's own names whom it waits on: **Wait for a designer** (to start or ask, to build again, to
@@ -63,9 +66,10 @@ served by the Desk server through the platform's Artifact API relay.
   Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions**,
   **Differences** (with Figma on, [below](#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
   handled, the default), **Handled**, **Auto handled** (shipped more than `change_auto_handled_days`, 14,
-  ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Unread** (not opened by you), **Open** (the default), **Ready**
-  (waits for someone to act: options drawn, a Slack vote ended or none runs, a live prototype up;
-  not while Design Desk works or asks; the list's `voting` and `voted`), **Closed**; Issues:
+  ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default: the next move is the viewer's own, by what they may do —
+  answer Design Desk, start the options, ask the team, vote (until they voted, the list's
+  `voted_mine`), approve (not while a vote runs in Slack), read and send the spec, build the
+  prototype again; never while Design Desk works), **Unread** (not opened by you), **Open**, **Closed**; Issues:
   **All** (the default, designed issues too), then the buckets, then **Handled** (what a
   designer marked handled; it leaves the other lists); Decisions: In force, Not approved, Revoked, All),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
@@ -546,6 +550,7 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 | Design Desk answered, Design Desk asks | the agent answers a question, or asks one |
 | New options drawn, Options redrawn | a run draws options, or new versions of them |
 | New vote, Option approved, Spec ready, Closed with a decision | a request moves on |
+| Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `lead-developer` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
 
@@ -581,7 +586,9 @@ requests sent to developers (`handed-off`), **To build** and **Done**, nothing e
 shows, read-only: a status strip (**Approved**, or **Done**, with who approved it and when,
 and who marked it done) holding the links to the issue or pull request it went to, the pull request it comes from
 (a PR change it adjusts, or its origin) and the Figma frame, and **Mark as done** (`POST /api/cards/C-<n>/built`, `built: {by, at}`; **Not done yet**
-takes it back), and **Open the request**, the same request on Requests; the
+takes it back, `not_built`). The store marks it done itself (`built: {by: {agent}, at, change}`) when a merged change card
+that builds it is written: its pull request is the spec's or links its issue, or its `design_check` says `matches`;
+never one a person took back. And **Open the request**, the same request on Requests; the
 approved option as approved, **UX decisions** (`dev_summary`, the [handoff](handoff.md)'s step 7,
 AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
 comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line (its asker — its first words), under the open ones. Its
@@ -747,7 +754,9 @@ with a role; it has no card. This is the one roster change that comes from the D
    is `added`. A non-zero exit (the file unreadable, the write failed) leaves the item claimed
    for the next run: report it. Never edit `## Desk people` by hand for an ask.
 3. `added` → tell the operator in the run's report to share the Desk with that email (Share →
-   Restricted): only the owner shares it, the row alone opens nothing.
+   Restricted): only the owner shares it, the row alone opens nothing. People says so too: the
+   ask shows **Not shared yet** until that person opened the Desk, with the owner's move and
+   **Copy email** for the owner.
 
 ## The presentation
 
@@ -788,7 +797,7 @@ opens its card.
 ## Needs a designer
 
 Changes have a **Needs a designer** filter next to their others (Changes opens on **Open**;
-Requests use **Ready** instead): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
+Requests use **Your turn** instead): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
 
 - **A change card**: you judge it when you write the card ([watch.md](watch.md) step 7), as
   `attention: {level, reasons}` — `designer` for a new screen or a new address, a look that
@@ -884,7 +893,8 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and
-  the channel hears nothing when a person hands it to the team.
+  the channel hears nothing when a person hands it to the team: the bell tells every developer
+  (*Feedback asked*, [Notifications](#notifications)).
 - When `notify` is `slack`, a request moving to `feedback`, `testing` or `handed-off` gets
   one message in the bound channel, its title escaped ([Text to Slack](#links-to-an-item)): "<title> (C-<n>) — Options ready to vote on: <link>", "— Live
   prototype ready to try: <link>" or "— Sent to developers: <link>", the link the card's

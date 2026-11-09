@@ -10,6 +10,10 @@ import { fileURLToPath } from "node:url";
 import { chromium, req } from "../../toolkit/lib/core.mjs";
 import { ROLES, ADDABLE_ROLES, abilities } from "../store.mjs";
 
+// Requests open on Your turn, which shows only what the viewer may act on. The tests look at
+// every request, so they start on Open, as a browser that picked it; TURN_FIRST keeps the default.
+const TURN_FIRST = "<script>window.TURN_FIRST = true;</script>";
+const OPEN_FIRST = `<script>try { if (!window.TURN_FIRST && !localStorage.getItem("desk-turn")) { localStorage.setItem("desk-turn", "1"); if (!localStorage.getItem("desk-reqFilter")) localStorage.setItem("desk-reqFilter", "open"); } } catch {}</script>`;
 const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "page.html"), "utf8");
 
 test("nothing on the page submits a form", () => {
@@ -107,7 +111,7 @@ async function launch(t, bridge) {
   Object.assign(process.env, browser.env);
   const server = createServer((r, res) => {
     res.setHeader("content-type", "text/html");
-    res.end(r.url === "/desk" ? page.replace("<script>", bridge + "<script>")
+    res.end(r.url === "/desk" ? page.replace("<script>", bridge + OPEN_FIRST + "<script>")
       : `<!doctype html><iframe sandbox="allow-scripts allow-modals" src="/desk" style="width:1000px;height:700px"></iframe>`);
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -354,6 +358,17 @@ window.platform = { async request({ path }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
+// Requests open on Your turn: what the viewer may act on, here a vote not given yet.
+test("Requests open on Your turn, and a vote given takes the request out of it", (t) => open(t, TURN_FIRST + LIST.replace("can: { request: true }", "can: { request: true, vote: true }"), async (desk) => {
+  await desk.waitForSelector("#list .filters");
+  assert.match(await desk.textContent("#list .filters .on"), /^Your turn\s*1$/, "the default, with its count");
+  assert.deepEqual(await desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)), ["r1"], "Team feedback waits for this viewer's vote");
+}));
+test("Your turn leaves out a request the viewer voted on", (t) => open(t, TURN_FIRST + LIST.replace("can: { request: true }", "can: { request: true, vote: true }").replace('status: "feedback",', 'status: "feedback", voted_mine: true,'), async (desk) => {
+  await desk.waitForSelector("#list .filters");
+  assert.deepEqual(await desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)), []);
+}));
+
 // The page at the top level, so its browser storage survives a reload.
 async function open(t, bridge, fn) {
   const browser = chromium();
@@ -361,7 +376,7 @@ async function open(t, bridge, fn) {
   let pw;
   try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
   Object.assign(process.env, browser.env);
-  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", bridge + "<script>")); });
+  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", bridge + OPEN_FIRST + "<script>")); });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
   try {
@@ -472,7 +487,7 @@ test("every button and label says on hover what it does or means", (t) => open(t
   }
 }));
 
-test("Needs a designer filters Changes, Ready filters Requests, and Changes opens on Open", (t) => open(t, LIST, async (desk) => {
+test("Needs a designer filters Changes, Your turn filters Requests, and Changes opens on Open", (t) => open(t, LIST, async (desk) => {
   const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
   // Requests leads the menu; Changes and Issues follow, then Product and People.
   await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
@@ -486,11 +501,12 @@ test("Needs a designer filters Changes, Ready filters Requests, and Changes open
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
   assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
   await desk.click('[data-tab="requests"]');
-  assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["reqFilter:unread", "reqFilter:open", "reqFilter:ready", "reqFilter:closed"], "Requests filter by Unread, Open, Ready and Closed");
+  assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["reqFilter:turn", "reqFilter:unread", "reqFilter:open", "reqFilter:closed"], "Requests filter by Your turn, Unread, Open and Closed");
   assert.match(await desk.textContent('[data-filter="reqFor:presentation"]'), /^For presentation/);
-  await desk.click('[data-filter="reqFilter:ready"]');
-  assert.deepEqual(await rows(), ["r1"], "Ready: options wait for someone to act");
-  assert.match(await desk.textContent('[data-filter="reqFilter:ready"]'), /^Ready\s*1$/);
+  await desk.click('[data-filter="reqFilter:turn"]');
+  assert.deepEqual(await rows(), [], "Your turn: this viewer may neither vote nor approve");
+  assert.match(await desk.textContent("#list"), /Nothing waits for you right now/);
+  assert.match(await desk.textContent('[data-filter="reqFilter:turn"]'), /^Your turn$/);
   await desk.reload();
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");

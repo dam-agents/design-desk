@@ -393,7 +393,8 @@ export class Store {
 
   // ---------- reads ----------
 
-  listCards({ kind, status, viewer } = {}) {
+  listCards({ kind, status, viewer, who = null } = {}) {
+    const me = addressesOf(who);
     // One index of the pull requests sent requests are built by, for the whole list.
     let index = null;
     const builds = (c) => (c.kind === "change" ? this.buildsOf(c, (index ||= this.buildsIndex())) : null);
@@ -418,6 +419,8 @@ export class Store {
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
         for: c.kind === "request" ? (c.size?.small ? "developers" : "designers") : null,
+        // Whether the viewer voted on it: Your turn reads it on a row (docs/desk.md → A request's state in the list).
+        voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
@@ -531,7 +534,16 @@ export class Store {
   waitingFor(cardId, viewer) {
     return Object.values(this.db.inbox).filter((i) => i.card === cardId && i.state !== "done" && (!i.thread || sees(this.db.threads[i.thread], viewer)))
       .sort((a, b) => a.created.localeCompare(b.created))
-      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part?.label ? { part: i.part.label } : {}) }));
+      .map((i) => ({ kind: i.kind, state: i.state, created: i.created, ...(i.state === "claimed" ? { started: i.claimed_started || i.claimed_at, ...(this.usualMinutes(i) ? { usual_min: this.usualMinutes(i) } : {}) } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part?.label ? { part: i.part.label } : {}) }));
+  }
+
+  // How long Design Desk usually works on an item of this kind: the median of its last ten
+  // finished ones, in minutes; none before three of them (docs/desk.md → A request's state in the list).
+  usualMinutes(item) {
+    const took = Object.values(this.db.inbox).filter((i) => i.state === "done" && i.kind === item.kind && (i.scope || "") === (item.scope || "") && i.claimed_started && i.done_at)
+      .sort((a, b) => b.done_at.localeCompare(a.done_at)).slice(0, 10)
+      .map((i) => (Date.parse(i.done_at) - Date.parse(i.claimed_started)) / 60000).filter((m) => m >= 0).sort((a, b) => a - b);
+    return took.length < 3 ? null : Math.max(1, Math.round(took[Math.floor(took.length / 2)]));
   }
 
   getAsset(id) {
@@ -573,7 +585,8 @@ export class Store {
   markBuilt(cardId, who, on = true) {
     const c = this.card(cardId);
     if (c.kind !== "request" || c.status !== "handed-off") throw bad("Only a design sent to developers is marked done.");
-    if (on) c.built = { by: person(who), at: this.clock() }; else delete c.built;
+    // Taken back by a person, it stays theirs: a merged change marks it done no more.
+    if (on) { c.built = { by: person(who), at: this.clock() }; delete c.not_built; } else { delete c.built; c.not_built = { by: person(who), at: this.clock() }; }
     this.save();
     return { card: c };
   }
@@ -814,6 +827,8 @@ export class Store {
         const name = (c.variants || []).find((v) => v.id === variant)?.name || variant;
         for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${{ prefer: "Prefers", dislike: "Dislikes", concern: "Has a concern about" }[v.vote] || "Voted on"} ${name}`, variant }, yours);
       }
+      // Asked for feedback: for every developer, and for whose request it is (docs/desk.md → Team feedback).
+      if (c.team_feedback?.state === "open" && c.team_feedback.at) push(c.team_feedback.at, "feedback-asked", it, c.team_feedback.by, {}, yours || DEVELOPERS.includes(who?.role));
       if (c.approved?.at) push(c.approved.at, "approved", it, c.approved.by, { detail: (c.variants || []).find((v) => v.id === c.approved.variant)?.name || null, variant: c.approved.variant || null }, yours);
       if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
       if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
@@ -1284,11 +1299,13 @@ export class Store {
     const since = Date.parse(this.clock()) - 14 * 86400 * 1000;
     return Object.values(this.db.inbox).filter((i) => i.kind === "person" && i.person && (i.state !== "done" || Date.parse(i.done_at) >= since))
       .sort((a, b) => b.created.localeCompare(a.created) || Number(b.id.slice(2)) - Number(a.id.slice(2))).slice(0, 20)
-      .map((i) => ({ id: i.id, email: i.person.email, role: i.person.role, by: i.by?.email || null, created: i.created, state: i.state, outcome: i.outcome || null, done_at: i.done_at || null }));
+      .map((i) => ({ id: i.id, email: i.person.email, role: i.person.role, by: i.by?.email || null, created: i.created, state: i.state, outcome: i.outcome || null, done_at: i.done_at || null,
+        // Added to the list is not shared with: only the owner shares the Desk (docs/desk.md → People).
+        opened: Boolean(own(this.db.reads, i.person.email) || own(this.db.prefs, i.person.email) || own(this.db.seen, i.person.email)) }));
   }
 
   // A state change a person asks for on a request card; the agent does the work.
-  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, closeEarlier = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
+  act(cardId, who, action, note = "", { askFirst = false, count = null, overrule = false, implement = false, closeEarlier = false, autoSend = false, variant = null, version = null, states = null, part = null, element = null } = {}) {
     const c = this.card(cardId);
     // Check again: Design Desk takes the screen's pictures again on the live product; the same
     // pictures mark it checked, new ones redraw it (docs/map.md → Check again).
@@ -1392,6 +1409,7 @@ export class Store {
       delete c.decided;
       // Designs: sent, done, then declined and reopened, it is not built any more; its next handoff sums it up again.
       delete c.built;
+      delete c.not_built;
       delete c.dev_summary;
       c.updated = this.clock();
       const item = this.enqueue("request", cardId, null, who, optText(note, 1000, "note"));
@@ -1445,6 +1463,9 @@ export class Store {
     // Who approved, shown on the card; an approval For Developers says so (`small`).
     if (action === "approve") c.approved = { by: person(who), at: this.clock(), small: Boolean(c.size?.small), ...(implement ? { implement: true } : {}),
       ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
+    // The approver sends the spec unread, as soon as it is written (docs/handoff.md → Review
+    // before it goes); never a request from Slack, whose spec always waits for a person.
+    if (action === "approve" && autoSend && c.origin?.channel !== "slack") c.approved.auto_send = true;
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
     if (action === "add-option") {
@@ -1959,6 +1980,13 @@ export class Store {
     for (const it of Object.values(this.db.inbox)) if (goneLive && it.card === next.id && it.kind === "build" && it.state === "open" && it.variant === goneLive)
       Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not built: its option was taken off the card" });
     if (moved && fields.decision_check === undefined) this.queueCheck(next, { agent: true }, "Its design changed without a check against the decisions.");
+    // A merged change that builds a sent design marks it done (docs/desk.md → Designs): its pull
+    // request is the spec's, or its check says it matches the design.
+    if (next.kind === "change" && next.source?.merged_at) {
+      const hit = this.buildsOf(next)?.card || (next.design_check?.verdict === "matches" ? next.design_check.request : null);
+      const r = hit ? own(this.db.cards, String(hit)) : null;
+      if (r && r.kind === "request" && r.status === "handed-off" && !r.built && !r.not_built) r.built = { by: { agent: true }, at: this.clock(), change: next.id };
+    }
     this.save();
     return { card: next };
   }

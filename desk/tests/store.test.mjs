@@ -2323,3 +2323,53 @@ test("github refs that cannot be read: counted, given up after 3, cleared by a r
   s.putGithub([{ key: "acme/widgets#50000", kind: "issue", title: "Found", updated: "2026-11-08T10:00:00Z" }]);
   assert.deepEqual(refs(), [{ key: "acme/widgets#50000", updated: "2026-11-08T10:00:00Z", tries: 0 }], "a read clears the count");
 });
+
+test("Ask for feedback tells every developer; a row says who voted; a claimed item says since when", () => {
+  const s = fresh();
+  const carol = { email: "carol@example.com", role: "designer" };
+  const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "checked"); }
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Table", asset: a }] });
+  const asked = (who) => s.notifications(who).items.find((x) => x.event === "feedback-asked");
+  assert.equal(asked(bob), undefined, "not while the options are held");
+  s.openFeedback(card.id, alice);
+  assert.equal(asked(bob).for_you, true, "a developer's, whoever filed it");
+  assert.equal(asked(carol).for_you, false, "another designer sees it under All");
+  assert.equal(asked(alice), undefined, "never one's own doing");
+  s.vote(card.id, bob, { variant: "v1", vote: "prefer" });
+  const row = (who) => s.listCards({ kind: "request", viewer: who.email, who }).find((x) => x.id === card.id);
+  assert.deepEqual([row(bob).voted_mine, row(carol).voted_mine], [true, false]);
+  // Approve with the box ticked: the spec goes as soon as it is written (docs/handoff.md).
+  const r = s.act(card.id, alice, "approve", "v1", { autoSend: true });
+  assert.equal(r.card.approved.auto_send, true);
+  assert.equal(s.getCard(card.id).waiting.find((w) => w.kind === "handoff").started, undefined, "not started before its claim");
+  s.claim(r.inbox.id, "run-2");
+  assert.ok(s.getCard(card.id).waiting.find((w) => w.kind === "handoff").started);
+});
+
+test("a request from Slack never sends its spec unread", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "From a thread." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "checked"); }
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] } });
+  s.db.cards[card.id].origin = { channel: "slack", reporter: "Dana" };
+  assert.equal(s.act(card.id, alice, "approve", "Build it.", { autoSend: true }).card.approved.auto_send, undefined);
+});
+
+test("a merged change that builds a sent design marks it done, unless a person took it back", () => {
+  const s = fresh();
+  const sent = (title, n) => { const r = s.createRequest(alice, { title, problem: "Why.", type: "feature" }).card; return s.upsertCard({ id: r.id, status: "handed-off", spec: { pr_url: `https://github.com/acme/widgets/pull/${n}` } }).card; };
+  const change = (n, merged) => s.upsertCard({ kind: "change", title: `PR ${n}`, source: { repo: "acme/widgets", pr: n, url: `https://github.com/acme/widgets/pull/${n}`, ...(merged ? { merged_at: "2026-11-01T10:00:00Z" } : {}) } }).card;
+  const one = sent("Spend column", 41);
+  const open = change(41, false);
+  assert.equal(s.getCard(one.id).built, undefined, "an open pull request builds nothing yet");
+  s.upsertCard({ id: open.id, source: { ...open.source, merged_at: "2026-11-01T10:00:00Z" } });
+  assert.deepEqual([s.getCard(one.id).built.by, s.getCard(one.id).built.change], [{ agent: true }, open.id]);
+  const two = sent("Tidy", 42);
+  s.markBuilt(two.id, bob); s.markBuilt(two.id, bob, false);
+  change(42, true);
+  assert.equal(s.getCard(two.id).built, undefined, "Not done yet is a person's word");
+  s.markBuilt(two.id, bob);
+  assert.equal(s.getCard(two.id).built.by.email, bob.email);
+});
