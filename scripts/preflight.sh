@@ -294,15 +294,18 @@ watch_mode() {
   # The issues and pull requests the Desk's cards point at whose copy on the Desk is behind
   # GitHub: never read, or changed since (a comment changes it). One search per repository.
   # A ref never read whose last 3 reads failed (a mistyped number, a private repository) opens
-  # no run (docs/watch.md → Comments on GitHub).
-  local gh_due='[]' REFS="$DESK_DIR/github-refs.json" r since hits
+  # no run, nor does a ref outside the watched repositories: github-sync never reads one
+  # (docs/watch.md → Comments on GitHub).
+  local gh_due='[]' REFS="$DESK_DIR/github-refs.json" REFS_W r since hits watched
+  watched="$(printf '%s' "$REPOS" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "") | ascii_downcase | split("/") | .[-2:] | join("/") | select(test("/")))')"
   if [ -f "$REFS" ]; then
-    gh_due="$(jq -c '[.refs[] | select(.updated == null and (.tries // 0) < 3) | .key]' "$REFS")"
-    for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' "$REFS"); do
-      since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' "$REFS")"
+    REFS_W="$(jq -c --argjson w "$watched" '{refs: [.refs[] | select((.key | split("#")[0] | ascii_downcase) as $r | $w | index($r) != null)]}' "$REFS")"
+    gh_due="$(jq -c '[.refs[] | select(.updated == null and (.tries // 0) < 3) | .key]' <<<"$REFS_W")"
+    for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' <<<"$REFS_W"); do
+      since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' <<<"$REFS_W")"
       local hostargs=()
       hits="$(search "$r" "repo:$r updated:>=${since%%T*}")" || { log "$r: could not check its issues and pull requests for new comments — next run"; continue; }
-      gh_due="$(jq -c --arg r "$r" --slurpfile refs "$REFS" --argjson due "$gh_due" \
+      gh_due="$(jq -c --arg r "$r" --slurpfile refs <(printf '%s' "$REFS_W") --argjson due "$gh_due" \
         '$due + [.items[] as $i | $refs[0].refs[] | select(.key == ($r + "#" + ($i.number | tostring)) and .updated != null and $i.updated_at > .updated) | .key] | unique' <<<"$hits")"
     done
   fi

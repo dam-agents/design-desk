@@ -93,8 +93,14 @@ export const ORIGIN_JOBS = ["watch", "digest"];
 // decisions named their origin.
 export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk", "call", "approval", "chat"];
 
+// The server's per-person rate windows: past `max` callers, those with nothing left in either
+// window (writes in `writeWindowMs`, items in the hour) are forgotten, so the map stays small.
+export function forgetIdle(usage, now, writeWindowMs, max = 500) {
+  if (usage.size > max) for (const [k, v] of usage) if (!v.items.some((t) => now - t < 3600 * 1000) && !v.writes.some((t) => now - t < writeWindowMs)) usage.delete(k);
+}
+
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people", "designs", "built"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people", "designs", "built", "resolve"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -2351,7 +2357,7 @@ export class Store {
     if (!buf.length) throw bad("the asset is empty");
     if (buf.length > LIMITS.assetBytes) throw bad(`the asset is ${buf.length} bytes; the Desk serves at most ${LIMITS.assetBytes} (compress the image or split the page)`);
     const held = Object.values(this.db.assets).reduce((n, a) => n + (a.bytes || 0), 0);
-    if (held + buf.length > LIMITS.assetsBytes) throw bad("The Desk holds as many pictures and pages as it can. Ask the operator to archive old cards.");
+    if (held + buf.length > LIMITS.assetsBytes) throw bad("The Desk holds as many pictures and pages as it can (2 GiB). A designer or an admin frees room by deleting a closed request (Delete this request…).");
     const id = this.next("asset", "A");
     const ext = (contentType.split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 8) || "bin";
     const file = `${id}.${ext}`;

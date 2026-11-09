@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf } from "./store.mjs";
+import { Store, DeskError, forgetIdle, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -40,8 +40,7 @@ function spend(key, kind) {
   if (kind === "item" && u.items.length >= ITEMS_PER_HOUR) throw new DeskError(429, `You've sent Design Desk ${ITEMS_PER_HOUR} things this hour. It's working through them; try again in an hour.`);
   u[kind === "write" ? "writes" : "items"].push(now);
   usage.set(key, u);
-  // Callers with nothing in their windows are forgotten, so the map stays small.
-  if (usage.size > 500) for (const [k, v] of usage) if (!v.items.some((t) => now - t < 3600 * 1000) && !v.writes.some((t) => now - t < WINDOW_MS)) usage.delete(k);
+  forgetIdle(usage, now, WINDOW_MS);
 }
 
 const log = (level, event, msg) => {
@@ -187,7 +186,13 @@ async function viewerRoute(req, res, url, who) {
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") return send(res, 200, { people: roster(), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES });
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub }) });
-  if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2], { viewer: who.email || who.sub || null }) });
+  if (m === "GET" && p[1] === "cards" && p[2]) {
+    const card = store.getCard(p[2], { viewer: who.email || who.sub || null });
+    // Each conversation says what this reader may do in it, so the page shows only the controls
+    // the routes below accept (reply and answer, reopen; resolve: Mark done).
+    const may = (t, move) => can(who.deskRole, store.threadNeed(t.id, actor, move), s.prototypeRoles);
+    return send(res, 200, { card: { ...card, threads: card.threads.map((t) => ({ ...t, may: { reply: may(t), resolve: may(t, "resolve") } })) } });
+  }
   if (m === "GET" && p[1] === "assets" && p[2]) return send(res, 200, store.getAsset(p[2]));
   // What the Desk keeps of the issues and pull requests its items point at, for previews.
   if (m === "GET" && p[1] === "github") return send(res, 200, { records: store.github(String(url.searchParams.get("keys") || "").split(",").filter(Boolean).slice(0, 50)) });

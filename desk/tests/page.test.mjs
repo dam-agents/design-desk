@@ -37,6 +37,22 @@ test("markdown text never becomes an attribute or a handler", () => {
   assert.equal(inline("[**b**](https://x.test)"), '<a href="https://x.test" target="_blank" rel="noopener noreferrer"><b>b</b></a>');
 });
 
+// A conversation's controls follow `may`, which the server sends with each one: a control the
+// thread routes refuse for this reader is never drawn (docs/desk.md → Roles).
+test("a conversation shows Reply, Answer, Mark done and Reopen only to a reader who may use them", () => {
+  const mayIn = new Function(`${page.match(/const mayIn = [^\n]+/)[0]}\nreturn mayIn;`)();
+  assert.deepEqual([mayIn({ may: { reply: false, resolve: true } }, "reply"), mayIn({ may: { reply: true, resolve: false } }, "resolve"), mayIn({ may: { reply: true } }, "reply")], [false, false, true]);
+  const controls = { "data-send-reply": "reply", "data-send-form": "reply", "data-reopen": "reply", "data-resolve": "resolve" };
+  for (const [attr, move] of Object.entries(controls)) {
+    const at = [...page.matchAll(new RegExp(`${attr}="\\$\\{esc\\(th\\.id\\)\\}"`, "g"))].map((m) => m.index);
+    assert.ok(at.length > 0, attr);
+    for (const i of at) {
+      const before = page.slice(page.lastIndexOf("\n", i), i);
+      assert.ok(before.lastIndexOf(`mayIn(th, "${move}")`) > -1, `${attr} at offset ${i} is drawn without mayIn(th, "${move}")`);
+    }
+  }
+});
+
 test("the new option dialog sends on its close, as the page's other dialogs do", () => {
   const f = page.match(/<dialog id="option-dialog">[\s\S]*?<\/dialog>/)?.[0];
   assert.ok(f, "the page has the option-dialog");

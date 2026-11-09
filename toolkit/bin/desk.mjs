@@ -281,6 +281,7 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
 }
 // Only the watched repositories (`repos`) are read: a ref a person's text names in another one
 // is never fetched with the agent's token, so no one reads a private repository through the Desk.
+// The watch gate (scripts/preflight.sh) lists only these too, so a skipped ref never opens a run.
 const repoKey = (r) => String(r || "").trim().toLowerCase().split("/").slice(-2).join("/");
 // `io` stands in for the Desk server, gh and `repos` in a test.
 export async function githubSync(card, io = { call, gh: undefined }) {

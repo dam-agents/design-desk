@@ -1353,6 +1353,7 @@
   const ABILITIES = [
     [["ack", "ask", "comment"], "Read everything, ask and comment"],
     [["vote", "request", "follow-up", "screens"], "Vote on options, send requests and bug reports, add screenshots"],
+    [["resolve"], "Mark someone else's conversation done"],
     [["explore", "revise", "refresh"], "Start design options and change them in the workspace"],
     [["approve"], "Approve designs, also ones that go against a decision"],
     [["close", "reopen"], "Close, reopen and delete requests"],
@@ -2906,13 +2907,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The agent's questions as a form, in four parts and nothing else: what it is about (the
   // agent's text), each question, its options, and the one Design Desk recommends. A question
   // nobody answers is left to Design Desk, which takes its recommendation.
+  // What this reader may do in a conversation: the server sends it with each one (`may`), as the
+  // thread routes check it, so a control the server refuses is never shown.
+  const mayIn = (th, move) => th.may?.[move] ?? true;
+  const notYours = `<p class="hint">Your role cannot answer this one; someone on the team whose role can will.</p>`;
   function askForm(th) {
     const many = th.questions.length > 1;
     const qs = th.questions.map((q, i) => `<fieldset class="q" data-q="${i}"><legend>${many ? `${i + 1}. ` : ""}${txt(q.text)}</legend>
       ${q.options.map((o) => `<label><input type="radio" name="q-${esc(th.id)}-${i}" value="${esc(o)}" /> ${esc(o)}${o === q.suggested ? ` <span class="chip info" title="Design Desk takes this one if you leave the question">recommended</span>` : ""}</label>`).join("")}
       <input placeholder="Anything to add? (optional)" data-q-note maxlength="500" /></fieldset>`).join("");
     return `<div class="asks" id="form-${esc(th.id)}">${md(th.messages[0].text)}${qs}
-      <div class="actions"><button class="btn small primary" data-send-form="${esc(th.id)}">${many ? "Send answers" : "Send answer"}</button><button class="btn small" data-skip-form="${esc(th.id)}">Leave it to Design Desk</button></div></div>`;
+      ${mayIn(th, "reply") ? `<div class="actions"><button class="btn small primary" data-send-form="${esc(th.id)}">${many ? "Send answers" : "Send answer"}</button><button class="btn small" data-skip-form="${esc(th.id)}">Leave it to Design Desk</button></div>` : notYours}</div>`;
   }
 
   // A picture that knows where the change is outlines it; one switch, remembered, shows or hides every outline.
@@ -3077,7 +3082,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         <div class="head">${kind}${anchor}${state}</div>`}
         ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
-        ${th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`}
+        ${th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Closes this conversation">Mark done</button>` : ""}${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}" title="Design Desk changes the design as this comment asks">Work it in</button>` : ""}</div>` : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}
       ${mini ? "</details>" : "</article>"}`;
     }).join("");
     // The designer answers in the thread; only who sees Designs asks.
@@ -3832,7 +3837,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
-        <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
+        ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${sizeLine(c)}
       ${c.status === "handed-off" ? sentBox(c) : ""}${(c.status === "handed-off" ? more : nx.buttons || more) ? `<div class="next"><div class="actions">${c.status === "handed-off" ? "" : nx.buttons}${more}</div></div>` : ""}
@@ -4778,7 +4783,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         return `<li class="note ${st === "done" ? "done" : ""}" data-ws-note="${esc(th.id)}" aria-current="${open}">
           <div class="h"><span class="n" title="Note #${th.n}">${th.n}</span><span>${esc(where)}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}" title="${st === "done" ? "Marked done" : st === "working" ? "Design Desk is changing the design for it" : "Still open"}">${esc(label)}</span></div>
           ${open ? th.messages.map(msg).join("") : `<div>${esc(th.messages[0].text)}</div>${th.messages.length > 1 ? `<div class="a">${last?.by?.agent ? "" : `${who(last.by)}: `}${esc(last.text)}</div>` : ""}${th.messages.length > 2 ? `<div class="hint">${th.messages.length - 1} replies</div>` : ""}`}
-          ${open ? (th.state !== "resolved" ? `<div class="reply"><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button><button class="btn small" data-resolve="${esc(th.id)}">Done</button>${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}">Work it in</button>` : ""}</div>` : `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>`) : ""}</li>`; }).join("")}</ol>`
+          ${open ? (th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}">Done</button>` : ""}${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}">Work it in</button>` : ""}</div>` : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : "") : ""}</li>`; }).join("")}</ol>`
         : `<p class="hint">${all.length ? (f === "open" ? "Nothing open. Everything here is done." : "None here.") : "No notes yet."}</p>`}
     </div>`;
   }
