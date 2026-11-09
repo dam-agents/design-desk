@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.70.0 — 2026-11-09
+
+**Upgrade:**
+Nothing — `~/bin/design` runs the toolkit from the checkout, so the stricter guard applies once
+the change is pulled ([boundary.md](docs/boundary.md) → The guard). A prototype it now refuses
+goes the usual way: rewrite an accident, or take the part out as `needs-developer`.
+
 ## 1.69.0 — 2026-11-09
 
 **Upgrade:**
