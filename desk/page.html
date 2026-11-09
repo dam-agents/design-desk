@@ -3754,7 +3754,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Every option taken out at Options drawn: as when checked, a person draws them again.
     // Approve: at Checked only for who may skip the options; at Options drawn, as there, for any approver.
     const row = c.status === "variants" ? (canApprove(c) ? b("approve", "Approve") : "") + ends : skip;
-    if (c.status === "triage" || (c.status === "variants" && !hasOptions)) return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: row } : { text: none || "Next: a designer, PM or developer starts the design options.", buttons: row };
+    if (c.status === "triage" || (c.status === "variants" && !hasOptions)) return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: row } : { text: none || "Next: a designer, PM or developer starts the design options.", wait: "a designer", buttons: row };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
       return { text: "Before it goes to developers, Design Desk needs your answers above.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "" };
@@ -3762,7 +3762,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (c.status === "spec" && c.spec?.review === "draft") {
       const may = canApprove(c);
       return { text: may ? "Your turn: read the developer spec below. Edit it or ask for changes; send it when it is right." : "The developer spec is written. It goes to developers once someone who may approve it has read it.",
-        sub: may ? "Nothing leaves the Desk until you press Send to developers." : approver(c),
+        sub: may ? "Nothing leaves the Desk until you press Send to developers." : approver(c), wait: may ? "" : c.size?.small ? "a developer" : "a designer",
         step: may ? `<button class="step-next" data-spec-send title="Sends the spec as it is now, with the design, to developers; you pick first where it goes">Send to developers…</button>` : "",
         // Edit and Ask for changes sit on the spec itself, below; the row keeps Close.
         buttons: "" };
@@ -3772,7 +3772,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const failed = p.state === "failed";
       // The expiry is its date only once it passed: a person may switch it off before (docs/prototype.md → Teardown).
       return { text: failed ? "This try didn't work." : Date.parse(p.expires) <= Date.now() ? `This prototype was switched off on ${day(p.expires)} to free its place.` : "This prototype was switched off.",
-        sub: failed ? "Design Desk wrote why in the comments below." : "", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
+        sub: failed ? "Design Desk wrote why in the comments below." : "", wait: "a designer", step: design && canBuild() ? sb("build", failed ? "Try again" : "Build it again") : "", buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (live(c)) {
       // The next step is to open the live prototype: it sits in the step pill, as Ask for feedback does.
@@ -3791,7 +3791,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const mine = (can("revise") || filedIt(c)) && c.team_feedback?.state !== "open";
       const ask = mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, PMs, developers and admins may on any request"}.">Ask for feedback</button>` : "";
       return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, press Ask for feedback." : "The options are drawn. The request's author, a designer, a PM, a developer or an admin asks the team for feedback once they are fine-tuned.",
-        step: dev || ask,
+        step: dev || ask, wait: "a designer",
         buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (c.status === "feedback" && hasOptions) {
@@ -3802,7 +3802,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         || (canApprove(c) ? sb("approve", "Approve") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
         // The green Approve stays in the row even when the pill's next move is Approve too.
-        step, buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
+        step, wait: "the team", buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     return { text: "", buttons: "" };
   }
@@ -3936,7 +3936,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // An open request with no move of its own waits too (the team's votes and comments, say).
     const wait = !busy.length && !nx.step && !closed(c);
     // A move a person can make comes first; Wait only when there is none.
-    const nextStep = nx.step || (asks.length ? `<span class="step-next still">Answer</span>` : busy.length || wait ? `<span class="step-next still">Wait</span>` : "");
+    // Waiting on another person names whom (Wait for a designer); on Design Desk it is plain Wait.
+    const nextStep = nx.step || (asks.length ? `<span class="step-next still">Answer</span>` : busy.length ? `<span class="step-next still">Wait</span>`
+      : wait ? `<span class="step-next still">${nx.wait ? `Wait for ${esc(nx.wait)}` : "Wait"}</span>` : "");
     const act = asks.length ? `<span class="s-act">${plural(asks.length, "question", "questions")} below</span>`
       : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
       : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
