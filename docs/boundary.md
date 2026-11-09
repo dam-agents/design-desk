@@ -91,8 +91,11 @@ When the guard refuses:
 
 1. Read the issues. A refusal you caused by accident (you passed a handler differently, you
    reformatted a condition) → write it the way the original did and run the guard again.
-2. A refusal that is the request itself → that part is `needs-developer`: take it out of the
-   prototype, keep it in the variants, and record it for the spec.
+2. A refusal that is the request itself → judge the refused part by **What needs a developer**
+   above. Plumbing (a field, an endpoint, wiring to an existing action) goes in `build`: the
+   prototype keeps its look with a sample value instead of the wiring, and the verdict stays
+   `design`. A part that makes the product work differently is `needs-developer`: take it out
+   of the prototype, keep it in the variants, and record it for the spec.
 3. Never change the profile's boundary, the guard, or a file's imports to get a pass, and
    never install, push or hand off a diff the guard has not passed.
 

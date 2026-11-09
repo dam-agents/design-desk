@@ -395,6 +395,15 @@ test("while its prototype is live, approve takes live_pick back at feedback; an 
   assert.deepEqual([s.item(waiting.id).state, s.item(waiting.id).outcome], ["done", "not built: its option was taken off the card"]);
 });
 
+test("a triage keeps what a developer wires to build the design (build)", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Provider name on the row", problem: "Show the provider." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: [], build: ["Send the provider's name with each chat."] } });
+  assert.deepEqual(s.getCard(card.id).triage.build, ["Send the provider's name with each chat."]);
+  s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: [] } });
+  assert.deepEqual(s.getCard(card.id).triage.build, [], "a triage without it keeps none");
+});
+
 test("a request that needs a developer gets no live prototype", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { title: "Week starts per person", problem: "Use my own Monday." });

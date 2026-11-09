@@ -192,8 +192,10 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   real screen in the product's own styles; `fidelity: wireframe` (`--style wireframe`,
   grayscale boxes) when the question is structure or flow, `mockup` (the product's styles)
   when it is the look. An option that spans several screens is one view per screen, each
-  control that leads on wired to its view (the `variants` skill → Flow). A `needs-developer` request still gets variants; the parts a
-  developer must add are drawn and labelled "needs a developer" in the variant.
+  control that leads on wired to its view (the `variants` skill → Flow). A `needs-developer` request still gets variants; a part that makes the
+  product work differently is drawn and labelled "needs a developer" in the variant, and plumbing
+  (triage `build`) is drawn with a sample value, unlabelled ([boundary.md](boundary.md) → What
+  needs a developer).
 - **One more option** (`explore` with `scope: "add"`): a designer, PM or developer pressed the
   **+ New option** tab and wrote what it should look like and have (`note`). `variant`, when
   set, is the option it starts from ("like this one, changed as I describe"); none means a new

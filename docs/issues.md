@@ -49,8 +49,9 @@ Every entry carries the issue's `title`, `url`, `author`, `updated`, `bucket`,
    - `summary` — one sentence: the problem it solves; at most 180;
    - `needs` — one to three bullets of at most 200: what the UI will need (a new screen, a
      changed part, a new state, new words), naming screens as the product map does; a
-     need a developer must build first says so ("needs a developer: a field the product
-     does not keep yet").
+     need that makes the product work differently says so ("needs a developer: spend counted
+     per day, not per week"); plumbing such as a field or an endpoint is not called out
+     ([boundary.md](boundary.md) → What needs a developer).
    A card whose needs changed in substance also gets `sketches: []` and `screens: []`: the
    next pass draws it again. The store finds a card by its issue, so a retry never makes a
    second one.
@@ -87,7 +88,8 @@ direction, not options.
    static page on sample data in the product's own style, built from the "now" screen's
    markup when there is one and changed only where the needs and the item's note say; `design build …
    --style <the profile's style>`, then `design shot`, a JPEG under 700 KB, looked at. A part
-   a developer must build is drawn and labelled "needs a developer". No real person or
+   that makes the product work differently is drawn and labelled "needs a developer"; plumbing
+   is drawn with a sample value. No real person or
    data; every number is made up.
 5. Upload each (`design desk asset <file> --kind screen --card C-<n>`), then one
    `design desk upsert` `{id, screens, sketches, style, draw: {failures: 0, note: ""}}` with its
