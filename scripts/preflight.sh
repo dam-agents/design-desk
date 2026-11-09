@@ -662,18 +662,28 @@ inbox_mode() {
         | select($why != null or ((.synced | epoch) as $at | $at == null or ($now - $at) >= $every))
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
+  # With ci_gate on, an open pull request's change card that waits for a designer and was never
+  # judged for the gate (no `ci`) is due once, as `G-<card>`: the cards already on the Desk when
+  # the key was turned on, and any the watch run missed (docs/watch.md → CI gate).
+  local gate="[]"
+  if [ -f "$DB" ] && [ "$(jq -r .ci_gate <<<"$CONF")" = enabled ]; then
+    gate="$(jq -c '[ .cards[] | select(.kind == "change" and .source.pr != null and (.source.merged_at // null) == null
+        and .ci == null and .handled == null and .status != "archived" and .attention.level == "designer")
+      | {id: ("G-" + .id), card: .id, gate: true} ]' "$DB" 2>/dev/null || echo '[]')"
+  fi
   local n; n="$(jq 'length' <<<"$items")"
-  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ]; then
+  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ] && [ "$(jq 'length' <<<"$gate")" -eq 0 ]; then
     log "Desk inbox empty"; printf '%s due=0\n' "$NOW_ISO" >> "$WORK/INBOX.log"; quiet_out
   fi
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind)\(if .card then " on \(.card)" else "" end)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): prototype of \(.card) expires \(.expires) — extend or let it go"' <<<"$expiring")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack vote on \(.card) — \(if .close then "close it" else "sync it" end)"' <<<"$polls")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack thread on \(.card) — \(if .close then "close it (\(.why))" else "read it" end)"' <<<"$councils")
+  while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.card) waits for a designer — judge it for the CI gate"' <<<"$gate")
   printf '%s due=%s expiring=%s\n' "$NOW_ISO" "$n" "$(jq 'length' <<<"$expiring")" >> "$WORK/INBOX.log"
   logev info preflight "inbox: $n items due"
-  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson councils "$councils" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; elif [ "$(jq 'length' <<<"$polls")" -gt 0 ]; then printf 'Sync Slack votes'; else printf 'Read Slack threads'; fi; })" '
+  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson councils "$councils" --argjson gate "$gate" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; elif [ "$(jq 'length' <<<"$polls")" -gt 0 ]; then printf 'Sync Slack votes'; elif [ "$(jq 'length' <<<"$councils")" -gt 0 ]; then printf 'Read Slack threads'; else printf 'Hold pull requests for a designer'; fi; })" '
     def pick(k): [ $items[] | select(.kind as $x | k | index($x)) ];
     { mode:"inbox", nothing_to_do:false, title:$title,
       questions_due: pick(["question"]),
@@ -692,7 +702,7 @@ inbox_mode() {
       people_due: [ pick(["person"])[] | select(.person != null) ],
       decisions_due: pick(["decision"]),
       checks_due: pick(["decision-check"]),
-      ci_due: pick(["ci"]),
+      ci_due: (pick(["ci"]) + $gate),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,

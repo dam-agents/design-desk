@@ -130,10 +130,14 @@ passes. Merged and closed pull requests are never touched: their checks no longe
 
 - **Fail it** right after the card is written (step 13), when all of these hold: the PR is
   open; the card's `attention` (as `design desk item` returns it) is `designer`; and the PR
-  did **not** come through a Design Desk request — the card has no `builds` and no
-  `design_check` (step 11), its head branch does not start with `design-desk/`, and its title
-  and body name no request (`C-<n>`). One that builds a Desk design is never failed, whatever
-  its attention says; one found to build one later is passed.
+  did **not** come through a Design Desk request. That is read from structured records only,
+  never from text the PR's author writes: the card has no `builds` (the store links it from
+  a sent spec's pull request or issue), its head branch does not start with `design-desk/`,
+  and no record in `design desk designs` has it as its `pr_url`. A `design_check` alone is no
+  proof: step 11 can start one from a card number in the PR's text. One that builds a Desk design is never failed,
+  whatever its attention says; one found to build one later is passed. A PR judged and not
+  held — it builds a Desk request, or it is no longer open — gets `ci: {state: "skipped"}`,
+  so it is never judged again.
   `gh pr view <pr> -R <repo> --json headRefOid,headRefName,state`, then
   `gh api [--hostname <host>] -X POST repos/<owner>/<name>/statuses/<headRefOid> -f state=failure
   -f context=design-desk -f description="A designer should see this UI change first"`, with
@@ -143,7 +147,13 @@ passes. Merged and closed pull requests are never touched: their checks no longe
   copy is behind GitHub, a push included. For a change card with `ci.state: failing`, an
   open PR and a head that is not `ci.sha`, set the same failure on the new head and upsert
   the new `sha`; a card marked handled meanwhile gets `success` instead.
-- **`ci_due`** (inbox run): a designer marked the card handled, or took the mark back. Claim;
+- **Cards already on the Desk.** The gate's first step runs when a card is written, so the
+  inbox pre-flight also lists, while `ci_gate` is `enabled`, every change card of an open PR
+  that waits for a designer and has no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
+  true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
+  item to claim: judge it as in **Fail it** and upsert `ci` (`failing` or `skipped`); a card
+  with `ci` is never due this way again.
+- **`ci_due`** (inbox run), an `I-<n>` item: a designer marked the card handled, or took the mark back. Claim;
   read the card and the PR again. Handled (or the PR builds a Desk request, or `ci_gate` is
   now `disabled`, so nothing stays held) → the same call with `-f state=success -f
   description="A designer has seen this UI change"` on the current head and upsert `ci:

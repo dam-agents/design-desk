@@ -564,7 +564,7 @@ export class Store {
     else { c.status = "new"; delete c.handled; }
     // A change whose pull request Design Desk's check holds (`ci_gate`, docs/watch.md → CI
     // gate): the check follows the mark, so the run sets it again — passed once handled.
-    if (c.kind === "change" && c.ci) this.pendingOrNew("ci", c.id, who, on ? "Marked handled: pass the check." : "Marked not handled: hold the check again.");
+    if (c.kind === "change" && ["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, on ? "Marked handled: pass the check." : "Marked not handled: hold the check again.");
     this.save();
     return { card: c };
   }
@@ -1688,7 +1688,8 @@ export class Store {
   // (docs/desk.md → Questions and comments).
   agentFor(card, items = null) {
     const xs = (items || Object.values(this.db.inbox).filter((i) => i.card === card && i.state === "claimed"))
-      .filter((i) => i.by?.email || i.by?.name).sort((a, b) => String(b.claimed_at || b.created).localeCompare(String(a.claimed_at || a.created)));
+      // A private ask's asker is never named where others read (docs/desk.md → Private asks).
+      .filter((i) => (i.by?.email || i.by?.name) && this.db.threads[i.thread]?.kind !== "private").sort((a, b) => String(b.claimed_at || b.created).localeCompare(String(a.claimed_at || a.created)));
     const b = xs[0]?.by;
     return b ? { agent: true, for: { email: b.email || null, ...(b.name ? { name: b.name } : {}) } } : { agent: true };
   }
@@ -3033,9 +3034,10 @@ function cleanTriage(t) {
 // The agent's judgement of a change: a designer should look at it, or it is for
 // information only; either way with its reasons in plain words.
 // Design Desk's check on a change's pull request: failing (held until a designer marks it
-// handled) or passing, on the commit it was set on (docs/watch.md → CI gate).
+// handled), passing, or skipped (judged and never held: it builds a Desk request, or it is no
+// longer open), on the commit it was set on (docs/watch.md → CI gate).
 function cleanCi(x) {
-  if (!x || !["failing", "passing"].includes(x.state)) throw bad("ci state must be failing or passing");
+  if (!x || !["failing", "passing", "skipped"].includes(x.state)) throw bad("ci state must be failing, passing or skipped");
   if (x.sha !== undefined && !/^[0-9a-f]{7,40}$/.test(String(x.sha))) throw bad("ci sha must be a commit id");
   return { state: x.state, ...(x.sha ? { sha: String(x.sha) } : {}) };
 }

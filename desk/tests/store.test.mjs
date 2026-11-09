@@ -123,7 +123,7 @@ test("a held check follows the handled mark: each mark queues one ci item, none 
   s.handle(plain.id, alice);
   assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci").length, 0, "no check held: nothing to set");
   const c = s.upsertCard({ kind: "change", title: "Held", source: { repo: "acme/widgets", pr: 8 } }).card;
-  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "red" } }), /failing or passing/);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "red" } }), /failing, passing or skipped/);
   assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "failing", sha: "nope" } }), /commit id/);
   const r = s.createRequest(alice, { title: "A request", problem: "P." }).card;
   assert.throws(() => s.upsertCard({ id: r.id, ci: { state: "failing" } }), /change card/);
@@ -134,6 +134,10 @@ test("a held check follows the handled mark: each mark queues one ci item, none 
   assert.deepEqual(items.map((i) => [i.state, i.by.email]), [["open", "alice@example.com"]]);
   s.handle(c.id, alice, false);
   assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci" && i.card === c.id).length, 1, "an open item is reused, not doubled");
+  const skipped = s.upsertCard({ kind: "change", title: "Built from a request", source: { repo: "acme/widgets", pr: 10 } }).card;
+  s.upsertCard({ id: skipped.id, ci: { state: "skipped" } });
+  s.handle(skipped.id, alice);
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci" && i.card === skipped.id).length, 0, "a check never held needs no item");
 });
 
 test("Design Desk's message names the person whose claimed item it works on", () => {
@@ -146,6 +150,12 @@ test("Design Desk's message names the person whose claimed item it works on", ()
   s.claim(it.id, "run-1");
   s.openThread(c.id, { agent: true }, { kind: "comment", text: "Passed the check." });
   assert.deepEqual(Object.values(s.db.threads).map((t) => t.messages[0].by), [{ agent: true }, { agent: true, for: { email: "alice@example.com" } }]);
+  // A claimed private ask on the same card is never the one named.
+  s.done(it.id, "run-1", "passed");
+  const priv = s.openPrivate({ email: "carol@example.com", role: "designer" }, { text: "Just between us?", context: { card: c.id } });
+  s.claim(priv.inbox.id, "run-2");
+  s.openThread(c.id, { agent: true }, { kind: "comment", text: "A public note." });
+  assert.deepEqual(Object.values(s.db.threads).filter((t) => t.kind === "comment").at(-1).messages[0].by, { agent: true });
 });
 
 test("a change card stays short, and a designer marks it handled", () => {
