@@ -66,7 +66,7 @@ served by the Desk server through the platform's Artifact API relay.
   Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions**,
   **Differences** (with Figma on, [below](#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
   handled, the default), **Handled**, **Auto handled** (shipped more than `change_auto_handled_days`, 14,
-  ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default: the next move is the viewer's own, by what they may do —
+  ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default for anyone who may vote, **Open** for the rest: the next move is the viewer's own, by what they may do —
   answer Design Desk, start the options, ask the team, vote (until they voted, the list's
   `voted_mine`), approve (not while a vote runs in Slack), read and send the spec, build the
   prototype again; never while Design Desk works), **Unread** (not opened by you), **Open**, **Closed**; Issues:
@@ -119,8 +119,9 @@ served by the Desk server through the platform's Artifact API relay.
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** strip under it (the design workspace keeps its
   button). An option's design (the mockup) and All elements start open, as in full mode. A
-  list's filters stay as they are drawn, with their counts and **Needs a designer** among them,
-  but as words, not buttons: nothing is clicked and the list holds every item of its page.
+  list's filters stay as they are drawn and filter as in full mode, **Needs a designer** among them.
+  A row's source line (`created:`, `from:`, `by:`, `based on:`) is only words: none of it filters,
+  opens or links; a click on it opens the row.
   Nothing else names a role a request needs: no **Needs a designer** line or heading. A request offers no rename. Switching the mode
   starts an option's sections again as they first open. The tab
   intros and How it works, its drawings included, leave out what it hides, and so does the bell:

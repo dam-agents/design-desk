@@ -215,6 +215,10 @@
   /* A value with its word filters the list: it keeps its colour and underlines on hover. */
   .row .prov > span:has(> .k) { pointer-events: auto; cursor: pointer; }
   .row .prov > span:has(> .k):hover > :not(.k) { text-decoration: underline; text-underline-offset: 2px; }
+  /* Simple mode: a row's source line is only words; a click on it opens the row like the rest of it. */
+  .row .prov.plain, .row .prov.plain * { pointer-events: none !important; cursor: default; }
+  .row .prov.plain > span:hover > :not(.k), .row .prov.plain .anchor:hover, .row .prov.plain a:hover { text-decoration: none; }
+  .row .prov.plain .anchor::after { content: none; }
   .pf-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 6px 6px 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); font-size: var(--fs-meta); }
   .pf-bar .k { color: var(--muted); } .pf-bar b { font-weight: 600; }
   .pf-bar [data-pf-clear] { font-size: var(--fs-ui); line-height: 1; padding: 2px 8px; color: var(--muted); }
@@ -284,8 +288,6 @@
   .filters .btn.on { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.08); }
   .filters .btn .n { background: transparent; padding: 0; min-width: 0; color: inherit; opacity: .7; font-weight: 500; }
   .filters .btn.on .n { opacity: 1; }
-  /* Simple mode: the filters only count, so they look the same but take no click. */
-  .filters.static .btn, .filters.static .btn:hover { cursor: default; background: none; color: var(--muted); }
   h2 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
   h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
   .lead { font-size: 16px; margin: 10px 0 18px; max-width: var(--measure); }
@@ -1976,7 +1978,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // When it came: Today, Yesterday, or its date (docs/desk.md → Where a card came from).
     // A screen or a part says when it was drawn, not when its card was made (docs/map.md → A screen card).
     const [stampK, stamp] = (c.kind === "screen" || c.kind === "element") && c.drawn ? ["drawn", c.drawn] : ["created", c.created];
-    return `<div class="prov">${stamp ? `<span><span class="k">${stampK}:</span> <span class="when" title="${esc(new Date(stamp).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }))}">${esc(dayWord(stamp))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b${machine ? ' title="Filed on its own by Design Desk, not by a person"' : ""}>${machine ? icon("auto") : ""}${esc(author === "you" ? "You" : author)}</b></span>` : ""}${planned}${auto}${from_}</div>`;
+    return `<div class="prov${simple() ? " plain" : ""}">${stamp ? `<span><span class="k">${stampK}:</span> <span class="when" title="${esc(new Date(stamp).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }))}">${esc(dayWord(stamp))}</span></span>` : ""}<span><span class="k">from:</span> <span class="src" data-k="${kind}">${icon(kind)}${src}</span></span>${author ? `<span><span class="k">by:</span> <b${machine ? ' title="Filed on its own by Design Desk, not by a person"' : ""}>${machine ? icon("auto") : ""}${esc(author === "you" ? "You" : author)}</b></span>` : ""}${planned}${auto}${from_}</div>`;
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
@@ -2383,7 +2385,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
           acts: [["<b>Ask</b> what is unclear", "ask"], ["<b>Add screenshots</b> when it has none", "screens"]] },
         { tone: "approved", text: "A designer deals with it: marks it handled or adjusts the design.",
           acts: [["<b>Mark handled</b>", "handle"], ["<b>Adjust the design</b>: it becomes a request", "follow-up"], ["<b>Add to presentation</b>", "queue"]] }],
-      tip: `Red: it has waited too long. ${simple() ? "The list counts what is" : "Filter by"} <b>Open</b>, <b>Handled</b>, <b>Auto handled</b> (shipped more than ${esc(S.me?.auto_days || 14)} days ago and never marked) or <b>Needs a designer</b>. ${LINK}` },
+      tip: `Red: it has waited too long. Filter by <b>Open</b>, <b>Handled</b>, <b>Auto handled</b> (shipped more than ${esc(S.me?.auto_days || 14)} days ago and never marked) or <b>Needs a designer</b>. ${LINK}` },
     requests: { about: simple() ? "from an idea to design options and a developer spec" : "from an idea to a live prototype and a developer spec",
       steps: [
         { tone: "", text: "Someone describes a problem in their own words.", acts: [["<b>+ New request</b>", "request"]] },
@@ -2578,7 +2580,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const KEPT = (k) => k !== "reqFor";
   for (const [k, ok] of Object.entries(FILTERS)) { const v = KEPT(k) && store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   // Requests open on Your turn: a browser that kept Open from before the filter was there starts on it once.
-  if (!store.get("desk-turn")) { store.set("desk-turn", "1"); if (S.reqFilter === "open") S.reqFilter = "turn"; }
+  if (!store.get("desk-turn")) { store.set("desk-turn", "1"); if (S.reqFilter === "open") { S.reqFilter = "turn"; store.del("desk-reqFilter"); } }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
   S.ws.notes = store.get("desk-notes") !== "0";
@@ -2591,9 +2593,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An earlier record of a reopened request: the request as it is, with what that send had.
   const sendOf = (id) => { const m = /^(C-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
   function visibleCards() {
-    // Simple mode shows a list's filters as words with counts, not buttons: the list holds everything.
-    if (simple() && S.tab === "new") return newCards("all");
-    if (simple() && S.tab === "requests" && !presenting()) return requestCards("all");
     if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "designs") return designCards(S.designFilter);
     // History: the weekly digests, the newest week first (docs/digest.md).
@@ -2662,10 +2661,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One filter: a segmented control, its choice marked; the key is S's, or a data- action.
   // A tab's or a filter's words, with its count in a quiet pill.
   const counted = (l, n) => `${esc(l)}${n ? ` <span class="n">${n}</span>` : ""}`;
-  // In simple mode a list's filters only count: words, not buttons, and nothing is filtered.
-  const seg = (key, opts, attr = "filter", value = S[key]) => attr === "filter" && simple()
-    ? `<div class="filters static" role="list">${opts.map(([, l, n, x = ""]) => `<span class="btn small" role="listitem">${counted(l, n)}${x}</span>`).join("")}</div>`
-    : `<div class="filters" role="group">${opts.map(([k, l, n, x = ""]) => `<button class="btn small ${value === k ? "on" : ""}" data-${attr}="${attr === "filter" ? `${key}:${k}` : k}" aria-pressed="${value === k}">${counted(l, n)}${x}</button>`).join("")}</div>`;
+  const seg = (key, opts, attr = "filter", value = S[key]) => `<div class="filters" role="group">${opts.map(([k, l, n, x = ""]) => `<button class="btn small ${value === k ? "on" : ""}" data-${attr}="${attr === "filter" ? `${key}:${k}` : k}" aria-pressed="${value === k}">${counted(l, n)}${x}</button>`).join("")}</div>`;
   // A filter too wide for the list fades at its edge.
   const markScrolls = (root) => root.querySelectorAll(".filters").forEach((f) => f.classList.toggle("scrolls", f.scrollWidth > f.clientWidth + 1 && f.scrollLeft + f.clientWidth < f.scrollWidth - 1));
   document.addEventListener("scroll", (e) => { if (e.target.matches?.(".filters")) markScrolls(e.target.parentElement); }, true);
@@ -2734,11 +2730,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (presenting()) { renderAgendaList(filters); return; }
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
-      new: simple() ? "No changes yet. They appear here soon after they ship." : S.newFilter === "designer" ? waiting : S.newFilter === "handled" ? "No change is marked handled yet." : S.newFilter === "auto" ? "No change is auto handled." : newCards("handled").length || newCards("auto").length ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
+      new: S.newFilter === "designer" ? waiting : S.newFilter === "handled" ? "No change is marked handled yet." : S.newFilter === "auto" ? "No change is auto handled." : newCards("handled").length || newCards("auto").length ? "Every change is handled." : "No changes yet. They appear here soon after they ship.",
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       designs: S.designFilter === "done" ? "Nothing is marked done yet." : "Nothing to build.",
-      requests: simple() ? (can("request") ? "No requests. Press New request to describe what you would change." : "No requests.") : S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "turn" ? "Nothing waits for you right now. Open shows every request still being worked on." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
+      requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "turn" ? "Nothing waits for you right now. Open shows every request still being worked on." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "differences" ? (S.figFilter === "closed" ? "Nothing is closed." : S.figFilter === "matches" ? "Nothing matches its Figma frame yet." : S.figFilter === "differs" && figmaCards("all").length ? "Nothing differs from Figma." : "Nothing is compared with Figma yet. Design Desk compares a screen, an element, a change or a request with its frame once it has a Figma link.")
         : S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
@@ -5481,7 +5477,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // A value in a row's source line: filter the list by it. A link in it still opens.
   document.addEventListener("click", (e) => {
-    const sp = !e.target.closest("a, button") && e.target.closest("#list .row.item .prov > span");
+    const sp = !simple() && !e.target.closest("a, button") && e.target.closest("#list .row.item .prov > span");
     if (!sp || !pfKey(sp)) return;
     e.preventDefault();
     S.pf = { view: pfView(), k: pfKey(sp), v: pfValue(sp) };
@@ -6459,6 +6455,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function start() {
     if (!bridge) { $("#detail").innerHTML = `<div class="panel">The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.</div>`; $("#main").classList.add("has-detail"); return; }
     S.me = await api("GET", "/api/me");
+    // Someone who may not even vote has no turn: with no filter picked, their Requests open on Open.
+    if (!can("vote") && !store.get("desk-reqFilter") && S.reqFilter === "turn") S.reqFilter = "open";
     applyMyTheme(); applyMySimple(); renderFigmaSwitch();
     // The ask button counts each page's messages, so the person's asks are read before it is drawn.
     await loadAsks().catch(() => {});
