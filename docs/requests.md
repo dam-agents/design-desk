@@ -82,7 +82,7 @@ The person deciding sees it on the card, and every later step builds on it.
    as a plain Link.
 
    Then `design desk github-sync --card <C-n>`: the Desk reads every issue and pull request
-   the research cites, so each link's preview shows its state, labels and latest comments
+   the research cites in a watched repository (`repos`; any other is `skipped`), so each link's preview shows its state, labels and latest comments
    about the design ([desk.md](desk.md) → GitHub on the Desk).
 
    Keep the full notes as an asset (`--kind report`) and set `research.asset`.
@@ -338,11 +338,16 @@ sent to developers too: the states document the approved design and change nothi
 4. Look at every state's shot (`design shot`), upload each (`--kind variant`). **The design
    catalog:** shoot the part alone in each state (`design shot <state.html> <dir> --element
    <selector>`, the part's CSS path in that page; the light picture, `<state>-element-light.png`,
-   named after the state's page so the states share one directory) and upload it (`--kind
-   image`); and say which use case of the brief the state serves: the ids of the card's
-   `issue_brief.stories` it covers, or, where the brief has no stories or none fits, the use
-   case in one plain sentence from the request's own words. A state no use case of the brief
-   asks for says so with neither. Then one `design desk upsert` with every option (each with
+   named after the state's page so the states share one directory — the picture is shot at three
+   screen pixels per CSS pixel, so a tile 380–420 px wide shows it sharp, or at two or one where a
+   sharper one would pass 700 KiB, under the Desk's 720 KiB) and upload it (`--kind
+   image`). **A refused shot** (exit 1, "more than 700 KiB … shoot a smaller part") writes no
+   picture: shoot a smaller part (a narrower selector), or send the state with its `selector`
+   and no `shot`; never upload a file from a refused run. Then say which use case of the brief
+   the state serves: the ids of the card's `issue_brief.stories` it covers, or, where the brief
+   has no stories or none fits, the use case in one plain sentence from the request's own
+   words. A state no use case of the brief asks for says so with neither. Then one
+   `design desk upsert` with every option (each with
    its `version`, Variants above) and, on this one, `states: [{id, version, name, how, part,
    asset, shot, selector, stories, use, element}]` (`version` only for a state already there): `id` short and
    stable (`hover`, `error`), `name` the state in plain words, `how` when it happens in one

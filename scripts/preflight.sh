@@ -294,15 +294,18 @@ watch_mode() {
   # The issues and pull requests the Desk's cards point at whose copy on the Desk is behind
   # GitHub: never read, or changed since (a comment changes it). One search per repository.
   # A ref never read whose last 3 reads failed (a mistyped number, a private repository) opens
-  # no run (docs/watch.md → Comments on GitHub).
-  local gh_due='[]' REFS="$DESK_DIR/github-refs.json" r since hits
+  # no run, nor does a ref outside the watched repositories: github-sync never reads one
+  # (docs/watch.md → Comments on GitHub).
+  local gh_due='[]' REFS="$DESK_DIR/github-refs.json" REFS_W r since hits watched
+  watched="$(printf '%s' "$REPOS" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "") | ascii_downcase | split("/") | .[-2:] | join("/") | select(test("/")))')"
   if [ -f "$REFS" ]; then
-    gh_due="$(jq -c '[.refs[] | select(.updated == null and (.tries // 0) < 3) | .key]' "$REFS")"
-    for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' "$REFS"); do
-      since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' "$REFS")"
+    REFS_W="$(jq -c --argjson w "$watched" '{refs: [.refs[] | select((.key | split("#")[0] | ascii_downcase) as $r | $w | index($r) != null)]}' "$REFS")"
+    gh_due="$(jq -c '[.refs[] | select(.updated == null and (.tries // 0) < 3) | .key]' <<<"$REFS_W")"
+    for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' <<<"$REFS_W"); do
+      since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' <<<"$REFS_W")"
       local hostargs=()
       hits="$(search "$r" "repo:$r updated:>=${since%%T*}")" || { log "$r: could not check its issues and pull requests for new comments — next run"; continue; }
-      gh_due="$(jq -c --arg r "$r" --slurpfile refs "$REFS" --argjson due "$gh_due" \
+      gh_due="$(jq -c --arg r "$r" --slurpfile refs <(printf '%s' "$REFS_W") --argjson due "$gh_due" \
         '$due + [.items[] as $i | $refs[0].refs[] | select(.key == ($r + "#" + ($i.number | tostring)) and .updated != null and $i.updated_at > .updated) | .key] | unique' <<<"$hits")"
     done
   fi
@@ -369,7 +372,8 @@ decisions_page() {
       | map(select(length >= 3)) | unique | sort_by(-length) | map(esc) | join("|")
       | if . == "" then "" else "(?<p>^|[^\\p{L}\\p{N}_])(?:" + . + ")(?![\\p{L}\\p{N}_])" end' "$DB" > "$PAGE.names" 2>/dev/null \
   || { rm -f "$PAGE.names"; DEC_BLOCKED="cannot read the names to mask from the roster or the Desk store at $DB"; log "decisions page: $DEC_BLOCKED — not published"; return; }
-  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
+  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf); a
+  # decision not approved there (withSide) is not published.
   # A row's email cell may list several addresses, each of them that person's (docs/config.md).
   roster="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
     | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
@@ -378,20 +382,21 @@ decisions_page() {
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub($nre[0]);
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def role: (.author.role // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+    def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
     def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
     def side: role as $r | (.origin.kind // "") as $k
       | if (["admin", "designer", "pm"] | index($r)) != null then "design"
         elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
+    def unapproved: (.origin.kind // "") as $k | side != "design" or (["pr", "issue", "commit", "doc"] | index($k)) != null;
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
     [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all
-    | ($all | map(select((.status // "active") == "active")) | sort_by(num)) as $on
+    | ($all | map(select((.status // "active") == "active" and (.approved != null or (unapproved | not)))) | sort_by(num)) as $on
     | ($all | map(select(.status == "revoked")) | sort_by(num)) as $off
     | ([ $all[] | .recorded, .at, .revoked.at?, (.history // [])[]?.at, .approved.at? ] | map(select(type == "string")) | max // "") as $last
     | "# Design decisions: \($name | line)",
       "",
-      "The design decisions this product'"'"'s team has made, kept by Design Desk. Follow every decision in force when you change what a person sees in the product: a screen, a part, a state, a word. A change that must go against one says so in its pull request, names the decision (D-<n>), and waits for a designer: never work around one silently. \"Not approved yet\" means a designer has not confirmed it; it still holds. A revoked decision binds nothing: it is listed so that an old reference to it makes sense.",
+      "The design decisions this product'"'"'s team has made, kept by Design Desk. Follow every decision in force when you change what a person sees in the product: a screen, a part, a state, a word. A change that must go against one says so in its pull request, names the decision (D-<n>), and waits for a designer: never work around one silently. A revoked decision binds nothing: it is listed so that an old reference to it makes sense.",
       "",
       "In force: \($on | length) · Revoked: \($off | length) · Last change: \(if $last == "" then "none" else ($last | day) end)",
       "",
@@ -403,8 +408,7 @@ decisions_page() {
           | "### \(.id) · \((.concepts // []) | map(line) | join(", "))", "", (.text | line), "",
             (if ((.why // "") | line) != "" then "Why: \(.why | line)", "" else empty end),
             ("Decided \(.at // .recorded // "" | day)\(if who then " by \(who)" else "" end)\(if from then ", from \(from)" else "" end)."
-              + (if (.replaces // []) | length > 0 then " Replaces \(.replaces | join(", "))." else "" end)
-              + (if side != "design" and .approved == null then " Not approved yet." else "" end)),
+              + (if (.replaces // []) | length > 0 then " Replaces \(.replaces | join(", "))." else "" end)),
             "")
       else "No decision is in force yet.", "" end),
       (if ($off | length) > 0 then

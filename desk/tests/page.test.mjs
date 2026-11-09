@@ -23,6 +23,37 @@ test("nothing on the page submits a form", () => {
   assert.doesNotMatch(page, /addEventListener\("submit",\s*guard\(/);
 });
 
+// md()'s inline rules (docs/desk.md → Writing on the Desk), run on their own: a construct
+// never lands inside another's attribute, so no person's text becomes markup.
+test("markdown text never becomes an attribute or a handler", () => {
+  const esc = page.match(/const esc = [^\n]+/)[0];
+  const rules = page.match(/const INLINE = [\s\S]*?\n  };\n/)[0];
+  const inline = new Function(`${esc}\n${rules}\nreturn inline;`)();
+  const out = inline("![[x](asset:A-1)](https://a/src/onerror=alert(1)//)");
+  assert.doesNotMatch(out, /<a\b/, "the link stays text after the picture");
+  assert.equal((out.match(/"/g) || []).length % 2, 0);
+  assert.match(out, /<img alt="\[x" data-asset="A-1" \/>/);
+  assert.equal(inline('**a [b](https://x.test/"q) c** `<i>`'), '<b>a <a href="https://x.test/&quot;q" target="_blank" rel="noopener noreferrer">b</a> c</b> <code>&lt;i&gt;</code>');
+  assert.equal(inline("[**b**](https://x.test)"), '<a href="https://x.test" target="_blank" rel="noopener noreferrer"><b>b</b></a>');
+});
+
+// A conversation's controls follow `may`, which the server sends with each one: a control the
+// thread routes refuse for this reader is never drawn (docs/desk.md → Roles).
+test("a conversation shows Reply, Answer, Mark done and Reopen only to a reader who may use them", () => {
+  const mayIn = new Function(`${page.match(/const mayIn = [^\n]+/)[0]}\nreturn mayIn;`)();
+  assert.deepEqual([mayIn({ may: { reply: false, resolve: true } }, "reply"), mayIn({ may: { reply: true, resolve: false } }, "resolve"), mayIn({ may: { reply: true } }, "reply")], [false, false, true]);
+  const controls = { "data-send-reply": "reply", "data-send-form": "reply", "data-reopen": "reply", "data-resolve": "resolve" };
+  for (const [attr, move] of Object.entries(controls)) {
+    const at = [...page.matchAll(new RegExp(`${attr}="\\$\\{esc\\(th\\.id\\)\\}"`, "g"))].map((m) => m.index);
+    assert.ok(at.length > 0, attr);
+    // The guard opens the very template the control is in: no other backtick between them.
+    for (const i of at) {
+      const opened = page.slice(0, page.lastIndexOf("`", i) + 1);
+      assert.ok(opened.endsWith(`mayIn(th, "${move}") ? \``), `${attr} at offset ${i} is drawn without mayIn(th, "${move}") right before it`);
+    }
+  }
+});
+
 test("the new option dialog sends on its close, as the page's other dialogs do", () => {
   const f = page.match(/<dialog id="option-dialog">[\s\S]*?<\/dialog>/)?.[0];
   assert.ok(f, "the page has the option-dialog");
@@ -772,6 +803,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
     assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
     assert.match(await desk.textContent("#detail .elements"), /All elements[\s\S]*Send button[\s\S]*1 state/);
+    // A tile keeps white space around its picture, inside the same 192 px.
+    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["10px", "10px", 192], "a tile pads its picture");
     await desk.click('#detail [data-el="part-send-button"]');
     await desk.waitForSelector("#element-dialog[open] .catalog");
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
@@ -1869,6 +1902,10 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.match(await desk.$eval(".ask-panel header .chip", (c) => c.title || c.dataset.tip || ""), /Only you and Design Desk see these.*nothing goes to Slack/, "it says only you see it");
   assert.equal(await desk.$eval(".ask-body", (b) => Math.round(b.scrollTop + b.clientHeight) >= b.scrollHeight - 1), true, "it opens on the newest message");
   assert.equal(await desk.$$eval("[data-ask-starter]", (x) => x.length), 5, "five starters");
+  // One size for both sides: the person's bubble once inherited 12px from the header's `.me` chip
+  // while the answer read at 14px.
+  const sizes = await desk.$$eval(".ask-msg", (x) => x.map((n) => getComputedStyle(n).fontSize));
+  assert.deepEqual(sizes, ["14px", "14px"], "a question and its answer read at the same size");
   await desk.click('[data-ask-starter="fixed"]');
   await desk.waitForFunction(() => posted.length === 1);
   assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
@@ -1876,6 +1913,16 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posted.length === 2);
   assert.deepEqual(await desk.evaluate(() => [posted[1].body.text, posted[1].body.starter]), ["Is the bar too thin?", null], "a question of their own");
+  // A redraw replaces the box; it keeps the caret and the focus of whoever was typing in it. The
+  // card redraws on a hashchange, as when an answer lands; the box must be a new one after it.
+  await desk.fill("#ask-text", "Typing while an answer lands");
+  await desk.focus("#ask-text");
+  await desk.evaluate(() => { const t = document.querySelector("#ask-text"); t.setSelectionRange(9, 9); t.dataset.before = "1"; });
+  await desk.evaluate(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+  await desk.waitForFunction(() => { const t = document.querySelector("#ask-text"); return t && !t.dataset.before; });
+  assert.equal(await desk.evaluate(() => document.activeElement?.id), "ask-text", "the box keeps the focus");
+  assert.equal(await desk.evaluate(() => document.querySelector("#ask-text").selectionStart), 9, "and the caret");
+  assert.equal(await desk.inputValue("#ask-text"), "Typing while an answer lands", "and what was typed");
   await desk.click('[data-brief="T-2"]');
   assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
