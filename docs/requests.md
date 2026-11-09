@@ -149,8 +149,8 @@ The person deciding should know it before a single variant exists.
    wires when building the design, one plain line each, which the spec carries under **What a
    developer must add** and which never stops the request or its live prototype). The Desk names every verdict in the request's steps (no label
    beside the title), says in the state's ⓘ what it means for the next step, and folds
-   `cannot` under the status. With options drawn and no live prototype to build
-   next, the request's next step is **Contact a developer**: it opens `cannot`, where **Copy a
+   `cannot` under the status. At Options drawn, and at Team feedback with no live prototype
+   to build next, the request's next step is **Contact a developer**: it opens `cannot`, where **Copy a
    question for a developer** copies a link to the request, its state and these parts. Once a
    person opened it, their step moves on to the next step of the process: at Options drawn
    **Ask for feedback** (never Approve), at Team feedback **Approve**, or **Send to Slack…** for
@@ -179,7 +179,8 @@ Compare with the product); a note from **Work into the design** is a `revise` li
 
 - **What the person chose** in New request: `request.vision` is how they picture it, so one
   option follows it as closely as the boundary allows and the others are real alternatives;
-  `request.skills` (`{name: on}`) — a skill switched on is used for this request's options
+  `request.skills` (`{name: on}`, switches folded under **What Design Desk uses for the options**,
+  closed each time the dialog opens) — a skill switched on is used for this request's options
   (read its `SKILL.md`), one switched off is not, even where it would run by default; a
   skill not listed follows the usual rules. Say on the card when a choice could not be kept.
 - **Carried options** — a request made from an approved one (`request.from` a request) may

@@ -48,8 +48,10 @@ served by the Desk server through the platform's Artifact API relay.
   When a dialog's action fails, the dialog opens again with what the person typed or picked.
   While Design Desk works, the step pill's next move is **Wait**, with a few words on what it does;
   while it waits on a person it is **Answer**, the questions below. The state's mark pulses only
-  while Design Desk works, never while it waits on a person. An open request with no other move
-  shows **Wait** too.
+  while Design Desk works, never while it waits on a person. An open request with no move of the
+  viewer's own names whom it waits on: **Wait for a designer** (to start or ask, to build again, to
+  send the spec), **Wait for a developer** (a For Developers spec), **Wait for the team** (Team
+  feedback); a plain **Wait** is Design Desk's turn.
   A dialog with something typed, picked or added in it asks before Escape or a click outside
   closes it (its Cancel closes it at once); a picture dropped on it is added as if chosen.
   The browser's Back leaves the Desk: every view keeps the menu or its own way back on
@@ -410,7 +412,9 @@ roster.
 
 **Requests** has two tabs, **For Designers** and **For Developers** (with **Presentation**
 beside them in full mode); each request is in one (the card's `size: {small, by, at}`,
-`small: true` for developers; the list's `for`). Where it starts:
+`small: true` for developers; the list's `for`). The page opens Requests on the viewer's own tab
+every visit — For Developers for a developer or a lead developer, For Designers for everyone
+else; another tab picked holds until the page is left, and the browser does not keep it. Where it starts:
 
 - **Filed on the Desk**: New request has a **For Designers / For Developers** switch,
   For Designers by default (`POST /api/requests {audience}`), for the roles that move a request
@@ -475,8 +479,16 @@ no Environment outlives its request. Decisions recorded from it stay.
 ## A request's state in the list
 
 In both modes, each request in the list shows its state as a dot in the row's top-right corner,
-as large as the dot on the request's page and level with the title's first line, each state in a colour of
-its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
+as large as the dot on the request's page and level with the title's first line, in the colour of
+whom the request waits on — the same colour as the state on its page: **blue** Design Desk,
+**amber** the team's votes or tries (Team feedback, Live — try it), **magenta** a person's move
+(Checked: start the options; Options drawn: ask the team; No options, every option taken out at
+Options drawn: draw them again; a question to answer; a prototype that
+failed or was switched off; a spec draft to send); green sent to developers, slate decided, red
+closed. It pulses only while Design Desk works on the request, whatever the step (then blue), and
+stays lit otherwise. A request is never blue with a move of a person's own in its step pill: once
+Design Desk's work is done, Checking reads **Checked** and Drawing options reads **Options drawn**. Team feedback
+reads **Team feedback (finished)** once its vote in Slack ended and no other runs. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
 dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`
@@ -859,7 +871,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
   they fine-tune the options, until its author, a designer, a PM, a developer or an admin presses **Ask for
-  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Options drawn and Team feedback Build a live prototype, else Contact a developer until you opened it; then at Options drawn Ask for feedback, never Approve, and at Team feedback Approve, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Options drawn Contact a developer until you opened it, then Ask for feedback, never Approve, and no Build a live prototype anywhere, ⋯ included; at Team feedback Build a live prototype, else Contact a developer until you opened it, then Approve, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and
