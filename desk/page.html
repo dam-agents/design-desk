@@ -58,7 +58,7 @@
   nav .main .count { background: var(--accent); color: var(--accent-ink); line-height: 18px; font-weight: 600; }
   nav .main .count.warn { background: var(--warn); color: var(--bg); }
   .grow { flex: 1; }
-  .me { color: var(--muted); font-size: 12px; }
+  .me-menu .me { color: var(--muted); font-size: 12px; }
   /* Your name opens your menu: How it works, simple mode, day or night mode. */
   details.me-menu > summary.me { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; }
   details.me-menu > summary.me:hover, details.me-menu[open] > summary.me { background: var(--soft); color: var(--ink); }
@@ -342,7 +342,7 @@
   .eltile:hover { border-color: var(--accent); }
   .eltile .elopen { display: grid; grid-template-rows: auto auto 1fr; gap: 6px; text-align: left; padding: 8px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; min-width: 0; }
   .eltile .elcat { padding: 0 8px 8px; } .eltile .elcat .anchor { font-size: var(--fs-meta, 12px); }
-  .eltile .elpic { display: block; height: 192px; overflow: hidden; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
+  .eltile .elpic { display: block; height: 192px; padding: 10px; box-sizing: border-box; overflow: hidden; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
   .eltile .elpic img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .eltile .elpic iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .eltile .elname { font-weight: 600; font-size: var(--fs-ui, 13px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -558,7 +558,7 @@
   .ask-body { flex: 1; overflow: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
   .ask-body .hint { line-height: 1.5; margin: 0; }
   .ask-about { align-self: center; font-size: 11.5px; color: var(--muted); background: var(--soft); padding: 2px 10px; border-radius: 999px; margin: 6px 0 2px; }
-  .ask-msg { padding: 8px 12px; border-radius: 14px; max-width: 85%; }
+  .ask-msg { padding: 8px 12px; border-radius: 14px; max-width: 85%; font-size: var(--fs-ui); line-height: 1.5; }
   .ask-msg.me { align-self: flex-end; background: var(--ink); color: var(--panel); border-bottom-right-radius: 4px; }
   .ask-msg.me a { color: inherit; }
   .ask-row { display: flex; gap: 8px; align-items: flex-start; align-self: flex-start; max-width: 92%; }
@@ -3204,7 +3204,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (was.open) root.querySelector(".ask-fab")?.classList.add("enter");
       return;
     }
-    const keep = $("#ask-text")?.value || "";
+    // A redraw replaces the box: keep what was typed, and the focus and caret of whoever was in it.
+    const box = $("#ask-text"), keep = box?.value || "";
+    const hadFocus = document.activeElement === box, caret = box ? box.selectionStart : null;
     const answerOf = (th) => [...th.messages].reverse().find((m) => m.by?.agent);
     const size = askSize();
     root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
@@ -3220,6 +3222,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
       </footer></section>`;
     $("#ask-text").value = keep;
+    if (hadFocus) { const t = $("#ask-text"); t.focus(); if (caret !== null) t.setSelectionRange(caret, caret); }
     if (!was.open) root.querySelector(".ask-panel").classList.add("enter");
     else if (was.ctx === ctxKey && said > was.said) for (const m of [...root.querySelectorAll(".ask-body .ask-msg")].slice(-(said - was.said))) (m.closest(".ask-row") || m).classList.add("new");
     // Like any chat: it opens on the newest message, and again once its pictures are in.
