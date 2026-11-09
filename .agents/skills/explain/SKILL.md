@@ -36,7 +36,8 @@ A text answers the one question its reader has, and stops:
 | Triage reason, Slack reply | What was decided, and what happens next? | one or two sentences |
 | Under the hood | Would the product have to work differently? | a short text, never a list |
 | Answer, private ask | Their own question | the answer in one sentence, then the layers below |
-| Digest, presentation brief | What happened, and what waits for a decision? | one line per item |
+| Digest | What happened this week, and what waits for a decision? | one line per item |
+| Presentation brief | What do we decide, and between what? | three to six lines, the decision asked and its options last |
 | Developer spec | What do I build? | its sections ([docs/handoff.md](../../../docs/handoff.md) step 2) |
 
 - **Every sentence earns its place**: it changes what the reader does or knows. A sentence
@@ -100,9 +101,10 @@ A change card takes only the layers the reader acts on; an answer usually needs 
 
 ## Grounding — never invent a reason
 
-Every "why" comes from somewhere you can name. Where the text has a field for it (a card
-section's `source`, a research link), the field names it and the text does not say it again.
-Anywhere else (an answer, a triage reason, a reply) you name it in the text:
+Every "why" comes from somewhere you can name. Where a field ties the text to
+its source (a card section's `source`), the field names it and the text does not say it again.
+Anywhere else (an answer, a triage reason, a reply, a research paragraph, whose `links` are
+one list for the whole summary) you name it in the sentence:
 
 | Source | Say |
 | --- | --- |
