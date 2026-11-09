@@ -12,6 +12,16 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
 
+## 1.71.3 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.71.2 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
 ## 1.71.1 — 2026-11-09
 
 **Upgrade:**

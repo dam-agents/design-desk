@@ -152,8 +152,9 @@ The person deciding should know it before a single variant exists.
    `cannot` under the status. With options drawn and no live prototype to build
    next, the request's next step is **Contact a developer**: it opens `cannot`, where **Copy a
    question for a developer** copies a link to the request, its state and these parts. Once a
-   person opened it, their step moves on to the one it would be without it (**Approve**, or
-   **Send to Slack…** for someone who cannot approve): the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+   person opened it, their step moves on to the next step of the process: at Options drawn
+   **Ask for feedback** (never Approve), at Team feedback **Approve**, or **Send to Slack…** for
+   someone who cannot approve: the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request

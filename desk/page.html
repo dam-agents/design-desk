@@ -1897,12 +1897,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const JOB = { watch: "hourly check", digest: "weekly digest", issues: "daily issue read", map: "live product", catalog: "source code" };
   // A request's head, as on the prototype: who asked, their role, where it came from (with its
   // icon) and when; the request's own words fold under it.
-  function askHead(c, bug) {
+  function askHead(c) {
     const p = origin(c, { parts: true });
     const name = p.author ? (p.author === "you" ? "You" : p.author) : "Someone";
     // Who and where, in words: no role beside the name, the source as text as in the list's rows.
     return `<span class="face" aria-hidden="true">${esc((name.replace(/^[^A-Za-z0-9]+/, "")[0] || "?").toUpperCase())}</span>
-      <span class="ask-who"><b>${esc(name)}</b> ${bug ? "reported" : "asked"}, from</span>
+      <span class="ask-who"><b>${esc(name)}</b> asked, from</span>
       <span class="prov"><span class="src" data-k="${p.kind}">${icon(p.kind)}${p.src}</span>${p.auto}${p.parent}</span>${c.created ? `<span class="ask-when">· ${esc(when(c.created))}</span>` : ""}`;
   }
   const icon = (k) => `<svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
@@ -2441,7 +2441,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     S.folds = { card: c.id, brief: again, made: again };
     if (!again) store.set(SEEN_KEY, JSON.stringify([...seen, c.id].slice(-500)));
   }
-  const briefToggle = (folded, kind) => { const what = kind === "made" ? "what Design Desk found" : kind ? "report" : "request";
+  const briefToggle = (folded, kind) => { const what = kind === "made" ? "what Design Desk found" : "request";
     return `<button class="brief-toggle" data-brief-toggle="${kind === "made" ? "made" : kind ? "bug" : ""}" title="${kind === "made" ? "Fold or unfold what Design Desk found" : "Fold or unfold what was asked"}">${folded ? (kind === "made" ? `Show ${what}` : `Show the whole ${what}`) : `Hide ${kind === "made" ? what : `the ${what}`}`}</button>`; };
   // The brief folds and unfolds in a short glide, so what stands under it moves, not jumps;
   // folded from below, the page brings the brief's top back into view.
@@ -3768,10 +3768,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // them (simple mode names no role a request needs). Once you opened them the step moves on,
       // as if there had been none: the spec carries them to developers when the request is approved.
       const dev = !simple() && (c.triage?.cannot || []).length && !devAsked(c) ? `<button class="step-next" data-dev-ask title="Opens the parts a design change cannot do, with a question for a developer to copy">Contact a developer</button>` : "";
-      // The pill always holds a move on: with no prototype and nothing left to ask a developer,
-      // the next step is approval; for someone who cannot approve, asking the team in Slack.
+      // The pill holds the move to the next step of the process. At Options drawn that is Team
+      // feedback (Ask for feedback), never Approve; at Team feedback, with no prototype and
+      // nothing left to ask a developer, it is approval, or for someone who cannot approve, Slack.
+      const ask = (can("revise") || filedIt(c)) && c.team_feedback?.state !== "open" ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on.">Ask for feedback</button>` : "";
       const step = design && canBuild() ? sb("build", "Build a live prototype") : dev
-        || (canApprove(c) ? sb("approve", "Approve") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
+        || (c.status === "variants" ? ask : canApprove(c) ? sb("approve", "Approve") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
         // The green Approve stays in the row even when the pill's next move is Approve too.
         step, buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
@@ -4126,7 +4128,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${live(c) ? renderPrototype(c) : ""}
       </div>
       <div class="top2">
-      <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c, bug)}</div><div class="brief-body">
+      <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c)}</div><div class="brief-body">
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
