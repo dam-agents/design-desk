@@ -95,8 +95,9 @@ All equal → report "up to date".
 
 **Migration** (`from` = adopted, `to` = checked-out):
 
-1. Read the `CHANGELOG.md` **Upgrade** blocks of every version in `(from, to]` before you
-   run any step. A newer block can replace an older block's steps (a corrected order): run
+1. `bash "$HOME/scripts/upgrade-steps.sh"` prints the `CHANGELOG.md` **Upgrade** blocks of
+   every version in `(from, to]`, oldest first, and the steps they repeat, each to run once:
+   read its output, not the whole changelog, before you run any step. A newer block can replace an older block's steps (a corrected order): run
    the newer steps in their place. Then apply the blocks oldest first, with one exception:
    when the crossed blocks restart the Desk server and republish the Desk page, restart the
    server once before any republish, then republish the page once, whichever blocks name

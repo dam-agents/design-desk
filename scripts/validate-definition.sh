@@ -291,6 +291,18 @@ EOF
 done < <(find . -name '*.md' -not -path './.git/*' -not -path './work/*' -not -path '*/node_modules/*' | sort)
 [ "$dead" -eq 0 ] && pass "no dead relative links in any .md file"
 
+# ------------------------------------------------------------ read_set docs ----
+# A worklist's read_set is built in preflight.sh; CLAUDE.md's map says when each doc is
+# read. Every file a read_set names exists, and every doc among them has its row in the map.
+if [ -f scripts/preflight.sh ] && [ -f CLAUDE.md ]; then
+  rs_bad=0
+  for p in $(grep -oE '"(docs/[a-z-]+\.md|\.agents/skills/[a-z-]+/SKILL\.md)"' scripts/preflight.sh | tr -d '"' | sort -u); do
+    [ -f "$p" ] || { fail "preflight.sh names $p in a read_set, and no such file exists"; rs_bad=$((rs_bad + 1)); continue; }
+    case "$p" in docs/*) grep -qF "($p)" CLAUDE.md || { fail "preflight.sh reads $p, and CLAUDE.md's map of docs/ has no row for it"; rs_bad=$((rs_bad + 1)); };; esac
+  done
+  [ "$rs_bad" -eq 0 ] && pass "every read_set file exists and every doc has its row in CLAUDE.md's map"
+fi
+
 # ----------------------------------------------------- sentinel consistency ----
 if [ -f CLAUDE.md ] && [ -f ONBOARDING.md ]; then
   s_claude="$(grep -oE '\.[a-z0-9-]+-onboarded' CLAUDE.md | head -1)"

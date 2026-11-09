@@ -13,7 +13,9 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 
 - `display_name` (`Design Desk`) — the Desk's title.
 - `repos` — comma-separated `[host/]owner/name` the watch reads (default `none`: no watch);
-  `watch_since` — ISO time, written at onboarding: a PR merged earlier never gets a card;
+  `watch_since` — ISO time, written at onboarding: a PR merged earlier never gets a card
+  (the hourly search starts later by itself, two days before the last pass that left nothing
+  behind or at the oldest change still due: `work/.watch-cursor`);
   `max_changes_per_run` (`10`); `watch_paths` — UI globs for a repo without a profile;
   `watch_open_prs` (`enabled`) — open PRs get cards too; `ci_gate` (`disabled`) — `enabled`:
   an open PR whose card needs a designer fails Design Desk's check on GitHub until a designer

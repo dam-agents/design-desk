@@ -2374,6 +2374,23 @@ test("a merged change that builds a sent design marks it done, unless a person t
   assert.equal(s.getCard(two.id).built.by.email, bob.email);
 });
 
+test("a write on a card renews the claims on it; a claim on another card keeps its time", () => {
+  let now = Date.UTC(2026, 9, 1, 8);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const one = s.createRequest(alice, { problem: "One." }), two = s.createRequest(alice, { problem: "Two." });
+  s.claim(one.inbox.id, "run-1"); s.claim(two.inbox.id, "run-2");
+  const at = s.item(one.inbox.id).claimed_at;
+  now += 10 * 60e3;
+  s.renewClaims({ card: one.card.id });
+  assert.notEqual(s.item(one.inbox.id).claimed_at, at, "the lease starts again");
+  assert.equal(s.item(one.inbox.id).claimed_started, at, "since when it is worked on stays");
+  assert.equal(s.item(two.inbox.id).claimed_at, at);
+  now += 10 * 60e3;
+  assert.throws(() => s.claim(one.inbox.id, "run-3", { takeover: true }), /claimed by run-1/, "20 minutes after the claim, 10 after the write: still held");
+  assert.equal(s.claim(two.inbox.id, "run-3", { takeover: true }).item.claimed_by, "run-3", "no write for 20 minutes: taken over");
+  s.renewClaims({ thread: "T-999" }); s.renewClaims({});
+});
+
 test("People: an added person counts as opened once they loaded the Desk, whatever the letters' case", () => {
   const s = fresh();
   const admin = { email: "lee@example.com", role: "admin" };

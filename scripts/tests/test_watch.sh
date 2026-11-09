@@ -113,4 +113,33 @@ printf -- '- repos: none\n' > "$WORK_DIR/CONFIG.md"
 assert "repos none is quiet" '.nothing_to_do == true and (.error == null)' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 printf -- '- repos: acme/widgets\n' > "$WORK_DIR/CONFIG.md"
 assert "missing watch_since is an error" '.error | test("watch_since")' "$(bash "$ROOT/scripts/preflight.sh" watch)"
+# The merged search narrows. After a pass that left nothing behind, the next one starts at the
+# oldest merge still due; with nothing due, two days before that pass; a moved watch_since
+# starts it over.
+printf -- '- repos: acme/widgets\n- watch_since: 2026-10-01T00:00:00Z\n- max_changes_per_run: 50\n' > "$WORK_DIR/CONFIG.md"
+rm -f "$WORK_DIR/CHANGES.tsv" "$WORK_DIR/.watch-cursor" "$DESK_DIR/github-refs.json"
+printf '{"incomplete_results":false,"items":[]}' > "$STUB_DIR/open.json"; rm -f "$STUB_DIR/issues.json"
+cat > "$STUB_DIR/search.json" <<'JSON'
+{"incomplete_results":false,"items":[
+ {"number":11,"title":"Agents list shows spend","html_url":"https://github.com/acme/widgets/pull/11","user":{"login":"alice"},"pull_request":{"merged_at":"2026-10-20T10:00:00Z"}}]}
+JSON
+merged_q() { grep 'is:merged' "$STUB_DIR/gh.calls" | tail -1 | grep -oE 'merged:>=[0-9-]+'; }
+# A candidate whose files could not be read (no stub for #16) has no ledger row yet: the
+# pass moves no cursor, so the change cannot age out of the search window unread.
+cp "$STUB_DIR/search.json" "$STUB_DIR/search.keep"
+jq '.items += [{"number":16,"title":"Unread","html_url":"https://github.com/acme/widgets/pull/16","user":{"login":"erin"},"pull_request":{"merged_at":"2026-10-21T10:00:00Z"}}]' "$STUB_DIR/search.keep" > "$STUB_DIR/search.json"
+bash "$ROOT/scripts/preflight.sh" watch >/dev/null
+assert "a pass that could not read a candidate's files writes no cursor" '. == "none"' "$([ -e "$WORK_DIR/.watch-cursor" ] && echo '"written"' || echo '"none"')"
+mv "$STUB_DIR/search.keep" "$STUB_DIR/search.json"
+bash "$ROOT/scripts/preflight.sh" watch >/dev/null
+assert "without a cursor the search starts at watch_since" '. == "merged:>=2026-10-01"' "$(merged_q | jq -R .)"
+assert "a pass that deferred nothing writes the cursor" '. == "2026-10-01T00:00:00Z"' "$(sed -n 2p "$WORK_DIR/.watch-cursor" | jq -R .)"
+bash "$ROOT/scripts/preflight.sh" watch >/dev/null
+assert "a change still due holds the search at its merge day" '. == "merged:>=2026-10-20"' "$(merged_q | jq -R .)"
+for n in 11; do bash "$ROOT/scripts/ledger.sh" skip acme/widgets "$n" "test" >/dev/null 2>&1; done
+bash "$ROOT/scripts/preflight.sh" watch >/dev/null
+assert "with nothing due the search starts two days before the last clean pass" '. == ("merged:>=" + (now - 172800 | strftime("%Y-%m-%d")))' "$(merged_q | jq -R .)"
+printf -- '- repos: acme/widgets\n- watch_since: 2026-09-01T00:00:00Z\n- max_changes_per_run: 50\n' > "$WORK_DIR/CONFIG.md"
+bash "$ROOT/scripts/preflight.sh" watch >/dev/null
+assert "a moved watch_since starts the search over" '. == "merged:>=2026-09-01"' "$(merged_q | jq -R .)"
 finish

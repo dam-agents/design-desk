@@ -212,11 +212,11 @@ async function viewerRoute(req, res, url, who) {
     return send(res, 200, { decisions: (pending ? all.filter((d) => d.unapproved) : all).slice(0, 200) });
   }
   if (m === "GET" && p[1] === "decisions" && p[2]) { const r = store.getDecision(p[2]); return send(res, 200, { ...r, decision: withSide(r.decision) }); }
-  // Opening an item marks it read for this person alone (docs/desk.md → Read and unread). It is
+  // Opening an item marks it read for this person alone (docs/desk-page.md → Read and unread). It is
   // outside the write budget: browsing many items must not use up what comments and votes need,
   // and it writes at most once per person and item.
   if (m === "POST" && p[1] === "cards" && p[3] === "read" && !p[4]) return send(res, 200, store.full() ? { read: false } : store.markRead(p[2], actor));
-  // The bell: what happened lately, for this person (docs/desk.md → Notifications). A click on a
+  // The bell: what happened lately, for this person (docs/desk-page.md → Notifications). A click on a
   // row marks it read, Mark as read all of them; like reading an item, outside the write budget.
   if (m === "GET" && p[1] === "notifications") return send(res, 200, store.notifications(actor));
   if (m === "POST" && p[1] === "notifications" && p[2] === "read") return send(res, 200, store.full() ? { read: false } : store.markNoteRead(actor, url.searchParams.get("id")));
@@ -228,7 +228,7 @@ async function viewerRoute(req, res, url, who) {
     if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
   // A person's own day or night mode and simple mode, kept for them on every device
-  // (docs/desk.md → The menu); only the keys sent change.
+  // (docs/desk-page.md → The menu); only the keys sent change.
   if (m === "POST" && p[1] === "prefs") {
     if (!b || typeof b !== "object" || Array.isArray(b)) throw new DeskError(400, "prefs must be an object");
     return send(res, 200, store.setPrefs(actor, Object.fromEntries(["theme", "simple", "figma"].filter((k) => Object.hasOwn(b, k)).map((k) => [k, b[k] ?? null]))));
@@ -248,7 +248,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "threads") {
     need(b.kind === "question" ? "ask" : b.kind === "change" ? "change" : "comment");
     const { kind, text, anchor } = b;
-    // A question for the designer, from Designs (docs/desk.md → Designs).
+    // A question for the designer, from Designs (docs/desk-page.md → Designs).
     const dev = b.dev === true && can(who.deskRole, "designs", s.prototypeRoles);
     return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor, dev }), s, who));
   }
@@ -385,6 +385,9 @@ async function agentRoute(req, res, url) {
   if (m === "GET" && p[1] === "councils") return send(res, 200, { council: store.findCouncil(String(url.searchParams.get("ts") || "")) });
   if (m === "GET" && p[1] === "findings") return send(res, 200, { finding: store.findFinding(String(url.searchParams.get("ref") || "")) });
   const b = m === "GET" ? {} : await body(req);
+  // Work on a card keeps the claims on it alive: every agent write that names a card, an asset
+  // of it or a thread of it renews the lease of the items claimed on it (docs/desk.md → Claims).
+  if (m === "POST" && ["cards", "assets", "threads"].includes(p[1])) store.renewClaims({ card: p[1] === "cards" ? p[2] || b.id : p[1] === "assets" ? b.card : null, thread: p[1] === "threads" ? p[2] : null });
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
   if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));

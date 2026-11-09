@@ -79,7 +79,7 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
     case "decide": return shaper;
     case "build": return prototypeRoles.includes(role);
     case "people": return role === "admin";
-    // Designs: what was approved and sent, for developers to build and mark done (docs/desk.md → Designs).
+    // Designs: what was approved and sent, for developers to build and mark done (docs/desk-page.md → Designs).
     case "designs": case "built": return dev || role === "admin";
     default: return false;
   }
@@ -415,19 +415,19 @@ export class Store {
         screens: (c.screens || []).length, variants: (c.variants || []).length,
         open_threads: (c.threads || []).filter((t) => sees(this.db.threads[t], viewer) && this.db.threads[t]?.state !== "resolved").length,
         acked: viewer ? Boolean(c.acks?.[viewer]) : false, handled: c.handled?.at || null,
-        // Whether this person has opened it: the list shows an unopened item's title bold (docs/desk.md → Read and unread).
+        // Whether this person has opened it: the list shows an unopened item's title bold (docs/desk-page.md → Read and unread).
         read: viewer ? Boolean(own(this.db.reads, viewer)?.[c.id]) : true,
         // Closed with a decision: the list shows it in the decided ink, as the page does.
         decided: c.kind === "request" && c.status === "declined" && c.decided?.at || null,
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
-        // A spec draft waits on a person: the list's dot reads it as the page does (docs/desk.md → A request's state in the list).
+        // A spec draft waits on a person: the list's dot reads it as the page does (docs/desk-page.md → A request's state in the list).
         spec: c.spec ? { review: c.spec.review || null } : null,
-        // A Slack vote on its options: running, or one that ended (the list's Your turn, docs/desk.md → Pages and filters).
+        // A Slack vote on its options: running, or one that ended (the list's Your turn, docs/desk-page.md → Pages and filters).
         voting: (c.polls || []).some((x) => x.state === "open"), voted: (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
         for: c.kind === "request" ? (c.size?.small ? "developers" : "designers") : null,
-        // Whether the viewer voted on it: Your turn reads it on a row (docs/desk.md → Pages and filters).
+        // Whether the viewer voted on it: Your turn reads it on a row (docs/desk-page.md → Pages and filters).
         voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
@@ -450,9 +450,9 @@ export class Store {
         in_catalog: c.in_catalog ? c.in_catalog.cards.length : 0,
         // Compared with its Figma frame (the figma skill): Product → Differences lists it.
         figma: c.figma_check ? figmaRow(c.figma_check) : null,
-        // An approved design a developer marked done (docs/desk.md → Designs).
+        // An approved design a developer marked done (docs/desk-page.md → Designs).
         built: c.built?.at || null,
-        // Earlier Designs records of a request sent, reopened and sent again (docs/desk.md → Designs).
+        // Earlier Designs records of a request sent, reopened and sent again (docs/desk-page.md → Designs).
         sends: (c.sends || []).map((s) => ({ closed: s.closed, built: s.built?.at || null })),
       }));
   }
@@ -547,7 +547,7 @@ export class Store {
   }
 
   // How long Design Desk usually works on an item of this kind: the median of its last ten
-  // finished ones, in minutes; none before three of them (docs/desk.md → Publishing the page).
+  // finished ones, in minutes; none before three of them (docs/desk-page.md → The page).
   usualMinutes(item) {
     const took = Object.values(this.db.inbox).filter((i) => i.state === "done" && i.kind === item.kind && (i.scope || "") === (item.scope || "") && i.claimed_started && i.done_at)
       .sort((a, b) => b.done_at.localeCompare(a.done_at)).slice(0, 10)
@@ -590,7 +590,7 @@ export class Store {
     return { card: c };
   }
 
-  // A developer marks an approved design built, or takes it back (docs/desk.md → Designs).
+  // A developer marks an approved design built, or takes it back (docs/desk-page.md → Designs).
   markBuilt(cardId, who, on = true) {
     const c = this.card(cardId);
     if (c.kind !== "request" || c.status !== "handed-off") throw bad("Only a design sent to developers is marked done.");
@@ -602,7 +602,7 @@ export class Store {
 
   openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null, shots = null, dev = false } = {}) {
     const c = this.card(cardId);
-    // A developer's question to the designer of an approved design (docs/desk.md → Designs).
+    // A developer's question to the designer of an approved design (docs/desk-page.md → Designs).
     if (dev && (kind !== "comment" || c.kind !== "request" || c.status !== "handed-off")) throw bad("A question for the designer belongs to a design sent to developers.");
     if (!THREAD_KINDS.includes(kind)) throw bad(`kind must be one of ${THREAD_KINDS.join(", ")}`);
     if (kind === "asks" && !who?.agent) throw forbidden("only Design Desk asks questions of this kind");
@@ -786,7 +786,7 @@ export class Store {
   }
 
   // A person opened an item: from now on its title is not bold in their list, and only theirs
-  // (docs/desk.md → Read and unread). The first open counts; later ones change nothing.
+  // (docs/desk-page.md → Read and unread). The first open counts; later ones change nothing.
   markRead(cardId, who) {
     const c = this.card(cardId);
     const key = viewerKey(who);
@@ -799,7 +799,7 @@ export class Store {
     return { read: true };
   }
 
-  // What happened lately on the Desk, newest first, for the bell (docs/desk.md → Notifications).
+  // What happened lately on the Desk, newest first, for the bell (docs/desk-page.md → Notifications).
   // Nothing new is logged: each event is read from what the store keeps anyway (a card's
   // creation, a message, a drawn option, a vote, an approval, a spec, a decision). A person
   // never sees their own doings, nor another person's private ask. A row is read once its
@@ -842,7 +842,7 @@ export class Store {
       if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
       if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
       if (c.built?.at) push(c.built.at, "built", it, c.built.by, { designs: true }, yours);
-      // A developer's question on Designs is for the designer who approved it, else for every designer (docs/desk.md → Designs).
+      // A developer's question on Designs is for the designer who approved it, else for every designer (docs/desk-page.md → Designs).
       const designer = ["designer", "admin"].includes(c.approved?.by?.role) ? isMine(c.approved.by) : ["designer", "admin"].includes(who?.role);
       for (const tid of c.threads || []) {
         const t = own(this.db.threads, tid);
@@ -1409,7 +1409,7 @@ export class Store {
       if (c.status !== "declined" && c.status !== "handed-off") throw bad("only a closed request can be reopened");
       // A request sent to developers: its Designs record closes as it was (`sends`), and the
       // request goes back to before the vote with its options; a new approval sends it anew
-      // (docs/desk.md → Designs).
+      // (docs/desk-page.md → Designs).
       if (c.status === "handed-off") {
         const at = this.clock();
         c.sends = [...(c.sends || []), { approved: c.approved || null, spec: c.spec || null, dev_summary: c.dev_summary || null, built: c.built || null,
@@ -1749,6 +1749,14 @@ export class Store {
     return Object.values(this.db.inbox).find((i) => i.state === "open" && i.thread === thread);
   }
 
+  // The agent wrote on a card: the items claimed on it are being worked, so their leases start
+  // again. Nothing is saved here: the write that follows saves, and a refused write renews nothing.
+  renewClaims({ card = null, thread = null } = {}) {
+    const id = card ? String(card) : thread ? own(this.db.threads, String(thread))?.card : null;
+    if (!id) return;
+    for (const it of Object.values(this.db.inbox)) if (it.state === "claimed" && it.card === id) it.claimed_at = this.clock();
+  }
+
   // A claim is the inbox lock: one session per item. It is a renewable lease, and a
   // claim past its TTL is taken over only by the explicit `takeover` the preflight sends.
   // A heartbeat by the same session renews it; another session still needs a takeover.
@@ -1988,7 +1996,7 @@ export class Store {
     this.keepLook(c, next);
     // A screen's or an element's pictures sent again, new or the same: Design Desk looked at it again.
     if ((next.kind === "screen" || next.kind === "element") && (fields.screens !== undefined || fields.sheet !== undefined)) next.checked = this.clock();
-    // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk.md → Designs).
+    // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk-page.md → Designs).
     if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
     // A design already in the catalog follows every new version of its option and of its states.
@@ -1999,7 +2007,7 @@ export class Store {
     for (const it of Object.values(this.db.inbox)) if (goneLive && it.card === next.id && it.kind === "build" && it.state === "open" && it.variant === goneLive)
       Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not built: its option was taken off the card" });
     if (moved && fields.decision_check === undefined) this.queueCheck(next, { agent: true }, "Its design changed without a check against the decisions.");
-    // A merged change that builds a sent design marks it done (docs/desk.md → Designs): its pull
+    // A merged change that builds a sent design marks it done (docs/desk-page.md → Designs): its pull
     // request is the spec's, or its check says it matches the design.
     if (next.kind === "change" && next.source?.merged_at) {
       const hit = this.buildsOf(next)?.card || (next.design_check?.verdict === "matches" ? next.design_check.request : null);

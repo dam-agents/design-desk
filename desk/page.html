@@ -67,7 +67,7 @@
   details.me-menu > summary.me .role-ic { margin: 0; }
   details.me-menu .menu { left: auto; right: 0; min-width: 100%; box-sizing: border-box; }
   details.me-menu .menu .btn[aria-current="true"] { background: var(--soft); font-weight: 600; }
-  /* The bell (docs/desk.md → Notifications): one row per event, every row the same five facts. */
+  /* The bell (docs/desk-page.md → Notifications): one row per event, every row the same five facts. */
   details.bell { position: relative; }
   details.bell > summary { list-style: none; position: relative; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; color: var(--muted); }
   details.bell > summary::-webkit-details-marker { display: none; }
@@ -163,7 +163,7 @@
   /* People shows at once: its intro on top, beside it on a wide screen. */
   .btn > .ico { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .btn.small > .ico { width: 13px; height: 13px; }
-  /* What a button or label does, the moment the pointer is on it (docs/desk.md → Tooltips). */
+  /* What a button or label does, the moment the pointer is on it (docs/desk-page.md → Tooltips). */
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 6px 10px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
   #tip .opens { color: var(--tip-opens); font-weight: 600; }
@@ -196,7 +196,7 @@
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
   .row:hover { background: var(--soft); }
   .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
-  /* A title is bold until this person first opens the item (docs/desk.md → Read and unread). */
+  /* A title is bold until this person first opens the item (docs/desk-page.md → Read and unread). */
   .row .t { font-weight: 400; display: flex; gap: 8px; align-items: baseline; } .row.unread .t { font-weight: 600; }
   .row .s { color: var(--muted); font-size: var(--fs-meta); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .row .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
@@ -264,7 +264,7 @@
   .chip.live { background: var(--live-soft); color: var(--live); }
   .empty { color: var(--muted); padding: 24px 12px; text-align: center; max-width: 60ch; margin: 0 auto; }
   /* A list's head, kept on top while the list scrolls: the tab's pages as tabs, then what
-     narrows the page's list as a segmented filter (docs/desk.md → Pages and filters). */
+     narrows the page's list as a segmented filter (docs/desk-page.md → Pages and filters). */
   .listhead { position: sticky; top: -12px; z-index: 3; margin: -12px -12px 8px; padding: 12px 12px 0; background: var(--panel); }
   .listhead:has(.subtabs) { padding-top: 2px; }
   .listhead:not(:has(.filterbar)) { padding-bottom: 4px; }
@@ -1073,7 +1073,7 @@
   kbd { font: var(--fs-meta) var(--font); padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); font-weight: 400; }
   /* Design Desk working on it now: the tag's dot pulses. */
   .tag.busy::before { background: currentColor; box-shadow: none; animation: pulse 1.2s ease-in-out infinite; }
-  /* Motion (docs/desk.md → Motion): short and soft, only for people who did not ask their
+  /* Motion (docs/desk-page.md → Motion): short and soft, only for people who did not ask their
      system for less. Dialogs rise in and fade out, menus pop, folds slide open, the chat grows
      from its button, a new message and a newly opened item rise in, a picked row eases into
      place, and a toast comes and goes. Nothing waits on an animation to work. */
@@ -1600,7 +1600,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const TIPPED = "button, a.btn, summary.btn, [data-zoom]";
   // A list row's button covers the whole card: it shows no line and no preview of its own; its
-  // labels and its issue or pull request link show theirs (docs/desk.md → Tooltips).
+  // labels and its issue or pull request link show theirs (docs/desk-page.md → Tooltips).
   const ROW_OPEN = ".row.item > .open";
   // A button's icon, by its data- action (or id), drawn before its words; a button whose
   // words start with a sign of their own (▶, ✓, 👍, +…) keeps that sign instead.
@@ -1742,7 +1742,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     try { data = JSON.parse(res.body || "{}"); } catch { data = {}; }
     if (res.status >= 400 && res.status < 500 && data.error) throw new Said(data.error);
     if (res.status >= 400) throw new Error(`${res.status}`);
-    if (data.ping) { try { bridge.sendPrompt(data.ping); } catch {} }
+    // A call that did not go out is said, not swallowed: the work then waits for the next look at the inbox.
+    if (data.ping) {
+      const missed = () => { try { toast("Design Desk could not be called right away. It picks this up within 10 minutes."); } catch {} };
+      try { const sent = bridge.sendPrompt(data.ping); if (sent && typeof sent.catch === "function") sent.catch(missed); } catch { missed(); }
+    }
     return data;
   }
 
@@ -2207,7 +2211,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; }, true);
   // A fold opened or shut by hand: an option's section keeps how the person left it (a fold
   // drawn open fires toggle too, so only a click counts), and the fold's height eases between
-  // its two sizes (docs/desk.md → Motion). Popovers (More, a menu, a request's steps) pop instead.
+  // its two sizes (docs/desk-page.md → Motion). Popovers (More, a menu, a request's steps) pop instead.
   const calm = matchMedia("(prefers-reduced-motion: reduce)");
   document.addEventListener("click", (e) => {
     const sum = e.target.closest?.("summary"), d = sum?.parentElement;
@@ -2352,7 +2356,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const asks = open.filter((c) => c.asks).length;
     const tab = ([k, n, waiting]) => `<button data-tab="${k}" aria-current="${S.tab === k}"${k === "requests" ? ` class="main"` : ""}>${esc(TABS[k])}${n ? `<span class="count${waiting ? " warn" : ""}"${waiting ? ` title="${esc(waiting)}"` : ""}>${n}</span>` : ""}</button>`;
     const sep = `<span class="sep" aria-hidden="true"></span>`;
-    // Designs only for developers and admins; a designer reaches one from a notification (docs/desk.md → Designs).
+    // Designs only for developers and admins; a designer reaches one from a notification (docs/desk-page.md → Designs).
     const designs = can("designs") ? [[["designs", designCards("todo").length]]] : [];
     const html = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.filter(([k]) => !(simple() && SIMPLE_HIDES.includes(k)))).filter((group) => group.length)
@@ -2531,7 +2535,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const forDesigner = (c) => designerReasons(c).length > 0;
   const attentionLine = (c) => (c.attention && !simple() ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}" title="${c.attention.level === "designer" ? "A designer should look at this; the reasons follow" : "Nothing here waits for a designer's decision"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
   // Every list on the left shows the newest first: a change by the day it shipped, anything
-  // else by the day it came onto the Desk (docs/desk.md → Lists).
+  // else by the day it came onto the Desk (docs/desk-page.md → Lists).
   const dateOf = (c) => String(c.source?.merged_at || c.created || c.updated || c.at || "");
   const newestFirst = (xs) => [...xs].sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
   // A change shipped more than `change_auto_handled_days` ago (14) that nobody marked handled is
@@ -2549,7 +2553,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "turn" ? myTurn(c) : filter === "open" ? !closed(c) : closed(c))));
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
   // Design Desk, start the options, ask the team, vote, approve, read and send the spec, build
-  // the prototype again; never while Design Desk works (docs/desk.md → Pages and filters). A
+  // the prototype again; never while Design Desk works (docs/desk-page.md → Pages and filters). A
   // list row carries what this reads: `voted_mine`, `against`, `for`, `voting`.
   function myTurn(c) {
     if (c.kind !== "request" || closed(c) || atWork(c)) return false;
@@ -2585,7 +2589,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   S.ws.why = store.get("desk-why") !== "0";
   S.ws.notes = store.get("desk-notes") !== "0";
 
-  // Designs: requests approved and sent to developers; To build, or marked done (docs/desk.md → Designs).
+  // Designs: requests approved and sent to developers; To build, or marked done (docs/desk-page.md → Designs).
   // A request reopened after it was sent keeps each earlier record, closed, under Done: its row is `C-<n>~<k>`.
   const designCards = (filter) => S.cards.flatMap((c) => c.kind !== "request" ? [] : [
     ...(c.status === "handed-off" && Boolean(c.built) === (filter === "done") ? [c] : []),
@@ -2666,7 +2670,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const markScrolls = (root) => root.querySelectorAll(".filters").forEach((f) => f.classList.toggle("scrolls", f.scrollWidth > f.clientWidth + 1 && f.scrollLeft + f.clientWidth < f.scrollWidth - 1));
   document.addEventListener("scroll", (e) => { if (e.target.matches?.(".filters")) markScrolls(e.target.parentElement); }, true);
   // A value in a row's source line filters its list to the rows with the same value
-  // (docs/desk.md → Lists): `from: Slack`, `by: alice`, `created: Today`. The bar on top names it,
+  // (docs/desk-page.md → Lists): `from: Slack`, `by: alice`, `created: Today`. The bar on top names it,
   // and its × shows every row again. It holds for the tab's page it was set on.
   const pfView = () => S.tab + (S.tab === "product" ? `:${S.productFilter}` : S.tab === "requests" && S.reqFilter === "presentation" ? ":presentation" : "");
   const pfKey = (sp) => sp.querySelector(":scope > .k")?.textContent.replace(/:\s*$/, "").trim() || "";
@@ -3771,7 +3775,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // row, and any other action goes under ⋯ (`more`).
     const sb = (act, label) => `<button class="step-next" data-act="${act}">${esc(label)}</button>`;
     if (c.status === "declined") return { text: "This request is closed.", sub: can("reopen") ? "" : "To bring it back, say so in a comment; a designer or a PM reopens it.", buttons: can("reopen") ? b("reopen", "Reopen") : "" };
-    // Sent: the next step is the design as developers build it, for who sees Designs (docs/desk.md → Designs).
+    // Sent: the next step is the design as developers build it, for who sees Designs (docs/desk-page.md → Designs).
     if (c.status === "handed-off") return { text: "", buttons: "", step: seesDesigns() ? `<button class="step-next" data-show-design="${esc(c.id)}" title="Opens it on Designs, as developers build it">Show the design</button>` : "" };
     if (busy.length) return { text: "", buttons: "" };
     if (c.status === "triage" && !c.triage) return { text: c.request?.grill && c.grill?.state !== "done" ? "Design Desk asks its questions first, then checks what can be done." : "Design Desk will check this soon.", buttons: "" };
@@ -4211,7 +4215,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderThreads(c, { skipAsks: true })}`;
   }
 
-  // ---------- Designs: an approved design as a developer builds it (docs/desk.md → Designs) ----------
+  // ---------- Designs: an approved design as a developer builds it (docs/desk-page.md → Designs) ----------
   // The issue it went to, Figma, Done; the approved option as it was approved, never changed here;
   // Design Desk's summary of the UX decisions; the issue's text; questions for its designer.
   function renderDesign(c) {
@@ -5090,7 +5094,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (!S.card) {
       const n = visibleCards().length;
-      // Nothing open: the tab's intro fills the pane (docs/desk.md → Tab intros).
+      // Nothing open: the tab's intro fills the pane (docs/desk-page.md → Tab intros).
       d.innerHTML = `<p class="pick">${n ? "Pick something on the left." : `${S.cards.length ? "" : "The Desk is empty for now. "}<a href="#" data-tab="guide">How Design Desk works</a>`}</p>${renderIntro()}`;
       return;
     }
@@ -5438,7 +5442,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   async function post(kind) {
     const text = $("#composer-text").value.trim(); if (!text) return;
-    // A question for the designer, from Designs (docs/desk.md → Designs).
+    // A question for the designer, from Designs (docs/desk-page.md → Designs).
     const dev = kind === "designer";
     const r = await api("POST", `/api/cards/${S.card.id}/threads`, { kind: dev ? "comment" : kind, text, ...(dev ? { dev: true } : {}) });
     if (dev) toast("Sent. The designer answers right here.");
@@ -5801,7 +5805,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
   }));
 
-  // ---------- search (docs/desk.md → Search) ----------
+  // ---------- search (docs/desk-page.md → Search) ----------
   // The header's one search: words over every item's title, summary and source and over the
   // decisions; an item's number (C-12, 12), a decision's (D-3), a GitHub issue or pull request
   // number (#4512, PR 4512) or link, or a Desk link. Enter opens the first hit.
@@ -6262,7 +6266,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   // ---------- notifications ----------
-  // The bell (docs/desk.md → Notifications): what happened lately, newest first, never your own
+  // The bell (docs/desk-page.md → Notifications): what happened lately, newest first, never your own
   // doings. Every row says the same things in the same places: what happened and who, when, the
   // item's title and number, and where it lives (its page and screen).
   const NOTE = {
@@ -6290,11 +6294,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const noteBy = (by) => !by ? "" : by.agent ? "Design Desk" : by.name && !by.email ? by.name : personName(by.email, by.name || "someone");
   const ago = (iso) => { const s = (Date.now() - Date.parse(iso)) / 1000; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s / 60)} min` : s < 86400 ? `${Math.floor(s / 3600)} h` : dayWord(iso) === "Yesterday" ? "Yesterday" : new Date(iso).toLocaleDateString("en", { month: "short", day: "numeric" }); };
   // Simple mode leaves out what lives on the pages it hides: Issues' issues, Product's screens,
-  // elements and decisions (docs/desk.md → Notifications); the count counts what is left.
+  // elements and decisions (docs/desk-page.md → Notifications); the count counts what is left.
   const NOTE_HIDDEN = ["issue", "screen", "element", "decision"];
   const noteShown = (x) => !(simple() && NOTE_HIDDEN.includes(x.kind));
   const noteUnread = () => simple() ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
-  // For you leads: the bell counts only what is for you (docs/desk.md → Notifications).
+  // For you leads: the bell counts only what is for you (docs/desk-page.md → Notifications).
   S.notes = { items: [], seen: null, unread: 0, only: true };
   async function loadNotes() {
     const r = await api("GET", "/api/notifications"), was = JSON.stringify(S.notes.items);
@@ -6303,7 +6307,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // An open panel draws again only when the list changed, so a poll keeps the reader's place.
   function renderBell(changed = false) {
-    // A row stays unread until it is clicked, or Mark as read (docs/desk.md → Notifications).
+    // A row stays unread until it is clicked, or Mark as read (docs/desk-page.md → Notifications).
     const n = noteUnread();
     const b = $("#bell-count");
     b.hidden = !n; b.textContent = n > 9 ? "9+" : String(n);
