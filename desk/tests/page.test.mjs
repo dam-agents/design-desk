@@ -2750,6 +2750,20 @@ test("the step pill says Wait while Design Desk works and Answer while it waits 
   assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "none", "nothing pulses");
 }));
 
+// The state's mark pulses only while Design Desk works: a checked request that waits for a
+// person to start the options is still Checking, and its mark stays still.
+const STILL = { id: "r5", kind: "request", title: "Checked", status: "triage", triage: { verdict: "design", reasons: ["Look only."] } };
+test("the state's mark pulses while Design Desk works and stays still while it waits on a person", (t) => open(t, DESK({ ...DESIGNER, can: { request: true, explore: true } }, [BUSY, STILL]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r1"]');
+  await desk.click('#list [data-card="r1"]');
+  await desk.waitForSelector("#detail .status[data-busy]");
+  assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "pulse", "it works: the mark pulses");
+  await desk.click('#list [data-card="r5"]');
+  await desk.waitForFunction(() => document.querySelector("#detail .status") && !document.querySelector("#detail .status[data-busy]"));
+  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "checking", "still Checking");
+  assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "none", "it waits: nothing pulses");
+}));
+
 // What's already known: each part of Design Desk's short report is its own paragraph; a
 // request that asked for no options keeps the options box, with its one line in it.
 const KNOWN = { id: "r4", kind: "request", title: "Known", status: "feedback", request: { problem: "Calmer.", options: 0 }, triage: { verdict: "design", reasons: ["Look only."] },
