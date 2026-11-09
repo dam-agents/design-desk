@@ -1314,6 +1314,8 @@
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
     slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots" };
+  // What an open request waits for when nobody needs to press anything.
+  const WAIT_SHORT = { feedback: "The team votes and comments", testing: "The team tries it", triage: "Design Desk checks it soon" };
   const WORK = {
     request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     "follow-up": "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
@@ -3879,9 +3881,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     // What to do now, as the step pill's next move: answer Design Desk's question, or wait
     // while it works, with a few words on what it does after the pill.
-    const nextStep = asks.length ? `<span class="step-next still">Answer</span>` : busy.length ? `<span class="step-next still">Wait</span>` : nx.step;
+    // An open request with no move of its own waits too (the team's votes and comments, say).
+    const wait = !busy.length && !nx.step && !closed(c);
+    const nextStep = asks.length ? `<span class="step-next still">Answer</span>` : busy.length || wait ? `<span class="step-next still">Wait</span>` : nx.step;
     const act = asks.length ? `<span class="s-act">${plural(asks.length, "question", "questions")} below</span>`
-      : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>` : "";
+      : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
+      : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
     return `<div class="status" data-o="${tone(c)}">
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
