@@ -9,7 +9,7 @@ echo a > "$wc/a.css"; g add a.css; g commit -qm base; g push -q origin HEAD:refs
 g checkout -qb design-desk/c1-x; echo b > "$wc/a.css"; g commit -qam look; look="$(g rev-parse HEAD)"
 mkdir -p "$wc/.github/workflows"; echo x > "$wc/.github/workflows/x.yml"; g add .github; g commit -qm wf; wf="$(g rev-parse HEAD)"
 # Paths git would quote without -z: a non-ASCII workflow name, and a look file with a tab.
-g checkout -q "$look"; echo x > "$wc/.github/workflows/é.yml"; g add .github; g commit -qm wf2; wfq="$(g rev-parse HEAD)"
+g checkout -q "$look"; mkdir -p "$wc/.github/workflows"; echo x > "$wc/.github/workflows/é.yml"; g add .github; g commit -qm wf2; wfq="$(g rev-parse HEAD)"
 g checkout -q "$look"; printf 'q' > "$wc/tab	x.css"; g add .; g commit -qm tab; tab="$(g rev-parse HEAD)"
 z=0000000000000000000000000000000000000000
 run() { (cd "$wc" && printf '%s\n' "$1" | bash "$hook" origin "${2:-https://github.com/acme/widgets.git}" >/dev/null 2>&1); echo $?; }
