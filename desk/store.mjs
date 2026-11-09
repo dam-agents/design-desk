@@ -1890,6 +1890,13 @@ export class Store {
       }
       else next[k] = cleanLinks(k, fields[k]);
     }
+    // A spec for a request from Slack never leaves unread: only a person's Send to developers
+    // (specAction) marks it sent, whatever `spec_review` says (docs/handoff.md step 3). The
+    // stored origin counts too, so a write cannot rename it away, and the card is not handed
+    // off before that send.
+    const slackBorn = [c?.origin, next.origin].some((o) => o?.channel === "slack");
+    if (slackBorn && !c?.spec?.sent && ((fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent)) || (next.status === "handed-off" && c?.status !== "handed-off")))
+      throw bad("a request from Slack waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 3)");
     if (!next.title) throw bad("a card needs a title");
     // One card per screen and per element: a card a person added that turns out to be one
     // already on the Desk is dropped with a pointer to it, never filled in as a second copy.

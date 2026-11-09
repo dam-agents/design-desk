@@ -28,7 +28,7 @@ a page, a sentence in a Slack alert, a column in the command line.
 In the product's clone (`bash "$HOME/scripts/checkout.sh" <repo>`):
 
 ```bash
-design where <element file> --export <Component> --root <clone> --words "<the words people read>, <their synonyms>"
+design where <element file> --export <Component> --root <clone> --words "$(cat <words file>)"
 ```
 
 It lists every file that uses the same data (the element's prop types, hooks and fields) or

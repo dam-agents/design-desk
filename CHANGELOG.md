@@ -7,6 +7,23 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.69.0 — 2026-11-09
+
+**Upgrade:**
+1. Add `- qa_bot:` to `work/CONFIG.md` when missing (`design config write`,
+   [docs/config.md](docs/config.md)). **Operator-only:** give the Quality Inspector's Slack user
+   id; until then its findings are read as people's bug reports.
+2. Run `bash "$HOME/scripts/verify-onboarding.sh" --live` and apply each `FAIL` line's `fix:`.
+   **Operator-only:** a backup repository that is not private is made private, with access
+   for the operator only ([docs/desk.md](docs/desk.md) → Private asks).
+3. List to the operator every skill a product profile brought (`design skill --repo <repo>`:
+   each one not confirmed is a line in `notes`). **Operator-only:** confirm each; write its
+   `## Skills` row with the `| source |` pin ([docs/actions.md](docs/actions.md) → Another
+   skill for an action). Until then `design skill` gives the action to the bundled skill.
+4. Rewrite and republish the agent manifest (new trust rules, [docs/manifest.md](docs/manifest.md)).
+5. Restart the Desk server (`rc-service --user design-desk-server restart`): the store refuses a
+   spec sent, or a hand-off, on a request from Slack until a person's Send to developers.
+
 ## 1.68.0 — 2026-11-09
 
 **Upgrade:**

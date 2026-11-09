@@ -211,7 +211,8 @@ export function bundleOf(card) {
   });
   const design = {
     format: "design-desk/handoff@1",
-    request: { id: card.id, title: card.title, type: card.request?.type || "idea", problem: card.request?.problem || "", vision: card.request?.vision || "" },
+    // No requester's raw words: a coding agent reads the spec's summary and its quoted block (docs/handoff.md → Why).
+    request: { id: card.id, title: card.title, type: card.request?.type || "idea" },
     approved: { option: v ? { id: v.id, name: v.name, version } : null, by: card.approved?.by?.role || null, at: card.approved?.at || null, straight_to_implementation: Boolean(card.approved?.implement) },
     // What a design change can and cannot do here: the parts a developer adds beyond the look.
     boundary: { verdict: card.triage?.verdict || null, can: card.triage?.can || [], needs_developer: card.triage?.cannot || [] },
