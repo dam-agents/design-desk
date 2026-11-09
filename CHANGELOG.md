@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.66.2 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+2. **Operator-only, optional:** to sharpen an element picture drawn before this version, shoot
+   that state again per [requests.md](docs/requests.md) → Every state of a part, step 4.
+
 ## 1.66.1 — 2026-11-08
 
 **Upgrade:**

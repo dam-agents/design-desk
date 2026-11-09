@@ -772,6 +772,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
     assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
     assert.match(await desk.textContent("#detail .elements"), /All elements[\s\S]*Send button[\s\S]*1 state/);
+    // A tile keeps white space around its picture, inside the same 192 px.
+    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["10px", "10px", 192], "a tile pads its picture");
     await desk.click('#detail [data-el="part-send-button"]');
     await desk.waitForSelector("#element-dialog[open] .catalog");
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
@@ -1869,6 +1871,10 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.match(await desk.$eval(".ask-panel header .chip", (c) => c.title || c.dataset.tip || ""), /Only you and Design Desk see these.*nothing goes to Slack/, "it says only you see it");
   assert.equal(await desk.$eval(".ask-body", (b) => Math.round(b.scrollTop + b.clientHeight) >= b.scrollHeight - 1), true, "it opens on the newest message");
   assert.equal(await desk.$$eval("[data-ask-starter]", (x) => x.length), 5, "five starters");
+  // One size for both sides: the person's bubble once inherited 12px from the header's `.me` chip
+  // while the answer read at 14px.
+  const sizes = await desk.$$eval(".ask-msg", (x) => x.map((n) => getComputedStyle(n).fontSize));
+  assert.deepEqual(sizes, ["14px", "14px"], "a question and its answer read at the same size");
   await desk.click('[data-ask-starter="fixed"]');
   await desk.waitForFunction(() => posted.length === 1);
   assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
@@ -1876,6 +1882,16 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posted.length === 2);
   assert.deepEqual(await desk.evaluate(() => [posted[1].body.text, posted[1].body.starter]), ["Is the bar too thin?", null], "a question of their own");
+  // A redraw replaces the box; it keeps the caret and the focus of whoever was typing in it. The
+  // card redraws on a hashchange, as when an answer lands; the box must be a new one after it.
+  await desk.fill("#ask-text", "Typing while an answer lands");
+  await desk.focus("#ask-text");
+  await desk.evaluate(() => { const t = document.querySelector("#ask-text"); t.setSelectionRange(9, 9); t.dataset.before = "1"; });
+  await desk.evaluate(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+  await desk.waitForFunction(() => { const t = document.querySelector("#ask-text"); return t && !t.dataset.before; });
+  assert.equal(await desk.evaluate(() => document.activeElement?.id), "ask-text", "the box keeps the focus");
+  assert.equal(await desk.evaluate(() => document.querySelector("#ask-text").selectionStart), 9, "and the caret");
+  assert.equal(await desk.inputValue("#ask-text"), "Typing while an answer lands", "and what was typed");
   await desk.click('[data-brief="T-2"]');
   assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
