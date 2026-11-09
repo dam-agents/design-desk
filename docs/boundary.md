@@ -18,8 +18,9 @@ file is how that promise is kept and how it is explained.
 Edge cases, decided once:
 
 - **Showing information the screen already shows** somewhere else on it is design. Showing a
-  field it does not show today is `needs-developer`, even when the screen receives it: the
-  field may be private, or not loaded for every user, and a developer decides that.
+  field it does not show today is design too, with the field in `build` for the developer
+  (the live prototype shows it with a sample value); it is `needs-developer` only when the
+  field is private or decides who sees what, because that is a rule.
 - Copy lives in the markup. A string in the code around it (a constant, a toast) is code,
   because a string there can just as well be an address or a status.
 - **Hiding** something behind a disclosure is design; **removing** it is not.
@@ -27,6 +28,19 @@ Edge cases, decided once:
   whether something is offered is not.
 - Copy that changes meaning ("Delete" → "Archive") is not design when the action stays the
   same: it would mislead. Wording that keeps the meaning is design.
+
+## What needs a developer
+
+The table says what a **live prototype** can change; it is not the triage verdict. Almost every
+design ends with a developer building it, and that alone never makes a request
+`needs-developer`. The verdict is for a part where the product would have to **work differently**:
+its logic or rules, how a feature works, how its parts fit together (its architecture), who may
+see or do what (security), or a feature that would have to be rebuilt. It is the same line the
+`impact` skill draws for **Under the hood**, so the triage and that text never disagree. The
+small plumbing a developer adds on the way — a new field, a parameter, an endpoint, an API, a
+control wired to an action the product already has, a picked value saved where the product
+already saves — is ordinary building: it goes in triage's `build` and the spec, the verdict
+stays `design`, and the live prototype shows the look with sample values. When in doubt, `design`.
 
 ## Explaining a "not as a design change"
 

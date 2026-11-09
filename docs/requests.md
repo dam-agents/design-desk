@@ -132,19 +132,28 @@ The person deciding should know it before a single variant exists.
    branch (`scripts/checkout.sh <repo>`). Read the components the request touches and what
    they are wired to: data, handlers, conditions, permissions.
 3. Judge each part of the request against [boundary.md](boundary.md), then pick the verdict:
-   - `design` — every part changes only the look;
-   - `needs-developer` — the look can change, but a part needs new data, a new rule or a
-     new action;
+   - `design` — every part changes how the product looks, even when a developer then adds
+     the small plumbing to build it (a new field, a parameter, an endpoint, an API, a control
+     wired to an action the product already has). That plumbing is ordinary building from the
+     spec, not a reason for another verdict: it goes in `build`;
+   - `needs-developer` — only when, for a part, the product would have to **work
+     differently**: its logic or rules, how a feature works, its architecture, its security,
+     or a feature to rebuild — the line Under the hood draws ([boundary.md](boundary.md) →
+     What needs a developer);
    - `product` — the request changes what the product does or who it is for; it needs a
      decision before design work makes sense.
 4. Write `triage` on the card, in plain words ([desk.md](desk.md) → Writing on the Desk), with its check against the decisions ([desk.md](desk.md) → Decisions → The check): `verdict`, `reasons` (one plain sentence, only when the verdict
    needs it) and `cannot`: only what the person asked for — in the issue, the request or
-   their answers — that a design change cannot do, each with its reason in their terms; never
-   a part nobody asked for. The Desk names every verdict in the request's steps (no label
+   their answers — that changes how the product works, each with its reason in their terms; never
+   a part nobody asked for, and never implementation work (that is `build`: what a developer
+   wires when building the design, one plain line each, which the spec carries under **What a
+   developer must add** and which never stops the request or its live prototype). The Desk names every verdict in the request's steps (no label
    beside the title), says in the state's ⓘ what it means for the next step, and folds
    `cannot` under the status. With options drawn and no live prototype to build
    next, the request's next step is **Contact a developer**: it opens `cannot`, where **Copy a
-   question for a developer** copies a link to the request, its state and these parts. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+   question for a developer** copies a link to the request, its state and these parts. Once a
+   person opened it, their step moves on to the one it would be without it (**Approve**, or
+   **Send to Slack…** for someone who cannot approve): the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request
@@ -333,7 +342,7 @@ sent to developers too: the states document the approved design and change nothi
    "new".
 3. **Draw** each state as its own self-contained HTML file: the option's whole page with only
    the part in that state, built like the option (`design build`, the same style), so a person
-   compares states one by one. A state that needs a developer (new data, a new rule) is drawn
+   compares states one by one. A state that needs a developer (a new rule or action: [boundary.md](boundary.md) → What needs a developer) is drawn
    and labelled "needs a developer", as in the options.
 4. Look at every state's shot (`design shot`), upload each (`--kind variant`). **The design
    catalog:** shoot the part alone in each state (`design shot <state.html> <dir> --element

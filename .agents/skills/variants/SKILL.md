@@ -183,8 +183,9 @@ Rules — `design build` enforces the mechanical ones:
 - **Empty states:** populated content in `data-populated`, the real empty state in
   `data-empty-view`. The review bar shows the toggle on views that have one.
 - **Sample data only.** Plausible, sparse, never a real person or customer, never a number
-  presented as fact. A part of the design that needs data the screen does not have is drawn and
-  labelled "needs a developer" (docs/boundary.md).
+  presented as fact. A part that needs a value the screen does not show yet is drawn with a
+  sample value (triage `build`, for the developer); only a part that changes how the product works
+  is labelled "needs a developer" (docs/boundary.md → What needs a developer).
 - **Words:** existing copy verbatim from the source; new words follow the `copy` skill.
 - Write `&` literally inside `class` (`[&_svg]:size-4`), never `&amp;`.
 

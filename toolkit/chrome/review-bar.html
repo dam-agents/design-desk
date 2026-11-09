@@ -32,7 +32,8 @@
   #review .switch[aria-checked="true"] .track{background:#0f62fe;}
   #review .switch[aria-checked="true"] .track::after{left:14px;}
   #review .switch:focus-visible .track{outline:2px solid #0f62fe;outline-offset:2px;}
-  html.review-hot :is([data-goto-view],[data-menu-trigger],[onclick],[data-clickable]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;background-color:rgba(15,98,254,.08) !important;}
+  /* Only an outline: it takes no room and leaves the product's own colors as they are. */
+  html.review-hot :is([data-goto-view],[data-menu-trigger],[onclick],[data-clickable]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;}
 </style>
 <div id="review">
   <b id="review-title"></b>

@@ -70,8 +70,10 @@ A Slack turn in a council thread, or a `councils_due` entry with `close: false`.
    options exist.
 4. **Each ask** since `seen` — read [docs/requests.md](../../../docs/requests.md) → Variants
    and [docs/boundary.md](../../../docs/boundary.md) before the first:
-   - Judge it against the boundary: a part that needs new data, a rule or an action is
-     drawn labelled "needs a developer"; a part that changes what the product does is not
+   - Judge it against the boundary ([boundary.md](../../../docs/boundary.md) → What needs a
+     developer): a part a developer only wires (a value from the server, an existing action) is
+     drawn with sample values; a part that needs a new rule or action is drawn labelled "needs a
+     developer"; a part that changes what the product does is not
      drawn, and the answer says why, with the source.
    - **One ask, one result**: a new version of an option, or one new option. This replaces
      the two-or-three rule of the `options` action inside a council.
