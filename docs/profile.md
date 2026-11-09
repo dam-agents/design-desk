@@ -59,8 +59,8 @@ read from) and `source` (`repo`, `saved` or `default`).
   clients) and `render_wrappers` (`{src, export}` providers every tile renders inside).
 - `boundary` — the guard's input ([boundary.md](boundary.md)). Without `allow`, nothing can
   be a design change and the guard refuses to run. `ignored_ok` lists the ignored build
-  outputs the product's own install leaves in a worktree (dependency folders and `dist/`
-  are always fine).
+  outputs the product's own install leaves in a worktree (dependency and build folders are
+  fine at the root, in `style.ui_dir` or outside the UI paths: [boundary.md](boundary.md)).
 - `docs` — where the "why" lives, read when explaining.
 - `screens`, `capture` — where each screen is in code and at which address it renders.
   `capture.login` signs in with the demo account `bin/env credentials` prints.

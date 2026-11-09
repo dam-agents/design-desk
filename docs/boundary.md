@@ -56,13 +56,22 @@ checks the exact diff of a prototype and prints one JSON object:
 How it decides: the profile's `boundary.allow` and `boundary.deny` path lists first (a rename
 by both paths); then, for code, a fingerprint of each changed file — the modules it uses,
 every statement outside the markup in its order, and what the markup wires to behaviour
-(handlers, links, values, conditions, lists, data passed to components, and any attribute
-whose expression calls or assigns). Markup structure, classes, styles, copy and
-presentational components are not in it, so moving, restyling and rewording leave it
-unchanged. New markup may only read what the old markup read, call formatting and the new
-view state's setters, and add no condition on existing data. Files git ignores in the
-worktree (other than dependency and build folders) fail the check: they would ship with the
-install unseen.
+(handlers, links, values, conditions, lists, data passed to components, every attribute
+outside the presentational list — literal or not —, the components it renders, elements
+that load or submit such as `script`, `iframe`, `form`, and what a class or a style reads).
+Markup structure, classes, styles, copy and presentational components are not in it, so
+moving, restyling and rewording leave it unchanged. New markup may only read what the old
+markup read, call formatting and the view state its own function adds, add no condition on
+existing data, and render only presentational components (new in the diff or named in
+`presentational_imports`). An action keeps its place: moved under another condition, onto
+another element, or offered twice, it is behaviour. A style sheet, an inline style or an SVG
+that loads from anywhere but a plain local path or an image data URL, runs script, or disables
+or hides a control fails; it is read as the browser reads it (escapes, entities, comments, any
+prefix or letter case), and an inline style the guard cannot read counts as one that does. A
+symbolic link fails too.
+Files git ignores in the worktree fail the check — they would ship with the install unseen —
+except dependency and build folders and logs at the root, in `style.ui_dir` or outside the UI
+paths, and the profile's `ignored_ok`; never one the diff imports.
 
 When the guard refuses:
 
