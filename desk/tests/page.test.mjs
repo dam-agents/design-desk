@@ -1283,13 +1283,22 @@ const HEADERS = [
   ["Team feedback, the Slack vote still runs", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT }, { state: "open", closes: LATER }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
   ["No options, every one taken out", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME(ALL), "No options", "turn", 2, "Draw design options", false],
   ["No options, someone who may not draw them", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME({}), "No options", "turn", 2, "Wait for a designer", false],
+  ["The prototype failed, someone who may not build", { status: "prototype", triage: DESIGN, prototype: { state: "failed" } }, ME({}), "Prototype didn't work", "turn", 4, "Wait for a designer", false],
+  ["Spec draft, someone who may not send it", { status: "spec", triage: DESIGN, approved: OK, spec: { review: "draft" } }, ME({}, { spec_review: true }), "Spec draft — read it, then send", "turn", 6, "Wait for a designer", false],
 ];
 // The request as the test stands it, on its page and as the list's row (a count, busy, asks).
 const BRIDGE_HEADER = (patch, me) => BRIDGE_STORIES
   .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me))
   .replace('{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };', `{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };\nObject.assign(request, ${JSON.stringify(patch)});`)
   .replace('localStorage.setItem("desk-guide-seen", "1");', `localStorage.setItem("desk-guide-seen", "1"); localStorage.setItem("desk-reqFilter", "${["handed-off", "declined"].includes(patch.status) ? "closed" : "open"}");`)
-  .replace("variants: 2, threads: undefined }", 'variants: request.variants.length, threads: undefined, busy: (request.waiting || []).length > 0, asks: (request.threads || []).some((t) => t.kind === "asks" && t.state === "open") }');
+  // The list gets the store's own projection (desk/store.mjs listCards), not the card: a field the
+  // projection leaves out shows here as a dot in the wrong ink or with the wrong word.
+  .replace("{ ...request, from: \"is1\", variants: 2, threads: undefined }", LIST_ROW);
+const LIST_ROW = `{ id: request.id, kind: "request", title: request.title, status: request.status, created: request.created, updated: request.created,
+  variants: (request.variants || []).length, triage: request.triage?.verdict || null, prototype: request.prototype?.state || null, team_feedback: request.team_feedback || null,
+  spec: request.spec ? { review: request.spec.review || null } : null, voting: (request.polls || []).some((x) => x.state === "open"), voted: (request.polls || []).some((x) => x.state === "closed"),
+  busy: (request.waiting || []).length > 0, asks: (request.threads || []).some((t) => t.kind === "asks" && t.state === "open"),
+  decided: request.status === "declined" && request.decided?.at || null, type: request.request?.type || null, for: "designers", from: "is1", read: true, origin: null, by: null }`;
 const pillText = (desk) => desk.evaluate(() => document.querySelector("#detail .steppill .step-next, #detail .status > .s-line .step-next")?.textContent.trim() ?? null);
 for (const [name, patch, me, word, ink, step, pill, busy] of HEADERS) {
   test(`header: ${name} → ${word}, ${ink}, ${pill ?? "no move"}`, (t) => open(t, BRIDGE_HEADER(patch, me), async (desk) => {
@@ -1299,6 +1308,7 @@ for (const [name, patch, me, word, ink, step, pill, busy] of HEADERS) {
     await desk.waitForSelector(dot);
     assert.equal(await desk.getAttribute(dot, "data-s"), ink, "the dot's ink");
     assert.equal(await desk.locator(`${dot} .tag.busy`).count(), busy ? 1 : 0, busy ? "the dot blinks" : "the dot stays lit");
+    assert.equal((await desk.textContent(`${dot} .w`)).trim(), word, "the dot's word, the same as the page's");
     await desk.click('[data-card="r7"]');
     await desk.waitForSelector("#detail .status");
     assert.equal(await desk.evaluate(() => [...document.querySelector("#detail .s-word").childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim()), word);
