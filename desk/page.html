@@ -3884,7 +3884,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // An open request with no move of its own waits too (the team's votes and comments, say).
     const wait = !busy.length && !nx.step && !closed(c);
     // A move a person can make comes first; Wait only when there is none.
-    const nextStep = asks.length ? `<span class="step-next still">Answer</span>` : nx.step || (busy.length || wait ? `<span class="step-next still">Wait</span>` : "");
+    const nextStep = nx.step || (asks.length ? `<span class="step-next still">Answer</span>` : busy.length || wait ? `<span class="step-next still">Wait</span>` : "");
     const act = asks.length ? `<span class="s-act">${plural(asks.length, "question", "questions")} below</span>`
       : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
       : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
