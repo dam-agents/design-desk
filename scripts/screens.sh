@@ -24,7 +24,8 @@ HOME_DIR="${HOME:-/home/agent}"
 WORK="${WORK_DIR:-$HOME_DIR/work}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_JOB="${LOG_JOB:-screens}"
-. "$SCRIPT_DIR/log.sh" 2>/dev/null || logev() { :; }
+. "$SCRIPT_DIR/log.sh" 2>/dev/null || { logev() { :; }; logmask() { cat; }; }
+. "$SCRIPT_DIR/lib/pr.sh"
 err() { jq -cn --arg e "$1" '{error:$e}'; exit 1; }
 ROOT="$WORK/screens"
 
@@ -50,6 +51,8 @@ case "$cmd" in
     name=main; ref=""; at=""
     [ "${3:-}" = "--pr" ] && { case "${4:-}" in ''|*[!0-9]*) err "--pr needs a number";; esac; name="pr$4"; ref="pull/$4/head"; }
     [ "${3:-}" = "--at" ] && { case "${4:-}" in ''|*[!0-9a-f]*) err "--at needs a commit sha";; esac; at="$4"; }
+    [ -z "$ref" ] || pr_same_repo "$repo" "$4" \
+      || err "pull request #$4 comes from a fork (or GitHub could not say where it comes from): its code gets no screens instance — its card uses the pictures the pull request carries"
     state="$ROOT/$name"; meta="$state/meta.json"; mkdir -p "$state"
     if ! mkdir "$state/.lock" 2>/dev/null; then
       if [ -n "$(find "$state/.lock" -maxdepth 0 -mmin +90 2>/dev/null)" ]; then rm -rf "$state/.lock"; mkdir "$state/.lock" 2>/dev/null || err "cannot take the lock of $name"
@@ -58,7 +61,7 @@ case "$cmd" in
     trap 'rm -rf "$state/.lock"' EXIT
     co="$(bash "$SCRIPT_DIR/checkout.sh" "$repo")" || { printf '%s\n' "$co"; exit 1; }
     clone="$(jq -r .dir <<<"$co")"; def="$(jq -r .default_branch <<<"$co")"
-    if [ -n "$ref" ]; then git -C "$clone" fetch -q origin "$ref" 2>/dev/null || err "cannot fetch $ref"; target="$(git -C "$clone" rev-parse FETCH_HEAD)"
+    if [ -n "$ref" ]; then git -C "$clone" fetch -q -- origin "$ref" 2>/dev/null || err "cannot fetch $ref"; target="$(git -C "$clone" rev-parse FETCH_HEAD)"
     else git -C "$clone" fetch -q origin "$def" 2>/dev/null || err "cannot fetch $def"; target="$(git -C "$clone" rev-parse "origin/$def")"; fi
     if [ -n "$at" ]; then
       target="$(git -C "$clone" rev-parse --verify -q "$at^{commit}")" || err "no commit $at"
@@ -76,7 +79,9 @@ case "$cmd" in
       --arg commit "$target" --arg ref "${ref:-$def}" --arg was "${installed:-}" \
       '{repo:$repo, name:$name, env:$env, worktree:$wt, clone:$clone, profile_dir:$prof, commit:$commit, ref:$ref, previous:$was, state:"installing"}' > "$meta.tmp" && mv "$meta.tmp" "$meta"
     logev info screens "$name install of ${target:0:7} start"
-    if engine "$name" up >> "$state/env-up.log" 2>&1; then
+    # The saved log is backed up with work/: masked like every log (scripts/log.sh).
+    engine "$name" up 2>&1 | logmask >> "$state/env-up.log"
+    if [ "${PIPESTATUS[0]}" -eq 0 ]; then
       jq --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '.state = "installed" | .installed_at = $at' "$meta" > "$meta.tmp" && mv "$meta.tmp" "$meta"
       logev info screens "$name installed ${target:0:7}"
     else

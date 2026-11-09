@@ -444,7 +444,9 @@ A change card (an open or merged pull request) has **Adjust the design**: it fil
 of type `adjustment` with `request.from` = the change card. Research reads the pull request
 first. Variants start from the UI the developer built (its screens on the change card are
 the "before"); a live prototype branches from the pull request's head when it is still open
-(`proto.sh worktree C-<n> <repo> --ref pull/<n>/head`), else from the default branch.
+(`proto.sh worktree C-<n> <repo> --ref pull/<n>/head`), else from the default branch. A pull
+request from a fork gets no prototype from its head (`proto.sh` refuses it: the pushed branch
+would run the fork's code in the repository's workflows); say so on the card and keep to variants.
 
 ## Chat and Slack
 
