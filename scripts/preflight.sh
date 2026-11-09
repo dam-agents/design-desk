@@ -720,8 +720,7 @@ inbox_mode() {
       councils_due: $councils,
       expiring_due: $expiring,
       config:$config, logs:$logs }
-    | .read_set = (["docs/desk.md"]
-        + (if (.questions_due | length) > 0 then [".agents/skills/explain/SKILL.md"] else [] end)
+    | .read_set = (["docs/desk.md", ".agents/skills/explain/SKILL.md"]
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)

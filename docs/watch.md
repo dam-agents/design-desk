@@ -51,12 +51,10 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    store refuses longer text (`LIMITS.change`, `desk/store.mjs`). A card holds:
    - `title` — what a person can now do or see, in the product's words, not the PR title;
      at most 90 characters;
-   - `summary` — one sentence: what is different from before, and for whom; never the title
-     again; at most 180 characters;
+   - `summary` — one sentence, at most 180 characters;
    - `sections`, in this order, each only when it has content, each one to three bullets of
      one short sentence (at most 280 characters in all) and its `source: {label, url}` — where it comes from
-     ("the issue #12", "the PR's decision notes", "not documented — ask <author>"); the
-     bullets do not name the source again:
+     ("the issue #12", "the PR's decision notes", "not documented — ask <author>"):
      `what` (What changed) · `why` (Why it is like this; the page lets it fold, with `limits`
      and `good-to-know`; they show open) · `limits` (What cannot change, and why) ·
      `good-to-know` (states and edge cases that matter: empty, error, permissions, long text,

@@ -20,9 +20,10 @@ The reader is a designer or a project manager. They are smart and busy, they thi
 screens, people and tasks, and they do not read code. They read your text to decide something:
 what to design, what to ask, what to tell a user. Write so that they can.
 
-This file is the one home of **how to write** every text people read. What a text holds and
-how long it may be is in its own doc; what the Desk never shows (ids, status names) is in
-[docs/desk.md](../../../docs/desk.md) → Writing on the Desk.
+This file is the one home of **how to write** what Design Desk itself tells people: the texts
+[docs/desk.md](../../../docs/desk.md) → Writing on the Desk lists, which also says what the
+Desk never shows (ids, status names). What a text holds and how long it may be is in its own
+doc. The words inside a design or a deliverable are the [`copy`](../copy/SKILL.md) skill's.
 
 ## What goes in
 

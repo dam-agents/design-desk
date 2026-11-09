@@ -809,7 +809,8 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
 ## Writing on the Desk
 
 - **Plain words: the one rule for every text people read** — cards, answers, triage
-  reasons, research, Slack replies, digests, the spec, and comments. How to write them —
+  reasons, research, Slack replies, digests, the spec, and comments; the words inside a design
+  or a deliverable are the `copy` skill's. How to write them —
   what goes in, bullets or prose, the words, examples, the last check — is the
   [`explain`](../.agents/skills/explain/SKILL.md) skill: read it before you write any of them.
   The developer spec keeps what a developer builds from (styles, tokens, patch files, tests

@@ -5,7 +5,8 @@ description: "Write and edit the words people read: UI copy (buttons, labels, em
 
 # Copy
 
-Every deliverable this kit makes ends with a copy pass. Prototypes take their existing words
+Every deliverable this kit makes — a variant, a prototype, a deck, a walkthrough, a video —
+ends with a copy pass. Prototypes take their existing words
 from the product's source code (`variants` skill); only the new words are yours, and they
 follow this file.
 
@@ -27,5 +28,8 @@ follow this file.
 
 An announcement, a doc, an email, a post, slide text, or a request to rewrite, tighten or
 de-AI a text: read [references/writing.md](references/writing.md) first — the general writing
-method and its final check. The short texts of the Desk (cards, answers, replies) follow the
-[`explain`](../explain/SKILL.md) skill instead.
+method and its final check.
+
+What Design Desk itself tells people is not this skill's: every text
+[docs/desk.md](../../../docs/desk.md) → Writing on the Desk lists follows the
+[`explain`](../explain/SKILL.md) skill alone, with no copy pass.

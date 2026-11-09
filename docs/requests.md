@@ -51,9 +51,10 @@ The person deciding sees it on the card, and every later step builds on it.
    Writing on the Desk): `research: {verdict,
    summary, links}`. `verdict`: `clear`, `duplicate`, `deliberate`, `collision` (someone is
    changing it now) or `unclear`. The Desk shows only the summary, with no label for the
-   verdict, open near the top. Its first sentence says the verdict in words, and in the same
-   breath what you looked for and did not find ("Nothing is in the way: nobody asked for this
-   before and nobody is changing it now"). Then one short paragraph per finding, each starting
+   verdict, open near the top. Its first sentence says the verdict in words and the one thing
+   the reader must know ("Someone is already changing this: PR #40 moves the same button"); a
+   `clear` verdict says there what you looked for and did not find ("Nothing is in the way:
+   nobody asked for this before and nobody is changing it now"). Then one short paragraph per finding, each starting
    with its label, **only the ones that found something**, every source linked in `links`:
    - **Already asked for**: duplicates and close issues with their state;
    - **Where it lives**: the screen, in plain words, never a code file's name;
