@@ -31,10 +31,11 @@ WORK="${WORK_DIR:-${HOME:-/home/agent}/work}"
 LOCAL="${WORK_BACKUP_LOCAL:-/dev/shm/design-desk-work-backup}"
 BRANCH="${WORK_BACKUP_BRANCH:-main}"
 RETRIES="${WORK_BACKUP_RETRIES:-3}"
-LOCK="$LOCAL.lock"                                # tmpfs too; mtime = acquire time
+LOCK="$LOCAL.lock"                                # tmpfs too; mtime = acquire time; never a symlink
 LOCK_TTL_MIN="${WORK_BACKUP_LOCK_TTL_MIN:-10}"    # a persist takes seconds
 MAX_FILE_MB="${WORK_BACKUP_MAX_FILE_MB:-50}"      # GitHub warns at 50 MB, refuses 100 MB
 BULK="output logs"                                # the bulk set: pushed after the state
+umask 077                                         # the clone, its lock, restored files: this user's only
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_JOB="${LOG_JOB:-session}"
@@ -57,11 +58,24 @@ fi
 
 REMOTE_URL="${WORK_BACKUP_REMOTE:-https://github.com/$GITHUB_REPO_WORK}"
 
+# own_name <path>: 0 when nothing is at the path or this user's own non-symlink is. On a
+# shared tmpfs another user can plant a name first; a write through a symlink would land on
+# whatever it points at. A name that fails is refused and said as its own cause.
+REFUSED=""
+own_name() {
+  if [ -L "$1" ] || { [ -e "$1" ] && [ ! -O "$1" ]; }; then
+    REFUSED="$1"; say "$1 is not this user's own — refusing it."; logev error work_backup "$1 is not this user's own (a symlink or another user's) — refused"; return 1
+  fi
+}
+
 # (Re)seed a usable clone in $LOCAL. tmpfs may be empty (fresh boot), stale, or
 # half-written (interrupted run) — validate and re-clone defensively. The clone holds
 # the tip only (--depth 1): the backup's history keeps every old output/ and logs/ and
 # only grows, so a full clone would outgrow /dev/shm.
 seed_clone() {
+  # The clone holds all of work/ on a shared tmpfs: this user's alone (umask 077 above), and
+  # a name another user or a symlink holds is never used.
+  own_name "$LOCAL" || return 1
   if ! ( cd "$LOCAL" 2>/dev/null && git rev-parse --git-dir >/dev/null 2>&1 ); then
     rm -rf "$LOCAL" 2>/dev/null || true
     if ! git clone -q --depth 1 --branch "$BRANCH" "$REMOTE_URL" "$LOCAL" 2>/dev/null; then
@@ -71,6 +85,7 @@ seed_clone() {
       ( cd "$LOCAL" && git init -q && git remote add origin "$REMOTE_URL" ) || return 1
     fi
   fi
+  chmod 700 "$LOCAL" 2>/dev/null || true             # a clone made before umask 077
   ( cd "$LOCAL" || exit 1
     git config user.name  "design-desk"              2>/dev/null || true
     git config user.email "design-desk@agents.local" 2>/dev/null || true
@@ -111,8 +126,9 @@ copy_ok() {
 # a set that needs more than the clone's free space (the copy plus its git object, so
 # twice its size) stays out whole and the backup keeps its last copy. Returns 43 then.
 sync_bulk() {
-  local skip="$LOCAL.skip" d f need=0 free have=0 cap_k=$((MAX_FILE_MB * 1024)) dirs=""
-  : > "$skip" || return 1
+  local skip d f need=0 free have=0 cap_k=$((MAX_FILE_MB * 1024)) dirs=""
+  # The skip list: a fresh file only this user can open (mktemp), never a fixed shared name.
+  skip="$(mktemp "${TMPDIR:-/tmp}/design-desk-backup-skip.XXXXXX")" || return 1
   for d in $BULK; do
     [ -d "$WORK/$d" ] || continue
     dirs="$dirs ./$d"
@@ -146,8 +162,10 @@ EOF
 # Serialize the persist step (lock-or-skip): concurrent sessions share $LOCAL,
 # and two persists over one clone would race. mkdir is atomic; stale locks
 # (crashed persist) expire by TTL.
+# A lock name another user or a symlink holds is refused (return 2), never waited on or stolen.
 acquire_lock() {
   mkdir "$LOCK" 2>/dev/null && return 0
+  own_name "$LOCK" || return 2
   if [ -n "$(find "$LOCK" -maxdepth 0 -mmin "+$LOCK_TTL_MIN" 2>/dev/null)" ]; then
     rm -rf "$LOCK" 2>/dev/null
     if mkdir "$LOCK" 2>/dev/null; then
@@ -161,7 +179,9 @@ release_lock() { rm -rf "$LOCK" 2>/dev/null || true; }
 
 persist() {
   local rc
-  if ! acquire_lock; then
+  acquire_lock; rc=$?
+  if [ "$rc" -eq 2 ]; then say "backup failed: the lock name is not this user's own."; logev error work_backup "backup failed: $LOCK is not this user's own — refused"; return 0; fi
+  if [ "$rc" -ne 0 ]; then
     say "another persist is running — skipping; state stays on work/ and the next run backs it up."
     logev info work_backup "persist skipped — concurrent persist holds the lock"
     return 0
@@ -182,7 +202,11 @@ do_persist() {
   push_part bulk sync_bulk output logs; bulk="$PART"
   local summary="state $state, bulk $bulk"
   case "$state $bulk" in
-    (*failed*)  say "backup failed: $summary."; logev error work_backup "backup failed: $summary — retry next run" ;;
+    (*failed*)
+      if [ -n "$REFUSED_ANY" ]; then   # the outcome line names the refused name: the audit reads only this line
+        say "backup failed: $summary — $REFUSED_ANY is not this user's own."
+        logev error work_backup "backup failed: $summary — $REFUSED_ANY is not this user's own; remove it and retry"
+      else say "backup failed: $summary."; logev error work_backup "backup failed: $summary — retry next run"; fi ;;
     (*skipped*) logev warn work_backup "backup ok: $summary (output/ and logs/ too large for the clone)" ;;
     (*)         logev info work_backup "backup ok: $summary" ;;
   esac
@@ -191,13 +215,14 @@ do_persist() {
 
 # push_part <label> <sync function> <pathspec...>: commit and push one part of work/,
 # re-seeding from the remote tip on a rejected push. Sets PART to pushed, unchanged,
-# skipped or failed.
-PART=""
+# skipped or failed. REFUSED_ANY keeps a name refused in any part for the outcome line.
+PART=""; REFUSED_ANY=""
 push_part() {
   local label="$1" sync="$2" attempt=0 rc; shift 2
   while [ "$attempt" -lt "$RETRIES" ]; do
     attempt=$((attempt + 1))
-    seed_clone || { logev warn work_backup "$label: seed failed (attempt $attempt)"; continue; }
+    REFUSED=""
+    seed_clone || { [ -n "$REFUSED" ] && break; logev warn work_backup "$label: seed failed (attempt $attempt)"; continue; }
     "$sync"; rc=$?
     if [ "$rc" -eq 43 ]; then PART=skipped; return 0; fi   # skipped, and said why
     [ "$rc" -eq 0 ] || { logev warn work_backup "$label: sync failed (attempt $attempt)"; continue; }
@@ -224,13 +249,19 @@ push_part() {
     say "$label: push rejected (attempt $attempt) — re-seeding from remote tip."
     logev warn work_backup "$label: push rejected (attempt $attempt) — retrying"
   done
-  say "$label: failed after $RETRIES attempt(s); the data is safe on work/, retry next run."
-  logev warn work_backup "$label: failed after $RETRIES attempts"
+  if [ -n "$REFUSED" ]; then REFUSED_ANY="$REFUSED"; say "$label: failed — $REFUSED is not this user's own; the data is safe on work/."
+  else say "$label: failed after $RETRIES attempt(s); the data is safe on work/, retry next run."
+    logev warn work_backup "$label: failed after $RETRIES attempts"; fi
   PART=failed; return 0
 }
 
 restore() {
-  seed_clone || { say "restore: could not reach remote — leaving work/ as-is."; logev warn work_backup "restore: remote unreachable"; return 0; }
+  REFUSED=""
+  if ! seed_clone; then
+    if [ -n "$REFUSED" ]; then say "restore: $REFUSED is not this user's own — leaving work/ as-is."
+    else say "restore: could not reach remote — leaving work/ as-is."; logev warn work_backup "restore: remote unreachable"; fi
+    return 0
+  fi
   # copy data into work/ — never .git. Targets a machine with no state yet;
   # existing files
   # with the same names are overwritten, nothing is deleted.

@@ -7,12 +7,34 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.67.1 — 2026-11-09
+## 1.68.1 — 2026-11-09
 
 **Upgrade:**
 1. Restart the Desk server (`rc-service --user design-desk-server restart`): only a lead
    developer or an admin picks or moves For Designers / For Developers.
 2. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.68.0 — 2026-11-09
+
+**Upgrade:**
+1. Run `bash "$HOME/scripts/install-toolkit.sh"`: packages install by `npm ci --ignore-scripts`
+   alone (a `FAIL packages` line means `toolkit/package-lock.json` drifted; report it), then
+   `design doctor`.
+2. `rm -rf /tmp/design-desk`: build scratch now lives in a private per-user folder.
+3. A repo build whose CSS or components import a package its lockfile names no version of now
+   fails instead of installing `latest`; a fork's pull request gets no prototype from its head
+   and no `pr<n>` screens instance ([requests.md](docs/requests.md) → Adjusting a developer's UI).
+4. Stopgaps (record in `work/LESSONS.md`): repository code (component bundles, Tailwind
+   configs) runs in a child node with only `PATH` in its env, but can still read files on disk;
+   Chromium falls back to `--no-sandbox` when its sandbox cannot start. The fix for both is an
+   OS sandbox in the agent image.
+5. **Operator-only:** limit the agent's GitHub identity to `design-desk/*` branches with a
+   ruleset or a fine-grained token; the pre-push hook is a local guard only
+   ([prototype.md](docs/prototype.md) → Push). It accepts the repository only over `https://`
+   or ssh: a `prototype_remote` push over another scheme now fails.
+6. A `backup failed: … is not this user's own` line: something else holds the backup clone's
+   or lock's name in `/dev/shm`; remove it and run the persist again
+   ([persistence.md](docs/persistence.md) → Backup & restore).
 
 ## 1.67.0 — 2026-11-09
 

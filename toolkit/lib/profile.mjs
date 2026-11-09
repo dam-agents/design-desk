@@ -4,7 +4,7 @@
 // these pointers — the styles themselves are compiled fresh from a fresh clone each run.
 import { existsSync, readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
 import { join, relative, dirname } from "node:path";
-import { WORK, SCRATCH, ensureDir, fail, warn, req, run, slugOf } from "./core.mjs";
+import { WORK, scratch, ensureDir, fail, warn, req, run, slugOf } from "./core.mjs";
 
 const YAML = () => req("yaml");
 export const profilePath = (repo) => join(WORK, "profiles", `${slugOf(repo)}.yaml`);
@@ -14,9 +14,10 @@ export function saveProfile(p) { ensureDir(join(WORK, "profiles")); writeFileSyn
 // Fresh shallow clone into scratch. A fresh clone every run: a mockup built from a stale
 // checkout shows a UI that no longer exists.
 export function cloneRepo(repo, ref = "") {
-  const dir = join(SCRATCH, "repos", slugOf(repo));
+  // A branch, tag or commit; never a word git would read as an option.
+  if (ref && !/^[A-Za-z0-9_][A-Za-z0-9._/-]*$/.test(ref)) fail(`"${ref}" is not a branch, tag or commit`);
+  const dir = join(scratch("repos"), slugOf(repo));
   run("rm", ["-rf", dir]);
-  ensureDir(dirname(dir));
   // `[host/]owner/name`, the same rule as scripts/checkout.sh: a GitHub Enterprise host
   // is the first of three parts.
   const parts = repo.split("/");
@@ -25,7 +26,7 @@ export function cloneRepo(repo, ref = "") {
   let r = run("git", args);
   if (r.status !== 0 && ref) { // a commit sha, not a branch
     r = run("git", ["clone", "-q", url, dir]);
-    if (r.status === 0) r = run("git", ["-C", dir, "checkout", "-q", ref]);
+    if (r.status === 0) r = run("git", ["-C", dir, "checkout", "-q", ref, "--"]);
   }
   if (r.status !== 0) fail(`could not clone ${repo}${ref ? `@${ref}` : ""}: ${(r.stderr || "").trim().split("\n").pop()} — a private repo needs the GitHub connection`);
   const commit = run("git", ["-C", dir, "rev-parse", "--short", "HEAD"]).stdout.trim();

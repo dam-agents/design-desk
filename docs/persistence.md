@@ -58,7 +58,10 @@ pushed with the file missing. The clone holds only the newest commit (`--depth 1
 never has to fit in `/dev/shm`. Each persist ends with one
 `work_backup` outcome line that the audit and the monitor read: `backup ok: …` (a `warn`
 when `output/` and `logs/` were skipped), or `backup failed: …` (an `error`) when either
-push failed.
+push failed. The clone and its lock sit on a shared tmpfs: a name there that is a symlink or
+another user's is refused, never used or written through (a persist logs `backup failed: …`
+naming it, a restore says so instead of "could not reach remote"); the skip list is a fresh
+`mktemp` file; the clone and every file a restore writes are this user's only (`umask 077`).
 
 `restore` is the inverse — remote → `work/` (data only, never a `.git`) — run once on a
 fresh machine (`ONBOARDING.md` Step 2a).

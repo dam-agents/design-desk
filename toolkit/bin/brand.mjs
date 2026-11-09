@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync, existsSync, copyFileSync } from "node:fs";
 import { basename, extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { WORK, ensureDir, fail, req, launch } from "../lib/core.mjs";
+import { WORK, ensureDir, fail, req, launch, scratch } from "../lib/core.mjs";
 import { brandPath, loadBrand } from "../lib/style.mjs";
 import { contrast } from "../lib/theme.mjs";
 
@@ -125,7 +125,7 @@ export async function main(_cmd, [sub, ...rest]) {
   for (let i = 0; i < rest.length; i++) rest[i].startsWith("--") ? (opt[rest[i].slice(2)] = rest[++i]) : files.push(resolve(rest[i]));
   if (!files.length) fail("design brand extract needs at least one file (logo, screenshot, .pptx, .pdf, .css)");
   const draft = { name: opt.name || "", colors: {}, fonts: {}, logo: null, radius: null, sources: [] };
-  const images = [], ex = ensureDir(join("/tmp/design-desk", "brand-extract"));
+  const images = [], ex = scratch("brand-extract");
   for (const f of files) {
     if (!existsSync(f)) fail(`no such file: ${f}`);
     const e = extname(f).toLowerCase();
