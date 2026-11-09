@@ -37,19 +37,21 @@ ui="[]"
 sha="$(jq -r '.mergeCommit.oid // empty' "$out/pr.json" 2>/dev/null)"
 diff=""
 if [ "$(jq length <<<"$ui")" -gt 0 ]; then
+  # An earlier run of the same pull request left its diff here: this run reports only one it wrote.
+  rm -f "$out/ui.diff"; wrote=0
   mapfile -t files < <(jq -r '.[]' <<<"$ui")
   if [ -n "$sha" ]; then
     # Merged: the change against its first parent. A merge commit has two parents, and
     # `git show` of one prints no patch for a path.
-    git -C "$dir" diff "$sha^1" "$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null
+    git -C "$dir" diff "$sha^1" "$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null && wrote=1
   else
     # An open pull request: its head, fetched by its commit, against the default branch.
     sha="$(git -C "$dir" ls-remote origin "refs/pull/$pr/head" 2>/dev/null | cut -f1)"
     [ -n "$sha" ] && git -C "$dir" fetch -q origin "$sha" 2>/dev/null \
-      && git -C "$dir" diff "origin/$(jq -r .default_branch <<<"$co")...$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null
+      && git -C "$dir" diff "origin/$(jq -r .default_branch <<<"$co")...$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null && wrote=1
   fi
-  # A diff with no hunk is no diff: the caller reads it by hand.
-  if grep -q '^@@' "$out/ui.diff" 2>/dev/null; then diff="$out/ui.diff"; else missing+=("diff"); fi
+  # A diff that failed, or one with no hunk, is no diff: the caller reads it by hand.
+  if [ "$wrote" = 1 ] && grep -q '^@@' "$out/ui.diff" 2>/dev/null; then diff="$out/ui.diff"; else missing+=("diff"); fi
 else
   missing+=("ui_files")
 fi
