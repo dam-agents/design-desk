@@ -97,18 +97,22 @@ export function cssDangers(text) {
   const toks = tokenize(text), out = [];
   const sig = toks.filter((x) => x.t !== "ws");
   const ref = (what, x) => { if (x.bad || !localAddress(x.v)) out.push(`${what} ${x.v.slice(0, 80) || "(an empty address)"}`); };
+  // `custom`: inside the value of a custom property (`--*`). var() can carry its strings
+  // into image-set() or another image function, so each one must be a local address.
   const stack = [];
+  let custom = false;
   for (let k = 0; k < sig.length; k++) {
     const x = sig[k];
     if (x.t === "fn") stack.push(x.v);
     else if (x.t === "delim" && x.v === "(") stack.push("(");
     else if (x.t === "delim" && x.v === ")") stack.pop();
-    else if (x.t === "delim" && /[;{}]/.test(x.v)) stack.length = 0;
+    else if (x.t === "delim" && /[;{}]/.test(x.v)) { stack.length = 0; custom = false; }
+    else if (x.t === "ident" && x.v.startsWith("--") && sig[k + 1]?.t === "delim" && sig[k + 1].v === ":") custom = true;
     if (x.t === "url") ref("loads", x);
     else if (x.t === "fn" && URL_FNS.has(x.v)) {
       if (sig[k + 1]?.t === "str") ref("loads", sig[++k]);
       else out.push(`loads ${x.v}(…) that is not one address`);
-    } else if (x.t === "str" && stack.some((f) => IMAGE_FNS.has(f))) ref("loads", x);
+    } else if (x.t === "str" && (custom || stack.some((f) => IMAGE_FNS.has(f)))) ref("loads", x);
     else if (x.t === "at" && x.v === "import") {
       const a = sig[k + 1];
       if (a?.t === "str") { ref("imports", a); k++; }
@@ -137,6 +141,49 @@ const ACTIVE_SVG = ["script", "foreignObject", "iframe", "frame", "embed", "obje
 const ACTIVE_RE = new RegExp(`<\\s*${PREFIX}(${ACTIVE_SVG.join("|")})(?=[\\s/>]|$)`, "gi");
 const STYLE_RE = new RegExp(`<\\s*${PREFIX}style\\b[^>]*>([\\s\\S]*?)(?:<\\/\\s*${PREFIX}style\\s*>|$)`, "gi");
 
+// The attributes of every start tag, as [name, raw value]. Comments, CDATA sections,
+// processing instructions, declarations, end tags and text hold no attributes; a start
+// tag ends at its first unquoted `>`. Where an XML and an HTML parser end a part at
+// different places, the earlier end is taken, so more is read as markup: a comment also
+// ends at `<!-->`, `<!--->` or `--!>`, a processing instruction at its first `>`.
+// An unquoted value or a bare name (XML parse errors) is read too.
+function startTagAttributes(t) {
+  const out = [];
+  let i = 0;
+  const skipTo = (...ends) => { i = Math.min(t.length, ...ends.map(([e, from]) => { const k = t.indexOf(e, from); return k < 0 ? Infinity : k + e.length; })); };
+  while (i < t.length) {
+    const lt = t.indexOf("<", i);
+    if (lt < 0) break;
+    i = lt;
+    if (t.startsWith("<!--", i)) skipTo(["-->", i + 2], ["--!>", i + 4]);
+    else if (t.startsWith("<![CDATA[", i)) skipTo(["]]>", i + 9]);
+    else if (t[i + 1] === "?" || t[i + 1] === "!" || t[i + 1] === "/") skipTo([">", i + 1]);
+    else if (!/[^\s<>/=]/.test(t[i + 1] || "")) i++; // a lone `<` is text
+    else {
+      i++;
+      while (i < t.length && !/[\s/>]/.test(t[i])) i++; // the element name
+      for (;;) {
+        while (i < t.length && /[\s/]/.test(t[i])) i++;
+        if (i >= t.length || t[i] === ">") { i++; break; }
+        let name = "";
+        while (i < t.length && !/[\s/>=]/.test(t[i])) name += t[i++];
+        while (/\s/.test(t[i] || "")) i++;
+        if (t[i] !== "=") { if (name) out.push([name, ""]); continue; }
+        i++;
+        while (/\s/.test(t[i] || "")) i++;
+        let v = "";
+        if (t[i] === '"' || t[i] === "'") {
+          const q = t[i++], e = t.indexOf(q, i);
+          v = t.slice(i, e < 0 ? t.length : e);
+          i = e < 0 ? t.length : e + 1;
+        } else while (i < t.length && !/[\s>]/.test(t[i])) v += t[i++];
+        if (name) out.push([name, v]);
+      }
+    }
+  }
+  return out;
+}
+
 // What an SVG file must not hold: script, event handlers, embedded documents, entity
 // declarations, and addresses other than a #fragment or an image data URL.
 export function svgDangers(text) {
@@ -146,8 +193,8 @@ export function svgDangers(text) {
   if (/<\?\s*xml-stylesheet/i.test(t)) out.push("a style sheet link (<?xml-stylesheet?>)");
   if (/<!ENTITY|<!DOCTYPE[^>]*\[/i.test(t)) out.push("an entity declaration");
   if (/javascript:/i.test(t)) out.push("a javascript: address");
-  for (const m of t.matchAll(/([^\s<>"'=/]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-    const name = m[1], local = name.split(":").pop().toLowerCase(), value = xmlDecode(m[2] ?? m[3]);
+  for (const [name, raw] of startTagAttributes(t)) {
+    const local = name.split(":").pop().toLowerCase(), value = xmlDecode(raw);
     if (/^xmlns(:|$)/i.test(name)) continue;
     // The URL parser drops tabs and newlines, and spaces at either end.
     const addr = value.replace(/[\t\n\r]/g, "").replace(/^[\x00-\x20]+|[\x00-\x20]+$/g, "");

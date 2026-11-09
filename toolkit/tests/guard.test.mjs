@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -398,4 +398,61 @@ test("(o) design guard on a git repository: a rename is judged by both paths, a 
   const by = Object.fromEntries(r.out.files.map((f) => [f.path, f.verdict]));
   assert.equal(by["src/components/key.ts"], "denied");
   assert.equal(by["src/components/link.tsx"], "logic");
+});
+
+// Round 3 of the 1.69.0 review: start tags in an SVG, strings in custom properties, and a
+// failing fixture for each name and branch the review named.
+test("(p) an SVG's attributes are read only inside start tags; comments, CDATA, PIs and text hold none", () => {
+  for (const c of ['<svg><!-- a=" --><image href="http://evil.example/p.png"/></svg>', "<svg><text>a=\"</text><rect onclick=\"document.title='pwn'\"/></svg>",
+    '<svg><!--> <image href="https://evil.example/p.png"/> --></svg>', '<?pi a="?><svg><image href="https://evil.example/p.png"/></svg>',
+    '<svg><desc><![CDATA[ a=" ]]></desc><image href="https://evil.example/p.png"/></svg>', "<svg><image href=https://evil.example/p.png /></svg>"]) assert.equal(svgVerdict(c), "logic", c);
+  assert.equal(svgVerdict('<svg><!-- href="https://evil.example/p.png" --><title>a="b"</title><path d="M0 0"/></svg>'), "asset");
+});
+
+test("(q) a string in a custom property must be a local address: var() can carry it into image-set()", () => {
+  assert.equal(cssVerdict('.a { --u: "https://evil.example/a.gif" } .b { background: image-set(var(--u) 1x) }'), "logic");
+  assert.equal(cssVerdict(".a { --u: url(https://evil.example/a.gif) }"), "logic");
+  assert.equal(cssVerdict('.a { --font: "Inter"; color: red }'), "style");
+  const li = '<li key={a.id} className="flex gap-2 p-2">';
+  const s = `{ "--u": '"https://evil.example/a.gif"', background: "image-set(var(--u) 1x)" }`;
+  logicFrom(BASE, BASE.replace(li, `<li key={a.id} className="flex gap-2 p-2" style={${s}}>`), s);
+});
+
+test("(r) every image function, src(), an empty url(), every active SVG element, a DOCTYPE subset and entities in <style>", () => {
+  for (const f of ["image-set", "-webkit-image-set", "image", "cross-fade", "-webkit-cross-fade"]) assert.equal(cssVerdict(`.a { background: ${f}("https://evil.example/a.gif" 1x) }`), "logic", f);
+  for (const c of ['.a { background: src("https://evil.example/a.gif") }', ".a { background: src(var(--x)) }", ".a { background: url() }"]) assert.equal(cssVerdict(c), "logic", c);
+  for (const el of ["script", "foreignObject", "iframe", "frame", "embed", "object", "applet", "portal", "handler", "listener", "link", "meta", "base"]) assert.equal(svgVerdict(`<svg><${el}/></svg>`), "logic", el);
+  assert.equal(svgVerdict("<!DOCTYPE svg [ ]><svg/>"), "logic");
+  assert.equal(svgVerdict('<svg><style>@imp&#111;rt "https://evil.example/c.css";</style></svg>'), "logic");
+});
+
+test("(s) markup: a protocol-relative image, a remote srcSet entry, the false branch of a conditional style", () => {
+  const add = (el) => logicFrom(BASE, BASE.replace("<span>{a.name}</span>", `<span>{a.name}</span>${el}`), el);
+  add('<img src="//evil.example/p.png" alt="" />');
+  add('<img srcSet="/img/a.png 1x, //evil.example/b.png 2x" alt="" />');
+  const ok = verdict(BASE.replace("<span>{a.name}</span>", '<span>{a.name}</span><img srcSet="/img/a.png 1x, /img/a@2x.png 2x" alt="" />'));
+  assert.equal(ok.verdict, "ok", JSON.stringify(ok));
+  const btn = '<Button variant="ghost" onClick={() => del.mutate(a.id)}>';
+  for (const s of ['{ display: a.name ? "block" : "none" }', '{ pointerEvents: a.name ? "auto" : "none" }']) logicFrom(BASE, BASE.replace(btn, `<Button variant="ghost" style={${s}} onClick={() => del.mutate(a.id)}>`), s);
+});
+
+test("(t) design guard exits 2 with an error when it cannot read the diff", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dd-guard-")), bin = mkdtempSync(join(tmpdir(), "dd-guard-bin-")), prof = join(bin, "profile.json");
+  const realGit = spawnSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+  const git = (...a) => { const r = spawnSync(realGit, ["-C", dir, "-c", "user.email=guard@example.com", "-c", "user.name=guard", "-c", "commit.gpgsign=false", ...a], { encoding: "utf8" }); assert.equal(r.status, 0, r.stderr); return r.stdout; };
+  git("init", "-q");
+  mkdirSync(join(dir, "src/components"), { recursive: true });
+  writeFileSync(join(dir, "src/components/a.tsx"), "export const A = () => <p>Hi</p>;\n");
+  writeFileSync(prof, JSON.stringify({ boundary: { allow: ["src/components/**"] } }));
+  git("add", "-A"); git("commit", "-qm", "base");
+  const base = git("rev-parse", "HEAD").trim();
+  writeFileSync(join(dir, "src/components/a.tsx"), "export const A = () => <p>Hello</p>;\n");
+  // A git that answers `diff --raw` with a line parseRawDiff cannot read.
+  writeFileSync(join(bin, "git"), `#!/bin/sh\nfor a in "$@"; do [ "$a" = "--raw" ] && { printf ':bad\\0'; exit 0; }; done\nexec "${realGit}" "$@"\n`);
+  chmodSync(join(bin, "git"), 0o755);
+  const r = spawnSync(process.execPath, [DESIGN, "guard", dir, "--base", base, "--profile", prof], { encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  const out = JSON.parse(r.stdout);
+  assert.equal(out.ok, false);
+  assert.match(out.error, /unreadable diff line/);
 });
