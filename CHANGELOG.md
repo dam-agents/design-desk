@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.70.1 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): only a lead
+   developer or an admin picks or moves For Designers / For Developers.
+2. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
 ## 1.70.0 — 2026-11-09
 
 **Upgrade:**

@@ -438,6 +438,9 @@
   .revoked-text { text-decoration: line-through; color: var(--muted); }
   .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
   .asks .reply { border: 0; padding: 8px 0 0; }
+  /* Its text, questions, answers and fields read at the size of the page around it. */
+  .asks, .asks legend, .asks label, .asks input { font-size: var(--fs-read); }
+  .asks label { color: var(--ink); }
   .asks fieldset.q { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; display: grid; gap: 4px; }
   .asks legend { font-weight: 600; padding: 0; }
   .asks > p:first-child { margin-top: 0; }
@@ -510,6 +513,8 @@
   .tabs.vtabs button[aria-pressed="true"] { background: var(--panel); color: var(--ink); border-color: var(--line); border-bottom-color: var(--panel); box-shadow: inset 0 2px 0 var(--ink); }
   .vpanel { border: 1px solid var(--line); border-radius: 0 var(--radius) var(--radius) var(--radius); background: var(--panel); padding: 12px 14px 14px; }
   .vpanel .vbar:first-child { margin-top: 0; }
+  .frame.vempty { display: grid; place-items: center; height: 40vh; background: var(--panel); color: var(--muted); font-size: var(--fs-meta); text-align: center; padding: 16px; }
+  .frame.vempty p { margin: 0; max-width: var(--measure); }
   .vbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
   .looks { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; }
   .looks button { flex: none; width: 128px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 0; cursor: pointer; text-align: left; overflow: hidden; color: inherit; font: inherit; }
@@ -590,6 +595,7 @@
   .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; z-index: 90; max-width: calc(100% - 32px); }
   dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, calc(100% - 32px)); background: var(--panel); color: var(--ink); }
   dialog::backdrop { background: rgba(0,0,0,.35); }
+  .drop.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
   dialog form { padding: 20px; display: grid; gap: 10px; }
   dialog h2 { font-size: 18px; } label { font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 4px; }
   .drop { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; font-size: var(--fs-meta); color: var(--muted); display: grid; gap: 8px; }
@@ -928,6 +934,7 @@
   .s-word .info .tip .t-paths li.no { opacity: .6; }
   /* The status line: the state's word, its ⓘ and the steps pill. */
   .s-line { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+  .s-act { font-size: var(--fs-ui); color: var(--muted); }
   /* A screen's or a part's drawn, checked and from: one line, cut short with … when narrow. */
   .s-meta .one-line { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .s-meta .one-line > span + span { margin-left: 12px; }
@@ -943,6 +950,7 @@
   .steppill .step-next::before { content: "Next:"; margin-right: 5px; color: var(--muted); font-size: var(--fs-meta); font-weight: 400; }
   .steppill .step-next::after { content: " →"; color: var(--o); }
   .steppill .step-next:hover { background: color-mix(in srgb, var(--o) 12%, transparent); }
+  .steppill .step-next.still { cursor: default; } .steppill .step-next.still::after { content: none; } .steppill .step-next.still:hover { background: none; }
   .stepper ol { position: absolute; z-index: 25; left: 0; top: calc(100% + 8px); margin: 0; padding: 10px 6px; list-style: none; width: 320px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.14); }
   .stepper li { display: grid; grid-template-columns: 22px 1fr; gap: 0 8px; padding: 4px 8px; font-size: var(--fs-ui); color: var(--muted); }
   .stepper li .n { grid-row: span 2; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; box-shadow: inset 0 0 0 1.5px var(--line); margin-top: 1px; }
@@ -1137,7 +1145,7 @@
     <fieldset class="skills" id="rq-skills" hidden><legend>What Design Desk uses for the options</legend><div id="rq-skill-list"></div></fieldset>
     <label id="rq-figma" hidden><span>Figma link (optional)</span><input name="figma" maxlength="500" placeholder="https://www.figma.com/design/…" /></label>
     <div class="drop" id="rq-drop">
-      <span>Screenshot (optional): paste it here with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="rq-file" hidden multiple /></label>. Two at most.</span>
+      <span>Screenshot (optional): drop it here, paste it with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="rq-file" hidden multiple /></label>. Two at most.</span>
       <div class="thumbs" id="rq-thumbs"></div>
     </div>
     <input type="hidden" name="from" />
@@ -1159,7 +1167,7 @@
     <label><span id="pd-where-label"></span><input name="where" maxlength="500" /></label>
     <label><span id="pd-show-label"></span><textarea name="show" maxlength="2000"></textarea></label>
     <div class="drop">
-      <span>Screenshot (optional): paste it here with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="pd-file" hidden multiple /></label>. Two at most.</span>
+      <span>Screenshot (optional): drop it here, paste it with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="pd-file" hidden multiple /></label>. Two at most.</span>
       <div class="thumbs" id="pd-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send" id="pd-send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
@@ -1171,7 +1179,7 @@
     <h2>Add screenshots</h2>
     <p class="sub" id="sh-hint">Take them in the product and paste them here. Design Desk checks that each one shows the change, and writes its caption.</p>
     <div class="drop">
-      <span>Paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="sh-file" hidden multiple /></label>. Four at most.</span>
+      <span>Drop them here, paste them with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="sh-file" hidden multiple /></label>. Four at most.</span>
       <div class="thumbs" id="sh-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
@@ -1186,7 +1194,7 @@
     <label><span>What it is about — a few words, separated by commas</span><input name="concepts" maxlength="300" required placeholder="e.g. send button, composer" /></label>
     <label><span>Why (optional)</span><textarea name="why" maxlength="1500" placeholder="e.g. Thumb reach on phones."></textarea></label>
     <div class="drop">
-      <span>Pictures (optional, up to 2): paste with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="dc-file" hidden multiple /></label>.</span>
+      <span>Pictures (optional, up to 2): drop them here, paste them with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="dc-file" hidden multiple /></label>.</span>
       <div class="thumbs" id="dc-thumbs"></div>
     </div>
     <div class="actions"><button type="button" class="btn primary" data-close="send">Add</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
@@ -1220,7 +1228,7 @@
       <label>Name<input name="name" maxlength="80" placeholder="e.g. My sketch" /></label>
       <label>What it shows (optional)<textarea name="why" maxlength="1000"></textarea></label>
       <div class="drop" id="of-drop">
-        <span>Pictures: paste them here with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="of-file" hidden multiple /></label>. Four at most, shown one under another.</span>
+        <span>Pictures: drop them here, paste them with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose files<input type="file" accept="image/png,image/jpeg,image/webp" id="of-file" hidden multiple /></label>. Four at most, shown one under another.</span>
         <div class="thumbs" id="of-thumbs"></div>
       </div>
     </div>
@@ -1276,6 +1284,7 @@
   const TONE = { triage: "checking", variants: "checking", feedback: "waiting", prototype: "live", testing: "live", spec: "approved", "handed-off": "approved", declined: "closed" };
   // What each place means, behind the ⓘ beside the state's word (from the request-page prototype).
   const STATUS_TIP = {
+    asking: "Design Desk asked a question below and waits for the answer before it goes on. Answer it, or leave it to Design Desk, which takes its recommendation.",
     triage: "Design Desk is reading how the screen works today and what a design change can do. Nobody needs to do anything yet.",
     variants: "Design Desk is drawing the design options. Nobody needs to do anything yet.",
     feedback: "Nothing is decided yet. A designer, a PM or a lead developer approves one option when the team is happy, or closes the request.",
@@ -1291,15 +1300,25 @@
   // team for feedback; one from Slack goes on by itself (docs/desk.md → Team feedback).
   const held = (c) => c.status === "variants" && c.team_feedback?.state === "waiting";
   STATUS_TIP.held = "The options are drawn. Fine-tune them in the design workspace; when they are ready, press Ask for feedback and the team votes and comments.";
-  const tone = (c) => c.status === "declined" && c.decided ? "decided" : held(c) ? "waiting" : TONE[c.status] || "fyi";
+  // Design Desk waits on a person's answer: the state says so and stops pulsing.
+  const asking = (c) => !closed(c) && (Boolean(c.asks) || (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"));
+  const tone = (c) => c.status === "declined" && c.decided ? "decided" : held(c) || asking(c) ? "waiting" : TONE[c.status] || "fyi";
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
   const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
   const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : specWord(c) || STATUS[c.status] || c.status;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
+  // What Design Desk does, in a few words, after the step's Wait.
+  const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options",
+    decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
+    states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
+    deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
+    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots" };
+  // What an open request waits for when nobody needs to press anything.
+  const WAIT_SHORT = { feedback: "The team votes and comments", testing: "The team tries it", triage: "Design Desk checks it soon" };
   const WORK = {
-    request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
-    "follow-up": "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
+    request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
+    "follow-up": "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
@@ -1738,7 +1757,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { fail(e); } };
   // A send that fails opens its dialog again with what the person typed; the toast says why.
   // Every dialog sends through it (docs/desk.md → Where it works).
-  const sendOrReopen = async (dlg, send) => { try { return await send(); } catch (e) { dlg.returnValue = ""; dlg.showModal(); throw e; } };
+  const sendOrReopen = async (dlg, send) => { try { return await send(); } catch (e) { dlg.returnValue = ""; dlg._reopen = true; dlg.showModal(); throw e; } };
   // The Desk runs in a sandboxed frame with no origin of its own, where local storage can
   // throw: a choice is kept in memory too, so a redraw (another design tab) keeps it.
   const store = (() => {
@@ -2199,6 +2218,46 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (b.dataset.close !== "cancel" && !dlg.querySelector("form").reportValidity()) return;
     dlg.close(b.dataset.close);
   });
+  // A dialog with something typed, picked or added in it asks before Escape or a click
+  // outside it closes it; its Cancel button still closes it at once (docs/desk.md → Where it works).
+  const formState = (d) => JSON.stringify([[...d.querySelectorAll("input:not([type=file]):not([type=hidden]), textarea, select")].map((i) => (i.type === "checkbox" || i.type === "radio" ? i.checked : i.value)),
+    [...d.querySelectorAll("button[aria-pressed]")].map((b) => b.getAttribute("aria-pressed")), d.querySelectorAll(".thumbs img").length]);
+  const leave = (d) => {
+    if (formState(d) === d._clean) { d.close("cancel"); return; }
+    ask({ title: "Close without sending?", body: "What you wrote or added in this window is lost; nothing is sent.", ok: "Close it", send: () => d.close("cancel") });
+  };
+  for (const d of document.querySelectorAll("dialog:not(#confirm-dialog):not(#element-dialog)")) {
+    // What it held when it opened; a dialog opened again after a failed send keeps it.
+    new MutationObserver(() => { if (d.open && !d._reopen) d._clean = formState(d); d._reopen = false; }).observe(d, { attributes: true, attributeFilter: ["open"] });
+    d.addEventListener("cancel", (e) => { if (formState(d) === d._clean) return; e.preventDefault(); leave(d); });
+    let downOutside = false;
+    const outside = (e) => { const r = d.getBoundingClientRect(); return e.target === d && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom); };
+    d.addEventListener("pointerdown", (e) => { downOutside = outside(e); });
+    d.addEventListener("click", (e) => { if (downOutside && outside(e)) leave(d); downOutside = false; });
+  }
+  // A picture dropped on a dialog goes where its "choose a file" puts it; a file dropped
+  // anywhere else on the page never opens in the page's place.
+  const dropInput = (d) => [...(d?.querySelectorAll(".drop input[type=file]") || [])].find((i) => !i.parentElement.closest("[hidden]"));
+  const files = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
+  let overTimer = 0;
+  document.addEventListener("dragover", (e) => {
+    if (!files(e)) return;
+    e.preventDefault();
+    const inp = dropInput(e.target.closest?.("dialog[open]"));
+    e.dataTransfer.dropEffect = inp ? "copy" : "none";
+    document.querySelectorAll(".drop.over").forEach((z) => z !== inp?.closest(".drop") && z.classList.remove("over"));
+    inp?.closest(".drop").classList.add("over");
+    clearTimeout(overTimer); overTimer = setTimeout(() => document.querySelectorAll(".drop.over").forEach((z) => z.classList.remove("over")), 150);
+  });
+  document.addEventListener("drop", (e) => {
+    if (!files(e)) return;
+    e.preventDefault();
+    document.querySelectorAll(".drop.over").forEach((z) => z.classList.remove("over"));
+    const inp = dropInput(e.target.closest?.("dialog[open]"));
+    if (!inp) return;
+    inp.files = e.dataTransfer.files;
+    inp.dispatchEvent(new Event("change", { bubbles: true }));
+  });
   // A confirmation for anything that cannot be taken back; optional choice, note or link.
   // `send(answer)` does the action; ask() resolves to its result, or to null on Cancel.
   // `multi`: the choices are checkboxes, `pick` the ids ticked at first, and the answer's
@@ -2525,7 +2584,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : ["pr-open", "Open", "Its pull request is open: not in the product yet"];
     return `<span class="sdot" data-s="${k}"><span class="chip tag" title="${esc(tip)}"><span class="w">${esc(word)}</span></span></span>`;
   }
-  const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
+  const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy && !c.asks ? "checking busy" : tone(c)}" title="${c.busy && !c.asks ? "Design Desk is working on it now" : c.asks ? "Design Desk waits for an answer" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
 
   // A screen's or an element's drawing in the list, as a request's state: up to date, out of date, being drawn, or not drawn.
   const MAP_STATE = { current: ["Up to date", "Drawn from the product as it is now"], stale: ["Out of date", "The product changed since it was drawn; Update the drawing draws it again"],
@@ -3289,7 +3348,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${requestsFrom(c)}
       ${attentionLine(c)}
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
-      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}</div></div>`).join("")}
       <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : ""}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
       ${renderInstance(c)}
@@ -3325,7 +3384,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${requestsFrom(c)}
       ${againstBox(c)}${followsLine(c)}
       ${(c.needs || []).length ? `<h3>What the UI will need</h3><ul>${c.needs.map((x) => `<li>${txt(x)}</li>`).join("")}</ul>` : ""}
-      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}</div></div>`).join("")}
       <h3>How it looks now</h3>${now.length ? shots(now) : `<p class="hint">${sketch.length ? "Nothing to show yet: this is a new part of the product." : "No picture yet."}</p>`}
       ${c.designed && !sketch.length ? "" : `<h3>How it could look</h3>`}${c.designed && !sketch.length ? "" : sketch.length ? `${shots(sketch, "sketch")}<p class="hint">A sketch${c.style && !/@/.test(c.style) ? ` in ${esc(c.style)}` : ""}: one possible direction to picture the issue, not a decision. Numbers and names in it are made up.</p>`
         : `<p class="hint">${busy ? "Being sketched." : "Design Desk sketches it in one of its next daily checks, the sprint's first."}${can("draw") && !busy && open ? " Press Draw it to have it now." : ""}</p>${can("draw") && !busy && open && !c.designed ? `<div class="actions"><button class="btn" data-act="draw">Draw it</button></div>` : ""}`}
@@ -3342,7 +3401,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
       ${c.group || c.path ? `<div class="sub">${c.group ? `<span class="chip" title="Where in the product it belongs">${esc(c.group)}</span>` : ""}${c.path ? `<code>${esc(c.path)}</code>` : ""}</div>` : ""}
       ${mapStatus(c, c.status === "dropped" ? "" : `${open ? `<a class="btn" href="${safeUrl(open)}" target="_blank" rel="noopener noreferrer" title="Opens this screen on Design Desk's own running copy of the product, with made-up data">Open the live product ↗</a>` : ""}${can("refresh") && c.status !== "building" && !working(c).length ? `<button class="btn" data-act="refresh" title="Design Desk takes this screen's pictures again on the live product: the same pictures mark it checked, new ones replace them">Check again</button>` : ""}`, c.status === "dropped" ? "" : agendaButton(c))}
-      ${c.status === "dropped" ? "" : working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${c.status === "dropped" ? "" : working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}</div></div>`).join("")}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.how ? `<p><b>How to get there:</b> ${esc(c.how)}</p>` : ""}
       ${renderWanted(c)}
@@ -3358,7 +3417,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!w) return "";
     const rows = `<dl class="kv"><dt>Asked for</dt><dd>${txt(w.part)}</dd>${w.where ? `<dt>Where</dt><dd>${esc(w.where)}</dd>` : ""}${w.show ? `<dt>To show</dt><dd>${txt(w.show)}</dd>` : ""}</dl>`;
     const by = `Added by ${who(c.created_by)} on ${esc(day(c.created))}`;
-    if (c.status === "building") return `<div class="panel"><p>${by}. Design Desk is finding it in the product; this page updates by itself.</p>${rows}</div>`;
+    if (c.status === "building") return `<div class="panel"><p>${by}. Design Desk is finding it in the product.</p>${rows}</div>`;
     if (c.status === "dropped") return `<div class="panel"><p><span class="chip warn" title="Design Desk could not add it; open it to see why">Not added</span> Design Desk could not add it; the reason is below.</p>${rows}</div>`;
     return `<details class="fold"><summary>${by}</summary>${rows}</details>`;
   }
@@ -3527,7 +3586,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${designs.map((x) => `<div class="designbox"><p>✎ An approved design changes it: <button class="anchor" data-ref="${esc(x.id)}">${esc(x.title)}</button>${num(x)}, from ${reqRef(x.design.card)}. Until that ships, the drawing below is the product as it is.</p></div>`).join("")}
       ${renderWanted(c)}
-      ${c.status === "dropped" ? "" : `${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
+      ${c.status === "dropped" ? "" : `${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}</div></div>`).join("")}
       ${(c.states || []).length ? `<h3>Situations</h3><ol class="md" style="max-width:var(--measure);padding-left:0;list-style:none">${c.states.map((x, k) => `<li id="no-${esc(c.id)}-${k + 1}">${subTag(c, k + 1)} <b>${esc(x.name)}</b>${x.how ? ` — <span class="sub" style="display:inline">${esc(x.how)}</span>` : ""}</li>`).join("")}</ol>` : ""}
       <p class="hint">Each tile is the real element, shown in one situation.</p>
       ${c.sheet ? renderLooks(c) : working(c).length ? "" : `<p class="hint">Not drawn yet.</p>`}${figmaBox(c)}`}
@@ -3755,11 +3814,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     else if (held(c)) paths = [can("revise") || filedIt(c) ? go("Ask for feedback", "Once the options are fine-tuned: the team votes and comments.") : no("Ask for feedback", "Only the request's author, a designer, a PM, a developer or an admin asks the team."), build(), approve(), close()];
     else if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) paths = [build(p.state === "failed" ? "Try again" : "Build it again"), approve(), close()];
     else if (live(c)) paths = [go("Open the prototype", "Try it and comment below."), approve(), close()];
-    else if (["prototype", "testing"].includes(c.status)) paths = [info("Design Desk builds the live prototype; this page updates by itself."), close()];
+    else if (["prototype", "testing"].includes(c.status)) paths = [info("Design Desk builds the live prototype."), close()];
     else if (hasOptions) paths = [go("Vote and comment", "👍, 👎 or ⚠ on each option, a comment on any part."), build(),
       ...((c.triage?.cannot || []).length ? [simple() ? no("Contact a developer", "Simple mode hides it; switch simple mode off.") : go("Contact a developer", "The parts a design change cannot do, with a question to copy.")] : []),
       slack(), approve(), close()];
-    else paths = [info("Design Desk draws the design options; this page updates by itself."), close()];
+    else paths = [info("Design Desk draws the design options."), close()];
     return { now, paths };
   }
   // The help as HTML (the diagram) and as one line for screen readers.
@@ -3817,7 +3876,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The prototype's demo account in the facts' style: grey words, the values in ink.
   const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}`;
   function renderStatus(c) {
-    const busy = working(c);
+    // While Design Desk waits on an answer, nothing says it is at work.
+    const busy = asking(c) ? [] : working(c);
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
     const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
     const nx = nextFor(c);
@@ -3837,11 +3897,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const reopenSent = c.status === "handed-off" && S.me?.role === "admin" ? `<button class="btn" data-act="reopen" title="Opens it again before the team's vote, with its options; its Designs record closes, and what went to GitHub stays there">Reopen…</button>` : "";
     const items = (nx.more || "") + call + size + reopenSent + del + (closed(c) || locked(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`) + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
+    // What to do now, as the step pill's next move: answer Design Desk's question, or wait
+    // while it works, with a few words on what it does after the pill.
+    // An open request with no move of its own waits too (the team's votes and comments, say).
+    const wait = !busy.length && !nx.step && !closed(c);
+    // A move a person can make comes first; Wait only when there is none.
+    const nextStep = nx.step || (asks.length ? `<span class="step-next still">Answer</span>` : busy.length || wait ? `<span class="step-next still">Wait</span>` : "");
+    const act = asks.length ? `<span class="s-act">${plural(asks.length, "question", "questions")} below</span>`
+      : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
+      : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
-      ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow} <span class="hint">This page updates by itself.</span></div></div>`).join("")}
       ${sizeLine(c)}
       ${c.status === "handed-off" ? sentBox(c) : ""}${(c.status === "handed-off" ? more : nx.buttons || more) ? `<div class="next"><div class="actions">${c.status === "handed-off" ? "" : nx.buttons}${more}</div></div>` : ""}
     </div>`;
@@ -3896,6 +3964,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (CODE_LINK.test(l.url || "")) return null;
     return { kind: "Link", label: l.label, url };
   }
+  // The short report's parts (docs/requests.md → Record it on the card), each its own
+  // paragraph that starts with its label, also when the summary runs them on in one.
+  const RESEARCH_PARTS = /(?:\*\*)?(Already asked for|Where it lives|History|In flight|Deliberate or a slip|Who to ask)(?:\*\*)?\s*:(?:\*\*)?[ \t]*/g;
+  const researchParts = (s) => String(s || "").replace(RESEARCH_PARTS, (m, h, at, all) => `${/(^|\n)[ \t]*([-*][ \t]+|\d+[.)][ \t]+)?$/.test(all.slice(0, at)) ? "" : "\n\n"}**${h}:** `);
   function renderResearch(r) {
     if (!r) return "";
     const items = (r.links || []).map(researchSource).filter(Boolean).map((x) => {
@@ -3905,7 +3977,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const link = x.html ?? `<a href="${x.url}" target="_blank" rel="noopener noreferrer"${docAttrs}>${label}</a>`;
       return `<li><span class="src-kind">${esc(x.kind)}</span> · ${link}</li>`;
     });
-    return `<section class="made-sec"><h4>What's already known</h4><div>${md(r.summary)}${items.length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${items.join("")}</ul>` : ""}</div></section>`;
+    return `<section class="made-sec"><h4>What's already known</h4><div>${md(researchParts(r.summary))}${items.length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${items.join("")}</ul>` : ""}</div></section>`;
   }
 
   // 👍, 👎 and ⚠ as pills with their count: grey until someone votes, then green, red or amber.
@@ -3961,7 +4033,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const vs = c.variants || [];
     // A request that asked for no options: once checked, its first one is added by hand.
     if (!vs.length) return c.request?.options === 0 && c.triage && addOptionTab(c)
-      ? `<h3>Design options</h3><div class="tabs vtabs" role="group" aria-label="Design options">${addOptionTab(c)}</div><p class="hint">No options were asked for. Add one: describe it for Design Desk to draw, or use your own pictures.</p>` : "";
+      ? `<h3>Design options</h3><div class="tabs vtabs" role="group" aria-label="Design options">${addOptionTab(c)}</div><div class="vpanel"><div class="frame vempty"><p>No options were asked for. Add one: describe it for Design Desk to draw, or use your own pictures.</p></div></div>` : "";
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
@@ -5791,7 +5863,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const f = $("#request-form");
     f.audience.value = to;
     for (const b of document.querySelectorAll("#for-choice button")) b.setAttribute("aria-pressed", String(b.dataset.for === to));
-    $("#rq-for-hint").textContent = to === "developers" ? "A developer approves it, without a designer; it waits in the For Developers tab." : "A designer, a PM or a lead developer approves it; it waits in the For Designers tab.";
+    $("#rq-for-hint").textContent = to === "developers" ? "A developer approves it, without a designer; it waits in the For Developers tab." : "";
   }
   $("#for-choice").addEventListener("click", (e) => { const b = e.target.closest("[data-for]"); if (b) setFor(b.dataset.for); });
   function setType(type) {
@@ -5814,7 +5886,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const carried = !$("#rq-carry").hidden && $("#request-form").querySelector("input[name=carry]:checked");
     $("#rq-count-hint").textContent = carried ? ""
       : !n ? "Design Desk only checks what can be done as a design change; a designer, PM or developer can still have options drawn later."
-      : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer, PM or developer starts them after Design Desk checks what can be done.";
+      : can("explore") ? "" :"A designer, PM or developer starts them after Design Desk checks what can be done.";
   }
   $("#request-form").options.addEventListener("input", sayCount);
 
@@ -5857,6 +5929,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
     $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
     setType("idea"); sayCount(); setFor("designers");
+    $("#rq-for").hidden = !can("size"); // who may move a request between the two tabs picks it here too
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !figmaOn(); // only with Figma on for this person (their menu switch)
     const issue = from?.kind === "issue";

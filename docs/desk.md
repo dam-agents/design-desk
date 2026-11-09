@@ -46,6 +46,11 @@ served by the Desk server through the platform's Artifact API relay.
   a dialog button carries `data-close`; Enter in a dialog `input` presses it (a `textarea`
   keeps Enter for a new line), and the work runs on the dialog's `close` event.
   When a dialog's action fails, the dialog opens again with what the person typed or picked.
+  While Design Desk works, the step pill's next move is **Wait**, with a few words on what it does;
+  while it waits on a person it is **Answer**, the questions below, and nothing pulses. An open
+  request with no other move shows **Wait** too.
+  A dialog with something typed, picked or added in it asks before Escape or a click outside
+  closes it (its Cancel closes it at once); a picture dropped on it is added as if chosen.
   The browser's Back leaves the Desk: every view keeps the menu or its own way back on
   screen while it scrolls (the list beside an open item, or its back bar where the list hides
   on a narrow screen; the presentation's Exit, a picture's Close).
@@ -149,7 +154,7 @@ served by the Desk server through the platform's Artifact API relay.
   how long things take.
 - **Redraws keep your place.** The page polls; a menu that did not change is not redrawn, and a
   redrawn menu or list gives keyboard focus back to the same button. A request's own work line
-  ("Checking your request") leaves once an option was drawn after its item was filed; a request
+  (its Wait and what Design Desk does) leaves once an option was drawn after its item was filed; a request
   reopened and checked again, its item filed after its options, keeps the line.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
   works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a
@@ -377,7 +382,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
 | a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
-| `lead-developer`, `pm`, `designer`, `admin` | move a request between For Developers and For Designers |
+| `lead-developer`, `admin` | move a request between For Developers and For Designers, and pick one when filing it |
 | `lead-developer`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
 | `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
@@ -407,12 +412,13 @@ beside them in full mode); each request is in one (the card's `size: {small, by,
 `small: true` for developers; the list's `for`). Where it starts:
 
 - **Filed on the Desk**: New request has a **For Designers / For Developers** switch,
-  For Designers by default (`POST /api/requests {audience}`).
+  For Designers by default (`POST /api/requests {audience}`), for the roles that move a request
+  below; anyone else files For Designers.
 - **Filed by you** (`design desk request`, `design desk report`): `audience` as you set it;
   without it, a request with a Slack `origin` is For Developers and any other For Designers.
   From Slack, set `audience: "designers"` only when the message asks for a designer.
 
-A designer, a PM, a lead developer or an admin moves an open, unapproved request between the two (**More** →
+A lead developer or an admin moves an open, unapproved request between the two (**More** →
 For Developers / For Designers; `POST /api/cards/<id>/size {small}`). The tab chosen when a
 request is filed carries `size.filed` and the page names no one for it; a later move shows who
 moved it and when. A request For Developers is approved by a designer or

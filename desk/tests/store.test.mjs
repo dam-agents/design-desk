@@ -23,8 +23,8 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   for (const a of ["explore", "revise", "refresh", "history", "change", "figma", "share", "add", "draw"]) assert.equal(can("developer", a), true, a);
   for (const a of ["approve", "close", "reopen", "queue", "handle", "choose", "decide"]) assert.equal(can("developer", a), false, a);
   assert.equal(can("guest", "explore"), false);
-  // A PM moves a request along: everything a lead developer may, and closing, reopening and live prototypes.
-  for (const a of ["explore", "revise", "size", "skip", "close", "reopen", "build"]) assert.equal(can("pm", a), true, a);
+  // A PM moves a request along: everything a lead developer may but the tab, and closing, reopening and live prototypes.
+  for (const a of ["explore", "revise", "skip", "close", "reopen", "build"]) assert.equal(can("pm", a), true, a);
   for (const a of ["approve", "queue", "handle", "choose", "decide", "people"]) assert.equal(can("pm", a), false, a);
   assert.equal(can("admin", "add"), true);
 });
@@ -201,8 +201,7 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   const dana = { email: "dana@example.com", role: "developer" };
   assert.equal(can("lead-developer", "size"), true);
   assert.equal(can("admin", "size"), true);
-  for (const r of ["designer", "pm"]) assert.equal(can(r, "size"), true, r);
-  for (const r of ["developer", "guest"]) assert.equal(can(r, "size"), false, r);
+  for (const r of ["designer", "pm", "developer", "guest"]) assert.equal(can(r, "size"), false, r);
   assert.equal(can("lead-developer", "approve"), false, "a developer approves only a request For Developers, per card");
   assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", also: [], role: "lead-developer" }]);
 
