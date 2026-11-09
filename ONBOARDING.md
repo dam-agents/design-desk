@@ -206,8 +206,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
     without names, as one public text page that coding agents read before they change the
     screens?" Yes → `dam` ([docs/decisions-page.md](docs/decisions-page.md)); default `off`.
 
-The keys under **Advanced** are never asked about: write them with these defaults, and
-change one only when the operator asks ([docs/config.md](docs/config.md) says what each does).
+The keys under **Advanced** are never asked about and no later step writes them: write them
+with these defaults, and change one only when the operator asks ([docs/config.md](docs/config.md) says what each does).
 Write the file in exactly this shape with `design config write` (a restored file included;
 [docs/config.md](docs/config.md) → Writing the file), then `bash "$HOME/scripts/verify-onboarding.sh"
 --config` and apply what it reports:
@@ -222,7 +222,11 @@ Write the file in exactly this shape with `design config write` (a restored file
 - max_prototypes: 2
 - spec_review: enabled
 - prototype_remote: none
+- screens: disabled
+- max_screen_prs: 2
 - handoff: desk
+- desk_artifact:
+- desk_link:
 - qa_bot:
 - ci_gate: disabled
 - issue_label: design
@@ -253,8 +257,6 @@ Write the file in exactly this shape with `design config write` (a restored file
 - default_style: auto
 - prototype_expiry_days: 7
 - desk_ping: enabled
-- desk_artifact:
-- desk_link:
 - bug_reports: enabled
 - watch_open_prs: enabled
 - proposals: enabled
@@ -263,8 +265,6 @@ Write the file in exactly this shape with `design config write` (a restored file
 - dispatch: enabled
 - audit_report: enabled
 - log_level: info
-- screens: disabled
-- max_screen_prs: 2
 - council_sync_min: 30
 
 ## Desk people

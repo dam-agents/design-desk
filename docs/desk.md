@@ -512,7 +512,8 @@ with a role; it has no card. This is the one roster change that comes from the D
    for the next run: report it. Never edit `## Desk people` by hand for an ask.
 3. `added` → tell the operator in the run's report to share the Desk with that email (Share →
    Restricted): only the owner shares it, the row alone opens nothing. People says so too: the
-   ask shows **Not shared yet** until that person opened the Desk, with the owner's move and
+   ask shows **Not shared yet** until that person loaded the Desk once (the store keeps
+   `opened: {<address>: at}`, lower-cased, from the page's first load), with the owner's move and
    **Copy email** for the owner.
 
 ## The presentation

@@ -243,7 +243,7 @@ function cleanCount(v, fallback = 3) {
 }
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {} };
 }
 
 // The bell's events that fold into one row per item and day, with their count.
@@ -414,7 +414,7 @@ export class Store {
         triage: c.triage?.verdict || null, prototype: c.prototype?.state || null, team_feedback: c.team_feedback || null,
         // A spec draft waits on a person: the list's dot reads it as the page does (docs/desk-page.md → A request's state in the list).
         spec: c.spec ? { review: c.spec.review || null } : null,
-        // A Slack vote on its options: running, or one that ended (the list's Ready, docs/desk-page.md → Pages and filters).
+        // A Slack vote on its options: running, or one that ended (the list's Your turn, docs/desk-page.md → Pages and filters).
         voting: (c.polls || []).some((x) => x.state === "open"), voted: (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
@@ -1301,7 +1301,18 @@ export class Store {
       .sort((a, b) => b.created.localeCompare(a.created) || Number(b.id.slice(2)) - Number(a.id.slice(2))).slice(0, 20)
       .map((i) => ({ id: i.id, email: i.person.email, role: i.person.role, by: i.by?.email || null, created: i.created, state: i.state, outcome: i.outcome || null, done_at: i.done_at || null,
         // Added to the list is not shared with: only the owner shares the Desk (docs/desk.md → People).
-        opened: Boolean(own(this.db.reads, i.person.email) || own(this.db.prefs, i.person.email) || own(this.db.seen, i.person.email)) }));
+        opened: Boolean(own(this.db.opened || {}, String(i.person.email).toLowerCase())) }));
+  }
+
+  // A person loaded the Desk: kept once per address, lower-cased, so People can tell an added
+  // person the Desk was shared with from one it was not (docs/desk.md → People). The first
+  // load alone writes; a store from before this record has none and starts one.
+  markOpened(who) {
+    const fresh = addressesOf(who).filter((e) => !own(this.db.opened || {}, e));
+    if (!fresh.length) return;
+    if (!this.db.opened) this.db.opened = {};
+    for (const e of fresh) Object.defineProperty(this.db.opened, e, { value: this.clock(), enumerable: true, writable: true, configurable: true });
+    this.save();
   }
 
   // A state change a person asks for on a request card; the agent does the work.
