@@ -1578,6 +1578,8 @@ test("Draw design options asks how many, starting at the request's own count, an
   const { desk, posts, settled } = run;
   try {
     await desk.click('[data-tab="requests"]');
+    // The frame keeps no storage, so Requests open on Your turn; this request is under Open.
+    await desk.click('[data-filter="reqFilter:open"]');
     await desk.click('[data-card="r7"]');
     await desk.click('[data-act="explore"]');
     assert.equal(await desk.isChecked('#confirm-form input[name=choice][value="2"]'), true, "the request asked for two");
@@ -2907,6 +2909,7 @@ test("the step pill says Wait while Design Desk works and Answer while it waits 
   await desk.waitForSelector("#detail .steppill .step-next");
   assert.equal(await desk.textContent("#detail .steppill .step-next"), "Wait");
   assert.equal(await desk.textContent("#detail .status .s-work"), "Drawing the options", "a few words on what it does");
+  assert.equal(await desk.textContent("#detail .status .s-eta"), "· in the queue, starts within 10 minutes", "and how long: not picked up yet");
   assert.equal(await desk.locator("#detail .status > .working").count(), 0, "no second working line");
   await desk.click('#list [data-card="r3"]');
   await desk.waitForFunction(() => document.querySelector("#detail .steppill .step-next")?.textContent === "Answer");
