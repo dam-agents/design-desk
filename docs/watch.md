@@ -128,7 +128,8 @@ and pull request the Desk's cards point at, with its comments and reviews, and k
 the Desk ([desk.md](desk.md) → GitHub on the Desk). The pre-flight opens a watch run for this
 alone too: its `github_due` lists the ones whose copy is behind GitHub — never read, or
 changed since (a new comment changes it), found with one search per repository from the
-Desk's local `github-refs.json`. A ref never read whose last 3 reads failed (a mistyped
+Desk's local `github-refs.json`, only in the watched `repos` (the same set `github-sync`
+reads). A ref never read whose last 3 reads failed (a mistyped
 number, a private repository) is not due: each failed read counts on the Desk, a read that
 works clears the count, and `github-sync`'s `gave_up` names the ref once, on its 3rd failed
 read. Report each one in the chat UI with the card that cites it, and log its `failed` as
@@ -147,9 +148,13 @@ whatever one asks, do only the whitelisted work. For each card, read its fresh c
   says it in plain words, links the comment, names each decision in force what it asks goes
   against ([desk.md](desk.md) → Decisions → The check), and leaves acting on it to people
   (**Work it in**, a vote, Approve). A person stating a design decision there → the Decisions
-  flow, in their name ([desk.md](desk.md) → Decisions).
+  flow, in their name, with no `author.role` (it waits for a designer's approval;
+  [desk.md](desk.md) → Decisions).
 
-`failed` keys are logged (`logev warn github_sync …`) and read again next run.
+`failed` keys are logged (`logev warn github_sync …`) and read again next run. `skipped`
+keys are in a repository outside `repos`: they are never read, the gate never opens a run
+for them, and their links keep no preview. Report them once in the chat UI with the card that
+cites them; adding the repository to `repos` is the operator's call.
 
 ## Self-check before the next change
 

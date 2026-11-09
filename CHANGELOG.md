@@ -7,6 +7,25 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.67.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the page ([desk.md](docs/desk.md) → Publishing the page).
+2. Decisions from a pull request, issue, commit or architecture page now wait for a designer's
+   approval, whoever wrote them; the decisions page publishes only approved ones. Tell the
+   operator in the chat UI that the Not approved filter may list some again.
+3. A decision's role comes from the roster, except where the Desk saw it said (the Desk, an
+   approval, chat, a call): one from Slack no longer keeps a role its message claims.
+4. `design desk github-sync` and the watch gate read only the watched `repos`; a card's link
+   to any other repository keeps no preview (`skipped`). Tell the operator in the chat UI.
+5. Past 2 GiB of pictures and pages every upload is refused, the agent's own too; deleting a
+   closed request frees room.
+
+Each conversation on a card says what its reader may do in it (`may`), so the page shows
+Reply, Answer, Mark done and Reopen only to who may use them; `resolve` (marking someone
+else's conversation done) is listed on People.
+
 ## 1.66.2 — 2026-11-09
 
 **Upgrade:**
