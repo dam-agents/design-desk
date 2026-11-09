@@ -1227,6 +1227,53 @@ for (const [label, triage, me, sel] of PILLS) {
   }));
 }
 
+// Every branch of the step pill at Options drawn (step 2) and Team feedback (step 3). The pill
+// holds the move to the next step only: at Options drawn that is Team feedback — Contact a
+// developer first, then Ask for feedback — never a live prototype (step 4) or Approve, which
+// stay under ⋯ and in the row; votes and Slack come at Team feedback.
+const ME = (can, extra = {}) => ({ role: "designer", email: "alice@example.com", ...extra, can: { vote: true, comment: true, ...can } });
+const DESIGN = { verdict: "design", reasons: [] }, PRODUCT = { verdict: "product", reasons: [] };
+const CANNOT = { verdict: "design", reasons: [], cannot: ["Sort by spend: the list has no such order."] };
+const ALL = { build: true, revise: true, approve: true, close: true, share: true };
+const BRANCHES = [
+  // [name, status, team_feedback, triage, me, pill, ⋯ has Build]
+  ["Options drawn, parts for a developer", "variants", null, CANNOT, ME(ALL, { slack: true }), "Contact a developer", true],
+  ["Options drawn, a designer who builds", "variants", null, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", true],
+  ["Options drawn, held for its people", "variants", { state: "waiting" }, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", true],
+  ["Options drawn, held, parts for a developer", "variants", { state: "waiting" }, CANNOT, ME(ALL), "Contact a developer", true],
+  ["Options drawn, Product", "variants", null, PRODUCT, ME(ALL, { slack: true }), "Ask for feedback", false],
+  ["Options drawn, an approver who may not ask", "variants", null, DESIGN, ME({ build: true, approve: true, close: true, share: true }, { slack: true }), "Wait", true],
+  ["Team feedback, a designer who builds", "feedback", { state: "open" }, DESIGN, ME(ALL), "Build a live prototype", false],
+  ["Team feedback, parts for a developer, no build", "feedback", { state: "open" }, { ...CANNOT, verdict: "needs-developer" }, ME({ approve: true, close: true }), "Contact a developer", false],
+  ["Team feedback, an approver", "feedback", { state: "open" }, PRODUCT, ME({ approve: true, close: true, share: true }, { slack: true }), "Approve", false],
+  ["Team feedback, Slack for who cannot approve", "feedback", { state: "open" }, PRODUCT, ME({ share: true }, { slack: true }), "Send to Slack…", false],
+  ["Team feedback, no move of one's own", "feedback", { state: "open" }, PRODUCT, ME({}), "Wait", false],
+];
+for (const [name, status, tf, triage, me, pill, build] of BRANCHES) {
+  test(`step pill: ${name} → ${pill}`, (t) => open(t, BRIDGE_PILL(triage, me).replace('status: "feedback"', `status: "${status}", team_feedback: ${JSON.stringify(tf)}`), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector("#detail .steppill .step-next");
+    assert.equal(await desk.locator("#detail .steppill .step-next").count(), 1, "one move, no more");
+    assert.equal((await desk.textContent("#detail .steppill .step-next")).trim(), pill);
+    assert.match(await desk.textContent("#detail .steppill summary"), status === "variants" ? /^Step 2\// : /^Step 3\//);
+    assert.equal(await desk.locator('#detail .more [data-act="build"]').count(), build ? 1 : 0, build ? "Build waits under ⋯" : "no Build under ⋯");
+    const help = await desk.textContent("#detail .s-word .info .tip");
+    if (status === "variants") {
+      assert.equal(await desk.locator('#detail .steppill [data-act="build"], #detail .steppill [data-act="approve"], #detail .steppill [data-act="slack"]').count(), 0, "never a live prototype, Approve or Slack at Options drawn");
+      assert.doesNotMatch(help, /Vote and comment/, "nobody votes before Team feedback");
+      assert.match(help, /Ask for feedback/, "the way on is to ask the team");
+      assert.equal(await desk.locator("#detail .btn.vote").count(), 0, "no vote pills yet");
+    }
+    if (me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve stays in the row");
+    // Contact a developer opened: the pill moves on to the step's next move.
+    if (pill === "Contact a developer" && status === "variants") {
+      await desk.click("#detail .steppill [data-dev-ask]");
+      await desk.waitForFunction(() => document.querySelector("#detail .steppill .step-next")?.textContent.trim() === "Ask for feedback");
+    }
+  }));
+}
+
 // An item opened from another one's link opens on its own tab: the menu says where you are.
 test("a link to an issue opens it under Issues, and the menu says so", (t) => open(t, BRIDGE_STORIES
   .replace(': path === "/api/cards/r7"', ': path === "/api/cards/is1" ? { card: issue }\n    : path === "/api/cards/r7"'), async (desk) => {
