@@ -5882,6 +5882,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
     $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
     setType("idea"); sayCount(); setFor("designers");
+    $("#rq-for").hidden = !can("size"); // who may move a request between the two tabs picks it here too
     $("#type-choice").hidden = Boolean(from);
     $("#rq-figma").hidden = !figmaOn(); // only with Figma on for this person (their menu switch)
     const issue = from?.kind === "issue";

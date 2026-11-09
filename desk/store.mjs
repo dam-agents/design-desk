@@ -65,7 +65,7 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
     // A developer or a PM starts and changes everything a designer does; deciding stays a designer's.
     case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev || pm;
     // Whether a request is For Developers, which a developer approves, or For Designers.
-    case "size": return shaper || pm || role === "lead-developer";
+    case "size": return role === "lead-developer" || role === "admin";
     // Skip the vote and the live prototype: approve straight away, or decide and close
     // (docs/desk.md → Deciding straight away).
     case "skip": return shaper || pm || role === "lead-developer";

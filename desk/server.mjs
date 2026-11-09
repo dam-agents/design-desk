@@ -172,7 +172,7 @@ async function viewerRoute(req, res, url, who) {
     const verb = VERBS[action] || "do that";
     throw new DeskError(403, who.deskRole === "guest"
       ? `To ${verb}, ask ${s.contact} to add ${who.email || "you"} to the Desk's members.`
-      : `Only ${action === "people" ? "an admin" : action === "size" ? "designers, PMs and lead developers" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : action === "built" ? "developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
+      : `Only ${action === "people" ? "an admin" : action === "size" ? "lead developers and admins" : action === "skip" ? "designers, PMs and lead developers" : action === "close" || action === "reopen" ? "designers and PMs" : action === "built" ? "developers" : "designers"} can ${verb}. Ask ${s.contact} if you need it.`);
   };
   const p = url.pathname.split("/").filter(Boolean); // ["api", ...]
   const m = req.method;
@@ -275,8 +275,9 @@ async function viewerRoute(req, res, url, who) {
     // A person files an idea, a bug, or an adjustment of a change card; features and
     // proposals are the agent's (from an issue, from a shipped change).
     const { title, problem, goal, screen, steps, from, figma } = b;
-    // For Developers or For Designers, the dialog's switch; the Desk's default is the designers'.
-    const audience = b.audience === "developers" ? "developers" : "designers";
+    // For Developers or For Designers, the dialog's switch, for the roles that may move a
+    // request between the two; the Desk's default is the designers'.
+    const audience = b.audience === "developers" && can(who.deskRole, "size", s.prototypeRoles) ? "developers" : "designers";
     // How many options, and questions first: a bug is fixed, not designed, so it has neither.
     // From an issue on the Issues page it designs that feature; from a change it adjusts it.
     // From an approved request, a new one of the same kind, its options carried over as ticked.

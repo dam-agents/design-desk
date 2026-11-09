@@ -427,15 +427,15 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   assert.equal((await d.agent("/agent/cards", { id: none, status: "feedback", triage: { verdict: "design", reasons: ["Words only."] } })).body.card.status, "feedback", "no options to fine-tune: on by itself");
 });
 
-test("a PM moves a request along — size, close, reopen, build by default — and marks no presentation presented", async (t) => {
+test("a PM moves a request along — close, reopen, build by default — and marks no presentation presented", async (t) => {
   const d = await desk(t);
   const me = (await d.viewer("pat@example.com", "/api/me")).body;
-  assert.deepEqual([me.role, me.can.size, me.can.close, me.can.reopen, me.can.build, me.can.queue], ["pm", true, true, true, true, false], "prototype_requesters unset: a PM builds");
+  assert.deepEqual([me.role, me.can.size, me.can.close, me.can.reopen, me.can.build, me.can.queue], ["pm", false, true, true, true, false], "prototype_requesters unset: a PM builds, and leaves the tab to a lead developer");
   assert.equal((await d.viewer("bob@example.com", "/api/me")).body.can.build, false, "a developer does not");
   const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/size`, { small: true })).status, 403, "a developer does not move it");
-  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/size`, { small: true })).status, 200, "a PM does");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/size`, { small: true })).status, 403, "nor does a PM");
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "close" })).status, 403, "a developer does not close it");
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "close" })).body.card.status, "declined", "a PM does");
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "reopen" })).status, 403, "a developer does not reopen it");
