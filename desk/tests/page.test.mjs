@@ -2585,10 +2585,10 @@ test("a request's own work line leaves once its options are drawn, and shows aga
   const lines = () => desk.$$eval("#detail .working, #detail .s-work", (els) => els.map((e) => e.textContent).join(" "));
   await desk.click('#list [data-card="r1"]');
   await desk.waitForSelector("#detail .crumb", { state: "attached" });
-  assert.doesNotMatch(await lines(), /how the screen works/, "options drawn after the item: no Checking line");
+  assert.doesNotMatch(await lines(), /Reading the screen/, "options drawn after the item: no Checking line");
   await desk.click('#list [data-card="r2"]');
   await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent.includes("Reopened"));
-  assert.match(await lines(), /how the screen works/, "a reopened request, checked again, says so");
+  assert.match(await lines(), /Reading the screen/, "a reopened request, checked again, says so");
 }));
 
 test("a caption that only repeats its stage is not said twice", (t) => open(t, DESK(DESIGNER, [{ id: "ch1", kind: "change", title: "Pairs", source: { repo: "acme/widgets", pr: 3 },

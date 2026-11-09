@@ -43,8 +43,8 @@ served by the Desk server through the platform's Artifact API relay.
   a dialog button carries `data-close`; Enter in a dialog `input` presses it (a `textarea`
   keeps Enter for a new line), and the work runs on the dialog's `close` event.
   When a dialog's action fails, the dialog opens again with what the person typed or picked.
-  A request's state line says what to do now: **Wait** and what Design Desk is doing while it
-  works, or **Answer the question below** while it waits on a person, when nothing pulses.
+  While Design Desk works, the step pill's next move is **Wait**, with a few words on what it does;
+  while it waits on a person it is **Answer**, the questions below, and nothing pulses.
   A dialog with something typed, picked or added in it asks before Escape or a click outside
   closes it (its Cancel closes it at once); a picture dropped on it is added as if chosen.
   The browser's Back leaves the Desk: every view keeps the menu or its own way back on
