@@ -1229,20 +1229,20 @@ for (const [label, triage, me, sel] of PILLS) {
 
 // Every branch of the step pill at Options drawn (step 2) and Team feedback (step 3). The pill
 // holds the move to the next step only: at Options drawn that is Team feedback — Contact a
-// developer first, then Ask for feedback — never a live prototype (step 4) or Approve, which
-// stay under ⋯ and in the row; votes and Slack come at Team feedback.
+// developer first, then Ask for feedback — never Approve, which stays in the row, and no live
+// prototype (step 4) anywhere, not under ⋯ nor in the ⓘ; votes and Slack come at Team feedback.
 const ME = (can, extra = {}) => ({ role: "designer", email: "alice@example.com", ...extra, can: { vote: true, comment: true, ...can } });
 const DESIGN = { verdict: "design", reasons: [] }, PRODUCT = { verdict: "product", reasons: [] };
 const CANNOT = { verdict: "design", reasons: [], cannot: ["Sort by spend: the list has no such order."] };
 const ALL = { build: true, revise: true, approve: true, close: true, share: true };
 const BRANCHES = [
   // [name, status, team_feedback, triage, me, pill, ⋯ has Build]
-  ["Options drawn, parts for a developer", "variants", null, CANNOT, ME(ALL, { slack: true }), "Contact a developer", true],
-  ["Options drawn, a designer who builds", "variants", null, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", true],
-  ["Options drawn, held for its people", "variants", { state: "waiting" }, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", true],
-  ["Options drawn, held, parts for a developer", "variants", { state: "waiting" }, CANNOT, ME(ALL), "Contact a developer", true],
+  ["Options drawn, parts for a developer", "variants", null, CANNOT, ME(ALL, { slack: true }), "Contact a developer", false],
+  ["Options drawn, a designer who builds", "variants", null, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", false],
+  ["Options drawn, held for its people", "variants", { state: "waiting" }, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", false],
+  ["Options drawn, held, parts for a developer", "variants", { state: "waiting" }, CANNOT, ME(ALL), "Contact a developer", false],
   ["Options drawn, Product", "variants", null, PRODUCT, ME(ALL, { slack: true }), "Ask for feedback", false],
-  ["Options drawn, an approver who may not ask", "variants", null, DESIGN, ME({ build: true, approve: true, close: true, share: true }, { slack: true }), "Wait", true],
+  ["Options drawn, an approver who may not ask", "variants", null, DESIGN, ME({ build: true, approve: true, close: true, share: true }, { slack: true }), "Wait", false],
   ["Team feedback, a designer who builds", "feedback", { state: "open" }, DESIGN, ME(ALL), "Build a live prototype", false],
   ["Team feedback, parts for a developer, no build", "feedback", { state: "open" }, { ...CANNOT, verdict: "needs-developer" }, ME({ approve: true, close: true }), "Contact a developer", false],
   ["Team feedback, an approver", "feedback", { state: "open" }, PRODUCT, ME({ approve: true, close: true, share: true }, { slack: true }), "Approve", false],
@@ -1262,6 +1262,8 @@ for (const [name, status, tf, triage, me, pill, build] of BRANCHES) {
     if (status === "variants") {
       assert.equal(await desk.locator('#detail .steppill [data-act="build"], #detail .steppill [data-act="approve"], #detail .steppill [data-act="slack"]').count(), 0, "never a live prototype, Approve or Slack at Options drawn");
       assert.doesNotMatch(help, /Vote and comment/, "nobody votes before Team feedback");
+      assert.doesNotMatch(help, /live prototype/, "no live prototype before Team feedback");
+      assert.equal(await desk.locator('#detail [data-act="build"]').count(), 0, "no Build anywhere at Options drawn");
       assert.match(help, /Ask for feedback/, "the way on is to ask the team");
       assert.equal(await desk.locator("#detail .btn.vote").count(), 0, "no vote pills yet");
     }

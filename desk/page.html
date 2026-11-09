@@ -3761,14 +3761,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // as if there had been none: the spec carries them to developers when the request is approved.
     const dev = !simple() && (c.triage?.cannot || []).length && !devAsked(c) ? `<button class="step-next" data-dev-ask title="Opens the parts a design change cannot do, with a question for a developer to copy">Contact a developer</button>` : "";
     // Options drawn (step 2), held for its people or not: the next step is Team feedback, so the
-    // pill is Contact a developer, then Ask for feedback — never a live prototype (step 4) or
-    // Approve; those stay under ⋯ and in the row.
+    // pill is Contact a developer, then Ask for feedback. No live prototype (step 4) here at all,
+    // not even under ⋯: it is built from the team's feedback. Approve stays in the row.
     if (c.status === "variants" && hasOptions) {
       const mine = (can("revise") || filedIt(c)) && c.team_feedback?.state !== "open";
       const ask = mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, PMs, developers and admins may on any request"}.">Ask for feedback</button>` : "";
       return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, press Ask for feedback." : "The options are drawn. The request's author, a designer, a PM, a developer or an admin asks the team for feedback once they are fine-tuned.",
         step: dev || ask,
-        more: design && canBuild() ? b("build", "Build a live prototype…") : "",
         buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (c.status === "feedback" && hasOptions) {
@@ -3823,7 +3822,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     else if (c.status === "triage" && !c.triage) paths = [info("Design Desk checks it first: how the screen works today, who else is changing it, what a design change can do."), close()];
     else if (c.status === "triage") paths = [can("explore") ? go("Draw design options", "Design Desk draws a few ways it could look.") : no("Draw design options", `Only designers, PMs, developers and admins start the options; ${ask}.`), approve(), close()];
     // Options drawn: nobody votes yet (votes come at Team feedback), so the way on is to ask the team.
-    else if (c.status === "variants" && hasOptions) paths = [...dev(), can("revise") || filedIt(c) ? go("Ask for feedback", "Once the options are fine-tuned: the team votes and comments.") : no("Ask for feedback", "Only the request's author, a designer, a PM, a developer or an admin asks the team."), build(), approve(), close()];
+    else if (c.status === "variants" && hasOptions) paths = [...dev(), can("revise") || filedIt(c) ? go("Ask for feedback", "Once the options are fine-tuned: the team votes and comments.") : no("Ask for feedback", "Only the request's author, a designer, a PM, a developer or an admin asks the team."), approve(), close()];
     else if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) paths = [build(p.state === "failed" ? "Try again" : "Build it again"), approve(), close()];
     else if (live(c)) paths = [go("Open the prototype", "Try it and comment below."), approve(), close()];
     else if (["prototype", "testing"].includes(c.status)) paths = [info("Design Desk builds the live prototype."), close()];
