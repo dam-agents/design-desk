@@ -276,7 +276,9 @@ test("a spec for a request from Slack is sent only by a person, whatever spec_re
   const approved = s.card(slack).status;
   assert.throws(() => s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "sent" } }), /waits for a person's Send/, "spec_review disabled does not send it");
   assert.throws(() => s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "draft", sent: { by: { email: "alice@example.com" } } } }), /waits for a person's Send/, "nor a send the agent writes itself");
-  assert.deepEqual([s.card(slack).spec, s.card(slack).status], [null, approved], "a refused write leaves the card as it was");
+  assert.throws(() => s.upsertCard({ id: slack, origin: { channel: "chat", reporter: "Dana" }, status: "spec", spec: { asset: spec(), review: "sent" } }), /waits for a person's Send/, "nor a write that renames its origin");
+  assert.throws(() => s.upsertCard({ id: slack, status: "handed-off" }), /waits for a person's Send/, "nor a hand-off before the send");
+  assert.deepEqual([s.card(slack).spec, s.card(slack).status, s.card(slack).origin.channel], [null, approved, "slack"], "a refused write leaves the card as it was");
   s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "draft" } });
   assert.equal(s.specAction(slack, alice, { action: "send" }).card.spec.review, "sent");
   s.upsertCard({ id: slack, spec: { ...s.card(slack).spec, issue_url: "https://github.com/acme/widgets/issues/7" } });

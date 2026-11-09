@@ -72,7 +72,7 @@ repository and, where the profile's `source` names a commit, the same commit). A
 skill without such a row, a pinned row whose pin no longer matches, and a pinned row read
 without `--repo` are set aside with a line in `notes`, and the bundled skill does the action
 until the operator confirms again; tell the operator what `notes` says. A row without a pin
-is the operator's own override and is used as it stands.
+is the operator's own override and is used as it stands, with no line in `notes`.
 
 A skill that replaces a bundled one keeps the action's contract:
 

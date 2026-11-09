@@ -21,6 +21,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    `## Skills` row with the `| source |` pin ([docs/actions.md](docs/actions.md) → Another
    skill for an action). Until then `design skill` gives the action to the bundled skill.
 4. Rewrite and republish the agent manifest (new trust rules, [docs/manifest.md](docs/manifest.md)).
+5. Restart the Desk server (`rc-service --user design-desk-server restart`): the store refuses a
+   spec sent, or a hand-off, on a request from Slack until a person's Send to developers.
 
 ## 1.66.1 — 2026-11-08
 

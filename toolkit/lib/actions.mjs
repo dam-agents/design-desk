@@ -94,7 +94,8 @@ export function resolve(action, { config = {}, profile = {} } = {}) {
     configSkill = null;
     notes.push(`${row.skill} (config) is pinned to ${row.source}, which ${prof.skill ? `does not match the profile's ${prof.skill} from ${prof.source || "no source"}` : "no profile read here names (pass --repo)"}; the operator confirms it again (docs/actions.md)`);
   }
-  if (prof.skill && !confirmed) {
+  // An unpinned row with the profile's own skill is the operator's override: nothing is set aside.
+  if (prof.skill && !confirmed && !(row.skill === prof.skill && !row.source)) {
     notes.push(`${prof.skill} (profile) is not confirmed by the operator: no ## Skills row pins it to ${(prof.source || "its source").split("@")[0]}@<sha> (docs/actions.md)`);
   }
   const choices = [
