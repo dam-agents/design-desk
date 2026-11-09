@@ -147,6 +147,10 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await rq.open(), true, "an empty request stays open");
     await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
     assert.equal(await desk.isVisible("#rq-skills"), true, "an idea offers the skills");
+    assert.equal(await desk.evaluate(() => document.querySelector("#rq-skills").open), false, "the skills start folded");
+    assert.equal(await desk.isVisible("#rq-skill-list"), false, "their switches hide until it is opened");
+    await desk.click("#rq-skills > summary");
+    assert.equal(await desk.isVisible("#rq-skill-list input[data-skill]"), true, "opened, the switches show");
     await desk.click("#request-dialog #type-choice button[data-type=bug]");
     assert.equal(await desk.isVisible("#rq-skills"), false, "a bug offers no skills");
     assert.equal(await desk.isVisible("#rq-vision"), false, "a bug asks for no picture of how it should look");
@@ -1275,6 +1279,8 @@ const HEADERS = [
   ["Sent, someone who does not", { status: "handed-off", triage: DESIGN, approved: OK }, ME(ALL), "Sent to developers", "approved", 6, null, false],
   ["Closed", { status: "declined", triage: DESIGN }, ME(ALL), "Closed", "closed", null, null, false],
   ["Decided without a design", { status: "declined", triage: DESIGN, decided: { by: { email: "bob@example.com" }, at: AT, text: "Keep the list as it is." } }, ME(ALL), "Decided without a design", "decided", null, null, false],
+  ["Team feedback, the Slack vote ended", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT, result: "Column won" }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback (finished)", "waiting", 3, "Approve", false],
+  ["Team feedback, the Slack vote still runs", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT }, { state: "open", closes: LATER }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
 ];
 // The request as the test stands it, on its page and as the list's row (a count, busy, asks).
 const BRIDGE_HEADER = (patch, me) => BRIDGE_STORIES
@@ -2869,13 +2875,13 @@ test("the step pill says Wait while Design Desk works and Answer while it waits 
   assert.equal(await desk.locator("#detail .status > .working").count(), 0, "no second working line");
   await desk.click('#list [data-card="r3"]');
   await desk.waitForFunction(() => document.querySelector("#detail .steppill .step-next")?.textContent === "Answer");
-  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "waiting", "waiting on a person, not checking");
+  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "turn", "a person's move, not checking");
   assert.match(await desk.textContent("#detail .status .s-act"), /1 question below/);
   assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "none", "nothing pulses");
 }));
 
 // The state's mark pulses only while Design Desk works: a checked request that waits for a
-// person to start the options is still Checking, and its mark stays still.
+// person to start the options reads Checked, in a person's ink, and its mark stays still.
 const STILL = { id: "r5", kind: "request", title: "Checked", status: "triage", triage: { verdict: "design", reasons: ["Look only."] } };
 test("the state's mark pulses while Design Desk works and stays still while it waits on a person", (t) => open(t, DESK({ ...DESIGNER, can: { request: true, explore: true } }, [BUSY, STILL]), async (desk) => {
   await desk.waitForSelector('#list [data-card="r1"]');
@@ -2884,7 +2890,8 @@ test("the state's mark pulses while Design Desk works and stays still while it w
   assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "pulse", "it works: the mark pulses");
   await desk.click('#list [data-card="r5"]');
   await desk.waitForFunction(() => document.querySelector("#detail .status") && !document.querySelector("#detail .status[data-busy]"));
-  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "checking", "still Checking");
+  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "turn", "a person's move");
+  assert.match(await desk.textContent("#detail .s-word"), /^Checked/, "Checked, no longer Checking");
   assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "none", "it waits: nothing pulses");
 }));
 

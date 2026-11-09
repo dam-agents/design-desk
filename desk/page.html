@@ -445,7 +445,9 @@
   .asks legend { font-weight: 600; padding: 0; }
   .asks > p:first-child { margin-top: 0; }
   .asks fieldset.q label { display: flex; gap: 8px; align-items: baseline; } .asks fieldset.q input[type=radio] { width: auto; }
-  fieldset.skills { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; } fieldset.skills legend { font-size: var(--fs-meta); color: var(--muted); padding: 0; margin-bottom: 4px; }
+  /* What Design Desk uses for the options: folded until opened, each time the dialog opens. */
+  details.skills { margin: 0; } details.skills > summary { cursor: pointer; font-size: var(--fs-meta); color: var(--muted); width: fit-content; }
+  details.skills > summary:hover { color: var(--ink); } details.skills #rq-skill-list { display: grid; gap: 6px; margin-top: 8px; }
   label.switch { display: flex; gap: 10px; align-items: center; font-size: 13.5px; color: var(--ink); cursor: pointer; } label.switch small { display: block; color: var(--muted); font-size: 12px; }
   label.switch input { appearance: none; -webkit-appearance: none; flex: none; width: 34px; height: 20px; padding: 0; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; }
   label.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
@@ -1143,7 +1145,7 @@
       <div class="row2"><input type="range" name="options" min="0" max="5" step="1" value="3" aria-label="How many design options to draw" /><output id="rq-count-say">3 options</output></div>
       <span class="hint" style="margin:0" id="rq-count-hint"></span></div>
     <label class="switch" id="rq-grill"><input type="checkbox" role="switch" name="grill" /><span>Ask me questions first<small>One question at a time, each with a suggested answer.</small></span></label>
-    <fieldset class="skills" id="rq-skills" hidden><legend>What Design Desk uses for the options</legend><div id="rq-skill-list"></div></fieldset>
+    <details class="skills" id="rq-skills" hidden><summary>What Design Desk uses for the options</summary><div id="rq-skill-list"></div></details>
     <label id="rq-figma" hidden><span>Figma link (optional)</span><input name="figma" maxlength="500" placeholder="https://www.figma.com/design/…" /></label>
     <div class="drop" id="rq-drop">
       <span>Screenshot (optional): drop it here, paste it with Ctrl+V or ⌘V, or <label style="display:inline;color:var(--accent);cursor:pointer">choose a file<input type="file" accept="image/png,image/jpeg,image/webp" id="rq-file" hidden multiple /></label>. Two at most.</span>
@@ -1304,6 +1306,10 @@
   const held = (c) => c.status === "variants" && optionCount(c) > 0 && !atWork(c);
   const checked = (c) => c.status === "triage" && Boolean(c.triage) && !optionCount(c) && !atWork(c);
   STATUS_TIP.held = "The options are drawn. Fine-tune them in the design workspace; when they are ready, press Ask for feedback and the team votes and comments.";
+  // Team feedback whose vote in Slack ended, and no other runs: the word says (finished). The list's
+  // rows carry `voted` and `voting`; the page's card carries its polls.
+  const voteEnded = (c) => c.status === "feedback" && (Array.isArray(c.polls)
+    ? c.polls.some((x) => x.state === "closed") && !c.polls.some((x) => x.state === "open") : Boolean(c.voted) && !c.voting);
   // A live prototype that failed or was switched off: nobody builds it now, a person tries again.
   const protoDown = (c) => ["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(typeof c.prototype === "string" ? c.prototype : c.prototype?.state) && !atWork(c);
   STATUS_TIP.down = "The live prototype does not run now. Design Desk wrote why in the comments; a designer builds it again, or the team approves without it.";
@@ -1319,7 +1325,7 @@
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
   const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
-  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : checked(c) ? "Checked" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : specWord(c) || STATUS[c.status] || c.status;
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : checked(c) ? "Checked" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : voteEnded(c) ? "Team feedback (finished)" : specWord(c) || STATUS[c.status] || c.status;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   // What Design Desk does, in a few words, after the step's Wait.
   const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options",
@@ -5965,6 +5971,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function openRequestDialog(from) {
     const dlg = $("#request-dialog"), f = $("#request-form");
     f.reset(); pictures.length = 0; $("#rq-thumbs").innerHTML = "";
+    $("#rq-skills").open = false;
     $("#rq-skill-list").innerHTML = (S.me?.skills || []).map((k) => `<label class="switch"><input type="checkbox" role="switch" data-skill="${esc(k.name)}"${k.on ? " checked" : ""} /><span>${esc(k.does || k.name)}<small>${esc(k.name)}</small></span></label>`).join("");
     setType("idea"); sayCount(); setFor("designers");
     $("#rq-for").hidden = !can("size"); // who may move a request between the two tabs picks it here too

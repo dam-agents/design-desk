@@ -179,7 +179,8 @@ Compare with the product); a note from **Work into the design** is a `revise` li
 
 - **What the person chose** in New request: `request.vision` is how they picture it, so one
   option follows it as closely as the boundary allows and the others are real alternatives;
-  `request.skills` (`{name: on}`) — a skill switched on is used for this request's options
+  `request.skills` (`{name: on}`, switches folded under **What Design Desk uses for the options**,
+  closed each time the dialog opens) — a skill switched on is used for this request's options
   (read its `SKILL.md`), one switched off is not, even where it would run by default; a
   skill not listed follows the usual rules. Say on the card when a choice could not be kept.
 - **Carried options** — a request made from an approved one (`request.from` a request) may
