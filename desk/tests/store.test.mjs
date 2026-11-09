@@ -2373,3 +2373,20 @@ test("a merged change that builds a sent design marks it done, unless a person t
   s.markBuilt(two.id, bob);
   assert.equal(s.getCard(two.id).built.by.email, bob.email);
 });
+
+test("People: an added person counts as opened once they loaded the Desk, whatever the letters' case", () => {
+  const s = fresh();
+  const admin = { email: "lee@example.com", role: "admin" };
+  const roster = [{ email: "lee@example.com", role: "admin" }];
+  const { inbox } = s.askForPerson(admin, { email: "dee@example.com", role: "designer" }, roster);
+  s.claim(inbox.id, "run-1"); s.done(inbox.id, "run-1", "added");
+  const opened = () => s.peopleAsks().find((a) => a.email === "dee@example.com").opened;
+  assert.equal(opened(), false, "on the list, and the Desk not loaded yet");
+  s.markOpened({ sub: "no-address" });
+  assert.equal(opened(), false, "someone else's load, with no address, is not theirs");
+  s.markOpened({ email: "Dee@Example.com", emails: ["Dee@Example.com"], role: "designer" });
+  assert.equal(opened(), true, "a load alone counts: no card opened, no preference set");
+  const at = s.db.opened["dee@example.com"];
+  s.markOpened({ email: "dee@example.com", role: "designer" });
+  assert.equal(s.db.opened["dee@example.com"], at, "the first load alone is kept");
+});
