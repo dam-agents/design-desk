@@ -2210,7 +2210,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   });
   // A dialog with something typed, picked or added in it asks before Escape or a click
   // outside it closes it; its Cancel button still closes it at once (docs/desk.md → Where it works).
-  const formState = (d) => JSON.stringify([[...d.querySelectorAll("input:not([type=file]):not([type=hidden]), textarea, select")].map((i) => (i.type === "checkbox" || i.type === "radio" ? i.checked : i.value)), d.querySelectorAll(".thumbs img").length]);
+  const formState = (d) => JSON.stringify([[...d.querySelectorAll("input:not([type=file]):not([type=hidden]), textarea, select")].map((i) => (i.type === "checkbox" || i.type === "radio" ? i.checked : i.value)),
+    [...d.querySelectorAll("button[aria-pressed]")].map((b) => b.getAttribute("aria-pressed")), d.querySelectorAll(".thumbs img").length]);
   const leave = (d) => {
     if (formState(d) === d._clean) { d.close("cancel"); return; }
     ask({ title: "Close without sending?", body: "What you wrote or added in this window is lost; nothing is sent.", ok: "Close it", send: () => d.close("cancel") });
@@ -3949,7 +3950,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The short report's parts (docs/requests.md → Record it on the card), each its own
   // paragraph that starts with its label, also when the summary runs them on in one.
   const RESEARCH_PARTS = /(?:\*\*)?(Already asked for|Where it lives|History|In flight|Deliberate or a slip|Who to ask)(?:\*\*)?\s*:(?:\*\*)?[ \t]*/g;
-  const researchParts = (s) => String(s || "").replace(RESEARCH_PARTS, (m, h, at, all) => `${/(^|\n)[ \t]*([-*][ \t]+)?$/.test(all.slice(0, at)) ? "" : "\n\n"}**${h}:** `);
+  const researchParts = (s) => String(s || "").replace(RESEARCH_PARTS, (m, h, at, all) => `${/(^|\n)[ \t]*([-*][ \t]+|\d+[.)][ \t]+)?$/.test(all.slice(0, at)) ? "" : "\n\n"}**${h}:** `);
   function renderResearch(r) {
     if (!r) return "";
     const items = (r.links || []).map(researchSource).filter(Boolean).map((x) => {

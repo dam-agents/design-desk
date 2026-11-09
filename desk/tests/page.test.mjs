@@ -2620,3 +2620,99 @@ test("simple mode leaves the live prototype step out of the help", (t) => open(t
   assert.match(steps, /New request/);
   assert.doesNotMatch(steps, /live prototype/i, "a step only about what simple mode hides leaves with it");
 }));
+
+// A dialog with something typed or picked asks before Escape or a click outside closes it;
+// its own Cancel closes it at once. The For Designers / For Developers switch is a lead
+// developer's and an admin's (docs/desk.md → Where it works, For Developers or For Designers).
+test("a dialog with work in it asks before Escape or a click outside closes it; Cancel closes it at once", (t) => open(t, DESK(DESIGNER, [BUSY]), async (desk) => {
+  const isOpen = (id) => desk.evaluate((i) => document.getElementById(i).open, id);
+  await desk.waitForSelector("#new-request");
+  await desk.click("#new-request");
+  assert.equal(await desk.isVisible("#rq-for"), false, "a designer does not pick the tab");
+  await desk.keyboard.press("Escape");
+  assert.equal(await isOpen("request-dialog"), false, "an empty dialog closes on Escape");
+
+  await desk.click("#new-request");
+  await desk.fill("#request-dialog textarea[name=problem]", "Make the list calmer");
+  await desk.keyboard.press("Escape");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.match(await desk.textContent("#cf-title"), /Close without sending/);
+  assert.equal(await isOpen("request-dialog"), true, "Escape keeps what was typed until the person says so");
+  await desk.click("#confirm-dialog .actions button:has-text('Cancel')");
+  assert.deepEqual([await isOpen("confirm-dialog"), await isOpen("request-dialog")], [false, true], "Cancel in the question goes back to the dialog");
+  await desk.mouse.click(4, 4);
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await isOpen("request-dialog"), true, "a click outside asks too");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => !document.getElementById("confirm-dialog").open && !document.getElementById("request-dialog").open, null, { timeout: 5000 });
+
+  await desk.click("#new-request");
+  await desk.click("#request-dialog #type-choice button[data-type=bug]");
+  await desk.keyboard.press("Escape");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await isOpen("request-dialog"), true, "a picked choice counts as work too");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => !document.getElementById("request-dialog").open, null, { timeout: 5000 });
+
+  await desk.click("#new-request");
+  await desk.fill("#request-dialog textarea[name=problem]", "Make the list calmer");
+  await desk.click("#request-dialog .actions button:has-text('Cancel')");
+  assert.deepEqual([await isOpen("confirm-dialog"), await isOpen("request-dialog")], [false, false], "the dialog's own Cancel closes it at once");
+}));
+
+test("a lead developer picks For Designers or For Developers when filing", (t) => open(t, DESK({ ...DESIGNER, role: "lead-developer", can: { request: true, size: true } }, [BUSY]), async (desk) => {
+  await desk.waitForSelector("#new-request");
+  await desk.click("#new-request");
+  assert.equal(await desk.isVisible("#rq-for"), true);
+}));
+
+// A picture dropped anywhere on a dialog is added as if chosen with "choose a file".
+test("a picture dropped on a dialog is added to it", (t) => open(t, DESK(DESIGNER, [BUSY]), async (desk) => {
+  await desk.waitForSelector("#new-request");
+  await desk.click("#new-request");
+  await desk.evaluate(async () => {
+    const c = Object.assign(document.createElement("canvas"), { width: 40, height: 30 });
+    c.getContext("2d").fillRect(0, 0, 40, 30);
+    const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+    const dt = new DataTransfer(); dt.items.add(new File([blob], "shot.png", { type: "image/png" }));
+    const on = document.querySelector("#rq-problem-label");
+    on.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer: dt }));
+    on.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt }));
+  });
+  await desk.waitForSelector("#rq-thumbs img");
+  assert.equal(await desk.locator("#rq-thumbs img").count(), 1);
+  assert.match(await desk.textContent("#rq-drop"), /drop it here/);
+}));
+
+// The step pill's next move: Wait while Design Desk works, with a few words on what it does;
+// Answer while it waits on a person, when nothing pulses.
+const ASKING = { id: "r3", kind: "request", title: "Asking", status: "triage", asks: true,
+  threads: [{ id: "t9", kind: "asks", state: "open", step: "request", messages: [{ by: { agent: true }, at: "2026-11-01T00:00:00Z", text: "One question first." }],
+    questions: [{ text: "Which one?", options: ["A", "B"], suggested: "A" }] }] };
+test("the step pill says Wait while Design Desk works and Answer while it waits on a person", (t) => open(t, DESK(DESIGNER, [BUSY, ASKING]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r1"]');
+  await desk.click('#list [data-card="r1"]');
+  await desk.waitForSelector("#detail .steppill .step-next");
+  assert.equal(await desk.textContent("#detail .steppill .step-next"), "Wait");
+  assert.equal(await desk.textContent("#detail .status .s-work"), "Drawing the options", "a few words on what it does");
+  assert.equal(await desk.locator("#detail .status > .working").count(), 0, "no second working line");
+  await desk.click('#list [data-card="r3"]');
+  await desk.waitForFunction(() => document.querySelector("#detail .steppill .step-next")?.textContent === "Answer");
+  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "waiting", "waiting on a person, not checking");
+  assert.match(await desk.textContent("#detail .status .s-act"), /1 question below/);
+  assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "none", "nothing pulses");
+}));
+
+// What's already known: each part of Design Desk's short report is its own paragraph; a
+// request that asked for no options keeps the options box, with its one line in it.
+const KNOWN = { id: "r4", kind: "request", title: "Known", status: "feedback", request: { problem: "Calmer.", options: 0 }, triage: { verdict: "design", reasons: ["Look only."] },
+  research: { verdict: "clear", summary: "Nothing in the way. Where it lives: the Agents list. Already asked for: none found. History: spaced out in May.", links: [] } };
+test("the research summary splits into its parts; no options asked for keeps the options box", (t) => open(t, DESK({ ...DESIGNER, can: { request: true, explore: true } }, [KNOWN]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r4"]');
+  await desk.click('#list [data-card="r4"]');
+  await desk.waitForSelector("#detail .made-sec");
+  const ps = await desk.$$eval("#detail .made-sec .md p", (els) => els.map((e) => e.textContent.trim()));
+  assert.deepEqual(ps, ["Nothing in the way.", "Where it lives: the Agents list.", "Already asked for: none found.", "History: spaced out in May."]);
+  assert.deepEqual(await desk.$$eval("#detail .made-sec .md p b", (els) => els.map((e) => e.textContent)), ["Where it lives:", "Already asked for:", "History:"]);
+  assert.match(await desk.textContent("#detail .vpanel .frame.vempty"), /No options were asked for/);
+}));

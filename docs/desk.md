@@ -151,7 +151,7 @@ served by the Desk server through the platform's Artifact API relay.
   how long things take.
 - **Redraws keep your place.** The page polls; a menu that did not change is not redrawn, and a
   redrawn menu or list gives keyboard focus back to the same button. A request's own work line
-  ("Checking your request") leaves once an option was drawn after its item was filed; a request
+  (its Wait and what Design Desk does) leaves once an option was drawn after its item was filed; a request
   reopened and checked again, its item filed after its options, keeps the line.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
   works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a

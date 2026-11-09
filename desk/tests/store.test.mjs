@@ -23,7 +23,7 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   for (const a of ["explore", "revise", "refresh", "history", "change", "figma", "share", "add", "draw"]) assert.equal(can("developer", a), true, a);
   for (const a of ["approve", "close", "reopen", "queue", "handle", "choose", "decide"]) assert.equal(can("developer", a), false, a);
   assert.equal(can("guest", "explore"), false);
-  // A PM moves a request along: everything a lead developer may, and closing, reopening and live prototypes.
+  // A PM moves a request along: everything a lead developer may but the tab, and closing, reopening and live prototypes.
   for (const a of ["explore", "revise", "skip", "close", "reopen", "build"]) assert.equal(can("pm", a), true, a);
   for (const a of ["approve", "queue", "handle", "choose", "decide", "people"]) assert.equal(can("pm", a), false, a);
   assert.equal(can("admin", "add"), true);

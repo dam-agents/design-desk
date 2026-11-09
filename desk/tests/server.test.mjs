@@ -427,6 +427,15 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   assert.equal((await d.agent("/agent/cards", { id: none, status: "feedback", triage: { verdict: "design", reasons: ["Words only."] } })).body.card.status, "feedback", "no options to fine-tune: on by itself");
 });
 
+// Who files a request For Developers (docs/desk.md → For Developers or For Designers): the
+// dialog's switch counts for a lead developer and an admin; anyone else's lands For Designers.
+test("only a lead developer or an admin files a request For Developers", async (t) => {
+  const d = await desk(t);
+  const filed = async (email) => (await d.viewer(email, "/api/requests", { problem: "Rows are too airy.", options: 0, audience: "developers" })).body.card.size.small;
+  for (const email of ["lou@example.com", "lee@example.com"]) assert.equal(await filed(email), true, `${email} may`);
+  for (const email of ["alice@example.com", "pat@example.com", "bob@example.com"]) assert.equal(await filed(email), false, `${email} may not`);
+});
+
 test("a PM moves a request along — close, reopen, build by default — and marks no presentation presented", async (t) => {
   const d = await desk(t);
   const me = (await d.viewer("pat@example.com", "/api/me")).body;
