@@ -65,7 +65,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   file per request).
 - `## Skills` table, `| action | skill |`: another installed skill for an action
   ([actions.md](actions.md)); it wins over the product profile's choice. A third column
-  `| source |` holds the `<repo>@<sha>` the operator confirmed for a profile's skill.
+  `| source |` holds the `<repo>@<sha>` the operator confirmed for a profile's skill; a
+  profile's skill does an action only with a row whose pin matches its `source`.
 - `request_skills` (`copy, impact, brand, walkthrough, figma`), never asked — the installed
   skills a person switches on or off for one request in New request; one not installed is
   not offered, `figma` only with `figma` enabled ([requests.md](requests.md) → Variants).

@@ -12,6 +12,7 @@ case "$args" in
       *) cat "$STUB_DIR/search.json";;
     esac;;
   *"api user"*) echo '{"login":"design-bot"}' | { if [[ "$args" == *"--jq"* ]]; then echo design-bot; else cat; fi; };;
+  *"--jq .private"*) cat "$STUB_DIR/private.txt" 2>/dev/null || { echo "stub: no such repository" >&2; exit 1; };;
   *milestones*) cat "$STUB_DIR/milestones.json" 2>/dev/null || echo '[]';;
   *repos/*/issues/*)
     n="$(printf '%s' "$args" | sed -E 's#.*issues/([0-9]+).*#\1#')"

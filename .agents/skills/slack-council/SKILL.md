@@ -17,8 +17,10 @@ The `council` action ([docs/actions.md](../../../docs/actions.md)). Only with
 deliverable ([docs/requests.md](../../../docs/requests.md) → Chat and Slack).
 
 A council is a request whose discussion happens in one Slack thread. Everyone in the thread
-on the roster may ask ([docs/requests.md](../../../docs/requests.md) → Chat and Slack: anyone
-else's message is not an ask); the Desk keeps every option and version; the thread sees each round as a picture.
+on the roster may ask ([docs/requests.md](../../../docs/requests.md) → Who Slack serves:
+anyone else's message is not an ask, is not relayed, and gets that page's one decline line); the Desk keeps every option and version; the thread sees each
+round as a picture. Every option name, ask or quote in a reply is escaped
+([docs/desk.md](../../../docs/desk.md) → Links to an item, Text to Slack).
 
 ## Asks
 
@@ -34,6 +36,9 @@ else's message is not an ask); the Desk keeps every option and version; the thre
 
 ## Start: a thread opens
 
+0. **Role first**: the sender's role from the email Slack holds for their user id
+   ([docs/desk.md](../../../docs/desk.md) → Roles, In Slack). Not on the roster → the decline
+   line of Who Slack serves, and the turn ends.
 1. **Route.** `design desk find-poll <thread ts>` names a vote → the `slack-polls` skill.
    `design desk find-council <thread ts>`: an open council → **Each round**; a closed one →
    step 3, then **Each round**; a card with `council: null` → step 3, then **Each round**.
@@ -52,8 +57,11 @@ else's message is not an ask); the Desk keeps every option and version; the thre
 A Slack turn in a council thread, or a `councils_due` entry with `close: false`.
 
 1. Read the messages after `seen` (`read_thread`; a Slack turn also has its own message).
-   None → `council-update --synced <now>`, done.
-2. **Relay** every message that is not yours, once: `design desk relay C-<n> <file>` with
+   None → `council-update --synced <now>`, done. **Role first**: each message's author by the
+   email Slack holds for their user id ([docs/desk.md](../../../docs/desk.md) → Roles, In
+   Slack); a message from anyone not on the roster is set aside (not relayed, not an ask),
+   and in a Slack turn its author gets the decline line of Who Slack serves.
+2. **Relay** every message from the roster that is not yours, once: `design desk relay C-<n> <file>` with
    `{variant, name, email, text, slack_ts, url, mentions}`; `variant` only when it names one option;
    `mentions` maps each `<@U…>` in the text to the person's name (`describe_channel_users`),
    and a mention left without a name is dropped from the comment.
@@ -90,7 +98,8 @@ One `reply` in the thread per round, with the picture:
   <diff.jpg>` outlines what changed; put the before and the outlined after side by side in
   one PNG (a page of two labelled figures, "Now" | "Proposed" or "v2" | "v3", then
   `design shot <page> <dir> --width 1600`). Look at it before you send it.
-- **Text**:
+- **Text**, the option name, the asks and who asked escaped per
+  [docs/desk.md](../../../docs/desk.md) → Text to Slack:
   "*<option name> — version <n>*: <what changed, one line per ask, with who asked>.
   <Consequences, when there are any: where else this shows, what needs a developer, an
   earlier decision it goes against, by its number `D-<n>` — each with its source.> <What was not done, and why.>
@@ -102,7 +111,7 @@ One `reply` in the thread per round, with the picture:
 ## Close
 
 - **The thread agrees**: everyone who wrote since the last version agrees on one option and
-  version, with no open concern and no ask left. Reply: "Looks like we agree on *<option>
+  version, with no open concern and no ask left. Reply, `<option>` escaped as in The answer: "Looks like we agree on *<option>
   v<n>*. A designer makes the final pick and the fine-tuning on the Design Desk (C-<n>): <link>."
   Comment the same on the card, then `council-update --result "Agreed on <option> v<n>"`.
   Never approve or change the request's status: that is the designer's, on the Desk. A new

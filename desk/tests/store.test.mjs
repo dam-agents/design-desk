@@ -262,6 +262,30 @@ test("the developer spec waits for a person: edit keeps every version, changes g
   assert.throws(() => s.specAction(card.id, alice, { action: "edit", text: "late" }), /already on its way|in progress|still/i);
 });
 
+test("a spec for a request from Slack is sent only by a person, whatever spec_review says", () => {
+  const s = fresh();
+  const spec = () => s.addAsset({ kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec", encoding: "utf8" }).asset.id;
+  const ready = (origin) => {
+    const { card } = s.createRequest({ agent: true }, { title: "Calmer header", problem: "Too loud.", origin });
+    s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] } });
+    const { inbox: item } = s.act(card.id, alice, "approve");
+    s.claim(item.id, `s-${card.id}`); s.done(item.id, `s-${card.id}`, "review");
+    return card.id;
+  };
+  const slack = ready({ channel: "slack", chat: "C0123", thread_ts: "1.0", reporter: "Dana" });
+  const approved = s.card(slack).status;
+  assert.throws(() => s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "sent" } }), /waits for a person's Send/, "spec_review disabled does not send it");
+  assert.throws(() => s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "draft", sent: { by: { email: "alice@example.com" } } } }), /waits for a person's Send/, "nor a send the agent writes itself");
+  assert.deepEqual([s.card(slack).spec, s.card(slack).status], [null, approved], "a refused write leaves the card as it was");
+  s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "draft" } });
+  assert.equal(s.specAction(slack, alice, { action: "send" }).card.spec.review, "sent");
+  s.upsertCard({ id: slack, spec: { ...s.card(slack).spec, issue_url: "https://github.com/acme/widgets/issues/7" } });
+  assert.equal(s.card(slack).spec.issue_url, "https://github.com/acme/widgets/issues/7", "after a person's send the agent records where it went");
+  const chat = ready({ channel: "chat", reporter: "Lukas" });
+  s.upsertCard({ id: chat, status: "spec", spec: { asset: spec(), review: "sent" } });
+  assert.equal(s.card(chat).spec.review, "sent", "any other request goes straight on with spec_review disabled");
+});
+
 test("For Developers: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
   const s = fresh();
   const lee = { email: "lee@example.com", role: "lead-developer" };

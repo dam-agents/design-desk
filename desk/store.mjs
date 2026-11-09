@@ -1868,6 +1868,10 @@ export class Store {
       }
       else next[k] = cleanLinks(k, fields[k]);
     }
+    // A spec for a request from Slack never leaves unread: only a person's Send to developers
+    // (specAction) marks it sent, whatever `spec_review` says (docs/handoff.md step 3).
+    if (fields.spec !== undefined && next.origin?.channel === "slack" && next.spec && !c?.spec?.sent && (next.spec.review === "sent" || next.spec.sent))
+      throw bad("a request from Slack waits for a person's Send to developers: write its spec with review \"draft\" (docs/handoff.md step 3)");
     if (!next.title) throw bad("a card needs a title");
     // One card per screen and per element: a card a person added that turns out to be one
     // already on the Desk is dropped with a pointer to it, never filled in as a second copy.

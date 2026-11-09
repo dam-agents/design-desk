@@ -66,9 +66,13 @@ missing and where to install it from.
 confirmed it in the direct session, from its `source` pinned to a commit, and the
 confirmation is the action's `## Skills` row with that pin in a third column
 (`| options | dam-prototyper | dam-agents/dam-prototyper@<sha> |`); never from a scheduled
-run. A profile on the default branch whose `source` no longer matches the pin (another
-repository, or another `@<sha>`) is reported to the operator, and the bundled skill does the
-action until they confirm the new one.
+run. `design skill <action> --repo <repo>` enforces it: a profile's skill does the action
+only when that row names the same skill and its pin matches the profile's `source` (the same
+repository and, where the profile's `source` names a commit, the same commit). A profile's
+skill without such a row, a pinned row whose pin no longer matches, and a pinned row read
+without `--repo` are set aside with a line in `notes`, and the bundled skill does the action
+until the operator confirms again; tell the operator what `notes` says. A row without a pin
+is the operator's own override and is used as it stands.
 
 A skill that replaces a bundled one keeps the action's contract:
 

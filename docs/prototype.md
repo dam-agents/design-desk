@@ -5,7 +5,8 @@ with the approved design, guarded ([boundary.md](boundary.md)), installed on its
 **Environment** with demo data, which everyone on the owner's list opens and clicks through.
 
 An Environment is a sandbox this agent creates and owns: its own machine, its own addresses,
-an access list, an expiry, and no credentials of the agent. The platform tools are
+an expiry, and no credentials of the agent. Who can open it is the owner's call, made in
+the app: the agent never sets or changes an Environment's access. The platform tools are
 `create_environment`, `list_environments`, `update_environment`, `wake_environment` and
 `delete_environment`; they exist only while the owner has the Environments feature on.
 
@@ -53,9 +54,9 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    (`--kind report`, `--kind patch`) and set `prototype: {state: "building", guard: {ok,
    summary, asset}, branch, base, patch: <the patch's asset>}` and `status: prototype`.
 5. **Environment.** `create_environment` with `name` = `c<n>`, the profile's
-   `engine.endpoints`, `storage`, `start` when it names one, `expires` =
-   `<prototype_expiry_days>d`, and the access list the emails of `## Desk people` (never
-   public, never anyone else). An Environment of that name already there is reused.
+   `engine.endpoints`, `storage`, `start` when it names one, and `expires` =
+   `<prototype_expiry_days>d`; no access argument (the tool takes none: the owner shares the
+   Environment in the app). An Environment of that name already there is reused.
 6. **Install.** `bash "$HOME/scripts/proto.sh" run C-<n> up` **as a background task**
    (an install takes many minutes), then poll `proto.sh run C-<n> status` until it says
    `running` or `failed`. The profile's `bin/env up` installs the worktree into the

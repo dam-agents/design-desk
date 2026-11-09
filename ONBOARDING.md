@@ -293,7 +293,7 @@ product name and whether it has a boundary and an engine (`source: repo`), or th
 repository has no profile ([docs/profile.md](docs/profile.md) → A repository without a
 profile). For a profile with an engine, propose every host in `engine.egress` to the owner
 (`egress_proposal` with `propose`), with the profile's reason. For a profile with `skills`,
-name each one it brings (`design skill <action> --repo <repo>` says which are missing) and
+name each one it brings (`design skill <action> --repo <repo>` says which are missing or not confirmed) and
 install only those the operator confirms, pinned to a commit
 ([docs/actions.md](docs/actions.md) → Another skill for an action). For a profile with
 `catalog.elements`, build the catalog now ([docs/catalog.md](docs/catalog.md) → Keeping it

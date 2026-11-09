@@ -16,10 +16,10 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 2. Run `bash "$HOME/scripts/verify-onboarding.sh" --live` and apply each `FAIL` line's `fix:`.
    **Operator-only:** a backup repository that is not private is made private, with access
    for the operator only ([docs/desk.md](docs/desk.md) → Private asks).
-3. List to the operator every skill a product profile brought (`design skill --repo <repo>`,
-   `source: profile`). **Operator-only:** confirm each; write its `## Skills` row with the
-   `| source |` pin ([docs/actions.md](docs/actions.md) → Another skill for an action). Until
-   then the bundled skill does that action.
+3. List to the operator every skill a product profile brought (`design skill --repo <repo>`:
+   each one not confirmed is a line in `notes`). **Operator-only:** confirm each; write its
+   `## Skills` row with the `| source |` pin ([docs/actions.md](docs/actions.md) → Another
+   skill for an action). Until then `design skill` gives the action to the bundled skill.
 4. Rewrite and republish the agent manifest (new trust rules, [docs/manifest.md](docs/manifest.md)).
 
 ## 1.66.1 — 2026-11-08

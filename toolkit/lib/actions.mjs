@@ -64,23 +64,49 @@ export function findSkill(name, paths = skillPaths()) {
   return null;
 }
 
+// A `## Skills` row's `source` pin (`<owner/name>@<sha>`) matches a profile's `source` when
+// the repository is the same and, where the profile's source names a commit, the commit is
+// the same. A pin without a commit matches nothing.
+export function pinMatches(pin, source) {
+  const [pr, ps = ""] = String(pin || "").trim().split("@");
+  const [sr, ss = ""] = String(source || "").trim().split("@");
+  if (!pr || !sr || !/^[0-9a-f]{7,40}$/i.test(ps)) return false;
+  return pr.toLowerCase() === sr.toLowerCase() && (!ss || ss.toLowerCase() === ps.toLowerCase());
+}
+
 // The skill for an action: the operator's choice, then the product's, then the bundled one.
+// A `## Skills` row is `{skill, source}` (or the skill's name). A profile's skill counts only
+// when the operator confirmed it: the action's row names the same skill with a `source` pin
+// that matches the profile's `source` (docs/actions.md). A pinned row the profile read no
+// longer matches, or no profile was read for, is set aside with a note, and so is a profile's
+// skill without a matching row: the bundled skill does the action until the operator confirms.
 // A chosen skill that is not installed falls back, and says so.
 export function resolve(action, { config = {}, profile = {} } = {}) {
   const a = ACTIONS[action];
   if (!a) return null;
   const base = a.fallback ? resolve(a.fallback, { config, profile }) : null;
+  const notes = [];
+  const row = typeof config[action] === "string" ? { skill: config[action] } : config[action] || {};
+  const prof = typeof profile[action] === "string" ? { skill: profile[action] } : profile[action] || {};
+  const confirmed = !!(prof.skill && row.source && row.skill === prof.skill && pinMatches(row.source, prof.source));
+  let configSkill = row.skill;
+  if (row.skill && row.source && !confirmed) {
+    configSkill = null;
+    notes.push(`${row.skill} (config) is pinned to ${row.source}, which ${prof.skill ? `does not match the profile's ${prof.skill} from ${prof.source || "no source"}` : "no profile read here names (pass --repo)"}; the operator confirms it again (docs/actions.md)`);
+  }
+  if (prof.skill && !confirmed) {
+    notes.push(`${prof.skill} (profile) is not confirmed by the operator: no ## Skills row pins it to ${(prof.source || "its source").split("@")[0]}@<sha> (docs/actions.md)`);
+  }
   const choices = [
-    ["config", config[action]],
-    ["profile", typeof profile[action] === "string" ? profile[action] : profile[action]?.skill],
+    ["config", configSkill],
+    ["profile", confirmed ? prof.skill : null],
     ...(base && base.source !== "default" ? [[base.source, base.skill]] : []),
     ["default", a.skill],
   ].filter(([, s]) => s);
-  const notes = [];
   for (const [source, skill] of choices) {
     const path = findSkill(skill);
     if (path) return { action, skill, source, path, doc: a.doc || null, does: a.does, notes };
-    notes.push(`${skill} (${source === "default" ? "bundled" : source}) is not installed${source === "profile" && profile[action]?.source ? `; install it from ${profile[action].source}` : ""}`);
+    notes.push(`${skill} (${source === "default" ? "bundled" : source}) is not installed${source !== "default" && row.source && skill === row.skill ? `; install it from ${row.source}` : ""}`);
   }
   // Core actions without a bundled skill are procedures in the definition's docs.
   return { action, skill: null, source: "default", path: null, doc: a.doc || null, does: a.does, notes };
