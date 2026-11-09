@@ -480,7 +480,8 @@ In both modes, each request in the list shows its state as a dot in the row's to
 as large as the dot on the request's page and level with the title's first line, in the colour of
 whom the request waits on — the same colour as the state on its page: **blue** Design Desk,
 **amber** the team's votes or tries (Team feedback, Live — try it), **magenta** a person's move
-(Checked: start the options; Options drawn: ask the team; a question to answer; a prototype that
+(Checked: start the options; Options drawn: ask the team; No options, every option taken out at
+Options drawn: draw them again; a question to answer; a prototype that
 failed or was switched off; a spec draft to send); green sent to developers, slate decided, red
 closed. It pulses only while Design Desk works on the request, whatever the step (then blue), and
 stays lit otherwise. A request is never blue with a move of a person's own in its step pill: once

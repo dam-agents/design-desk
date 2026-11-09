@@ -1305,6 +1305,8 @@
   const atWork = (c) => Array.isArray(c.waiting) ? working(c).length > 0 : Boolean(c.busy);
   const held = (c) => c.status === "variants" && optionCount(c) > 0 && !atWork(c);
   const checked = (c) => c.status === "triage" && Boolean(c.triage) && !optionCount(c) && !atWork(c);
+  // At Options drawn with every option taken out and Design Desk not drawing: a person draws them again.
+  const emptied = (c) => c.status === "variants" && !optionCount(c) && !atWork(c);
   STATUS_TIP.held = "The options are drawn. Fine-tune them in the design workspace; when they are ready, press Ask for feedback and the team votes and comments.";
   // Team feedback whose vote in Slack ended, and no other runs: the word says (finished). The list's
   // rows carry `voted` and `voting`; the page's card carries its polls.
@@ -1313,19 +1315,20 @@
   // A live prototype that failed or was switched off: nobody builds it now, a person tries again.
   const protoDown = (c) => ["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(typeof c.prototype === "string" ? c.prototype : c.prototype?.state) && !atWork(c);
   STATUS_TIP.down = "The live prototype does not run now. Design Desk wrote why in the comments; a designer builds it again, or the team approves without it.";
+  STATUS_TIP.emptied = "Every option was taken out. Draw design options again, or approve or close the request.";
   STATUS_TIP.checked = "Design Desk checked what a design change can do. A designer, a PM or a developer starts the design options.";
   // Design Desk waits on a person's answer: the state says so and stops pulsing.
   const asking = (c) => !closed(c) && (Boolean(c.asks) || (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"));
   // An open request waits on one of three, each in its own ink, the same in the list's dot and
   // on its page: Design Desk (blue; it blinks only while Design Desk is at work), the team's votes
   // or tries (amber), or a person's move — answer, ask the team, start, build again, send (magenta).
-  const turn = (c) => held(c) || checked(c) || protoDown(c) || asking(c) || (c.status === "spec" && c.spec?.review === "draft" && !atWork(c));
+  const turn = (c) => held(c) || checked(c) || emptied(c) || protoDown(c) || asking(c) || (c.status === "spec" && c.spec?.review === "draft" && !atWork(c));
   const tone = (c) => c.status === "declined" ? (c.decided ? "decided" : "closed") : c.status === "handed-off" ? "approved"
     : turn(c) ? "turn" : !atWork(c) && ["feedback", "testing"].includes(c.status) ? "waiting" : "checking";
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
   const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
-  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : checked(c) ? "Checked" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : voteEnded(c) ? "Team feedback (finished)" : specWord(c) || STATUS[c.status] || c.status;
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : checked(c) ? "Checked" : emptied(c) ? "No options" : protoDown(c) ? ((typeof c.prototype === "string" ? c.prototype : c.prototype?.state) === "failed" ? "Prototype didn't work" : "Prototype switched off") : voteEnded(c) ? "Team feedback (finished)" : specWord(c) || STATUS[c.status] || c.status;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   // What Design Desk does, in a few words, after the step's Wait.
   const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options",
@@ -3748,7 +3751,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // One Close: just close it, or close it with a decision recorded in the person's name.
     const ends = can("close") || can("skip") ? b("close", "Close…") : "";
     const skip = (can("skip") && canApprove(c) ? b("approve", "Approve") : "") + ends;
-    if (c.status === "triage") return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: skip } : { text: none || "Next: a designer, PM or developer starts the design options.", buttons: skip };
+    // Every option taken out at Options drawn: as when checked, a person draws them again.
+    if (c.status === "triage" || (c.status === "variants" && !hasOptions)) return can("explore") ? { text: "Your turn: start the design options.", sub: none, step: sb("explore", "Draw design options"), buttons: skip } : { text: none || "Next: a designer, PM or developer starts the design options.", buttons: skip };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
       return { text: "Before it goes to developers, Design Desk needs your answers above.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "" };
@@ -3781,7 +3785,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Options drawn (step 2), held for its people or not: the next step is Team feedback, so the
     // pill is Contact a developer, then Ask for feedback. No live prototype (step 4) here at all,
     // not even under ⋯: it is built from the team's feedback. Approve stays in the row.
-    if (c.status === "variants" && hasOptions) {
+    if (c.status === "variants") {
       const mine = (can("revise") || filedIt(c)) && c.team_feedback?.state !== "open";
       const ask = mine ? `<button class="step-next" data-team-feedback title="The team votes and comments on the options from now on. You may ask: ${filedIt(c) ? "you filed this request" : "designers, PMs, developers and admins may on any request"}.">Ask for feedback</button>` : "";
       return { text: mine ? "Your turn: fine-tune the options in the design workspace. When they are ready, press Ask for feedback." : "The options are drawn. The request's author, a designer, a PM, a developer or an admin asks the team for feedback once they are fine-tuned.",
@@ -3838,7 +3842,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ? [go("Answer Design Desk's questions", "They are in this box; the spec waits for them."), close()]
       : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
     else if (c.status === "triage" && !c.triage) paths = [info("Design Desk checks it first: how the screen works today, who else is changing it, what a design change can do."), close()];
-    else if (c.status === "triage") paths = [can("explore") ? go("Draw design options", "Design Desk draws a few ways it could look.") : no("Draw design options", `Only designers, PMs, developers and admins start the options; ${ask}.`), approve(), close()];
+    // Checked, or at Options drawn with every option taken out: the way on is to draw them (again).
+    else if (c.status === "triage" || (c.status === "variants" && !hasOptions && !busy.length)) paths = [can("explore") ? go("Draw design options", "Design Desk draws a few ways it could look.") : no("Draw design options", `Only designers, PMs, developers and admins start the options; ${ask}.`), approve(), close()];
     // Options drawn: nobody votes yet (votes come at Team feedback), so the way on is to ask the team.
     else if (c.status === "variants" && hasOptions) paths = [...dev(), can("revise") || filedIt(c) ? go("Ask for feedback", "Once the options are fine-tuned: the team votes and comments.") : no("Ask for feedback", "Only the request's author, a designer, a PM, a developer or an admin asks the team."), approve(), close()];
     else if (["prototype", "testing"].includes(c.status) && ["failed", "expired", "torn-down"].includes(p.state)) paths = [build(p.state === "failed" ? "Try again" : "Build it again"), approve(), close()];
@@ -3934,7 +3939,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
       : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
     return `<div class="status" data-o="${tone(c)}"${busy.length ? " data-busy" : ""}>
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
       ${sizeLine(c)}

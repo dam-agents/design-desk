@@ -1260,7 +1260,7 @@ const HEADERS = [
   ["Options drawn, held for its people", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" } }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
   ["Options drawn, held, parts for a developer", { status: "variants", triage: CANNOT, team_feedback: { state: "waiting" } }, ME(ALL), "Options drawn", "turn", 2, "Contact a developer", false],
   ["Options drawn, Product", { status: "variants", triage: PRODUCT }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
-  ["Options drawn, an approver who may not ask", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" } }, ME({ build: true, approve: true, close: true, share: true }, { slack: true }), "Options drawn", "turn", 2, "Wait", false],
+  ["Options drawn, someone who may not ask", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" } }, ME({}), "Options drawn", "turn", 2, "Wait", false],
   ["Team feedback, a designer who builds", { status: "feedback", triage: DESIGN, team_feedback: { state: "open" } }, ME(ALL), "Team feedback", "waiting", 3, "Build a live prototype", false],
   ["Team feedback, parts for a developer, no build", { status: "feedback", triage: { ...CANNOT, verdict: "needs-developer" }, team_feedback: { state: "open" } }, ME({ approve: true, close: true }), "Team feedback", "waiting", 3, "Contact a developer", false],
   ["Team feedback, an approver", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" } }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
@@ -1281,6 +1281,8 @@ const HEADERS = [
   ["Decided without a design", { status: "declined", triage: DESIGN, decided: { by: { email: "bob@example.com" }, at: AT, text: "Keep the list as it is." } }, ME(ALL), "Decided without a design", "decided", null, null, false],
   ["Team feedback, the Slack vote ended", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT, result: "Column won" }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback (finished)", "waiting", 3, "Approve", false],
   ["Team feedback, the Slack vote still runs", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT }, { state: "open", closes: LATER }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
+  ["No options, every one taken out", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME(ALL), "No options", "turn", 2, "Draw design options", false],
+  ["No options, someone who may not draw them", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME({}), "No options", "turn", 2, "Wait", false],
 ];
 // The request as the test stands it, on its page and as the list's row (a count, busy, asks).
 const BRIDGE_HEADER = (patch, me) => BRIDGE_STORIES
@@ -1309,7 +1311,7 @@ for (const [name, patch, me, word, ink, step, pill, busy] of HEADERS) {
     // Blue is Design Desk's turn: never a move of a person's own beside it.
     if (ink === "checking") assert.equal(pill, "Wait", "a blue header waits");
     if (pill === "Wait" && busy) assert.equal(ink, "checking", "Design Desk at work is blue");
-    if (patch.status === "variants" && !busy) {
+    if (patch.status === "variants" && !busy && word === "Options drawn") {
       const help = await desk.textContent("#detail .s-word .info .tip");
       assert.equal(await desk.locator('#detail .steppill [data-act="build"], #detail .steppill [data-act="approve"], #detail .steppill [data-act="slack"]').count(), 0, "never a live prototype, Approve or Slack at Options drawn");
       assert.doesNotMatch(help, /Vote and comment/, "nobody votes before Team feedback");
@@ -1317,6 +1319,12 @@ for (const [name, patch, me, word, ink, step, pill, busy] of HEADERS) {
       assert.equal(await desk.locator('#detail [data-act="build"]').count(), 0, "no Build anywhere at Options drawn");
       assert.match(help, /Ask for feedback/, "the way on is to ask the team");
       assert.equal(await desk.locator("#detail .btn.vote").count(), 0, "no vote pills yet");
+    }
+    // Every option taken out: drawing them again is the way on, and the row keeps Approve and Close.
+    if (word === "No options") {
+      assert.match(await desk.textContent("#detail .s-word .info .tip"), /Draw design options/, "the help offers to draw them again");
+      assert.equal(await desk.locator('#detail [data-act="build"], #detail [data-team-feedback]').count(), 0, "no live prototype, no Ask for feedback without options");
+      if (me.can.close) assert.equal(await desk.locator('#detail .next .btn[data-act="close"]').count(), 1, "Close stays in the row");
     }
     if (["variants", "feedback"].includes(patch.status) && !busy && me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve stays in the row");
     // Contact a developer opened: the pill moves on to the step's next move.
