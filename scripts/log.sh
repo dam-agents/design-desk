@@ -25,16 +25,19 @@ LOG_LEVEL="${LOG_LEVEL:-info}"
 
 # best-effort masking of well-known credential shapes before anything is
 # written (invariant: no secrets in any log) — GitHub/Slack tokens, bearer
-# headers. sed -E, applied to the whole message.
-_log_mask() {
-  printf '%s' "$1" | sed -E \
-    -e 's/gh[pousr]_[A-Za-z0-9]{20,}/gh*_MASKED/g' \
-    -e 's/github_pat_[A-Za-z0-9_]{20,}/github_pat_MASKED/g' \
-    -e 's/xox[baprs]-[A-Za-z0-9-]{10,}/xox*-MASKED/g' \
-    -e 's/[Bb]earer[[:space:]]+[A-Za-z0-9._~+/=-]{16,}/Bearer MASKED/g' \
-    -e 's/(^|[^0-9a-f])[0-9a-f]{48}([^0-9a-f]|$)/\1HEX48_MASKED\2/g' \
-    -e 's/(password|passwd|secret)([=:][[:space:]]*)[^[:space:]"]+/\1\2MASKED/Ig'
-}
+# headers. sed -E, applied to the whole message; `logmask` applies the same to a
+# stream (an engine's output saved to a log file).
+_LOG_MASK=(
+  -e 's/gh[pousr]_[A-Za-z0-9]{20,}/gh*_MASKED/g'
+  -e 's/github_pat_[A-Za-z0-9_]{20,}/github_pat_MASKED/g'
+  -e 's/xox[baprs]-[A-Za-z0-9-]{10,}/xox*-MASKED/g'
+  -e 's/[Bb]earer[[:space:]]+[A-Za-z0-9._~+/=-]{16,}/Bearer MASKED/g'
+  -e 's/(^|[^0-9a-f])[0-9a-f]{48}([^0-9a-f]|$)/\1HEX48_MASKED\2/g'
+  -e 's/(password|passwd|secret)([=:][[:space:]]*)[^[:space:]"]+/\1\2MASKED/Ig'
+)
+_log_mask() { printf '%s' "$1" | sed -E "${_LOG_MASK[@]}"; }
+# Line-buffered where sed can be (GNU -u), so a long install shows as it goes.
+logmask() { if sed -u q </dev/null >/dev/null 2>&1; then sed -u -E "${_LOG_MASK[@]}"; else sed -E "${_LOG_MASK[@]}"; fi; }
 
 logev() {
   { [ "$1" = "debug" ] && [ "$LOG_LEVEL" != "debug" ]; } && return 0

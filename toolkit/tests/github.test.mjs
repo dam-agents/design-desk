@@ -18,12 +18,14 @@ const gh = (args) => { const path = args[args.length - 1]; return path in GH ? {
 test("github-sync reads each ref with its comments and reviews, posts them, merges fresh, and names a key it cannot read", async () => {
   const posted = [], failed = [];
   const call = async (method, path, body) => {
-    if (method === "GET") return { refs: ["acme/widgets#3", "acme/widgets#7", "acme/widgets#9"] };
+    if (method === "GET") return { refs: ["acme/widgets#3", "acme/widgets#7", "acme/widgets#9", "acme/private#1"] };
     if (path === "/agent/github/failed") { failed.push(body); return { gave_up: body.keys }; }
     posted.push(body);
     return { fresh: [{ key: "acme/widgets#3", cards: ["C-1"], comments: body.records[0].comments }] };
   };
-  const out = await githubSync(null, { call, gh });
+  // repos as people write it; scripts/tests/test_watch.sh feeds the watch gate the same value.
+  const out = await githubSync(null, { call, gh, repos: "GitHub.com/Acme/Widgets , other/thing" });
+  assert.deepEqual(out.skipped, ["acme/private#1"], "a repository the watch does not read is never fetched");
   assert.equal(posted.length, 1, "one batch for three refs");
   const [issue, pr] = posted[0].records;
   assert.deepEqual([issue.kind, issue.state, issue.labels, issue.comments.map((c) => c.body)], ["issue", "open", ["design"], ["Make it red?"]]);

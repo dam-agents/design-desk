@@ -20,5 +20,8 @@ case "$args" in
   *pulls/*/files*)
     n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+)/files.*#\1#')"
     f="$STUB_DIR/files-$n.txt"; [ -f "$f" ] && cat "$f";;
+  *repos/*/pulls/[0-9]*) # one pull request: "<head repo>\t<base repo>", as pr_same_repo's --jq asks
+    n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+).*#\1#')"
+    f="$STUB_DIR/pull-$n.tsv"; [ -f "$f" ] || { echo "stub: no pull $n" >&2; exit 1; }; cat "$f";;
   *) echo "stub: unhandled gh $args" >&2; exit 1;;
 esac

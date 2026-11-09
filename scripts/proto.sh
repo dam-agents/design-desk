@@ -2,8 +2,9 @@
 # proto.sh — the mechanics of a live prototype (docs/prototype.md).
 #
 #   proto.sh worktree C-<n> <repo> [slug] [--ref <ref>]
-#                                           a worktree of the repo's default branch (or of <ref>,
-#                                           e.g. pull/42/head for an open pull request) on the
+#                                           a worktree of the repo's default branch (or of <ref>:
+#                                           pull/<n>/head of an open pull request that is not
+#                                           from a fork, or a branch of the repo) on the
 #                                           branch design-desk/c<n>-<slug>; reused when it exists
 #   proto.sh run C-<n> <verb>               the profile's bin/env <verb> (up|update|status|
 #                                           credentials|tunnel|untunnel|down) with the engine variables
@@ -18,7 +19,8 @@ HOME_DIR="${HOME:-/home/agent}"
 WORK="${WORK_DIR:-$HOME_DIR/work}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_JOB="${LOG_JOB:-prototype}"
-. "$SCRIPT_DIR/log.sh" 2>/dev/null || logev() { :; }
+. "$SCRIPT_DIR/log.sh" 2>/dev/null || { logev() { :; }; logmask() { cat; }; }
+. "$SCRIPT_DIR/lib/pr.sh"
 err() { jq -cn --arg e "$1" '{error:$e}'; exit 1; }
 
 cmd="${1:-}"; card="${2:-}"
@@ -32,6 +34,16 @@ case "$cmd" in
     repo="${3:-}"; [ -n "$repo" ] || err "usage: proto.sh worktree C-<n> <repo> [slug] [--ref <ref>]"
     ref=""; slugarg="${4:-}"; [ "$slugarg" = "--ref" ] && { ref="${5:-}"; slugarg=""; }; [ "${5:-}" = "--ref" ] && ref="${6:-}"
     if [ -f "$META" ] && [ -d "$(jq -r .worktree "$META")" ]; then cat "$META"; exit 0; fi
+    case "$ref" in
+      "") ;;
+      pull/[0-9]*/head)
+        pr="${ref#pull/}"; pr="${pr%/head}"
+        case "$pr" in *[!0-9]*) err "--ref must be pull/<n>/head or a branch name";; esac
+        pr_same_repo "$repo" "$pr" || err "pull request #$pr comes from a fork (or GitHub could not say where it comes from): its code gets no live prototype — adjust its design on sample data, or prototype from the default branch";;
+      -*|*pull/*|*..*|*@\{*) err "--ref must be pull/<n>/head or a branch name";;
+      *) printf '%s' "$ref" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9._/-]*$' && ! printf '%s' "$ref" | grep -Eq '^[0-9a-f]{40}$' \
+           || err "--ref must be pull/<n>/head or a branch name";;
+    esac
     co="$(bash "$SCRIPT_DIR/checkout.sh" "$repo")" || { printf '%s\n' "$co"; exit 1; }
     clone="$(jq -r .dir <<<"$co")"; def="$(jq -r .default_branch <<<"$co")"; base="$(jq -r .head <<<"$co")"
     slug="$(printf '%s' "${slugarg:-change}" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | sed 's/-\{2,\}/-/g; s/^-//; s/-$//' | cut -c1-32)"
@@ -39,7 +51,7 @@ case "$cmd" in
     wt="$HOME_DIR/checkouts/proto-c$n"
     start="origin/$def"
     if [ -n "$ref" ]; then
-      git -C "$clone" fetch -q origin "$ref" 2>/dev/null || err "cannot fetch $ref"
+      git -C "$clone" fetch -q -- origin "$ref" 2>/dev/null || err "cannot fetch $ref"
       start="$(git -C "$clone" rev-parse FETCH_HEAD)"; base="$start"
     fi
     git -C "$clone" worktree add -q -B "$branch" "$wt" "$start" 2>/dev/null || err "git worktree add failed for $branch"
@@ -58,7 +70,9 @@ case "$cmd" in
     case "$verb" in
       status|credentials|tunnel|untunnel) bash "$prof/bin/env" "$verb";;
       *) logev info prototype "$card $verb start"
-         if bash "$prof/bin/env" "$verb" 2>&1 | tee -a "$STATE/env-$verb.log"; then logev info prototype "$card $verb done"
+         # The saved log is backed up with work/: masked like every log (scripts/log.sh).
+         bash "$prof/bin/env" "$verb" 2>&1 | logmask | tee -a "$STATE/env-$verb.log"
+         if [ "${PIPESTATUS[0]}" -eq 0 ]; then logev info prototype "$card $verb done"
          else logev error prototype "$card $verb failed — $STATE/env-$verb.log"; exit 1; fi;;
     esac;;
   remove)

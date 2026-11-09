@@ -18,7 +18,8 @@ Environments feature on.
 | `pr<n>` | `screens-pr<n>` | an open pull request's head | until its screens are taken, or the pull request merges or closes |
 
 At most `max_screen_prs` (`2`) `pr<n>` instances at a time; past that, an open pull
-request's card gets its pictures when it merges.
+request's card gets its pictures when it merges. A pull request from a fork never gets one
+(`screens.sh` refuses it): its card uses the pictures it carries until it merges.
 `bash "$HOME/scripts/screens.sh"` does the mechanics; the platform tools make and delete the
 Environments.
 

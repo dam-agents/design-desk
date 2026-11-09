@@ -1,12 +1,11 @@
 // <ui-component>: render a real component from the repo to static HTML, so a prototype
 // carries the repo's own logo, avatars, badges — or, for CSS-in-JS repos, its whole
 // look. esbuild bundles the component (tsconfig path aliases included); React renders
-// it. A dependency the component imports is installed at the repo's locked version on
-// the first build that needs it, and kept for the next.
+// it in a child process. A dependency the component imports is installed at the repo's
+// locked version on the first build that needs it, and kept for the next.
 import { existsSync, writeFileSync, readFileSync, mkdirSync, symlinkSync, rmSync } from "node:fs";
-import { join, resolve, relative } from "node:path";
-import { createRequire } from "node:module";
-import { TOOLKIT, SCRATCH, ensureDir, fail, warn, attrs, tagRe, slugOf } from "./core.mjs";
+import { join, resolve } from "node:path";
+import { TOOLKIT, scratch, privateTmp, isolatedEnv, run, fail, attrs, tagRe, slugOf } from "./core.mjs";
 
 // Packages whose only job at import time is to throw when the app's secrets are missing.
 // A prototype never has them, so they render through a stub (chrome/stubs/env.js).
@@ -45,7 +44,7 @@ export async function renderComponents(html, style) {
 
   // One entry exporting every requested component, bundled once.
   const reqs = tags.map((m, i) => ({ i, raw: m[0], a: attrs(m[1]) }));
-  const entry = join(ensureDir(join(SCRATCH, "build")), "components-entry.jsx");
+  const entry = join(scratch("build"), "components-entry.jsx");
   // Providers the app wraps every screen in (a tooltip provider, a theme), from the
   // profile's `render_wrappers`: each component renders inside them, outermost first.
   const wrappers = (profile.render_wrappers || []).map((w, i) => {
@@ -65,7 +64,7 @@ export async function renderComponents(html, style) {
   const workspace = workspacePackages(root);
   // Monorepo packages resolve as installed packages (a node_modules of symlinks), so
   // their package.json `exports` map is honoured: `pkg/avatar/svg` finds its file.
-  const wsNm = join(SCRATCH, "build", "ws-node_modules");
+  const wsNm = join(scratch("build"), "ws-node_modules");
   rmSync(wsNm, { recursive: true, force: true });
   for (const [name, dir] of Object.entries(workspace)) {
     const link = join(wsNm, name);
@@ -99,29 +98,41 @@ export async function renderComponents(html, style) {
         .map((s) => (s.startsWith("@") ? s.split("/").slice(0, 2).join("/") : s.split("/")[0])))].filter((n) => n && !installed.has(n) && !n.startsWith(".") && !n.startsWith("/") && !n.startsWith("@/") && n !== "@" && !workspace[n] && !stubs[n]);
       if (!missing.length) fail(`could not bundle the components: ${(e.errors || []).map((x) => x.text).join("; ") || e.message}`);
       const locked = lockedVersions(root, uiDir, missing);
-      const specs = Object.fromEntries(missing.map((n) => [n, locked[n] || "latest"]));
+      // Never "latest": a public package of that name need not be the one the repo means.
+      const unlocked = missing.filter((n) => !locked[n]);
+      if (unlocked.length) fail(`the components import ${unlocked.join(", ")}, which the repo's lockfile names no version of — it is never installed from npm at "latest" (a public package of that name may not be the repo's); render a part that doesn't import it, or copy its markup`);
+      const specs = Object.fromEntries(missing.map((n) => [n, locked[n]]));
       missing.forEach((n) => installed.add(n));
       tc = toolchain(`comp-${slugOf(style.repo)}`, specs);
     }
   }
   if (!code) fail("could not bundle the components after installing their dependencies");
 
-  const creq = createRequire(join(tc.dir, "package.json"));
-  const mod = { exports: {} };
-  try { new Function("module", "exports", "require", code)(mod, mod.exports, creq); }
-  catch (e) { fail(`a component failed to load (it reads browser globals, env vars or app state at import time?): ${e.message} — render a smaller part that doesn't import it, or copy its markup`); }
-  const { createElement: h } = creq("react");
-  const { renderToStaticMarkup } = creq("react-dom/server");
-  for (const { i, raw, a } of reqs) {
-    const C = mod.exports[`C${i}`];
-    if (!C) fail(`${a.src} has no export "${a.export || "default"}"`);
-    const props = { ...parseProps(a.props), ...(a.class ? { className: a.class } : {}) };
-    globalThis.__deskMocks = parseProps(a.mocks);
-    let out = "";
-    const tree = (profile.render_wrappers || []).reduceRight((child, w, k) => h(mod.exports[`W${k}`], w.props || null, child), h(C, props));
-    try { out = renderToStaticMarkup(tree); }
-    catch (e) { if (process.env.DESK_DEBUG) console.error(e.stack); fail(`<ui-component src="${a.src}" export="${a.export || "default"}"> threw while rendering: ${e.message} — it may need a provider or a hook's data; render a smaller part, or copy its markup by hand`); }
-    globalThis.__deskMocks = {};
+  // The bundle is the repository's code: it loads and renders in a child node
+  // (component-child.cjs) with an env of PATH alone, never in this process.
+  const box = privateTmp("components");
+  const input = {
+    bundle: join(box, "bundle.cjs"), react: tc.dir, out: join(box, "out.json"),
+    wrappers: (profile.render_wrappers || []).map((w) => ({ props: w.props || null })),
+    tags: reqs.map(({ i, a }) => ({ i, props: { ...parseProps(a.props), ...(a.class ? { className: a.class } : {}) }, mocks: parseProps(a.mocks) })),
+  };
+  writeFileSync(input.bundle, code);
+  const r = run(process.execPath, [join(TOOLKIT, "lib/component-child.cjs")], { cwd: box, env: isolatedEnv(box), input: JSON.stringify(input), timeout: 180000, maxBuffer: 64 << 20 });
+  if (process.env.DESK_DEBUG) console.error(`${r.stdout || ""}${r.stderr || ""}`);
+  let res = null;
+  try { res = JSON.parse(readFileSync(input.out, "utf8")); } catch {}
+  rmSync(box, { recursive: true, force: true });
+  if (!res) fail(`the components did not render (node ${r.signal ? `stopped by ${r.signal}` : `exited ${r.status}`}): ${(r.stderr || "").trim().split("\n").slice(-3).join(" | ")}`);
+  if (res.error) {
+    const e = res.error, a = reqs.find((q) => q.i === e.i)?.a || {};
+    if (process.env.DESK_DEBUG && e.stack) console.error(e.stack);
+    if (e.stage === "load") fail(`a component failed to load (it reads browser globals, env vars or app state at import time?): ${e.message} — render a smaller part that doesn't import it, or copy its markup`);
+    if (e.stage === "export") fail(`${a.src} has no export "${a.export || "default"}"`);
+    fail(`<ui-component src="${a.src}" export="${a.export || "default"}"> threw while rendering: ${e.message} — it may need a provider or a hook's data; render a smaller part, or copy its markup by hand`);
+  }
+  const outs = Object.fromEntries(res.ok.map((o) => [o.i, o.out]));
+  for (const { i, raw } of reqs) {
+    let out = outs[i] || "";
     // React escapes & and ' in attributes; Tailwind reads class lists as raw text
     // (`[&_svg]:size-4`, `content-['·']`), so a rendered class list gets them back.
     out = out.replace(/class="([^"]*)"/g, (_, c) => `class="${c.replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&gt;/g, ">").replace(/&lt;/g, "<")}"`);

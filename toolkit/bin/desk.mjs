@@ -3,7 +3,7 @@
 // Text comes from files (or - for stdin), never from argv. Prints JSON on stdout.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { WORK, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
+import { WORK, cfg, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
 import { ADDABLE_ROLES, rosterOf, personOf } from "../../desk/store.mjs";
 
 const USAGE = `usage: design desk <command>
@@ -280,9 +280,16 @@ export function ghRecord(key, gh = (args) => run("gh", args)) {
   return { key, kind: pr ? "pr" : "issue", title: it.title, state: it.pull_request?.merged_at ? "merged" : it.state, url: it.html_url, author: it.user?.login || "",
     labels: (it.labels || []).map((l) => l.name), assignees: (it.assignees || []).map((a) => a.login), ...(linked === null ? {} : { linked }), body: it.body || "", updated: it.updated_at, comments: [...said, ...reviews].sort((a, b) => String(a.at).localeCompare(String(b.at))) };
 }
-// `io` stands in for the Desk server and gh in a test.
+// Only the watched repositories (`repos`) are read: a ref a person's text names in another one
+// is never fetched with the agent's token, so no one reads a private repository through the Desk.
+// The watch gate (scripts/preflight.sh) lists only these too, so a skipped ref never opens a run.
+const repoKey = (r) => String(r || "").trim().toLowerCase().split("/").slice(-2).join("/");
+// `io` stands in for the Desk server, gh and `repos` in a test.
 export async function githubSync(card, io = { call, gh: undefined }) {
-  const { refs } = await io.call("GET", `/agent/github${card ? `?card=${encodeURIComponent(card)}` : ""}`);
+  const watched = new Set(String(io.repos ?? cfg("repos", "none")).split(",").map(repoKey).filter((r) => r.includes("/")));
+  const all = (await io.call("GET", `/agent/github${card ? `?card=${encodeURIComponent(card)}` : ""}`)).refs;
+  const refs = all.filter((k) => watched.has(repoKey(k.split("#")[0])));
+  const skipped = all.filter((k) => !refs.includes(k));
   const done = [], failed = [], fresh = [];
   for (let i = 0; i < refs.length; i += 5) {
     const batch = [];
@@ -294,7 +301,7 @@ export async function githubSync(card, io = { call, gh: undefined }) {
   // Each failed read counts on the Desk; `gave_up` names the refs that just reached the limit,
   // which the watch gate no longer opens a run for (docs/watch.md → Comments on GitHub).
   const gaveUp = failed.length ? (await io.call("POST", "/agent/github/failed", { keys: failed.map((x) => x.key) })).gave_up : [];
-  return { synced: done.length, failed, gave_up: gaveUp, fresh };
+  return { synced: done.length, failed, gave_up: gaveUp, fresh, ...(skipped.length ? { skipped } : {}) };
 }
 
 // The row goes in through the one writer of work/CONFIG.md (docs/config.md).

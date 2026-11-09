@@ -13,9 +13,10 @@ gh auth setup-git >/dev/null 2>&1 || true
 err() { jq -cn --arg e "$1" --arg r "$repo" '{error:$e, repo:$r}'; exit 1; }
 if [ ! -d "$dir/.git" ]; then
   mkdir -p "$(dirname "$dir")"
-  git clone -q --filter=blob:none "https://$host/$slug.git" "$dir" 2>/tmp/design-desk-clone.$$ \
-    || { e="$(tail -1 /tmp/design-desk-clone.$$)"; rm -f /tmp/design-desk-clone.$$; err "clone failed: $e"; }
-  rm -f /tmp/design-desk-clone.$$
+  errf="$(mktemp "${TMPDIR:-/tmp}/design-desk-clone.XXXXXX")" || err "cannot make a temporary file"
+  git clone -q --filter=blob:none "https://$host/$slug.git" "$dir" 2>"$errf" \
+    || { e="$(tail -1 "$errf")"; rm -f "$errf"; err "clone failed: $e"; }
+  rm -f "$errf"
 fi
 # Pushes from this clone and its prototype worktrees go through the agent's own hook.
 git -C "$dir" config core.hooksPath "${HOME:-/home/agent}/scripts/git-hooks"
