@@ -179,6 +179,11 @@ Rules — `design build` enforces the mechanical ones:
   what is wired (`data-goto-view`, `data-menu-trigger`, `onclick`); a control a small script
   toggles carries `data-clickable` so it shows too. `design build` refuses a `data-goto-view`
   with no view of that number.
+- **Notes for the team:** an explanation of why a part looks as it does is never drawn — no
+  tooltip, callout, caption or label the product would not show. Put it on the part as
+  `data-design-note="…"` (one or two plain sentences). The review bar's **Show notes** switch
+  shows only when a note exists, numbers the notes and shows each on pointing; pictures from
+  `design shot` never show them.
 - **Light interactions only:** a small inline `<script>` toggling a class or `hidden` is fine.
 - **Empty states:** populated content in `data-populated`, the real empty state in
   `data-empty-view`. The review bar shows the toggle on views that have one.
@@ -203,7 +208,8 @@ broken dark mode or empty state. Fix and rebuild until it holds.
 Self-check:
 - the product's `PROFILE.md` read, and its rules kept;
 - built into the real screen (or, without a repo, a complete plausible one), not a floating card;
-- approaches distinct and each simple; no rationale text on the page;
+- approaches distinct and each simple; no rationale text on the page — an explanation is a
+  `data-design-note` on its part, nothing drawn;
 - a flow walks from its first view to its last by clicking, and nothing that looks clickable is dead;
 - every control a script toggles carries `data-clickable`, so **Show hotspots** outlines it;
 - classes and copy from the source; no hand-written CSS;

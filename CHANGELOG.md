@@ -13,6 +13,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 1. Restart the Desk server (`rc-service --user design-desk-server restart`): a triage keeps
    its `build` list.
 2. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+3. Nothing for designs already built: designs built from now on keep a note for the team in
+   `data-design-note`, shown by the review bar's Show notes switch.
 
 ## 1.70.2 — 2026-11-09
 
