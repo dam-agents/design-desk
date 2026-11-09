@@ -26,6 +26,13 @@ Each conversation on a card says what its reader may do in it (`may`), so the pa
 Reply, Answer, Mark done and Reopen only to who may use them; `resolve` (marking someone
 else's conversation done) is listed on People.
 
+## 1.66.2 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+2. **Operator-only, optional:** to sharpen an element picture drawn before this version, shoot
+   that state again per [requests.md](docs/requests.md) → Every state of a part, step 4.
+
 ## 1.66.1 — 2026-11-08
 
 **Upgrade:**
