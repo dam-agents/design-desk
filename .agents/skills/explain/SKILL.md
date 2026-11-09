@@ -20,7 +20,39 @@ The reader is a designer or a project manager. They are smart and busy, they thi
 screens, people and tasks, and they do not read code. They read your text to decide something:
 what to design, what to ask, what to tell a user. Write so that they can.
 
-## The shape
+This file is the one home of **how to write** every text people read. What a text holds and
+how long it may be is in its own doc; what the Desk never shows (ids, status names) is in
+[docs/desk.md](../../../docs/desk.md) → Writing on the Desk.
+
+## What goes in
+
+A text answers the one question its reader has, and stops:
+
+| Text | The reader asks | Form |
+| --- | --- | --- |
+| Change card, issue card | What is different for the people using it, and is there something for me to do? | one sentence, then one-line bullets |
+| Research | Is anything in the way of this request? | the verdict in one sentence, then one labelled paragraph per finding |
+| Triage reason, Slack reply | What was decided, and what happens next? | one or two sentences |
+| Under the hood | Would the product have to work differently? | a short text, never a list |
+| Answer, private ask | Their own question | the answer in one sentence, then the layers below |
+| Digest, presentation brief | What happened, and what waits for a decision? | one line per item |
+| Developer spec | What do I build? | its sections ([docs/handoff.md](../../../docs/handoff.md) step 2) |
+
+- **Every sentence earns its place**: it changes what the reader does or knows. A sentence
+  that only says nothing was found, nothing changed or that all is as usual is cut; where the
+  reader must know that you looked, one sentence says it for all of them.
+- **A summary never repeats its title.** The title says what a person can now do or see; the
+  summary what is different from before, and for whom.
+- **Say what is next** when the reader has something to do or to wait for: the step, and whose
+  it is.
+- **Bullets for parallel points**, one line and one idea each. **Prose where one thing leads
+  to the next** (a reason, how something works). Never a paragraph that hides a list, never
+  bullets that cut one thought in pieces.
+- **Show it** when a picture says it faster: a screen for where something is or how it looks,
+  a before and after for a change, a small diagram for three steps or more or a fork
+  (`![caption](asset:A-<n>)`). Never for decoration.
+
+## The shape of an explanation
 
 1. **The answer first.** The first sentence is the gist: what a person can now do, or the
    direct answer to the question. A reader who stops there is not misled.
@@ -33,8 +65,7 @@ what to design, what to ask, what to tell a user. Write so that they can.
 3. **One offer to go deeper**, at the end, when there is more: "Ask if you want to know how
    the limit is counted."
 
-Short and structured: a change card is a one-sentence summary and, per layer, one to three
-one-line bullets, and only the layers the reader acts on; an answer usually needs two layers.
+A change card takes only the layers the reader acts on; an answer usually needs two.
 
 ## Words
 
@@ -43,18 +74,34 @@ one-line bullets, and only the layers the reader acts on; an answer usually need
 - **No code words.** Not: component, endpoint, API, query, state, props, mutation, backend,
   migration, flag, null, enum, PR (say "the change"). When a technical idea matters, say what it
   means for a person: not "the endpoint is paginated" but "the list loads 50 at a time; the
-  rest appear as you scroll".
+  rest appear as you scroll". A term the reader may not know gets a few words of explanation
+  the first time.
 - **No file paths** in "what" or "why". A path appears only where a developer will act on it,
   and is then labelled for them.
 - **Concrete over abstract.** "Owners did not notice an agent had stopped" beats "improves
   visibility". Numbers as digits with units.
-- **Short sentences.** One idea each. Lists for three or more parallel things, otherwise prose.
+- **Short sentences.** One idea each, as you would say it to a colleague at their desk.
+- **Each thing once.** Leave out what a picture already shows and what only a developer needs
+  (API, internals, review history).
 - Write in English, the language of the Desk and of everything around it. Keep product
   names and on-screen words exactly as the product shows them.
 
+## Examples
+
+| Text | Not | But |
+| --- | --- | --- |
+| Summary under the title "See why an agent stopped" | "Adds the stop reason to the Agents list so people can see why an agent stopped." | "A stopped agent used to look like a sleeping one; its row now says why it stopped." |
+| A card's "why" bullet, its `source` "the issue #12" | "The issue that asked for this says that owners did not notice an agent had stopped." | "Owners did not notice an agent had stopped." |
+| Research | "Already asked for: none found. Where it lives: the Agents list. History: … In flight: nothing. Who to ask: nobody." | "Nothing is in the way: nobody asked for this before and nobody is changing it now. **Where it lives:** each row of the Agents list. **History:** the rows were spaced out in May to fit long names (PR #40)." |
+| Triage reason | "This requires changes to the spend aggregation logic in the backend." | "The product counts spend per week only. A daily bar needs it to count per day, and a developer decides that first." |
+| Answer | "Great question! The list is paginated through the API, which returns 50 records per request." | "The list shows 50 agents at a time; the rest appear as you scroll." |
+| A reason a designer should look | "a missing state" | "Check the empty list: it shows nothing at all" |
+
 ## Grounding — never invent a reason
 
-Every "why" comes from somewhere you can name, and you name it in the text:
+Every "why" comes from somewhere you can name. Where the text has a field for it (a card
+section's `source`, a research link), the field names it and the text does not say it again.
+Anywhere else (an answer, a triage reason, a reply) you name it in the text:
 
 | Source | Say |
 | --- | --- |
@@ -63,9 +110,9 @@ Every "why" comes from somewhere you can name, and you name it in the text:
 | An architecture or design page | "The product's design notes say…" |
 | The code itself | "The screen does this because it only receives…" (only when the code makes it obvious) |
 
-When no source says why, write exactly that: "The change does not say why. <Author> made it
-and would know." A guessed reason presented as fact is the one mistake this skill exists to
-prevent; a plausible guess may be offered only labelled as a guess.
+When no source says why, write exactly that, in the text: "The change does not say why.
+<Author> made it and would know." A guessed reason presented as fact is the one mistake this
+skill exists to prevent; a plausible guess may be offered only labelled as a guess.
 
 ## Constraints, kindly
 
@@ -79,7 +126,8 @@ Never "it is not possible", never "the system does not allow it", never blame.
 
 ## Before you hand it over
 
-- Could a designer act on this without asking what a word means?
-- Is every "why" sourced, or marked as not documented?
 - Is the first sentence true and enough on its own?
-- Did you leave out what the reader does not need? Cut it.
+- Could a designer act on this without asking what a word means?
+- Does every sentence change what the reader does or knows? Cut the rest.
+- Does anything repeat the title, a picture or another sentence?
+- Is every "why" sourced, or marked as not documented?

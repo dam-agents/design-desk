@@ -47,14 +47,16 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
    when it is missing, so never leave it out.
    Look at every screen before you use it (Read the image): a sign-in page, an error or
    an empty frame is not a screen of the change.
-7. **Write the card** with the `explain` skill, in plain words ([desk.md](desk.md) → Writing on
-   the Desk): short, structured, only what a designer acts on. The store refuses longer text (`LIMITS.change`, `desk/store.mjs`). A card holds:
+7. **Write the card** with the `explain` skill, which says how every text here reads. The
+   store refuses longer text (`LIMITS.change`, `desk/store.mjs`). A card holds:
    - `title` — what a person can now do or see, in the product's words, not the PR title;
      at most 90 characters;
-   - `summary` — one sentence, the gist; at most 180 characters;
+   - `summary` — one sentence: what is different from before, and for whom; never the title
+     again; at most 180 characters;
    - `sections`, in this order, each only when it has content, each one to three bullets of
      one short sentence (at most 280 characters in all) and its `source: {label, url}` — where it comes from
-     ("the issue #12", "the PR's decision notes", "not documented — ask <author>"):
+     ("the issue #12", "the PR's decision notes", "not documented — ask <author>"); the
+     bullets do not name the source again:
      `what` (What changed) · `why` (Why it is like this; the page lets it fold, with `limits`
      and `good-to-know`; they show open) · `limits` (What cannot change, and why) ·
      `good-to-know` (states and edge cases that matter: empty, error, permissions, long text,
@@ -62,13 +64,8 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
      the design system, a missing state, copy that breaks the product's words);
    - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: the due entry's, true for a
      draft pull request; the Desk shows it as the row's Draft dot).
-   Every "why" names its source in the text ("the issue says…", "the PR's decision notes
-   say…"); a reason you cannot find is written as not documented, with the PR author as
-   the person to ask.
-   Write it as you would tell a designer at their desk: plain words, what they will see and
-   why, nothing a developer alone needs (API, internals, review history). Say each thing
-   once, in the section it belongs to; leave out what the screens already show. Two open
-   questions at most, the ones a designer should decide.
+   A reason you cannot find is written as not documented, with the PR author as the person
+   to ask. Two open questions at most, the ones a designer should decide.
    - `impact` — where else the same thing shows up and what the change touches, from earlier
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
      the PR records ("per week because the limit resets weekly") becomes a decision with the
@@ -158,8 +155,8 @@ cites them; adding the repository to `repos` is the operator's call.
 
 ## Self-check before the next change
 
-- The card says what a person can now **do or see**, not what the code does.
-- Nothing a designer would not act on: no restated summary, no filler, every bullet one line.
+- The card says what a person can now **do or see**, not what the code does, and passes the
+  `explain` skill's own check (Before you hand it over).
 - Every section has a source or says it has none; no invented reason.
 - Every screen was looked at, shows the change, and has a caption.
 - `attention` says whether a designer should look at it, with its reasons.

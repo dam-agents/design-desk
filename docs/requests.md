@@ -51,12 +51,16 @@ The person deciding sees it on the card, and every later step builds on it.
    Writing on the Desk): `research: {verdict,
    summary, links}`. `verdict`: `clear`, `duplicate`, `deliberate`, `collision` (someone is
    changing it now) or `unclear`. The Desk shows only the summary, with no label for the
-   verdict, open near the top, so the summary says the verdict in words; it is this short report, one paragraph each that starts with its label, every source linked in `links`:
-   - **Already asked for**: duplicates and close issues with their state, or "none found";
+   verdict, open near the top. Its first sentence says the verdict in words, and in the same
+   breath what you looked for and did not find ("Nothing is in the way: nobody asked for this
+   before and nobody is changing it now"). Then one short paragraph per finding, each starting
+   with its label, **only the ones that found something**, every source linked in `links`:
+   - **Already asked for**: duplicates and close issues with their state;
    - **Where it lives**: the screen, in plain words, never a code file's name;
-   - **History**: who added it and why, the last change and what it did;
-   - **In flight**: open pull requests and issues on the same area, or "nothing";
-   - **Deliberate or a slip**: the verdict and its evidence, one quote or link;
+   - **History**: who added it and why, the last change and what it did; only what bears on
+     the request;
+   - **In flight**: open pull requests and issues on the same area;
+   - **Deliberate or a slip**: the evidence, one quote or link;
    - **Who to ask**: the people who own the decision, only when the request reverses it.
 
    **Sources** (`links`, at most 20) are only what a designer opens and reads, and the page
