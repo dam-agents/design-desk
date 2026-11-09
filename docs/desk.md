@@ -627,8 +627,7 @@ A `questions_due` item points at a thread: on a card, or a private ask about a D
 
 1. Find the answer in the product: the card's sources first, then the profile's
    architecture pages and the code at the default branch (`scripts/checkout.sh`).
-2. Answer with the `explain` skill, in plain words ([Writing on the Desk](#writing-on-the-desk)): the direct answer in the first
-   sentence, then only what the person needs; under 200 words; one offer to go deeper.
+2. Answer with the `explain` skill ([Writing on the Desk](#writing-on-the-desk)), under 200 words.
    **Show, don't only tell:** put in the pictures that make the answer obvious, as
    `![caption](asset:A-12)` lines, with the asset's real number,: the product's own screens and element drawings already
    on the Desk first, a fresh shot of the product (the `show` action) when none fits, a
@@ -805,8 +804,8 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   `attention: {level, reasons}` — `designer` for a new screen or a new address, a look that
   breaks the product's patterns or its catalog elements, a missing state (empty, loading,
   error), or a screen with an open request or a theme in feedback; else `fyi`. One to five
-  reasons, each a short phrase in the product's words ("a new screen", "its own grey instead of
-  the product's"). It leaves the filter once the person saw it, a designer marked it handled, or it is auto handled.
+  reasons, each a short phrase in the product's words that says what to look at ("Check the
+  empty list: it shows nothing", "its own grey instead of the product's"). It leaves the filter once the person saw it, a designer marked it handled, or it is auto handled.
   The store adds "Differs from the approved design C-<n>" itself ([watch.md](watch.md) step 11).
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
@@ -820,23 +819,13 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
 ## Writing on the Desk
 
 - **Plain words: the one rule for every text people read** — cards, answers, triage
-  reasons, research, Slack replies, digests, the spec, and comments:
-  - Write for someone who has never seen the code. Everyday words and the product's own
-    names; a term the reader may not know gets a few words of explanation the first time.
-  - Short sentences, one idea each. Separate points as bullets, not a paragraph. The answer
-    or the gist comes first.
-  - Show it: an example, a before and after, the screen it happens on. A picture or a small
-    diagram (`![caption](asset:A-<n>)`: a flow, before → after) only when it makes the
-    point clearer than words; never for decoration.
-  - Brief: say each thing once; leave out what a picture already shows and what only a
-    developer needs (API, internals, review history). Long → cut it. The developer spec is
-    the exception: its sections keep what a developer builds from (styles, tokens, patch
-    files, tests to update), and these rules govern only how it is worded
-    ([handoff.md](handoff.md) step 2).
-  - Before you publish, read it as a new teammate would: clear on the first read, with no
-    question left about what it means?
-- Everything on the Desk is for people who do not read code: the product's own words, no
-  file paths, no jargon the profile's glossary does not define. Never write an inbox item or
+  reasons, research, Slack replies, digests, the spec, and comments; the words inside a design
+  or a deliverable are the `copy` skill's. How to write them —
+  what goes in, bullets or prose, the words, examples, the last check — is the
+  [`explain`](../.agents/skills/explain/SKILL.md) skill: read it before you write any of them.
+  The developer spec keeps what a developer builds from (styles, tokens, patch files, tests
+  to update); the skill governs only how it is worded ([handoff.md](handoff.md) step 2).
+- Never write an inbox item or
   thread id (`I-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
   Environment name: refer to things by their title, another card by its title and number
   ([Links to an item](#links-to-an-item)), and to steps with the words the Desk

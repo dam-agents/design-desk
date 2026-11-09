@@ -31,7 +31,7 @@ assert "the sprint is the open milestone due next, the next one after it" '.spri
 assert "one drawing, the cap: the sprint's most recent first" '[.drawings_due[] | [.issue, .bucket, .judge]] == [[43, "sprint", true]]' "$out"
 assert "the rest are read: sprint (an epic's sub-issue too), next, labelled; the rest not" '[.issue_news_due[] | [.issue, .bucket, .need, .kind]] == [[41, "sprint", "judge", "first"], [46, "sprint", "judge", "first"], [45, "sprint", "judge", "first"], [42, "next", "judge", "first"], [44, "label", "judge", "first"]]' "$out"
 assert "an entry carries its issue" '.issue_news_due[0] | .title == "Spend per agent" and .assignees == ["bob"] and .labels == ["ui"] and .milestone == "Sprint 12"' "$out"
-assert "read_set names the issues doc and screens for drawings" '.read_set == ["docs/issues.md", "docs/screens.md"]' "$out"
+assert "read_set names the issues doc, the explain skill and screens for drawings" '.read_set == ["docs/issues.md", ".agents/skills/explain/SKILL.md", "docs/screens.md"]' "$out"
 assert "a title from ids" '.title == "Read issues #43, #41 +4 more"' "$out"
 
 # Second pass: everything is due and fresh, left to its session.
