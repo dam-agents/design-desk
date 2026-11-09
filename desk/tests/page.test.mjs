@@ -23,6 +23,37 @@ test("nothing on the page submits a form", () => {
   assert.doesNotMatch(page, /addEventListener\("submit",\s*guard\(/);
 });
 
+// md()'s inline rules (docs/desk.md → Writing on the Desk), run on their own: a construct
+// never lands inside another's attribute, so no person's text becomes markup.
+test("markdown text never becomes an attribute or a handler", () => {
+  const esc = page.match(/const esc = [^\n]+/)[0];
+  const rules = page.match(/const INLINE = [\s\S]*?\n  };\n/)[0];
+  const inline = new Function(`${esc}\n${rules}\nreturn inline;`)();
+  const out = inline("![[x](asset:A-1)](https://a/src/onerror=alert(1)//)");
+  assert.doesNotMatch(out, /<a\b/, "the link stays text after the picture");
+  assert.equal((out.match(/"/g) || []).length % 2, 0);
+  assert.match(out, /<img alt="\[x" data-asset="A-1" \/>/);
+  assert.equal(inline('**a [b](https://x.test/"q) c** `<i>`'), '<b>a <a href="https://x.test/&quot;q" target="_blank" rel="noopener noreferrer">b</a> c</b> <code>&lt;i&gt;</code>');
+  assert.equal(inline("[**b**](https://x.test)"), '<a href="https://x.test" target="_blank" rel="noopener noreferrer"><b>b</b></a>');
+});
+
+// A conversation's controls follow `may`, which the server sends with each one: a control the
+// thread routes refuse for this reader is never drawn (docs/desk.md → Roles).
+test("a conversation shows Reply, Answer, Mark done and Reopen only to a reader who may use them", () => {
+  const mayIn = new Function(`${page.match(/const mayIn = [^\n]+/)[0]}\nreturn mayIn;`)();
+  assert.deepEqual([mayIn({ may: { reply: false, resolve: true } }, "reply"), mayIn({ may: { reply: true, resolve: false } }, "resolve"), mayIn({ may: { reply: true } }, "reply")], [false, false, true]);
+  const controls = { "data-send-reply": "reply", "data-send-form": "reply", "data-reopen": "reply", "data-resolve": "resolve" };
+  for (const [attr, move] of Object.entries(controls)) {
+    const at = [...page.matchAll(new RegExp(`${attr}="\\$\\{esc\\(th\\.id\\)\\}"`, "g"))].map((m) => m.index);
+    assert.ok(at.length > 0, attr);
+    // The guard opens the very template the control is in: no other backtick between them.
+    for (const i of at) {
+      const opened = page.slice(0, page.lastIndexOf("`", i) + 1);
+      assert.ok(opened.endsWith(`mayIn(th, "${move}") ? \``), `${attr} at offset ${i} is drawn without mayIn(th, "${move}") right before it`);
+    }
+  }
+});
+
 test("the new option dialog sends on its close, as the page's other dialogs do", () => {
   const f = page.match(/<dialog id="option-dialog">[\s\S]*?<\/dialog>/)?.[0];
   assert.ok(f, "the page has the option-dialog");

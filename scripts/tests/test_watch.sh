@@ -83,11 +83,12 @@ printf -- '- repos: acme/widgets
 assert "issue_label none and watch_open_prs disabled turn both off" '(.issues_due | length) == 0 and ([.changes_due[]? | select(.state == "open")] | length) == 0' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 
 # The Desk's GitHub copies: one never read, and one GitHub changed since, open a run alone;
-# one never read whose last 3 reads failed does not.
+# one never read whose last 3 reads failed does not, nor does one outside the watched
+# repositories, read or not: github-sync never reads it.
 printf -- '- repos: acme/widgets\n- watch_since: 2026-10-01T00:00:00Z\n- issue_label: none\n- watch_open_prs: disabled\n' > "$WORK_DIR/CONFIG.md"
 mkdir -p "$DESK_DIR"
 cat > "$DESK_DIR/github-refs.json" <<'JSON'
-{"refs":[{"key":"acme/widgets#21","updated":"2026-11-01T10:00:00Z"},{"key":"acme/widgets#22","updated":"2026-11-03T10:00:00Z"},{"key":"acme/widgets#30","updated":null,"tries":2},{"key":"acme/widgets#50000","updated":null,"tries":3}]}
+{"refs":[{"key":"acme/widgets#21","updated":"2026-11-01T10:00:00Z"},{"key":"acme/widgets#22","updated":"2026-11-03T10:00:00Z"},{"key":"acme/widgets#30","updated":null,"tries":2},{"key":"acme/widgets#50000","updated":null,"tries":3},{"key":"acme/private#5","updated":null},{"key":"other/repo#21","updated":"2026-11-01T10:00:00Z"}]}
 JSON
 cat > "$STUB_DIR/search.json" <<'JSON'
 {"incomplete_results":false,"items":[
@@ -97,6 +98,10 @@ JSON
 outg="$(bash "$ROOT/scripts/preflight.sh" watch)"
 assert "a copy behind GitHub opens a run" '.nothing_to_do == false and .github_due == ["acme/widgets#21", "acme/widgets#30"] and (.changes_due | length) == 0' "$outg"
 assert "its title says what it does" '.title == "Read new GitHub comments"' "$outg"
+# repos as people write it: a host, mixed case, spaces around the comma, two repositories.
+# toolkit/tests/github.test.mjs feeds github-sync the same value: both read one watched set.
+printf -- '- repos: GitHub.com/Acme/Widgets , other/thing\n- watch_since: 2026-10-01T00:00:00Z\n- issue_label: none\n- watch_open_prs: disabled\n' > "$WORK_DIR/CONFIG.md"
+assert "repos with a host, mixed case and spaces watches the same refs" '.github_due == ["acme/widgets#21", "acme/widgets#30"]' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 rm -f "$DESK_DIR/github-refs.json"
 
 # A failed listing is never an answer.

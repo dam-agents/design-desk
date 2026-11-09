@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, abilities, rosterOf, readRole, personOf, namesOf, elementsOf } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, LIMITS, abilities, forgetIdle, rosterOf, readRole, personOf, namesOf, elementsOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -743,6 +743,43 @@ test("no option is the winner; votes only suggest one, and the presentation show
   assert.equal(s.queueForCall(card.id, alice, "", "v2").card.agenda.variant, "v2");
 });
 
+test("a reply, an answer, a reopen and Mark done take the ability of what they start", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "triaged"); }
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Big", asset: a }] });
+  const guest = { email: "guest@example.com", role: "guest" };
+  const asks = (step) => s.openThread(card.id, { agent: true }, { kind: "asks", text: "Which one?", step }).thread.id;
+  assert.deepEqual(["request", "explore", "build", "figma", "map"].map((step) => s.threadNeed(asks(step), guest)), ["request", "revise", "build", "figma", "add"], "an answer takes its step's ability");
+  const note = s.openThread(card.id, alice, { kind: "change", text: "Bigger", anchor: { variant: "v1", selector: "button", label: "Upload" } }).thread.id;
+  assert.deepEqual([s.threadNeed(note, guest), s.threadNeed(note, guest, "resolve")], ["change", "change"], "a change note's follow-up takes change");
+  const talk = s.openThread(card.id, alice, { kind: "question", text: "Why blue?" }).thread.id;
+  const own = s.openThread(card.id, guest, { kind: "question", text: "Why so big?" }).thread.id;
+  assert.deepEqual([s.threadNeed(talk, guest), s.threadNeed(talk, guest, "resolve"), s.threadNeed(own, guest, "resolve"), s.threadNeed(talk, alice, "resolve")], ["comment", "resolve", "comment", "comment"], "anyone replies; marking another's done takes resolve");
+  assert.deepEqual(["guest", "developer", "designer"].map((r) => can(r, "resolve")), [false, true, true]);
+  assert.equal(abilities("guest").resolve, false, "the page and the People tab hear of it");
+});
+
+test("pictures and pages have a total: past it an upload is refused, and the refusal names what frees room", () => {
+  const s = fresh();
+  s.db.assets.A0 = { id: "A0", file: "A0.png", bytes: LIMITS.assetsBytes - 2 };
+  assert.throws(() => s.addAsset({ kind: "image", name: "x", contentType: "image/png", data: "abc", encoding: "utf8" }), /deleting a closed request/);
+  assert.equal(s.addAsset({ kind: "image", name: "x", contentType: "image/png", data: "ab", encoding: "utf8" }).asset.bytes, 2, "up to the total it is taken");
+});
+
+test("the rate windows forget idle callers past 500, never one still in a window", () => {
+  const now = 100_000_000, WINDOW = 10 * 60 * 1000;
+  const m = new Map(Array.from({ length: 501 }, (_, i) => [`p${i}`, { writes: [now - 2 * WINDOW], items: [] }]));
+  m.set("writing", { writes: [now - 1000], items: [] });
+  m.set("asked", { writes: [], items: [now - 30 * 60 * 1000] });
+  forgetIdle(m, now, WINDOW);
+  assert.deepEqual([...m.keys()], ["writing", "asked"]);
+  const few = new Map([["idle", { writes: [], items: [] }]]);
+  forgetIdle(few, now, WINDOW);
+  assert.equal(few.size, 1, "a small map is left alone");
+});
+
 test("every state of a part: drawn per option, versioned, noted on its own; a build names what goes live", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
@@ -760,6 +797,10 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   // The agent's question resumes the same option and part.
   s.claim(item.id, "run-2"); s.done(item.id, "run-2", "asked");
   const { thread: q } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "The upload button?", step: "states" });
+  const guest = { email: "guest@example.com", role: "guest" };
+  assert.deepEqual([s.threadNeed(q.id, guest), can("guest", s.threadNeed(q.id, guest)), can("developer", s.threadNeed(q.id, bob))], ["revise", false, true], "an answer that resumes a step takes that step's ability");
+  const { thread: talk } = s.openThread(card.id, alice, { kind: "question", text: "Why blue?" });
+  assert.deepEqual([s.threadNeed(talk.id, guest), s.threadNeed(talk.id, guest, "resolve"), s.threadNeed(talk.id, alice, "resolve")], ["comment", "resolve", "comment"], "a guest replies, marks done only their own");
   const { inbox: resumed } = s.reply(q.id, alice, "Yes.");
   assert.deepEqual([resumed.kind, resumed.variant, resumed.part.label], ["states", "v1", "Button “Upload”"]);
   s.claim(resumed.id, "run-3"); s.done(resumed.id, "run-3", "drew");

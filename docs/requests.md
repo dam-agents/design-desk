@@ -82,7 +82,7 @@ The person deciding sees it on the card, and every later step builds on it.
    as a plain Link.
 
    Then `design desk github-sync --card <C-n>`: the Desk reads every issue and pull request
-   the research cites, so each link's preview shows its state, labels and latest comments
+   the research cites in a watched repository (`repos`; any other is `skipped`), so each link's preview shows its state, labels and latest comments
    about the design ([desk.md](desk.md) → GitHub on the Desk).
 
    Keep the full notes as an asset (`--kind report`) and set `research.asset`.
