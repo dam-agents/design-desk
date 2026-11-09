@@ -154,11 +154,18 @@ cat > "$WORK_DIR/desk/db.json" <<'JSON'
  "C-1":{"id":"C-1","kind":"change","status":"new","source":{"repo":"a/b","pr":1},"attention":{"level":"designer","reasons":["r"]}},
  "C-2":{"id":"C-2","kind":"change","status":"new","source":{"repo":"a/b","pr":2},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"failing"}},
  "C-3":{"id":"C-3","kind":"change","status":"new","source":{"repo":"a/b","pr":3,"merged_at":"2026-11-01T00:00:00Z"},"attention":{"level":"designer","reasons":["r"]}},
- "C-4":{"id":"C-4","kind":"change","status":"new","source":{"repo":"a/b","pr":4},"attention":{"level":"fyi","reasons":["r"]}}}}
+ "C-4":{"id":"C-4","kind":"change","status":"new","source":{"repo":"a/b","pr":4},"attention":{"level":"fyi","reasons":["r"]}},
+ "C-5":{"id":"C-5","kind":"change","status":"new","source":{"repo":"a/b","pr":5},"attention":{"level":"fyi","reasons":["r"]},"design_check":{"verdict":"differs"}},
+ "C-6":{"id":"C-6","kind":"change","status":"new","source":{"repo":"a/b","pr":6},"conflicts":[{"decision":"D-1"}]},
+ "C-7":{"id":"C-7","kind":"change","status":"new","source":{"repo":"a/b","pr":7},"ci":{"state":"error","tries":2}},
+ "C-8":{"id":"C-8","kind":"change","status":"new","source":{"repo":"a/b","pr":8},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"skipped","tries":3}}},
+ "decisions":{"D-1":{"id":"D-1","status":"active"}}}
 JSON
 assert "ci_gate off: no card is due for the gate" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 printf -- '- ci_gate: enabled\n' > "$WORK_DIR/CONFIG.md"
-assert "ci_gate on: only the open, unjudged card that waits for a designer" '[.ci_due[] | [.id, .card]] == [["G-C-1", "C-1"]]' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "ci_gate on: open unjudged cards that wait for a designer, as derived, and a failed write under its cap" '[.ci_due[] | [.id, .retry]] == [["G-C-1", false], ["G-C-5", false], ["G-C-6", false], ["G-C-7", true]]' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+echo '{"cards":' > "$WORK_DIR/desk/db.json"
+assert "a Desk store the gate cannot read is an error line, and the run stays open" '(.nothing_to_do == false) and (.logs | any(test("could not read the Desk.s cards for the CI gate")))' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"
 assert "a broken inbox file is an error" '.error | test("not an inbox")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"

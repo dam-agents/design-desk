@@ -149,19 +149,27 @@ passes. Merged and closed pull requests are never touched: their checks no longe
   the new `sha`; a card marked handled meanwhile gets `success` instead.
 - **Cards already on the Desk.** The gate's first step runs when a card is written, so the
   inbox pre-flight also lists, while `ci_gate` is `enabled`, every change card of an open PR
-  that waits for a designer and has no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
-  true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
-  item to claim: judge it as in **Fail it** and upsert `ci` (`failing` or `skipped`); a card
-  with `ci` is never due this way again.
+  that waits for a designer (as the store derives it: its `attention`, a `design_check` that
+  differs, a decision in force it goes against, a suggestion for the presentation) and has no
+  `ci` yet, as a `ci_due` entry `G-<card>` (`gate: true`): the cards on the Desk before the key
+  was turned on, and any a run missed. It has no item to claim: set the check to follow the
+  card — handled → success, waiting for a designer → failure as in **Fail it**, else none —
+  and upsert `ci` (`failing`, `passing` or `skipped`). A card with `ci` is never due this way
+  again, save after a failed write (`retry: true`, below). A pre-flight that cannot read the
+  cards logs an error line and leaves the run open, never an empty list.
 - **`ci_due`** (inbox run), an `I-<n>` item: a designer marked the card handled, or took the mark back. Claim;
   read the card and the PR again. Handled (or the PR builds a Desk request, or `ci_gate` is
   now `disabled`, so nothing stays held) → the same call with `-f state=success -f
   description="A designer has seen this UI change"` on the current head and upsert `ci:
   {state: "passing", sha}`. Not handled, open and still `designer` → failure again, as
   above. A merged or closed PR → nothing to set; `design desk done` with "PR no longer open".
-- The context `design-desk` is a marker: never rename it. A failed GitHub call is logged
-  (`logev warn ci …`), the card keeps its `ci` and the next run tries again; it never fails
-  the change's ledger entry.
+- The context `design-desk` is a marker: never rename it. A failed status write (a fork head,
+  a 403, a deleted repository) is logged (`logev warn ci …`) and upserted as `ci: {state:
+  "error", tries: <the last tries + 1>}`; it never fails the change's ledger entry. The gate
+  lists such a card again as `G-<card>` with `retry: true` until its 3rd try; the 3rd failure
+  is written as `{state: "skipped", tries: 3}` and reported in the chat UI, and the card is
+  never due again. An `I-<n>` item whose write failed is done with that outcome: the `G-`
+  entry retries it.
 
 ## Comments on GitHub
 

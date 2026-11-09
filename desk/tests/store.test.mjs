@@ -123,7 +123,10 @@ test("a held check follows the handled mark: each mark queues one ci item, none 
   s.handle(plain.id, alice);
   assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci").length, 0, "no check held: nothing to set");
   const c = s.upsertCard({ kind: "change", title: "Held", source: { repo: "acme/widgets", pr: 8 } }).card;
-  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "red" } }), /failing, passing or skipped/);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "red" } }), /failing, passing, skipped or error/);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "error" } }), /counts its tries/);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "error", tries: 4 } }), /1 to 3/);
+  assert.equal(s.upsertCard({ id: c.id, ci: { state: "error", tries: 2 } }).card.ci.tries, 2);
   assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "failing", sha: "nope" } }), /commit id/);
   const r = s.createRequest(alice, { title: "A request", problem: "P." }).card;
   assert.throws(() => s.upsertCard({ id: r.id, ci: { state: "failing" } }), /change card/);

@@ -3034,12 +3034,16 @@ function cleanTriage(t) {
 // The agent's judgement of a change: a designer should look at it, or it is for
 // information only; either way with its reasons in plain words.
 // Design Desk's check on a change's pull request: failing (held until a designer marks it
-// handled), passing, or skipped (judged and never held: it builds a Desk request, or it is no
-// longer open), on the commit it was set on (docs/watch.md → CI gate).
+// handled), passing, skipped (judged and never held: it builds a Desk request, it is no longer
+// open, or its status could not be set 3 times), or error (its last status write failed; `tries`
+// counts the failures in a row, and the gate stops at 3), on the commit it was set on
+// (docs/watch.md → CI gate).
 function cleanCi(x) {
-  if (!x || !["failing", "passing", "skipped"].includes(x.state)) throw bad("ci state must be failing, passing or skipped");
+  if (!x || !["failing", "passing", "skipped", "error"].includes(x.state)) throw bad("ci state must be failing, passing, skipped or error");
   if (x.sha !== undefined && !/^[0-9a-f]{7,40}$/.test(String(x.sha))) throw bad("ci sha must be a commit id");
-  return { state: x.state, ...(x.sha ? { sha: String(x.sha) } : {}) };
+  if (x.tries !== undefined && !(Number.isInteger(x.tries) && x.tries >= 1 && x.tries <= 3)) throw bad("ci tries must be 1 to 3");
+  if (x.state === "error" && x.tries === undefined) throw bad("a ci error counts its tries");
+  return { state: x.state, ...(x.sha ? { sha: String(x.sha) } : {}), ...(x.tries ? { tries: x.tries } : {}) };
 }
 
 function cleanAttention(a) {

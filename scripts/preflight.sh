@@ -662,17 +662,30 @@ inbox_mode() {
         | select($why != null or ((.synced | epoch) as $at | $at == null or ($now - $at) >= $every))
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
-  # With ci_gate on, an open pull request's change card that waits for a designer and was never
-  # judged for the gate (no `ci`) is due once, as `G-<card>`: the cards already on the Desk when
-  # the key was turned on, and any the watch run missed (docs/watch.md → CI gate).
-  local gate="[]"
+  # With ci_gate on, an open pull request's change card is due as `G-<card>` when it waits for a
+  # designer (as the store derives it: its attention, a design check that differs, a decision in
+  # force it goes against, a suggestion for the presentation) and was never judged for the gate
+  # (no `ci`): the cards already on the Desk when the key was turned on, and any a run missed.
+  # A card whose last status write failed (`ci.state: error`) is due again until its 3rd try
+  # (docs/watch.md → CI gate). A read that fails is an error line, never an empty list.
+  local gate="[]" gate_err=""
   if [ -f "$DB" ] && [ "$(jq -r .ci_gate <<<"$CONF")" = enabled ]; then
-    gate="$(jq -c '[ .cards[] | select(.kind == "change" and .source.pr != null and (.source.merged_at // null) == null
-        and .ci == null and .handled == null and .status != "archived" and .attention.level == "designer")
-      | {id: ("G-" + .id), card: .id, gate: true} ]' "$DB" 2>/dev/null || echo '[]')"
+    if ! gate="$(jq -c '(.decisions // {}) as $d
+        | [ (.cards // {})[] | select(.kind == "change" and (.source | type) == "object" and .source.pr != null
+              and (.source.merged_at // null) == null and .status != "archived")
+          | (((.attention | if type == "object" then .level else null end) == "designer") or ((.design_check | if type == "object" then .verdict else null end) == "differs")
+             or ([(.conflicts // [])[] | objects | ($d[.decision | tostring] | if type == "object" then .status else null end)] | index("active")) != null
+             or (.call_suggestion // null) != null) as $wait
+          | (.ci | if type == "object" then . else null end) as $ci
+          | select(($ci == null and .handled == null and $wait) or ($ci.state == "error" and ($ci.tries // 0) < 3))
+          | {id: ("G-" + .id), card: .id, gate: true, retry: ($ci != null)} ]' "$DB" 2>&1)"; then
+      log "could not read the Desk's cards for the CI gate: ${gate%%$'\n'*} — no pull request is judged this run"
+      logev error preflight "inbox: CI gate read failed"
+      gate="[]"; gate_err=1
+    fi
   fi
   local n; n="$(jq 'length' <<<"$items")"
-  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ] && [ "$(jq 'length' <<<"$gate")" -eq 0 ]; then
+  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ] && [ "$(jq 'length' <<<"$gate")" -eq 0 ] && [ -z "$gate_err" ]; then
     log "Desk inbox empty"; printf '%s due=0\n' "$NOW_ISO" >> "$WORK/INBOX.log"; quiet_out
   fi
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind)\(if .card then " on \(.card)" else "" end)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")

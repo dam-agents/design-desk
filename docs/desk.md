@@ -862,7 +862,7 @@ Requests use **Ready** instead): only the cards that wait for a designer's decis
 - A change card counts the days since it appeared until a designer marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue. Its **What changed and why** folds, open by default. With `ci_gate` its `ci`
-  (`{state: failing|passing|skipped, sha}`, yours to write) shows as its GitHub check; marking it
+  (`{state: failing|passing|skipped|error, sha, tries}`, yours to write) shows as its GitHub check; marking it
   handled, or not, queues a `ci` item (`ci_due`, [watch.md](watch.md) → CI gate).
 - **Comments on options** are pinned to an element and its view; people reply, mark them
   done or reopen them, and a designer, PM or developer presses **Work it in** (one, or every open one) to turn
