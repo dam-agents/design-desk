@@ -71,6 +71,7 @@ JSON
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "polls due: never synced, and the one whose request moved on" '[.polls_due[] | [.id, .close]] == [["P-2", false], ["P-3", true]]' "$out"
 assert "the slack-polls skill is read" '.read_set | index(".agents/skills/slack-polls/SKILL.md")' "$out"
+assert "the explain skill is read whatever is due" '(.questions_due | length) == 0 and (.read_set | index(".agents/skills/explain/SKILL.md")) != null' "$out"
 
 # A closing time is a time in whatever offset it is written (a vote was closed a minute
 # after it opened because a "+01:00" value read as the epoch), and a closing time nobody

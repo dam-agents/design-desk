@@ -33,6 +33,7 @@ cat > "$DESK_DIR/db.json" <<'JSON'
 JSON
 out="$(bash "$ROOT/scripts/preflight.sh" digest)"
 assert "work is due" '.nothing_to_do == false and .mode == "digest" and .period == "2026-W45"' "$out"
+assert "read_set names the digest doc and the explain skill" '.read_set == ["docs/digest.md", ".agents/skills/explain/SKILL.md"]' "$out"
 assert "named by its days, the year once" '.dates == "29 Oct – 4 Nov 2026"' "$out"
 assert "its items are those days, this morning's wait for next week" '[.changes[].id] == ["C-2", "C-3"]' "$out"
 # A developer's question for the designer on Designs is not feedback on the product.
