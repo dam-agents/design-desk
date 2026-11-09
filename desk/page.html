@@ -934,6 +934,7 @@
   .s-word .info .tip .t-paths li.no { opacity: .6; }
   /* The status line: the state's word, its ⓘ and the steps pill. */
   .s-line { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+  .s-act { font-size: var(--fs-ui); color: var(--muted); } .s-act b { color: var(--ink); font-weight: 600; }
   /* A screen's or a part's drawn, checked and from: one line, cut short with … when narrow. */
   .s-meta .one-line { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .s-meta .one-line > span + span { margin-left: 12px; }
@@ -1304,11 +1305,11 @@
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
   const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
-  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : `${specWord(c) || STATUS[c.status] || c.status}${asking(c) ? " (needs your answer)" : ""}`;
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : specWord(c) || STATUS[c.status] || c.status;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   const WORK = {
-    request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
-    "follow-up": "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
+    request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
+    "follow-up": "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     explore: "Drawing the design options.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
@@ -3869,11 +3870,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const reopenSent = c.status === "handed-off" && S.me?.role === "admin" ? `<button class="btn" data-act="reopen" title="Opens it again before the team's vote, with its options; its Designs record closes, and what went to GitHub stays there">Reopen…</button>` : "";
     const items = (nx.more || "") + call + size + reopenSent + del + (closed(c) || locked(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`) + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
+    // What to do now, on the state's own line: answer Design Desk's question, or wait while it works.
+    const act = asks.length ? `<span class="s-act"><b>Answer the question below</b></span>`
+      : busy.length ? `<span class="s-act s-work"><b>Wait</b> · ${busy.map((k) => esc(WORK[k] || "Design Desk is working on this.")).join(" ")}${guestSlow}</span>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
-      ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow}</div></div>`).join("")}
       ${sizeLine(c)}
       ${c.status === "handed-off" ? sentBox(c) : ""}${(c.status === "handed-off" ? more : nx.buttons || more) ? `<div class="next"><div class="actions">${c.status === "handed-off" ? "" : nx.buttons}${more}</div></div>` : ""}
     </div>`;
