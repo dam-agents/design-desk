@@ -3921,6 +3921,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (CODE_LINK.test(l.url || "")) return null;
     return { kind: "Link", label: l.label, url };
   }
+  // The short report's parts (docs/requests.md → Record it on the card), each its own
+  // paragraph that starts with its label, also when the summary runs them on in one.
+  const RESEARCH_PARTS = /(?:\*\*)?(Already asked for|Where it lives|History|In flight|Deliberate or a slip|Who to ask)(?:\*\*)?\s*:(?:\*\*)?[ \t]*/g;
+  const researchParts = (s) => String(s || "").replace(RESEARCH_PARTS, (m, h, at, all) => `${/(^|\n)[ \t]*([-*][ \t]+)?$/.test(all.slice(0, at)) ? "" : "\n\n"}**${h}:** `);
   function renderResearch(r) {
     if (!r) return "";
     const items = (r.links || []).map(researchSource).filter(Boolean).map((x) => {
@@ -3930,7 +3934,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const link = x.html ?? `<a href="${x.url}" target="_blank" rel="noopener noreferrer"${docAttrs}>${label}</a>`;
       return `<li><span class="src-kind">${esc(x.kind)}</span> · ${link}</li>`;
     });
-    return `<section class="made-sec"><h4>What's already known</h4><div>${md(r.summary)}${items.length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${items.join("")}</ul>` : ""}</div></section>`;
+    return `<section class="made-sec"><h4>What's already known</h4><div>${md(researchParts(r.summary))}${items.length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${items.join("")}</ul>` : ""}</div></section>`;
   }
 
   // 👍, 👎 and ⚠ as pills with their count: grey until someone votes, then green, red or amber.
