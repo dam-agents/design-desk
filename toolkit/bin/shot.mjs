@@ -51,7 +51,7 @@ export async function main(_cmd, argv) {
   const snap = async (name) => {
     await pg.waitForTimeout(350);
     // The review bar's dead-click flash outlines every wired control; a picture never shows it.
-    await pg.evaluate(() => document.documentElement.classList.remove("review-hot"));
+    await pg.evaluate(() => { document.documentElement.classList.remove("review-hot", "review-notes"); const n = document.getElementById("review-notes"); if (n) n.textContent = ""; });
     // Apps scroll inside a pane, not the page: grow the window to the tallest scroll area.
     const tall = await pg.evaluate(() => Math.max(innerHeight, ...[...document.querySelectorAll("*")]
       .filter((e) => e.offsetParent !== null && /(auto|scroll)/.test(getComputedStyle(e).overflowY))
@@ -111,7 +111,7 @@ export async function main(_cmd, argv) {
       if (!(await el.count())) { drop(); await browser.close(); fail(`--element: nothing matches ${element}`); }
       const view = await el.evaluate((e) => e.closest("[data-view]")?.dataset.view || null);
       if (view) await pg.locator(`[data-review-view="${view}"]`).first().click().catch(() => {});
-      await pg.evaluate(() => { document.documentElement.classList.remove("review-hot"); const r = document.querySelector("#review"); if (r) r.style.display = "none"; });
+      await pg.evaluate(() => { document.documentElement.classList.remove("review-hot", "review-notes"); const n = document.getElementById("review-notes"); if (n) n.textContent = ""; const r = document.querySelector("#review"); if (r) r.style.display = "none"; });
       drop(); paths = [];
       for (const t of themes) {
         await pg.evaluate((d) => document.documentElement.classList.toggle("dark", d), t === "dark");

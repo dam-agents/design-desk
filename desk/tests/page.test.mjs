@@ -1973,6 +1973,7 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");
   await desk.click(".steppill [data-dev-ask]");
   assert.equal(await desk.$eval("#dev-parts", (d) => d.open), true, "the step Contact a developer opens what design cannot do");
+  assert.equal(await desk.locator(".steppill [data-dev-ask]").count(), 0, "once opened, the step moves on to the one after it");
   assert.equal(await desk.locator("#dev-parts [data-dev-copy]").count(), 1, "with a question for a developer to copy");
 
   await desk.click('[data-brief-toggle="made"]');

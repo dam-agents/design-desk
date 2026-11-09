@@ -215,7 +215,7 @@ export function bundleOf(card) {
     request: { id: card.id, title: card.title, type: card.request?.type || "idea" },
     approved: { option: v ? { id: v.id, name: v.name, version } : null, by: card.approved?.by?.role || null, at: card.approved?.at || null, straight_to_implementation: Boolean(card.approved?.implement) },
     // What a design change can and cannot do here: the parts a developer adds beyond the look.
-    boundary: { verdict: card.triage?.verdict || null, can: card.triage?.can || [], needs_developer: card.triage?.cannot || [] },
+    boundary: { verdict: card.triage?.verdict || null, can: card.triage?.can || [], needs_developer: card.triage?.cannot || [], build: card.triage?.build || [] },
     mockup: mockup ? "mockup.html" : null,
     elements: (v?.elements || []).map((e) => ({ id: e.id, name: e.name, change: e.change, what: e.how || "", selector: e.selector || null, view: e.view_name || e.view || null,
       product_element: e.element || null, states: states.filter((x) => x.element === e.id).map((x) => x.id) })),

@@ -3005,7 +3005,8 @@ function cleanGrill(g) {
 function cleanTriage(t) {
   if (!t || !["design", "needs-developer", "product"].includes(t.verdict)) throw bad("triage verdict must be design, needs-developer or product");
   const list = (x, n) => (Array.isArray(x) ? x.slice(0, 12).map((s) => clean(s, 600, n)) : []);
-  return { verdict: t.verdict, reasons: list(t.reasons, "reason"), can: list(t.can, "can"), cannot: list(t.cannot, "cannot") };
+  // cannot: what changes how the product works; build: what a developer wires to build the design (it stops nothing).
+  return { verdict: t.verdict, reasons: list(t.reasons, "reason"), can: list(t.can, "can"), cannot: list(t.cannot, "cannot"), build: list(t.build, "build") };
 }
 
 // The agent's judgement of a change: a designer should look at it, or it is for

@@ -76,6 +76,36 @@ test("a click walks the flow, Back retraces it, a dead spot flashes what is clic
   } finally { await chrome.close(); }
 });
 
+test("Show notes shows only with a note, numbers it, reads it on a click and changes nothing in the design", async (t) => {
+  const browser = chromium();
+  if (!browser) return t.skip("no browser here");
+  let pw;
+  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  Object.assign(process.env, browser.env);
+  const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
+  try {
+    const pg = await chrome.newPage();
+    const load = async (html) => { await pg.setContent(html); await pg.evaluate(() => document.dispatchEvent(new Event("DOMContentLoaded"))); };
+    await load(PAGE);
+    assert.equal(await pg.isVisible("#review [data-notes]"), false, "no note, no switch");
+    await load(PAGE.replace('<p id="plain">', '<p id="plain" data-design-note="Plans read as a count, not a list.">'));
+    assert.equal(await pg.isVisible("#review [data-notes]"), true, "a note shows the switch");
+    assert.equal(await pg.getAttribute("#review [data-notes]", "aria-checked"), "false", "it starts off");
+    assert.equal(await pg.locator("#review-notes .pin").count(), 0, "nothing drawn while off");
+    const look = () => pg.evaluate(() => { const s = getComputedStyle(document.getElementById("plain")); return [s.backgroundColor, s.color, s.outlineStyle]; });
+    const before = await look();
+    await pg.click("#review [data-notes]");
+    assert.equal(await pg.locator("#review-notes .pin").count(), 1, "one number per note on the screen shown");
+    assert.deepEqual(await look(), before, "the part keeps its look");
+    const hot = await pg.evaluate(() => document.documentElement.classList.contains("review-hot"));
+    await pg.click("#review-notes .pin");
+    assert.equal(await pg.textContent("#review-notes .bubble"), "Plans read as a count, not a list.");
+    assert.equal(await pg.evaluate(() => document.documentElement.classList.contains("review-hot")), hot, "a number is no dead spot");
+    await pg.click("#open");
+    assert.equal(await pg.locator("#review-notes .pin").count(), 0, "another screen shows its own notes only");
+  } finally { await chrome.close(); }
+});
+
 test("design shot takes no picture with the dead-click flash", async (t) => {
   const browser = chromium();
   if (!browser) return t.skip("no browser here");

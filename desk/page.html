@@ -1353,7 +1353,7 @@
   const VERDICT = {
     idea: {
       design: ["Design only", "I can draw design options and build a live prototype of the one you choose."],
-      "needs-developer": ["Needs a developer", "I can draw design options that show the whole idea. The parts below need a developer, so this request gets no live prototype; the developer spec lists them."],
+      "needs-developer": ["Needs a developer", "It changes how the product works, so no live prototype. Approve an option; the spec takes the parts below to developers."],
       product: ["Needs a decision", "I can sketch it to support the discussion, but it changes what the product does, so the team decides first."],
     },
     bug: {
@@ -1770,6 +1770,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       del(k) { mem.set(k, null); try { localStorage.removeItem(k); } catch {} },
     };
   })();
+  // You opened a request's parts for a developer (Contact a developer): its step moves on, for you.
+  const devAsked = (c) => store.get(`desk-dev-asked:${c.id}`) === "1";
   // Simple mode (a switch in your menu, kept for you on the Desk) only hides: Designs, People,
   // Product and Issues leave the tabs, a sent request its Show the design, Product's pages their bar, the presentation its page and buttons,
   // and a request its buttons that build a live prototype and an option its Why it looks like
@@ -3762,11 +3764,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         buttons: (canApprove(c) ? b("approve", "Approve") : "") + ends };
     }
     if (["variants", "feedback"].includes(c.status) && hasOptions) {
-      // No live prototype for a request with parts a design change cannot do: the step is to
-      // ask a developer about them, and it opens them (simple mode names no role a request needs).
-      const dev = !simple() && (c.triage?.cannot || []).length ? `<button class="step-next" data-dev-ask title="Opens the parts a design change cannot do, with a question for a developer to copy">Contact a developer</button>` : "";
-      // The pill always holds a move on: with no prototype and nothing for a developer, the
-      // next step is approval; for someone who cannot approve, asking the team in Slack.
+      // Parts a design change cannot do: the step is to ask a developer about them, and it opens
+      // them (simple mode names no role a request needs). Once you opened them the step moves on,
+      // as if there had been none: the spec carries them to developers when the request is approved.
+      const dev = !simple() && (c.triage?.cannot || []).length && !devAsked(c) ? `<button class="step-next" data-dev-ask title="Opens the parts a design change cannot do, with a question for a developer to copy">Contact a developer</button>` : "";
+      // The pill always holds a move on: with no prototype and nothing left to ask a developer,
+      // the next step is approval; for someone who cannot approve, asking the team in Slack.
       const step = design && canBuild() ? sb("build", "Build a live prototype") : dev
         || (canApprove(c) ? sb("approve", "Approve") : slackModes(c).length ? sb("slack", "Send to Slack…") : "");
       return { text: "Your turn: look at the options, 👍 the one you like, 👎 the one you don't or ⚠ what worries you, and comment on any part.",
@@ -3818,7 +3821,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     else if (live(c)) paths = [go("Open the prototype", "Try it and comment below."), approve(), close()];
     else if (["prototype", "testing"].includes(c.status)) paths = [info("Design Desk builds the live prototype."), close()];
     else if (hasOptions) paths = [go("Vote and comment", "👍, 👎 or ⚠ on each option, a comment on any part."), build(),
-      ...((c.triage?.cannot || []).length ? [simple() ? no("Contact a developer", "Simple mode hides it; switch simple mode off.") : go("Contact a developer", "The parts a design change cannot do, with a question to copy.")] : []),
+      ...((c.triage?.cannot || []).length ? [simple() ? no("Contact a developer", "Simple mode hides it; switch simple mode off.") : go("Contact a developer", "The parts a design change cannot do, with a question to copy. Then the request goes on to its next step; the spec carries these parts to developers.")] : []),
       slack(), approve(), close()];
     else paths = [info("Design Desk draws the design options."), close()];
     return { now, paths };
@@ -5516,7 +5519,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { S.convoOpen = true; S.sect.talk = true; await post(ds.post); return; }
     if ("built" in ds) { await api("POST", `/api/cards/${S.card.id}/built`, { built: ds.built === "1" }); await refreshList(); await openCard(S.card.id); return; }
-    if ("devAsk" in ds) { const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
+    if ("devAsk" in ds) { if (!devAsked(S.card)) { store.set(`desk-dev-asked:${S.card.id}`, "1"); renderDetail(); } const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
     if ("devCopy" in ds) { await copyText(devQuestion(S.card), "a question for a developer"); return; }
     // The developer spec, read before it goes (docs/handoff.md → Review before it goes).
     if ("specView" in ds) { S.specView = ds.specView; renderDetail(); return; }

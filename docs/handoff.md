@@ -38,8 +38,8 @@ sent; the developer or coding agent gets only answers.
    - **What the prototype already does** — the guard summary, the files and their verdicts,
      the branch (when pushed) and the patch asset. Say plainly that it is a starting point
      and was not reviewed as production code.
-   - **What a developer must add** — the `needs-developer` parts from triage and from any
-     guard refusal, each with the reason.
+   - **What a developer must add** — triage's `cannot` (what changes how the product works)
+     and `build` (what to wire to build the design) and any guard refusal, each with the reason.
    - **Tests to update** — tests in the repository that assert copy or structure the design
      changes (`git grep` the old strings under the profile's `tests` paths).
    - **Settled at handoff** — each question the Desk answered before sending, with its
