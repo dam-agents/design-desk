@@ -1201,6 +1201,16 @@ const PILLS = [
   ["Approve", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
   ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
 ];
+// At Options drawn the step after Contact a developer is Team feedback, never Approve.
+test("at Options drawn, once Contact a developer is opened, the step pill offers Ask for feedback", (t) => open(t, BRIDGE_PILL({ verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true, revise: true } }).replace('status: "feedback"', 'status: "variants"'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.waitForSelector("#detail .steppill [data-dev-ask]");
+  await desk.click("#detail .steppill [data-dev-ask]");
+  await desk.waitForSelector("#detail .steppill [data-team-feedback]");
+  assert.equal(await desk.locator('#detail .steppill [data-act="approve"]').count(), 0, "never Approve at Options drawn");
+}));
+
 for (const [label, triage, me, sel] of PILLS) {
   test(`at Team feedback the step pill offers ${label}`, (t) => open(t, BRIDGE_PILL(triage, me), async (desk) => {
     await desk.click('[data-tab="requests"]');
