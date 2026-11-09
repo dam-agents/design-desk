@@ -559,6 +559,36 @@ test("a closed request keeps Add to presentation and Take off under More; Not no
   await sent("DELETE", "/api/cards/C-4/agenda");
 }));
 
+// A list draws 20 rows and 20 more as its end scrolls into view; the open item is always drawn
+// (docs/desk-page.md → Lists).
+const LONG = `<script>
+const cards = Array.from({ length: 25 }, (_, i) => ({ id: \`C-\${i + 1}\`, kind: "change", title: \`Change \${i + 1}\`, acked: true,
+  created: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString(), source: { repo: "acme/widgets", pr: i + 1 } }));
+window.platform = { async request({ path }) {
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: {} }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a long list draws 20 rows, then the rest as its end scrolls into view", (t) => open(t, LONG, async (desk) => {
+  const rows = () => desk.locator("#list .row.item").count();
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector('.row.item:has([data-card="C-25"])');
+  assert.equal(await rows(), 20, "the first page has 20 rows");
+  assert.equal(await desk.locator('[data-card="C-1"]').count(), 0, "the oldest change waits for the scroll");
+  await desk.locator("#list [data-list-more]").scrollIntoViewIfNeeded();
+  await desk.waitForFunction(() => document.querySelectorAll("#list .row.item").length === 25);
+  assert.equal(await desk.locator("#list [data-list-more]").count(), 0, "nothing is left to load");
+
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#C-1");
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="C-1"][aria-current="true"]');
+  assert.ok(await rows() > 20, "the open item is drawn though it is past the first 20");
+}));
+
 // Every item has a number by its title; a link with it, or Go to, opens the item in its tab
 // (on the presentation for #presentation/C-n while it is on it); a number in text links to that item
 // (docs/desk.md → Links to an item).
