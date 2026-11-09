@@ -223,10 +223,20 @@ watch_mode() {
   local stale_s=$((3 * 3600))
   local OPEN_PRS LABEL; OPEN_PRS="$(jq -r '.watch_open_prs' <<<"$CONF")"; LABEL="$(jq -r '.issue_label' <<<"$CONF")"
   # The ledger's last row for (repo, number) decides: kind of work, or a reason to skip.
+  declare -A LAST_STATUS=() LAST_UPDATED=() LAST_ATTEMPTS=()
   decide() {  # <repo> <number> <state: merged|open|issue> → prints kind or nothing
-    local row status updated attempts
-    row="$(awk -F'\t' -v r="$1" -v p="$2" 'NR>1 && $1==r && $2==p' "$LEDGER" | tail -1)"
-    status="$(cut -f4 <<<"$row")"; updated="$(cut -f6 <<<"$row")"; attempts="$(cut -f7 <<<"$row")"
+    local status updated attempts
+    # The ledger is read once, with no process per pull request (a fork is slow in a small sandbox):
+    # the last row of a (repo, number) wins, as `tail -1` did.
+    if [ -z "${LEDGER_LOADED:-}" ]; then
+      local _k _s _u _a
+      # awk, not `read`: a tab is whitespace to IFS, so empty columns would collapse.
+      while IFS=$'\x1f' read -r _k _s _u _a; do
+        LAST_STATUS["$_k"]="$_s"; LAST_UPDATED["$_k"]="$_u"; LAST_ATTEMPTS["$_k"]="$_a"
+      done < <(awk -F'\t' -v OFS='\037' 'NR>1 { r[$1 "#" $2]=$4 OFS $6 OFS $7 } END { for (k in r) print k OFS r[k] }' "$LEDGER")
+      LEDGER_LOADED=1
+    fi
+    status="${LAST_STATUS["$1#$2"]:-}"; updated="${LAST_UPDATED["$1#$2"]:-}"; attempts="${LAST_ATTEMPTS["$1#$2"]:-}"
     case "$status" in
       carded|skipped|dispatched) return 0;;
       open) [ "$3" = merged ] && echo merged; return 0;;   # carded while open; now it shipped
@@ -250,10 +260,12 @@ watch_mode() {
       items="$(jq -c --slurpfile more <(jq -c '.items | map(. + {state: "open"})' <<<"$more") '.items += $more[0]' <<<"$items")"  # a page is too big for an argument
     fi
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
+    local SINCE_Z; SINCE_Z="$(date -u -d "@$(iso2epoch "$SINCE")" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "$SINCE")"
     while IFS=$'\t' read -r num state merged title url author draft; do
       [ -n "$num" ] || continue
       seen=$((seen + 1))
-      [ "$state" = open ] || [ "$(iso2epoch "$merged")" -ge "$(iso2epoch "$SINCE")" ] || continue
+      # Both are UTC ISO times ending in Z, so a text comparison orders them; no `date` per pull request.
+      [ "$state" = open ] || ! [[ "$merged" < "$SINCE_Z" ]] || continue
       local kind; kind="$(decide "$repo" "$num" "$state")"
       [ -n "$kind" ] || continue
       if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
