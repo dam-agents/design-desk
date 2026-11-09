@@ -51,7 +51,8 @@ sent; the developer or coding agent gets only answers.
    bundle carries it to the coding agent.
 3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset, acceptance,
    review: "draft"}`; the card shows it under **The developer spec**. With `spec_review:
-   disabled` write `review: "sent"`, except for a request with a Slack `origin`, which always
+   disabled`, or the card's `approved.auto_send` (the approver ticked **Send it as soon as the
+   spec is written**; the store never sets it on a request from Slack), write `review: "sent"`, except for a request with a Slack `origin`, which always
    waits (until a person's Send to developers, the store refuses `review: "sent"` and
    `status: handed-off` on it, and reads the stored `origin`, not the one a write gives): a
    spec without it waits for a person.
@@ -73,8 +74,8 @@ Writing the spec and sending it are two steps, and the Desk says so everywhere: 
 steps (**Approved** → **Spec written** → **Sent to developers**, Send a person's step like
 Approve), its state word (*Spec draft — read it, then send*), and Approve's words (the spec waits on the
 Desk; nothing goes to developers until **Send to developers**).
-Nothing leaves the Desk until a person sends it (`spec_review`, default `enabled`; `disabled`
-→ go straight on to step 5, never for a request with a Slack `origin`). After step 4 with no open question: keep `status: spec`,
+Nothing leaves the Desk until a person sends it (`spec_review`, default `enabled`; `disabled`, or the card's `approved.auto_send`
+→ go straight on to step 5 as an issue for developers, never for a request with a Slack `origin`, and never past an open question of step 4). After step 4 with no open question: keep `status: spec`,
 `done --outcome review` and stop. On the
 card the people who may approve it read the spec, and:
 - **Edit the spec** — their text becomes the newest version (`spec.history` keeps the others);

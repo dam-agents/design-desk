@@ -206,6 +206,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
     without names, as one public text page that coding agents read before they change the
     screens?" Yes → `dam` ([docs/decisions-page.md](docs/decisions-page.md)); default `off`.
 
+The keys under **Advanced** are never asked about and no later step writes them: write them
+with these defaults, and change one only when the operator asks ([docs/config.md](docs/config.md) says what each does).
 Write the file in exactly this shape with `design config write` (a restored file included;
 [docs/config.md](docs/config.md) → Writing the file), then `bash "$HOME/scripts/verify-onboarding.sh"
 --config` and apply what it reports:
@@ -216,51 +218,54 @@ Write the file in exactly this shape with `design config write` (a restored file
 - display_name: Design Desk
 - repos: acme/widgets
 - watch_since: 2026-11-02T09:00:00Z
-- max_changes_per_run: 10
-- profile: auto
-- default_style: auto
 - prototype_requesters: designer, pm, admin
 - max_prototypes: 2
-- prototype_expiry_days: 7
 - spec_review: enabled
 - prototype_remote: none
-- handoff: desk
-- desk_ping: enabled
-- desk_artifact:
-- desk_link:
-- bug_reports: enabled
-- qa_bot:
-- watch_open_prs: enabled
-- ci_gate: disabled
-- issue_label: design
-- proposals: enabled
-- max_proposals_per_week: 3
-- implementer: pr-comment
-- implementer_mention:
-- issue_writeback: enabled
-- notify: disabled
-- run_model: default
-- dispatch: enabled
-- work_repo: none
-- audit_report: enabled
-- agent_manifest: dam
-- decisions_page: off
-- log_level: info
-- figma: disabled
-- figma_file:
 - screens: disabled
 - max_screen_prs: 2
+- handoff: desk
+- desk_artifact:
+- desk_link:
+- qa_bot:
+- ci_gate: disabled
+- issue_label: design
+- implementer: pr-comment
+- implementer_mention:
+- notify: disabled
+- run_model: default
+- work_repo: none
+- agent_manifest: dam
+- decisions_page: off
+- figma: disabled
+- figma_file:
 - slack_polls: disabled
 - slack_poll_channel:
 - slack_send: disabled
 - digest: desk
 - slack_council: disabled
-- council_sync_min: 30
 - issue_news: disabled
 - issue_sprint: milestone
 - issue_next_sprint: milestone
 - issue_news_label: none
 - max_issue_drawings: 5
+
+## Advanced
+
+- max_changes_per_run: 10
+- profile: auto
+- default_style: auto
+- prototype_expiry_days: 7
+- desk_ping: enabled
+- bug_reports: enabled
+- watch_open_prs: enabled
+- proposals: enabled
+- max_proposals_per_week: 3
+- issue_writeback: enabled
+- dispatch: enabled
+- audit_report: enabled
+- log_level: info
+- council_sync_min: 30
 
 ## Desk people
 

@@ -88,7 +88,9 @@ run already dispatched all but the first ([CLAUDE.md](../CLAUDE.md) → Fan-out)
     went (`issue_url`, `pr_url`, `from`), its option (`asset`) and its elements (`of`, `file`).
     The change builds one when the PR closes or links its spec's issue, is its `pr_url` or a
     `design-desk/c<n>-…` branch, names its card (`C-<n>`), or touches the `file` of an element
-    it changes; none → nothing. For that one: `design desk fetch` the option, look at it next to
+    it changes; none → nothing. (A merged change whose pull request is the spec's or links its
+    issue, or whose `design_check` says `matches`, marks that design done on Designs: the store
+    does it with the card's write.) For that one: `design desk fetch` the option, look at it next to
     the change's screens element by element, and put `design_check` on the card: `{request,
     verdict, summary, differences: [{element, card, what, design, shipped}]}`, at most 12
     differences (the store refuses more; group the rest into one) — `verdict`

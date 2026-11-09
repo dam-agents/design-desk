@@ -1525,7 +1525,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       issues: "Issues: what the team plans that will change the screens, with sketches", product: "Product: its screens, its parts in every situation, the team's decisions and the weekly history",
       people: "People: who is on the Desk, their roles and what each role can do", guide: "How Design Desk works" }[v]),
     filter: (v) => ({ "newFilter:open": "PR Changes no designer marked handled yet", "newFilter:handled": "PR Changes a designer marked handled", "newFilter:auto": "PR Changes that shipped long ago and nobody marked handled",
-      "newFilter:designer": "Only changes that wait for a designer", "reqFilter:unread": "Requests you have not opened yet", "reqFilter:open": "Requests still being worked on", "reqFilter:ready": "Requests that wait for someone to act: options are drawn, a vote ended or a live prototype is ready", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
+      "newFilter:designer": "Only changes that wait for a designer", "reqFilter:unread": "Requests you have not opened yet", "reqFilter:open": "Requests still being worked on", "reqFilter:turn": "Requests whose next move is yours: an answer, a vote, an approval, a spec to read", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
       "reqFor:designers": "Requests a designer, a PM or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
       "reqFilter:closed": "Requests sent to developers or closed",
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
@@ -1749,7 +1749,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // ---------- state ----------
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
-  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "open", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "turn", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1765,7 +1765,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // You, by any address you go by: the one you signed in with and the others on your row of the
   // people list, such as the one Slack knows you by (docs/config.md → Desk people).
   const isMe = (e) => Boolean(e) && (S.me?.emails?.length ? S.me.emails : [S.me?.email]).some((x) => x && String(x).toLowerCase() === String(e).toLowerCase());
-  const filedIt = (c) => [c.created_by?.email, c.origin?.email].some(isMe);
+  const filedIt = (c) => [c.created_by?.email, c.by?.email, c.origin?.email].some(isMe);
   // A person as the Desk names them: you, else their name from the people list, else the
   // address (or the name a channel gave) as it is.
   const nameOf = (e) => S.me?.names?.[String(e || "").toLowerCase()] || e;
@@ -2409,7 +2409,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       steps: [
         { tone: "approved", text: "A designer, PM or lead developer approves a design; it arrives here under To build, with its spec." },
         { tone: "waiting", text: "A developer builds it and asks the designer what is unclear.", acts: [["<b>Ask the designer</b>", "designs"]] },
-        { tone: "approved", text: "Once it is built, a developer marks it done; it moves to Done.", acts: [["<b>Mark as done</b>", "built"]] }],
+        { tone: "approved", text: "Once the change that builds it ships, Design Desk marks it done; a developer can too. It moves to Done.", acts: [["<b>Mark as done</b>", "built"]] }],
       tip: `<b>Open the request</b> shows the same design on Requests. ${LINK}` },
     // Not a tab: how a design changes, in How it works.
     workspace: { about: "how a design changes",
@@ -2546,13 +2546,28 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const reqFor = () => S.reqFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
   const forOf = (c) => c.for || (c.size?.small ? "developers" : "designers");
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
-    && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "ready" ? readyToAct(c) : filter === "open" ? !closed(c) : closed(c))));
-  // Ready: an open request that waits for someone to act — its options are drawn, its vote in Slack
-  // ended (or no vote runs), or its live prototype is up; not while Design Desk works or asks.
-  function readyToAct(c) {
-    if (closed(c) || c.busy || c.asks) return false;
-    if (c.status === "variants" || c.status === "testing") return true;
-    return c.status === "feedback" && !c.voting && (c.voted || c.team_feedback?.state !== "open");
+    && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "turn" ? myTurn(c) : filter === "open" ? !closed(c) : closed(c))));
+  // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
+  // Design Desk, start the options, ask the team, vote, approve, read and send the spec, build
+  // the prototype again; never while Design Desk works (docs/desk.md → Pages and filters). A
+  // list row carries what this reads: `voted_mine`, `against`, `for`, `voting`.
+  function myTurn(c) {
+    if (c.kind !== "request" || closed(c) || atWork(c)) return false;
+    const against = Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length > 0;
+    const small = c.size ? Boolean(c.size.small) : c.for === "developers";
+    const approves = can("approve") || (!against && (can("skip") || (small && DEVELOPERS.includes(S.me?.role) && !filedIt(c))));
+    const drives = can("revise") || filedIt(c);
+    if (asking(c)) return drives || approves;
+    if (checked(c) || emptied(c)) return can("explore");
+    if (held(c)) return drives;
+    if (c.status === "spec") return c.spec?.review === "draft" && approves;
+    if (protoDown(c)) return approves || ((c.triage?.verdict || c.triage) === "design" && canBuild());
+    if (!["feedback", "testing"].includes(c.status)) return false;
+    // The team's step: an approver's until they approve, but not while a vote runs in Slack;
+    // anyone else's until they voted.
+    const voting = Array.isArray(c.polls) ? c.polls.some((x) => x.state === "open") : Boolean(c.voting);
+    const voted = c.voted_mine ?? Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some(isMe));
+    return approves ? !voting : can("vote") && !voted;
   }
   // The list filter a person picked last is kept in their browser.
   const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
@@ -2560,10 +2575,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // plan's filters and stays in All with its Designed dot (docs/issues.md → On the Desk).
   const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
       && (filter === "handled" ? Boolean(c.handled) : !c.handled && (filter === "all" || (!c.designed && c.bucket === filter)))));
-  const FILTERS = { newFilter: ["open", "handled", "auto", "designer"], reqFilter: ["unread", "open", "ready", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label", "handled"], elFilter: ["all", "product", "design"], designFilter: ["todo", "done"] };
+  const FILTERS = { newFilter: ["open", "handled", "auto", "designer"], reqFilter: ["turn", "unread", "open", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label", "handled"], elFilter: ["all", "product", "design"], designFilter: ["todo", "done"] };
   // The browser keeps each filter, but not the Requests tab: that one starts on the viewer's role.
   const KEPT = (k) => k !== "reqFor";
   for (const [k, ok] of Object.entries(FILTERS)) { const v = KEPT(k) && store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
+  // Requests open on Your turn: a browser that kept Open from before the filter was there starts on it once.
+  if (!store.get("desk-turn")) { store.set("desk-turn", "1"); if (S.reqFilter === "open") { S.reqFilter = "turn"; store.del("desk-reqFilter"); } }
   S.outline = store.get("desk-outline") !== "0"; document.body.classList.toggle("outline", S.outline);
   S.ws.why = store.get("desk-why") !== "0";
   S.ws.notes = store.get("desk-notes") !== "0";
@@ -2702,7 +2719,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ["auto", "Auto handled", newCards("auto").length], ["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])
-      : S.tab === "requests" && reqList ? seg("reqFilter", [["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["ready", "Ready", requestCards("ready").length], ["closed", "Closed", requestCards("closed").length]])
+      : S.tab === "requests" && reqList ? seg("reqFilter", [["turn", "Your turn", requestCards("turn").length], ["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "designs" ? seg("designFilter", [["todo", "To build", designCards("todo").length], ["done", "Done", designCards("done").length]])
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET, handled: "Handled" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "differences" ? seg("figFilter", [["differs", "Differs from Figma", figmaCards("differs").length], ["matches", "Matches", figmaCards("matches").length], ...(figmaCards("closed").length ? [["closed", "Closed", figmaCards("closed").length]] : []), ["all", "All", figmaCards("all").length]])
@@ -2717,7 +2734,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       issues: S.issueFilter === "sprint" ? "No issue of the current sprint changes the screens, or Design Desk has not read them yet. It reads the issues once a day."
         : S.issueFilter === "all" ? "No open issue changes the screens yet. Design Desk reads the issues once a day." : `No ${BUCKET[S.issueFilter].toLowerCase()} issue changes the screens.`,
       designs: S.designFilter === "done" ? "Nothing is marked done yet." : "Nothing to build.",
-      requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "ready" ? "Nothing waits for anyone to act right now." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
+      requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "turn" ? "Nothing waits for you right now. Open shows every request still being worked on." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "differences" ? (S.figFilter === "closed" ? "Nothing is closed." : S.figFilter === "matches" ? "Nothing matches its Figma frame yet." : S.figFilter === "differs" && figmaCards("all").length ? "Nothing differs from Figma." : "Nothing is compared with Figma yet. Design Desk compares a screen, an element, a change or a request with its frame once it has a Figma link.")
         : S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
@@ -2770,7 +2787,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // An admin's asks to add someone: waiting, added, or not added with Design Desk's reason.
     const asked = (P.asks || []).map((a) => {
       const chip = a.state !== "done" ? `<span class="chip info" title="Design Desk is putting them on the list; this page updates by itself">● Design Desk is adding them</span>`
-        : a.outcome === "added" ? `<span class="chip ok" title="They are on the list with the role asked for">✓ Added</span>` : `<span class="chip warn" title="Design Desk could not add it; open it to see why">Not added</span>`;
+        : a.outcome === "added" ? `<span class="chip ok" title="They are on the list with the role asked for">✓ Added</span>${a.opened ? "" : ` <span class="chip warn" title="A role on the list opens nothing by itself: only the Desk's owner shares the page">Not shared yet</span>${S.me?.platformRole === "owner" ? ` <span class="sub">Your move: Share → Restricted → add this email. <button class="btn small" data-copy-email="${esc(a.email)}">Copy email</button></span>` : ` <span class="sub">The Desk's owner shares the page with them (Share → Restricted).</span>`}`}` : `<span class="chip warn" title="Design Desk could not add it; open it to see why">Not added</span>`;
       const why = a.state === "done" && a.outcome !== "added" ? ` ${esc(String(a.outcome || "").replace(/^not added:\s*/i, ""))}` : "";
       return `<tr><td>${esc(a.email)}</td><td>${roleIcon(a.role)}${esc(roleName(a.role))}</td><td>${chip}${why}<div class="sub">${esc(a.by || "An admin")} asked · ${esc(when(a.created))}</div></td></tr>`;
     }).join("");
@@ -3849,7 +3866,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     };
     const dev = () => (c.triage?.cannot || []).length ? [simple() ? no("Contact a developer", "Simple mode hides it; switch simple mode off.") : go("Contact a developer", "The parts a design change cannot do, with a question to copy. Then the request goes on to its next step; the spec carries these parts to developers.")] : [];
     const busy = working(c);
-    const now = busy.length ? busy.map((k) => WORK[k] || "Design Desk is working on this.").join(" ") : "";
+    // A spec the approver sends unread says so, not that it waits to be read (docs/handoff.md → Review before it goes).
+    const now = busy.length ? busy.map((k) => (k === "handoff" && c.approved?.auto_send ? "Writing the developer spec. It goes to developers as soon as it is written: the approver asked for that." : WORK[k]) || "Design Desk is working on this.").join(" ") : "";
     let paths;
     if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer or a PM reopens it; say so in a comment.")];
     else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(seesDesigns() ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
@@ -3926,7 +3944,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // While Design Desk waits on an answer, nothing says it is at work.
     const busy = asking(c) ? [] : working(c);
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
-    const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
+    // How long: since when Design Desk works on it and how long that usually takes; before it
+    // started, whether it starts now (the page called it) or with its next look, every 10 minutes.
+    const item = (c.waiting || []).find((w) => w.kind !== "question" && !workDone(c, w));
+    const eta = !item ? "" : item.state === "claimed" && item.started ? `started ${ago(item.started) === "just now" ? "just now" : `${ago(item.started)} ago`}${item.usual_min ? `, usually about ${item.usual_min} min` : ""}`
+      : !item.created ? "" : S.me?.pings && Date.now() - Date.parse(item.created) < 12e4 ? "starting" : "in the queue, starts within 10 minutes";
     const nx = nextFor(c);
     // Close stays at hand while the request is open, whatever step it is at.
     if (!closed(c) && (can("close") || can("skip")) && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close…</button>`;
@@ -3953,10 +3975,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const nextStep = nx.step || (asks.length ? `<span class="step-next still">Answer</span>` : busy.length ? `<span class="step-next still">Wait</span>`
       : wait ? `<span class="step-next still">${nx.wait ? `Wait for ${esc(nx.wait)}` : "Wait"}</span>` : "");
     const act = asks.length ? `<span class="s-act">${plural(asks.length, "question", "questions")} below</span>`
-      : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
+      : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}</span>${eta ? `<span class="s-act s-eta">· ${esc(eta)}</span>` : ""}`
       : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
     return `<div class="status" data-o="${tone(c)}"${busy.length ? " data-busy" : ""}>
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
       ${sizeLine(c)}
@@ -4201,7 +4223,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const out = (href, words, tip) => `<a class="btn" href="${safeUrl(href)}" target="_blank" rel="noopener noreferrer" title="${esc(tip)}">${esc(words)} ↗</a>`;
     const done = !can("built") || c.send ? "" : c.built ? `<button class="btn" data-built="0" title="Puts it back under To build">Not done yet</button>` : `<button class="btn primary" data-built="1" title="It is built: it moves under Done, and its designer sees it">Mark as done</button>`;
     // Who approved it and when; once built, who marked it done too.
-    const fact = (k, x) => x?.at ? `<span><span class="k">${k}</span> <b>${esc(personName(x.by?.email, "someone"))}</b> · ${esc(day(x.at))}</span>` : "";
+    const fact = (k, x) => x?.at ? `<span><span class="k">${k}</span> <b>${esc(x.by?.agent ? "Design Desk" : personName(x.by?.email, "someone"))}</b>${x.change ? ` (${esc(x.change)} shipped)` : ""} · ${esc(day(x.at))}</span>` : "";
     // The pull request it comes from: a request started from a PR change, or one filed from a PR.
     const from = S.cards.find((x) => x.id === c.request?.from);
     const prUrl = [from?.kind === "change" ? from.source?.url : null, c.origin?.url].find((u) => /\/pull\/\d+/.test(u || "") && u !== url);
@@ -5233,12 +5255,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // Straight to the coding agent: its issue gets the agent's label, only where the spec reaches GitHub (docs/handoff.md).
       const github = (S.me?.handoff?.[c.request?.type || "idea"] || "desk") !== "desk";
       // Sent before and reopened: what goes to GitHub now may close the earlier issue (docs/handoff.md, step 6).
-      const earlier = github && !S.me?.spec_review ? await earlierIssue(c) : null;
-      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${S.me?.spec_review ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      const earlier = github ? await earlierIssue(c) : null;
+      // With the spec read before it goes, the approver may send it unread; never a request from Slack (docs/handoff.md → Review before it goes).
+      const unread = Boolean(S.me?.spec_review) && c.origin?.channel !== "slack";
+      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${S.me?.spec_review ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
         ...(github && !S.me?.spec_review ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
-        ...(earlier?.open ? { check3: earlier.check } : {}),
-        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? { implement: true } : {}), ...(a.check3 ? { close_earlier: true } : {}) }) });
+        ...(unread ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
+        ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
+        send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
       if (!res) return;
     }
     // Build: pick the option, then look at its latest version and states once more in the
@@ -5469,6 +5494,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A sent request and its design open each other: Requests ↔ Designs.
     if (ds.showDesign) { await goTo({ id: ds.showDesign, tab: "designs" }); return; }
     if (ds.showRequest) { await goTo({ id: ds.showRequest, tab: "requests" }); return; }
+    if (ds.copyEmail) { await copyText(ds.copyEmail, "the email"); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.presented) { await markPresented(ds.presented); return; }
     if (ds.notNow) { await api("DELETE", `/api/cards/${encodeURIComponent(ds.notNow)}/suggestion`); await refreshList(); renderDetail(); return; }
@@ -6246,6 +6272,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     "options-drawn": ["New options drawn", "design", '<path d="m12 4 8 4-8 4-8-4z"/><path d="m4 12 8 4 8-4M4 16l8 4 8-4"/>'],
     "options-redrawn": ["Options redrawn", "design", '<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>'],
     vote: ["New vote", "design", '<path d="M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7"/>'],
+    "feedback-asked": ["Feedback asked", "design", '<path d="M4 5h16v11H9l-5 4z"/><path d="M12 8v3.5M12 13.5h.01"/>'],
     approved: ["Option approved", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
     spec: ["Spec ready", "ok", '<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'],
     built: ["Marked done", "ok", '<path d="m5 12.5 4.5 4.5L19 7.5"/>'],
@@ -6428,6 +6455,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function start() {
     if (!bridge) { $("#detail").innerHTML = `<div class="panel">The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.</div>`; $("#main").classList.add("has-detail"); return; }
     S.me = await api("GET", "/api/me");
+    // Someone who may not even vote has no turn: with no filter picked, their Requests open on Open.
+    if (!can("vote") && !store.get("desk-reqFilter") && S.reqFilter === "turn") S.reqFilter = "open";
     applyMyTheme(); applyMySimple(); renderFigmaSwitch();
     // The ask button counts each page's messages, so the person's asks are read before it is drawn.
     await loadAsks().catch(() => {});
