@@ -2407,3 +2407,33 @@ test("People: an added person counts as opened once they loaded the Desk, whatev
   s.markOpened({ email: "dee@example.com", role: "designer" });
   assert.equal(s.db.opened["dee@example.com"], at, "the first load alone is kept");
 });
+
+test("a store from before the sign-in record starts it from who already used the Desk", () => {
+  const s = fresh();
+  const admin = { email: "lee@example.com", role: "admin" };
+  for (const email of ["dee@example.com", "new@example.com"]) { const { inbox } = s.askForPerson(admin, { email, role: "designer" }, [{ email: "lee@example.com", role: "admin" }]); s.claim(inbox.id, "run-1"); s.done(inbox.id, "run-1", "added"); }
+  // The store as an older version left it: no record, and Dee's preference under the address as she signed in.
+  delete s.db.opened;
+  s.db.prefs["Dee@Example.com"] = { theme: "dark" };
+  s.db.seen["sub-123"] = "2026-10-01T08:00:00Z";
+  s.save();
+  const old = new Store(s.dir);
+  const opened = (email) => old.peopleAsks().find((a) => a.email === email).opened;
+  assert.equal(opened("dee@example.com"), true, "she set a preference: she loaded the Desk");
+  assert.equal(opened("new@example.com"), false, "nothing known of them");
+  assert.deepEqual(Object.keys(old.db.opened), ["dee@example.com"], "addresses only, lower-cased; a key that is no address is left out");
+  old.markOpened({ email: "new@example.com", role: "designer" });
+  assert.equal(new Store(s.dir).peopleAsks().find((a) => a.email === "new@example.com").opened, true, "a store with the record is read as it is");
+});
+
+test("a claimed item says how long its kind usually takes, once three of them finished", () => {
+  let now = Date.UTC(2026, 9, 1, 8);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const work = (minutes) => { const { card, inbox } = s.createRequest(alice, { problem: "x" }); s.claim(inbox.id, "run"); if (minutes != null) { now += minutes * 60e3; s.done(inbox.id, "run", "checked"); } return card; };
+  work(4); work(20);
+  assert.equal(s.getCard(work(null).id).waiting[0].usual_min, undefined, "two finished: no estimate yet");
+  work(6);
+  const w = s.getCard(work(null).id).waiting[0];
+  assert.equal(w.usual_min, 6, "the median of 4, 6 and 20");
+  assert.ok(w.started);
+});

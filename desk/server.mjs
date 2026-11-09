@@ -184,7 +184,8 @@ async function viewerRoute(req, res, url, who) {
   const m = req.method;
   if (m === "GET" && p[1] === "me") {
     // The page asks who it is once, when it loads: that is the sign-in People reads (docs/desk.md → People).
-    store.markOpened(actor);
+    // A read never fails for it: a full store keeps no record, and a failed write is dropped.
+    try { if (!store.full()) store.markOpened(actor); } catch {}
     return send(res, 200, { email: who.email, emails: who.emails, my_name: rowOf(who.email)?.name || null, names: namesOf(roster()), key: who.email || who.sub, role: who.deskRole, theme: store.prefsOf(actor).theme, simple: store.prefsOf(actor).simple, figma_pref: store.prefsOf(actor).figma, platformRole: who.role, can: canAll(who.deskRole, s), pings: s.ping && who.deskRole !== "guest", name: s.name, repo: s.repo, contact: s.contact, figma: s.figma, slack: s.slack, slack_send: s.slackSend, screens: s.screens, handoff: s.handoff, spec_review: s.specReview, due_days: s.dueDays, auto_days: s.autoDays, link: s.link, skills: offerSkills(s.figma) });
   }
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
