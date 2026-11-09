@@ -195,8 +195,11 @@ export async function launch() {
   const found = chromium();
   if (!found) fail("no Chromium found — run `bash ~/scripts/install-toolkit.sh` (it installs one), or set CHROMIUM=/path/to/chrome");
   Object.assign(process.env, found.env);
-  const { chromium: pw } = req("playwright-core");
-  const opts = { executablePath: found.executablePath, args: ["--disable-gpu", "--font-render-hinting=none"] };
+  return launchWith(req("playwright-core").chromium, found.executablePath);
+}
+// The launch itself, given playwright's chromium: a test hands it a stand-in.
+export async function launchWith(pw, executablePath) {
+  const opts = { executablePath, args: ["--disable-gpu", "--font-render-hinting=none"] };
   try { return await pw.launch({ ...opts, chromiumSandbox: true }); }
   catch (e) {
     if (!sandboxWarned) warn(`Chromium's sandbox did not start (${String(e.message || e).split("\n")[0].slice(0, 160)}); rendering without it`);

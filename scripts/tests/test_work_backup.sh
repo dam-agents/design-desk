@@ -4,7 +4,8 @@
 # never blocks the state's push — a failing bulk push once cost the Desk store its
 # backup (PR #86). Each branch of the script has a case that fails when only it is
 # reverted (the unreadable-directory cases need a non-root user), and the audit and the
-# monitor read the one outcome line a persist ends with.
+# monitor read the one outcome line a persist ends with. Names on the shared tmpfs that another
+# user or a symlink holds are refused (5b).
 . "$(dirname "$0")/lib.sh"
 
 is() { if eval "$2"; then echo true; else echo false; fi; }
@@ -187,6 +188,39 @@ check "a restore brings back output/" '[ -f "$WORK_DIR/output/C-1/shot.png" ]'
 check "a restore brings back logs/" '[ -f "$WORK_DIR/logs/run.log" ]'
 check "a restore brings back CONFIG.md" '[ -f "$WORK_DIR/CONFIG.md" ]'
 check "a restore brings back no token" '[ ! -e "$WORK_DIR/desk/.agent-token" ]'
+# umask 077: what a restore writes is this user's only.
+mode() { ls -ld "$1" | cut -c5-10; }
+check "a restored file is this user's only (umask 077)" '[ "$(mode "$WORK_DIR/desk/store.json")" = ------ ]'
+
+# 5b. The shared tmpfs: a name another user or a symlink holds is refused as its own cause and
+# never written through; a clone made open before is closed.
+fixture; remote; persist
+chmod 755 "$SANDBOX/clone"; persist
+check "a clone made open before is made this user's only (chmod 700)" '[ "$(mode "$SANDBOX/clone")" = ------ ]'
+echo keep > "$SANDBOX/victim"; ln -s "$SANDBOX/victim" "$SANDBOX/clone.skip"   # the old fixed skip-list name
+echo changed > "$WORK_DIR/output/C-1/shot.png"; persist
+check "a symlink at the skip-list name is never written through" '[ "$(cat "$SANDBOX/victim")" = keep ]'
+mkdir "$SANDBOX/victim-dir"; ln -s "$SANDBOX/victim-dir" "$SANDBOX/clone.lock"
+echo again > "$WORK_DIR/desk/store.json"; persist
+check "a symlink at the lock name is a refused, failed backup — not a skip" \
+  'outcome | grep -q "^error backup failed: .*clone.lock is not this user.s own"'
+rm -f "$SANDBOX/clone.lock" "$SANDBOX/clone.skip"
+mkdir "$SANDBOX/elsewhere"; ln -s "$SANDBOX/elsewhere" "$SANDBOX/clone-s"
+said="$(GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.git" WORK_BACKUP_LOCAL="$SANDBOX/clone-s" \
+  WORK_DIR="$SANDBOX/work-s" bash "$ROOT/scripts/work-backup.sh" restore 2>&1)"
+check "a symlinked clone is refused as its own cause, not as a network fault" \
+  'printf "%s" "$said" | grep -q "clone-s is not this user.s own" && ! printf "%s" "$said" | grep -q "could not reach"'
+check "nothing is cloned through the symlink" '[ -z "$(ls -A "$SANDBOX/elsewhere")" ]'
+# Another user's clone folder: needs root, or sudo without a password, to make one.
+if [ "$(id -u)" -eq 0 ]; then asroot=""; elif sudo -n true 2>/dev/null; then asroot="sudo -n"; else asroot=-; fi
+if [ "$asroot" != - ]; then
+  mkdir "$SANDBOX/clone-f"; $asroot chown nobody "$SANDBOX/clone-f"
+  said="$(GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.git" WORK_BACKUP_LOCAL="$SANDBOX/clone-f" \
+    WORK_DIR="$SANDBOX/work-f" bash "$ROOT/scripts/work-backup.sh" restore 2>&1)"
+  check "another user's clone folder is refused (owner check)" \
+    'printf "%s" "$said" | grep -q "clone-f is not this user.s own" && [ -z "$(ls -A "$SANDBOX/clone-f" 2>/dev/null)" ]'
+  $asroot rm -rf "$SANDBOX/clone-f"
+fi
 
 # 6. The readers: a per-part "pushed" line after a failed persist clears nothing; the
 # audit fails on a failed persist, warns on a skipped bulk set; the monitor alerts after 6 h.

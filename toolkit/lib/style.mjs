@@ -183,7 +183,7 @@ export function fontCss(style) {
 
 // A family name comes from uploaded brand CSS or a repo: only a plain name becomes a
 // package name, and npm runs no install script of it.
-function installFontsource(family) {
+export function installFontsource(family) {
   if (!/^[a-z0-9][a-z0-9 -]{0,60}$/i.test(family)) { warn(`"${family}" is not a plain font family name — not fetched from Fontsource`); return null; }
   const pkg = `@fontsource/${family.toLowerCase().replace(/\s+/g, "-")}`;
   const dir = ensureDir(join(DATA, "fonts"));

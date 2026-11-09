@@ -17,16 +17,26 @@ if [ -z "$remote_cfg" ] || [ "$remote_cfg" = none ]; then
   exit 1
 fi
 # The destination must be the configured repository on its host, whatever remote name it
-# has here: https://[user@]host/owner/name[.git], ssh://git@host/owner/name, git@host:owner/name.
+# has here: https://[user@]host[:port]/owner/name[.git], ssh://[user@]host[:port]/owner/name,
+# [user@]host:owner/name. The host is cut from the authority (before the first / of a URL,
+# before the first : of the scp form) and only then stripped of its user and port, so
+# https://evil.example/x@github.com/... reads as evil.example. An authority with any other
+# character (?, #, \, a second @) or any other scheme is refused, never guessed.
 lower() { printf '%s' "$1" | tr 'A-Z' 'a-z'; }
 case "$remote_cfg" in */*/*) want="$remote_cfg";; *) want="github.com/$remote_cfg";; esac
-url="${2:-}"; u="${url%/}"; u="${u%.git}"
+url="${2:-}"; u="$(lower "${url%/}")"; u="${u%.git}"
+user='([a-z0-9._~%+-]+(:[a-z0-9._~%+-]*)?@)?'; host='[a-z0-9]([a-z0-9.-]*[a-z0-9])?'
 case "$u" in
-  *://*) u="${u#*://}"; u="${u#*@}";;
-  *@*:*) u="${u#*@}"; u="${u/://}";;
+  https://*|ssh://*)
+    u="${u#*://}"; auth="${u%%/*}"; path="${u#"$auth"}"
+    if [[ "$auth" =~ ^$user($host)(:[0-9]+)?$ ]]; then u="${BASH_REMATCH[3]}$path"; else u=""; fi;;
+  *://*) u="";;
+  *:*)
+    auth="${u%%:*}"; path="${u#*:}"
+    if [[ "$auth" =~ ^$user($host)$ ]] && [ -n "$path" ]; then u="${BASH_REMATCH[3]}/$path"; else u=""; fi;;
   *) u="";;
 esac
-if [ -z "$u" ] || [ "$(lower "$u")" != "$(lower "$want")" ]; then
+if [ -z "$u" ] || [ "$u" != "$(lower "$want")" ]; then
   echo "design-desk: refusing to push to $url — prototype_remote is $remote_cfg" >&2; exit 1
 fi
 zero=0000000000000000000000000000000000000000
@@ -37,11 +47,12 @@ while read -r _local lsha remote_ref _rsha; do
   esac
   [ "$lsha" = "$zero" ] && continue   # deleting the branch
   # Every commit this push brings that the remote does not have yet (merges by their own
-  # changes): none may touch .github/.
-  if ! paths="$(git log --format= --name-only --no-renames --cc "$lsha" --not --remotes 2>/dev/null)"; then
+  # changes): none may touch .github/. -z: git writes every path as it is, never quoted
+  # (a quoted "\.github/..." line would not start with .github/), one per NUL.
+  if ! paths="$(set -o pipefail; git log -z --format= --name-only --no-renames --cc "$lsha" --not --remotes 2>/dev/null | tr '\0' '\n')"; then
     echo "design-desk: refusing to push $remote_ref — cannot tell which files $lsha changes" >&2; exit 1
   fi
-  if printf '%s\n' "$paths" | grep -q '^\.github/'; then
+  if printf '%s\n' "$paths" | grep -q -e '^\.github/' -e '^"'; then
     echo "design-desk: refusing to push $remote_ref — it changes .github/ (workflows run with the repository's secrets; a prototype changes the look only)" >&2; exit 1
   fi
 done

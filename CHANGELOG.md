@@ -23,7 +23,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    OS sandbox in the agent image.
 5. **Operator-only:** limit the agent's GitHub identity to `design-desk/*` branches with a
    ruleset or a fine-grained token; the pre-push hook is a local guard only
-   ([prototype.md](docs/prototype.md) → Push).
+   ([prototype.md](docs/prototype.md) → Push). It accepts the repository only over `https://`
+   or ssh: a `prototype_remote` push over another scheme now fails.
+6. A `backup failed: … is not this user's own` line: something else holds the backup clone's
+   or lock's name in `/dev/shm`; remove it and run the persist again
+   ([persistence.md](docs/persistence.md) → Backup & restore).
 
 ## 1.66.1 — 2026-11-08
 
