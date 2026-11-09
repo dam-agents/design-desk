@@ -116,7 +116,8 @@ person's **Draw it** tries again.
   it out of the plan's filters (it stays in **All**, the first filter and the default, with its
   purple Designed dot), and its card links the
   request. The pre-flight never offers it to draw. An issue Design Desk opened itself (its
-  body carries the card's marker) is read like any other, so it lands there linked.
+  own login wrote it with the card's marker, [`handoff-github` → The marker](../.agents/skills/handoff-github/SKILL.md#the-marker))
+  is read like any other, so it lands there linked.
 - **The pull request that builds it.** A change card whose pull request a sent request's spec
   went to (`spec.pr_url`), or one of the pull requests the Desk's GitHub copy lists under the
   spec's issue (`linked`), carries `builds` (the request, its title and date): its page links

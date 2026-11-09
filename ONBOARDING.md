@@ -174,9 +174,11 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    request from Slack gets them in its thread anyway), "Should people be
    able to ask for design changes in a request's thread and get the pictures back there?"
    (`slack_council`, default `disabled`). And "Should the weekly UX digest also go to the
-   channel?" (`digest: slack`; default `desk`, only on the Desk).
+   channel?" (`digest: slack`; default `desk`, only on the Desk). "Does a test agent post its
+   findings there? Its Slack user id, please" (`qa_bot`, default empty).
 7. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
    Desk store, its threads and votes cannot be rebuilt from anywhere else; recommend yes.
+   Only the operator may have access: it holds private asks ([docs/desk.md](docs/desk.md) → Private asks).
 8. **Model** (`run_model`) — "Which model should scheduled runs use?" Default `default`.
 9. **Figma** (`figma`, `figma_file`) — "Does the team design in Figma? I can import frames
    from it, show where the product differs from its design there, and send options back as
@@ -224,6 +226,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - desk_artifact:
 - desk_link:
 - bug_reports: enabled
+- qa_bot:
 - watch_open_prs: enabled
 - issue_label: design
 - proposals: enabled
@@ -290,9 +293,9 @@ product name and whether it has a boundary and an engine (`source: repo`), or th
 repository has no profile ([docs/profile.md](docs/profile.md) → A repository without a
 profile). For a profile with an engine, propose every host in `engine.egress` to the owner
 (`egress_proposal` with `propose`), with the profile's reason. For a profile with `skills`,
-install each skill it names from its `source` through the platform's skill install, unless
-it is installed already (`design skill <action> --repo <repo>` says which are missing), and
-tell the operator which actions they now do. For a profile with
+name each one it brings (`design skill <action> --repo <repo>` says which are missing or not confirmed) and
+install only those the operator confirms, pinned to a commit
+([docs/actions.md](docs/actions.md) → Another skill for an action). For a profile with
 `catalog.elements`, build the catalog now ([docs/catalog.md](docs/catalog.md) → Keeping it
 current, "Build the catalog"), so Product → Elements is not empty on the team's first visit.
 

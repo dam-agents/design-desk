@@ -1,6 +1,7 @@
 // node --test toolkit/tests/skills.test.mjs — an action resolves to its skill, and a profile's shape is checked.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,14 +16,65 @@ test("an action takes the operator's skill, then the product's, then the bundled
   process.env.DESIGN_DESK_SKILL_PATHS = `${extra}:${bundled}`;
   const { resolve } = await import("../lib/actions.mjs");
   assert.equal(resolve("options").skill, "variants");
-  assert.equal(resolve("options", { profile: { options: { skill: "acme-prototyper", source: "acme/proto" } } }).skill, "acme-prototyper");
+  const pinned = { options: { skill: "acme-prototyper", source: "acme/proto@0123abcd" } };
+  assert.equal(resolve("options", { config: pinned, profile: { options: { skill: "acme-prototyper", source: "acme/proto" } } }).skill, "acme-prototyper");
   const missing = resolve("options", { config: { options: "not-here" } });
   assert.equal(missing.skill, "variants");
   assert.match(missing.notes[0], /not-here .* not installed/);
-  assert.equal(resolve("revise", { profile: { options: "acme-prototyper" } }).skill, "acme-prototyper");
+  const acme = { options: { skill: "acme-prototyper", source: "acme/proto" } };
+  assert.equal(resolve("revise", { config: pinned, profile: acme }).skill, "acme-prototyper");
   assert.equal(resolve("states").skill, "variants", "every state of a part is drawn by the variants skill");
-  assert.equal(resolve("states", { profile: { options: "acme-prototyper" } }).skill, "acme-prototyper", "and by the product's own options skill");
+  assert.equal(resolve("states", { config: pinned, profile: acme }).skill, "acme-prototyper", "and by the product's own confirmed options skill");
   assert.equal(resolve("prototype").skill, null);
+});
+
+test("a profile's skill does an action only while the operator's pin matches its source", async () => {
+  const extra = mkdtempSync(join(tmpdir(), "dd-pin-"));
+  mkdirSync(join(extra, "acme-prototyper"));
+  writeFileSync(join(extra, "acme-prototyper", "SKILL.md"), "---\nname: acme-prototyper\ndescription: x\n---\n");
+  process.env.DESIGN_DESK_SKILL_PATHS = `${extra}:${bundled}`;
+  const { resolve, pinMatches } = await import("../lib/actions.mjs");
+  const acme = { options: { skill: "acme-prototyper", source: "acme/proto" } };
+  const unpinned = resolve("options", { profile: acme });
+  assert.deepEqual([unpinned.skill, unpinned.source], ["variants", "default"], "installed but not confirmed: the bundled skill");
+  assert.match(unpinned.notes[0], /acme-prototyper \(profile\) is not confirmed/);
+  const moved = resolve("options", { config: { options: { skill: "acme-prototyper", source: "evil/proto@0123abcd" } }, profile: acme });
+  assert.equal(moved.skill, "variants", "a pin to another repository is set aside");
+  assert.match(moved.notes[0], /pinned to evil\/proto@0123abcd, which does not match/);
+  const bumped = resolve("options", { config: { options: { skill: "acme-prototyper", source: "acme/proto@0123abcd" } }, profile: { options: { skill: "acme-prototyper", source: "acme/proto@fedc9876" } } });
+  assert.equal(bumped.skill, "variants", "a profile that names another commit needs a new confirmation");
+  const blind = resolve("options", { config: { options: { skill: "acme-prototyper", source: "acme/proto@0123abcd" } } });
+  assert.equal(blind.skill, "variants", "a pinned row with no profile read is not checked, so not used");
+  assert.match(blind.notes[0], /no profile read here names \(pass --repo\)/);
+  const ok = resolve("options", { config: { options: { skill: "acme-prototyper", source: "acme/proto@0123abcd" } }, profile: { options: { skill: "acme-prototyper", source: "acme/proto@0123abcd" } } });
+  assert.deepEqual([ok.skill, ok.notes], ["acme-prototyper", []], "a matching pin");
+  const own = resolve("options", { config: { options: "acme-prototyper" }, profile: acme });
+  assert.deepEqual([own.skill, own.source, own.notes], ["acme-prototyper", "config", []], "an unpinned row is the operator's own override, with no note");
+  const other = resolve("options", { config: { options: { skill: "acme-other", source: "acme/proto@0123abcd" } }, profile: { options: { skill: "acme-prototyper", source: "acme/proto@0123abcd" } } });
+  assert.deepEqual([other.skill, other.source], ["variants", "default"], "a pin on another skill confirms nothing, even with the same source");
+  assert.match(other.notes[0], /acme-other \(config\) is pinned to acme\/proto@0123abcd, which does not match/);
+  assert.match(other.notes[1], /acme-prototyper \(profile\) is not confirmed/);
+  assert.equal(pinMatches("acme/proto", "acme/proto"), false, "a pin without a commit matches nothing");
+  assert.equal(pinMatches("Acme/Proto@0123ABCD", "acme/proto"), true);
+});
+
+test("design skill reads the source pin of a ## Skills row", () => {
+  const extra = mkdtempSync(join(tmpdir(), "dd-cli-"));
+  mkdirSync(join(extra, "acme-prototyper"));
+  writeFileSync(join(extra, "acme-prototyper", "SKILL.md"), "---\nname: acme-prototyper\ndescription: x\n---\n");
+  const design = new URL("../bin/design.mjs", import.meta.url).pathname;
+  const ask = (row) => {
+    const work = mkdtempSync(join(tmpdir(), "dd-cli-work-"));
+    writeFileSync(join(work, "CONFIG.md"), `# Config\n\n## Skills\n\n| action | skill | source |\n| --- | --- | --- |\n| options | acme-prototyper | ${row} |\n`);
+    const r = spawnSync(process.execPath, [design, "skill", "options"], { encoding: "utf8", env: { ...process.env, WORK_DIR: work, DESIGN_DESK_SKILL_PATHS: `${extra}:${bundled}` } });
+    assert.equal(r.status, 0, r.stderr);
+    return JSON.parse(r.stdout);
+  };
+  const pinned = ask("acme/proto@0123abcd");
+  assert.deepEqual([pinned.skill, pinned.source], ["variants", "default"], "a pinned row with no profile read is set aside");
+  assert.match(pinned.notes[0], /pinned to acme\/proto@0123abcd/);
+  const own = ask("");
+  assert.deepEqual([own.skill, own.source, own.notes], ["acme-prototyper", "config", []], "an unpinned row is the operator's own override");
 });
 
 test("New request offers installed skills only, figma with Figma on, bundled words and defaults", async () => {

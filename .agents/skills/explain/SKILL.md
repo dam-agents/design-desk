@@ -11,6 +11,11 @@ description: >-
 
 # Explain
 
+**A question asked in Slack, role first**: the asker's role from the email Slack holds for
+their user id ([docs/desk.md](../../../docs/desk.md) → Roles, In Slack). Not on the roster →
+the decline line of [docs/requests.md](../../../docs/requests.md) → Who Slack serves, no
+answer from the code, and stop.
+
 The reader is a designer or a project manager. They are smart and busy, they think in
 screens, people and tasks, and they do not read code. They read your text to decide something:
 what to design, what to ask, what to tell a user. Write so that they can.

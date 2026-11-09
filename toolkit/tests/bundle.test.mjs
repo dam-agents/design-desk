@@ -23,6 +23,7 @@ test("the bundle carries the approved option, its states, the boundary and the a
   assert.deepEqual(design.approved.option, { id: "v2", name: "Quiet", version: 3 }, "the option a person approved, not the first");
   assert.equal(design.approved.straight_to_implementation, true);
   assert.equal(design.approved.by, null, "no e-mail address in a file that may go public");
+  assert.equal(design.request.problem, undefined, "the requester's raw words never reach a coding agent");
   assert.deepEqual(design.boundary.needs_developer, ["Sort by spend: no such order in the data."]);
   assert.deepEqual(design.elements[0].states, ["s1"], "an element lists its states");
   assert.equal(design.states[0].shot, "shots/s1-empty-list.png");
