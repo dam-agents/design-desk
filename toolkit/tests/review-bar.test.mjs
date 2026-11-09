@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TOOLKIT, chromium, req } from "../lib/core.mjs";
@@ -141,23 +141,40 @@ test("design shot --element pictures one part alone, on its view, named after it
   assert.match(hidden.stderr, /--element: #gone is not visible/);
 });
 
-test("design shot --element shoots a large part again at a lower scale, so it fits the Desk's 720 KiB", async (t) => {
+// A part of random pixels drawn at the screen's own resolution: its PNG does not compress, so its
+// size is about 3 bytes per screen pixel and says which scale the shot takes.
+const NOISE = (w, h, darkOnly = false) => `<!doctype html><html><head><style>body{margin:20px} canvas{display:block} canvas.dark-only{display:none} .dark canvas.dark-only{display:block}</style></head><body>
+<div id="part" style="width:${w}px;height:${h}px;background:#fff"><canvas${darkOnly ? ' class="dark-only"' : ""} style="width:${w}px;height:${h}px"></canvas></div>
+<script>for (const c of document.querySelectorAll("canvas")) { const r = devicePixelRatio, x = c.getContext("2d"); c.width = ${w} * r; c.height = ${h} * r;
+const d = x.createImageData(c.width, c.height); for (let i = 0; i < d.data.length; i++) d.data[i] = i % 4 === 3 ? 255 : Math.random() * 256 | 0; x.putImageData(d, 0, 0); }</script></body></html>`;
+
+test("design shot --element steps down from 3× to 2× to 1× until both pictures fit the Desk's 720 KiB, and refuses what never fits", async (t) => {
   const browser = chromium();
   if (!browser) return t.skip("no browser here");
   try { req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
   const { main } = await import("../bin/shot.mjs");
-  const dir = mkdtempSync(join(tmpdir(), "dd-element-big-"));
-  // A large gradient with a shadow: at 3× its PNG is far over the Desk's limit (desk/store.mjs LIMITS.assetBytes).
-  writeFileSync(join(dir, "big.html"), `<!doctype html><html><body style="margin:40px">
-<div id="hero" style="width:1000px;height:750px;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.45);
-background:radial-gradient(circle at 30% 20%,#ff6a3d,transparent 60%),radial-gradient(circle at 80% 70%,#3d8bff,transparent 55%),conic-gradient(from 40deg,#ffe66d,#7cffcb,#b07cff,#ffe66d)"></div></body></html>`);
-  const out = join(dir, "shots"), printed = [];
-  const log = console.log; console.log = (p) => printed.push(p);
-  try { await main("shot", [join(dir, "big.html"), out, "--width", "1200", "--height", "900", "--element", "#hero", "--pad", "10"]); } finally { console.log = log; }
-  assert.deepEqual(printed, ["light", "dark"].map((th) => join(out, `big-element-${th}.png`)));
-  for (const f of printed) {
-    const b = readFileSync(f), w = b.readUInt32BE(16);
-    assert.ok(b.length <= 720 * 1024, `${f} fits the Desk (${b.length} bytes)`);
-    assert.ok(w >= 1020 && w < 3 * 1020, `${f} is the part at a lower scale than 3× (${w} px wide)`);
+  const dir = mkdtempSync(join(tmpdir(), "dd-element-big-")), out = join(dir, "shots");
+  // [page, part, the scale both pictures must take]: with a 10 px pad a part W px wide is (W + 20) × scale.
+  // 100×100 fits at 3×; 200×200 is over 700 KiB at 3× and fits at 2×; 300×300 only at 1×. A part
+  // whose dark picture alone is over at 3× steps both pictures down, so the pair keeps one scale.
+  const cases = [["small", NOISE(100, 100), 3, 100], ["mid", NOISE(200, 200), 2, 200], ["big", NOISE(300, 300), 1, 300], ["mixed", NOISE(200, 200, true), 2, 200]];
+  for (const [name, html, scale, w] of cases) {
+    writeFileSync(join(dir, `${name}.html`), html);
+    const printed = [], log = console.log; console.log = (p) => printed.push(p);
+    try { await main("shot", [join(dir, `${name}.html`), out, "--width", "800", "--height", "600", "--element", "#part", "--pad", "10"]); } finally { console.log = log; }
+    assert.deepEqual(printed, ["light", "dark"].map((th) => join(out, `${name}-element-${th}.png`)));
+    for (const f of printed) {
+      const b = readFileSync(f);
+      assert.ok(b.length <= 720 * 1024, `${f} fits the Desk (${b.length} bytes)`);
+      assert.deepEqual([b.readUInt32BE(16), b.readUInt32BE(20)], [(w + 20) * scale, (w + 20) * scale], `${f} is shot at ${scale}×`);
+    }
   }
+  // Over 700 KiB even at 1×: exit 1, said, nothing printed and no picture left to upload.
+  writeFileSync(join(dir, "huge.html"), NOISE(600, 500));
+  const refused = join(dir, "refused");
+  const run = spawnSync(process.execPath, [join(TOOLKIT, "bin/design.mjs"), "shot", join(dir, "huge.html"), refused, "--width", "800", "--height", "600", "--element", "#part", "--pad", "10"], { encoding: "utf8" });
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /--element: #part is more than 700 KiB \(the Desk takes at most 720 KiB\) even at one screen pixel per CSS pixel; no picture was written/);
+  assert.equal(run.stdout, "");
+  assert.deepEqual(readdirSync(refused), [], "no picture is left");
 });
