@@ -5837,7 +5837,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const carried = !$("#rq-carry").hidden && $("#request-form").querySelector("input[name=carry]:checked");
     $("#rq-count-hint").textContent = carried ? ""
       : !n ? "Design Desk only checks what can be done as a design change; a designer, PM or developer can still have options drawn later."
-      : can("explore") ? "Design Desk draws them right after it checks what can be done." : "A designer, PM or developer starts them after Design Desk checks what can be done.";
+      : can("explore") ? "" :"A designer, PM or developer starts them after Design Desk checks what can be done.";
   }
   $("#request-form").options.addEventListener("input", sayCount);
 
