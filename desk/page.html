@@ -3951,8 +3951,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // How long: since when Design Desk works on it and how long that usually takes; before it
     // started, whether it starts now (the page called it) or with its next look, every 10 minutes.
     const item = (c.waiting || []).find((w) => w.kind !== "question" && !workDone(c, w));
-    const guestSlow = !item ? "" : item.state === "claimed" && item.started ? ` · started ${ago(item.started) === "just now" ? "just now" : `${ago(item.started)} ago`}${item.usual_min ? `, usually about ${item.usual_min} min` : ""}`
-      : S.me?.pings && Date.now() - Date.parse(item.created) < 12e4 ? " · starting" : " · in the queue, starts within 10 minutes";
+    const eta = !item ? "" : item.state === "claimed" && item.started ? `started ${ago(item.started) === "just now" ? "just now" : `${ago(item.started)} ago`}${item.usual_min ? `, usually about ${item.usual_min} min` : ""}`
+      : !item.created ? "" : S.me?.pings && Date.now() - Date.parse(item.created) < 12e4 ? "starting" : "in the queue, starts within 10 minutes";
     const nx = nextFor(c);
     // Close stays at hand while the request is open, whatever step it is at.
     if (!closed(c) && (can("close") || can("skip")) && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close…</button>`;
@@ -3979,7 +3979,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const nextStep = nx.step || (asks.length ? `<span class="step-next still">Answer</span>` : busy.length ? `<span class="step-next still">Wait</span>`
       : wait ? `<span class="step-next still">${nx.wait ? `Wait for ${esc(nx.wait)}` : "Wait"}</span>` : "");
     const act = asks.length ? `<span class="s-act">${plural(asks.length, "question", "questions")} below</span>`
-      : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}${guestSlow}</span>`
+      : busy.length ? `<span class="s-act s-work">${esc(busy.map((k) => WORK_SHORT[k] || "Working on it").join(", "))}</span>${eta ? `<span class="s-act s-eta">· ${esc(eta)}</span>` : ""}`
       : wait && WAIT_SHORT[c.status] ? `<span class="s-act">${esc(WAIT_SHORT[c.status])}</span>` : "";
     return `<div class="status" data-o="${tone(c)}"${busy.length ? " data-busy" : ""}>
       <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nextStep)}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
