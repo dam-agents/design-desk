@@ -308,6 +308,14 @@ test("a reply, an answer, a reopen and Mark done take the ability of what they s
   assert.deepEqual([(await d.viewer(guest, "/api/me")).body.can.resolve, (await d.viewer(dev, "/api/me")).body.can.resolve], [false, true]);
 });
 
+// The rate windows: forgetIdle itself is tested in store.test.mjs; here, that spend calls it,
+// so the map never keeps every caller for ever.
+test("every spend forgets idle callers past 500", () => {
+  const src = readFileSync(SERVER, "utf8");
+  const spend = src.slice(src.indexOf("function spend("), src.indexOf("\n}\n", src.indexOf("function spend(")));
+  assert.match(spend, /\n  forgetIdle\(usage, now, WINDOW_MS\);/);
+});
+
 test("an unexpected error answers in plain words and keeps its text, which can name the machine's paths, in the log", async (t) => {
   const d = await desk(t);
   mkdirSync(join(d.dir, `db.json.tmp-${d.pid}`));

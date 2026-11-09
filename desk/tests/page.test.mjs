@@ -46,9 +46,10 @@ test("a conversation shows Reply, Answer, Mark done and Reopen only to a reader 
   for (const [attr, move] of Object.entries(controls)) {
     const at = [...page.matchAll(new RegExp(`${attr}="\\$\\{esc\\(th\\.id\\)\\}"`, "g"))].map((m) => m.index);
     assert.ok(at.length > 0, attr);
+    // The guard opens the very template the control is in: no other backtick between them.
     for (const i of at) {
-      const before = page.slice(page.lastIndexOf("\n", i), i);
-      assert.ok(before.lastIndexOf(`mayIn(th, "${move}")`) > -1, `${attr} at offset ${i} is drawn without mayIn(th, "${move}")`);
+      const opened = page.slice(0, page.lastIndexOf("`", i) + 1);
+      assert.ok(opened.endsWith(`mayIn(th, "${move}") ? \``), `${attr} at offset ${i} is drawn without mayIn(th, "${move}") right before it`);
     }
   }
 });

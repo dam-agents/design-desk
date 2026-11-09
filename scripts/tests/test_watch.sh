@@ -98,6 +98,10 @@ JSON
 outg="$(bash "$ROOT/scripts/preflight.sh" watch)"
 assert "a copy behind GitHub opens a run" '.nothing_to_do == false and .github_due == ["acme/widgets#21", "acme/widgets#30"] and (.changes_due | length) == 0' "$outg"
 assert "its title says what it does" '.title == "Read new GitHub comments"' "$outg"
+# repos as people write it: a host, mixed case, spaces around the comma, two repositories.
+# toolkit/tests/github.test.mjs feeds github-sync the same value: both read one watched set.
+printf -- '- repos: GitHub.com/Acme/Widgets , other/thing\n- watch_since: 2026-10-01T00:00:00Z\n- issue_label: none\n- watch_open_prs: disabled\n' > "$WORK_DIR/CONFIG.md"
+assert "repos with a host, mixed case and spaces watches the same refs" '.github_due == ["acme/widgets#21", "acme/widgets#30"]' "$(bash "$ROOT/scripts/preflight.sh" watch)"
 rm -f "$DESK_DIR/github-refs.json"
 
 # A failed listing is never an answer.
