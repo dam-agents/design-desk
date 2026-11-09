@@ -81,7 +81,7 @@ config_json() {
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
     --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
     --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg issue_next_sprint "$(cfg issue_next_sprint)" --arg issue_news_label "$(cfg issue_news_label)" \
-    --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" \
+    --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" --arg ci_gate "$(cfg ci_gate)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -127,7 +127,8 @@ config_json() {
       issue_next_sprint: ($issue_next_sprint | if . == "" then "milestone" else . end),
       issue_news_label: ($issue_news_label | if . == "" then "none" else . end),
       max_issue_drawings: ($max_issue_drawings | tonumber? // 5),
-      decisions_page: ($decisions_page | if . == "dam" or . == "public" then "dam" else "off" end)}'
+      decisions_page: ($decisions_page | if . == "dam" or . == "public" then "dam" else "off" end),
+      ci_gate: ($ci_gate | if . == "enabled" then "enabled" else "disabled" end)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -691,6 +692,7 @@ inbox_mode() {
       people_due: [ pick(["person"])[] | select(.person != null) ],
       decisions_due: pick(["decision"]),
       checks_due: pick(["decision-check"]),
+      ci_due: pick(["ci"]),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
@@ -700,6 +702,7 @@ inbox_mode() {
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
+        + (if (.ci_due | length) > 0 then ["docs/watch.md"] else [] end)
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
         + (if (.map_due | length) > 0 then ["docs/map.md", "docs/screens.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)

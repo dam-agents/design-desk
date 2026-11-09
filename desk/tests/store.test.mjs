@@ -117,6 +117,37 @@ test("a change card is found again by its pull request, people's data survives",
   assert.ok(b.acks[alice.email], "acks are not the agent's to overwrite");
 });
 
+test("a held check follows the handled mark: each mark queues one ci item, none without a check", () => {
+  const s = fresh();
+  const plain = s.upsertCard({ kind: "change", title: "Plain", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.handle(plain.id, alice);
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci").length, 0, "no check held: nothing to set");
+  const c = s.upsertCard({ kind: "change", title: "Held", source: { repo: "acme/widgets", pr: 8 } }).card;
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "red" } }), /failing or passing/);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "failing", sha: "nope" } }), /commit id/);
+  const r = s.createRequest(alice, { title: "A request", problem: "P." }).card;
+  assert.throws(() => s.upsertCard({ id: r.id, ci: { state: "failing" } }), /change card/);
+  s.upsertCard({ id: c.id, ci: { state: "failing", sha: "abc1234" } });
+  assert.equal(s.getCard(c.id).ci.state, "failing");
+  s.handle(c.id, alice);
+  const items = Object.values(s.db.inbox).filter((i) => i.kind === "ci" && i.card === c.id);
+  assert.deepEqual(items.map((i) => [i.state, i.by.email]), [["open", "alice@example.com"]]);
+  s.handle(c.id, alice, false);
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci" && i.card === c.id).length, 1, "an open item is reused, not doubled");
+});
+
+test("Design Desk's message names the person whose claimed item it works on", () => {
+  const s = fresh();
+  const c = s.upsertCard({ kind: "change", title: "Held", source: { repo: "acme/widgets", pr: 8 } }).card;
+  s.openThread(c.id, { agent: true }, { kind: "comment", text: "On its own." });
+  s.upsertCard({ id: c.id, ci: { state: "failing", sha: "abc1234" } });
+  s.handle(c.id, alice);
+  const it = Object.values(s.db.inbox).find((i) => i.kind === "ci");
+  s.claim(it.id, "run-1");
+  s.openThread(c.id, { agent: true }, { kind: "comment", text: "Passed the check." });
+  assert.deepEqual(Object.values(s.db.threads).map((t) => t.messages[0].by), [{ agent: true }, { agent: true, for: { email: "alice@example.com" } }]);
+});
+
 test("a change card stays short, and a designer marks it handled", () => {
   const s = fresh();
   assert.throws(() => s.upsertCard({ kind: "change", title: "x".repeat(91) }), /longer than 90/);
