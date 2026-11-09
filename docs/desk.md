@@ -410,7 +410,9 @@ roster.
 
 **Requests** has two tabs, **For Designers** and **For Developers** (with **Presentation**
 beside them in full mode); each request is in one (the card's `size: {small, by, at}`,
-`small: true` for developers; the list's `for`). Where it starts:
+`small: true` for developers; the list's `for`). The page opens Requests on the viewer's own tab
+every visit — For Developers for a developer or a lead developer, For Designers for everyone
+else; another tab picked holds until the page is left, and the browser does not keep it. Where it starts:
 
 - **Filed on the Desk**: New request has a **For Designers / For Developers** switch,
   For Designers by default (`POST /api/requests {audience}`), for the roles that move a request
@@ -475,8 +477,14 @@ no Environment outlives its request. Decisions recorded from it stay.
 ## A request's state in the list
 
 In both modes, each request in the list shows its state as a dot in the row's top-right corner,
-as large as the dot on the request's page and level with the title's first line, each state in a colour of
-its own. It pulses while Design Desk works on the request and stays lit otherwise. Pointing at
+as large as the dot on the request's page and level with the title's first line, in the colour of
+whom the request waits on — the same colour as the state on its page: **blue** Design Desk,
+**amber** the team's votes or tries (Team feedback, Live — try it), **magenta** a person's move
+(Checked: start the options; Options drawn: ask the team; a question to answer; a prototype that
+failed or was switched off; a spec draft to send); green sent to developers, slate decided, red
+closed. It pulses only while Design Desk works on the request, whatever the step (then blue), and
+stays lit otherwise. A request is never blue with a move of a person's own in its step pill: once
+Design Desk's work is done, Checking reads **Checked** and Drawing options reads **Options drawn**. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
 dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`

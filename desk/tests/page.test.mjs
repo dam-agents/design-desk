@@ -1227,39 +1227,84 @@ for (const [label, triage, me, sel] of PILLS) {
   }));
 }
 
-// Every branch of the step pill at Options drawn (step 2) and Team feedback (step 3). The pill
-// holds the move to the next step only: at Options drawn that is Team feedback — Contact a
-// developer first, then Ask for feedback — never Approve, which stays in the row, and no live
+// Every state of a request's header, for every kind of viewer that changes it: the state's word,
+// its ink, its step, the step pill's one move, and the list's dot in the same ink. The ink says
+// whom the request waits on — blue Design Desk (its mark blinks only while Design Desk works,
+// and then the pill says Wait), amber the team's votes or tries, magenta a person's move — so a
+// blue header never offers a move of a person's own. At Options drawn (step 2) the pill holds
+// Contact a developer, then Ask for feedback: never Approve (it stays in the row), and no live
 // prototype (step 4) anywhere, not under ⋯ nor in the ⓘ; votes and Slack come at Team feedback.
 const ME = (can, extra = {}) => ({ role: "designer", email: "alice@example.com", ...extra, can: { vote: true, comment: true, ...can } });
 const DESIGN = { verdict: "design", reasons: [] }, PRODUCT = { verdict: "product", reasons: [] };
 const CANNOT = { verdict: "design", reasons: [], cannot: ["Sort by spend: the list has no such order."] };
-const ALL = { build: true, revise: true, approve: true, close: true, share: true };
-const BRANCHES = [
-  // [name, status, team_feedback, triage, me, pill, ⋯ has Build]
-  ["Options drawn, parts for a developer", "variants", null, CANNOT, ME(ALL, { slack: true }), "Contact a developer", false],
-  ["Options drawn, a designer who builds", "variants", null, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", false],
-  ["Options drawn, held for its people", "variants", { state: "waiting" }, DESIGN, ME(ALL, { slack: true }), "Ask for feedback", false],
-  ["Options drawn, held, parts for a developer", "variants", { state: "waiting" }, CANNOT, ME(ALL), "Contact a developer", false],
-  ["Options drawn, Product", "variants", null, PRODUCT, ME(ALL, { slack: true }), "Ask for feedback", false],
-  ["Options drawn, an approver who may not ask", "variants", null, DESIGN, ME({ build: true, approve: true, close: true, share: true }, { slack: true }), "Wait", false],
-  ["Team feedback, a designer who builds", "feedback", { state: "open" }, DESIGN, ME(ALL), "Build a live prototype", false],
-  ["Team feedback, parts for a developer, no build", "feedback", { state: "open" }, { ...CANNOT, verdict: "needs-developer" }, ME({ approve: true, close: true }), "Contact a developer", false],
-  ["Team feedback, an approver", "feedback", { state: "open" }, PRODUCT, ME({ approve: true, close: true, share: true }, { slack: true }), "Approve", false],
-  ["Team feedback, Slack for who cannot approve", "feedback", { state: "open" }, PRODUCT, ME({ share: true }, { slack: true }), "Send to Slack…", false],
-  ["Team feedback, no move of one's own", "feedback", { state: "open" }, PRODUCT, ME({}), "Wait", false],
+const ALL = { build: true, revise: true, approve: true, close: true, share: true, explore: true };
+const AT = "2026-11-01T00:00:00Z", WORK = (kind, scope) => [{ kind, ...(scope ? { scope } : {}), state: "claimed", created: AT }];
+const ASKS = [{ id: "T-1", kind: "asks", state: "open", messages: [{ text: "Which list should the column go in?" }] }];
+const OK = { variant: "v1", by: { email: "bob@example.com" }, at: AT };
+const LATER = "2099-01-01T00:00:00Z";
+const HEADERS = [
+  // [name, the request as it stands, viewer, word, ink, step, the pill's move (null: none), Design Desk at work]
+  ["Checking, Design Desk at work", { status: "triage", triage: null, variants: [], waiting: WORK("request") }, ME(ALL), "Checking", "checking", 1, "Wait", true],
+  ["Checking, not started yet", { status: "triage", triage: null, variants: [] }, ME(ALL), "Checking", "checking", 1, "Wait", false],
+  ["Checking, a question to answer", { status: "triage", triage: null, variants: [], threads: ASKS }, ME(ALL), "Checking", "turn", 1, "Answer", false],
+  ["Checked, someone who starts the options", { status: "triage", triage: DESIGN, variants: [] }, ME(ALL), "Checked", "turn", 1, "Draw design options", false],
+  ["Checked, someone who may not start them", { status: "triage", triage: DESIGN, variants: [] }, ME({}), "Checked", "turn", 1, "Wait", false],
+  ["Drawing options, Design Desk at work", { status: "variants", triage: DESIGN, variants: [], waiting: WORK("explore") }, ME(ALL), "Drawing options", "checking", 2, "Wait", true],
+  ["Options drawn, Design Desk changes them", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" }, waiting: WORK("revise") }, ME(ALL), "Drawing options", "checking", 2, "Wait", true],
+  ["Options drawn, parts for a developer", { status: "variants", triage: CANNOT }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Contact a developer", false],
+  ["Options drawn, a designer who builds", { status: "variants", triage: DESIGN }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
+  ["Options drawn, held for its people", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" } }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
+  ["Options drawn, held, parts for a developer", { status: "variants", triage: CANNOT, team_feedback: { state: "waiting" } }, ME(ALL), "Options drawn", "turn", 2, "Contact a developer", false],
+  ["Options drawn, Product", { status: "variants", triage: PRODUCT }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
+  ["Options drawn, an approver who may not ask", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" } }, ME({ build: true, approve: true, close: true, share: true }, { slack: true }), "Options drawn", "turn", 2, "Wait", false],
+  ["Team feedback, a designer who builds", { status: "feedback", triage: DESIGN, team_feedback: { state: "open" } }, ME(ALL), "Team feedback", "waiting", 3, "Build a live prototype", false],
+  ["Team feedback, parts for a developer, no build", { status: "feedback", triage: { ...CANNOT, verdict: "needs-developer" }, team_feedback: { state: "open" } }, ME({ approve: true, close: true }), "Team feedback", "waiting", 3, "Contact a developer", false],
+  ["Team feedback, an approver", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" } }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
+  ["Team feedback, Slack for who cannot approve", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" } }, ME({ share: true }, { slack: true }), "Team feedback", "waiting", 3, "Send to Slack…", false],
+  ["Team feedback, no move of one's own", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" } }, ME({}), "Team feedback", "waiting", 3, "Wait", false],
+  ["Team feedback, Design Desk redraws", { status: "feedback", triage: DESIGN, team_feedback: { state: "open" }, waiting: WORK("revise") }, ME(ALL), "Team feedback", "checking", 3, "Wait", true],
+  ["Building the prototype", { status: "prototype", triage: DESIGN, prototype: { state: "building" }, waiting: WORK("build") }, ME(ALL), "Building prototype", "checking", 4, "Wait", true],
+  ["Live, try it", { status: "testing", triage: DESIGN, prototype: { state: "live", url: "https://example.com/p", expires: LATER } }, ME(ALL), "Live — try it", "waiting", 4, "Open the prototype", false],
+  ["The prototype failed", { status: "prototype", triage: DESIGN, prototype: { state: "failed" } }, ME(ALL), "Prototype didn't work", "turn", 4, "Try again", false],
+  ["The prototype was switched off", { status: "testing", triage: DESIGN, prototype: { state: "torn-down", expires: LATER } }, ME(ALL), "Prototype switched off", "turn", 4, "Build it again", false],
+  ["Writing the spec", { status: "spec", triage: DESIGN, approved: OK, waiting: WORK("handoff") }, ME(ALL), "Writing the spec", "checking", 6, "Wait", true],
+  ["The spec, a question to answer", { status: "spec", triage: DESIGN, approved: OK, threads: ASKS }, ME(ALL), "Writing the spec", "turn", 6, "Answer", false],
+  ["Spec draft to read and send", { status: "spec", triage: DESIGN, approved: OK, spec: { review: "draft" } }, ME(ALL, { spec_review: true }), "Spec draft — read it, then send", "turn", 6, "Send to developers…", false],
+  ["Sending to developers", { status: "spec", triage: DESIGN, approved: OK, spec: { review: "sent" }, waiting: WORK("handoff", "deliver") }, ME(ALL, { spec_review: true }), "Sending to developers", "checking", 7, "Wait", true],
+  ["Sent, someone who sees Designs", { status: "handed-off", triage: DESIGN, approved: OK }, ME({ ...ALL, designs: true }), "Sent to developers", "approved", 6, "Show the design", false],
+  ["Sent, someone who does not", { status: "handed-off", triage: DESIGN, approved: OK }, ME(ALL), "Sent to developers", "approved", 6, null, false],
+  ["Closed", { status: "declined", triage: DESIGN }, ME(ALL), "Closed", "closed", null, null, false],
+  ["Decided without a design", { status: "declined", triage: DESIGN, decided: { by: { email: "bob@example.com" }, at: AT, text: "Keep the list as it is." } }, ME(ALL), "Decided without a design", "decided", null, null, false],
 ];
-for (const [name, status, tf, triage, me, pill, build] of BRANCHES) {
-  test(`step pill: ${name} → ${pill}`, (t) => open(t, BRIDGE_PILL(triage, me).replace('status: "feedback"', `status: "${status}", team_feedback: ${JSON.stringify(tf)}`), async (desk) => {
+// The request as the test stands it, on its page and as the list's row (a count, busy, asks).
+const BRIDGE_HEADER = (patch, me) => BRIDGE_STORIES
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me))
+  .replace('{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };', `{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };\nObject.assign(request, ${JSON.stringify(patch)});`)
+  .replace('localStorage.setItem("desk-guide-seen", "1");', `localStorage.setItem("desk-guide-seen", "1"); localStorage.setItem("desk-reqFilter", "${["handed-off", "declined"].includes(patch.status) ? "closed" : "open"}");`)
+  .replace("variants: 2, threads: undefined }", 'variants: request.variants.length, threads: undefined, busy: (request.waiting || []).length > 0, asks: (request.threads || []).some((t) => t.kind === "asks" && t.state === "open") }');
+const pillText = (desk) => desk.evaluate(() => document.querySelector("#detail .steppill .step-next, #detail .status > .s-line .step-next")?.textContent.trim() ?? null);
+for (const [name, patch, me, word, ink, step, pill, busy] of HEADERS) {
+  test(`header: ${name} → ${word}, ${ink}, ${pill ?? "no move"}`, (t) => open(t, BRIDGE_HEADER(patch, me), async (desk) => {
     await desk.click('[data-tab="requests"]');
+    // The list's dot (a closed request under Closed): the same ink, blinking only while Design Desk works.
+    const dot = '.row.item:has([data-card="r7"]) .sdot';
+    await desk.waitForSelector(dot);
+    assert.equal(await desk.getAttribute(dot, "data-s"), ink, "the dot's ink");
+    assert.equal(await desk.locator(`${dot} .tag.busy`).count(), busy ? 1 : 0, busy ? "the dot blinks" : "the dot stays lit");
     await desk.click('[data-card="r7"]');
-    await desk.waitForSelector("#detail .steppill .step-next");
-    assert.equal(await desk.locator("#detail .steppill .step-next").count(), 1, "one move, no more");
-    assert.equal((await desk.textContent("#detail .steppill .step-next")).trim(), pill);
-    assert.match(await desk.textContent("#detail .steppill summary"), status === "variants" ? /^Step 2\// : /^Step 3\//);
-    assert.equal(await desk.locator('#detail .more [data-act="build"]').count(), build ? 1 : 0, build ? "Build waits under ⋯" : "no Build under ⋯");
-    const help = await desk.textContent("#detail .s-word .info .tip");
-    if (status === "variants") {
+    await desk.waitForSelector("#detail .status");
+    assert.equal(await desk.evaluate(() => [...document.querySelector("#detail .s-word").childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim()), word);
+    assert.equal(await desk.getAttribute("#detail .status", "data-o"), ink, "the header's ink");
+    assert.equal(await desk.locator("#detail .status[data-busy]").count(), busy ? 1 : 0, busy ? "the mark blinks" : "the mark stays lit");
+    if (step) assert.match(await desk.textContent("#detail .steppill summary"), new RegExp(`^Step ${step}/`));
+    else assert.equal(await desk.locator("#detail .steppill").count(), 0, "a closed request has no steps");
+    assert.equal(await desk.locator("#detail .step-next").count(), pill ? 1 : 0, "one move, no more");
+    assert.equal(await pillText(desk), pill);
+    // Blue is Design Desk's turn: never a move of a person's own beside it.
+    if (ink === "checking") assert.equal(pill, "Wait", "a blue header waits");
+    if (pill === "Wait" && busy) assert.equal(ink, "checking", "Design Desk at work is blue");
+    if (patch.status === "variants" && !busy) {
+      const help = await desk.textContent("#detail .s-word .info .tip");
       assert.equal(await desk.locator('#detail .steppill [data-act="build"], #detail .steppill [data-act="approve"], #detail .steppill [data-act="slack"]').count(), 0, "never a live prototype, Approve or Slack at Options drawn");
       assert.doesNotMatch(help, /Vote and comment/, "nobody votes before Team feedback");
       assert.doesNotMatch(help, /live prototype/, "no live prototype before Team feedback");
@@ -1267,13 +1312,32 @@ for (const [name, status, tf, triage, me, pill, build] of BRANCHES) {
       assert.match(help, /Ask for feedback/, "the way on is to ask the team");
       assert.equal(await desk.locator("#detail .btn.vote").count(), 0, "no vote pills yet");
     }
-    if (me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve stays in the row");
+    if (["variants", "feedback"].includes(patch.status) && !busy && me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve stays in the row");
     // Contact a developer opened: the pill moves on to the step's next move.
-    if (pill === "Contact a developer" && status === "variants") {
+    if (pill === "Contact a developer" && patch.status === "variants") {
       await desk.click("#detail .steppill [data-dev-ask]");
       await desk.waitForFunction(() => document.querySelector("#detail .steppill .step-next")?.textContent.trim() === "Ask for feedback");
     }
   }));
+}
+
+// Requests open on the viewer's own tab every visit, whatever tab the browser saw last: For
+// Developers for a developer or a lead developer, For Designers for everyone else.
+for (const [role, tab] of [["designer", "designers"], ["admin", "designers"], ["developer", "developers"], ["lead-developer", "developers"]]) {
+  for (const last of ["designers", "developers"]) {
+    test(`a ${role} opens Requests on For ${tab === "designers" ? "Designers" : "Developers"}, though ${last} was picked last`, (t) => open(t, BRIDGE_STORIES
+      .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify({ role, email: "alice@example.com", can: { vote: true, comment: true } }))
+      .replace('localStorage.setItem("desk-guide-seen", "1");', `localStorage.setItem("desk-guide-seen", "1"); localStorage.setItem("desk-reqFor", "${last}");`), async (desk) => {
+      await desk.click('[data-tab="requests"]');
+      await desk.waitForSelector('[data-filter="reqFor:designers"]');
+      assert.equal(await desk.getAttribute(`[data-filter="reqFor:${tab}"]`, "aria-current"), "page", "the viewer's own tab is on");
+      // A tab picked holds on this page, and the browser does not keep it.
+      const other = tab === "designers" ? "developers" : "designers";
+      await desk.click(`[data-filter="reqFor:${other}"]`);
+      assert.equal(await desk.getAttribute(`[data-filter="reqFor:${other}"]`, "aria-current"), "page");
+      assert.equal(await desk.evaluate(() => localStorage.getItem("desk-reqFor")), last, "the pick is not kept");
+    }));
+  }
 }
 
 // An item opened from another one's link opens on its own tab: the menu says where you are.
