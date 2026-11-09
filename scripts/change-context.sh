@@ -27,7 +27,7 @@ dir="$(jq -r .dir <<<"$co")"
 gh pr view "$pr" -R "$slug" --json title,body,author,mergedAt,mergeCommit,closingIssuesReferences,labels,comments > "$out/pr.json" 2>/dev/null || missing+=("pr")
 
 issues=()
-for n in $(jq -r '.closingIssuesReferences[]?.number' "$out/pr.json" 2>/dev/null | head -10); do
+for n in $(jq -r '.closingIssuesReferences[]?.number' "$out/pr.json" 2>/dev/null); do
   if gh issue view "$n" -R "$slug" --json number,title,body,author,state,labels,comments > "$out/issue-$n.json" 2>/dev/null; then issues+=("$out/issue-$n.json"); else missing+=("issue $n"); fi
 done
 
@@ -37,15 +37,19 @@ ui="[]"
 sha="$(jq -r '.mergeCommit.oid // empty' "$out/pr.json" 2>/dev/null)"
 diff=""
 if [ "$(jq length <<<"$ui")" -gt 0 ]; then
-  if [ -z "$sha" ]; then git -C "$dir" fetch -q origin "pull/$pr/head" 2>/dev/null && sha="$(git -C "$dir" rev-parse FETCH_HEAD 2>/dev/null)"; fi
   mapfile -t files < <(jq -r '.[]' <<<"$ui")
-  if [ -n "$sha" ] && [ -n "$(jq -r '.mergeCommit.oid // empty' "$out/pr.json" 2>/dev/null)" ]; then
-    git -C "$dir" show "$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null && diff="$out/ui.diff"
-  elif [ -n "$sha" ]; then
-    # An open pull request: its commits against the default branch.
-    git -C "$dir" diff "origin/$(jq -r .default_branch <<<"$co")...$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null && diff="$out/ui.diff"
+  if [ -n "$sha" ]; then
+    # Merged: the change against its first parent. A merge commit has two parents, and
+    # `git show` of one prints no patch for a path.
+    git -C "$dir" diff "$sha^1" "$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null
+  else
+    # An open pull request: its head, fetched by its commit, against the default branch.
+    sha="$(git -C "$dir" ls-remote origin "refs/pull/$pr/head" 2>/dev/null | cut -f1)"
+    [ -n "$sha" ] && git -C "$dir" fetch -q origin "$sha" 2>/dev/null \
+      && git -C "$dir" diff "origin/$(jq -r .default_branch <<<"$co")...$sha" -- "${files[@]}" > "$out/ui.diff" 2>/dev/null
   fi
-  [ -n "$diff" ] || missing+=("diff")
+  # A diff with no hunk is no diff: the caller reads it by hand.
+  if grep -q '^@@' "$out/ui.diff" 2>/dev/null; then diff="$out/ui.diff"; else missing+=("diff"); fi
 else
   missing+=("ui_files")
 fi

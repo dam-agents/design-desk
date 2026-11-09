@@ -219,7 +219,8 @@ watch_mode() {
   # The merged search starts where the ledger may still need it, not at onboarding: two days
   # before the last pass that left nothing behind (work/.watch-cursor), or at the oldest merge
   # whose row is still due, in progress or failed under 3 tries, whichever is earlier; never
-  # before watch_since. A pass that deferred a change or got a partial search moves no cursor,
+  # before watch_since. A pass that deferred a change, could not read a candidate's files or
+  # got a partial search moves no cursor: nothing unread may age out of the window,
   # and a cursor written under another watch_since (its second line) is not used: the operator
   # moved the start, and the search goes back to it once.
   local CURSOR="$WORK/.watch-cursor" merged_from="$since_day" cur open_min
@@ -232,7 +233,7 @@ watch_mode() {
     [[ "$merged_from" < "$since_day" ]] && merged_from="$since_day"
   fi
   local DUE ISSUES; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"; ISSUES="$(mktemp "${TMPDIR:-/tmp}/design-desk-issues.XXXXXX")"
-  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0
+  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0
   # One files call per new candidate; a backlog is spread over passes so a pass stays
   # well inside the Precheck's budget (about 2 s a call through the gateway).
   local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
@@ -289,7 +290,7 @@ watch_mode() {
       # Per candidate: its files, to keep only PRs that touch the UI.
       local files ui n
       files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
-        || { log "$repo#$num: could not read its files — retried next run"; continue; }
+        || { log "$repo#$num: could not read its files — retried next run"; unread=$((unread + 1)); continue; }
       ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
       n=$(printf '%s\n' "$ui" | grep -c . || true)
       if [ "$n" -eq 0 ]; then
@@ -342,7 +343,7 @@ watch_mode() {
   [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
   [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
-  if [ "$deferred" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
+  if [ "$deferred" -eq 0 ] && [ "$unread" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
   rm -f "$WORK/.search-partial"
   local arr iss; arr="$(jq -s '.' "$DUE")"; iss="$(jq -s '.' "$ISSUES")"; rm -f "$DUE" "$ISSUES"
   [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || [ "$ngh" -gt 0 ] || quiet_out
@@ -737,7 +738,7 @@ inbox_mode() {
       councils_due: $councils,
       expiring_due: $expiring,
       config:$config, logs:$logs }
-    # A pass with only chores (a vote to sync, a check to set, a prototype about to expire)
+    # A pass with only chores (a Slack vote to sync, a GitHub check to set, a prototype about to expire)
     # writes nothing people read on the Desk: it reads its own doc or skill, not docs/desk.md.
     | .read_set = ((if ([$items[] | select(.kind != "ci")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
         + (if (.questions_due | length) > 0 then [".agents/skills/explain/SKILL.md"] else [] end)

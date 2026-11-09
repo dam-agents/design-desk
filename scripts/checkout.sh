@@ -34,8 +34,14 @@ fi
 git -C "$dir" config core.hooksPath "${HOME:-/home/agent}/scripts/git-hooks"
 git -C "$dir" remote set-head origin --auto >/dev/null 2>&1 || true
 # A fetch another unit finished in the last 2 minutes is fresh enough: one fetch serves them all.
+# The marker is this script's own, written only after this fetch of origin: any other fetch in
+# the clone (a pull request's head) leaves it alone and cannot make an old default branch look fresh.
 mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
-[ $(( $(date +%s) - $(mtime "$dir/.git/FETCH_HEAD") )) -lt 120 ] || git -C "$dir" fetch -q --prune origin 2>/dev/null || err "fetch failed"
+marker="$dir/.git/design-desk-fetched"
+if [ $(( $(date +%s) - $(mtime "$marker") )) -ge 120 ]; then
+  git -C "$dir" fetch -q --prune origin 2>/dev/null || err "fetch failed"
+  : > "$marker"
+fi
 def="$(git -C "$dir" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##')"
 def="${def:-main}"
 # The checkout itself follows the default branch; prototype work happens in worktrees.
