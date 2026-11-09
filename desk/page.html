@@ -4311,6 +4311,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${d.state === "paused" ? `<button class="btn small" data-play-ctl="resume">▶ Resume</button>` : `<button class="btn small" data-play-ctl="pause">❚❚ Pause</button>`}<button class="btn small" data-play-ctl="stop">■ Stop</button>`;
   }
   addEventListener("message", (e) => { const vf = $("#variant-frame"); if (vf && e.source === vf.contentWindow && e.data?.type === "desk-play-state") storyPlayer(e.data); });
+  // The design's Show notes switch is kept across options and tabs: the frame says when the
+  // person flips it, and every design frame that loads gets the same state.
+  const REVIEW_NOTES = "desk-review-notes";
+  addEventListener("message", (e) => {
+    if (e.data?.type !== REVIEW_NOTES) return;
+    if (![$("#variant-frame"), $("#ws-frame")].some((f) => f && e.source === f.contentWindow)) return;
+    store.set(REVIEW_NOTES, e.data.on ? "on" : "off");
+  });
+  const sayReviewNotes = (frame) => frame?.contentWindow?.postMessage({ type: REVIEW_NOTES, on: store.get(REVIEW_NOTES) === "on" }, "*");
   // The list folds away with the arrow on its edge; each viewer's browser remembers it.
   function foldList(on) {
     $("#main").classList.toggle("folded", on);
@@ -4542,6 +4551,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const openView = (d) => { const vs = [...document.querySelectorAll("[data-view]")]; const t = vs.find((v) => d.view_name && v.dataset.viewName === d.view_name) || (!d.view_name && vs.find((v) => v.dataset.view === d.view)); if (t && !t.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(t.dataset.view) + '"]')?.click(); };
     const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
     new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    // Show notes is kept across options: the Desk hears each flip of the switch and, when the
+    // frame loads, names the state to start in.
+    const notesSwitch = () => document.querySelector("#review [data-notes]");
+    addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     // A user story played: a pointer goes to each part that does it, in order, outlines it and
     // clicks it when it is something to press; a new story stops the one playing. The Desk can
@@ -4617,6 +4631,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const REVIEW_LOOK = `<style data-desk-look>
     html #review { background: #f7f7f5; color: #1b1b1a; border-color: #e4e3df; font: 500 14px/1.4 "IBM Plex Sans", system-ui, sans-serif; padding: 0 14px; gap: 12px; align-items: center; }
     html #review .seg { gap: 2px; padding: 3px; border: 0; border-radius: 9px; background: #f0efeb; box-shadow: inset 0 0 0 1px #e4e3df; }
+    /* An open note lies over the other notes' numbers, also in designs drawn before this fix. */
+    html #review-notes .bubble { z-index: 1; }
     /* The bar is 41px high: the screens' segmented control fits in it, centred. */
     html #review .seg { align-items: center; flex: none; }
     /* One row whatever the width: the screens scroll sideways, the switches stay on the right. */
@@ -4878,6 +4894,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         const old = assetId !== latest;
         frame.contentWindow?.postMessage({ type: "desk-mode", mode: old || S.ws.check ? "off" : S.ws.mode }, "*");
         frame.contentWindow?.postMessage({ type: "desk-view", ...(S.ws.view || {}) }, "*");
+        sayReviewNotes(frame);
         sendPins(S.card, v);
         if (S.ws.selected?.selector) frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*");
         else { const r = (v.reasons || []).find((x) => x.decision === S.ws.reason); if (r?.parts[0]) frame.contentWindow?.postMessage({ type: "desk-show", selector: r.parts[0].selector }, "*"); }
@@ -4966,7 +4983,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (specText && S.card?.spec?.asset && !specText.value) { try { specText.value = S.specDraft?.card === S.card.id ? S.specDraft.text : decode(await asset(S.card.spec.asset)); await specPreview(); } catch {} }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
-    if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
+    if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; sayReviewNotes(vf); }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
