@@ -24,13 +24,14 @@ if [ ! -f "$TK/package.json" ]; then
   echo "FAIL toolkit — $TK/package.json missing: the definition checkout is incomplete"; exit 1
 fi
 
-# 1. Packages. ffmpeg-static downloads its binary in an install script; allow it.
-if (cd "$TK" && npm ci --no-audit --no-fund --loglevel=error 2>/dev/null || npm install --no-audit --no-fund --loglevel=error) >/dev/null; then
+# 1. Packages, exactly as package-lock.json pins them and with no install script (a
+# drifted lock fails here, never resolves afresh); ffmpeg-static's download runs below.
+if (cd "$TK" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error) >/dev/null; then
   ff="$TK/node_modules/ffmpeg-static/ffmpeg"
   if [ ! -x "$ff" ]; then (cd "$TK/node_modules/ffmpeg-static" && node install.js >/dev/null 2>&1); fi
   [ -x "$ff" ] && echo "ok   packages — $TK/node_modules" || { echo "FAIL ffmpeg — the ffmpeg-static binary did not download (github.com release assets must be reachable)"; fail=1; }
 else
-  echo "FAIL packages — npm install failed in $TK (is registry.npmjs.org reachable?)"; fail=1
+  echo "FAIL packages — npm ci failed in $TK (is registry.npmjs.org reachable? does package-lock.json match package.json?)"; fail=1
 fi
 
 # 2. Browser.
@@ -39,7 +40,7 @@ for d in /opt/ms-playwright/chromium-*/chrome-linux64/chrome; do [ -x "$d" ] && 
 [ -z "$have_browser" ] && [ -x "$DATA/chromium/chromium" ] && have_browser="$DATA/chromium/chromium"
 if [ -z "$have_browser" ]; then
   tmp="$(mktemp -d)"
-  if (cd "$tmp" && npm init -y >/dev/null && npm i --no-audit --no-fund --loglevel=error @sparticuz/chromium@153 >/dev/null); then
+  if (cd "$tmp" && npm init -y >/dev/null && npm i --no-audit --no-fund --loglevel=error @sparticuz/chromium@153.0.0 --ignore-scripts >/dev/null); then
     mkdir -p "$DATA/chromium/fonts"
     node -e '
       const z = require("zlib"), f = require("fs"), b = process.argv[1] + "/node_modules/@sparticuz/chromium/bin/", o = process.argv[2];

@@ -30,8 +30,8 @@ Before anything is designed, know what is already there: whether the request is 
 where the code came from, who owns it, and whether today's behaviour was someone's decision.
 The person deciding sees it on the card, and every later step builds on it.
 
-1. **Issues.** `gh issue list -R <repo> --state all --limit 30 --search "<keywords>"` with the
-   request's words, the UI text and the component names you find; read the relevant ones
+1. **Issues.** `gh issue list -R <repo> --state all --limit 30 --search "$(cat <keywords file>)"`
+   with the request's words, the UI text and the component names you find; read the relevant ones
    with their comments. A closed `not planned` issue often carries the reason.
 2. **The code.** The few files that implement the screen (the profile's `screens`, then a
    search for the UI text). `request.screen`, the person's answer to "Which screen?", says
@@ -82,7 +82,7 @@ The person deciding sees it on the card, and every later step builds on it.
    as a plain Link.
 
    Then `design desk github-sync --card <C-n>`: the Desk reads every issue and pull request
-   the research cites, so each link's preview shows its state, labels and latest comments
+   the research cites in a watched repository (`repos`; any other is `skipped`), so each link's preview shows its state, labels and latest comments
    about the design ([desk.md](desk.md) → GitHub on the Desk).
 
    Keep the full notes as an asset (`--kind report`) and set `research.asset`.
@@ -338,11 +338,16 @@ sent to developers too: the states document the approved design and change nothi
 4. Look at every state's shot (`design shot`), upload each (`--kind variant`). **The design
    catalog:** shoot the part alone in each state (`design shot <state.html> <dir> --element
    <selector>`, the part's CSS path in that page; the light picture, `<state>-element-light.png`,
-   named after the state's page so the states share one directory) and upload it (`--kind
-   image`); and say which use case of the brief the state serves: the ids of the card's
-   `issue_brief.stories` it covers, or, where the brief has no stories or none fits, the use
-   case in one plain sentence from the request's own words. A state no use case of the brief
-   asks for says so with neither. Then one `design desk upsert` with every option (each with
+   named after the state's page so the states share one directory — the picture is shot at three
+   screen pixels per CSS pixel, so a tile 380–420 px wide shows it sharp, or at two or one where a
+   sharper one would pass 700 KiB, under the Desk's 720 KiB) and upload it (`--kind
+   image`). **A refused shot** (exit 1, "more than 700 KiB … shoot a smaller part") writes no
+   picture: shoot a smaller part (a narrower selector), or send the state with its `selector`
+   and no `shot`; never upload a file from a refused run. Then say which use case of the brief
+   the state serves: the ids of the card's `issue_brief.stories` it covers, or, where the brief
+   has no stories or none fits, the use case in one plain sentence from the request's own
+   words. A state no use case of the brief asks for says so with neither. Then one
+   `design desk upsert` with every option (each with
    its `version`, Variants above) and, on this one, `states: [{id, version, name, how, part,
    asset, shot, selector, stories, use, element}]` (`version` only for a state already there): `id` short and
    stable (`hover`, `error`), `name` the state in plain words, `how` when it happens in one
@@ -403,20 +408,11 @@ in `reasons` whether you could see the fault there.
 
 A request with a Slack `origin` (a bug, a design someone asked for) is answered in the
 thread they started: `reply` with `chatId` = `origin.chat` and `threadTs` =
-`origin.thread_ts`, never a new post, whatever `notify` says. Every reply names the card
-(`C-<n>`) and links it; attach a PNG of the design or screen whenever the step has one. One
-text reply per step, in the words the Desk shows and in plain words ([desk.md](desk.md) →
-Writing on the Desk):
-
-- after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.",
-  with each decision in force it goes against by its `D-<n>`;
-- options on the card (`feedback`): run `share-options` with the request's thread as its
-  destination when `slack_polls: enabled`; it opens the vote, closing 48 hours later
-  (`slack-polls` → Share), and posts each option with its
-  PNG still (`design shot`). With polls off, send "Options ready to vote on: <link>", one
-  line per option (its name and when it wins), then one reply per option with its PNG still;
-- live (`testing`): "Live prototype ready to try: <link>"; handed off: "Sent to developers:
-  <link>"; closed: one sentence why.
+`origin.thread_ts`, never a new post, whatever `notify` says. Which replies the thread hears
+is the one list per audience in [Who Slack serves](#who-slack-serves); nothing else is sent.
+Every reply names the card (`C-<n>`) and links it, in the words the Desk shows and in plain
+words ([desk.md](desk.md) → Writing on the Desk), people's text in it escaped
+([desk.md](desk.md) → Links to an item, Text to Slack).
 
 The link is the card's, with its number ([desk.md](desk.md) → Links to an item) and the access
 note of [`intake-slack`](../.agents/skills/intake-slack/SKILL.md) (*In that Slack turn*, step 5). A reply the messenger
@@ -439,7 +435,9 @@ A change card (an open or merged pull request) has **Adjust the design**: it fil
 of type `adjustment` with `request.from` = the change card. Research reads the pull request
 first. Variants start from the UI the developer built (its screens on the change card are
 the "before"); a live prototype branches from the pull request's head when it is still open
-(`proto.sh worktree C-<n> <repo> --ref pull/<n>/head`), else from the default branch.
+(`proto.sh worktree C-<n> <repo> --ref pull/<n>/head`), else from the default branch. A pull
+request from a fork gets no prototype from its head (`proto.sh` refuses it: the pushed branch
+would run the fork's code in the repository's workflows); say so on the card and keep to variants.
 
 ## Chat and Slack
 
@@ -460,11 +458,13 @@ Designer kit made. Pick the skill, build, look, deliver:
 | "This is broken / looks wrong" | [UI bugs](#ui-bugs) → From a channel |
 | "Make it…", "how would it look if…" in a request's thread (`slack_council: enabled`) | `slack-council` |
 
+- **Slack serves the roster only**: [Who Slack serves](#who-slack-serves). A Figma link in a
+  Slack message is never opened (`figma` → Who may name a frame).
 - **Ask only what blocks the work**, once, with a suggested answer (which repo, which
   screen, who the deck is for); otherwise take the smallest reasonable reading and say what
   you assumed.
 - Deliver one self-contained file as a **private artifact** (`create_artifact`; `public` only
-  when the operator asks for a share link in this conversation; the agent manifest is the one
+  when the operator asks for a share link in the direct session, never in Slack; the agent manifest is the one
   public artifact by default, [docs/manifest.md](docs/manifest.md)). An MP4 or a PDF goes up
   through `create_artifact_upload_url`, `curl -X PUT --data-binary @<file>`, then
   `upload_ref`. A revision is `update_artifact` on the **same** artifact, never a new one.
@@ -478,3 +478,48 @@ Designer kit made. Pick the skill, build, look, deliver:
   it on the Desk as a request: `design desk request` with the operator's words as `problem`
   and `origin: {channel: "chat", reporter: <the operator's name>}` ([desk.md](desk.md) → Where a card came from).
 - Keep sources and builds under `work/output/<YYYY-MM-DD>-<slug>/`.
+
+### Who Slack serves
+
+**The role check comes first.** Every skill that starts from a Slack message
+(`intake-slack`, `slack-council`, `slack-polls` → In a Slack turn and Sync, `show-me`,
+`explain`, and every deliverable skill asked for in Slack) first takes the sender's role from
+the email Slack holds for their user id ([desk.md](desk.md) → Roles, In Slack); a later reply
+in a request's thread checks the card's `origin.email` the same way, at the time of the reply.
+Every `<title>`, name or quote in a reply is escaped ([desk.md](desk.md) → Links to an item, Text to Slack), and every
+`<link>` is the card's with the access note of `intake-slack` step 5.
+
+**A sender on the roster** gets the work they ask for (the table above), each skill answering
+as it says (a council, a vote, a picture). A request they started in Slack hears its steps in
+its thread ([Answering in the thread](#answering-in-the-thread)) with exactly these replies,
+one per step, with a PNG of the design or screen whenever the step has one:
+
+1. the one question of `intake-slack` step 2, only when the message does not say which
+   screen or what is wrong;
+2. on intake: `intake-slack` step 5 (a bug) or Design requests step 3 (a design);
+3. after triage: "<the verdict's title, as on the Desk>: <one sentence>. Next: <the next step>.",
+   with each decision in force it goes against by its `D-<n>`;
+4. options on the card (`feedback`): run `share-options` with the request's thread as its
+   destination when `slack_polls: enabled`; it opens the vote, closing 48 hours later
+   (`slack-polls` → Share), and posts each option with its PNG still (`design shot`). With
+   polls off, send "Options ready to vote on: <link>", one line per option (its name and when
+   it wins), then one reply per option with its PNG still;
+5. live (`testing`): "Live prototype ready to try: <link>";
+6. handed off: "Sent to developers: <link>"; closed: one sentence why.
+
+**A sender not on the roster** (no email, or no row with it) hears exactly these replies and
+nothing else:
+
+- **A UI bug report**, with `bug_reports: enabled`, is queued like anyone's, and its thread
+  hears only: the one question of `intake-slack` step 2 (only when the report does not say
+  which screen or what is wrong); the reply of `intake-slack` step 5; and, when the request
+  is handed off or closed, one last reply: "“<title>” (C-<n>) is now with the developers:
+  <link>" or "“<title>” (C-<n>) is closed: <link>". No verdict, no reasons, no picture.
+  A finding of the `qa_bot` (`intake-slack` → Automated test findings) hears its step 4
+  reply and that last reply.
+- **Anything else** — a question, a design, a picture, a deliverable, a council ask, a reply
+  under a vote, a bug report with `bug_reports` off — gets one reply, "Thanks — the Design
+  Desk works for its team only, so I can't take this on here.", and nothing else: no answer
+  from the code, no picture, no relay to the Desk, nothing queued.
+- **A vote reaction** on a shared option is counted by the Desk server under "in Slack"
+  (`slack-polls` → Sync): it is a reaction, not a message, and the vote only advises.

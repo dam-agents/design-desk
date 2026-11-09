@@ -25,6 +25,8 @@ export const LIMITS = {
   changeShots: 6,
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
   assetBytes: 720 * 1024,
+  // Every asset together: past this a new one is refused, so uploads cannot fill the disk.
+  assetsBytes: 2 * 1024 * 1024 * 1024,
   // A session renews its claim while it works (design desk claim --heartbeat). A missing
   // heartbeat therefore returns dead work to the queue on the next inbox tick.
   claimTtlMin: 15,
@@ -59,7 +61,7 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
   const pm = role === "pm";
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
-    case "vote": case "request": case "follow-up": case "screens": return member;
+    case "vote": case "request": case "follow-up": case "screens": case "resolve": return member;
     // Pictures of an issue: how it looks now and a sketch of how it could look (docs/issues.md).
     case "draw": return shaper || dev || pm;
     // A developer or a PM starts and changes everything a designer does; deciding stays a designer's.
@@ -91,8 +93,14 @@ export const ORIGIN_JOBS = ["watch", "digest"];
 // decisions named their origin.
 export const DECISION_ORIGINS = ["pr", "issue", "commit", "doc", "slack", "desk", "call", "approval", "chat"];
 
+// The server's per-person rate windows: past `max` callers, those with nothing left in either
+// window (writes in `writeWindowMs`, items in the hour) are forgotten, so the map stays small.
+export function forgetIdle(usage, now, writeWindowMs, max = 500) {
+  if (usage.size > max) for (const [k, v] of usage) if (!v.items.some((t) => now - t < 3600 * 1000) && !v.writes.some((t) => now - t < writeWindowMs)) usage.delete(k);
+}
+
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people", "designs", "built"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people", "designs", "built", "resolve"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -159,6 +167,9 @@ const viewerKey = (who) => (who && !who.agent ? who.email || who.sub || null : n
 const sees = (t, viewer) => Boolean(t) && (t.kind !== "private" || viewer === undefined || t.owner === viewer);
 // The step an agent's question blocks, which a person's answer resumes.
 const ASK_STEPS = ["request", "explore", "revise", "states", "build", "handoff", "figma", "catalog", "map"];
+// The ability an answer to Design Desk's question needs: it resumes the step the question
+// blocked, so it takes what starting that step takes (docs/desk.md → Roles).
+const ASK_ABILITY = { request: "request", explore: "revise", revise: "revise", states: "revise", build: "build", handoff: "revise", figma: "figma", catalog: "add", map: "add" };
 const FIGMA_URL = /^https:\/\/([\w-]+\.)?figma\.com\/[^\s]{1,500}$/;
 
 // GitHub issues and pull requests the Desk's items point at, kept here with their comments
@@ -312,6 +323,17 @@ export class Store {
   thread(id) { const t = own(this.db.threads, id); if (!t) throw missing(`no thread ${id}`); return t; }
   // A conversation a viewer acts on: another person's private ask is not there for them.
   threadFor(id, who) { const t = this.thread(id); if (!sees(t, who?.agent ? undefined : viewerKey(who))) throw missing(`no thread ${id}`); return t; }
+  // The ability a person's reply, answer or reopen on a conversation needs: an answer to the
+  // agent's question takes its step's, a change note's follow-up redraws (`change`), anything
+  // else is a comment. Marking one done (`resolve`) takes the same, and a member's ability for
+  // someone else's conversation.
+  threadNeed(id, who, move = "reply") {
+    const t = this.threadFor(id, who);
+    if (t.kind === "asks") return ASK_ABILITY[t.step] || "revise";
+    if (t.kind === "change") return "change";
+    const mine = addressesOf(who).includes(String(t.messages?.[0]?.by?.email || "").toLowerCase());
+    return move === "resolve" && t.kind !== "private" && !mine ? "resolve" : "comment";
+  }
   item(id) { const i = own(this.db.inbox, id); if (!i) throw missing(`no inbox item ${id}`); return i; }
   decision(id) { const d = own(this.db.decisions, id); if (!d) throw missing(`no decision ${id}`); return d; }
   // A card's warnings: the decisions it goes against that are still in force.
@@ -1868,6 +1890,13 @@ export class Store {
       }
       else next[k] = cleanLinks(k, fields[k]);
     }
+    // A spec for a request from Slack never leaves unread: only a person's Send to developers
+    // (specAction) marks it sent, whatever `spec_review` says (docs/handoff.md step 3). The
+    // stored origin counts too, so a write cannot rename it away, and the card is not handed
+    // off before that send.
+    const slackBorn = [c?.origin, next.origin].some((o) => o?.channel === "slack");
+    if (slackBorn && !c?.spec?.sent && ((fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent)) || (next.status === "handed-off" && c?.status !== "handed-off")))
+      throw bad("a request from Slack waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 3)");
     if (!next.title) throw bad("a card needs a title");
     // One card per screen and per element: a card a person added that turns out to be one
     // already on the Desk is dropped with a pointer to it, never filled in as a second copy.
@@ -2334,6 +2363,8 @@ export class Store {
     const buf = Buffer.from(String(data || ""), encoding === "utf8" ? "utf8" : "base64");
     if (!buf.length) throw bad("the asset is empty");
     if (buf.length > LIMITS.assetBytes) throw bad(`the asset is ${buf.length} bytes; the Desk serves at most ${LIMITS.assetBytes} (compress the image or split the page)`);
+    const held = Object.values(this.db.assets).reduce((n, a) => n + (a.bytes || 0), 0);
+    if (held + buf.length > LIMITS.assetsBytes) throw bad("The Desk holds as many pictures and pages as it can (2 GiB). A designer or an admin frees room by deleting a closed request (Delete this request…).");
     const id = this.next("asset", "A");
     const ext = (contentType.split("/")[1] || "bin").replace(/[^a-z0-9]/g, "").slice(0, 8) || "bin";
     const file = `${id}.${ext}`;

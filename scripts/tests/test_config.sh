@@ -62,4 +62,30 @@ for v in dam public on; do
     printf '%s' "$out" | grep -q '^FAIL config_decisions_page' && { echo "  ✗ verify passes decisions_page '$v': $out"; FAILS=$((FAILS+1)); }
   fi
 done
+# qa_bot is a known key: a config with it passes the key check.
+printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' '- qa_bot: U0QA12345' > "$WORK_DIR/CONFIG.md"
+out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)"
+printf '%s' "$out" | grep -q '^ok  *config_keys' || { echo "  ✗ verify takes qa_bot as a known key: $out"; FAILS=$((FAILS+1)); }
+# The Skills table takes | action | skill | and | action | skill | source |; any other header fails.
+for hdr in '| action | skill |' '| action | skill | source |' '| action | skill | pin |'; do
+  printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' '' '## Skills' '' "$hdr" '| --- | --- | --- |' '| options | acme-prototyper | acme/proto@0123abcd |' > "$WORK_DIR/CONFIG.md"
+  out="$(bash "$ROOT/scripts/verify-onboarding.sh" --config 2>&1)"
+  case "$hdr" in
+    *pin*) printf '%s' "$out" | grep -q '^FAIL skills_header' || { echo "  ✗ verify names a wrong Skills header: $out"; FAILS=$((FAILS+1)); } ;;
+    *) printf '%s' "$out" | grep -q '^ok  *skills_header' || { echo "  ✗ verify passes the Skills header '$hdr': $out"; FAILS=$((FAILS+1)); } ;;
+  esac
+done
+# --live: the backup repository must be private; a public one, or one that cannot be read, fails.
+# HOME and the Desk port point nowhere, so the other live checks fail fast and are not judged here.
+mkdir -p "$SANDBOX/home"
+printf '%s\n' '- repos: acme/widgets' '- watch_since: 2026-10-01T00:00:00Z' '- run_model: default' '- work_repo: acme/desk-state' > "$WORK_DIR/CONFIG.md"
+for private in true false missing; do
+  rm -f "$STUB_DIR/private.txt"; [ "$private" = missing ] || echo "$private" > "$STUB_DIR/private.txt"
+  out="$(HOME="$SANDBOX/home" DESK_PORT=9 GITHUB_REPO_WORK= bash "$ROOT/scripts/verify-onboarding.sh" --live 2>&1)"
+  case "$private" in
+    true) printf '%s' "$out" | grep -q '^ok  *work_repo_private' || { echo "  ✗ verify passes a private backup repository: $(printf '%s' "$out" | grep work_repo)"; FAILS=$((FAILS+1)); } ;;
+    *) printf '%s' "$out" | grep -q '^FAIL work_repo_private' || { echo "  ✗ verify names a backup repository that is $private: $(printf '%s' "$out" | grep work_repo)"; FAILS=$((FAILS+1)); } ;;
+  esac
+done
+grep -q 'repos/acme/desk-state --jq .private' "$STUB_DIR/gh.calls" || { echo "  ✗ verify reads the backup repository's .private"; FAILS=$((FAILS+1)); }
 finish
