@@ -438,6 +438,9 @@
   .revoked-text { text-decoration: line-through; color: var(--muted); }
   .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
   .asks .reply { border: 0; padding: 8px 0 0; }
+  /* Its text, questions, answers and fields read at the size of the page around it. */
+  .asks, .asks legend, .asks label, .asks input { font-size: var(--fs-read); }
+  .asks label { color: var(--ink); }
   .asks fieldset.q { border: 0; border-top: 1px solid var(--line); margin: 10px 0 0; padding: 10px 0 0; display: grid; gap: 4px; }
   .asks legend { font-weight: 600; padding: 0; }
   .asks > p:first-child { margin-top: 0; }
@@ -1279,6 +1282,7 @@
   const TONE = { triage: "checking", variants: "checking", feedback: "waiting", prototype: "live", testing: "live", spec: "approved", "handed-off": "approved", declined: "closed" };
   // What each place means, behind the ⓘ beside the state's word (from the request-page prototype).
   const STATUS_TIP = {
+    asking: "Design Desk asked a question below and waits for the answer before it goes on. Answer it, or leave it to Design Desk, which takes its recommendation.",
     triage: "Design Desk is reading how the screen works today and what a design change can do. Nobody needs to do anything yet.",
     variants: "Design Desk is drawing the design options. Nobody needs to do anything yet.",
     feedback: "Nothing is decided yet. A designer, a PM or a lead developer approves one option when the team is happy, or closes the request.",
@@ -1294,11 +1298,13 @@
   // team for feedback; one from Slack goes on by itself (docs/desk.md → Team feedback).
   const held = (c) => c.status === "variants" && c.team_feedback?.state === "waiting";
   STATUS_TIP.held = "The options are drawn. Fine-tune them in the design workspace; when they are ready, press Ask for feedback and the team votes and comments.";
-  const tone = (c) => c.status === "declined" && c.decided ? "decided" : held(c) ? "waiting" : TONE[c.status] || "fyi";
+  // Design Desk waits on a person's answer: the state says so and stops pulsing.
+  const asking = (c) => !closed(c) && (Boolean(c.asks) || (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"));
+  const tone = (c) => c.status === "declined" && c.decided ? "decided" : held(c) || asking(c) ? "waiting" : TONE[c.status] || "fyi";
   // The state's word, the same in the list and on the page.
   // Writing the spec and sending it are two steps: the word says which (docs/handoff.md → Review before it goes).
   const specWord = (c) => c.status !== "spec" ? "" : c.spec?.review === "draft" ? "Spec draft — read it, then send" : c.spec?.review === "sent" ? "Sending to developers" : "";
-  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : specWord(c) || STATUS[c.status] || c.status;
+  const stateWord = (c) => tone(c) === "decided" ? "Decided without a design" : held(c) ? "Options drawn" : `${specWord(c) || STATUS[c.status] || c.status}${asking(c) ? " (needs your answer)" : ""}`;
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   const WORK = {
     request: "Checking your request: how this screen works today, whether anyone is already changing it, and what can be done as a design change.",
@@ -2557,7 +2563,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : ["pr-open", "Open", "Its pull request is open: not in the product yet"];
     return `<span class="sdot" data-s="${k}"><span class="chip tag" title="${esc(tip)}"><span class="w">${esc(word)}</span></span></span>`;
   }
-  const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy ? "checking busy" : tone(c)}" title="${c.busy ? "Design Desk is working on it now" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
+  const stateTag = (c, dot = false) => `<span class="chip tag t-${c.busy && !c.asks ? "checking busy" : tone(c)}" title="${c.busy && !c.asks ? "Design Desk is working on it now" : c.asks ? "Design Desk waits for an answer" : "Where the request is now"}">${dot ? `<span class="w">${esc(stateWord(c))}</span>` : esc(stateWord(c))}</span>`;
 
   // A screen's or an element's drawing in the list, as a request's state: up to date, out of date, being drawn, or not drawn.
   const MAP_STATE = { current: ["Up to date", "Drawn from the product as it is now"], stale: ["Out of date", "The product changed since it was drawn; Update the drawing draws it again"],
@@ -3842,7 +3848,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The prototype's demo account in the facts' style: grey words, the values in ink.
   const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}`;
   function renderStatus(c) {
-    const busy = working(c);
+    // While Design Desk waits on an answer, nothing says it is at work.
+    const busy = asking(c) ? [] : working(c);
     const asks = (c.threads || []).filter((th) => th.kind === "asks" && th.state === "open");
     const guestSlow = S.me?.role === "guest" ? " It may take up to 10 minutes to start." : "";
     const nx = nextFor(c);
@@ -3863,7 +3870,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const items = (nx.more || "") + call + size + reopenSent + del + (closed(c) || locked(c) ? "" : `${can("revise") && (c.variants || []).length ? `<button class="btn" data-act="revise">Redraw the options with all comments</button>` : ""}`) + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     const more = items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="status" data-o="${tone(c)}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(stateWord(c))}${(() => { const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review ? "spec-review" : c.status]; const h = nextHelp(c, own, c.status === "declined" ? "" : nx.text); return h.text ? `<span class="info" tabindex="0" role="note" aria-label="${esc(h.text)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${h.html}</span></span>` : ""; })()}</div>${renderSteps(c, nx.step)}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
         <div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div></div>`).join("")}
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}${guestSlow}</div></div>`).join("")}
