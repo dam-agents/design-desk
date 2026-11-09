@@ -9,7 +9,8 @@
 //               return, the conditions around it) and its element: handlers, links,
 //               values, conditions, lists, data passed to components, every attribute
 //               outside the presentational list (literal or not), the components it
-//               renders, elements that load or submit (script, iframe, form, …), and
+//               renders, elements that load or submit (script, iframe, form, …), a
+//               style that loads, hides or disables (judged as a style sheet is), and
 //               what a class or a style reads.
 // Markup structure, classes, styles, copy and presentational components are not in it,
 // so moving, restyling and rewording leave it unchanged. Anything else that changes is
@@ -22,7 +23,7 @@
 import { posix } from "node:path";
 import { req } from "../core.mjs";
 import { matchAny } from "../globs.mjs";
-import { cssDangers, styleUrlDangers } from "../css-check.mjs";
+import { cssDangers, xmlDecode } from "../css-check.mjs";
 
 export const exts = /\.(tsx|ts|jsx|js|mjs|cjs|mts|cts)$/;
 
@@ -164,8 +165,58 @@ function identifiersOf(name) {
 const ACTIVE_TAGS = new Set(["script", "iframe", "frame", "frameset", "object", "embed", "applet", "form", "meta", "link", "base", "portal"]);
 // A fixed local image may change on src/srcSet/poster (an image is design); another
 // host, a query or a non-image is behaviour (a tracker, a GET to an action).
-const LOCAL_IMAGE = /^((?![a-z][\w+.-]*:|\/\/)[^?#:\s]+\.(png|jpe?g|gif|webp|svg|avif|ico)|data:image\/(png|jpe?g|gif|webp|avif);base64,[\w+/=]+)$/i;
-const localImages = (text) => text.split(",").every((p) => LOCAL_IMAGE.test(p.trim().split(/\s+/)[0] || ""));
+// The path is plain: no scheme, no host, no backslash, no query, no entity or escape.
+const LOCAL_IMAGE = /^((?!\/\/)[\w.~@%+/-]+\.(png|jpe?g|gif|webp|svg|avif|ico)|data:image\/(png|jpe?g|gif|webp|avif);base64,[\w+/=]+)$/i;
+// src and poster hold one address; srcSet a comma-separated list (a data URL in it, with
+// its own comma, is refused).
+const localImages = (text, list) => (list ? text.split(",") : [text]).every((p) => LOCAL_IMAGE.test((list ? p.trim().split(/\s+/)[0] : p.trim()) || ""));
+// An inline style gets the style-sheet test: each property becomes a declaration
+// (camelCase to kebab-case) and each value it may take is tried. A value the guard cannot
+// read counts as the worst it could be: `none` for pointer-events and display, `hidden`
+// for visibility, another address for a property that takes url(). A style that is not an
+// object written in place, or holds a spread or a computed key, cannot be read: it counts
+// as a danger too (unchanged in place, it passes as any binding does).
+const WORST = { "pointer-events": "none", display: "none", visibility: "hidden" };
+const TAKES_URL = /^(--.*|background(-image)?|(-webkit-)?mask(-image|-box-image|-border(-source)?)?|border-image(-source)?|list-style(-image)?|cursor|content|filter|clip-path|shape-outside|offset-path|src)$/;
+const CONTROL_TAGS = /^(button|a|input|select|textarea|form|label|summary|details|option)$/;
+const kebab = (k) => (k.startsWith("--") ? k : k.replace(/^(Webkit|Moz|ms|O)(?=[A-Z])/, (p) => `-${p.toLowerCase()}`).replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`));
+
+function styleValues(node) {
+  const T = ts();
+  const lits = [];
+  let dynamic = false;
+  const walk = (x) => {
+    if (T.isParenthesizedExpression(x) || T.isAsExpression(x) || T.isNonNullExpression(x) || T.isSatisfiesExpression?.(x)) return walk(x.expression);
+    if (T.isStringLiteral(x) || T.isNoSubstitutionTemplateLiteral(x) || T.isNumericLiteral(x)) return void lits.push(x.text);
+    if ((T.isPrefixUnaryExpression(x) && T.isNumericLiteral(x.operand)) || [T.SyntaxKind.NullKeyword, T.SyntaxKind.TrueKeyword, T.SyntaxKind.FalseKeyword].includes(x.kind) || (T.isIdentifier(x) && x.text === "undefined")) return;
+    if (T.isConditionalExpression(x)) { walk(x.whenTrue); walk(x.whenFalse); return; }
+    if (T.isBinaryExpression(x) && x.operatorToken.kind === T.SyntaxKind.AmpersandAmpersandToken) return walk(x.right);
+    if (T.isBinaryExpression(x) && [T.SyntaxKind.BarBarToken, T.SyntaxKind.QuestionQuestionToken].includes(x.operatorToken.kind)) { walk(x.left); walk(x.right); return; }
+    if (T.isTemplateExpression(x)) lits.push([x.head.text, ...x.templateSpans.map((sp) => sp.literal.text)].join(" "));
+    dynamic = true;
+  };
+  walk(node);
+  return { lits, dynamic };
+}
+
+function styleDangers(expr, control, sf) {
+  const T = ts();
+  let e = expr;
+  while (T.isParenthesizedExpression(e) || T.isAsExpression(e) || T.isNonNullExpression(e)) e = e.expression;
+  if (!T.isObjectLiteralExpression(e)) return [`style the guard cannot read: ${expr.getText(sf).slice(0, 60)}`];
+  const out = [];
+  for (const p of e.properties) {
+    const named = T.isPropertyAssignment(p) && (T.isIdentifier(p.name) || T.isStringLiteral(p.name) || T.isNoSubstitutionTemplateLiteral(p.name));
+    if (!named && !T.isShorthandPropertyAssignment(p)) { out.push(`style the guard cannot read: ${p.getText(sf).slice(0, 60)}`); continue; }
+    const prop = kebab(p.name.text);
+    const { lits, dynamic } = named ? styleValues(p.initializer) : { lits: [], dynamic: true };
+    if (dynamic && WORST[prop]) lits.push(WORST[prop]);
+    if (dynamic && TAKES_URL.test(prop)) out.push(`style sets ${prop} at run time`);
+    for (const v of lits) out.push(...cssDangers(`${control ? "button" : "div"} { ${prop}: ${v} }`).map((d) => `style ${d}`));
+  }
+  return out;
+}
+
 const EMPTY = Object.freeze({ ids: new Set(), members: new Set(), calls: [], writes: false, decides: false, bound: new Set() });
 const intrinsicTag = (tag) => /^[a-z][\w-]*$/.test(tag);
 
@@ -228,13 +279,26 @@ export function fingerprint(source, fileName, cfgIn = {}) {
     if (!intrinsic) add("tag", `<${tag}>`, EMPTY, where, el, { tag });
     visitOpening(open, where, el, intrinsic, inForm);
     if (T.isJsxElement(n)) {
-      if (tag === "style") for (const d of cssDangers(n.children.map((c) => c.getText(sf)).join(""))) add("element", `<style> ${d}`, EMPTY, where, el);
+      if (tag === "style") {
+        // The text React writes: JSX text with its entities decoded, string children as
+        // their value; anything else is built at run time.
+        let css = "", built = false;
+        for (const c of n.children) {
+          if (T.isJsxText(c)) css += xmlDecode(c.text);
+          else if (T.isJsxExpression(c) && c.expression && (T.isStringLiteral(c.expression) || T.isNoSubstitutionTemplateLiteral(c.expression))) css += c.expression.text;
+          else if (!(T.isJsxExpression(c) && !c.expression)) built = true;
+        }
+        if (built) add("element", "<style> built at run time", EMPTY, where, el);
+        for (const d of cssDangers(css)) add("element", `<style> ${d}`, EMPTY, where, el);
+      }
       const f = inForm || tag === "form";
       n.children.forEach((c) => visitJsxChild(c, where, f));
     }
   };
   const visitOpening = (open, where, el, intrinsic, inForm) => {
     let typed = false;
+    // An inline style on a control (or a component, which may be one) may not hide it.
+    const control = !intrinsic || CONTROL_TAGS.test(el.tag) || open.attributes.properties.some((a) => T.isJsxSpreadAttribute(a) || /^(on[A-Z]\w*|href|to|role|tabIndex|type)$/.test(a.name.getText(sf)));
     for (const a of open.attributes.properties) {
       if (T.isJsxSpreadAttribute(a)) { add("attr", `...${normalize(a.expression, sf, cfg)}`, analyze(a.expression), where, el, { behaviour: true }); visitInner(a.expression, where, inForm); continue; }
       const name = a.name.getText(sf);
@@ -246,14 +310,14 @@ export function fingerprint(source, fileName, cfgIn = {}) {
           const effectful = info.writes || info.calls.some((c) => !safeCall(c, cfg, new Set()));
           // What a class or a style reads is shown (or leaked) as surely as a child is.
           add(effectful ? "attr" : "read", `${name}={${normalize(expr, sf, cfg)}}`, info, where, el, { behaviour: effectful });
-          if (name === "style") for (const u of styleUrlDangers(expr.getText(sf))) add("element", `style loads ${u}`, EMPTY, where, el);
+          if (name === "style") for (const d of styleDangers(expr, control, sf)) add("element", d, EMPTY, where, el);
           visitInner(expr, where, inForm);
-        }
+        } else if (a.initializer && isJsx(a.initializer)) visitJsx(a.initializer, where, inForm);
         continue;
       }
       if (!a.initializer) { add("attr", name, EMPTY, where, el, { behaviour: true, literal: true }); continue; }
       if (T.isStringLiteral(a.initializer)) {
-        if (/^(src|srcSet|poster)$/.test(name) && localImages(a.initializer.text)) continue;
+        if (/^(src|srcSet|poster)$/.test(name) && localImages(a.initializer.text, name === "srcSet")) continue;
         // type="button" only keeps a button from submitting: it does nothing itself.
         if (name === "type" && a.initializer.text === "button" && /^(button|Button)$/.test(el.tag)) continue;
         add("attr", `${name}=${JSON.stringify(a.initializer.text)}`, EMPTY, where, el, { behaviour: true, literal: true });
@@ -588,7 +652,7 @@ export function compare(baseSrc, headSrc, file, profile = {}, opts = {}) {
       else issues.push(`renders ${short}, which this file did not render before; it may act (only presentational components may be added)`);
       continue;
     }
-    if (e.kind === "element") { issues.push(`adds ${short}: it loads, runs or submits something`); continue; }
+    if (e.kind === "element") { issues.push(`adds ${short}: it loads, runs or submits something, or hides or disables a control`); continue; }
     if (!baseTagged.has(e.key)) { judgeNew(e); continue; }
     if ((total.h.get(e.key) || 0) > (total.b.get(e.key) || 0)) issues.push(`offers ${short} in one more place`);
     else issues.push(`moves ${short} to another place or condition`);

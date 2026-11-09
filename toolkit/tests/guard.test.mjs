@@ -1,7 +1,14 @@
 // node --test toolkit/tests/guard.test.mjs — the design-only guard's verdicts on small diffs.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { compare, classifyPath, judge, judgeIgnored, newImportTargets } from "../lib/guard.mjs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { compare, classifyPath, judge, judgeIgnored, newImportTargets, parseRawDiff } from "../lib/guard.mjs";
+
+const DESIGN = fileURLToPath(new URL("../bin/design.mjs", import.meta.url));
 
 const profile = {
   boundary: {
@@ -290,4 +297,105 @@ test("(h) style sheets, SVGs and links: remote loads, disabled or hidden control
   assert.equal(svg('<svg onload="fetch(1)"></svg>'), "logic");
   assert.equal(svg("<svg><foreignObject><div/></foreignObject></svg>"), "logic");
   assert.equal(judge([{ path: "src/components/x.tsx", status: "A", mode: "120000", oldMode: "000000" }], profile, () => "x").files[0].verdict, "logic");
+});
+
+// Round 2 of the 1.69.0 review: the browser's reading of an address, prefixed SVG
+// elements, inline styles, and a failing test for every branch of the guard.
+const cssVerdict = (head, base = ".a { color: red }\n") => judge([{ path: "src/components/x.css", status: "M" }], profile, (side) => (side === "base" ? base : head)).files[0].verdict;
+const svgVerdict = (head) => judge([{ path: "public/icon.svg", status: "A" }], { boundary: { allow: ["public/**"] } }, () => head).files[0].verdict;
+
+test("(i) a style sheet is read as the browser reads it: escapes, comments, case and other spellings of an address", () => {
+  for (const c of ['@import"https://evil.example/x.css";', '@import/**/"https://evil.example/x.css";', '@import url( https://evil.example/x.css );', "@import x;",
+    ".a { background: url(/\\/evil.example/x.gif) }", ".a { background: url(\\2f \\2f evil.example/x.gif) }", ".a { background: u\\72l(https://evil.example/x.gif) }",
+    '.a { background: image-set("https://evil.example/x.gif" 1x) }', '.a { background: URL( "//evil.example/x.gif" ) }', ".a { background: url(data:text/html,x) }",
+    ".a { cursor: url(/img/x.png?track=1), auto }", ".a { background: url(/\\9 /evil.example/x.gif) }", '.a { background: url("/\\5c evil.example/x.gif") }',
+    ".a { background: url(/img/a b.png) }"]) assert.equal(cssVerdict(c), "logic", c);
+  for (const c of [".a { -moz-binding: url(x.xml#b) }", ".a { behavior: url(x.htc) }", ".a { width: expression(alert(1)) }", ".a { width: \\65xpression(alert(1)) }"]) assert.equal(cssVerdict(c), "logic", c);
+  for (const c of [".b { @apply pointer-events-none }", ".bar button { @apply hidden }", ".btn { p\\6f inter-events: none }", 'button { content: "{"; display: none }']) assert.equal(cssVerdict(c), "logic", c);
+  for (const c of ['.a { background: url("data:image/png;base64,AAA=") }', ".a { fill: url(#g) }", '@import "./base.css";\n.a { color: blue }', ".a { background: url( /img/bg.png ) }",
+    ".a { /* url(https://evil.example/x.gif) */ color: blue }", ".a { background: URL(/img/bg.png) }", ".a { background: url(\\2f img\\2f bg.png) }"]) assert.equal(cssVerdict(c), "style", c);
+});
+
+test("(j) an SVG is read by local names and decoded values: prefixed script, embedded documents, outside links, entities", () => {
+  for (const c of ['<svg xmlns="http://www.w3.org/2000/svg"><s:script xmlns:s="http://www.w3.org/2000/svg">document.title=1</s:script></svg>', "<svg><h:iframe/></svg>", '<svg><embed src="x.swf"/></svg>', "<svg><object/></svg>",
+    '<svg><image href="/\\evil.example/p.png"/></svg>', '<svg><image xlink:href="https://evil.example/p.png"/></svg>', '<svg><a href="&#106;avascript:alert(1)">x</a></svg>', '<svg><a href="java&#x09;script:alert(1)">x</a></svg>',
+    '<svg><set attributeName="href" to="https://evil.example/p.png"/></svg>', '<!DOCTYPE svg [<!ENTITY x "y">]><svg>&x;</svg>', '<?xml-stylesheet href="x.css"?><svg/>',
+    '<svg><style><![CDATA[@import "https://evil.example/x.css";]]></style></svg>', '<svg><path fill="url(https://evil.example/f.svg#g)"/></svg>', '<svg><path style="background:url(//evil.example/p.gif)"/></svg>',
+    "<svg><embed/></svg>", '<?xml-stylesheet type="text/css" href="#s"?><svg/>', "<svg><text>javascript:x</text></svg>", '<svg><path data-x="&#106;avascript:x"/></svg>',
+    '<svg><set attributeName="href" to="&#x68;ttps://evil.example/p.png"/></svg>']) assert.equal(svgVerdict(c), "logic", c);
+  assert.equal(svgVerdict('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><path id="i" d="M0 0"/></defs><use href="#i"/><path fill="url(#i)"/><image href="data:image/png;base64,AAA="/></svg>'), "asset");
+});
+
+test("(k) markup: a backslash image path, <portal>, a <style> element, markup in an attribute", () => {
+  const add = (el) => logicFrom(BASE, BASE.replace("<span>{a.name}</span>", `<span>{a.name}</span>${el}`), el);
+  add('<img src="/\\evil.example/p.png" alt="" />');
+  add('<img src="/img/a.png?x=1" alt="" />');
+  add("<portal />");
+  add('<style>{"@import \\"https://evil.example/x.css\\";"}</style>');
+  add("<style>@import url(&#47;&#47;evil.example/x.css);</style>");
+  add("<style>{`.a { color: ${a.name} }`}</style>");
+  add("<abbr tip=<iframe /> />");
+  add("<span title=<iframe /> />");
+  const ok = (el) => { const r = verdict(BASE.replace("<span>{a.name}</span>", `<span>{a.name}</span>${el}`)); assert.equal(r.verdict, "ok", `${el}: ${JSON.stringify(r)}`); };
+  ok('<img src="data:image/png;base64,AAAA" alt="" />');
+  ok('<style>{".a { color: red }"}</style>');
+  ok("<style>@import url(&#47;css&#47;x.css);</style>");
+});
+
+test("(l) an inline style gets the style-sheet test: it may not hide or disable a control, or load from elsewhere", () => {
+  const btn = '<Button variant="ghost" onClick={() => del.mutate(a.id)}>';
+  const on = (style) => BASE.replace(btn, `<Button variant="ghost" style={${style}} onClick={() => del.mutate(a.id)}>`);
+  for (const s of ['{ pointerEvents: "none" }', '{ display: "none" }', "{ visibility: a.name }", '{ ...{ display: "none" } }', "HIDE"]) logicFrom(BASE.replace("export function AgentList", 'const HIDE = { display: "none" };\nexport function AgentList'), on(s).replace("export function AgentList", 'const HIDE = { display: "none" };\nexport function AgentList'), s);
+  const li = '<li key={a.id} className="flex gap-2 p-2">';
+  const at = (style) => BASE.replace(li, `<li key={a.id} className="flex gap-2 p-2" style={${style}}>`);
+  for (const s of ['{ pointerEvents: "none" }', '{ backgroundImage: "url(/\\\\/evil.example/p.gif)" }', '{ "--bg": "url(https://evil.example/x.gif)" }', '{ WebkitMaskImage: "url(https://evil.example/m.svg)" }', "{ backgroundImage: a.name }"]) logicFrom(BASE, at(s), s);
+  for (const s of ['{ display: "none" }', "{ minWidth: 40, color: a.name }"]) assert.equal(verdict(at(s)).verdict, "ok", s);
+  // A control without a handler, native or a component, is still a control.
+  for (const el of ['<button style={{ display: "none" }}>More</button>', '<Button variant="ghost" style={{ visibility: "hidden" }}>More</Button>']) logicFrom(BASE, BASE.replace("<span>{a.name}</span>", `<span>{a.name}</span>${el}`), el);
+});
+
+test("(m) decorators, dynamic imports, export … from and literal consts", () => {
+  notLook(BASE.replace('<li key={a.id} className="flex gap-2 p-2">', "<li key={a.id} data-x={@del.mutate class {}}>"), "a decorator calls");
+  const p = { boundary: { allow: ["web/src/**/components/**"] } };
+  const src = { base: "export const L = () => <ul />;\n", head: 'export { x } from "./build/a";\nconst m = () => import("./build/b");\nconst r = require("./build/c");\nexport const L = () => <ul />;\n' };
+  assert.deepEqual(newImportTargets([{ path: "web/src/components/list.tsx", status: "M" }], p, (side) => src[side]).sort(), ["web/src/components/build/a", "web/src/components/build/b", "web/src/components/build/c"]);
+  const withConst = BASE.replace("export function AgentList", "const GAP = 8;\nexport function AgentList");
+  const r = compare(withConst, withConst.replace('<li key={a.id} className="flex gap-2 p-2">', '<li key={a.id} className="flex p-2" style={{ gap: GAP }}>'), FILE, profile);
+  assert.equal(r.verdict, "ok", JSON.stringify(r));
+});
+
+test("(n) a symbolic link turned into a file, an unreadable file, and the raw diff", () => {
+  assert.equal(judge([{ path: "src/components/x.tsx", status: "M", mode: "100644", oldMode: "120000" }], profile, () => "export const x = 1;\n").files[0].verdict, "logic");
+  assert.equal(judge([{ path: "src/components/x.css", status: "M" }], profile, (side) => (side === "base" ? ".a{}" : null)).files[0].verdict, "logic");
+  const raw = [":100644 100644 aaa bbb R087", "src/a.tsx", "src/b.tsx", ":000000 120000 000 ccc A", "src/l.tsx", ":100644 100644 ddd eee M", "src/c.css", ""].join("\0");
+  assert.deepEqual(parseRawDiff(raw), [
+    { status: "M", path: "src/b.tsx", oldPath: "src/a.tsx", mode: "100644", oldMode: "100644" },
+    { status: "A", path: "src/l.tsx", mode: "120000", oldMode: "000000" },
+    { status: "M", path: "src/c.css", mode: "100644", oldMode: "100644" },
+  ]);
+});
+
+test("(o) design guard on a git repository: a rename is judged by both paths, a symbolic link is refused", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dd-guard-")), prof = join(mkdtempSync(join(tmpdir(), "dd-guard-p-")), "profile.json");
+  const git = (...a) => { const r = spawnSync("git", ["-C", dir, "-c", "user.email=guard@example.com", "-c", "user.name=guard", "-c", "commit.gpgsign=false", ...a], { encoding: "utf8" }); assert.equal(r.status, 0, r.stderr); return r.stdout; };
+  git("init", "-q");
+  mkdirSync(join(dir, "src/components"), { recursive: true });
+  mkdirSync(join(dir, "src/api"), { recursive: true });
+  writeFileSync(join(dir, "src/components/a.tsx"), 'export const A = () => <p className="p-2">Hi</p>;\n');
+  writeFileSync(join(dir, "src/api/key.ts"), 'export const KEY = "k";\n');
+  writeFileSync(prof, JSON.stringify({ boundary: { allow: ["src/components/**"] } }));
+  git("add", "-A"); git("commit", "-qm", "base");
+  const base = git("rev-parse", "HEAD").trim();
+  const guard = () => { const r = spawnSync(process.execPath, [DESIGN, "guard", dir, "--base", base, "--profile", prof], { encoding: "utf8" }); return { status: r.status, out: JSON.parse(r.stdout) }; };
+  git("mv", "src/components/a.tsx", "src/components/hello.tsx");
+  let r = guard();
+  assert.equal(r.status, 0, JSON.stringify(r.out));
+  assert.deepEqual(r.out.files.map((f) => [f.path, f.verdict]), [["src/components/hello.tsx", "ok"]]);
+  git("mv", "src/api/key.ts", "src/components/key.ts");
+  symlinkSync("../api/key.ts", join(dir, "src/components/link.tsx"));
+  r = guard();
+  assert.equal(r.status, 1, JSON.stringify(r.out));
+  const by = Object.fromEntries(r.out.files.map((f) => [f.path, f.verdict]));
+  assert.equal(by["src/components/key.ts"], "denied");
+  assert.equal(by["src/components/link.tsx"], "logic");
 });

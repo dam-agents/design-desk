@@ -6,7 +6,8 @@
 // both of its paths.
 // Code is judged by the language adapter whose extensions match (lib/lang/); a code file
 // no adapter reads is refused, whatever the allow lists say. A style sheet or an SVG is
-// read too (lib/css-check.mjs); a symbolic link or a submodule is refused.
+// read too (lib/css-check.mjs; one that cannot be read is refused); a symbolic link or a
+// submodule is refused.
 import { globRe, matchAny } from "./globs.mjs";
 import { cssDangers, svgDangers } from "./css-check.mjs";
 import * as tsxReact from "./lang/tsx-react.mjs";
@@ -19,6 +20,19 @@ const CODE_EXT = /\.(vue|svelte|astro|mdx|py|rb|go|rs|java|kt|kts|swift|php|cs|c
 const langOf = (path) => LANGS.find((l) => l.exts.test(path));
 
 // ---------- the whole diff ----------
+
+// `git diff --raw -z --find-renames` → the changes judge() reads: status, path, the old
+// path of a rename or copy, and both modes (a symbolic link or a submodule is refused).
+export function parseRawDiff(z) {
+  const f = String(z || "").split("\0").filter(Boolean), list = [];
+  for (let i = 0; i < f.length;) {
+    const [oldMode, mode, , , st] = f[i++].replace(/^:/, "").split(" ");
+    if (!st) throw new Error(`unreadable diff line: ${f[i - 1].slice(0, 80)}`);
+    if (st.startsWith("R") || st.startsWith("C")) { const oldPath = f[i++], path = f[i++]; list.push({ status: "M", path, oldPath, mode, oldMode }); }
+    else list.push({ status: st[0], path: f[i++], mode, oldMode });
+  }
+  return list;
+}
 
 const PLAIN = {
   ok: "Only the look changed (layout, styles, copy or icons).",
@@ -56,8 +70,10 @@ function judgeFile(c, profile, readSide, presentationalFiles) {
   if (where.verdict === "style" || where.verdict === "global" || (where.verdict === "asset" && /\.svg$/i.test(c.path))) {
     if (c.status === "D") return { ...where, notes: [] };
     const check = where.verdict === "asset" ? svgDangers : cssDangers;
+    const head = readSide("head", c.path);
+    if (head === null) return { verdict: "logic", issues: ["could not read the file; a person must review it"], notes: [] };
     const before = c.status === "A" ? [] : check(readSide("base", c.oldPath || c.path));
-    const added = minus(check(readSide("head", c.path)), before);
+    const added = minus(check(head), before);
     if (added.length) return { verdict: "logic", issues: added.slice(0, 5).map((d) => `${where.verdict === "asset" ? "the image holds" : "the style"} ${d}`), notes: [] };
     return { ...where, notes: [] };
   }

@@ -64,8 +64,11 @@ moving, restyling and rewording leave it unchanged. New markup may only read wha
 markup read, call formatting and the view state its own function adds, add no condition on
 existing data, and render only presentational components (new in the diff or named in
 `presentational_imports`). An action keeps its place: moved under another condition, onto
-another element, or offered twice, it is behaviour. A style sheet or an SVG that loads from
-another host, runs script, or disables or hides a control fails; so does a symbolic link.
+another element, or offered twice, it is behaviour. A style sheet, an inline style or an SVG
+that loads from anywhere but a plain local path or an image data URL, runs script, or disables
+or hides a control fails; it is read as the browser reads it (escapes, entities, comments, any
+prefix or letter case), and an inline style the guard cannot read counts as one that does. A
+symbolic link fails too.
 Files git ignores in the worktree fail the check — they would ship with the install unseen —
 except dependency and build folders and logs at the root, in `style.ui_dir` or outside the UI
 paths, and the profile's `ignored_ok`; never one the diff imports.

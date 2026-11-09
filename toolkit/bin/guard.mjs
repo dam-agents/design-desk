@@ -6,7 +6,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fail, run } from "../lib/core.mjs";
-import { judge, judgeIgnored, newImportTargets } from "../lib/guard.mjs";
+import { judge, judgeIgnored, newImportTargets, parseRawDiff } from "../lib/guard.mjs";
 
 export async function main(_cmd, argv) {
   const pos = []; let base = "", profilePath = "", patch = "";
@@ -34,13 +34,8 @@ export async function main(_cmd, argv) {
   const untracked = git("ls-files", "--others", "--exclude-standard", "-z").split("\0").filter(Boolean);
   if (untracked.length) git("add", "--intent-to-add", "--", ...untracked);
   // --raw carries the modes: a symbolic link (120000) or a submodule (160000) is refused.
-  const changes = git("diff", "--raw", "-z", "--find-renames", mergeBase).split("\0").filter(Boolean);
-  const list = [];
-  for (let i = 0; i < changes.length;) {
-    const [oldMode, mode, , , st] = changes[i++].replace(/^:/, "").split(" ");
-    if (st.startsWith("R") || st.startsWith("C")) { const oldPath = changes[i++], path = changes[i++]; list.push({ status: "M", path, oldPath, mode, oldMode }); }
-    else list.push({ status: st[0], path: changes[i++], mode, oldMode });
-  }
+  let list;
+  try { list = parseRawDiff(git("diff", "--raw", "-z", "--find-renames", mergeBase)); } catch (e) { console.log(JSON.stringify({ ok: false, error: e.message })); process.exit(2); }
   const readSide = (side, path) => {
     if (side === "head") { try { return readFileSync(join(dir, path), "utf8"); } catch { return null; } }
     const r = run("git", ["-C", dir, "show", `${mergeBase}:${path}`], { maxBuffer: 64 * 1024 * 1024 });
