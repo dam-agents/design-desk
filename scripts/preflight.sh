@@ -590,7 +590,7 @@ issues_mode() {
   jq -n --argjson news "$news" --argjson draw "$draw" --argjson sprints "$sprints" --argjson nexts "$nexts" --argjson dec "$DEC_DUE" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     --arg title "$(jq -r '.[] | "#\(.issue)"' <<<"$(jq -c --argjson a "$draw" '$a + .' <<<"$news")" | title_for Read issues)" \
     '{mode:"issues", nothing_to_do:false, title:$title, sprint:$sprints, next_sprint:$nexts,
-      read_set: (["docs/issues.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end) + (if ($dec | length) > 0 then ["docs/decisions-page.md"] else [] end)),
+      read_set: (["docs/issues.md", ".agents/skills/explain/SKILL.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end) + (if ($dec | length) > 0 then ["docs/decisions-page.md"] else [] end)),
       issue_news_due:$news, drawings_due:$draw, decisions_page_due:$dec, config:$config, logs:$logs}'
 }
 
@@ -720,8 +720,7 @@ inbox_mode() {
       councils_due: $councils,
       expiring_due: $expiring,
       config:$config, logs:$logs }
-    | .read_set = (["docs/desk.md"]
-        + (if (.questions_due | length) > 0 then [".agents/skills/explain/SKILL.md"] else [] end)
+    | .read_set = (["docs/desk.md", ".agents/skills/explain/SKILL.md"]
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
@@ -910,7 +909,7 @@ digest_mode() {
   fi
   log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.revoked|length) revoked, \(.feedback|length) pieces of feedback"' <<<"$out")"
   jq -n --argjson d "$out" --arg period "$period" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md"], config:$config, logs:$logs} | del(.done)'
+    '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md", ".agents/skills/explain/SKILL.md"], config:$config, logs:$logs} | del(.done)'
 }
 
 case "$MODE" in
