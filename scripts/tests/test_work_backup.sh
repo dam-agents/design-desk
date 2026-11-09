@@ -211,6 +211,16 @@ said="$(GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.gi
 check "a symlinked clone is refused as its own cause, not as a network fault" \
   'printf "%s" "$said" | grep -q "clone-s is not this user.s own" && ! printf "%s" "$said" | grep -q "could not reach"'
 check "nothing is cloned through the symlink" '[ -z "$(ls -A "$SANDBOX/elsewhere")" ]'
+# A persist over a symlinked clone: one attempt per part (no retry over a refused name), and
+# the outcome line the audit reads names the refused name.
+fixture; mkdir "$SANDBOX/elsewhere-p"; ln -s "$SANDBOX/elsewhere-p" "$SANDBOX/clone-p"
+GITHUB_REPO_WORK=test/work WORK_BACKUP_REMOTE="file://$SANDBOX/remote.git" WORK_BACKUP_LOCAL="$SANDBOX/clone-p" \
+  WORK_BACKUP_RETRIES=3 bash "$ROOT/scripts/work-backup.sh" persist >/dev/null 2>&1
+check "a refused clone costs one attempt per part, not one per retry" \
+  '[ "$(grep -h "clone-p is not this user.s own (a symlink" "$WORK_DIR"/logs/events-*.jsonl | wc -l | tr -d " ")" = 2 ]'
+check "the outcome line of a persist over a refused clone names it" \
+  'outcome | grep -q "^error backup failed: state failed, bulk failed — .*clone-p is not this user.s own"'
+check "nothing is written through the symlinked clone" '[ -z "$(ls -A "$SANDBOX/elsewhere-p")" ]'
 # Another user's clone folder: needs root, or sudo without a password, to make one.
 if [ "$(id -u)" -eq 0 ]; then asroot=""; elif sudo -n true 2>/dev/null; then asroot="sudo -n"; else asroot=-; fi
 if [ "$asroot" != - ]; then

@@ -4,16 +4,17 @@
 // stand-ins first on PATH (they record each call; npm always fails, so nothing is fetched),
 // and toolchains seeded from the toolkit's own packages.
 import { spawnSync } from "node:child_process";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { TOOLKIT, launchWith, slugOf } from "../lib/core.mjs";
 
 const TOKEN = "ghp_planted00000000000000000000000000000";
-const T = mkdtempSync(join(tmpdir(), "design-desk-guards-"));
+const T = mkdtempSync(join(tmpdir(), "dd-guards-"));
+after(() => rmSync(T, { recursive: true, force: true }));   // no leftover in the temp folder
 const DATA = join(T, "data"), BIN = join(T, "bin"), CALLS = join(T, "calls.log");
 mkdirSync(BIN, { recursive: true });
 const stand = (name, body) => { writeFileSync(join(BIN, name), `#!/bin/sh\necho "${name} $*" >> "${CALLS}"\n${body}\n`); chmodSync(join(BIN, name), 0o755); };

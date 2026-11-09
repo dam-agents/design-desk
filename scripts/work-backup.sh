@@ -202,7 +202,11 @@ do_persist() {
   push_part bulk sync_bulk output logs; bulk="$PART"
   local summary="state $state, bulk $bulk"
   case "$state $bulk" in
-    (*failed*)  say "backup failed: $summary."; logev error work_backup "backup failed: $summary — retry next run" ;;
+    (*failed*)
+      if [ -n "$REFUSED_ANY" ]; then   # the outcome line names the refused name: the audit reads only this line
+        say "backup failed: $summary — $REFUSED_ANY is not this user's own."
+        logev error work_backup "backup failed: $summary — $REFUSED_ANY is not this user's own; remove it and retry"
+      else say "backup failed: $summary."; logev error work_backup "backup failed: $summary — retry next run"; fi ;;
     (*skipped*) logev warn work_backup "backup ok: $summary (output/ and logs/ too large for the clone)" ;;
     (*)         logev info work_backup "backup ok: $summary" ;;
   esac
@@ -211,8 +215,8 @@ do_persist() {
 
 # push_part <label> <sync function> <pathspec...>: commit and push one part of work/,
 # re-seeding from the remote tip on a rejected push. Sets PART to pushed, unchanged,
-# skipped or failed.
-PART=""
+# skipped or failed. REFUSED_ANY keeps a name refused in any part for the outcome line.
+PART=""; REFUSED_ANY=""
 push_part() {
   local label="$1" sync="$2" attempt=0 rc; shift 2
   while [ "$attempt" -lt "$RETRIES" ]; do
@@ -245,7 +249,7 @@ push_part() {
     say "$label: push rejected (attempt $attempt) — re-seeding from remote tip."
     logev warn work_backup "$label: push rejected (attempt $attempt) — retrying"
   done
-  if [ -n "$REFUSED" ]; then say "$label: failed — $REFUSED is not this user's own; the data is safe on work/."
+  if [ -n "$REFUSED" ]; then REFUSED_ANY="$REFUSED"; say "$label: failed — $REFUSED is not this user's own; the data is safe on work/."
   else say "$label: failed after $RETRIES attempt(s); the data is safe on work/, retry next run."
     logev warn work_backup "$label: failed after $RETRIES attempts"; fi
   PART=failed; return 0
