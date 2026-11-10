@@ -3390,7 +3390,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const hadFocus = document.activeElement === box, caret = box ? box.selectionStart : null;
     const answerOf = (th) => [...th.messages].reverse().find((m) => m.by?.agent);
     const size = askSize();
-    root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
+    // keepFocus puts a focused button (send, a starter, close, a brief) back; the box is kept above.
+    keepFocus(root, () => { root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
       <div class="ask-grip" data-ask-grip title="Drag to resize"></div>
       <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button class="btn small" data-ask-close title="Close; your questions stay here">✕</button></header>
       <div class="ask-ctx" title="Design Desk answers about what you had open when you asked">About: <b>${esc(ctx.label)}</b></div>
@@ -3401,7 +3402,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         <div class="starters">${starters(ctx).map(([k, l]) => `<button class="btn small" data-ask-starter="${k}" data-ask-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
         <textarea id="ask-text" maxlength="4000" placeholder="Your question…" title="Enter sends, Shift+Enter starts a new line"></textarea>
         <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
-      </footer></section>`;
+      </footer></section>`; });
     $("#ask-text").value = keep;
     if (hadFocus) { const t = $("#ask-text"); t.focus(); if (caret !== null) t.setSelectionRange(caret, caret); }
     if (!was.open) root.querySelector(".ask-panel").classList.add("enter");
@@ -6633,7 +6634,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     || [...document.querySelectorAll("textarea, input:not([type]), input[type=text]")].some((x) => x.value.trim());
   document.addEventListener("click", (e) => { if (e.target.closest("[data-reload]")) location.reload(); });
 
-  // One timer: every 15 s, every 4 s while the open request waits for Design Desk or the Desk can't be reached.
+  // One timer: every 15 s, every 4 s while the open request or a private ask waits for Design Desk, or the Desk can't be reached.
   let tick = 0;
   async function poll() {
     tick += 1;
