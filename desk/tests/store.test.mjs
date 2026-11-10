@@ -2472,6 +2472,8 @@ test("PR Changes and Issues: For Developers, a lead developer marks handled; a d
   // Issues follow the same rules.
   const { card: is } = s.upsertCard({ kind: "issue", title: "Show the limit", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 5, url: "https://github.com/acme/widgets/issues/5" }, attention: { level: "developer", reasons: ["a column in the existing table"] } });
   assert.equal(row(is.id).for, "developers");
+  assert.deepEqual(s.getCard(is.id).attention, { level: "developer", reasons: ["a column in the existing table"] }, "an issue's judgement reads back");
+  assert.deepEqual(row(is.id).attention, s.getCard(is.id).attention, "the list read and the card read agree");
   s.handle(is.id, lee);
   assert.ok(s.getCard(is.id).handled);
   s.handle(is.id, lee, false);

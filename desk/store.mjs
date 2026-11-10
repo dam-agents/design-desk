@@ -525,15 +525,16 @@ export class Store {
   }
 
   attentionOf(c) {
-    if (c.kind !== "change" && c.kind !== "request") return null;
+    if (!["change", "request", "issue"].includes(c.kind)) return null;
     const suggested = c.call_suggestion ? ["Suggested for the presentation"] : [];
     if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
       return suggested.length ? { level: "designer", reasons: suggested } : null;
-    // A change For Developers waits for a lead developer, not a designer: its reasons stay its own
-    // level unless a decision it goes against, or the presentation, needs a designer.
-    const dev = c.kind === "change" && this.forOf(c) === "developers";
-    const reasons = c.attention?.level === "designer" || (c.kind === "change" && c.size && !dev && c.attention) ? [...c.attention.reasons] : [];
-    const mine = dev && c.attention ? [...c.attention.reasons] : [];
+    // A change or an issue For Developers waits for a lead developer, not a designer: its reasons
+    // stay its own level unless a decision it goes against, or the presentation, needs a designer.
+    const judged = c.kind !== "request" && c.attention;
+    const dev = c.kind !== "request" && this.forOf(c) === "developers";
+    const reasons = !dev && judged && (c.attention.level === "designer" || c.size) ? [...c.attention.reasons] : [];
+    const mine = dev && judged ? [...c.attention.reasons] : [];
     const against = this.activeConflicts(c).map((x) => x.decision);
     if (against.length) reasons.push(`Goes against ${[...new Set(against)].join(", ")}`);
     const differs = c.design_check?.verdict === "differs" ? `Differs from the approved design ${c.design_check.request}` : null;
