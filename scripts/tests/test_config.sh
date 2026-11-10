@@ -88,4 +88,21 @@ for private in true false missing; do
   esac
 done
 grep -q 'repos/acme/desk-state --jq .private' "$STUB_DIR/gh.calls" || { echo "  ✗ verify reads the backup repository's .private"; FAILS=$((FAILS+1)); }
+# --structure: the .gitignore allowlist opens with `/*` after its comment lines, and the changes ledger
+# takes every status ledger.sh writes (`open` included) and refuses any other.
+mkdir -p "$SANDBOX/struct/work"
+printf '%s\n' '# comments above the allowlist do not hide it' '' '/*' '!/VERSION' > "$SANDBOX/struct/.gitignore"
+hdr="$(printf 'repo\tpr\tmerged_at\tstatus\tcard\tupdated\tattempts\tnote')"
+for st in open weird; do
+  { printf '%s\n' "$hdr"; printf 'acme/widgets\t7\t\t%s\tC-1\t2026-01-01T00:00:00Z\t0\t\n' "$st"; } > "$SANDBOX/struct/work/CHANGES.tsv"
+  out="$(HOME="$SANDBOX/struct" WORK_DIR="$SANDBOX/struct/work" bash "$ROOT/scripts/verify-onboarding.sh" 2>&1)"
+  printf '%s' "$out" | grep -q '^ok  *gitignore' || { echo "  ✗ verify reads an allowlist under its comments: $(printf '%s' "$out" | grep gitignore)"; FAILS=$((FAILS+1)); }
+  case "$st" in
+    open) printf '%s' "$out" | grep -q '^ok  *changes_rows' || { echo "  ✗ verify passes an open ledger row: $(printf '%s' "$out" | grep changes_rows)"; FAILS=$((FAILS+1)); } ;;
+    *) printf '%s' "$out" | grep -q '^FAIL changes_rows' || { echo "  ✗ verify names an unknown ledger status"; FAILS=$((FAILS+1)); } ;;
+  esac
+done
+printf '%s\n' '# no allowlist here' '!/VERSION' > "$SANDBOX/struct/.gitignore"
+out="$(HOME="$SANDBOX/struct" WORK_DIR="$SANDBOX/struct/work" bash "$ROOT/scripts/verify-onboarding.sh" 2>&1)"
+printf '%s' "$out" | grep -q '^FAIL gitignore' || { echo "  ✗ verify names a .gitignore that is not an allowlist"; FAILS=$((FAILS+1)); }
 finish

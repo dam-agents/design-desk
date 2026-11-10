@@ -7,11 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.78.1 — 2026-11-10
+## 1.78.2 — 2026-11-10
 
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page). Nothing else: How it works
    draws a request in its five stages, With developers included.
+
+## 1.78.1 — 2026-11-10
+
+**Upgrade:**
+Nothing — `scripts/verify-onboarding.sh` is re-read per run. Its `gitignore` check now skips the
+comment lines above `/*`, and `changes_rows` accepts the `open` status `ledger.sh open` writes.
 
 ## 1.78.0 — 2026-11-10
 
