@@ -167,7 +167,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   | `issue` | an issue or its comment that settles a question | who wrote it | the issue or comment |
   | `commit`, `doc` | research finds it only in a commit or an architecture page | its author (`git log`) | the commit or page |
   | `slack` | a message in a request's or council's thread that settles something | who wrote it | its permalink |
-  | `desk` | a comment a designer marked **Record as a decision**, or **Close…** with a decision (`decisions_due`) | the comment's author; who closed it with a decision | `card`, `thread`, `message`; `card` alone |
+  | `desk` | a comment a designer marked **Record as a decision**, or **Close** with a decision (`decisions_due`) | the comment's author; who closed it with a decision | `card`, `thread`, `message`; `card` alone |
   | `call` | taken at the design meeting (The presentation) | who decided, as the designer said | the card |
   | `approval` | a design approved ([handoff.md](handoff.md)) | the approver | the card |
   | `chat` | the operator says so in chat | the operator | none needed |
@@ -240,7 +240,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   I-<n>`; the designer's wording in `note`). Claim it; record it (`origin.kind: desk`, the
   message's author, concepts from the card, conflicts checked); answer in the thread
   "Recorded as D-<n>", with any conflict; done. A message that decides nothing: say so in the
-  thread, done `not recorded: <why>`. An item with no `thread` is a **Close…** with a decision: its
+  thread, done `not recorded: <why>`. An item with no `thread` is a **Close** with a decision: its
   `note` (and `why`) are the person's words, `by` is the author; record it, add `D-<n>` to the
   card's `decisions`, done `D-<n>`.
 
@@ -257,7 +257,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
-| a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options (Team feedback, below) |
+| a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options, and end its vote (Team feedback, below) |
 | a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | `lead-developer`, `admin` | move a request between For Developers and For Designers, and pick one when filing it |
@@ -319,7 +319,7 @@ prototype once Design Desk has checked a request:
   the store writes `approved` as any approval. Without options the item's `note` is what to build,
   in the person's words ([handoff.md](handoff.md)). A PM or a lead developer does not overrule a
   decision in force: that stays a designer's.
-- **Close…** is one button and one dialog: **Just close it** (a designer, a PM or an admin; `close`), or **Close
+- **Close** is one button and one dialog: **Just close it** (a designer, a PM or an admin; `close`), or **Close
   it and record a decision** (a designer, a PM or a lead developer; `POST /api/cards/<id>/decide {text}`): the request closes with
   `decided: {by, at, text}`, a `decision` item without a thread (Decisions → `decisions_due`) and
   a `teardown`. Reopen clears `decided`; the decision stays until revoked.
@@ -636,12 +636,17 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
 - **Team feedback.** A request a person filed on the Desk stays at `variants` when you write
   `feedback` with its options: the store keeps it (`team_feedback: {state: "waiting"}`) while
   they fine-tune the options, until its author, a designer, a PM, a developer or an admin presses **Ask for
-  feedback**, inside the request's step pill (**Step n/m** opens every step; after a grey "Next:" the pill holds the move to the next step, whatever the step — at Options drawn Contact a developer until you opened it, then Ask for feedback, never Approve, and no Build a live prototype anywhere, ⋯ included; at Team feedback Build a live prototype, else Contact a developer until you opened it, then Approve, else Send to Slack… — while the green Approve, Close and ⋯ stay in the row, Approve even when the pill names it too); the ⓘ by the state's word says what happens now and draws every way on from here as branches: each move the viewer can make, and each usual one they cannot, greyed, with why not and who can (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
+  feedback** in the request's state row ([desk-page.md](desk-page.md) → A request's state) (`POST /api/cards/<id>/feedback`, `state: "open"`); later redraws go straight
   to `feedback`. A request you filed for someone (Slack, chat), or one with no options, goes to
   `feedback` at once.
   Read the status the upsert returns: a held request gets no `feedback` message (below), and
   the channel hears nothing when a person hands it to the team: the bell tells every developer
   (*Feedback asked*, [Notifications](desk-page.md#notifications)).
+  The same people end the vote with **End the vote** (`POST /api/cards/<id>/end-vote`): the store
+  keeps `vote_ended: {by, at}`, takes no more votes on the options (comments stay open) and sets
+  every open Slack poll's `closes` to now, so your next look closes it there with its result
+  (`polls_due`). The request then waits for its approver. A request that comes
+  to `feedback` again from another step, or is reopened, starts a new vote.
 - When `notify` is `slack`, a request moving to `feedback`, `testing` or `handed-off` gets
   one message in the bound channel, its title escaped ([Text to Slack](#links-to-an-item)): "<title> (C-<n>) — Options ready to vote on: <link>", "— Live
   prototype ready to try: <link>" or "— Sent to developers: <link>", the link the card's

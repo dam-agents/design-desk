@@ -6,15 +6,35 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 
 ## The page
 
-- **Steps and waiting.** While Design Desk works, the step pill's next move is **Wait**, with a few words on what it does
-  and how long: *started 4 min ago, usually about 12 min* (the item's `started` and `usual_min`,
-  the median of the last ten finished items of its kind, none before three), or before it started
-  *starting* (the page called Design Desk) or *in the queue, starts within 10 minutes*;
-  while it waits on a person it is **Answer**, the questions below. The state's mark pulses only
-  while Design Desk works, never while it waits on a person. An open request with no move of the
-  viewer's own names whom it waits on: **Wait for a designer** (to start or ask, to build again, to
-  send the spec), **Wait for a developer** (a For Developers spec), **Wait for the team** (Team
-  feedback); a plain **Wait** is Design Desk's turn.
+- **A request's state.** The box under a request's title says where it stands and whose move it is.
+  Its word is one of five stages, the same for every request: **Checking**, **Options**, **Feedback**
+  (the team's votes; a live prototype to try), **Approved** (the spec), **With developers**; a closed
+  request reads Closed or Decided without a design. A few words after it say where in the stage it
+  stands (*done, no options yet*, *3 drawn*, *the vote ended*). Every stage ends with a person's move:
+  a checked request stays in Checking until someone starts its options. The list's dot keeps its
+  finer words (Checked, Options drawn; below).
+  **Turn:** names who has the move, the same way in every state: Design Desk while it works or is
+  about to; the team while it votes or tries a live prototype; developers once it is theirs; **you**
+  when a way on is yours; else who can take it (*a designer*; once the vote ended, who approves).
+  While Design Desk works, the box says what it does and how long: *started 4 min ago, usually about
+  12 min* (the item's `started` and `usual_min`, the median of the last ten finished items of its
+  kind, none before three), or before it started *starting* (the page called Design Desk) or *in the
+  queue, starts within 10 minutes*. The state's mark pulses only while Design Desk works.
+  On the right are **Approve** and **Close**, nothing else. One row holds the ways on after
+  **Next:**: the first is the button, the others follow it after *or*. Checked: Draw design options.
+  Options drawn: Ask for feedback. Feedback: Build a live prototype, End the vote. A live prototype
+  that runs: Open the prototype; one that does not: Try again or Build it again, Redraw with all
+  comments. A spec draft: Send to developers…. Sent: Show the design. Closed: Reopen. Contact a
+  developer joins them wherever a part needs one, until it was opened. Approve is never in the row.
+  With no way of the viewer's own, the row says what they wait for; with a question open, to answer
+  it below. **Open in the design workspace** sits at the row's right end, never among the ways on.
+  What is about the request, not its step (the presentation, For Developers or For Designers, Redraw
+  the options, New request from this, Delete), is under **⋯** by the title.
+  The five stages are a thin line along the box's bottom edge: done, now, to come. Pointing at the
+  box, or tabbing into it, raises the line into their names over what lies below, moving nothing;
+  each name's tooltip says what the stage holds (the verdict, who approved). Pointing at the state's
+  word shows its help: what happens now and every way on from here as branches, each move the
+  viewer can make, and each usual one they cannot, greyed, with why not and who can.
   A dialog with something typed, picked or added in it asks before Escape or a click outside
   closes it (its Cancel closes it at once); a picture dropped on it is added as if chosen.
   The browser's Back leaves the Desk: every view keeps the menu or its own way back on
@@ -104,8 +124,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   The Desk opens on Requests.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
-  dialogs rise in and fade out with their backdrop, More, the menu under a name and a
-  request's steps pop open,
+  dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,
+  a request's stage line rises into its names,
   folds slide open and shut (a script eases the fold's height, so every browser slides; only a
   fold opened or shut by a click is kept, not one drawn open), the private ask grows from its button, a new message in it rises
   in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and
@@ -146,8 +166,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   issue's or a pull request's preview shows on its link alone.
 - **Buttons.** A button's icon comes from `BTN_ICON` in `desk/page.html`, by its `data-`
   action; one whose words start with a sign of their own (▶, ✓, 👍, +) keeps that sign.
-  **More** closes on a click anywhere outside it, on Escape, and once something in it is picked;
-  a request's steps (`Step 2/4`) close on a click outside them and on Escape too.
+  **More** closes on a click anywhere outside it, on Escape, and once something in it is picked.
 - **One width.** An open item's text blocks (the request, what happens next, what is known,
   the threads) share the reading measure; only the designs run wider.
 
@@ -161,9 +180,9 @@ whom the request waits on — the same colour as the state on its page: **blue**
 Options drawn: draw them again; a question to answer; a prototype that
 failed or was switched off; a spec draft to send); green sent to developers, slate decided, red
 closed. It pulses only while Design Desk works on the request, whatever the step (then blue), and
-stays lit otherwise. A request is never blue with a move of a person's own in its step pill: once
+stays lit otherwise. A request is never blue with a move of a person's own beside it: once
 Design Desk's work is done, Checking reads **Checked** and Drawing options reads **Options drawn**. Team feedback
-reads **Team feedback (finished)** once its vote in Slack ended and no other runs. Pointing at
+reads **Team feedback (finished)** once a person ended the vote, or its vote in Slack ended and no other runs. Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
 dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`
@@ -264,7 +283,7 @@ comment thread with `dev: true` (`threads` with `dev` from a role that sees Desi
 messages are For you for the designer who approved the request, or every `designer` and
 `admin` when a non-designer approved it, and land on `#designs/C-<n>`: they open the page
 without the menu. The request shows the same thread as *Developer asks*, and for a role that sees Designs its
-step pill holds **Show the design**, which opens it here. Answer nothing on it:
+state row holds **Show the design**, which opens it here. Answer nothing on it:
 it is between people. Each closed record of a request reopened after it was sent (`sends`)
 stays under **Done** as its own row (`C-<n>~<k>`, **· earlier send**), read-only: **Closed**,
 who reopened it and when, its issue, its summary and its questions, with no box to ask and no

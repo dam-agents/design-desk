@@ -152,14 +152,12 @@ The person deciding should know it before a single variant exists.
    their answers — that changes how the product works, each with its reason in their terms; never
    a part nobody asked for, and never implementation work (that is `build`: what a developer
    wires when building the design, one plain line each, which the spec carries under **What a
-   developer must add** and which never stops the request or its live prototype). The Desk names every verdict in the request's steps (no label
-   beside the title), says in the state's ⓘ what it means for the next step, and folds
-   `cannot` under the status. At Options drawn, and at Team feedback with no live prototype
-   to build next, the request's next step is **Contact a developer**: it opens `cannot`, where **Copy a
+   developer must add** and which never stops the request or its live prototype). The Desk names every verdict in the request's stage line (Checking's tooltip; no label
+   beside the title), says in the state's help what it means for the next step, and folds
+   `cannot` under the status. While the request is open, **Contact a developer** is one of the ways
+   on in its state row: it opens `cannot`, where **Copy a
    question for a developer** copies a link to the request, its state and these parts. Once a
-   person opened it, their step moves on to the next step of the process: at Options drawn
-   **Ask for feedback** (never Approve), at Team feedback **Approve**, or **Send to Slack…** for
-   someone who cannot approve: the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+   person opened it, it leaves their row: the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request
