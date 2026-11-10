@@ -2155,6 +2155,31 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
 }));
 
+// The answer once stayed behind the three dots until the person left the box or sent again: the
+// poll skipped the redraw while the focus was in the chat, where it is right after a send.
+test("a private ask's answer shows as it lands, with the person still in the box", (t) => open(t, PRIVATE, async (desk) => {
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#C-5");
+  await desk.waitForSelector("[data-ask-open]");
+  await desk.click("[data-ask-open]");
+  await desk.waitForSelector(".ask-panel");
+  await desk.evaluate(() => asks.push({ id: "T-3", kind: "private", owner: "d@example.com", state: "open", needs_agent: true, context: { card: "C-5", label: "C-5 Show limits" }, created: "2026-11-04T11:00:00Z",
+    messages: [{ by: { email: "d@example.com" }, at: "2026-11-04T11:00:00Z", text: "Is this still relevant?" }] }));
+  await desk.fill("#ask-text", "Is this still relevant?");
+  await desk.press("#ask-text", "Enter");
+  await desk.waitForSelector(".ask-msg.typing");
+  // The person already writes the next question when the answer lands.
+  await desk.fill("#ask-text", "And one more");
+  await desk.evaluate(() => { const th = asks.at(-1); th.needs_agent = false; th.state = "answered"; th.messages.push({ by: { agent: true }, at: "2026-11-04T11:01:00Z", text: "It was redesigned last week." }); });
+  await desk.waitForFunction(() => /It was redesigned last week/.test(document.querySelector(".ask-body")?.textContent || ""), null, { timeout: 12000 });
+  assert.equal(await desk.$$eval(".ask-msg.typing", (x) => x.length), 0, "the three dots leave with the answer");
+  assert.equal(await desk.evaluate(() => document.activeElement?.id), "ask-text", "the box keeps the focus");
+  assert.equal(await desk.inputValue("#ask-text"), "And one more", "and what was typed");
+  // Nothing new: the next polls leave the chat as it is.
+  await desk.evaluate(() => { document.querySelector(".ask-panel").dataset.before = "1"; });
+  await desk.waitForTimeout(9000);
+  assert.equal(await desk.$eval(".ask-panel", (p) => p.dataset.before), "1", "a poll with nothing new does not redraw the chat");
+}));
+
 // docs/desk-page.md → Lists and Folds stay folded; docs/requests.md → Triage. The page runs where local
 // storage throws, as in its sandboxed frame.
 const FOLD = `<script>

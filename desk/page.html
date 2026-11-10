@@ -3366,6 +3366,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // What the chat showed when last drawn: it animates only what is new, never a redraw.
   let askShown = { open: false, ctx: "", said: 0 };
+  // The asks as last drawn: a poll redraws the chat only when they changed.
+  let askDrawn = "";
   function renderAsk() {
     let root = $("#ask");
     if (!can("ask")) { root?.remove(); return; }
@@ -3377,6 +3379,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const said = here.reduce((n, t) => n + (t.messages || []).length, 0);
     const was = askShown, ctxKey = JSON.stringify(ctx);
     askShown = { open: S.ask.open, ctx: ctxKey, said };
+    askDrawn = JSON.stringify(S.ask.asks);
     if (!S.ask.open) {
       root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Ask privately about this ${askWhat(ctx)}${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
       if (was.open) root.querySelector(".ask-fab")?.classList.add("enter");
@@ -6635,13 +6638,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function poll() {
     tick += 1;
     if (document.hidden) return;
-    const fast = S.offline || (S.card && waitingKinds(S.card).length > 0);
+    const asking = S.ask.asks.some((t) => t.needs_agent);
+    const fast = S.offline || asking || (S.card && waitingKinds(S.card).length > 0);
     if (!fast && tick % 4 !== 0) return;
     try {
       await refreshList();
       await loadNotes().catch(() => {});
       if (S.card) await openCard(S.card.id, { quiet: true });
-      if (S.ask.open || S.ask.asks.some((t) => t.needs_agent)) { await loadAsks(); if (!S.ask.dragging && !$("#ask-text")?.value && !document.activeElement?.closest?.("#ask")) renderAsk(); }
+      // An answer shows as it lands, with the person still in the box: the redraw keeps their text, focus and caret.
+      if (S.ask.open || asking) { await loadAsks(); if (!S.ask.dragging && JSON.stringify(S.ask.asks) !== askDrawn) renderAsk(); }
       if (S.tab === "people" && S.people?.asks?.some((a) => a.state !== "done")) { await loadPeople(); if (S.tab === "people") renderDetail(); }
       if (S.offline) { S.offline = false; S.stale = false; renderBanners(); }
     } catch (e) {
