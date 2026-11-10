@@ -88,14 +88,14 @@ steps say; the decision notes of step 4 are always yours to read.
    → Clean up). With the product map, update the screens the change touched
    ([map.md](map.md) → Keep it current).
 10. **Catalog.** Every element card whose `source.file` the change touched: set
-    `status: stale` and `design desk enqueue catalog C-<n>` ([catalog.md](catalog.md)).
+    `status: stale` and `design desk enqueue catalog E-<n>` ([catalog.md](catalog.md)).
     Put the touched elements' ids in the change card's `elements`. A merged change, handled or
     auto handled, that adds an element the catalog has none of: file it as an element card and
     enqueue `catalog` (catalog.md → Drawing an element).
 11. **Approved design.** `design desk designs` lists every approved design: where its spec
     went (`issue_url`, `pr_url`, `from`), its option (`asset`) and its elements (`of`, `file`).
     The change builds one when the PR closes or links its spec's issue, is its `pr_url` or a
-    `design-desk/c<n>-…` branch, names its card (`C-<n>`), or touches the `file` of an element
+    `design-desk/r<n>-…` branch, names its card (`R-<n>`), or touches the `file` of an element
     it changes; none → nothing. (A merged change whose pull request is the spec's or links its
     issue, or whose `design_check` says `matches`, marks that design done on Designs: the store
     does it with the card's write.) For that one: `design desk fetch` the option, look at it next to
@@ -119,7 +119,7 @@ steps say; the decision notes of step 4 are always yours to read.
     → Where a card came from): `label` "PR #<n> shipped" once `source.merged_at` is set,
     else "PR #<n> opened"; research it from what you just read, and enqueue `explore`: the
     inbox run makes two or three design proposals the team can pick from, adjust and comment
-    on. Suggest it for the presentation (`design desk agenda C-<n> --note "Design Desk proposes"`).
+    on. Suggest it for the presentation (`design desk agenda R-<n> --note "Design Desk proposes"`).
 13. **CI gate** (`ci_gate: enabled`), right after the card is written: [CI gate](#ci-gate).
 14. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title, number and link ([desk.md](desk.md) → Links to an item), the title
@@ -136,7 +136,7 @@ check: it passes when nobody needs to look, and fails until someone marks the ca
 Merged and closed pull requests are never touched: their checks no longer matter.
 
 - **Set it** right after the card is written (step 13), on an open PR, by the card as `design
-  desk card C-<n>` returns it: `attention` `fyi` (auto handled) or handled → **pass**; `designer`
+  desk card P-<n>` returns it: `attention` `fyi` (auto handled) or handled → **pass**; `designer`
   or `developer` → **fail** until a designer, or on a change For Developers a lead developer,
   marks it handled ([desk.md](desk.md) → For Developers or For Designers); no `attention` →
   set nothing: the change is not judged yet, so a required check keeps waiting. A PR that builds a Desk design is judged the same way, by the card's own derived
@@ -160,7 +160,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
   again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`
   (before 1.76.0 a PR judged and not held: its check is set now). A pre-flight that cannot read the
   cards logs an error line and leaves the run open, never an empty list.
-- **`ci_due`** (inbox run), an `I-<n>` item: a person marked the card handled, took the mark
+- **`ci_due`** (inbox run), a `Q-<n>` item: a person marked the card handled, took the mark
   back, or moved it between For Developers and For Designers. Claim; read the card and the
   PR again and set the check as in **Set it** on the current head (`ci_gate` now `disabled`
   → pass, so nothing stays held). A merged or closed PR → nothing to set; `design desk done` with "PR no longer open".
@@ -169,7 +169,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
   "error", tries: <the last tries + 1>}`; it never fails the change's ledger entry. The gate
   lists such a card again as `G-<card>` with `retry: true` until its 3rd try; the 3rd failure
   is written as `{state: "skipped", tries: 3}` and reported in the chat UI, and the card is
-  never due again. An `I-<n>` item whose write failed is done with that outcome: the `G-`
+  never due again. An `Q-<n>` item whose write failed is done with that outcome: the `G-`
   entry retries it.
 
 ## Comments on GitHub
@@ -215,7 +215,7 @@ cites them; adding the repository to `repos` is the operator's call.
 - Every section has a source or says it has none; no invented reason.
 - Every screen was looked at, shows the change, and has a caption.
 - `attention` says whether a designer should look at it, with its reasons.
-- No internal identifiers beyond the PR link and another card's number (`C-<n>`,
+- No internal identifiers beyond the PR link and another card's number (`<card>`,
   [desk.md](desk.md) → Links to an item): no file paths in `what` and `why` (a path may
   appear only in `limits` when it names where a developer would work).
 - The ledger row is `carded`, `skipped` or `failed`; `/tmp/design-desk-<pr>` is removed.

@@ -89,11 +89,11 @@ services…). Keep it under 200 lines; link instead of copying.
 
 ## The engine contract (`bin/env`)
 
-`bash "$HOME/scripts/proto.sh" run C-<n> <verb>` runs `<profile>/bin/env <verb>` with:
+`bash "$HOME/scripts/proto.sh" run R-<n> <verb>` runs `<profile>/bin/env <verb>` with:
 
 | Variable | Value |
 | --- | --- |
-| `PROTO_NAME` | the Environment's name (`c<n>`); `ssh env-$PROTO_NAME` reaches it |
+| `PROTO_NAME` | the Environment's name (`r<n>`); `ssh env-$PROTO_NAME` reaches it |
 | `PROTO_WORKTREE` | the prototype's checkout |
 | `PROTO_BASE` | the commit the prototype branched from |
 | `PROTO_PROFILE_DIR` | this profile's directory, read from the default branch |

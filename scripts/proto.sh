@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # proto.sh — the mechanics of a live prototype (docs/prototype.md).
 #
-#   proto.sh worktree C-<n> <repo> [slug] [--ref <ref>]
+#   proto.sh worktree R-<n> <repo> [slug] [--ref <ref>]
 #                                           a worktree of the repo's default branch (or of <ref>:
 #                                           pull/<n>/head of an open pull request that is not
 #                                           from a fork, or a branch of the repo) on the
-#                                           branch design-desk/c<n>-<slug>; reused when it exists
-#   proto.sh run C-<n> <verb>               the profile's bin/env <verb> (up|update|status|
+#                                           branch design-desk/<l><n>-<slug> (r12, c12); reused when it exists
+#   proto.sh run R-<n> <verb>               the profile's bin/env <verb> (up|update|status|
 #                                           credentials|tunnel|untunnel|down) with the engine variables
-#   proto.sh remove C-<n>                   the worktree and its local branch (never a pushed one)
-#   proto.sh show C-<n>                     what this card's prototype has on disk
+#   proto.sh remove R-<n>                   the worktree and its local branch (never a pushed one)
+#   proto.sh show R-<n>                     what this card's prototype has on disk
 #
-# State per card in work/prototypes/c<n>/: meta.json (repo, worktree, branch, base,
+# State per card in work/prototypes/<l><n>/: meta.json (repo, worktree, branch, base,
 # profile dir) and the engine's logs. Prints JSON; exit 1 on an error it names.
 set -u
 export LC_ALL=C
@@ -24,14 +24,17 @@ LOG_JOB="${LOG_JOB:-prototype}"
 err() { jq -cn --arg e "$1" '{error:$e}'; exit 1; }
 
 cmd="${1:-}"; card="${2:-}"
-case "$card" in C-[0-9]*) n="${card#C-}";; *) err "a card id like C-12 is required";; esac
-case "$n" in *[!0-9]*) err "a card id like C-12 is required";; esac
-STATE="$WORK/prototypes/c$n"; META="$STATE/meta.json"
+# A card's number is its letter and its number (R-12; C-12 from before 1.78.0): the state, branch
+# and Environment take it in lower case without the dash (r12, c12), so two kinds never share one.
+case "$card" in [A-Z]-[0-9]*) n="${card#?-}"; l="$(printf '%s' "${card%%-*}" | tr 'A-Z' 'a-z')";; *) err "a card id like R-12 is required";; esac
+case "$n" in *[!0-9]*) err "a card id like R-12 is required";; esac
+n="$l$n"
+STATE="$WORK/prototypes/$n"; META="$STATE/meta.json"
 mkdir -p "$STATE"
 
 case "$cmd" in
   worktree)
-    repo="${3:-}"; [ -n "$repo" ] || err "usage: proto.sh worktree C-<n> <repo> [slug] [--ref <ref>]"
+    repo="${3:-}"; [ -n "$repo" ] || err "usage: proto.sh worktree R-<n> <repo> [slug] [--ref <ref>]"
     ref=""; slugarg="${4:-}"; [ "$slugarg" = "--ref" ] && { ref="${5:-}"; slugarg=""; }; [ "${5:-}" = "--ref" ] && ref="${6:-}"
     if [ -f "$META" ] && [ -d "$(jq -r .worktree "$META")" ]; then cat "$META"; exit 0; fi
     case "$ref" in
@@ -47,8 +50,8 @@ case "$cmd" in
     co="$(bash "$SCRIPT_DIR/checkout.sh" "$repo")" || { printf '%s\n' "$co"; exit 1; }
     clone="$(jq -r .dir <<<"$co")"; def="$(jq -r .default_branch <<<"$co")"; base="$(jq -r .head <<<"$co")"
     slug="$(printf '%s' "${slugarg:-change}" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | sed 's/-\{2,\}/-/g; s/^-//; s/-$//' | cut -c1-32)"
-    branch="design-desk/c$n-${slug:-change}"
-    wt="$HOME_DIR/checkouts/proto-c$n"
+    branch="design-desk/$n-${slug:-change}"
+    wt="$HOME_DIR/checkouts/proto-$n"
     start="origin/$def"
     if [ -n "$ref" ]; then
       git -C "$clone" fetch -q -- origin "$ref" 2>/dev/null || err "cannot fetch $ref"
@@ -66,7 +69,7 @@ case "$cmd" in
     prof="$(jq -r .profile_dir "$META")"
     [ -n "$prof" ] && [ -f "$prof/bin/env" ] || err "the product's profile has no bin/env, so it gets no live prototype (docs/profile.md)"
     # The profile's engine is read from the default branch (the clone), never the worktree.
-    export PROTO_NAME="c$n" PROTO_WORKTREE="$(jq -r .worktree "$META")" PROTO_BASE="$(jq -r .base "$META")" PROTO_PROFILE_DIR="$prof" PROTO_STATE="$STATE"
+    export PROTO_NAME="$n" PROTO_WORKTREE="$(jq -r .worktree "$META")" PROTO_BASE="$(jq -r .base "$META")" PROTO_PROFILE_DIR="$prof" PROTO_STATE="$STATE"
     case "$verb" in
       status|credentials|tunnel|untunnel) bash "$prof/bin/env" "$verb";;
       *) logev info prototype "$card $verb start"
@@ -84,5 +87,5 @@ case "$cmd" in
     logev info prototype "$card removed $branch"
     jq -cn --arg b "$branch" '{removed:true, branch:$b}';;
   show) [ -f "$META" ] && cat "$META" || echo '{}';;
-  *) err "usage: proto.sh worktree|run|remove|show C-<n> …";;
+  *) err "usage: proto.sh worktree|run|remove|show R-<n> …";;
 esac

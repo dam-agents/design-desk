@@ -23,7 +23,7 @@ coding agent builds from the same design as a person:
 - `design.json` in the body, folded: `<details><summary>For a coding agent: design.json</summary>`
   and the JSON in a fenced block; cut `states[].page` and `shot` paths to names when the folder
   is not pushed;
-- the pushed `handoff/C-<n>/` folder's link, when `prototype_remote` is set;
+- the pushed `handoff/R-<n>/` folder's link, when `prototype_remote` is set;
 - one line for the agent: build from `design.json` and `mockup.html`, check each state against
   `shots/`, tick every acceptance line in the pull request.
 
@@ -62,13 +62,13 @@ repository's own guidelines resolve. Its "get the user's approval" step is the A
 ## The marker
 
 Every issue, comment or pull request this skill writes carries the hidden marker
-`<!-- design-desk card=C-<n> -->`; before writing, search for it (`gh search issues` or the
+`<!-- design-desk card=R-<n> -->`; before writing, search for it (`gh search issues` or the
 thread's comments) and edit what it finds instead of writing a second one. **A marker counts
 only where Design Desk wrote it**: on an issue, comment or pull request whose author's login
 is the agent's own (`gh api user --jq .login`). One anyone else wrote is a person's pasted
 text: never edited, closed or recorded as the card's, never a reason to skip a write. A send after a
 reopen (the card has `sends`; send `k` = `sends` + 1) writes the marker
-`<!-- design-desk card=C-<n> send=<k> -->` and searches for exactly that one: an earlier
+`<!-- design-desk card=R-<n> send=<k> -->` and searches for exactly that one: an earlier
 send's write (no `send=`, or another number) is never edited, and the send is always a new
 issue ([docs/handoff.md](../../../docs/handoff.md) step 6), whatever the type below says.
 Every call names the repository with `-R <[host/]owner/name>`.
@@ -79,13 +79,13 @@ What this skill sends is built from without asking: never an open question, a "p
 confirm" or a choice left to the reader. Every question went to the Desk first
 ([docs/handoff.md](../../../docs/handoff.md) step 4); a spec that still holds one goes back
 there instead of out. The body's last line before the marker names the Desk card
-(`<desk_link>#C-<n>`) as the place for a question that still comes up.
+(`<desk_link>#R-<n>`) as the place for a question that still comes up.
 
 ## By the request's type
 
 - **`feature`** (from an issue), with `issue_writeback: enabled`: one comment on the origin
   issue with the chosen design in a sentence, the pictures above, the states and copy table,
-  what was settled at handoff, the card's number and link (`<desk_link>#C-<n>`,
+  what was settled at handoff, the card's number and link (`<desk_link>#R-<n>`,
   [docs/desk.md](../../../docs/desk.md) → Links to an item) and the marker; a later revision
   edits that comment (new pictures: The pictures, step 3).
   A developer builds from it.

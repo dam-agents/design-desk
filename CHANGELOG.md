@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.78.0 — 2026-11-10
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page). On its first start the server gives each Figma
+   comparison and each design sent to developers its own number (`F-n`, `G-n`); nothing else to run.
+2. Nothing to rename: items made before keep their numbers (`C-n`, inbox `I-n`, votes `P-n`, councils
+   `S-n`) and their links work. New items take their kind's letter ([desk.md](docs/desk.md) → Links to
+   an item); a new prototype's branch and Environment take the card's number in lower case (`r12`).
+
 ## 1.77.3 — 2026-11-10
 
 **Upgrade:**
