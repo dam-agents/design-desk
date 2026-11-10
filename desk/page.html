@@ -3297,9 +3297,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       const kind = `<span class="chip ${tone}" title="${esc(th.dev ? "A developer asks the designer how the approved design is meant" : KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
-      // A conversation marked done folds to one line: who started it and their first words; a click opens it.
+      // A conversation marked done folds to one line: who started it and their first words; a click
+      // opens it, with the option it is on and its jump to the part.
       const mini = th.state === "resolved";
-      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc(((n) => n.includes("@") ? n : n.replace(/^./, (x) => x.toUpperCase()))(noteBy(th.messages[0]?.by) || "someone"))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim())}</span>${state}</summary>` : `<article class="thread" id="th-${esc(th.id)}">
+      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc(((n) => n.includes("@") ? n : n.replace(/^./, (x) => x.toUpperCase()))(noteBy(th.messages[0]?.by) || "someone"))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim())}</span>${state}</summary>${anchor ? `<div class="head">${anchor}</div>` : ""}` : `<article class="thread" id="th-${esc(th.id)}">
         <div class="head">${kind}${anchor}${state}</div>`}
         ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
@@ -5323,8 +5324,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
     const d = h.match(/^D\s*-?\s*(\d+)$/i);
     if (d) return { tab: "product", id: null, decision: `D-${d[1]}` };
-    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)(?:\.(\d+))?$/i);
-    if (m) return { tab: view(m[1]), id: `C-${m[2]}`, ...(m[3] ? { sub: Number(m[3]) } : {}) };
+    // C-12~1 is an earlier send of a reopened request, as the page writes it into its address.
+    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)(?:~(\d+)|\.(\d+))?$/i);
+    if (m) return { tab: view(m[1]), id: `C-${m[2]}${m[3] ? `~${m[3]}` : ""}`, ...(m[4] ? { sub: Number(m[4]) } : {}) };
     return view(h) ? { tab: view(h), id: null } : null;
   }
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
@@ -5580,7 +5582,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     f.reset();
     const where = c.origin?.channel === "slack" ? "in the Slack thread this request came from" : "to the team's Slack channel";
     $("#sl-send-hint").textContent = `Design Desk takes a picture of each design you tick and posts them ${where}, with a link back here. Comments and the decision stay here on the Desk.`;
-    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍, 👎 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
+    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍 or 👎 and write a concern or a why as a reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
     const vs = c.variants || [];
     $("#sl-options").innerHTML = vs.map((v) => `<label><input type="checkbox" name="option" value="${esc(v.id)}" checked /> ${esc(v.name)}${tallyText(c, v.id) ? ` <span class="sub">${esc(tallyText(c, v.id))}</span>` : ""}</label>`).join("");
     const at = (hours) => new Date(Date.now() + hours * 3600e3).toISOString();

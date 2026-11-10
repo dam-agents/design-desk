@@ -1087,11 +1087,11 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"].via, "slack");
   s.slackVotes(card.id, "v1", []);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"], undefined);
-  // The agent's own legend 👍/👎/⚠️ comes back among the reactions; it is a bot's, not a vote.
+  // The agent's own legend 👍/👎 comes back among the reactions; it is a bot's, not a vote.
   s.slackVotes(card.id, "v1", [{ key: "slack:UBOT", vote: "prefer", is_bot: true, name: "Design Desk" }, { key: "slack:UBOT", vote: "dislike", is_bot: true, name: "Design Desk" },
     { key: "slack:U2", vote: "concern", name: "Petr" }, { key: "slack:U3", vote: "dislike", name: "Eva" }]);
   assert.equal(s.getCard(card.id).votes.v1["slack:UBOT"], undefined, "a bot's reaction is never a vote");
-  assert.equal(s.getCard(card.id).votes.v1["slack:U2"].vote, "concern");
+  assert.equal(s.getCard(card.id).votes.v1["slack:U2"], undefined, "Slack votes 👍 or 👎 only: a concern there is a reply, never a vote");
   assert.equal(s.getCard(card.id).votes.v1["slack:U3"].vote, "dislike", "a 👎 in Slack is a vote against the option");
   s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" });
   assert.equal(s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" }).duplicate, true);

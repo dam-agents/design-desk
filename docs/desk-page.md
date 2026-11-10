@@ -20,7 +20,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   12 min* (the item's `started` and `usual_min`, the median of the last ten finished items of its
   kind, none before three), or before it started *starting* (the page called Design Desk) or *in the
   queue, starts within 10 minutes*. The state's mark pulses only while Design Desk works.
-  On the right are **Approve** and **Close**, nothing else. One row holds the ways on after
+  On the right are **Approve**, **Close** and the request's **⋯**, in that order. One row holds the ways on after
   **Next:**: the first is the button, the others follow it after *or*. Checked: Draw design options.
   Options drawn: Ask for feedback. Feedback: Build a live prototype, End the vote. A live prototype
   that runs: Open the prototype; one that does not: Try again or Build it again, Redraw with all
@@ -174,7 +174,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **One width.** An open item's text blocks (the request, what happens next, what is known,
   the threads) share the reading measure; only the designs run wider.
 - **Done conversations fold.** A conversation marked done, on any item, folds to one line: its
-  kind, who started it and their first words, then *done*; a click opens it with Reopen. The order
+  kind, who started it and their first words, then *done*; a click opens it with the option it is
+  on, its jump to the part and Reopen. The order
   stays newest first.
 
 ## A request's state in the list

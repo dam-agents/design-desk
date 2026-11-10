@@ -1693,6 +1693,9 @@ test("a worked-in note shows the place before and after, outlined, in the thread
     assert.match(await desk.textContent("#th-t3 > summary"), /^Comment\s*pat@example\.com — Typo in the title\s*done$/, "a done conversation folds to who and its first words");
     await desk.click("#th-t3 > summary");
     await desk.waitForSelector("#th-t3 .changed");
+    // Opened, it names its option and jumps to the part, as an open note does.
+    assert.match(await desk.textContent("#th-t3 .head .chip"), /Option 1: Tabs/, "the option it is on");
+    assert.equal(await desk.locator('#th-t3 .head [data-goto="t3"]').count(), 1, "the jump to the part");
     await loaded("#th-t3");
     assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");
     assert.deepEqual(await pictures("#th-t3"), both, "the thread shows before and after");
@@ -2686,6 +2689,11 @@ test("Designs: an earlier send of a reopened request is its own closed row under
   assert.match(await desk.textContent("#detail .status"), /Closed[\s\S]*reopened by/);
   assert.equal(await desk.getAttribute('#detail .status a.btn:has-text("Issue")', "href"), "https://github.com/acme/widgets/issues/99", "the earlier send's issue");
   assert.equal(await desk.locator("#detail [data-built], #detail #composer").count(), 0, "no Mark as done, no box to ask");
+  // The page writes the record into its address, and a reload reads it back.
+  await desk.waitForFunction(() => location.hash === "#designs/C-1~1");
+  await desk.reload();
+  await desk.waitForFunction(() => /Closed[\s\S]*reopened by/.test(document.querySelector("#detail .status")?.textContent || ""));
+  assert.match(await desk.textContent("#list .row.item[aria-current], #list .row.item"), /C-1 · earlier send/, "a reload opens the same earlier send");
 }));
 
 test("a send after a reopen shows the earlier issue's state and assignee, and closes it only when ticked", (t) => open(t, sendsBridge("designer", { status: "spec", approved: { by: { email: "designer@example.com", role: "designer" }, at: "2026-11-07T13:00:00Z", variant: "v1" }, spec: { asset: "A-3", review: "draft" } }), async (desk) => {

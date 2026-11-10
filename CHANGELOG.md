@@ -10,8 +10,9 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.77.1 — 2026-11-10
 
 **Upgrade:**
-1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
-2. Nothing to run for Slack votes: the next vote posts one message per option (picture and words)
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page).
+2. Nothing else to run for Slack votes: the next vote posts one message per option (picture and words)
    with 👍 and 👎 only. On a vote already open, a ⚠️ reaction no longer counts; a concern is a reply
    in the option's thread, relayed as a comment (`slack-polls` → Sync).
 

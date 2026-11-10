@@ -103,7 +103,9 @@ Every 30 minutes while a vote is open, in the inbox run:
 On its date, or when the request moved on (approved, closed):
 
 1. Sync once more (above).
-2. The result per option, all votes counted (the Desk's and Slack's): "B: 7 👍, 2 👎". The
+2. The result per option, every vote the card holds counted, the Desk's and Slack's: "B: 7 👍,
+   2 👎, 1 ⚠️ on the Desk". A ⚠️ comes only from the Desk's page (Slack votes 👍 or 👎), so it
+   says so, and is left out when there is none; a concern in Slack is a reply, on the Desk. The
    vote advises; no option is the winner: the person who approves on the Desk picks one.
 3. Post it as a `reply` under the poll's `chat` and `root_ts` (**Where it posts**): "🗳️ *<request title>* — the vote is closed. <result>. The team decides
    on the Design Desk (C-<n>): <link>."

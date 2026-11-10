@@ -2245,8 +2245,10 @@ export class Store {
     const box = (c.votes[variant] = c.votes[variant] || {});
     for (const [k, x] of Object.entries(box)) if (x.via === "slack") delete box[k];
     for (const v of voters.slice(0, 500)) {
-      if (!["prefer", "dislike", "concern"].includes(v.vote)) continue;
-      // The agent's own 👍, 👎 and ⚠️ are the legend it puts on each post so a vote is one
+      // Slack votes 👍 or 👎 only: a concern there is a reply in the option's thread, relayed as a
+      // comment (slack-polls → Share 4). A concern sent as a vote is dropped.
+      if (!["prefer", "dislike"].includes(v.vote)) continue;
+      // The agent's own 👍 and 👎 are the legend it puts on each post so a vote is one
       // click (slack-polls → Share 4), not votes: a bot's reaction never counts.
       if (v.is_bot === true) continue;
       const key = clean(String(v.key || ""), 200, "voter key");
