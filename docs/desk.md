@@ -645,8 +645,8 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   The same people end the vote with **End the vote** (`POST /api/cards/<id>/end-vote`): the store
   keeps `vote_ended: {by, at}`, takes no more votes on the options (comments stay open) and sets
   every open Slack poll's `closes` to now, so your next look closes it there with its result
-  (`polls_due`). The request then waits for its approver. Asking for feedback again, or reopening
-  the request, starts a new vote.
+  (`polls_due`). The request then waits for its approver. A request that comes
+  to `feedback` again from another step, or is reopened, starts a new vote.
 - When `notify` is `slack`, a request moving to `feedback`, `testing` or `handed-off` gets
   one message in the bound channel, its title escaped ([Text to Slack](#links-to-an-item)): "<title> (C-<n>) — Options ready to vote on: <link>", "— Live
   prototype ready to try: <link>" or "— Sent to developers: <link>", the link the card's

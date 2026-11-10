@@ -124,8 +124,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   The Desk opens on Requests.
 - **Motion.** Short, soft animations, in the `@media (prefers-reduced-motion: no-preference)`
   block of `desk/page.html`'s style, so a person whose system asks for less motion gets none:
-  dialogs rise in and fade out with their backdrop, More, the menu under a name and a
-  request's steps pop open,
+  dialogs rise in and fade out with their backdrop, More and the menu under a name pop open,
+  a request's stage line rises into its names,
   folds slide open and shut (a script eases the fold's height, so every browser slides; only a
   fold opened or shut by a click is kept, not one drawn open), the private ask grows from its button, a new message in it rises
   in, a newly opened item rises into the pane (a refresh of the same one does not), buttons and

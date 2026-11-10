@@ -4228,7 +4228,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const polls = c.polls || [];
     if (!polls.length) return "";
     const slackVotes = Object.values(c.votes || {}).reduce((n, box) => n + Object.values(box).filter((x) => x.via === "slack").length, 0);
-    return polls.slice(-2).map((p) => p.state === "open"
+    // A vote a person ended is over at once; closing it in Slack is Design Desk's next look.
+    return polls.slice(-2).map((p) => p.state === "open" && c.vote_ended
+      ? `<p class="hint">💬 The vote in Slack ended${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack` : ""}. Design Desk closes it there and posts its result.${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
+      : p.state === "open"
       ? `<p class="hint">💬 Voting in Slack until ${esc(when(p.closes))}${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack so far` : ""}. Reactions and replies there come to this page.${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
       : `<p class="hint">💬 Slack vote closed ${esc(day(p.closed))}${p.result ? `: ${esc(p.result)}` : ""}${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`).join("");
   }

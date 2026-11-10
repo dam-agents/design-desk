@@ -423,7 +423,7 @@ export class Store {
         // A spec draft waits on a person: the list's dot reads it as the page does (docs/desk-page.md → A request's state in the list).
         spec: c.spec ? { review: c.spec.review || null } : null,
         // A Slack vote on its options: running, or one that ended (the list's Your turn, docs/desk-page.md → Pages and filters).
-        voting: (c.polls || []).some((x) => x.state === "open"), voted: Boolean(c.vote_ended) || (c.polls || []).some((x) => x.state === "closed"),
+        voting: !c.vote_ended && (c.polls || []).some((x) => x.state === "open"), voted: Boolean(c.vote_ended) || (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
         for: c.kind === "request" ? (c.size?.small ? "developers" : "designers") : null,
@@ -1120,7 +1120,7 @@ export class Store {
     // Its options are ready, as after a run draws them: a request filed on the Desk waits for a
     // person to ask the team (docs/desk.md → Team feedback); one the agent filed goes on to feedback.
     if (["triage", "variants"].includes(c.status) && c.team_feedback?.state !== "open") {
-      if (c.created_by?.agent) c.status = "feedback";
+      if (c.created_by?.agent) { c.status = "feedback"; delete c.vote_ended; }
       else Object.assign(c, { status: "variants", team_feedback: c.team_feedback?.state === "waiting" ? c.team_feedback : { state: "waiting", since: at } });
     }
     c.updated = at;
@@ -1427,6 +1427,7 @@ export class Store {
       delete c.overruled;
       delete c.approved;
       delete c.decided;
+      delete c.vote_ended;
       // Designs: sent, done, then declined and reopened, it is not built any more; its next handoff sums it up again.
       delete c.built;
       delete c.not_built;
@@ -1998,6 +1999,8 @@ export class Store {
     // to feedback by itself, and so does one with no options to fine-tune.
     if (next.kind === "request" && next.status === "feedback" && c && ["triage", "variants"].includes(c.status) && !next.created_by?.agent && next.team_feedback?.state !== "open" && (next.variants || []).length)
       Object.assign(next, { status: "variants", team_feedback: { state: "waiting", since: this.clock() } });
+    // A request that comes to feedback from another step starts a new vote (docs/desk.md → Team feedback).
+    if (next.kind === "request" && next.status === "feedback" && c && c.status !== "feedback") delete next.vote_ended;
     if (!c) { next.id = this.next("card", "C"); }
     // A design written without its check against the decisions gets one queued; a write with
     // its check closes the check waiting for it (docs/desk.md → Decisions → The check).

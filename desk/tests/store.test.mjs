@@ -2341,7 +2341,8 @@ test("End the vote: no more votes, an open Slack vote is due to close, a new rou
   assert.equal(ended.vote_ended.by.email, "bob@example.com", "who ended it");
   assert.equal(ended.polls.find((x) => x.id === poll.id).closes, ended.vote_ended.at, "the vote in Slack is due to close now");
   assert.equal(ended.polls[0].state, "open", "closing it there stays the agent's");
-  assert.equal(s.listCards({ kind: "request" }).find((x) => x.id === card.id).voted, true, "the list's row says the vote ended");
+  const row = () => s.listCards({ kind: "request" }).find((x) => x.id === card.id);
+  assert.deepEqual([row().voted, row().voting], [true, false], "the list's row says the vote ended, though the poll is still open in Slack");
   assert.throws(() => s.vote(card.id, bob, { variant: "v1", vote: "dislike" }), (e) => e.status === 400 && /has ended/.test(e.message), "no more votes");
   assert.equal(s.card(card.id).votes.v1["bob@example.com"].vote, "prefer", "the votes cast stay");
   assert.throws(() => s.endVote(card.id, alice), (e) => e.status === 400 && /already ended/.test(e.message), "once");
@@ -2350,6 +2351,25 @@ test("End the vote: no more votes, an open Slack vote is due to close, a new rou
   s.openFeedback(card.id, alice);
   assert.equal(s.card(card.id).vote_ended, undefined, "asking for feedback again starts a new vote");
   s.vote(card.id, bob, { variant: "v1", vote: "dislike" });
+
+  // Every other way into a feedback round starts a new vote too: a run's write from another
+  // step, a person's own option on a request the agent filed, a closed request reopened.
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const filed = s.upsertCard({ kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } }).card;
+  const round = () => { s.upsertCard({ id: filed.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: a }] }); return s.card(filed.id); };
+  assert.equal(round().status, "feedback", "from Slack: on to the team by itself");
+  s.endVote(filed.id, alice);
+  s.upsertCard({ id: filed.id, status: "variants" });
+  assert.equal(round().vote_ended, undefined, "a run's write back to feedback starts a new vote");
+  s.endVote(filed.id, alice);
+  s.upsertCard({ id: filed.id, status: "variants" });
+  s.addOwnOption(filed.id, alice, { images: [{ contentType: "image/png", data: png }] });
+  assert.deepEqual([s.card(filed.id).status, s.card(filed.id).vote_ended], ["feedback", undefined], "a person's own option after a redraw starts a new vote");
+  s.vote(filed.id, bob, { variant: "v1", vote: "prefer" });
+  s.endVote(filed.id, alice);
+  s.act(filed.id, alice, "close");
+  s.act(filed.id, alice, "reopen");
+  assert.equal(s.card(filed.id).vote_ended, undefined, "a reopened request starts a new vote");
 });
 
 test("Ask for feedback tells every developer; a row says who voted; a claimed item says since when", () => {
