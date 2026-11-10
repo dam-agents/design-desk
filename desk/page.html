@@ -39,9 +39,9 @@
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
   button { font: inherit; color: inherit; }
-  /* Links read in ink with a faint underline that turns to the accent under the pointer. */
+  /* Links read in ink with a faint underline; under the pointer only the underline darkens, the ink stays. */
   a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
-  a:hover { color: var(--accent); text-decoration-color: currentColor; }
+  a:hover { text-decoration-color: currentColor; }
   .app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   /* An open header menu (the bell, your menu) floats above the private chat (75); only while
@@ -79,7 +79,7 @@
   details.bell .menu.notes { left: auto; right: 0; width: min(420px, calc(100vw - 24px)); max-width: none; padding: 0; gap: 0; overflow: hidden; }
   #notes .nh { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px 14px; border-bottom: 1px solid var(--line); }
   #notes .nh b { font-size: 14px; flex: 1; }
-  #notes .nh .nmark { font-size: 12px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; } #notes .nh .nmark:hover { text-decoration: underline; }
+  #notes .nh .nmark { font-size: 12px; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; } #notes .nh .nmark:hover { text-decoration: underline; }
   #notes .nh .tabs2 { display: flex; gap: 2px; background: var(--soft); padding: 2px; border-radius: 7px; }
   #notes .nh .tabs2 button { border: 0; background: transparent; padding: 2px 9px; border-radius: 5px; font-size: 12px; color: var(--muted); cursor: pointer; }
   #notes .nh .tabs2 button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
@@ -243,7 +243,7 @@
   .prov .auto svg { color: var(--accent); }
   .prov b > svg { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; color: inherit; }
   .prov b { color: var(--ink); font-weight: 600; }
-  .prov a { color: var(--accent); text-decoration: none; } .prov a:hover { text-decoration: underline; }
+  .prov a { color: inherit; text-decoration: none; } .prov a:hover { text-decoration: underline; }
   .prov .anchor { max-width: 32ch; }
   /* based on: reads as text like the rest of the line, with an arrow: it opens another item, it does not filter. */
   .prov .anchor { font: inherit; font-weight: bold; color: var(--ink); background: none; padding: 0; border-radius: 0; }
@@ -553,7 +553,7 @@
     15%, 45% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 0 999px color-mix(in srgb, var(--accent) 5%, transparent); }
     100% { box-shadow: 0 0 0 3px transparent, inset 0 0 0 999px transparent; } }
   @media (prefers-reduced-motion: reduce) { .spot { animation: none; box-shadow: 0 0 0 3px var(--accent); } }
-  .flash { outline: 2px solid var(--accent, #4a7cff); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
+  .flash { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; transition: outline-color .6s; }
   .starters { display: flex; gap: 6px; flex-wrap: wrap; }
   /* Above the design workspace (70) too, below a zoomed picture (80): the private ask works there as well. */
   #ask { position: fixed; right: 16px; bottom: 16px; z-index: 75; }
@@ -647,7 +647,7 @@
   .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; }
   .impact ul { margin: 4px 0 10px; padding-left: 20px; } .impact li { margin-bottom: 4px; }
-  .impact .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; text-align: left; } .impact .link:hover { text-decoration: underline; }
+  .impact .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; cursor: pointer; text-align: left; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; } .impact .link:hover { text-decoration-color: currentColor; }
   /* The browser's Back leaves the Desk (docs/desk.md → Where it works): every view keeps a way back on screen. */
   .crumb { position: sticky; top: -24px; z-index: 5; margin: -24px calc(-1 * var(--pad-x)) 14px; padding: 10px var(--pad-x); background: var(--bg); border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
   .crumb [data-copy-link] { margin-left: auto; }
@@ -710,7 +710,7 @@
   .reason .parts .btn::before { content: "◆"; color: var(--why); margin-right: 4px; font-size: 9px; }
   .reason .more { display: inline-block; margin-top: 6px; font-size: var(--fs-meta); }
   .reason .gone-note { margin: 6px 0 0; font-size: var(--fs-meta); color: var(--bad); }
-  .ws-side .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; } .ws-side .link:hover { text-decoration: underline; }
+  .ws-side .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; } .ws-side .link:hover { text-decoration-color: currentColor; }
   .why-sel { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
   .why-sel button { display: flex; gap: 6px; align-items: flex-start; text-align: left; border: 0; background: none; padding: 2px 0; cursor: pointer; font-size: 13px; }
   .why-sel button:hover span:last-child { text-decoration: underline; }
@@ -738,17 +738,18 @@
   /* ---------- the request page's look (from the team's request-page prototype) ----------
      The Desk's neutrals stay. Each outcome of a request has its own ink: amber while it
      waits on the team, magenta for a person's move, green approved, slate decided, red closed,
-     blue while it waits on Design Desk. */
-  :root { --approved: #1f6b45; --approved-soft: #e2f1e8; --waiting: #9c5c00; --waiting-soft: #fbefd6; --turn: #a8256f; --turn-soft: #fae3ef;
-    --decided: #33557f; --decided-soft: #e4ebf5; --closed: #8a2a22; --closed-soft: #f8e4e1;
+     blue while it waits on Design Desk. One green, one amber, one red, one violet on every page:
+     these inks are the Desk's own --ok, --warn, --bad and --live, never a near copy. */
+  :root { --approved: var(--ok); --approved-soft: var(--ok-soft); --waiting: var(--warn); --waiting-soft: var(--warn-soft); --turn: #a8256f; --turn-soft: #fae3ef;
+    --decided: #33557f; --decided-soft: #e4ebf5; --closed: var(--bad); --closed-soft: var(--bad-soft);
     --canvas: #edebe7; --dot: #d6d4cd;
-    /* A pull request's and an issue's state in GitHub's own colours, the same in both modes. */
-    --gh-open: #2da44e; --gh-draft: #8c959f; --gh-merged: #8957e5;
+    /* A pull request's and an issue's state: open green, merged violet, draft grey, in the Desk's own inks. */
+    --gh-open: var(--ok); --gh-draft: var(--muted); --gh-merged: var(--live);
     --fs-title: 26px; --fs-head: 17px; --fs-read: 15px; --fs-ui: 14px; --fs-meta: 12.5px; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --approved: #74d3a2; --approved-soft: #1b2e23; --waiting: #f0c060; --waiting-soft: #33291a; --turn: #f28cc6; --turn-soft: #3a1d2e;
-    --decided: #9bb8e0; --decided-soft: #1d2633; --closed: #ff8f85; --closed-soft: #3a1f1d; --canvas: #232321; --dot: #383835; } }
-  :root[data-theme="dark"] { --approved: #74d3a2; --approved-soft: #1b2e23; --waiting: #f0c060; --waiting-soft: #33291a; --turn: #f28cc6; --turn-soft: #3a1d2e;
-    --decided: #9bb8e0; --decided-soft: #1d2633; --closed: #ff8f85; --closed-soft: #3a1f1d; --canvas: #232321; --dot: #383835; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --turn: #f28cc6; --turn-soft: #3a1d2e;
+    --decided: #9bb8e0; --decided-soft: #1d2633; --canvas: #232321; --dot: #383835; } }
+  :root[data-theme="dark"] { --turn: #f28cc6; --turn-soft: #3a1d2e;
+    --decided: #9bb8e0; --decided-soft: #1d2633; --canvas: #232321; --dot: #383835; }
   body { font-variant-numeric: tabular-nums; }
   :is(button, a, input, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   /* Five text sizes: the page title, headings, reading text, the interface, small print. */
@@ -849,9 +850,9 @@
   .tabs button { font-size: var(--fs-ui); color: var(--ink); }
   nav button { font-size: var(--fs-ui); } nav button.main { font-size: var(--fs-read); }
   .subtabs > button[data-filter] { font-size: var(--fs-ui); }
-  /* A text link that is a button: accent ink, no frame, anywhere on the Desk. */
+  /* A text link that is a button: the same calm link, no frame, anywhere on the Desk. */
   button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; text-align: left; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
-  button.link:hover { color: var(--accent); text-decoration-color: currentColor; }
+  button.link:hover { text-decoration-color: currentColor; }
   .msg .who button.link { font-size: var(--fs-meta); }
   /* Chips: the same pill as the state tags. */
   .chip { font-size: var(--fs-meta); padding: 1px 9px; line-height: 1.5; font-weight: 500; }
@@ -870,7 +871,7 @@
   .composer { max-width: var(--measure); }
   details.convo { margin-top: 14px; max-width: var(--measure); }
   details.convo > summary { cursor: pointer; list-style: none; display: inline-flex; gap: 8px; align-items: center; color: var(--ink); font-size: var(--fs-ui); }
-  details.convo > summary:hover { color: var(--accent); }
+  details.convo > summary:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   details.convo > summary::-webkit-details-marker { display: none; }
   details.convo > summary::before { content: "▸"; font-size: var(--fs-meta); } details.convo[open] > summary::before { content: "▾"; }
   details.convo > summary .cnt { color: var(--muted); }
@@ -923,17 +924,17 @@
   .s-word :is(.info, .help) .tip { position: absolute; z-index: 30; left: 0; top: calc(100% + 8px); width: max-content; max-width: 300px; padding: 8px 11px; border-radius: 7px; background: var(--ink); color: var(--panel); font-size: var(--fs-meta); line-height: 1.45; font-weight: 400; letter-spacing: 0; opacity: 0; pointer-events: none; transition: opacity .1s; }
   .s-word .info:hover .tip, .s-word .info:focus-visible .tip { opacity: 1; }
   /* The spec's versions read as plain text: each a link, the one shown in ink. */
-  .spec-versions button { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .spec-versions button:hover { text-decoration: underline; }
+  .spec-versions button { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; } .spec-versions button:hover { text-decoration-color: currentColor; }
   .spec-versions button[aria-pressed="true"] { color: var(--ink); font-weight: 600; cursor: default; text-decoration: none; }
   .follow { margin: 8px 0 4px; } .follow p { margin: 0; } .follow-prs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
   .follow-prs li { display: grid; grid-template-columns: 60px 1fr; column-gap: 10px; align-items: baseline; } .follow-prs .chip { justify-content: center; }
   .follow-prs li > span:last-child { color: var(--muted); } .follow-prs .ttl { color: var(--ink); } .follow-prs .sep { margin: 0 6px; } .follow-prs .nw { white-space: nowrap; }
-  .follow-prs .anchor { font: inherit; background: none; padding: 0; border-radius: 0; color: var(--accent); text-decoration: underline; max-width: none; } .follow-prs .num { font-size: .8em; } .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, #1a7f37 14%, var(--panel)); color: #1a7f37; } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, #8250df 14%, var(--panel)); color: #8250df; }
+  .follow-prs .anchor { font: inherit; background: none; padding: 0; border-radius: 0; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; max-width: none; } .follow-prs .anchor:hover { text-decoration-color: currentColor; } .follow-prs .num { font-size: .8em; } .follow .chip[data-o="gh-open"] { background: color-mix(in srgb, var(--gh-open) 14%, var(--panel)); color: var(--gh-open); } .follow .chip[data-o="gh-merged"] { background: color-mix(in srgb, var(--gh-merged) 14%, var(--panel)); color: var(--gh-merged); }
   .spec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; } .spec-head .hint { margin: 0; } .spec-tools { margin: 0; }
   /* The approved note reads on the heading's line, after it, in the hints' size. */
   h3 .locked-note { font-weight: 400; font-size: var(--fs-meta); margin-left: 10px; }
   .anchor-text, .brief-toggle { text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
-  .anchor-text { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; } .anchor-text:hover, .brief-toggle:hover { color: var(--accent); text-decoration-color: currentColor; }
+  .anchor-text { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; } .anchor-text:hover, .brief-toggle:hover { text-decoration-color: currentColor; }
   .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
   .spec-preview { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow: auto; max-height: 36em; }
   .spec-text { width: 100%; font-family: var(--mono); font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
@@ -966,10 +967,10 @@
   .status.req .moves .ws { box-sizing: border-box; }
   /* A request's state (docs/desk-page.md → A request's state). The stage and who has the turn; Approve and
      Close on the right; the ways on in one row; the five stages as the box's bottom edge. The state's inks
-     share one lightness and one strength, so one slate suits the stage line beside each of them. */
-  :root { --st-checking: oklch(.5 .12 262); --st-turn: oklch(.5 .12 350); --st-waiting: oklch(.5 .12 62); --st-approved: oklch(.5 .12 155); --st-closed: oklch(.5 .12 27); --st-decided: oklch(.5 0 0); --st-bar: oklch(.38 .03 255); }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --st-checking: oklch(.8 .1 262); --st-turn: oklch(.8 .1 350); --st-waiting: oklch(.8 .1 62); --st-approved: oklch(.8 .1 155); --st-closed: oklch(.8 .1 27); --st-decided: oklch(.8 0 0); --st-bar: oklch(.86 .03 255); } }
-  :root[data-theme="dark"] { --st-checking: oklch(.8 .1 262); --st-turn: oklch(.8 .1 350); --st-waiting: oklch(.8 .1 62); --st-approved: oklch(.8 .1 155); --st-closed: oklch(.8 .1 27); --st-decided: oklch(.8 0 0); --st-bar: oklch(.86 .03 255); }
+     are the same inks as the state's dot and tag in the list, so a state reads one colour everywhere. */
+  :root { --st-checking: var(--accent); --st-turn: var(--turn); --st-waiting: var(--warn); --st-approved: var(--ok); --st-closed: var(--bad); --st-decided: var(--decided); --st-bar: oklch(.38 .03 255); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --st-bar: oklch(.86 .03 255); } }
+  :root[data-theme="dark"] { --st-bar: oklch(.86 .03 255); }
   .status.req[data-o="checking"] { --o: var(--st-checking); } .status.req[data-o="turn"] { --o: var(--st-turn); } .status.req[data-o="waiting"] { --o: var(--st-waiting); }
   .status.req[data-o="approved"] { --o: var(--st-approved); } .status.req[data-o="closed"] { --o: var(--st-closed); } .status.req[data-o="decided"] { --o: var(--st-decided); }
   .s-word .help { display: inline-flex; align-items: center; gap: 9px; cursor: help; border-radius: 6px; }
@@ -1267,7 +1268,7 @@
         <div class="thumbs" id="of-thumbs"></div>
       </div>
     </div>
-    <p class="hint" id="of-error" style="color:var(--bad, #b42318);margin:0" hidden></p>
+    <p class="hint" id="of-error" style="color:var(--bad);margin:0" hidden></p>
     <div class="actions"><button type="button" class="btn primary" data-close="ok" id="of-ok">Draw the option</button><button type="button" class="btn" data-close="cancel">Cancel</button></div>
   </form>
 </dialog>
@@ -4762,7 +4763,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const elementOf = (el) => { const hits = els.map((x) => ({ key: x.key, node: find(x.selector) })).filter((x) => x.node && x.node.contains(el)); return (hits.find((x) => !hits.some((y) => y.node !== x.node && x.node.contains(y.node))) || {}).key || null; };
     // A played story's numbered frames show only while the design's Show hotspots switch is on.
     const hot = () => document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") === "true";
-    const draw = () => { layer.textContent = ""; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#b07400" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
+    const draw = () => { layer.textContent = ""; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#9a6200" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
       // A part inside another part the same decision shaped does not repeat its number.
       const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
       for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
@@ -4777,6 +4778,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Show notes is kept across options: the Desk hears each flip of the switch and, when the
     // frame loads, names the state to start in.
     const notesSwitch = () => document.querySelector("#review [data-notes]");
+    // A switch shows only when the design has what it shows (a design built before the bar knew that included).
+    const emptySwitches = () => { const n = notesSwitch(); if (n && !document.querySelector("[data-design-note]")) n.hidden = true; const h = document.querySelector("#review [data-hot]"); if (h && ![...document.querySelectorAll("[data-goto-view],[data-menu-trigger],[onclick],[data-clickable]")].some((x) => !x.closest("#review"))) { h.hidden = true; document.documentElement.classList.remove("review-hot"); } };
+    if (document.readyState === "loading") addEventListener("DOMContentLoaded", emptySwitches); else emptySwitches();
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
@@ -4869,7 +4873,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     /* The product's own style (Style: <repo>@<commit>) goes without saying on the Desk; a fallback
        style (wireframe, Carbon, a saved brand) keeps its line, so it never passes for the product's look. */
     html[data-review-style*="@"]:not([data-review-style^="Style: brand"]) #review .style { display: none; }
-    html #review [data-hot] { margin-left: auto; }
+    html #review [data-hot], html #review [data-hot][hidden] + [data-notes] { margin-left: auto; }
     /* The design's title (number and name) repeats its option tab on the Desk. */
     html #review #review-title { display: none; }
     /* The design's pages are named as such: "Pages:" in grey before their switcher. */

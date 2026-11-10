@@ -213,7 +213,8 @@ force, Not approved or Revoked and holds **Approve** (when not approved), **Revo
 Weekly digest. Needs a designer carries a
 small AI tag: Design Desk judges what goes in it, the buttons (**Mark
 handled**, **Adjust the design**; **Design this**) and ⋯ for the presentation. **Draw it** sits
-under an issue's How it could look. A change and an issue show their GitHub state the same way, in GitHub's colours: a change's pull
+under an issue's How it could look. A change and an issue show their GitHub state the same way, in the Desk's own inks (one green, one
+violet, one grey on every page, the green the same as Approved): a change's pull
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).

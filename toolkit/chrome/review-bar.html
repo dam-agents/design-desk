@@ -7,7 +7,8 @@
      data-goto-view, a data-menu-trigger, an onclick, or data-clickable on a control a small
      script toggles; a click anywhere else but a field flashes them, as a prototype tool does.
      Notes: an explanation for the team sits on a part as data-design-note="…", never as a
-     drawn element. The "Show notes" switch shows only when the design has a note; it numbers
+     drawn element. "Show hotspots" shows only when the design wires something, and the
+     "Show notes" switch only when the design has a note; it numbers
      the notes on the screen shown, and pointing at a number reads its note.
      Title: <html data-review-title="#123 · Issue title">.
      Empty state: populated content in [data-populated], the empty one in [data-empty-view].
@@ -127,8 +128,10 @@
       layer.addEventListener("click", (e) => { const p = e.target.closest(".pin"); if (!p) return; const n = Number(p.dataset.note); openNote = openNote === n ? null : n; drawNotes(); });
       layer.addEventListener("mouseover", (e) => { const p = e.target.closest(".pin"); const n = p ? Number(p.dataset.note) : null; if (n !== hoverNote) { hoverNote = n; drawNotes(); } });
       layer.addEventListener("mouseleave", () => { if (hoverNote !== null) { hoverNote = null; drawNotes(); } });
-      // The switch shows only when the design carries a note.
+      // Each switch shows only when the design has what it shows: a note, a wired hotspot.
       const nb = document.querySelector("#review [data-notes]"); if (nb) nb.hidden = !document.querySelector(NOTE);
+      const hb = document.querySelector("#review [data-hot]");
+      if (hb && ![...document.querySelectorAll(HOT)].some((x) => !x.closest("#review"))) { hb.hidden = true; de.classList.remove("review-hot"); }
       addEventListener("scroll", drawNotes, true); addEventListener("resize", drawNotes);
       document.querySelectorAll("#review button").forEach((b) => b.addEventListener("click", () => {
         if (b.dataset.reviewBack !== undefined) { go("back"); return; }
