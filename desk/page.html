@@ -2402,7 +2402,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const PEN_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const titleLink = (c) => (c && itemLink(c) ? `<button class="linkbtn" data-copy-link aria-label="Copy a link to ${esc(c.id)}" title="A link that opens ${esc(c.id)}: paste it in Slack, an issue or a message">${LINK_ICON}</button>` : "");
   const designIdOf = (c) => (c.send ? c.sends?.[c.send - 1]?.design_id : c.design_id) || null;
-  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${S.tab === "designs" && !presenting() && designIdOf(c) ? designIdOf(c) : `${presenting() ? "presentation/" : S.tab === "designs" ? "designs/" : ""}${c.base || c.id}`}` : "");
+  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${S.tab === "designs" && !presenting() && designIdOf(c) ? designIdOf(c) : onDiffs() && (c.figma?.id || c.figma_check?.id) ? c.figma?.id || c.figma_check.id : `${presenting() ? "presentation/" : S.tab === "designs" ? "designs/" : ""}${c.base || c.id}`}` : "");
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
   const backBar = () => {
     const decisions = S.tab === "product" && S.productFilter === "decisions";
@@ -5245,7 +5245,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function keepPlace() {
     if (!placeKept) return;
     const at = S.decision ? S.decision.id
-      : S.card && S.tab === "designs" && S.card.design_id && !sendOf(S.card.id) ? S.card.design_id
+      : S.card && S.tab === "designs" && designIdOf(S.card) ? designIdOf(S.card)
       : S.card ? `${S.tab === "designs" ? "designs/" : S.reqFilter === "presentation" && S.tab === "requests" ? "presentation/" : ""}${onDiffs() && S.card.figma_check?.id ? S.card.figma_check.id : S.card.id}`
       : S.tab === "requests" && S.reqFilter === "presentation" ? "presentation" : S.tab;
     // A frame that may not change its address keeps the page as it is.
@@ -6074,7 +6074,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (to && !to.id && !to.decision && to.tab) push({ id: `#${to.tab}`, kind: "Page", title: to.tab === "presentation" ? "The presentation" : TABS[to.tab] || to.tab, why: "" });
     // Words: every word in the item's text.
     const words = q.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
-    if (words.length && !gh && !pre) {
+    // A number typed with its dash (R-3) is only a number; `s3` may be a word too ("Upload to S3").
+    if (words.length && !gh && !(pre && q.includes("-"))) {
       for (const c of S.cards) { const h = hay(c); if (words.every((w) => h.includes(w))) card(c); }
       try {
         const ds = (await api("GET", `/api/decisions?q=${encodeURIComponent(q)}`)).decisions || [];

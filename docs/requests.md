@@ -308,7 +308,7 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   part in the product's words; `change` `new` or `changed`; `how` one sentence on what is new or
   different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
-  (`R-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
+  (`E-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
   option's design as **All elements**; one opens in a dialog with its states. A part picked in the design workspace
   that is (or sits inside) an element with states drawn offers **See every state**: the same
   dialog, only to look through them, with no button that draws or adds. A state belongs to the

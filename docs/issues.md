@@ -94,13 +94,13 @@ direction, not options.
    that makes the product work differently is drawn and labelled "needs a developer"; plumbing
    is drawn with a sample value. No real person or
    data; every number is made up.
-5. Upload each (`design desk asset <file> --kind screen --card Q-<n>`), then one
+5. Upload each (`design desk asset <file> --kind screen --card I-<n>`), then one
    `design desk upsert` `{id, screens, sketches, style, draw: {failures: 0, note: ""}}` with its
    check against the decisions (`conflicts`, `decision_check`: [desk.md](desk.md) → Decisions → The check),
    each picture with a one-line caption and its `source` (`instance`, or `issue` for a
    picture taken from the issue itself; every sketch `sketch`); `style` names the look used (the product's own
    styles at `<repo>@<commit>`, or the fallback). Keep the sources under
-   `work/output/issues/Q-<n>/`.
+   `work/output/issues/I-<n>/`.
 6. An inbox item: `design desk done Q-<n> --session <id> --outcome drawn`.
 
 A drawing that fails → `design desk upsert` `{id, draw: {failures: <before + 1>, note:

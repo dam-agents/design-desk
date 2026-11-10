@@ -6,7 +6,7 @@ import { basename, extname, join } from "node:path";
 import { WORK, cfg, fail, run, tableIn, withRosterRow, writeConfig } from "../lib/core.mjs";
 import { ADDABLE_ROLES, rosterOf, personOf } from "../../desk/store.mjs";
 
-const USAGE = `usage: design desk <command>
+const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n> a request's)
   health                                   is the server up; store counts
   inbox                                    open and claimed inbox items
   item <Q-n>                               one inbox item with its card
@@ -18,22 +18,22 @@ const USAGE = `usage: design desk <command>
   person <Q-n> --session <id>              work an admin's ask to add a person: re-check it, add the
                                            row to ## Desk people, and mark the item done
   cards [--kind change|request|issue]      list cards
-  card <R-n>                               one card with its threads, by any of its numbers (R-12,
+  card <card>                              one card with its threads, by any of its numbers (R-12,
                                            P-3, C-12 from before 1.78.0; F-n and G-n name their card)
   designs                                  every approved design: where its spec went, its option
                                            and its elements (docs/watch.md step 11)
   upsert <card.json|->                     create or update a card (agent fields only)
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
-  agenda <R-n> [--note <text>]             suggest a card for the presentation; a designer adds it
-  look <R-n> <look.json|->                 add an earlier look of an element or a screen, drawn from the
+  agenda <card> [--note <text>]            suggest a card for the presentation; a designer adds it
+  look <E-n|S-n> <look.json|->             add an earlier look of an element or a screen, drawn from the
                                            code's history: {at, commit, sheet, thumb, states, made_by,
                                            links: [{label, url}], note} (a screen: screens instead of sheet)
   report <bug.json|->                      put a UI bug someone reported on the queue as a request
                                            of type bug: {title, problem, goal, steps, screen,
                                            screens: [{asset, caption}], origin: {channel, chat,
                                            thread_ts, message_ts, reporter, email, url}}
-  asset <file> --kind <k> [--card C-n] [--name <n>] [--type <media/type>]
+  asset <file> --kind <k> [--card <card>] [--name <n>] [--type <media/type>]
                                            store a file; kinds: screen variant spec patch image report
   answer <T-n> <text-file|-> [--resolve] [--shots <shots.json>] [--warns <warns.json>]
                                            answer a thread; --shots: what a worked-in change did,
@@ -41,9 +41,9 @@ const USAGE = `usage: design desk <command>
                                            stage: before|after|diff, pair, marks}]; --warns: what it
                                            goes against: [{what, why, source: {kind: decision, ref:
                                            D-n} | {kind: issue|pr, url, label}}]
-  comment <R-n> <text-file|-> [--shots <shots.json>]
+  comment <card> <text-file|-> [--shots <shots.json>]
                                            add a comment thread as the agent
-  ask <R-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
+  ask <card> <text-file|-> --step <step>   ask the people a question the step cannot go on without;
       [--form]                             their answer re-queues the step (request explore revise states
                                            build handoff figma catalog map); --form: the file is
                                            JSON {text, questions: [{text, options, suggested}]},
@@ -59,7 +59,7 @@ const USAGE = `usage: design desk <command>
                                            skill → Compare with the product); null clears it
   decisions [--concept <c>] [--q <words>] [--state active|revoked]
                                            earlier decisions, newest first
-  decision-check <R-n> [--concept <a,b>] [--q <words>]
+  decision-check <card> [--concept <a,b>] [--q <words>]
                                            what a check reads (docs/desk.md → Decisions → The check):
                                            the card's options, the decisions in force it could go
                                            against, its conflicts now and its last check
@@ -88,8 +88,8 @@ const USAGE = `usage: design desk <command>
   find-council <thread ts>                 which card and council a Slack thread belongs to; with no
                                            council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
-  enqueue <kind> <R-n> [--note <text>]     put work on the inbox (e.g. teardown)
-  github-sync [--card <R-n>]               read every issue and pull request the cards point at (or one
+  enqueue <kind> <card> [--note <text>]     put work on the inbox (e.g. teardown)
+  github-sync [--card <card>]               read every issue and pull request the cards point at (or one
                                            card's) on GitHub with its comments and keep it on the Desk;
                                            prints {synced, failed, gave_up, fresh: [{key, cards, comments}]}:
                                            the comments new since the last read, and the refs whose 3rd
@@ -345,7 +345,7 @@ export async function main(_cmd, argv) {
     }
     case "agenda": return out(await call("POST", `/agent/cards/${pos[0]}/agenda`, { note: typeof f.note === "string" ? f.note : "" }));
     case "look": {
-      if (!pos[0] || !pos[1]) fail("usage: design desk look <R-n> <look.json|->");
+      if (!pos[0] || !pos[1]) fail("usage: design desk look <E-n|S-n> <look.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[1])); } catch (e) { fail(`not JSON: ${e.message}`); }
       return out(await call("POST", `/agent/cards/${pos[0]}/looks`, doc));
     }
@@ -356,7 +356,7 @@ export async function main(_cmd, argv) {
     }
     case "asset": {
       const file = pos[0];
-      if (!file || !f.kind) fail("usage: design desk asset <file> --kind <kind> [--card C-n] [--name <name>]");
+      if (!file || !f.kind) fail("usage: design desk asset <file> --kind <kind> [--card <card>] [--name <name>]");
       const type = f.type || TYPES[extname(file).toLowerCase()] || "application/octet-stream";
       const text = /^text\/|json|svg/.test(type);
       const buf = readFileSync(file);

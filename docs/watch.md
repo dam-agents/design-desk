@@ -88,7 +88,7 @@ steps say; the decision notes of step 4 are always yours to read.
    → Clean up). With the product map, update the screens the change touched
    ([map.md](map.md) → Keep it current).
 10. **Catalog.** Every element card whose `source.file` the change touched: set
-    `status: stale` and `design desk enqueue catalog R-<n>` ([catalog.md](catalog.md)).
+    `status: stale` and `design desk enqueue catalog E-<n>` ([catalog.md](catalog.md)).
     Put the touched elements' ids in the change card's `elements`. A merged change, handled or
     auto handled, that adds an element the catalog has none of: file it as an element card and
     enqueue `catalog` (catalog.md → Drawing an element).
@@ -136,7 +136,7 @@ check: it passes when nobody needs to look, and fails until someone marks the ca
 Merged and closed pull requests are never touched: their checks no longer matter.
 
 - **Set it** right after the card is written (step 13), on an open PR, by the card as `design
-  desk card R-<n>` returns it: `attention` `fyi` (auto handled) or handled → **pass**; `designer`
+  desk card P-<n>` returns it: `attention` `fyi` (auto handled) or handled → **pass**; `designer`
   or `developer` → **fail** until a designer, or on a change For Developers a lead developer,
   marks it handled ([desk.md](desk.md) → For Developers or For Designers); no `attention` →
   set nothing: the change is not judged yet, so a required check keeps waiting. A PR that builds a Desk design is judged the same way, by the card's own derived
@@ -160,7 +160,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
   again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`
   (before 1.76.0 a PR judged and not held: its check is set now). A pre-flight that cannot read the
   cards logs an error line and leaves the run open, never an empty list.
-- **`ci_due`** (inbox run), an `Q-<n>` item: a person marked the card handled, took the mark
+- **`ci_due`** (inbox run), a `Q-<n>` item: a person marked the card handled, took the mark
   back, or moved it between For Developers and For Designers. Claim; read the card and the
   PR again and set the check as in **Set it** on the current head (`ci_gate` now `disabled`
   → pass, so nothing stays held). A merged or closed PR → nothing to set; `design desk done` with "PR no longer open".

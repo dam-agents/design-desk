@@ -132,7 +132,7 @@ design in Figma) → do not search again. Only a person's action starts a new se
   Old, Playground or Draft; prefer a frame marked ready for development. Render the two or
   three best and look at them next to the screen's own picture.
 - Sure (a Dev Mode link, or one frame that plainly is the screen): use it. Not sure: ask on
-  the card with its picture and link — `design desk ask R-<n> --step figma` "Is this its design
+  the card with its picture and link — `design desk ask <card> --step figma` "Is this its design
   in Figma?" — set `figma_search: {state: asked, thread: T-<n>}`, and compare only after a yes.
   Nothing that fits: `figma_search: {state: none}`, nothing on the card.
 - **The answer** comes back as a `figma` inbox item on the card (its note the answer); claim

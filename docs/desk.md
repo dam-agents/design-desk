@@ -61,7 +61,8 @@ How the page looks and behaves, its lists, filters, states, notifications and De
 
 - **Every item has a number**: its kind's letter and its place in that kind's own series,
   shown grey by its title on its row and its page. It is the one way to refer to an item:
-  people write it in Slack, a comment or chat; `design desk card R-12` reads it.
+  people write it in Slack, a comment or chat; `design desk card R-12` reads it. In a command
+  or a link, `<card>` is any card's number and `R-<n>` a request's.
 
   | Letter | Item | Where it shows |
   | --- | --- | --- |
@@ -117,9 +118,9 @@ How the page looks and behaves, its lists, filters, states, notifications and De
   a request its status, any other item its kind and `summary`, a decision its text, who made
   it, its day, whether it is in force and whether a designer approved it. A note's label on an element (◎ …) previews that element alone, cut from its option. A preview shows half a second after the pointer rests on
   it. A link that previews shows no one-line tooltip.
-- **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#R-<n>`
-  in a channel message (the platform turns it into the share link and keeps `#R-<n>`),
-  `<desk_link>#R-<n>` anywhere else (GitHub). The access note: it opens only for people on
+- **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#<card>`
+  in a channel message (the platform turns it into the share link and keeps `#<card>`),
+  `<desk_link>#<card>` anywhere else (GitHub). The access note: it opens only for people on
   the Desk's list.
 - **Stopgap:** the platform's share page does not pass a link's `#…` into the page yet, so a
   link opens the Desk on its first tab and the number is the way on (Go to). The fix is the
@@ -625,7 +626,7 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   pull request is written `#12` / `PR #12` (the card's repository, else the first of `repos`)
   or `owner/name#12`; the page links it to GitHub.
 - When a step cannot go on without a person, ask once, with a suggested answer:
-  `design desk ask R-<n> <file> --step <step>`. Their answer puts the step back on the queue.
+  `design desk ask <card> <file> --step <step>`. Their answer puts the step back on the queue.
 - <a id="the-questions-form"></a>**The questions form** shows four parts and nothing else:
   the `text`, each question, its options, and the `suggested` one marked **recommended**.
   The `text` is one or two short sentences of what it is about, only what the question needs;

@@ -296,6 +296,6 @@ messages are For you for the designer who approved the request, or every `design
 without the menu. The request shows the same thread as *Developer asks*, and for a role that sees Designs its
 state row holds **Show the design**, which opens it here. Answer nothing on it:
 it is between people. Each closed record of a request reopened after it was sent (`sends`)
-stays under **Done** as its own row (its own `G-<n>`, **· earlier send**; `R-<n>~<k>` for a send from before 1.78.0), read-only: **Closed**,
+stays under **Done** as its own row (its own `G-<n>`, **· earlier send**; `#R-<n>~<k>` still opens it), read-only: **Closed**,
 who reopened it and when, its issue, its summary and its questions, with no box to ask and no
 Mark as done.
