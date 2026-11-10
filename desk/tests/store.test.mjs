@@ -1073,6 +1073,25 @@ test("a picture keeps where it came from: an issue's own and an AI sketch too; a
   assert.equal(card.sketches[0].source, "sketch");
 });
 
+test("a Slack sync is not a new vote: a reaction counted before keeps its time, a changed one is new", () => {
+  let now = Date.UTC(2026, 10, 1, 9);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
+  const a = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "One button", asset: a }] });
+  s.slackVotes(card.id, "v1", [{ key: "slack:U1", vote: "prefer", name: "Jana" }]);
+  const first = s.getCard(card.id).votes.v1["slack:U1"].at;
+  const votes = () => s.notifications(bob).items.filter((x) => x.event === "vote");
+  assert.equal(votes().length, 1);
+  now += 3 * 3600e3;
+  s.slackVotes(card.id, "v1", [{ key: "slack:U1", vote: "prefer", name: "Jana" }]);
+  assert.equal(s.getCard(card.id).votes.v1["slack:U1"].at, first, "the same reaction keeps its time");
+  assert.deepEqual(votes().map((x) => x.at), [first], "a sync adds no vote to the bell");
+  now += 3600e3;
+  s.slackVotes(card.id, "v1", [{ key: "slack:U1", vote: "dislike", name: "Jana" }]);
+  assert.notEqual(s.getCard(card.id).votes.v1["slack:U1"].at, first, "a changed reaction is a new vote");
+});
+
 test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relayed once", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });

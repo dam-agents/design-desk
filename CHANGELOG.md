@@ -17,6 +17,12 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    `S-n`) and their links work. New items take their kind's letter ([desk.md](docs/desk.md) → Links to
    an item); a new prototype's branch and Environment take the card's number in lower case (`r12`).
 
+## 1.77.3 — 2026-11-10
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`). Nothing else: a Slack
+   vote synced before keeps the time of its last sync from now on.
+
 ## 1.77.2 — 2026-11-10
 
 **Upgrade:**

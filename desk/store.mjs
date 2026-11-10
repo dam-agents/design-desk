@@ -2281,7 +2281,10 @@ export class Store {
     if (!Array.isArray(voters)) throw bad("voters must be a list");
     c.votes = c.votes || {};
     const box = (c.votes[variant] = c.votes[variant] || {});
-    for (const [k, x] of Object.entries(box)) if (x.via === "slack") delete box[k];
+    // A reaction already counted keeps its time: a sync is not a new vote, so the bell shows
+    // only a reaction added or changed since the last sync (docs/desk-page.md → Notifications).
+    const was = new Map();
+    for (const [k, x] of Object.entries(box)) if (x.via === "slack") { was.set(k, x); delete box[k]; }
     for (const v of voters.slice(0, 500)) {
       // Slack votes 👍 or 👎 only: a concern there is a reply in the option's thread, relayed as a
       // comment (slack-polls → Share 4). A concern sent as a vote is dropped.
@@ -2291,7 +2294,7 @@ export class Store {
       if (v.is_bot === true) continue;
       const key = clean(String(v.key || ""), 200, "voter key");
       if (box[key]) continue;
-      box[key] = { vote: v.vote, role: optText(v.role, 20, "role") || "slack", name: optText(v.name, 120, "name") || null, via: "slack", at: this.clock(), note: "" };
+      box[key] = { vote: v.vote, role: optText(v.role, 20, "role") || "slack", name: optText(v.name, 120, "name") || null, via: "slack", at: was.get(key)?.vote === v.vote ? was.get(key).at : this.clock(), note: "" };
     }
     c.updated = this.clock();
     this.save();
