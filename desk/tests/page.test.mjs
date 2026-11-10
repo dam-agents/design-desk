@@ -980,7 +980,7 @@ test("numbers, notes and pins preview what they name; the search lists every num
   assert.equal(doc.match(/<\/script>/g).length, 1, "a note's text cannot end the preview's script");
   await desk.mouse.move(0, 0);
 
-  await desk.click('[data-act="workspace"]');
+  await desk.click('.vbar [data-act="workspace"]');
   await desk.waitForSelector("#ws-frame");
   const pin = (data) => desk.evaluate((d) => { const f = document.querySelector("#ws-frame"); dispatchEvent(new MessageEvent("message", { data: d, source: f.contentWindow })); }, data);
   await pin({ type: "desk-pin-tip", note: "t1", rect: { left: 40, top: 60, bottom: 72, width: 0 } });
@@ -1481,7 +1481,7 @@ test("a spec in draft waits for a person: read it, edit it, then send it", (t) =
   assert.equal(await desk.locator("#detail .spec-tools [data-spec-changes]").count(), 1, "and Ask for changes…");
   assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 0, "not in the row");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-body")?.textContent || ""));
-  assert.match(await desk.textContent("#detail"), /Spec draft — read it, then send/, "the state says the spec has not gone");
+  assert.match(await desk.textContent("#detail"), /Approved\s*the spec waits to be read/, "the state says the spec has not gone");
   await desk.click("#detail [data-spec-edit]");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-text")?.value || ""), null, { timeout: 5000 });
   await desk.fill("#spec-text", "# The spec\n\nGrey header, 14 px.");
@@ -1952,7 +1952,8 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   await card("bob", "C-5");
   assert.equal(await count('.btn[data-act="approve"]'), 1, "another developer does");
 
-  assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*for developers/, "the card names who approved it");
+  await card("lou", "C-3");
+  assert.match(await desk.$eval("#detail .line5 li:nth-child(4)", (e) => e.dataset.tip || e.title), /^Approved: .*dana@example\.com for developers/, "the stage line names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
 
   // docs/handoff.md step 4: a question the spec leaves open is asked on the Desk, next to the spec.
@@ -2182,7 +2183,7 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.equal(await desk.locator("#list .chip", { hasText: "Design only" }).count(), 0, "no Design only label in the list");
 
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Needs a developer" }).count(), 0, "no Needs a developer label beside the title");
-  assert.match(await desk.getAttribute("#detail .line5 li:first-child", "title"), /^Checking: Needs a developer/, "the stage line names it");
+  assert.match(await desk.$eval("#detail .line5 li:first-child", (e) => e.dataset.tip || e.title), /^Checking: Needs a developer/, "the stage line names it");
   assert.equal(await desk.locator(".made-col h4", { hasText: "What can be done" }).count(), 0, "no What can be done in the box");
   assert.doesNotMatch(await desk.textContent(".made-col"), /deliberate decision/, "no label on what is already known");
   assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");
@@ -2202,7 +2203,7 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.equal(await desk.locator(".top2 > .brief:not(.made-col) .brief-toggle:not([hidden])").count(), 0, "a request of one short line has nothing to fold: no Show or Hide");
   assert.equal(await desk.locator(".top2 > .brief.clamped").count(), 0, "and it is never folded");
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Design only" }).count(), 0, "no Design only label by the title");
-  assert.match(await desk.getAttribute("#detail .line5 li:first-child", "title"), /^Checking: Design only/, "the stage line names the verdict");
+  assert.match(await desk.$eval("#detail .line5 li:first-child", (e) => e.dataset.tip || e.title), /^Checking: Design only/, "the stage line names the verdict");
 
   await desk.click('[data-tab="new"]');
   await desk.click('[data-filter="newFilter:open"]');
@@ -2294,8 +2295,8 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   assert.deepEqual(await desk.$$eval("#detail .figdiffs figcaption", (xs) => xs.map((x) => x.textContent)), ["In Figma", "In the product"]);
   assert.equal(await desk.textContent("#detail .figdiffs .nopic-f .nopic-box"), "No picture");
   // Under ⋯: Close and Add to presentation. Close moves it to Closed; Reopen the last one goes back to Differs.
-  await desk.click("#detail .h-more summary");
-  assert.equal(await desk.locator('#detail .h-more .menu [data-act="queue"]').count(), 1, "Add to presentation is under ⋯");
+  await desk.click("#detail .status .more summary");
+  assert.equal(await desk.locator('#detail .status .menu [data-act="queue"]').count(), 1, "Add to presentation is under ⋯");
   await desk.click('#detail .status [data-fig-close="1"]');
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/figma-close"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/figma-close").body), { on: true });
@@ -2307,7 +2308,7 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   assert.equal(await desk.locator('#list [data-card="C-1"] .vdot').count(), 0, "a closed one keeps no !");
   await desk.click('#list [data-card="C-1"]');
   await desk.waitForSelector('#detail .status[data-o="closed"]');
-  await desk.click("#detail .h-more summary");
+  await desk.click("#detail .status .more summary");
   await desk.click('#detail .status [data-fig-close="0"]');
   await desk.waitForFunction(() => posts.filter((p) => p.path === "/api/cards/C-1/figma-close").length === 2);
   assert.deepEqual(await desk.evaluate(() => posts.filter((p) => p.path === "/api/cards/C-1/figma-close")[1].body), { on: false }, "Reopen sends on: false");
@@ -2364,7 +2365,7 @@ test("Differences from Figma: Close is only for whoever may mark items handled",
   await desk.click('#list [data-card="C-1"]');
   await desk.waitForSelector("#detail .status");
   assert.equal(await desk.locator("#detail .status [data-fig-close]").count(), 0, "no Close without handle");
-  assert.equal(await desk.locator('#detail .h-more [data-act="queue"]').count(), 1, "Add to presentation stays");
+  assert.equal(await desk.locator('#detail .status [data-act="queue"]').count(), 1, "Add to presentation stays");
 }));
 
 // A person who never chose: /api/me answers no choice (null), and Figma is off for them.
