@@ -118,7 +118,8 @@ async function launch(t, bridge) {
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
   const top = await chrome.newPage();
   await top.goto(`http://127.0.0.1:${server.address().port}/`);
-  const desk = top.frames().find((f) => f.url().endsWith("/desk"));
+  // The page writes what it shows into its address (#requests, #C-12): the frame is found by its path.
+  const desk = top.frames().find((f) => new URL(f.url()).pathname === "/desk");
   const posts = (path) => desk.evaluate((p) => calls.filter((c) => c.method === "POST" && c.path === p), path);
   const settled = async (path, n, why) => { await top.waitForTimeout(300); assert.equal((await posts(path)).length, n, why); };
   return { top, desk, posts, settled, close: async () => { await chrome.close(); server.close(); } };
@@ -1688,7 +1689,13 @@ test("a worked-in note shows the place before and after, outlined, in the thread
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
     await desk.click("[data-convo] > summary");
+    // Marked done, it folds to one line: who and their first words.
+    assert.match(await desk.textContent("#th-t3 > summary"), /^Comment\s*pat@example\.com — Typo in the title\s*done$/, "a done conversation folds to who and its first words");
+    await desk.click("#th-t3 > summary");
     await desk.waitForSelector("#th-t3 .changed");
+    // Opened, it names its option and jumps to the part, as an open note does.
+    assert.match(await desk.textContent("#th-t3 .head .chip"), /Option 1: Tabs/, "the option it is on");
+    assert.equal(await desk.locator('#th-t3 .head [data-goto="t3"]').count(), 1, "the jump to the part");
     await loaded("#th-t3");
     assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");
     assert.deepEqual(await pictures("#th-t3"), both, "the thread shows before and after");
@@ -2321,6 +2328,8 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   assert.equal(await desk.getAttribute('[data-filter="figFilter:differs"]', "aria-pressed"), "true", "back on Differs, a lit filter");
 
   // On the screen itself: folded to one line with the counts; × takes one off for everyone.
+  // The address already reads #C-1 (the page keeps it): another place first, so the link opens anew.
+  await desk.goto(`${base}#product`);
   await desk.goto(`${base}#C-1`);
   await desk.waitForSelector("[data-figbox]");
   assert.equal(await desk.$eval("[data-figbox]", (x) => x.open), false, "folded at first");
@@ -2680,6 +2689,11 @@ test("Designs: an earlier send of a reopened request is its own closed row under
   assert.match(await desk.textContent("#detail .status"), /Closed[\s\S]*reopened by/);
   assert.equal(await desk.getAttribute('#detail .status a.btn:has-text("Issue")', "href"), "https://github.com/acme/widgets/issues/99", "the earlier send's issue");
   assert.equal(await desk.locator("#detail [data-built], #detail #composer").count(), 0, "no Mark as done, no box to ask");
+  // The page writes the record into its address, and a reload reads it back.
+  await desk.waitForFunction(() => location.hash === "#designs/C-1~1");
+  await desk.reload();
+  await desk.waitForFunction(() => /Closed[\s\S]*reopened by/.test(document.querySelector("#detail .status")?.textContent || ""));
+  assert.match(await desk.textContent("#list .row.item[aria-current], #list .row.item"), /C-1 · earlier send/, "a reload opens the same earlier send");
 }));
 
 test("a send after a reopen shows the earlier issue's state and assignee, and closes it only when ticked", (t) => open(t, sendsBridge("designer", { status: "spec", approved: { by: { email: "designer@example.com", role: "designer" }, at: "2026-11-07T13:00:00Z", variant: "v1" }, spec: { asset: "A-3", review: "draft" } }), async (desk) => {
@@ -2697,8 +2711,8 @@ test("a send after a reopen shows the earlier issue's state and assignee, and cl
 
 test("only an admin reopens a sent request, from ⋯, behind a confirmation", (t) => open(t, sendsBridge("admin", { status: "handed-off", sends: [], approved: { by: { email: "alice@example.com", role: "designer" }, at: "2026-11-05T09:00:00Z", variant: "v1" }, spec: { issue_url: "https://github.com/acme/widgets/issues/142", review: "sent" } }), async (desk) => {
   await desk.evaluate(() => { location.hash = "#C-1"; });
-  await desk.click("#detail .h-more details.more > summary");
-  await desk.click('#detail .h-more [data-act="reopen"]');
+  await desk.click("#detail .status details.more > summary");
+  await desk.click('#detail .status [data-act="reopen"]');
   assert.match(await desk.textContent("#confirm-dialog"), /Reopen a request sent to developers\?[\s\S]*before the team's vote[\s\S]*stays as it is/);
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/actions"));
@@ -2759,6 +2773,9 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 test("research sources say what they are; a page previews its section; code links are left out, older links show plainly", (t) => open(t, SOURCES, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   await desk.goto(`${base}#C-2`);
+  await desk.waitForSelector(".made-sec details.srcs:not([open])");
+  assert.equal((await desk.textContent(".made-sec .srcs > summary")).trim(), "9 sources · Issue, PR, PR Change, Decision, 2× Doc, ADR, Link, Item", "the sources start folded, counted by kind");
+  await desk.click(".made-sec .srcs > summary");
   await desk.waitForSelector(".made-sec ul li");
   const rows = await desk.$$eval(".made-sec ul li", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
   assert.deepEqual(rows, ["Issue · #5", "PR · Menu #6", "PR Change · C-1 A new header", "Decision · D-1 Search sits in the header",

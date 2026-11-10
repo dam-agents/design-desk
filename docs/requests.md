@@ -65,7 +65,8 @@ The person deciding sees it on the card, and every later step builds on it.
    - **Who to ask**: the people who own the decision, only when the request reverses it.
 
    **Sources** (`links`, at most 20) are only what a designer opens and reads, and the page
-   starts each with what it is (Issue, PR, Request, Decision, Doc, ADR):
+   starts each with what it is (Issue, PR, Request, Decision, Doc, ADR). They start folded
+   under the report, in one quiet line that counts them by kind, and open on a click:
    - a GitHub issue or pull request: `{label, url}`;
    - an item or a decision on the Desk, a request, a discussion's card, a decision, by its
      number: `{ref: "C-12" | "C-12.3" | "D-4", label?}`;

@@ -39,7 +39,9 @@
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
   button { font: inherit; color: inherit; }
-  a { color: var(--accent); }
+  /* Links read in ink with a faint underline that turns to the accent under the pointer. */
+  a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
+  a:hover { color: var(--accent); text-decoration-color: currentColor; }
   .app { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
   /* An open header menu (the bell, your menu) floats above the private chat (75); only while
@@ -300,7 +302,7 @@
   /* A request's page: everything on it as wide as the pane, no part narrower than the rest. */
   #detail.fill { --measure: 100%; }
   /* A request's brief, what a person asked for, apart from what Design Desk made of it. */
-  .brief { border: 1px solid var(--line); border-left: 3px solid var(--ink); border-radius: var(--radius); background: var(--panel); padding: 12px 16px 4px; margin: 14px 0 0; }
+  .brief { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 12px 16px 4px; margin: 14px 0 0; }
   details.brief:not([open]) { padding-bottom: 12px; }
   details.brief:not([open]) > .brief-k { margin: 0; }
   .brief-k::marker { content: ""; } .brief-k::-webkit-details-marker { display: none; }
@@ -442,6 +444,8 @@
   .sent b { color: var(--ok); } .sent p { margin: 2px 0; }
   .revoked-text { text-decoration: line-through; color: var(--muted); }
   .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
+  /* Design Desk's questions stand under the state's box, which says to answer them below. */
+  .s-asks { display: grid; gap: 10px; margin: 0 0 8px; }
   .asks .reply { border: 0; padding: 8px 0 0; }
   /* Its text, questions, answers and fields read at the size of the page around it. */
   .asks, .asks legend, .asks label, .asks input { font-size: var(--fs-read); }
@@ -792,7 +796,8 @@
   @media (prefers-reduced-motion: reduce) { .sdot .tag, .sdot .tag::before, .sdot .tag .w { transition: none; } }
   .chip.ok { background: var(--approved-soft); color: var(--approved); } .chip.warn { background: var(--waiting-soft); color: var(--waiting); }
   /* The status strip: where the request stands, its word in the state's ink, a coloured edge. */
-  .status { --o: var(--muted); --os: var(--soft); padding: 12px 16px 12px 18px; border: 1px solid var(--line); border-left: 4px solid var(--o); border-radius: 8px; background: color-mix(in srgb, var(--os) 45%, var(--panel)); gap: 8px; }
+  /* Every state's box looks as a request's: a plain panel with a thin frame; only its word and dot carry the state's colour. */
+  .status { --o: var(--muted); --os: var(--soft); padding: 12px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); gap: 8px; }
   .status[data-o="waiting"] { --o: var(--waiting); --os: var(--waiting-soft); } .status[data-o="approved"] { --o: var(--approved); --os: var(--approved-soft); }
   .status[data-o="decided"] { --o: var(--decided); --os: var(--decided-soft); } .status[data-o="closed"] { --o: var(--closed); --os: var(--closed-soft); }
   /* A change's PR and an issue, in GitHub's colours, the same as their dots in the list. */
@@ -833,8 +838,6 @@
   .vpanel:has(> .vbar) .frame { border: 0; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 5px 16px rgba(0,0,0,.08); }
   .tabs.vtabs button[aria-pressed="true"] { background: var(--canvas); border-bottom-color: var(--canvas); }
   .tally .chip { border: 1px solid color-mix(in srgb, currentColor 25%, var(--line)); }
-  /* The ask, in the asker's words: set apart with an ink edge. */
-  .brief { border-left-width: 3px; }
   .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.04); }
 
   /* ---------- one set of controls on every page ---------- */
@@ -847,8 +850,8 @@
   nav button { font-size: var(--fs-ui); } nav button.main { font-size: var(--fs-read); }
   .subtabs > button[data-filter] { font-size: var(--fs-ui); }
   /* A text link that is a button: accent ink, no frame, anywhere on the Desk. */
-  button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-align: left; }
-  button.link:hover { text-decoration: underline; }
+  button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; text-align: left; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
+  button.link:hover { color: var(--accent); text-decoration-color: currentColor; }
   .msg .who button.link { font-size: var(--fs-meta); }
   /* Chips: the same pill as the state tags. */
   .chip { font-size: var(--fs-meta); padding: 1px 9px; line-height: 1.5; font-weight: 500; }
@@ -866,7 +869,8 @@
   /* The conversation: newest first, folded under the box until opened. */
   .composer { max-width: var(--measure); }
   details.convo { margin-top: 14px; max-width: var(--measure); }
-  details.convo > summary { cursor: pointer; list-style: none; display: inline-flex; gap: 8px; align-items: center; color: var(--accent); font-size: var(--fs-ui); }
+  details.convo > summary { cursor: pointer; list-style: none; display: inline-flex; gap: 8px; align-items: center; color: var(--ink); font-size: var(--fs-ui); }
+  details.convo > summary:hover { color: var(--accent); }
   details.convo > summary::-webkit-details-marker { display: none; }
   details.convo > summary::before { content: "▸"; font-size: var(--fs-meta); } details.convo[open] > summary::before { content: "▾"; }
   details.convo > summary .cnt { color: var(--muted); }
@@ -879,6 +883,8 @@
   .thread.mini > summary .q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
   .thread.mini > summary .q b { color: var(--ink); font-weight: 600; }
   .thread.mini[open] > summary { border-bottom: 1px solid var(--line); }
+  /* Its one line never widens the list: the words end in … at the list's width. */
+  .threads > .thread { min-width: 0; }
   .thread { border-radius: 10px; }
   .thread .head { font-size: var(--fs-meta); }
   .msg .who { font-size: var(--fs-meta); color: var(--muted); } .msg .who b { color: var(--ink); }
@@ -902,7 +908,7 @@
   .filters .btn.on .n { color: var(--muted); }
   /* The request's head: a face, who asked and from where, the fold on the right. */
   .brief > .brief-k.brief-k { cursor: default; margin: 0 0 8px;  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; text-transform: none; letter-spacing: 0; font-size: var(--fs-ui); font-weight: 400; color: var(--muted); }
-  .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; flex: none; }
+  .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; flex: none; line-height: 1; text-box: trim-both cap alphabetic; }
   .brief-k .ask-who b { color: var(--ink); font-weight: 600; }
   .brief-k .prov { font-size: inherit; }
   .brief-k .prov .src { padding: 0; border: 0; background: none; font-weight: 400; gap: 4px; }
@@ -926,7 +932,8 @@
   .spec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; } .spec-head .hint { margin: 0; } .spec-tools { margin: 0; }
   /* The approved note reads on the heading's line, after it, in the hints' size. */
   h3 .locked-note { font-weight: 400; font-size: var(--fs-meta); margin-left: 10px; }
-  .anchor-text { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; } .anchor-text:hover { text-decoration: underline; }
+  .anchor-text, .brief-toggle { text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
+  .anchor-text { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; } .anchor-text:hover, .brief-toggle:hover { color: var(--accent); text-decoration-color: currentColor; }
   .spec-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 12px; }
   .spec-preview { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; overflow: auto; max-height: 36em; }
   .spec-text { width: 100%; font-family: var(--mono); font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
@@ -954,14 +961,15 @@
   .status .next .actions { margin: 0; justify-content: flex-end; }
   .status .next details.more .menu { left: auto; right: 0; }
   .status .next details.more > summary.btn { min-width: 40px; }
+  /* Approve takes what the row has left over, so the row ends where the workspace button ends. */
+  .status.req .next .actions > .btn:first-child { flex: 1 0 auto; }
+  .status.req .moves .ws { box-sizing: border-box; }
   /* A request's state (docs/desk-page.md → A request's state). The stage and who has the turn; Approve and
      Close on the right; the ways on in one row; the five stages as the box's bottom edge. The state's inks
      share one lightness and one strength, so one slate suits the stage line beside each of them. */
   :root { --st-checking: oklch(.5 .12 262); --st-turn: oklch(.5 .12 350); --st-waiting: oklch(.5 .12 62); --st-approved: oklch(.5 .12 155); --st-closed: oklch(.5 .12 27); --st-decided: oklch(.5 0 0); --st-bar: oklch(.38 .03 255); }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --st-checking: oklch(.8 .1 262); --st-turn: oklch(.8 .1 350); --st-waiting: oklch(.8 .1 62); --st-approved: oklch(.8 .1 155); --st-closed: oklch(.8 .1 27); --st-decided: oklch(.8 0 0); --st-bar: oklch(.86 .03 255); } }
   :root[data-theme="dark"] { --st-checking: oklch(.8 .1 262); --st-turn: oklch(.8 .1 350); --st-waiting: oklch(.8 .1 62); --st-approved: oklch(.8 .1 155); --st-closed: oklch(.8 .1 27); --st-decided: oklch(.8 0 0); --st-bar: oklch(.86 .03 255); }
-  .status.req { padding: 12px 16px; border-left: 1px solid var(--line); background: var(--panel); }
-  .status.req:has(.line5) { padding-bottom: 0; }
   .status.req[data-o="checking"] { --o: var(--st-checking); } .status.req[data-o="turn"] { --o: var(--st-turn); } .status.req[data-o="waiting"] { --o: var(--st-waiting); }
   .status.req[data-o="approved"] { --o: var(--st-approved); } .status.req[data-o="closed"] { --o: var(--st-closed); } .status.req[data-o="decided"] { --o: var(--st-decided); }
   .s-word .help { display: inline-flex; align-items: center; gap: 9px; cursor: help; border-radius: 6px; }
@@ -980,25 +988,14 @@
   .way.lnk:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); text-decoration-color: currentColor; }
   a.way { text-decoration: none; }
   .moves .ws { margin-left: auto; }
-  .line5 { list-style: none; margin: 4px -16px 0; padding: 0; display: flex; gap: 2px; height: 4px; align-items: flex-start; position: relative; z-index: 2; }
-  .line5 li { --bar: var(--line); flex: 1 0 0; min-width: 0; height: 4px; display: flex; align-items: center; gap: 6px; padding: 0 10px; overflow: hidden; white-space: nowrap; font-size: var(--fs-meta); color: var(--muted); background: var(--bar); transition: height .32s cubic-bezier(.2, .8, .2, 1), background-color .32s ease; }
-  .line5 li:first-child { border-bottom-left-radius: 7px; } .line5 li:last-child { border-bottom-right-radius: 7px; }
-  .line5 li.done { --bar: color-mix(in srgb, var(--st-bar) 45%, var(--line)); color: var(--ink); }
-  .line5 li.now { --bar: var(--st-bar); color: var(--ink); font-weight: 650; }
-  .line5 li > * { opacity: 0; transform: translateY(8px); transition: opacity .22s ease, transform .32s cubic-bezier(.2, .8, .2, 1); }
-  .line5 li .n { font-weight: 600; }
-  .status.req:is(:hover, :focus-within) .line5 li { height: 28px; background: color-mix(in srgb, var(--bar) 16%, var(--panel)); box-shadow: inset 0 3px 0 var(--bar); }
-  .status.req:is(:hover, :focus-within) .line5 li > * { opacity: 1; transform: none; transition-delay: calc(var(--i) * 45ms + 60ms); }
-  /* The opened strip is one framed, lifted piece over what lies under the box: it pushes nothing down. */
-  .line5::after { content: ""; position: absolute; left: -1px; right: -1px; top: 0; height: 4px; border: 1px solid transparent; border-top: 0; border-radius: 0 0 8px 8px; pointer-events: none; transition: height .32s cubic-bezier(.2, .8, .2, 1), border-color .2s ease, box-shadow .32s ease; }
-  .status.req:is(:hover, :focus-within) .line5::after { height: 28px; border-color: color-mix(in srgb, var(--ink) 38%, var(--panel)); box-shadow: 0 10px 18px -4px color-mix(in srgb, var(--ink) 28%, transparent), 0 2px 4px color-mix(in srgb, var(--ink) 12%, transparent); }
-  .status.req[data-busy] .line5 li.now { background-image: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--panel) 55%, transparent) 50%, transparent 70%); background-size: 220% 100%; animation: st-sweep 1.6s linear infinite; }
-  @keyframes st-sweep { from { background-position: 120% 0; } to { background-position: -100% 0; } }
-  @media (prefers-reduced-motion: reduce) { .line5 li, .line5 li > *, .line5::after { transition: none; } .status.req[data-busy] .line5 li.now { animation: none; } }
-  /* A request's ⋯ sits by its title: the state's right side holds Approve and Close alone. */
-  .detail .h-more { float: right; margin-left: 12px; font-size: var(--fs-ui); font-weight: 400; letter-spacing: 0; line-height: 1.4; }
-  .detail .h-more details.more .menu { left: auto; right: 0; }
-  .detail .h-more details.more > summary.btn { min-width: 40px; }
+  .line5 { list-style: none; margin: 6px -16px -12px; padding: 10px 16px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-ui); }
+  .line5 li { display: inline-flex; align-items: center; color: var(--muted); white-space: nowrap; }
+  .line5 .l { display: inline-flex; align-items: center; gap: 5px; padding: 2px 0 3px; border-bottom: 2px solid transparent; }
+  .line5 li + li::before { content: ""; width: 16px; height: 1px; background: var(--line); margin: 0 9px; align-self: center; }
+  .line5 li.done { color: var(--ink); }
+  .line5 li.done + li::before { background: color-mix(in srgb, var(--ink) 45%, var(--line)); }
+  .line5 li .ck { color: var(--st-bar, var(--o)); font-weight: 700; font-size: .9em; }
+  .line5 li.now { color: var(--ink); font-weight: 650; } .line5 li.now .l { border-bottom-color: var(--o); }
   /* On a wide window what was asked and what Design Desk made of it stand side by side. */
   .top2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 0 28px; align-items: start; max-width: calc(2 * var(--measure)); }
   .top2 > .brief { max-width: none; }
@@ -1011,7 +1008,7 @@
   /* Folded, a brief hides every picture, whatever its text's length: Show brings them back. */
   .brief.clamped .brief-body :is(img, figure, .shots, .shot, iframe, video) { display: none; }
   .brief.clamped .brief-body { max-height: var(--clip, calc(3 * 1.55em)); overflow: hidden; -webkit-mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); mask-image: linear-gradient(#000 var(--fade, calc(2 * 1.55em)), transparent); }
-  .brief-toggle { border: 0; background: none; padding: 4px 0 0; color: var(--accent); cursor: pointer; font-size: var(--fs-ui); }
+  .brief-toggle { border: 0; background: none; padding: 4px 0 0; color: var(--ink); cursor: pointer; font-size: var(--fs-ui); }
   .brief-toggle:hover { text-decoration: underline; }
   .brief-body { font-size: var(--fs-read); line-height: 1.55; display: flow-root; }
   .brief-toggle[hidden] { display: none; }
@@ -1035,7 +1032,15 @@
   .made-col details.fold > summary .cnt { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); font-size: 12px; line-height: 18px; }
   .brief-k .face.agent { background: var(--ink); color: var(--panel); }
   .made-sec + .made-sec { margin-top: 16px; }
-  .made-sec .src-kind { font-weight: 600; color: var(--ink); }
+  .made-sec .srcs { margin: 6px 0 0; font-size: var(--fs-meta); color: var(--muted); }
+  .made-sec .srcs > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; }
+  .made-sec .srcs > summary::-webkit-details-marker { display: none; }
+  .made-sec .srcs > summary::before { content: ""; width: 5px; height: 5px; margin-right: 3px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-1px) rotate(-45deg); transition: transform .15s ease; }
+  .made-sec .srcs[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
+  .made-sec .srcs > summary:hover { color: var(--ink); }
+  .made-sec .srcs ul { list-style: none; margin: 4px 0 0; padding: 0 0 0 14px; display: grid; gap: 3px; }
+  .made-sec .srcs a[target="_blank"]::after { content: "↗"; display: inline-block; margin-left: 2px; font-size: .8em; color: var(--muted); }
+  .made-sec .src-kind { color: var(--muted); }
   .made-sec h4 { margin: 0 0 6px; font-size: var(--fs-ui); font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
   .made-sec ul { margin: 6px 0 8px; padding-left: 20px; }
   .made-sec p { margin: 0 0 6px; }
@@ -1360,6 +1365,10 @@
   // where in the stage it stands (docs/desk-page.md → A request's state). Each stage ends with a person's
   // move: a checked request stays in Checking until someone starts its options.
   const STAGES = ["Checking", "Options", "Feedback", "Approved", "With developers"];
+  // Approve records who approved and queues the spec; the request's status moves to spec only once
+  // Design Desk wrote it. In between the page shows it Approved, not still voted on: no second
+  // Approve, no vote, and a question Design Desk asks for the spec reads as the spec's.
+  const asShown = (c) => c?.kind === "request" && c.approved && ["triage", "variants", "feedback", "prototype", "testing"].includes(c.status) ? { ...c, status: "spec", status_was: c.status } : c;
   const stageOf = (c) => ({ triage: 0, variants: 1, feedback: 2, prototype: 2, testing: 2, spec: 3, "handed-off": 4 })[c.status] ?? -1;
   const stageSub = (c) => {
     const proto = typeof c.prototype === "string" ? c.prototype : c.prototype?.state;
@@ -2567,7 +2576,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     return lines.sort((a, b) => a.top - b.top);
   }
-  addEventListener("resize", () => clampBriefs());
+  addEventListener("resize", () => { clampBriefs(); alignRight(); });
+  // The state's buttons on the right (Approve, Close, ⋯) span as far as the design workspace's
+  // button under them, whichever is longer setting the length.
+  function alignRight() {
+    for (const box of document.querySelectorAll("#detail .status.req")) {
+      const row = box.querySelector(".next .actions"), ws = box.querySelector(".moves .ws");
+      if (!row || !ws) continue;
+      // Measured at their own lengths, nothing wrapped.
+      row.style.width = "max-content"; ws.style.minWidth = "";
+      const a = row.offsetWidth, b = ws.offsetWidth;
+      row.style.width = "";
+      // Only with room for the longer of the two at the right end.
+      const w = Math.max(a, b);
+      if (!w || w > box.clientWidth / 2) continue;
+      row.style.width = w + "px"; ws.style.minWidth = w + "px";
+    }
+  }
+  document.fonts?.ready.then(alignRight);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
@@ -3037,7 +3063,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const items = S.agenda;
     if (!items.length) return;
     const n = Math.max(0, Math.min(i, items.length - 1));
-    const { card } = await api("GET", `/api/cards/${encodeURIComponent(items[n].id)}`);
+    const card = asShown((await api("GET", `/api/cards/${encodeURIComponent(items[n].id)}`)).card);
     let ov = $("#present");
     if (!ov) { ov = document.createElement("div"); ov.id = "present"; ov.style.cssText = "position:fixed;inset:0;z-index:75;background:var(--bg);overflow:auto;padding:28px 48px"; document.body.append(ov); }
     // The option the designer picked when adding it; an older entry without one shows the favourite.
@@ -3271,9 +3297,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       const kind = `<span class="chip ${tone}" title="${esc(th.dev ? "A developer asks the designer how the approved design is meant" : KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
-      // On Designs a question marked done folds to one line: its first words; a click opens it.
-      const mini = designs && th.state === "resolved";
-      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc((noteBy(th.messages[0]?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/\s+/g, " "))}</span>${state}</summary>` : `<article class="thread" id="th-${esc(th.id)}">
+      // A conversation marked done folds to one line: who started it and their first words; a click
+      // opens it, with the option it is on and its jump to the part.
+      const mini = th.state === "resolved";
+      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc(((n) => n.includes("@") ? n : n.replace(/^./, (x) => x.toUpperCase()))(noteBy(th.messages[0]?.by) || "someone"))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim())}</span>${state}</summary>${anchor ? `<div class="head">${anchor}</div>` : ""}` : `<article class="thread" id="th-${esc(th.id)}">
         <div class="head">${kind}${anchor}${state}</div>`}
         ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
@@ -3812,7 +3839,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const subs = [(v && VERDICT[typeOf(c)][v]?.[0]) || "Design Desk checks it", n ? plural(n, "option", "options") : "a few options",
       v && v !== "design" ? "votes and comments" : "votes and comments; a live prototype to try, if someone builds one", ap,
       S.me?.spec_review ? "once the spec is sent" : "after approval"];
-    return `<ol class="line5" aria-label="Stage ${i + 1} of ${STAGES.length}: ${esc(STAGES[i])}">${STAGES.map((l, k) => `<li class="${k < i ? "done" : k === i ? "now" : ""}" style="--i:${k}" title="${esc(`${l}: ${subs[k]}`)}"><span class="n">${k < i ? "✓" : k + 1}</span><span class="l">${esc(l)}</span></li>`).join("")}</ol>`;
+    // The stages as words in one row: the passed ones ticked, the current one underlined.
+    return `<ol class="line5" aria-label="Stage ${i + 1} of ${STAGES.length}: ${esc(STAGES[i])}">${STAGES.map((l, k) => `<li class="${k < i ? "done" : k === i ? "now" : ""}" title="${esc(`${l}: ${subs[k]}`)}"${k === i ? ' aria-current="step"' : ""}><span class="l">${k < i ? '<span class="ck" aria-hidden="true">✓</span>' : ""}${esc(l)}</span></li>`).join("")}</ol>`;
   }
 
   // Only a designer puts a card on the presentation, with its final version; Design Desk
@@ -3837,7 +3865,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // row's button, the others follow it after "or"), whom it waits on when the viewer has none
   // (`wait`), who approves when the viewer may not (`who`), and Approve and Close for the state's
   // right side (`buttons`). Approve is never a way: its one place is on the right. What is about
-  // the request, not its step, goes under ⋯ by the title.
+  // the request, not its step, goes under ⋯ after them (requestMore).
   function nextFor(c) {
     const p = c.prototype || { state: "none" };
     const busy = working(c);
@@ -3874,7 +3902,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : { text: none || "Next: a designer, PM or developer starts the design options.", wait: "a designer", ways: [dev], buttons: row };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
-      return { text: "Before it goes to developers, Design Desk needs your answers above.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "", ways: [] };
+      return { text: "Before it goes to developers, Design Desk needs your answers below.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "", ways: [] };
     // The spec waits for a person: read it, edit it or ask for changes, then send it (docs/handoff.md → Review before it goes).
     // Edit and Ask for changes sit on the spec itself, below.
     if (c.status === "spec" && c.spec?.review === "draft") {
@@ -3953,7 +3981,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer or a PM reopens it; say so in a comment.")];
     else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(seesDesigns() ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
     else if (c.status === "spec") paths = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
-      ? [go("Answer Design Desk's questions", "They are in this box; the spec waits for them."), close()]
+      ? [go("Answer Design Desk's questions", "They are under this box; the spec waits for them."), close()]
       : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
     else if (c.status === "triage" && !c.triage) paths = [info("Design Desk checks it first: how the screen works today, who else is changing it, what a design change can do."), close()];
     // Checked, or at Options drawn with every option taken out: the way on is to draw them (again).
@@ -4022,7 +4050,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The prototype's demo account in the facts' style: grey words, the values in ink.
   const demoLogin = (l) => `<span><span class="k">demo account:</span> <b>${esc(l.user || "")}</b></span>${l.password ? `<span><span class="k">password:</span> <b>${esc(l.password)}</b></span>` : ""}`;
   // What is about the request, not its step: the presentation, For Developers or For Designers, drawing
-  // the options again, a new request from an approved one, deleting. It sits by the title.
+  // the options again, a new request from an approved one, deleting. Its ⋯ sits at the state's right end.
   function requestMore(c) {
     const queued = c.agenda?.status === "queued", presented = c.agenda?.status === "presented";
     // Undo only before the deadline the store wrote: an earlier meeting's item keeps its record.
@@ -4038,7 +4066,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Where the live prototype does not run, drawing again is a way on in the state's row, not here.
     const redraw = closed(c) || locked(c) || protoDown(c) || !can("revise") || !(c.variants || []).length ? "" : `<button class="btn" data-act="revise">Redraw the options with all comments</button>`;
     const items = call + size + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
-    return items ? `<span class="h-more"><details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details></span>` : "";
+    return items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
   }
   // Whose turn it is, said the same way in every state: Design Desk while it works or is about to,
   // the team while it votes or tries, developers once it is theirs, you when a way on is yours,
@@ -4069,6 +4097,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const nx = nextFor(c);
     // Close stays at hand while the request is open, whatever step it is at.
     if (!closed(c) && (can("close") || can("skip")) && !nx.buttons.includes('data-act="close"')) nx.buttons += `<button class="btn" data-act="close">Close</button>`;
+    // What is about the request, not its step, is under ⋯ at the far right.
+    nx.buttons += requestMore(c);
     const i = stageOf(c), sub = busy.length ? "" : stageSub(c);
     const t = turnOf(c, nx, busy, asks);
     const turn = t ? `<span class="turn${t.k === "you" ? " me" : ""}" title="Who the request waits on now"><span class="fc" aria-hidden="true">${TURN_ICON[t.k] || TURN_ICON.you}</span><span class="k">Turn:</span><b>${esc(t.who)}</b></span>` : "";
@@ -4095,12 +4125,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `<div class="status req" data-o="${tone(c)}"${busy.length ? " data-busy" : ""}>
       <div class="s-line"><div class="s-word"><span class="help"${help.text ? ` tabindex="0" role="note" aria-label="${esc(help.text)}"` : ""}><span class="s-mark"></span>${esc(i < 0 ? stateWord(c) : STAGES[i])}${sub ? `<span class="s-sub">${esc(sub)}</span>` : ""}${help.text ? `<span class="tip" aria-hidden="true">${help.html}</span>` : ""}</span></div>${turn}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${nx.buttons ? `<div class="next"><div class="actions">${nx.buttons}</div></div>` : ""}
-      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
-        ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
       ${sizeLine(c)}
       ${c.status === "handed-off" ? sentBox(c) : ""}
       ${moves}${stageLine(c)}
-    </div>`;
+    </div>
+    ${asks.length ? `<div class="s-asks">
+      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
+        ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
+    </div>` : ""}`;
   }
 
   // For Developers or For Designers, who chose, and who approved (docs/desk.md → For Developers or For Designers).
@@ -4158,14 +4190,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const researchParts = (s) => String(s || "").replace(RESEARCH_PARTS, (m, h, at, all) => `${/(^|\n)[ \t]*([-*][ \t]+|\d+[.)][ \t]+)?$/.test(all.slice(0, at)) ? "" : "\n\n"}**${h}:** `);
   function renderResearch(r) {
     if (!r) return "";
-    const items = (r.links || []).map(researchSource).filter(Boolean).map((x) => {
+    const srcs = (r.links || []).map(researchSource).filter(Boolean);
+    const items = srcs.map((x) => {
       // The label without the kind it may start with: "Issue #6275" reads "Issue · #6275".
       const label = x.label ? esc(String(x.label).replace(new RegExp(`^(?:${x.kind}|pull request)\\b\\s*[:·—-]?\\s*`, "i"), "") || x.label) : "";
       const docAttrs = x.doc ? ` data-doc data-doc-title="${esc(x.doc.label)}" data-doc-kind="${esc(x.kind)}" data-doc-section="${esc(x.doc.section || "")}" data-doc-excerpt="${esc(x.doc.excerpt)}"` : "";
       const link = x.html ?? `<a href="${x.url}" target="_blank" rel="noopener noreferrer"${docAttrs}>${label}</a>`;
       return `<li><span class="src-kind">${esc(x.kind)}</span> · ${link}</li>`;
     });
-    return `<section class="made-sec"><h4>What's already known</h4><div>${md(researchParts(r.summary))}${items.length ? `<ul class="hint" style="margin:6px 0 0 16px;padding:0">${items.join("")}</ul>` : ""}</div></section>`;
+    // The sources fold shut under the report, in one quiet line that counts them by kind.
+    const kinds = [...srcs.reduce((m, x) => m.set(x.kind, (m.get(x.kind) || 0) + 1), new Map())].map(([k, n]) => n > 1 ? `${n}× ${k}` : k).join(", ");
+    const list = items.length ? `<details class="srcs" data-sect="srcs"${S.sect.srcs ? " open" : ""}><summary>${plural(items.length, "source", "sources")}<span class="srcs-k"> · ${esc(kinds)}</span></summary><ul>${items.join("")}</ul></details>` : "";
+    return `<section class="made-sec"><div>${md(researchParts(r.summary))}${list}</div></section>`;
   }
 
   // 👍, 👎 and ⚠ as pills with their count: grey until someone votes, then green, red or amber.
@@ -4303,7 +4339,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     foldsFor(c);
     return `${backBar()}
-      ${requestMore(c)}<h2 class="renamable">${txt(c.title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
+      <h2 class="renamable">${txt(c.title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
@@ -4317,7 +4353,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
-      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent" aria-hidden="true">D</span><span class="ask-who"><b>From Design Desk</b></span></div><div class="brief-body">
+      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent" aria-hidden="true">D</span><span class="ask-who"><b>What's already known</b></span></div><div class="brief-body">
       ${againstBox(c)}${followsLine(c)}
       ${renderResearch(c.research)}
       ${renderIssueBrief(c)}
@@ -5187,7 +5223,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
   }
 
-  function renderDetail() { renderDetailBody(); renderAsk(); if (S.el) renderElementDialog(); }
+  function renderDetail() { renderDetailBody(); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
+  // The address names what the page shows, so a reload opens it again: the item (#C-12, a sent
+  // design #designs/C-12, the presentation's #presentation/C-12), a decision (#D-4), else the tab.
+  let placeKept = false;
+  function keepPlace() {
+    if (!placeKept) return;
+    const at = S.decision ? S.decision.id
+      : S.card ? `${S.tab === "designs" ? "designs/" : S.reqFilter === "presentation" && S.tab === "requests" ? "presentation/" : ""}${S.card.id}`
+      : S.tab === "requests" && S.reqFilter === "presentation" ? "presentation" : S.tab;
+    // A frame that may not change its address keeps the page as it is.
+    try { if (at && location.hash !== `#${at}`) history.replaceState(null, "", `${location.pathname}${location.search}#${at}`); } catch {}
+  }
   // Another item, decision or tab opens at its top; a redraw of the same one keeps the place.
   // A newly opened item rises in once: the class leaves once the rise is over, so a redraw of
   // the same item (a poll, a vote, a fold) puts its new content in place without it.
@@ -5224,18 +5271,20 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
     clampBriefs();
+    alignRight(); requestAnimationFrame(alignRight);
     if (S.card.kind === "screen") loadTimeline(S.card);
   }
 
   // ---------- loading ----------
   async function refreshList() {
-    S.cards = (await api("GET", "/api/cards")).cards || [];
+    S.cards = ((await api("GET", "/api/cards")).cards || []).map(asShown);
     try { const a = await api("GET", "/api/agenda"); S.agenda = a.agenda || []; S.presented = a.presented || []; } catch { S.agenda = []; S.presented = []; }
     renderNav(); renderList();
   }
   async function openCard(id, { quiet = false } = {}) {
     const past = sendOf(id);
     let { card } = await api("GET", `/api/cards/${encodeURIComponent(past ? past.base : id)}`);
+    card = asShown(card);
     if (past) {
       const s = (card.sends || [])[past.k - 1];
       if (!s) throw new Error(`There is no earlier record ${id} on the Desk.`);
@@ -5275,8 +5324,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
     const d = h.match(/^D\s*-?\s*(\d+)$/i);
     if (d) return { tab: "product", id: null, decision: `D-${d[1]}` };
-    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)(?:\.(\d+))?$/i);
-    if (m) return { tab: view(m[1]), id: `C-${m[2]}`, ...(m[3] ? { sub: Number(m[3]) } : {}) };
+    // C-12~1 is an earlier send of a reopened request, as the page writes it into its address.
+    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)(?:~(\d+)|\.(\d+))?$/i);
+    if (m) return { tab: view(m[1]), id: `C-${m[2]}${m[3] ? `~${m[3]}` : ""}`, ...(m[4] ? { sub: Number(m[4]) } : {}) };
     return view(h) ? { tab: view(h), id: null } : null;
   }
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
@@ -5532,7 +5582,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     f.reset();
     const where = c.origin?.channel === "slack" ? "in the Slack thread this request came from" : "to the team's Slack channel";
     $("#sl-send-hint").textContent = `Design Desk takes a picture of each design you tick and posts them ${where}, with a link back here. Comments and the decision stay here on the Desk.`;
-    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍, 👎 or ⚠️ and reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
+    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍 or 👎 and write a concern or a why as a reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
     const vs = c.variants || [];
     $("#sl-options").innerHTML = vs.map((v) => `<label><input type="checkbox" name="option" value="${esc(v.id)}" checked /> ${esc(v.name)}${tallyText(c, v.id) ? ` <span class="sub">${esc(tallyText(c, v.id))}</span>` : ""}</label>`).join("");
     const at = (hours) => new Date(Date.now() + hours * 3600e3).toISOString();
@@ -6616,6 +6666,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!(to && await goTo(to))) {
       renderNav(); renderBanners(); renderList(); renderDetail();
     }
+    // Only from here the address follows the page: before, it still holds the link that opened it.
+    placeKept = true; keepPlace();
+    // A reload of the same place comes back to where the person had scrolled.
+    try {
+      const was = JSON.parse(sessionStorage.getItem("desk-scroll") || "null");
+      if (was?.at === location.hash) requestAnimationFrame(() => { $("#detail").scrollTop = was.top || 0; scrollTo(0, was.y || 0); });
+    } catch {}
+    addEventListener("pagehide", () => { try { sessionStorage.setItem("desk-scroll", JSON.stringify({ at: location.hash, top: $("#detail").scrollTop, y: scrollY })); } catch {} });
     window.addEventListener("hashchange", guard(async () => { const next = target(location.hash); if (next) await goTo(next); }));
     setInterval(() => { poll().catch(() => {}); }, 4000);
   }
