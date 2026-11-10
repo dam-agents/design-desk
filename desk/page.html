@@ -2707,6 +2707,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const list = $("#list");
     const main = $("#main");
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
+    // Another tab, page or filter starts the list again at LIST_PAGE rows; it is
+    // set before every early return, so a list that returns early still counts as another view.
+    const view = [S.tab, S.productFilter, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
+    if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
     if (S.productFilter === "differences" && !figmaOn()) S.productFilter = "screens";
@@ -2745,9 +2749,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
-    // Another tab, page or filter starts the list again at LIST_PAGE rows.
-    const view = [S.tab, S.productFilter, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
-    if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";

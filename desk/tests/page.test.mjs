@@ -582,6 +582,10 @@ test("a long list draws 20 rows, then the rest as its end scrolls into view", (t
   await desk.locator("#list [data-list-more]").scrollIntoViewIfNeeded();
   await desk.waitForFunction(() => document.querySelectorAll("#list .row.item").length === 25);
   assert.equal(await desk.locator("#list [data-list-more]").count(), 0, "nothing is left to load");
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector('.row.item:has([data-card="C-25"])');
+  assert.equal(await rows(), 20, "another tab starts the list again at 20");
 
   await desk.goto(desk.url().replace(/#.*$/, "") + "#C-1");
   await desk.reload();
