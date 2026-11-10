@@ -27,13 +27,15 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   comments. A spec draft: Send to developers…. Sent: Show the design. Closed: Reopen. Contact a
   developer joins them wherever a part needs one, until it was opened. Approve is never in the row.
   With no way of the viewer's own, the row says what they wait for; with a question open, to answer
-  it below. **Open in the design workspace** sits at the row's right end, never among the ways on.
+  it below: Design Desk's open questions stand right under the box, never inside it. **Open in the design workspace** sits at the row's right end, never among the ways on.
   What is about the request, not its step (the presentation, For Developers or For Designers, Redraw
   the options, New request from this, Delete), is under **⋯** at the right end of the box's top
   row, after Approve and Close; that row ends where Open in the design workspace ends.
   The five stages are a row of their names along the box's bottom edge, joined by short lines:
   the passed ones in ink with a ✓, the current one bold and underlined in the state's colour, the
-  ones to come grey. Each name's tooltip says what the stage holds (the verdict, who approved). Pointing at the state's
+  ones to come grey. Each name's tooltip says what the stage holds (the verdict, who approved).
+  An approved request reads Approved at once, while its status still waits for Design Desk to
+  write the spec: no second Approve, no vote, and its questions are the spec's. Pointing at the state's
   word shows its help: what happens now and every way on from here as branches, each move the
   viewer can make, and each usual one they cannot, greyed, with why not and who can.
   A dialog with something typed, picked or added in it asks before Escape or a click outside

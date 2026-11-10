@@ -444,6 +444,8 @@
   .sent b { color: var(--ok); } .sent p { margin: 2px 0; }
   .revoked-text { text-decoration: line-through; color: var(--muted); }
   .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
+  /* Design Desk's questions stand under the state's box, which says to answer them below. */
+  .s-asks { display: grid; gap: 10px; margin: 0 0 8px; }
   .asks .reply { border: 0; padding: 8px 0 0; }
   /* Its text, questions, answers and fields read at the size of the page around it. */
   .asks, .asks legend, .asks label, .asks input { font-size: var(--fs-read); }
@@ -1363,6 +1365,10 @@
   // where in the stage it stands (docs/desk-page.md → A request's state). Each stage ends with a person's
   // move: a checked request stays in Checking until someone starts its options.
   const STAGES = ["Checking", "Options", "Feedback", "Approved", "With developers"];
+  // Approve records who approved and queues the spec; the request's status moves to spec only once
+  // Design Desk wrote it. In between the page shows it Approved, not still voted on: no second
+  // Approve, no vote, and a question Design Desk asks for the spec reads as the spec's.
+  const asShown = (c) => c?.kind === "request" && c.approved && ["triage", "variants", "feedback", "prototype", "testing"].includes(c.status) ? { ...c, status: "spec", status_was: c.status } : c;
   const stageOf = (c) => ({ triage: 0, variants: 1, feedback: 2, prototype: 2, testing: 2, spec: 3, "handed-off": 4 })[c.status] ?? -1;
   const stageSub = (c) => {
     const proto = typeof c.prototype === "string" ? c.prototype : c.prototype?.state;
@@ -3057,7 +3063,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const items = S.agenda;
     if (!items.length) return;
     const n = Math.max(0, Math.min(i, items.length - 1));
-    const { card } = await api("GET", `/api/cards/${encodeURIComponent(items[n].id)}`);
+    const card = asShown((await api("GET", `/api/cards/${encodeURIComponent(items[n].id)}`)).card);
     let ov = $("#present");
     if (!ov) { ov = document.createElement("div"); ov.id = "present"; ov.style.cssText = "position:fixed;inset:0;z-index:75;background:var(--bg);overflow:auto;padding:28px 48px"; document.body.append(ov); }
     // The option the designer picked when adding it; an older entry without one shows the favourite.
@@ -3895,7 +3901,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : { text: none || "Next: a designer, PM or developer starts the design options.", wait: "a designer", ways: [dev], buttons: row };
     // Nothing goes to developers with an open question: Design Desk asks here first (docs/handoff.md).
     if (c.status === "spec" && (c.threads || []).some((th) => th.kind === "asks" && th.state === "open"))
-      return { text: "Before it goes to developers, Design Desk needs your answers above.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "", ways: [] };
+      return { text: "Before it goes to developers, Design Desk needs your answers below.", sub: "The spec it will send is under The developer spec, below; your answers go into it.", buttons: "", ways: [] };
     // The spec waits for a person: read it, edit it or ask for changes, then send it (docs/handoff.md → Review before it goes).
     // Edit and Ask for changes sit on the spec itself, below.
     if (c.status === "spec" && c.spec?.review === "draft") {
@@ -3974,7 +3980,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (c.status === "declined") paths = [can("reopen") ? go("Reopen", "It goes back to where it was.") : no("Reopen", "Only a designer or a PM reopens it; say so in a comment.")];
     else if (c.status === "handed-off") paths = [info("Developers build it. When it ships, it appears under PR Changes; nothing for you to do here."), ...(seesDesigns() ? [go("Show the design", "It opens on Designs, as developers build it, with their questions for the designer.")] : [])];
     else if (c.status === "spec") paths = (c.threads || []).some((th) => th.kind === "asks" && th.state === "open")
-      ? [go("Answer Design Desk's questions", "They are in this box; the spec waits for them."), close()]
+      ? [go("Answer Design Desk's questions", "They are under this box; the spec waits for them."), close()]
       : [info("Design Desk writes the developer spec and sends it. Nothing for you to do."), close()];
     else if (c.status === "triage" && !c.triage) paths = [info("Design Desk checks it first: how the screen works today, who else is changing it, what a design change can do."), close()];
     // Checked, or at Options drawn with every option taken out: the way on is to draw them (again).
@@ -4118,12 +4124,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `<div class="status req" data-o="${tone(c)}"${busy.length ? " data-busy" : ""}>
       <div class="s-line"><div class="s-word"><span class="help"${help.text ? ` tabindex="0" role="note" aria-label="${esc(help.text)}"` : ""}><span class="s-mark"></span>${esc(i < 0 ? stateWord(c) : STAGES[i])}${sub ? `<span class="s-sub">${esc(sub)}</span>` : ""}${help.text ? `<span class="tip" aria-hidden="true">${help.html}</span>` : ""}</span></div>${turn}${act}${live(c) && c.prototype.login ? `<span class="hint s-meta" title="Sign in to the prototype with this demo account, not your own: everything in it is made-up data">${demoLogin(c.prototype.login)}</span>` : ""}</div>
       ${nx.buttons ? `<div class="next"><div class="actions">${nx.buttons}</div></div>` : ""}
-      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
-        ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
       ${sizeLine(c)}
       ${c.status === "handed-off" ? sentBox(c) : ""}
       ${moves}${stageLine(c)}
-    </div>`;
+    </div>
+    ${asks.length ? `<div class="s-asks">
+      ${asks.map((th) => th.questions ? askForm(th) : `<div class="asks" id="form-${esc(th.id)}"><b>Design Desk needs one answer from you before it can go on.</b>${md(th.messages[th.messages.length - 1].text)}
+        ${mayIn(th, "reply") ? `<div class="reply"><input placeholder="Your answer…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small primary" data-send-reply="${esc(th.id)}">Answer</button></div>` : notYours}</div>`).join("")}
+    </div>` : ""}`;
   }
 
   // For Developers or For Designers, who chose, and who approved (docs/desk.md → For Developers or For Designers).
@@ -5268,13 +5276,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // ---------- loading ----------
   async function refreshList() {
-    S.cards = (await api("GET", "/api/cards")).cards || [];
+    S.cards = ((await api("GET", "/api/cards")).cards || []).map(asShown);
     try { const a = await api("GET", "/api/agenda"); S.agenda = a.agenda || []; S.presented = a.presented || []; } catch { S.agenda = []; S.presented = []; }
     renderNav(); renderList();
   }
   async function openCard(id, { quiet = false } = {}) {
     const past = sendOf(id);
     let { card } = await api("GET", `/api/cards/${encodeURIComponent(past ? past.base : id)}`);
+    card = asShown(card);
     if (past) {
       const s = (card.sends || [])[past.k - 1];
       if (!s) throw new Error(`There is no earlier record ${id} on the Desk.`);

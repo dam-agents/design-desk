@@ -36,7 +36,7 @@ its `SKILL.md` is; read it before doing the action.
 | `figma-import` | a Figma frame as an option rebuilt from the product's parts | Import from Figma; a Figma link in a request or chat | `figma` |
 | `figma-export` | an option or a prototype into Figma as layers | Send to Figma; a request's `figma` switch in New request; chat | `figma` |
 | `figma-compare` | where a screen, an element, a shipped change or an option differs from its frame in Figma, on the Desk | a request with a Figma link; the watch run; a drawing made again; chat | `figma` |
-| `share-options` | post the options to Slack, one message each, for 👍 / 👎 / ⚠️ votes and replies | Send to Slack… (at Team feedback) → Ask for a vote; chat | `slack-polls` |
+| `share-options` | post the options to Slack, one message each (picture and words), for 👍 / 👎 votes and replies | Send to Slack… (at Team feedback) → Ask for a vote; chat | `slack-polls` |
 | `send-designs` | post pictures of the options to Slack: the request's own thread, else the channel | Send to Slack… → Send the designs (`slack_due`, `scope: send`) | `slack-polls` |
 | `poll-sync` | bring Slack votes and replies to the Desk; close the vote with its result | every 30 minutes while a vote is open | `slack-polls` |
 | `council` | each ask in a request's Slack thread as a new option or version, answered there before/after | an ask in a Slack thread; `councils_due` | `slack-council` |
