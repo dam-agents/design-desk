@@ -136,10 +136,10 @@ check: it passes when nobody needs to look, and fails until someone marks the ca
 Merged and closed pull requests are never touched: their checks no longer matter.
 
 - **Set it** right after the card is written (step 13), on an open PR, by the card as `design
-  desk item` returns it: `attention` `fyi` (auto handled) or handled → **pass**; `designer`
+  desk card C-<n>` returns it: `attention` `fyi` (auto handled) or handled → **pass**; `designer`
   or `developer` → **fail** until a designer, or on a change For Developers a lead developer,
-  marks it handled ([desk.md](desk.md) → For Developers or For Designers); no judgement →
-  pass. A PR that builds a Desk design is judged the same way, by the card's own derived
+  marks it handled ([desk.md](desk.md) → For Developers or For Designers); no `attention` →
+  set nothing: the change is not judged yet, so a required check keeps waiting. A PR that builds a Desk design is judged the same way, by the card's own derived
   `attention`: a difference from the design, or a decision it goes against, is one of its reasons.
   `gh pr view <pr> -R <repo> --json headRefOid,headRefName,state`, then
   `gh api [--hostname <host>] -X POST repos/<owner>/<name>/statuses/<headRefOid> -f state=failure
