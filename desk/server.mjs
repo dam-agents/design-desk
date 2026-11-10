@@ -127,7 +127,7 @@ function settings() {
 }
 
 // The words a person reads when their role lacks an action.
-const VERBS = { ack: "mark changes as seen", handle: "mark changes and issues as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
+const VERBS = { ack: "mark changes as seen", handle: "mark changes and issues as handled", "handle-small": "mark changes and issues For Developers as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
   reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "remove a design option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
   draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk", resolve: "mark someone else's conversation done", designs: "see Designs", built: "mark designs done" };
@@ -241,7 +241,7 @@ async function viewerRoute(req, res, url, who) {
   if (m === "POST" && p[1] === "cards" && p[3] === "presented") return send(res, 200, store.markPresented(p[2], actor, b.presented !== false));
   if (m === "POST" && p[1] === "cards" && p[3] === "ack") { need("ack"); return send(res, 200, store.ack(p[2], actor)); }
   if (m === "POST" && p[1] === "cards" && p[3] === "built") { need("built"); return send(res, 200, store.markBuilt(p[2], actor, b.built !== false)); }
-  if (m === "POST" && p[1] === "cards" && p[3] === "handled") { need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
+  if (m === "POST" && p[1] === "cards" && p[3] === "handled") { if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle"); return send(res, 200, store.handle(p[2], actor, b.handled !== false)); }
   // A difference from Figma taken off an item's table, or brought back (docs/desk.md → Differences from Figma).
   if (m === "POST" && p[1] === "cards" && p[3] === "figma-close") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.closeFigma(p[2], actor, b.on !== false)); }
   if (m === "POST" && (p[1] === "cards" || p[1] === "decisions") && p[3] === "figma-dismiss") { need("handle"); if (!s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet."); return send(res, 200, store.dismissFigma(p[2], actor, b.part, b.on !== false)); }

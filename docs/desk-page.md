@@ -23,15 +23,17 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   `desk/tests/page.test.mjs` drives every dialog in such a frame. It reports itself skipped
   only when it finds no Chromium or the toolkit's `playwright-core` is not installed.
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
-  Developers** and **For presentation** on Requests; **Screens**, **Elements**, **Decisions**,
+  Developers** and **For presentation** on Requests; **For Designers** and **For Developers** on
+  PR Changes and Issues, each opened on the viewer's own as Requests ([desk.md](desk.md) → For
+  Developers or For Designers); **Screens**, **Elements**, **Decisions**,
   **Differences** (with Figma on, [desk.md](desk.md#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
-  handled, the default), **Handled**, **Auto handled** (shipped more than `change_auto_handled_days`, 14,
+  handled, the default), **Handled**, **Auto handled** (Design Desk found nothing to look at, `attention` `fyi`, or it shipped more than `change_auto_handled_days`, 14,
   ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default for anyone who may vote, **Open** for the rest: the next move is the viewer's own, by what they may do —
   answer Design Desk, start the options, ask the team, vote (until they voted, the list's
   `voted_mine`), approve (not while a vote runs in Slack), read and send the spec, build the
   prototype again; never while Design Desk works), **Unread** (not opened by you), **Open**, **Closed**; Issues:
   **All** (the default, designed issues too), then the buckets, then **Handled** (what a
-  designer marked handled; it leaves the other lists); Decisions: In force, Not approved, Revoked, All),
+  designer or a lead developer marked handled; it leaves the other lists); Decisions: In force, Not approved, Revoked, All),
   counts in a quiet pill. Both stay on top while the list scrolls; a filter wider than the list
   scrolls sideways and fades at its edge. A list has no search box of its own.
 - **Counts in the menu.** Each tab counts only what is still open: Requests the open requests, PR

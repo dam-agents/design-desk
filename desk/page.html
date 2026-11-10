@@ -1392,7 +1392,7 @@
     admin: "The Desk's owner is always an admin. The first admin on the list is who people ask for access or help.",
     designer: "Shapes the designs: starts options, changes and approves them.",
     pm: "Brings problems and ideas, and moves a request along: starts and changes options, builds live prototypes, approves, decides or closes a request straight away. A design that goes against a decision is still a designer's to approve.",
-    "lead-developer": "A developer who also approves designs or decides a request straight away, and moves a request between For Developers, which a developer approves instead of a designer, and For Designers.",
+    "lead-developer": "A developer who also approves designs or decides a request straight away, marks a change or an issue For Developers handled, and moves a request, a change or an issue between For Developers, which a developer handles instead of a designer, and For Designers.",
     developer: "Brings problems and bug reports, and starts and changes design options; a designer decides, or another developer on a request For Developers.",
     guest: "Follows along. Anyone the Desk is shared with who has no role on the list.",
   };
@@ -1406,11 +1406,12 @@
     [["queue"], "Choose what the presentation shows"],
     [["change"], "Note changes on a product element"],
     [["handle"], "Mark changes handled"],
+    [["handle-small"], "Mark changes and issues For Developers handled"],
     [["decide"], "Add a decision or record one from a comment, revoke and restore decisions"],
     [["add"], "Add a missing screen or part to Product"],
     [["history"], "Draw how a screen or part looked before"],
     [["draw"], "Draw an issue: how it looks now and a sketch of how it could look"],
-    [["size"], "Move a request to For Developers, which a developer approves, or to For Designers"],
+    [["size"], "Move a request, a change or an issue to For Developers, which a developer handles, or to For Designers"],
     [["skip"], "Approve or decide a request straight away, without a vote or a live prototype"],
     [["build"], "Build live prototypes"],
     [["figma"], "Work with Figma", "figma"],
@@ -1524,8 +1525,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     tab: (v) => ({ requests: "Requests: problems and ideas, their design options and live prototypes", new: "PR Changes: what changed in the product's screens, explained, and what a designer should look at",
       issues: "Issues: what the team plans that will change the screens, with sketches", product: "Product: its screens, its parts in every situation, the team's decisions and the weekly history",
       people: "People: who is on the Desk, their roles and what each role can do", guide: "How Design Desk works" }[v]),
-    filter: (v) => ({ "newFilter:open": "PR Changes no designer marked handled yet", "newFilter:handled": "PR Changes a designer marked handled", "newFilter:auto": "PR Changes that shipped long ago and nobody marked handled",
+    filter: (v) => ({ "newFilter:open": "PR Changes no designer marked handled yet", "newFilter:handled": "PR Changes a designer marked handled", "newFilter:auto": "PR Changes Design Desk found nothing to look at, or that shipped long ago and nobody marked handled",
       "newFilter:designer": "Only changes that wait for a designer", "reqFilter:unread": "Requests you have not opened yet", "reqFilter:open": "Requests still being worked on", "reqFilter:turn": "Requests whose next move is yours: an answer, a vote, an approval, a spec to read", "reqFilter:presentation": "What the team shows at its next design meeting, in order",
+      "chgFor:designers": "PR Changes a designer looks at", "chgFor:developers": "PR Changes a lead developer looks at: small differences, no new UI",
+      "issFor:designers": "Issues a designer looks at", "issFor:developers": "Issues a lead developer looks at: small changes from what the product already has",
       "reqFor:designers": "Requests a designer, a PM or a lead developer approves", "reqFor:developers": "Requests any developer but the one who filed them approves, without a designer", "reqFor:presentation": "What the team shows at its next design meeting, in order",
       "reqFilter:closed": "Requests sent to developers or closed",
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
@@ -2351,8 +2354,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // How it works sits under the question mark next to the day and night switch.
   function renderNav() {
     // Each tab counts only what is still open: changes not handled, issues neither handled nor designed.
-    const unseen = newCards("open").length;
-    const openIssues = issueCards("all").filter((c) => !c.designed).length;
+    const unseen = newCards("open", "designers").length + newCards("open", "developers").length;
+    const openIssues = [...issueCards("all", "designers"), ...issueCards("all", "developers")].filter((c) => !c.designed).length;
     // Requests counts the open ones; it turns amber while one waits for an answer.
     const open = S.cards.filter((c) => c.kind === "request" && !closed(c));
     const asks = open.filter((c) => c.asks).length;
@@ -2389,9 +2392,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         { tone: "checking", text: "A change ships; Design Desk explains it with pictures soon after." },
         { tone: "waiting", text: "Everyone reads what changed and why. A bold title: you have not opened it yet.",
           acts: [["<b>Ask</b> what is unclear", "ask"], ["<b>Add screenshots</b> when it has none", "screens"]] },
-        { tone: "approved", text: "A designer deals with it: marks it handled or adjusts the design.",
+        { tone: "approved", text: "A designer deals with it, or a lead developer on a change For Developers: marks it handled or adjusts the design.",
           acts: [["<b>Mark handled</b>", "handle"], ["<b>Adjust the design</b>: it becomes a request", "follow-up"], ["<b>Add to presentation</b>", "queue"]] }],
-      tip: `Red: it has waited too long. Filter by <b>Open</b>, <b>Handled</b>, <b>Auto handled</b> (shipped more than ${esc(S.me?.auto_days || 14)} days ago and never marked) or <b>Needs a designer</b>. ${LINK}` },
+      tip: `Red: it has waited too long. Filter by <b>Open</b>, <b>Handled</b>, <b>Auto handled</b> (Design Desk found nothing to look at, or it shipped more than ${esc(S.me?.auto_days || 14)} days ago and was never marked) or <b>Needs a designer</b>. ${LINK}` },
     requests: { about: simple() ? "from an idea to design options and a developer spec" : "from an idea to a live prototype and a developer spec",
       steps: [
         { tone: "", text: "Someone describes a problem in their own words.", acts: [["<b>+ New request</b>", "request"]] },
@@ -2535,22 +2538,29 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return c.suggested ? ["Suggested for the presentation"] : [];
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
-  const attentionLine = (c) => (c.attention && !simple() ? `<p class="hint"><span class="chip ${c.attention.level === "designer" ? "warn" : "ok"}" title="${c.attention.level === "designer" ? "A designer should look at this; the reasons follow" : "Nothing here waits for a designer's decision"}">${c.attention.level === "designer" ? "Needs a designer" : "Nothing to decide"}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : "");
+  const ATTN = { designer: ["warn", "A designer should look at this; the reasons follow", "Needs a designer"], developer: ["info", "A lead developer looks at this; the reasons follow", "For Developers"], fyi: ["ok", "Nothing here waits for a designer's decision", "Nothing to decide"] };
+  const attentionLine = (c) => { const [cls, tip, word] = ATTN[c.attention?.level] || ATTN.fyi; return c.attention && !simple() ? `<p class="hint"><span class="chip ${cls}" title="${tip}">${word}</span> ${esc(c.attention.reasons.join(" · "))}</p>` : ""; };
   // Every list on the left shows the newest first: a change by the day it shipped, anything
   // else by the day it came onto the Desk (docs/desk-page.md → Lists).
   const dateOf = (c) => String(c.source?.merged_at || c.created || c.updated || c.at || "");
   const newestFirst = (xs) => [...xs].sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
   // A change shipped more than `change_auto_handled_days` ago (14) that nobody marked handled is
   // auto handled: it leaves Open and Needs a designer for Auto handled (docs/desk.md → PR Changes).
-  const autoHandled = (c) => c.kind === "change" && !c.handled && S.me?.auto_days > 0 && Boolean(c.source?.merged_at)
-    && Date.now() - Date.parse(c.source.merged_at) > S.me.auto_days * 864e5;
-  const newCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "change"
+  // A change Design Desk found nothing to look at (`attention` fyi) is auto handled at once.
+  const autoHandled = (c) => c.kind === "change" && !c.handled && (c.attention?.level === "fyi" || (S.me?.auto_days > 0 && Boolean(c.source?.merged_at)
+    && Date.now() - Date.parse(c.source.merged_at) > S.me.auto_days * 864e5));
+  // Changes sit in the same two tabs as requests: For Developers, a lead developer's look, and For Designers.
+  const chgFor = () => S.chgFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
+  const newCards = (filter, aud = chgFor()) => newestFirst(S.cards.filter((c) => c.kind === "change" && forOf(c) === aud
     && (filter === "all" ? true : filter === "designer" ? forDesigner(c) : filter === "handled" ? Boolean(c.handled) : filter === "auto" ? autoHandled(c) : !c.handled && !autoHandled(c))));
   // Requests sit in two tabs, For Designers and For Developers (docs/desk.md → For Developers or
   // For Designers): every visit starts on the viewer's own, For Developers for a developer or a
   // lead developer, For Designers for everyone else; a tab picked holds until the page is left.
   const reqFor = () => S.reqFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
-  const forOf = (c) => c.for || (c.size?.small ? "developers" : "designers");
+  const forOf = (c) => c.for || (c.size ? (c.size.small ? "developers" : "designers") : ["change", "issue"].includes(c.kind) && c.attention?.level === "developer" ? "developers" : "designers");
+  // Who may mark a change or an issue handled: a designer, or a lead developer on one For Developers that goes against no decision.
+  const mayHandle = (c) => can("handle") || (["change", "issue"].includes(c.kind) && can("handle-small") && forOf(c) === "developers"
+    && !(Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length));
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
     && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "turn" ? myTurn(c) : filter === "open" ? !closed(c) : closed(c))));
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
@@ -2579,11 +2589,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const BUCKET = { sprint: "This sprint", next: "Next sprint", assigned: "Assigned", label: "For design" };
   // An issue that already went through Design Desk is done on the design side: it leaves the
   // plan's filters and stays in All with its Designed dot (docs/issues.md → On the Desk).
-  const issueCards = (filter) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived"
+  const issFor = () => S.issFor || (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
+  const issueCards = (filter, aud = issFor()) => newestFirst(S.cards.filter((c) => c.kind === "issue" && c.status !== "archived" && forOf(c) === aud
       && (filter === "handled" ? Boolean(c.handled) : !c.handled && (filter === "all" || (!c.designed && c.bucket === filter)))));
-  const FILTERS = { newFilter: ["open", "handled", "auto", "designer"], reqFilter: ["turn", "unread", "open", "closed", "presentation"], reqFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label", "handled"], elFilter: ["all", "product", "design"], designFilter: ["todo", "done"] };
+  const FILTERS = { newFilter: ["open", "handled", "auto", "designer"], reqFilter: ["turn", "unread", "open", "closed", "presentation"], reqFor: ["designers", "developers"], chgFor: ["designers", "developers"], issFor: ["designers", "developers"], issueFilter: ["all", "sprint", "next", "assigned", "label", "handled"], elFilter: ["all", "product", "design"], designFilter: ["todo", "done"] };
   // The browser keeps each filter, but not the Requests tab: that one starts on the viewer's role.
-  const KEPT = (k) => k !== "reqFor";
+  const KEPT = (k) => !["reqFor", "chgFor", "issFor"].includes(k);
   for (const [k, ok] of Object.entries(FILTERS)) { const v = KEPT(k) && store.get(`desk-${k}`); if (ok.includes(v)) S[k] = v; }
   // Requests open on Your turn: a browser that kept Open from before the filter was there starts on it once.
   if (!store.get("desk-turn")) { store.set("desk-turn", "1"); if (S.reqFilter === "open") { S.reqFilter = "turn"; store.del("desk-reqFilter"); } }
@@ -2627,7 +2638,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const waited = (c) => Math.max(0, Math.floor(((Date.parse(handledAt(c)) || Date.now()) - Date.parse(c.created)) / 864e5)) || 0;
   const overdue = (c) => c.kind === "change" && !handledAt(c) && !autoHandled(c) && S.me?.due_days > 0 && waited(c) >= S.me.due_days;
   const ageChip = (c) => handledAt(c) ? `<span class="chip ok" title="A designer marked it handled: design has nothing more to do with it">✓ Handled</span>`
-    : autoHandled(c) ? `<span class="chip" title="It shipped more than ${esc(S.me.auto_days)} days ago and nobody marked it handled">Auto handled</span>`
+    : autoHandled(c) ? `<span class="chip" title="${c.attention?.level === "fyi" ? "Design Desk found nothing to look at" : `It shipped more than ${esc(S.me.auto_days)} days ago and nobody marked it handled`}">Auto handled</span>`
     // A change from today needs no chip: its row already says created: Today.
     : !waited(c) && !overdue(c) ? ""
     : `<span class="chip ${overdue(c) ? "bad" : waited(c) ? "" : "info"}" title="Days since it appeared, until a designer marks it handled${S.me?.due_days ? `; to be handled within ${esc(S.me.due_days)} days` : ""}">${overdue(c) ? "Overdue · " : ""}${waited(c) ? `${plural(waited(c), "day", "days")} open` : "New today"}</span>`;
@@ -2722,7 +2733,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : S.productFilter === "decisions" && can("decide") ? `<button class="btn small primary" data-add-decision title="Record a decision the team made, in your name">+ Add</button>` : "";
     // Requests: For Designers and For Developers, each with its open count, and the presentation.
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
-    const head = S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
+    const chgTab = (k, l) => [`${k}`, l, newCards("open", k).length];
+    const issTab = (k, l) => [`${k}`, l, issueCards("all", k).filter((c) => !c.designed).length];
+    const head = S.tab === "new" ? pages("chgFor", [chgTab("designers", "For Designers"), chgTab("developers", "For Developers")], (k) => chgFor() === k)
+      : S.tab === "issues" ? pages("issFor", [issTab("designers", "For Designers"), issTab("developers", "For Developers")], (k) => issFor() === k)
+      : S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
       : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ["auto", "Auto handled", newCards("auto").length], ["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["turn", "Your turn", requestCards("turn").length], ["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["closed", "Closed", requestCards("closed").length]])
@@ -3397,12 +3412,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         const hb = c.handled?.by, handler = hb?.agent ? "Design Desk" : isMe(hb?.email) ? "You" : hb?.name || personName(hb?.email);
         // Design Desk's check on GitHub holds an open PR a designer should see until it is marked handled (`ci_gate`, docs/watch.md → CI gate).
         const ci = c.ci?.state === "failing" ? kv("GitHub check", "held until handled") : c.ci?.state === "passing" ? kv("GitHub check", "passed") : "";
-        const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : autoHandled(c) ? kv("handled", `auto, not marked within ${esc(S.me.auto_days)} days of shipping`) : "", ci, src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
+        const meta = [handledAt(c) ? kv("handled by", esc(handler)) + kv("at", esc(day(handledAt(c)))) : autoHandled(c) ? kv("handled", c.attention?.level === "fyi" ? "auto, nothing to look at" : `auto, not marked within ${esc(S.me.auto_days)} days of shipping`) : "", ci, src.merged_at ? kv("shipped", esc(day(src.merged_at))) : ""].join("");
         const pill = src.pr ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">PR #${esc(src.pr)} ↗</a>` : `<span class="s-pill">PR #${esc(src.pr)}</span>`) : "";
-        const handle = can("handle") ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it${c.ci?.state === "failing" ? ". Design Desk then passes its check on the pull request" : ""}">Mark handled</button>`) : "";
+        const handle = mayHandle(c) ? (handledAt(c) ? `<button class="btn" data-handle="0" title="Counts its days again">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing more to do with this change; the team sees it${c.ci?.state === "failing" ? ". Design Desk then passes its check on the pull request" : ""}">Mark handled</button>`) : "";
+        // A lead developer or an admin moves it between For Developers and For Designers, as a request.
+        const size = can("size") && !handledAt(c) && c.status !== "archived" ? (forOf(c) === "developers" ? `<button class="btn small" data-size="designer">For Designers</button>` : `<button class="btn small" data-size="small">For Developers</button>`) : "";
         // As on an issue: the design action first and primary, Mark handled after it.
         const adjust = hasRequest(c) ? "" : (can("follow-up") && !handledAt(c) ? `<button class="btn primary" data-adjust>Adjust the design</button>` : can("follow-up") ? `<button class="btn" data-adjust>Adjust the design</button>` : "");
-        return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c), { pill, inline: true });
+        return ghStatus(o, word, tip, meta, adjust + handle, agendaButton(c) + size, { pill, inline: true });
       })()}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.builds ? `<div class="sent"><b>Builds a design from Design Desk</b><p>This pull request builds <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}${c.builds.url && ghRef(c.builds.url) && !ghRef(c.builds.url).pr ? `, sent to developers as <a href="${safeUrl(c.builds.url)}" target="_blank" rel="noopener noreferrer">Issue #${esc(ghRef(c.builds.url).n)} ↗</a>` : ""}; its design and spec are there.</p></div>` : ""}
@@ -3437,8 +3454,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         const pill = src.issue ? (src.url ? `<a class="s-pill" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="Open the issue on GitHub">Issue #${esc(src.issue)} ↗</a>` : `<span class="s-pill">Issue #${esc(src.issue)}</span>`) : "";
         const meta = [src.author ? kv("by", esc(src.author)) : "", (src.assignees || []).length ? kv("assigned to", esc(src.assignees.join(", "))) : "", c.bucket === "sprint" && src.milestone ? "" : src.milestone ? kv("milestone", esc(src.milestone)) : ""].join("");
         const design = hasRequest(c) ? "" : (open && !c.handled && can("follow-up") ? `<button class="btn${c.designed ? "" : " primary"}" data-adjust>${c.designed ? "Design it again" : "Design this"}</button>` : "");
-        const handle = can("handle") ? (c.handled ? `<button class="btn" data-handle="0" title="It comes back to the lists">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing to do with this issue: it leaves the lists for Handled">Mark handled</button>`) : "";
-        return ghStatus(o, word, tip, meta, design + handle, open ? agendaButton(c) : "", { pill, inline: true });
+        const handle = mayHandle(c) ? (c.handled ? `<button class="btn" data-handle="0" title="It comes back to the lists">Not handled yet</button>` : `<button class="btn" data-handle="1" title="Design has nothing to do with this issue: it leaves the lists for Handled">Mark handled</button>`) : "";
+        const size = can("size") && !c.handled ? (forOf(c) === "developers" ? `<button class="btn small" data-size="designer">For Designers</button>` : `<button class="btn small" data-size="small">For Developers</button>`) : "";
+        return ghStatus(o, word, tip, meta, design + handle, (open ? agendaButton(c) : "") + size, { pill, inline: true });
       })()}
       ${c.summary ? `<p class="lead">${txt(c.summary)}</p>` : ""}
       ${c.designed ? `<div class="sent"><b>✓ Already through Design Desk — done on the design side.</b><p><button class="anchor" data-card="${esc(c.designed.card)}">${esc(c.designed.title)}</button>${num({ id: c.designed.card })} was sent to developers${c.designed.at ? ` on ${esc(day(c.designed.at))}` : ""}; its design and spec are there.</p></div>` : ""}
@@ -5183,9 +5201,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (to.tab === "presentation" && onCall) S.reqFilter = "presentation";
     if (S.tab === "product") S.productFilter = { element: "elements", digest: "history" }[c.kind] || "screens";
     if (!visibleCards().some((x) => x.id === c.id)) {
-      if (S.tab === "new") S.newFilter = c.handled ? "handled" : "open";
+      if (S.tab === "new") { S.newFilter = c.handled ? "handled" : autoHandled(c) ? "auto" : "open"; S.chgFor = forOf(c); }
       if (S.tab === "requests") { S.reqFilter = closed(c) ? "closed" : "open"; S.reqFor = forOf(c); }
-      if (S.tab === "issues") S.issueFilter = c.handled ? "handled" : "all";
+      if (S.tab === "issues") { S.issueFilter = c.handled ? "handled" : "all"; S.issFor = forOf(c); }
     }
     S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners();
     await openCard(c.id);
@@ -5696,7 +5714,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.size) {
       const small = ds.size === "small";
       const r = await ask({ title: small ? "Move to For Developers" : "Move to For Designers",
-        body: small ? "Any developer but the person who filed it can then approve it, without a designer. The request shows that you chose this." : "A designer, a PM or a lead developer approves it again. The request shows that you chose this.",
+        body: S.card.kind !== "request" ? (small ? "A lead developer can then mark it handled, without a designer." : "A designer marks it handled.")
+          : small ? "Any developer but the person who filed it can then approve it, without a designer. The request shows that you chose this." : "A designer, a PM or a lead developer approves it again. The request shows that you chose this.",
         ok: small ? "For Developers" : "For Designers", send: () => api("POST", `/api/cards/${S.card.id}/size`, { small }) });
       if (!r) return;
       await refreshList(); await openCard(S.card.id); return;

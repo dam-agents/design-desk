@@ -66,8 +66,10 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
     case "draw": return shaper || dev || pm;
     // A developer or a PM starts and changes everything a designer does; deciding stays a designer's.
     case "explore": case "revise": case "refresh": case "history": case "change": case "figma": case "share": case "add": return shaper || dev || pm;
-    // Whether a request is For Developers, which a developer approves, or For Designers.
+    // Whether a request or a change is For Developers, which a developer approves, or For Designers.
     case "size": return role === "lead-developer" || role === "admin";
+    // Mark a change For Developers handled: a lead developer, the dev UI owner, as well as a designer.
+    case "handle-small": return shaper || role === "lead-developer";
     // Skip the vote and the live prototype: approve straight away, or decide and close
     // (docs/desk.md → Deciding straight away).
     case "skip": return shaper || pm || role === "lead-developer";
@@ -100,7 +102,7 @@ export function forgetIdle(usage, now, writeWindowMs, max = 500) {
 }
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "choose", "draw", "decide", "size", "skip", "people", "designs", "built", "resolve"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "handle-small", "choose", "draw", "decide", "size", "skip", "people", "designs", "built", "resolve"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -426,7 +428,7 @@ export class Store {
         voting: (c.polls || []).some((x) => x.state === "open"), voted: (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
-        for: c.kind === "request" ? (c.size?.small ? "developers" : "designers") : null,
+        for: ["request", "change", "issue"].includes(c.kind) ? this.forOf(c) : null,
         // Whether the viewer voted on it: Your turn reads it on a row (docs/desk-page.md → Pages and filters).
         voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
@@ -502,15 +504,28 @@ export class Store {
   // change card carries the agent's judgement; a request's comes from where it stands;
   // a suggestion for the next call waits for a designer on either, whatever its status.
   // Null: not judged.
+  // Whose tab a request, a change or an issue is on: For Developers or For Designers. A change
+  // or an issue starts on the agent's judgement (`attention.level` developer → For Developers)
+  // until a person moves it (`size`), as a request does (docs/desk.md → For Developers or For Designers).
+  forOf(c) {
+    if (c.size) return c.size.small ? "developers" : "designers";
+    return (c.kind === "change" || c.kind === "issue") && c.attention?.level === "developer" ? "developers" : "designers";
+  }
+
   attentionOf(c) {
     if (c.kind !== "change" && c.kind !== "request") return null;
     const suggested = c.call_suggestion ? ["Suggested for the presentation"] : [];
     if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
       return suggested.length ? { level: "designer", reasons: suggested } : null;
-    const reasons = c.attention?.level === "designer" ? [...c.attention.reasons] : [];
+    // A change For Developers waits for a lead developer, not a designer: its reasons stay its own
+    // level unless a decision it goes against, or the presentation, needs a designer.
+    const dev = c.kind === "change" && this.forOf(c) === "developers";
+    const reasons = c.attention?.level === "designer" || (c.kind === "change" && c.size && !dev && c.attention) ? [...c.attention.reasons] : [];
+    const mine = dev && c.attention ? [...c.attention.reasons] : [];
     const against = this.activeConflicts(c).map((x) => x.decision);
     if (against.length) reasons.push(`Goes against ${[...new Set(against)].join(", ")}`);
-    if (c.design_check?.verdict === "differs") reasons.push(`Differs from the approved design ${c.design_check.request}`);
+    const differs = c.design_check?.verdict === "differs" ? `Differs from the approved design ${c.design_check.request}` : null;
+    if (differs) (dev ? mine : reasons).push(differs);
     if (c.kind === "request") {
       const asks = (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open");
       const busy = Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question");
@@ -522,7 +537,8 @@ export class Store {
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
     reasons.push(...suggested);
-    if (reasons.length) return { level: "designer", reasons };
+    if (reasons.length) return { level: "designer", reasons: [...mine, ...reasons] };
+    if (dev) return { level: "developer", reasons: mine };
     return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
   }
 
@@ -535,7 +551,7 @@ export class Store {
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -578,6 +594,12 @@ export class Store {
   handle(cardId, who, on = true) {
     const c = this.card(cardId);
     if (!["change", "issue"].includes(c.kind)) throw bad("only a change or an issue is marked handled");
+    // A lead developer marks a change For Developers handled; one that goes against a decision
+    // in force stays a designer's (docs/desk.md → For Developers or For Designers).
+    if (!who?.agent && !can(who?.role, "handle")) {
+      if (!can(who?.role, "handle-small") || this.forOf(c) !== "developers") throw forbidden("Only designers can mark this handled. A lead developer marks a change or an issue For Developers handled.");
+      if (this.activeConflicts(c).length) throw forbidden(`This ${c.kind} goes against a decision in force: a designer marks it handled.`);
+    }
     // An issue keeps its status, which its run sets: handled only takes it off the Desk's lists
     // and out of drawing (docs/issues.md → On the Desk).
     if (c.kind === "issue") { if (on) c.handled = { by: person(who), at: this.clock() }; else delete c.handled; }
@@ -1579,16 +1601,21 @@ export class Store {
   }
 
   // A lead developer moves a request to For Developers, which any developer but its author
-  // approves, or back to For Designers; the card keeps who and when
+  // approves, or back to For Designers; the card keeps who and when. A change moves the same
+  // way, between a lead developer's look and a designer's
   // (docs/desk.md → For Developers or For Designers).
   setSize(cardId, who, small) {
     const c = this.card(cardId);
-    if (c.kind !== "request") throw bad("only a design request is For Developers or For Designers");
+    if (!["request", "change", "issue"].includes(c.kind)) throw bad("only a design request, a change or an issue is For Developers or For Designers");
+    if (c.kind !== "request" && c.handled) throw bad(`This ${c.kind} is already handled. Mark it not handled to change who looks at it.`);
+    if (c.kind !== "request" && c.status === "archived") throw bad(`This ${c.kind} is archived.`);
     if (c.status === "declined" || c.status === "handed-off") throw bad("This request is closed.");
     if (c.approved) throw bad("This request is already approved. Reopen it to change who approves it.");
     if (typeof small !== "boolean") throw bad("small must be true or false");
     c.size = { small, by: person(who), at: this.clock() };
     c.updated = this.clock();
+    // A change whose check Design Desk holds or passed: the check follows who looks at it now.
+    if (c.kind === "change" && ["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, `Moved to For ${small ? "Developers" : "Designers"}: set the check again.`);
     this.save();
     return { card: c };
   }
@@ -1934,7 +1961,7 @@ export class Store {
         else next.style = optText(fields.style, 200, "style");
       }
       else if (k === "attention") {
-        if (next.kind !== "change") throw bad("attention is judged on change cards; a request's comes from where it stands");
+        if (next.kind !== "change" && next.kind !== "issue") throw bad("attention is judged on change and issue cards; a request's comes from where it stands");
         next.attention = fields.attention === null ? null : cleanAttention(fields.attention);
       }
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
@@ -2013,6 +2040,9 @@ export class Store {
       const hit = this.buildsOf(next)?.card || (next.design_check?.verdict === "matches" ? next.design_check.request : null);
       const r = hit ? own(this.db.cards, String(hit)) : null;
       if (r && r.kind === "request" && r.status === "handed-off" && !r.built && !r.not_built) r.built = { by: { agent: true }, at: this.clock(), change: next.id };
+      // Shipped, its approved option's elements join the design catalog, as Add to the design catalog would (docs/catalog.md → From approved designs).
+      const v = r?.kind === "request" && r.approved && ["spec", "handed-off"].includes(r.status) ? (r.variants || []).find((x) => x.id === r.approved.variant) || ((r.variants || []).length === 1 ? r.variants[0] : null) : null;
+      if (v) for (const e of elementsOf(v)) if (!r.in_catalog?.elements?.[e.key]) this.copyToCatalog(r, v, { agent: true }, e.key);
     }
     this.save();
     return { card: next };
@@ -3102,7 +3132,7 @@ function cleanCi(x) {
 }
 
 function cleanAttention(a) {
-  if (!a || !["designer", "fyi"].includes(a.level)) throw bad("attention level must be designer or fyi");
+  if (!a || !["designer", "developer", "fyi"].includes(a.level)) throw bad("attention level must be designer, developer or fyi");
   if (!Array.isArray(a.reasons) || !a.reasons.length) throw bad("attention names at least one reason");
   return { level: a.level, reasons: a.reasons.slice(0, 5).map((s) => clean(s, 160, "attention reason")) };
 }

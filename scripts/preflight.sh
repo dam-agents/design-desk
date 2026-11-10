@@ -680,10 +680,11 @@ inbox_mode() {
         | select($why != null or ((.synced | epoch) as $at | $at == null or ($now - $at) >= $every))
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
-  # With ci_gate on, an open pull request's change card is due as `G-<card>` when it waits for a
-  # designer (as the store derives it: its attention, a design check that differs, a decision in
-  # force it goes against, a suggestion for the presentation) and was never judged for the gate
-  # (no `ci`): the cards already on the Desk when the key was turned on, and any a run missed.
+  # With ci_gate on, an open pull request's change card is due as `G-<card>` when it is judged
+  # (its attention, a design check, a decision in force it goes against, a suggestion for the
+  # presentation) and its check was never set (no `ci`, or the `skipped` that before 1.76.0
+  # meant a PR not held): the agent passes or holds it
+  # (docs/watch.md → CI gate). The cards already on the Desk when the key was turned on, and any a run missed.
   # A card whose last status write failed (`ci.state: error`) is due again until its 3rd try
   # (docs/watch.md → CI gate). A read that fails is an error line, never an empty list.
   local gate="[]" gate_err=""
@@ -691,12 +692,12 @@ inbox_mode() {
     if ! gate="$(jq -c '(.decisions // {}) as $d
         | [ (.cards // {})[] | select(.kind == "change" and (.source | type) == "object" and .source.pr != null
               and (.source.merged_at // null) == null and .status != "archived")
-          | (((.attention | if type == "object" then .level else null end) == "designer") or ((.design_check | if type == "object" then .verdict else null end) == "differs")
+          | (((.attention | type) == "object") or ((.design_check | type) == "object")
              or ([(.conflicts // [])[] | objects | ($d[.decision | tostring] | if type == "object" then .status else null end)] | index("active")) != null
              or (.call_suggestion // null) != null) as $wait
           | (.ci | if type == "object" then . else null end) as $ci
-          | select(($ci == null and .handled == null and $wait) or ($ci.state == "error" and ($ci.tries // 0) < 3))
-          | {id: ("G-" + .id), card: .id, gate: true, retry: ($ci != null)} ]' "$DB" 2>&1)"; then
+          | select((($ci == null or ($ci.state == "skipped" and $ci.tries == null)) and $wait) or ($ci.state == "error" and ($ci.tries // 0) < 3))
+          | {id: ("G-" + .id), card: .id, gate: true, retry: ($ci.state == "error")} ]' "$DB" 2>&1)"; then
       log "could not read the Desk's cards for the CI gate: ${gate%%$'\n'*} — no pull request is judged this run"
       logev error preflight "inbox: CI gate read failed"
       gate="[]"; gate_err=1

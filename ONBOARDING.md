@@ -155,8 +155,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    developer's UI or fixes a UI bug, how does the coding agent get it — a comment on the pull
    request, or a new issue? Does it answer to a handle?" (`implementer`, `implementer_mention`.)
    Both post on the product repository as the agent's account; say so.
-   "Should an open pull request that a designer should see fail a Design Desk check on
-   GitHub until a designer marks it handled?" (`ci_gate`, default `disabled`; it writes
+   "Should Design Desk set a check on every open pull request, failing until a designer (or a
+   lead developer, on a small difference) marks its change handled?" (`ci_gate`, default `disabled`; it writes
    commit statuses as the agent's account; [docs/watch.md](docs/watch.md) → CI gate.)
    "Should the Desk list the planned issues that change the screens — the current and the
    next sprint, assigned ones and a label's — with what the UI will need and a sketch?"
