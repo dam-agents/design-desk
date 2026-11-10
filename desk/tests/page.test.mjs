@@ -1326,6 +1326,7 @@ const HEADERS = [
   ["Decided without a design", { status: "declined", triage: DESIGN, decided: { by: { email: "bob@example.com" }, at: AT, text: "Keep the list as it is." } }, ME(ALL), "Decided without a design", "decided", null, null, false],
   ["Team feedback, the Slack vote ended", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT, result: "Column won" }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback (finished)", "waiting", 3, "Approve", false],
   ["Team feedback, the Slack vote still runs", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT }, { state: "open", closes: LATER }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
+  ["Team feedback, a person ended the vote", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, vote_ended: { by: { email: "bob@example.com" }, at: AT }, polls: [{ state: "open", closes: AT }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback (finished)", "waiting", 3, "Approve", false],
   ["No options, every one taken out", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME(ALL), "No options", "turn", 2, "Draw design options", false],
   ["No options, someone who may not draw them", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME({}), "No options", "turn", 2, "Wait for a designer", false],
   ["The prototype failed, someone who may not build", { status: "prototype", triage: DESIGN, prototype: { state: "failed" } }, ME({}), "Prototype didn't work", "turn", 4, "Wait for a designer", false],
@@ -1341,7 +1342,7 @@ const BRIDGE_HEADER = (patch, me) => BRIDGE_STORIES
   .replace("{ ...request, from: \"is1\", variants: 2, threads: undefined }", LIST_ROW);
 const LIST_ROW = `{ id: request.id, kind: "request", title: request.title, status: request.status, created: request.created, updated: request.created,
   variants: (request.variants || []).length, triage: request.triage?.verdict || null, prototype: request.prototype?.state || null, team_feedback: request.team_feedback || null,
-  spec: request.spec ? { review: request.spec.review || null } : null, voting: (request.polls || []).some((x) => x.state === "open"), voted: (request.polls || []).some((x) => x.state === "closed"),
+  spec: request.spec ? { review: request.spec.review || null } : null, voting: !request.vote_ended && (request.polls || []).some((x) => x.state === "open"), voted: Boolean(request.vote_ended) || (request.polls || []).some((x) => x.state === "closed"),
   busy: (request.waiting || []).length > 0, asks: (request.threads || []).some((t) => t.kind === "asks" && t.state === "open"),
   decided: request.status === "declined" && request.decided?.at || null, type: request.request?.type || null, for: "designers", from: "is1", read: true, origin: null, by: null }`;
 // On the page the word is the stage; the list keeps the finer word.
@@ -1359,6 +1360,7 @@ const LEAD = {
   "Building the prototype": NOTHING, "Live, try it": "Open the prototype", "The prototype failed": "Try again", "The prototype was switched off": "Build it again",
   "Writing the spec": NOTHING, "The spec, a question to answer": "Answer the question below", "Spec draft to read and send": "Send to developers…", "Sending to developers": NOTHING,
   "Sent, someone who sees Designs": "Show the design", "Sent, someone who does not": "Developers build it.", "Closed": NO_REOPEN, "Decided without a design": NO_REOPEN,
+  "Team feedback, a person ended the vote": "The vote ended.",
   "Team feedback, the Slack vote ended": VOTE, "Team feedback, the Slack vote still runs": VOTE,
   "No options, every one taken out": "Draw design options", "No options, someone who may not draw them": A_DESIGNER,
   "The prototype failed, someone who may not build": A_DESIGNER, "Spec draft, someone who may not send it": A_DESIGNER,
