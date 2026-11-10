@@ -2759,6 +2759,9 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 test("research sources say what they are; a page previews its section; code links are left out, older links show plainly", (t) => open(t, SOURCES, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   await desk.goto(`${base}#C-2`);
+  await desk.waitForSelector(".made-sec details.srcs:not([open])");
+  assert.equal((await desk.textContent(".made-sec .srcs > summary")).trim(), "9 sources · Issue, PR, PR Change, Decision, 2× Doc, ADR, Link, Item", "the sources start folded, counted by kind");
+  await desk.click(".made-sec .srcs > summary");
   await desk.waitForSelector(".made-sec ul li");
   const rows = await desk.$$eval(".made-sec ul li", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
   assert.deepEqual(rows, ["Issue · #5", "PR · Menu #6", "PR Change · C-1 A new header", "Decision · D-1 Search sits in the header",
