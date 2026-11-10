@@ -106,6 +106,27 @@ test("Show notes shows only with a note, numbers it, reads it on a click and cha
   } finally { await chrome.close(); }
 });
 
+test("Show hotspots shows only when the design wires something, and outlines nothing when it does not", async (t) => {
+  const browser = chromium();
+  if (!browser) return t.skip("no browser here");
+  let pw;
+  try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  Object.assign(process.env, browser.env);
+  const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
+  try {
+    const pg = await chrome.newPage();
+    const load = async (html) => { await pg.setContent(html); await pg.evaluate(() => document.dispatchEvent(new Event("DOMContentLoaded"))); };
+    const hot = () => pg.evaluate(() => document.documentElement.classList.contains("review-hot"));
+    await load(PAGE);
+    assert.equal(await pg.isVisible("#review [data-hot]"), true, "a wired design shows the switch");
+    assert.equal(await hot(), true, "and outlines what it wires");
+    await load(`<!doctype html><html><body>${bar}<div data-view="1" data-view-name="Still"><p>Three plans</p><button>Export</button></div></body></html>`);
+    assert.equal(await pg.isVisible("#review [data-hot]"), false, "nothing wired, no switch");
+    assert.equal(await pg.isVisible("#review [data-notes]"), false, "no note, no switch either");
+    assert.equal(await hot(), false, "nothing is outlined");
+  } finally { await chrome.close(); }
+});
+
 test("design shot takes no picture with the dead-click flash", async (t) => {
   const browser = chromium();
   if (!browser) return t.skip("no browser here");

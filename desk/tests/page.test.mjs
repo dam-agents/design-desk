@@ -1761,7 +1761,7 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
 // The review bar a build puts into every design (toolkit/chrome/review-bar.html), in the
 // workspace's frame: it acts in Select mode, and only a click on the design picks.
 const BAR = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "chrome", "review-bar.html"), "utf8");
-const WITH_BAR = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Billing"><button>Save</button></div></body>`;
+const WITH_BAR = `<body>${BAR}<div data-view="1" data-view-name="Start"><button data-clickable>Next</button></div><div data-view="2" data-view-name="Billing"><button>Save</button></div></body>`;
 // The second option has the same Billing screen under another number, and a Plans screen the first lacks.
 const WITH_BAR_2 = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Plans"><button>Pick</button></div><div data-view="3" data-view-name="Billing"><button>Pay</button></div></body>`;
 const BRIDGE_BAR = `<script>
