@@ -118,7 +118,8 @@ async function launch(t, bridge) {
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
   const top = await chrome.newPage();
   await top.goto(`http://127.0.0.1:${server.address().port}/`);
-  const desk = top.frames().find((f) => f.url().endsWith("/desk"));
+  // The page writes what it shows into its address (#requests, #C-12): the frame is found by its path.
+  const desk = top.frames().find((f) => new URL(f.url()).pathname === "/desk");
   const posts = (path) => desk.evaluate((p) => calls.filter((c) => c.method === "POST" && c.path === p), path);
   const settled = async (path, n, why) => { await top.waitForTimeout(300); assert.equal((await posts(path)).length, n, why); };
   return { top, desk, posts, settled, close: async () => { await chrome.close(); server.close(); } };
@@ -2324,6 +2325,8 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   assert.equal(await desk.getAttribute('[data-filter="figFilter:differs"]', "aria-pressed"), "true", "back on Differs, a lit filter");
 
   // On the screen itself: folded to one line with the counts; × takes one off for everyone.
+  // The address already reads #C-1 (the page keeps it): another place first, so the link opens anew.
+  await desk.goto(`${base}#product`);
   await desk.goto(`${base}#C-1`);
   await desk.waitForSelector("[data-figbox]");
   assert.equal(await desk.$eval("[data-figbox]", (x) => x.open), false, "folded at first");
@@ -2700,8 +2703,8 @@ test("a send after a reopen shows the earlier issue's state and assignee, and cl
 
 test("only an admin reopens a sent request, from ⋯, behind a confirmation", (t) => open(t, sendsBridge("admin", { status: "handed-off", sends: [], approved: { by: { email: "alice@example.com", role: "designer" }, at: "2026-11-05T09:00:00Z", variant: "v1" }, spec: { issue_url: "https://github.com/acme/widgets/issues/142", review: "sent" } }), async (desk) => {
   await desk.evaluate(() => { location.hash = "#C-1"; });
-  await desk.click("#detail .h-more details.more > summary");
-  await desk.click('#detail .h-more [data-act="reopen"]');
+  await desk.click("#detail .status details.more > summary");
+  await desk.click('#detail .status [data-act="reopen"]');
   assert.match(await desk.textContent("#confirm-dialog"), /Reopen a request sent to developers\?[\s\S]*before the team's vote[\s\S]*stays as it is/);
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/actions"));
