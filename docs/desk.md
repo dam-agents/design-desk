@@ -601,7 +601,7 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
 - A card is updated, never duplicated: `design desk upsert` with its `id`.
 - **Where a card came from.** Every row in PR Changes, Requests, Designs, Issues and Product shows its source, its author and,
   for what no person asked for, the event behind it, as `created: <when> from: <source> by: <author> based on:
-  <card>` (`<when>`: Today, Yesterday or the date it came, the exact time on hover; with no person behind it,
+  <card>` (an event about the card `based on:` names is left out: `based on:` already links it; `<when>`: Today, Yesterday or the date it came, the exact time on hover; with no person behind it,
   the run that filed it is the author: `by: hourly check`, `by: daily issue read`; an issue not yet
   designed adds where the team planned it: `in: This sprint`, or the sprint's milestone, `in: Sprint 12`), the joining words grey and what they name in ink; only Slack and GitHub (a pull request,
   an issue) show their icon beside their name. A change card shows its `source` (the PR,
