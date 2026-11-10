@@ -1828,7 +1828,7 @@ test("an item read against its frame in Figma: what differs, how much, each side
   assert.throws(() => s.upsertCard({ id: screen.id, figma_check: { ...check, differences: [diff, { ...diff, severity: "major" }] } }), /named twice/);
   s.upsertCard({ id: screen.id, figma_check: { ...check, frame: { ...frame, version: "a7b1" } } });
   s.dismissFigma(screen.id, alice, "Header"); s.dismissFigma(screen.id, alice, "Stopped dot");
-  assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked, closed: false }, "all off: it matches");
+  assert.deepEqual(s.listCards({ kind: "screen" })[0].figma, { id: s.getCard(screen.id).figma_check.id, verdict: "matches", count: 0, frame: "Agents list", checked: s.getCard(screen.id).figma_check.checked, closed: false }, "all off: it matches");
   s.dismissFigma(screen.id, alice, "Header", false);
   assert.equal(s.listCards({ kind: "screen" })[0].figma.count, 1, "brought back");
   s.upsertCard({ id: screen.id, figma_check: null });
