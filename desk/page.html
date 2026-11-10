@@ -1140,7 +1140,7 @@
     <span class="sep head-sep" id="new-request-sep" aria-hidden="true" hidden></span>
     <button class="btn primary" id="new-request" hidden>+ New request</button>
     <div class="grow"></div>
-    <div class="search"><input class="goto" id="goto" type="search" placeholder="Search, or C-12, D-3, #4512" role="combobox" aria-expanded="false" aria-controls="hits" aria-label="Search the Desk: words, an item's number like C-12, a decision's like D-3, a GitHub issue or pull request number, or a link" title="Search requests, changes, issues, screens, elements and decisions. A number opens its item: C-12, D-3, or a GitHub issue or pull request like #4512" autocomplete="off" spellcheck="false" /><div id="hits" role="listbox" hidden></div></div>
+    <div class="search"><input class="goto" id="goto" type="search" placeholder="Search, or R-12, D-3, #4512" role="combobox" aria-expanded="false" aria-controls="hits" aria-label="Search the Desk: words, an item's number like C-12, a decision's like D-3, a GitHub issue or pull request number, or a link" title="Search requests, changes, issues, screens, elements and decisions. A number opens its item: C-12, D-3, or a GitHub issue or pull request like #4512" autocomplete="off" spellcheck="false" /><div id="hits" role="listbox" hidden></div></div>
     <details class="more me-menu"><summary class="me" id="me" aria-label="Your menu"></summary><div class="menu"><button class="btn" id="help" type="button" data-tab="guide" title="How Design Desk works, with a picture of each flow">? How it works</button><button class="btn" id="simple" type="button" aria-pressed="false"></button><button class="btn" id="figma" type="button" aria-pressed="true" hidden></button><button class="btn" id="theme" type="button"></button></div></details>
     <details class="more bell" id="bell"><summary id="bell-btn" aria-label="Notifications" title="Notifications: what happened lately on the Desk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg><span class="badge" id="bell-count" hidden></span></summary><div class="menu notes" id="notes" role="dialog" aria-label="Notifications"></div></details>
   </header>
@@ -1892,8 +1892,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const a = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     return html.split(/(<a\b[\s\S]*?<\/a>|<code>[\s\S]*?<\/code>|<[^>]*>)/).map((part, i) => i % 2 ? part : part
       // Another item on the Desk, by its number (docs/desk.md → Links to an item).
-      // A numbered state or picture of it, C-12.3 (docs/desk.md → Numbers of parts and states).
-      .replace(/(?<![\w#/.-])(C-\d+)(?:\.(\d+))?\b/g, (m, id) => S.cards.some((x) => x.id === id) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
+      // A numbered state or picture of it, R-12.3 (docs/desk.md → Numbers of parts and states).
+      .replace(/(?<![\w#/.-])([A-CE-Z]-\d+)(?:\.(\d+))?\b/g, (m, id) => byNumber(id) ? `<a href="#${m}" data-ref="${m}">${m}</a>` : m)
       // A decision, by its number (docs/desk.md → Decisions).
       .replace(/(?<![\w#/.-])D-\d+\b/g, (m) => `<a href="#${m}" data-ref="${m}">${m}</a>`)
       .replace(/(?<![\w./-])([\w.-]+\/[\w.-]+)#(\d+)\b/g, (m, r, n) => a(`${host}/${r}/issues/${n}`, m))
@@ -2135,10 +2135,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A number in text (C-11, D-26) previews whatever it names; a card's button only an issue or a change.
     const own = el.dataset.ref;
     if (own && /^D-\d+$/.test(own)) { const d = await decisionOf(own); return d ? { ...d, kind: "decision" } : null; }
-    // A numbered part or state of an item, C-12.3, previews the item it is on.
-    const part = own?.match(/^(C-\d+)\.(\d+)$/);
-    if (part) { const c = S.cards.find((x) => x.id === part[1]); return c ? { ...c, sub: Number(part[2]) } : null; }
-    if (own) return S.cards.find((x) => x.id === own) || null;
+    // A numbered part or state of an item, R-12.3, previews the item it is on.
+    const part = own?.match(/^([A-Z]-\d+)\.(\d+)$/);
+    if (part) { const c = byNumber(part[1]); return c ? { ...c, sub: Number(part[2]) } : null; }
+    if (own) return byNumber(own);
     const id = el.dataset.card;
     if (id) { const c = S.cards.find((x) => x.id === id); return PEEKED.includes(c?.kind) ? c : null; }
     const ref = ghRef(el.getAttribute("href"));
@@ -2389,11 +2389,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // presentation the presentation's: #C-12, #presentation/C-12 (docs/desk.md → Links to an item).
   // An earlier Designs record of a reopened request shows its request's number.
   const num = (c) => (c?.id ? `<span class="num">${esc(c.base || c.id)}${c.send ? " · earlier send" : ""}</span>` : "");
+  // Every kind of item numbers its own series under its letter: P PR Change, R Request, I Issue,
+  // S Screen, E Element, W Week, F a comparison with Figma, G a design sent to developers; C is a
+  // card from before 1.78.0 (docs/desk.md → Links to an item). F-3 and G-3 name the card they are on.
+  const numbersOf = (x) => [x.id, x.figma?.id, x.design_id, ...(x.sends || []).map((s) => s.design_id)].filter(Boolean);
+  const byNumber = (id) => S.cards.find((x) => numbersOf(x).includes(id)) || null;
+  // A design on Designs is shown by its own number: the one sent now, or an earlier send's.
+  const designNum = (c) => { const id = designIdOf(c); return id ? `<span class="num">${esc(id)}${c.send ? " · earlier send" : ""}</span>` : num(c); };
+  // A comparison with Figma, on Product → Differences, is shown by its own number.
+  const onDiffs = () => S.tab === "product" && S.productFilter === "differences";
+  const figNum = (c) => (c?.figma?.id || c?.figma_check?.id ? `<span class="num">${esc(c.figma?.id || c.figma_check.id)}</span>` : num(c));
   // The item's link, as an icon beside its number: copies a link that opens it.
   const LINK_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>`;
   const PEN_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
   const titleLink = (c) => (c && itemLink(c) ? `<button class="linkbtn" data-copy-link aria-label="Copy a link to ${esc(c.id)}" title="A link that opens ${esc(c.id)}: paste it in Slack, an issue or a message">${LINK_ICON}</button>` : "");
-  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${presenting() ? "presentation/" : S.tab === "designs" ? "designs/" : ""}${c.base || c.id}` : "");
+  const designIdOf = (c) => (c.send ? c.sends?.[c.send - 1]?.design_id : c.design_id) || null;
+  const itemLink = (c) => (/^https?:\/\//i.test(S.me?.link || "") ? `${S.me.link.replace(/#.*$/, "")}#${S.tab === "designs" && !presenting() && designIdOf(c) ? designIdOf(c) : onDiffs() && (c.figma?.id || c.figma_check?.id) ? c.figma?.id || c.figma_check.id : `${presenting() ? "presentation/" : S.tab === "designs" ? "designs/" : ""}${c.base || c.id}`}` : "");
   // An open item's way back, kept on screen while it scrolls: the browser's Back leaves the Desk.
   const backBar = () => {
     const decisions = S.tab === "product" && S.productFilter === "decisions";
@@ -2437,7 +2448,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // colour of its box in the flow, says who acts, and under "You can" lists only the buttons the
   // person signed in may press there (`can`).
   // Every list's items have a number and a link (docs/desk.md → Links to an item).
-  const LINK = "Each item has a number, like C-12: <b>Search</b> finds it, the link icon copies a link to it.";
+  const LINK = "Each item has a number, like R-12: <b>Search</b> finds it, the link icon copies a link to it.";
   const INTRO = () => ({
     new: { about: "what changed on the product's screens, and what a designer does with it",
       steps: [
@@ -2677,7 +2688,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     ...(c.status === "handed-off" && Boolean(c.built) === (filter === "done") ? [c] : []),
     ...(filter === "done" ? (c.sends || []).map((s, k) => ({ ...c, id: `${c.id}~${k + 1}`, base: c.id, send: k + 1, status: "handed-off", built: s.closed?.at || null })).reverse() : [])]);
   // An earlier record of a reopened request: the request as it is, with what that send had.
-  const sendOf = (id) => { const m = /^(C-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
+  const sendOf = (id) => { const m = /^([A-Z]-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
   function visibleCards() {
     if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "designs") return designCards(S.designFilter);
@@ -2845,7 +2856,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const all = S.pf && S.pf.view === pfView();
     const drawn = all ? cards : cards.slice(0, S.listLimit);
     list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
-      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
       ${S.tab === "product" && S.productFilter === "differences" ? figmaFacts(c) : sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("")
       + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
     listMore.disconnect();
@@ -3654,7 +3665,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const figTable = (x, picking = false) => {
     const k = x.figma_check, off = figOff(k), mayOff = can("handle") && !picking;
     const head = `<div class="ft-h" role="row"><span role="columnheader" aria-label="Severity"></span><span role="columnheader">Difference</span><span role="columnheader">In Figma</span><span role="columnheader">In the product</span><span role="columnheader" aria-label="Remove"></span></div>`;
-    const rows = k.differences.map((d, i) => [d, i]).filter(([d]) => !off.has(d.part)).sort(([a], [b]) => (sevOf(a) === "major" ? 0 : 1) - (sevOf(b) === "major" ? 0 : 1)).map(([d, i]) => `<div class="ft-r" role="row"><div class="ft-s">${picking ? `<label class="fd-k"><input type="checkbox" data-fig-d="${i}" checked aria-label="${esc(d.part)}" />${sevChip(sevOf(d))}</label>` : `<span class="fd-k">${sevChip(sevOf(d))}</span>`}</div><div class="ft-d"><p><b>${esc(d.part)}</b>: ${txt(d.what)}</p></div>${figCell(d.figma, d.figma_shot, "In Figma")}${figCell(d.product, d.product_shot, "In the product")}<div class="ft-x">${mayOff ? `<button class="btn small" data-fig-dismiss="${esc(d.part)}" data-fig-of="${esc(x.id)}" aria-label="Remove ${esc(d.part)} from the table" title="Takes it off the table for everyone; it stays off until the frame in Figma changes">×</button>` : ""}</div></div>`).join("");
+    const rows = k.differences.map((d, i) => [d, i]).filter(([d]) => !off.has(d.part)).sort(([a], [b]) => (sevOf(a) === "major" ? 0 : 1) - (sevOf(b) === "major" ? 0 : 1)).map(([d, i]) => `<div class="ft-r" role="row"${k.id ? ` id="no-${esc(k.id)}-${i + 1}"` : ""}><div class="ft-s">${picking ? `<label class="fd-k"><input type="checkbox" data-fig-d="${i}" checked aria-label="${esc(d.part)}" />${sevChip(sevOf(d))}</label>` : `<span class="fd-k">${sevChip(sevOf(d))}</span>`}</div><div class="ft-d"><p>${k.id ? `<span class="num">${esc(k.id)}.${i + 1}</span> ` : ""}<b>${esc(d.part)}</b>: ${txt(d.what)}</p></div>${figCell(d.figma, d.figma_shot, "In Figma")}${figCell(d.product, d.product_shot, "In the product")}<div class="ft-x">${mayOff ? `<button class="btn small" data-fig-dismiss="${esc(d.part)}" data-fig-of="${esc(x.id)}" aria-label="Remove ${esc(d.part)} from the table" title="Takes it off the table for everyone; it stays off until the frame in Figma changes">×</button>` : ""}</div></div>`).join("");
     const gone = k.dismissed || [];
     const back = gone.length ? `<p class="hint ft-off">Removed: ${gone.map((d) => `${esc(d.part)}${d.by ? ` (${isMe(d.by.email) ? "you" : esc(d.by.name || nameOf(d.by.email))})` : ""}`).join(", ")}${can("handle") ? ` · <button class="anchor-text" data-fig-restore="${esc(x.id)}">Bring ${gone.length === 1 ? "it" : "them"} back</button>` : ""}</p>` : "";
     return `${rows ? `<div class="ftab" role="table">${head}${rows}</div>` : ""}${back}`;
@@ -3699,7 +3710,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const box = ghStatus(k.closed ? "closed" : differs ? "waiting" : "approved", k.closed ? "Closed" : differs ? `${plural(n, "difference", "differences")} from Figma` : "Matches Figma",
       `Design Desk compared it with ${k.frame?.name ? `"${k.frame.name}"` : "its frame"} in Figma`, meta + (k.closed ? kv("closed by", esc(closedBy)) + kv("at", esc(day(k.closed.at))) : ""), buttons, close + agendaButton(c), { pill, inline: true });
     return `${backBar()}
-      <h2>${txt(c.title)}${num(c)}</h2>
+      <h2>${txt(c.title)}${figNum(c)}</h2>
       ${box}
       ${k.frame?.shot || k.product_shot ? `<h3>The whole ${c.kind === "element" ? "element" : "screen"}</h3><div class="figdiffs">${figPics(k.frame?.shot, k.product_shot)}</div>` : ""}
       ${differs || (k.dismissed || []).length ? `<h3>What differs</h3>${figTable(c)}` : ""}`;
@@ -4392,7 +4403,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const back = `<button class="btn" data-show-request="${esc(c.base || c.id)}" title="Opens the request on Requests: its options, votes and comments">Open the request</button>`;
     const buttons = `${back}${url ? out(url, m?.[1] === "pull" ? "PR" : "Issue", "Where the design was sent to developers, on GitHub") : ""}${pr}${figma ? out(figma, "Figma", "The design in Figma") : ""}${done}`;
     return `${backBar()}
-      <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
+      <h2>${txt(c.title)}${designNum(c)}${titleLink(c)}</h2>
       <div class="status" data-o="approved"><div class="s-line"><div class="s-word"><span class="s-mark"></span>${c.send ? "Closed" : c.built ? "Done" : "Approved"}</div>
         <span class="hint s-meta">${fact("approved by", c.approved)}${fact("done by", c.built)}${fact("reopened by", c.closed)}</span></div>
         ${c.send ? `<p class="hint">An earlier send: the request was reopened, so this design no longer goes to developers.</p>` : ""}
@@ -5236,7 +5247,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function keepPlace() {
     if (!placeKept) return;
     const at = S.decision ? S.decision.id
-      : S.card ? `${S.tab === "designs" ? "designs/" : S.reqFilter === "presentation" && S.tab === "requests" ? "presentation/" : ""}${S.card.id}`
+      : S.card && S.tab === "designs" && designIdOf(S.card) ? designIdOf(S.card)
+      : S.card ? `${S.tab === "designs" ? "designs/" : S.reqFilter === "presentation" && S.tab === "requests" ? "presentation/" : ""}${onDiffs() && S.card.figma_check?.id ? S.card.figma_check.id : S.card.id}`
       : S.tab === "requests" && S.reqFilter === "presentation" ? "presentation" : S.tab;
     // A frame that may not change its address keeps the page as it is.
     try { if (at && location.hash !== `#${at}`) history.replaceState(null, "", `${location.pathname}${location.search}#${at}`); } catch {}
@@ -5323,16 +5335,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   // ---------- links to an item (docs/desk.md → Links to an item) ----------
-  // What a link or Go to names: #C-12, #presentation/C-12 (#call/C-12 before), a tab
-  // (#requests, #presentation); Go to also takes the number alone (12, c12) or a whole link.
+  // What a link or Go to names: #R-12, #presentation/R-12 (#call/C-12 before), a tab
+  // (#requests, #presentation); Go to also takes the number alone (12, r12) or a whole link.
+  // A number alone names the item that has it: a card from before 1.78.0 (C-12) first.
+  function numbered(letter, n) {
+    if (letter) return `${letter.toUpperCase()}-${n}`;
+    const hits = S.cards.flatMap((x) => numbersOf(x).filter((id) => id.split("-")[1] === n));
+    return hits.includes(`C-${n}`) || !hits.length ? `C-${n}` : hits[0];
+  }
   const view = (w) => { const k = String(w || "").toLowerCase(); return VIEWS[k] || (TABS[k] ? k : null); };
   function target(text) {
     const s = String(text || "").trim(), h = s.slice(s.lastIndexOf("#") + 1);
     const d = h.match(/^D\s*-?\s*(\d+)$/i);
     if (d) return { tab: "product", id: null, decision: `D-${d[1]}` };
     // C-12~1 is an earlier send of a reopened request, as the page writes it into its address.
-    const m = h.match(/^(?:([a-z]+)\/)?(?:C\s*-?\s*)?(\d+)(?:~(\d+)|\.(\d+))?$/i);
-    if (m) return { tab: view(m[1]), id: `C-${m[2]}${m[3] ? `~${m[3]}` : ""}`, ...(m[4] ? { sub: Number(m[4]) } : {}) };
+    const m = h.match(/^(?:([a-z]+)\/)?(?:([a-ce-z])\s*-?\s*)?(\d+)(?:~(\d+)|\.(\d+))?$/i);
+    if (m) return { tab: view(m[1]), id: `${numbered(m[2], m[3])}${m[4] ? `~${m[4]}` : ""}`, ...(m[5] ? { sub: Number(m[5]) } : {}) };
     return view(h) ? { tab: view(h), id: null } : null;
   }
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
@@ -5344,9 +5362,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!to.id) { if (to.tab === "presentation") { S.reqFilter = "presentation"; await showTab("requests"); } else await showTab(to.tab); return true; }
     // An earlier, closed record of a reopened request opens on Designs → Done.
     if (sendOf(to.id)) { S.tab = "designs"; S.designFilter = "done"; S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); await openCard(to.id); renderList(); return true; }
-    if (!S.cards.some((x) => x.id === to.id)) await refreshList();
-    const c = S.cards.find((x) => x.id === to.id);
+    if (!byNumber(to.id)) await refreshList();
+    const c = byNumber(to.id);
     if (!c) { toast(`There is nothing numbered ${to.id} on the Desk.`); return false; }
+    // A design sent to developers opens on Designs: the one sent now, or an earlier send under Done.
+    if (c.id !== to.id && /^G-/.test(to.id)) {
+      const k = (c.sends || []).findIndex((x) => x.design_id === to.id), id = k >= 0 ? `${c.id}~${k + 1}` : c.id;
+      S.tab = "designs"; S.designFilter = k >= 0 || c.built ? "done" : "todo"; S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners();
+      await openCard(id); renderList();
+      return true;
+    }
+    // A comparison with Figma opens on Product → Differences; its number .k, that row of its table.
+    if (c.id !== to.id) {
+      if (!figmaOn()) { toast(`${to.id} is a comparison with Figma, and Figma is off on this Desk.`); return false; }
+      S.tab = "product"; S.productFilter = "differences"; S.figFilter = "all"; S.decision = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners();
+      await openCard(c.id); renderList();
+      if (to.sub) { const n = document.getElementById(`no-${to.id}-${to.sub}`); if (n) { n.scrollIntoView({ block: "center" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 2000); } else toast(`${to.id} has no number ${to.sub}.`); }
+      return true;
+    }
     const onCall = S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id);
     const design = to.tab === "designs" && c.kind === "request" && c.status === "handed-off";
     S.tab = to.tab === "presentation" && onCall ? "requests" : design ? "designs" : HOME[c.kind] || "new";
@@ -5995,7 +6028,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The header's one search: words over every item's title, summary and source and over the
   // decisions; an item's number (C-12, 12), a decision's (D-3), a GitHub issue or pull request
   // number (#4512, PR 4512) or link, or a Desk link. Enter opens the first hit.
-  const KIND_NAME = { request: "Request", change: "PR Change", issue: "Issue", screen: "Screen", element: "Element", digest: "Week", decision: "Decision" };
+  const KIND_NAME = { request: "Request", change: "PR Change", issue: "Issue", screen: "Screen", element: "Element", digest: "Week", decision: "Decision", figma: "Figma difference", design: "Design" };
   // The GitHub numbers a card stands for: its pull request or issue, and where it came from.
   const ghNums = (c) => [c.source?.pr, c.source?.issue, c.origin?.number, ghRef(c.source?.url)?.n, ghRef(c.origin?.url)?.n].filter(Boolean).map(String);
   const hay = (c) => [c.title, c.summary, c.reporter, c.source?.author, c.source?.repo, c.path, c.period, c.origin?.reporter].filter(Boolean).join(" ").toLowerCase();
@@ -6013,18 +6046,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     };
     const to = gh ? null : target(q);
     if (byHash) ghHits();
-    if (to?.id) { const c = S.cards.find((x) => x.id === to.id); if (c) card(c, "Its number"); }
+    if (to?.id) { const c = byNumber(to.id); if (c && c.id !== to.id) push({ id: to.id, kind: KIND_NAME[/^G-/.test(to.id) ? "design" : "figma"], title: c.title, why: "Its number" }); else if (c) card(c, "Its number"); }
     if (to?.decision) {
       const d = await api("GET", `/api/decisions/${encodeURIComponent(to.decision)}`).then((r) => r.decision, () => null);
       if (d) push({ id: d.id, kind: "Decision", title: d.text, why: "Its number" });
     }
-    // A number being typed (C-, C-1, D-2): every item or decision whose number starts so,
+    // A number being typed (R-, R-1, D-2): every item or decision whose number starts so,
     // newest first, so the list fills while typing.
-    const pre = /^([CD])-?(\d*)$/i.exec(q);
+    const pre = /^([A-Z])(?:-(\d*)|(\d+))$/i.exec(q) || /^([CD])()$/i.exec(q);
     if (pre) {
-      const p = `${pre[1].toUpperCase()}-${pre[2]}`, n = (id) => Number(id.split("-")[1]);
+      const p = `${pre[1].toUpperCase()}-${pre[2] || pre[3] || ""}`, n = (id) => Number(id.split("-")[1]);
       const byNum = (xs) => xs.filter((x) => x.id.startsWith(p)).sort((x, y) => n(y.id) - n(x.id));
-      if (pre[1].toUpperCase() === "C") for (const c of byNum(S.cards)) card(c);
+      if (/^[FG]-/.test(p)) { for (const [id, c] of S.cards.flatMap((x) => numbersOf(x).slice(1).filter((id) => id.startsWith(p)).map((id) => [id, x])).sort(([a], [b]) => n(b) - n(a))) push({ id, kind: KIND_NAME[p[0] === "G" ? "design" : "figma"], title: c.title, why: "" }); }
+      else if (!p.startsWith("D-")) for (const c of byNum(S.cards)) card(c);
       else {
         // Every decision, revoked ones too: not the list the Decisions page filters.
         const every = await api("GET", "/api/decisions?state=").then((r) => r.decisions || [], () => []);
@@ -6042,7 +6076,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (to && !to.id && !to.decision && to.tab) push({ id: `#${to.tab}`, kind: "Page", title: to.tab === "presentation" ? "The presentation" : TABS[to.tab] || to.tab, why: "" });
     // Words: every word in the item's text.
     const words = q.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
-    if (words.length && !gh && !pre) {
+    // A number typed with its dash (R-3) is only a number; `s3` may be a word too ("Upload to S3").
+    if (words.length && !gh && !(pre && q.includes("-"))) {
       for (const c of S.cards) { const h = hay(c); if (words.every((w) => h.includes(w))) card(c); }
       try {
         const ds = (await api("GET", `/api/decisions?q=${encodeURIComponent(q)}`)).decisions || [];
