@@ -848,8 +848,8 @@
   nav button { font-size: var(--fs-ui); } nav button.main { font-size: var(--fs-read); }
   .subtabs > button[data-filter] { font-size: var(--fs-ui); }
   /* A text link that is a button: accent ink, no frame, anywhere on the Desk. */
-  button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-align: left; }
-  button.link:hover { text-decoration: underline; }
+  button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--ink); cursor: pointer; text-align: left; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: color .12s ease, text-decoration-color .12s ease; }
+  button.link:hover { color: var(--accent); text-decoration-color: currentColor; }
   .msg .who button.link { font-size: var(--fs-meta); }
   /* Chips: the same pill as the state tags. */
   .chip { font-size: var(--fs-meta); padding: 1px 9px; line-height: 1.5; font-weight: 500; }
@@ -867,7 +867,8 @@
   /* The conversation: newest first, folded under the box until opened. */
   .composer { max-width: var(--measure); }
   details.convo { margin-top: 14px; max-width: var(--measure); }
-  details.convo > summary { cursor: pointer; list-style: none; display: inline-flex; gap: 8px; align-items: center; color: var(--accent); font-size: var(--fs-ui); }
+  details.convo > summary { cursor: pointer; list-style: none; display: inline-flex; gap: 8px; align-items: center; color: var(--ink); font-size: var(--fs-ui); }
+  details.convo > summary:hover { color: var(--accent); }
   details.convo > summary::-webkit-details-marker { display: none; }
   details.convo > summary::before { content: "▸"; font-size: var(--fs-meta); } details.convo[open] > summary::before { content: "▾"; }
   details.convo > summary .cnt { color: var(--muted); }
@@ -880,6 +881,8 @@
   .thread.mini > summary .q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
   .thread.mini > summary .q b { color: var(--ink); font-weight: 600; }
   .thread.mini[open] > summary { border-bottom: 1px solid var(--line); }
+  /* Its one line never widens the list: the words end in … at the list's width. */
+  .threads > .thread { min-width: 0; }
   .thread { border-radius: 10px; }
   .thread .head { font-size: var(--fs-meta); }
   .msg .who { font-size: var(--fs-meta); color: var(--muted); } .msg .who b { color: var(--ink); }
@@ -903,7 +906,7 @@
   .filters .btn.on .n { color: var(--muted); }
   /* The request's head: a face, who asked and from where, the fold on the right. */
   .brief > .brief-k.brief-k { cursor: default; margin: 0 0 8px;  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; text-transform: none; letter-spacing: 0; font-size: var(--fs-ui); font-weight: 400; color: var(--muted); }
-  .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; flex: none; }
+  .brief-k .face { width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--approved); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; flex: none; line-height: 1; text-box: trim-both cap alphabetic; }
   .brief-k .ask-who b { color: var(--ink); font-weight: 600; }
   .brief-k .prov { font-size: inherit; }
   .brief-k .prov .src { padding: 0; border: 0; background: none; font-weight: 400; gap: 4px; }
@@ -3288,9 +3291,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       const kind = `<span class="chip ${tone}" title="${esc(th.dev ? "A developer asks the designer how the approved design is meant" : KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
-      // On Designs a question marked done folds to one line: its first words; a click opens it.
-      const mini = designs && th.state === "resolved";
-      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc((noteBy(th.messages[0]?.by) || "someone").replace(/^./, (x) => x.toUpperCase()))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/\s+/g, " "))}</span>${state}</summary>` : `<article class="thread" id="th-${esc(th.id)}">
+      // A conversation marked done folds to one line: who started it and their first words; a click opens it.
+      const mini = th.state === "resolved";
+      return `${mini ? `<details class="thread mini" id="th-${esc(th.id)}"><summary>${kind}<span class="q"><b>${esc(((n) => n.includes("@") ? n : n.replace(/^./, (x) => x.toUpperCase()))(noteBy(th.messages[0]?.by) || "someone"))}</b> — ${esc(String(th.messages[0]?.text || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim())}</span>${state}</summary>` : `<article class="thread" id="th-${esc(th.id)}">
         <div class="head">${kind}${anchor}${state}</div>`}
         ${th.messages.map((m, i) => `<div class="msg ${m.by?.agent ? "agent" : ""}" data-m="${i}"><div class="who">${who(m.by)} · ${esc(when(m.at))}${m.decision ? ` · <a href="#${esc(m.decision)}" data-ref="${esc(m.decision)}">Decision ${esc(m.decision)}</a>` : !m.by?.agent && can("decide") ? ` · <button class="link" data-decide="${esc(th.id)}:${i}" title="Design Desk records it as a numbered decision, with who said it and a link back here">Record as a decision</button>` : ""}</div>${md(m.text)}${warnsOf(m)}${changed(m)}</div>`).join("")}
         ${th.needs_agent ? `<div class="msg"><span class="pending">Waiting for Design Desk…</span></div>` : ""}
@@ -4189,7 +4192,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The sources fold shut under the report, in one quiet line that counts them by kind.
     const kinds = [...srcs.reduce((m, x) => m.set(x.kind, (m.get(x.kind) || 0) + 1), new Map())].map(([k, n]) => n > 1 ? `${n}× ${k}` : k).join(", ");
     const list = items.length ? `<details class="srcs" data-sect="srcs"${S.sect.srcs ? " open" : ""}><summary>${plural(items.length, "source", "sources")}<span class="srcs-k"> · ${esc(kinds)}</span></summary><ul>${items.join("")}</ul></details>` : "";
-    return `<section class="made-sec"><h4>What's already known</h4><div>${md(researchParts(r.summary))}${list}</div></section>`;
+    return `<section class="made-sec"><div>${md(researchParts(r.summary))}${list}</div></section>`;
   }
 
   // 👍, 👎 and ⚠ as pills with their count: grey until someone votes, then green, red or amber.
@@ -4341,7 +4344,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
-      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent" aria-hidden="true">D</span><span class="ask-who"><b>From Design Desk</b></span></div><div class="brief-body">
+      <div class="brief made-col${S.folds.made ? " clamped" : ""}"><div class="brief-k"><span class="face agent" aria-hidden="true">D</span><span class="ask-who"><b>What's already known</b></span></div><div class="brief-body">
       ${againstBox(c)}${followsLine(c)}
       ${renderResearch(c.research)}
       ${renderIssueBrief(c)}
@@ -5211,7 +5214,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
   }
 
-  function renderDetail() { renderDetailBody(); renderAsk(); if (S.el) renderElementDialog(); }
+  function renderDetail() { renderDetailBody(); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
+  // The address names what the page shows, so a reload opens it again: the item (#C-12, a sent
+  // design #designs/C-12, the presentation's #presentation/C-12), a decision (#D-4), else the tab.
+  let placeKept = false;
+  function keepPlace() {
+    if (!placeKept) return;
+    const at = S.decision ? S.decision.id
+      : S.card ? `${S.tab === "designs" ? "designs/" : S.reqFilter === "presentation" && S.tab === "requests" ? "presentation/" : ""}${S.card.id}`
+      : S.tab === "requests" && S.reqFilter === "presentation" ? "presentation" : S.tab;
+    // A frame that may not change its address keeps the page as it is.
+    try { if (at && location.hash !== `#${at}`) history.replaceState(null, "", `${location.pathname}${location.search}#${at}`); } catch {}
+  }
   // Another item, decision or tab opens at its top; a redraw of the same one keeps the place.
   // A newly opened item rises in once: the class leaves once the rise is over, so a redraw of
   // the same item (a poll, a vote, a fold) puts its new content in place without it.
@@ -6641,6 +6655,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!(to && await goTo(to))) {
       renderNav(); renderBanners(); renderList(); renderDetail();
     }
+    // Only from here the address follows the page: before, it still holds the link that opened it.
+    placeKept = true; keepPlace();
+    // A reload of the same place comes back to where the person had scrolled.
+    try {
+      const was = JSON.parse(sessionStorage.getItem("desk-scroll") || "null");
+      if (was?.at === location.hash) requestAnimationFrame(() => { $("#detail").scrollTop = was.top || 0; scrollTo(0, was.y || 0); });
+    } catch {}
+    addEventListener("pagehide", () => { try { sessionStorage.setItem("desk-scroll", JSON.stringify({ at: location.hash, top: $("#detail").scrollTop, y: scrollY })); } catch {} });
     window.addEventListener("hashchange", guard(async () => { const next = target(location.hash); if (next) await goTo(next); }));
     setInterval(() => { poll().catch(() => {}); }, 4000);
   }

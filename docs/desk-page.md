@@ -72,10 +72,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   and the Presentation) shows its first 20 rows and 20 more each time its end scrolls into view;
   another tab, page or filter starts again at 20.
   The open item is always shown, and a **Filtered by** filter looks through every row.
-- **Folds stay folded.** A folded box (the request, From Design Desk, an intro) stays folded
+- **Folds stay folded.** A folded box (the request, What's already known, an intro) stays folded
   when the page draws again, for example on another design tab. The page runs in a sandboxed
   frame where local storage can fail, so the page also keeps the choice in memory. A
-  request's own text and From Design Desk show whole the first time a person opens the
+  request's own text and What's already known show whole the first time a person opens the
   request in that browser, and folded on every later visit (`desk-seen-requests`). Folded, each
   keeps two whole lines of its text and half of the third; a heading above them shows whole and
   is not counted. A box with under three lines of text, no picture and nothing folded inside has
@@ -171,6 +171,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   **More** closes on a click anywhere outside it, on Escape, and once something in it is picked.
 - **One width.** An open item's text blocks (the request, what happens next, what is known,
   the threads) share the reading measure; only the designs run wider.
+- **Done conversations fold.** A conversation marked done, on any item, folds to one line: its
+  kind, who started it and their first words, then *done*; a click opens it with Reopen. The order
+  stays newest first.
 
 ## A request's state in the list
 
@@ -281,7 +284,7 @@ that builds it is written: its pull request is the spec's or links its issue, or
 never one a person took back. And **Open the request**, the same request on Requests; the
 approved option as approved, **UX decisions** (`dev_summary`, the [handoff](handoff.md)'s step 7,
 AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
-comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line (its asker — its first words), under the open ones. Its
+comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line (its asker — its first words), under the open ones, as on every item. Its
 messages are For you for the designer who approved the request, or every `designer` and
 `admin` when a non-designer approved it, and land on `#designs/C-<n>`: they open the page
 without the menu. The request shows the same thread as *Developer asks*, and for a role that sees Designs its
