@@ -151,7 +151,6 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   how long things take.
 - **Redraws keep your place.** The page polls; a menu that did not change is not redrawn, and a
   redrawn menu or list gives keyboard focus back to the same button. A private ask's answer shows
-  as it lands, every 4 seconds while one is awaited, and the box keeps its text, focus and caret. A private ask's answer shows
   as it lands, every 4 seconds while one is awaited, and the box keeps its text, focus and caret. A request's own work line
   (its Wait and what Design Desk does) leaves once an option was drawn after its item was filed; a request
   reopened and checked again, its item filed after its options, keeps the line.
