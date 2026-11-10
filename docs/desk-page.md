@@ -149,6 +149,12 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   redrawn menu or list gives keyboard focus back to the same button. A request's own work line
   (its Wait and what Design Desk does) leaves once an option was drawn after its item was filed; a request
   reopened and checked again, its item filed after its options, keeps the line.
+- **Not reached.** A poll that gets no answer shows "Can't reach Design Desk right now.
+  Retrying…" and polls every 4 seconds. An update restarts the server and republishes the
+  page, and the page open before it may never get an answer again: after 20 seconds without
+  one the page loads itself anew, unless a dialog is open or a text field holds text; then
+  the banner offers **Reload the page**. A first load that gets no answer tries again by
+  itself after 20 seconds.
 - **Tooltips.** Every button, label (chip) and picture says on hover what it does, how it
   works or what it means: a button by `TIP` in `desk/page.html` (by its `data-` action), a
   label by its own `title`. A new button or label gets its line in the same change; a button

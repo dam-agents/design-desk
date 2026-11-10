@@ -14,6 +14,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    ([desk.md](docs/desk.md) → Publishing the page). Nothing else: a card gets `vote_ended` only when
    a person ends a vote ([desk.md](docs/desk.md) → Team feedback).
 
+## 1.75.3 — 2026-11-10
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
 ## 1.75.2 — 2026-11-10
 
 **Upgrade:**

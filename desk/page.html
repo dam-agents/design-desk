@@ -2410,7 +2410,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   function renderBanners() {
     const out = [];
-    if (S.offline) out.push(`<div class="banner warn">Can't reach Design Desk right now. Retrying…</div>`);
+    if (S.offline) out.push(S.stale
+      ? `<div class="banner warn">Can't reach Design Desk. If it was just updated, copy what you're writing, then <button class="btn small" data-reload>Reload the page</button></div>`
+      : `<div class="banner warn">Can't reach Design Desk right now. Retrying…</div>`);
     if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, PM, lead developer or developer.</div>`);
     $("#banners").innerHTML = out.join("");
   }
@@ -6542,12 +6544,21 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     renderNotes(); renderBell();
   }));
 
-  // One timer: every 15 s, every 4 s while the open request waits for Design Desk.
+  // An update restarts the server and republishes this page: the page open before it may
+  // never reach the Desk again, so after RELOAD_AFTER without an answer it loads itself
+  // anew, unless the person is in the middle of writing something; then the banner asks.
+  const RELOAD_AFTER = 20000;
+  let offlineSince = 0;
+  const writing = () => !!document.querySelector("dialog[open]")
+    || [...document.querySelectorAll("textarea, input:not([type]), input[type=text]")].some((x) => x.value.trim());
+  document.addEventListener("click", (e) => { if (e.target.closest("[data-reload]")) location.reload(); });
+
+  // One timer: every 15 s, every 4 s while the open request waits for Design Desk or the Desk can't be reached.
   let tick = 0;
   async function poll() {
     tick += 1;
     if (document.hidden) return;
-    const fast = S.card && waitingKinds(S.card).length > 0;
+    const fast = S.offline || (S.card && waitingKinds(S.card).length > 0);
     if (!fast && tick % 4 !== 0) return;
     try {
       await refreshList();
@@ -6555,9 +6566,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (S.card) await openCard(S.card.id, { quiet: true });
       if (S.ask.open || S.ask.asks.some((t) => t.needs_agent)) { await loadAsks(); if (!S.ask.dragging && !$("#ask-text")?.value && !document.activeElement?.closest?.("#ask")) renderAsk(); }
       if (S.tab === "people" && S.people?.asks?.some((a) => a.state !== "done")) { await loadPeople(); if (S.tab === "people") renderDetail(); }
-      if (S.offline) { S.offline = false; renderBanners(); }
+      if (S.offline) { S.offline = false; S.stale = false; renderBanners(); }
     } catch (e) {
-      if (!(e instanceof Said) && !S.offline) { S.offline = true; renderBanners(); }
+      if (e instanceof Said) return;
+      if (!S.offline) { S.offline = true; offlineSince = Date.now(); renderBanners(); return; }
+      if (Date.now() - offlineSince < RELOAD_AFTER) return;
+      if (!writing()) { location.reload(); return; }
+      if (!S.stale) { S.stale = true; renderBanners(); }
     }
   }
 
@@ -6581,7 +6596,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     window.addEventListener("hashchange", guard(async () => { const next = target(location.hash); if (next) await goTo(next); }));
     setInterval(() => { poll().catch(() => {}); }, 4000);
   }
-  start().catch((e) => { $("#detail").innerHTML = `<div class="panel">${esc(e instanceof Said ? e.message : `Design Desk can't be reached right now. Try again in a minute; if it keeps happening, tell the Desk's owner.`)}</div>`; });
+  // Not reached (the server restarting, the machine waking): the page tries again by itself.
+  start().catch((e) => {
+    $("#detail").innerHTML = `<div class="panel">${esc(e instanceof Said ? e.message : `Design Desk can't be reached right now. Retrying… If it keeps happening, tell the Desk's owner.`)}</div>`;
+    if (!(e instanceof Said)) setTimeout(() => location.reload(), RELOAD_AFTER);
+  });
 })();
 </script>
 </body>
