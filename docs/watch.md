@@ -157,7 +157,8 @@ Merged and closed pull requests are never touched: their checks no longer matter
   suggestion for the presentation) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
   true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
   item to claim: set the check as in **Set it** and upsert `ci`. A card with `ci` is never due this way
-  again, save after a failed write (`retry: true`, below). A pre-flight that cannot read the
+  again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`
+  (before 1.76.0 a PR judged and not held: its check is set now). A pre-flight that cannot read the
   cards logs an error line and leaves the run open, never an empty list.
 - **`ci_due`** (inbox run), an `I-<n>` item: a person marked the card handled, took the mark
   back, or moved it between For Developers and For Designers. Claim; read the card and the
