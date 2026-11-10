@@ -2487,3 +2487,84 @@ test("a claimed item says how long its kind usually takes, once three of them fi
   assert.equal(w.usual_min, 6, "the median of 4, 6 and 20");
   assert.ok(w.started);
 });
+
+test("PR Changes and Issues: For Developers, a lead developer marks handled; a designer's otherwise", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const row = (id) => s.listCards().find((c) => c.id === id);
+  const { card: small } = s.upsertCard({ kind: "change", title: "Tighter rows", source: { repo: "acme/widgets", pr: 11 }, attention: { level: "developer", reasons: ["spacing only"] } });
+  assert.equal(row(small.id).for, "developers", "the agent's developer level puts it For Developers");
+  assert.deepEqual(row(small.id).attention, { level: "developer", reasons: ["spacing only"] }, "not in Needs a designer");
+  assert.equal(s.getCard(small.id).for, "developers", "the card read and the list read agree");
+  assert.throws(() => s.handle(small.id, bob), (e) => e.status === 403, "a developer does not mark it");
+  s.handle(small.id, lee);
+  assert.equal(s.getCard(small.id).status, "handled");
+  s.handle(small.id, lee, false);
+
+  const { card: big } = s.upsertCard({ kind: "change", title: "A new settings page", source: { repo: "acme/widgets", pr: 12 }, attention: { level: "designer", reasons: ["a new screen"] } });
+  assert.equal(row(big.id).for, "designers");
+  assert.throws(() => s.handle(big.id, lee), (e) => e.status === 403 && /For Developers/.test(e.message), "For Designers stays a designer's");
+  // A lead developer moves it; a difference from an approved design stays on its tab.
+  s.setSize(big.id, lee, true);
+  assert.deepEqual([row(big.id).for, row(big.id).attention.level], ["developers", "developer"]);
+  s.handle(big.id, lee);
+  assert.throws(() => s.setSize(big.id, lee, false), /already handled/);
+  s.setSize(small.id, lee, false);
+  assert.deepEqual([row(small.id).for, row(small.id).attention.level], ["designers", "designer"], "moved For Designers, it waits for a designer");
+  s.suggestForCall(small.id, "Worth showing");
+  s.setSize(small.id, lee, true);
+  assert.equal(row(small.id).attention.level, "designer", "the presentation still needs a designer");
+
+  // A change nobody needs to look at stays fyi: the page shows it auto handled.
+  const { card: plain } = s.upsertCard({ kind: "change", title: "Same list", source: { repo: "acme/widgets", pr: 13 }, attention: { level: "fyi", reasons: ["follows the list pattern"] } });
+  assert.deepEqual([row(plain.id).for, row(plain.id).attention.level], ["designers", "fyi"]);
+
+  // Issues follow the same rules.
+  const { card: is } = s.upsertCard({ kind: "issue", title: "Show the limit", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 5, url: "https://github.com/acme/widgets/issues/5" }, attention: { level: "developer", reasons: ["a column in the existing table"] } });
+  assert.equal(row(is.id).for, "developers");
+  assert.deepEqual(s.getCard(is.id).attention, { level: "developer", reasons: ["a column in the existing table"] }, "an issue's judgement reads back");
+  assert.deepEqual(row(is.id).attention, s.getCard(is.id).attention, "the list read and the card read agree");
+  s.handle(is.id, lee);
+  assert.ok(s.getCard(is.id).handled);
+  s.handle(is.id, lee, false);
+  s.setSize(is.id, lee, false);
+  assert.equal(row(is.id).for, "designers");
+  assert.throws(() => s.handle(is.id, lee), (e) => e.status === 403);
+  assert.equal(can("lead-developer", "handle-small"), true);
+  assert.equal(can("developer", "handle-small"), false);
+});
+
+test("a merged change that builds an approved design adds its elements to the design catalog", () => {
+  const s = fresh();
+  const html = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design" }, status: "feedback", variants: [{ id: "v1", name: "Limits", asset: html, elements: [{ id: "banner", name: "Limit banner", change: "new", shot: pic }] }] });
+  s.act(card.id, alice, "approve", "v1");
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  const open = s.upsertCard({ kind: "change", title: "Limit banner", source: { repo: "acme/widgets", pr: 21 }, design_check: { request: card.id, verdict: "matches", summary: "As designed.", differences: [] } }).card;
+  assert.equal(s.getCard(card.id).in_catalog, undefined, "not before it ships");
+  s.upsertCard({ id: open.id, source: { repo: "acme/widgets", pr: 21, merged_at: "2026-11-10T10:00:00Z" } });
+  const added = s.getCard(card.id).in_catalog.elements.banner;
+  assert.equal(s.getCard(added).design.element, "banner");
+  s.upsertCard({ id: open.id, summary: "Shipped." });
+  assert.equal(s.listCards({ kind: "element" }).length, 1, "a second write adds nothing twice");
+});
+
+test("a request made from an open pull request: its spec waits, and goes back to that pull request as a comment", () => {
+  const s = fresh();
+  const { card: change } = s.upsertCard({ kind: "change", title: "Tighter rows", source: { repo: "acme/widgets", pr: 31, url: "https://github.com/acme/widgets/pull/31" } });
+  const { card } = s.createRequest(alice, { title: "Airier rows", problem: "Too tight.", from: change.id });
+  assert.deepEqual(s.getCard(card.id).from_pr, { card: change.id, pr: 31, repo: "acme/widgets", url: "https://github.com/acme/widgets/pull/31" });
+  const spec = s.addAsset({ card: card.id, kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec", encoding: "utf8" }).asset.id;
+  assert.throws(() => s.upsertCard({ id: card.id, status: "spec", spec: { asset: spec, review: "sent" } }), /waits for a person's Send/);
+  s.upsertCard({ id: card.id, status: "spec", spec: { asset: spec, review: "draft" } });
+  const { inbox: item } = s.specAction(card.id, alice, { action: "send", comment: true });
+  assert.equal(item.comment_on, "https://github.com/acme/widgets/pull/31");
+  assert.equal(s.getCard(card.id).spec.sent.implement, false);
+
+  // Merged meanwhile: no comment route.
+  const { card: other } = s.createRequest(alice, { title: "Bolder header", problem: "Too faint.", from: change.id });
+  s.upsertCard({ id: change.id, source: { repo: "acme/widgets", pr: 31, url: "https://github.com/acme/widgets/pull/31", merged_at: "2026-11-10T10:00:00Z" } });
+  assert.equal(s.getCard(other.id).from_pr, null);
+});

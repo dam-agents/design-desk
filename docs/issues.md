@@ -51,7 +51,10 @@ Every entry carries the issue's `title`, `url`, `author`, `updated`, `bucket`,
      changed part, a new state, new words), naming screens as the product map does; a
      need that makes the product work differently says so ("needs a developer: spend counted
      per day, not per week"); plumbing such as a field or an endpoint is not called out
-     ([boundary.md](boundary.md) → What needs a developer).
+     ([boundary.md](boundary.md) → What needs a developer);
+   - `attention` — `{level, reasons}` as on a change card ([desk.md](desk.md) → Needs a
+     designer): `developer` when the needs are small changes made of what the catalog already
+     has, so it goes For Developers; else `designer`.
    A card whose needs changed in substance also gets `sketches: []` and `screens: []`: the
    next pass draws it again. The store finds a card by its issue, so a retry never makes a
    second one.
@@ -106,7 +109,8 @@ person's **Draw it** tries again.
 
 ## On the Desk
 
-- The **Issues** tab lists the open cards: **This sprint** first, then **Next sprint**,
+- The **Issues** tab has the two tabs **For Designers** and **For Developers**, as PR Changes
+  ([desk.md](desk.md) → For Developers or For Designers); each lists the open cards: **This sprint** first, then **Next sprint**,
   **Assigned**, **For design** (`label`) and **All**; each row names its issue and author; hovering or focusing the row (or any link to the issue) shows its summary and needs.
 - **Draw it** (designer, admin, lead developer, developer, PM) puts a `draw` item on the inbox. **Design this** files a
   `feature` request from the card (`request.from`); its research starts from the card and
@@ -125,7 +129,7 @@ person's **Draw it** tries again.
   spec's issue (`linked`), carries `builds` (the request, its title and date): its page links
   the request, and the request's Sent to developers box links that change card next to the
   pull request's row.
-- **Handled.** A designer marks an issue **Handled** on its page when design has nothing to do
+- **Handled.** A designer, or a lead developer on one For Developers, marks an issue **Handled** on its page when design has nothing to do
   with it (`POST /api/cards/<id>/handled`, the card's `handled: {by, at}`; its `status` stays the
   run's): it leaves every list but **Handled**, and the pre-flight never offers it to draw. **Not
   handled yet** brings it back.

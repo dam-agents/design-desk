@@ -260,10 +260,11 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options, and end its vote (Team feedback, below) |
 | a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
-| `lead-developer`, `admin` | move a request between For Developers and For Designers, and pick one when filing it |
+| `lead-developer`, `admin` | move a request, a change or an issue between For Developers and For Designers, and pick one when filing a request |
 | `lead-developer`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
 | `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
+| `lead-developer` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
 | `admin` | also ask you to add a person to the list ([People](#people)) |
 | `developer`, `lead-developer`, `admin` | see **Designs** in the menu, ask a design's designer, mark a design done ([Designs](#designs)) |
@@ -309,6 +310,14 @@ that goes against a decision in force is approved by a designer only. Every appr
 page shows who chose its tab and who approved it, and a reopen clears `approved`. A request For Developers
 is not in **Needs a designer** for its options or its prototype. The `handoff` item it makes is
 worked like any other ([handoff.md](handoff.md)); the approver is `approved.by`.
+
+**PR Changes** and **Issues** have the same two tabs, opened the same way. A change or an issue
+starts where you judged it (`attention.level`: `developer` → For Developers, else For
+Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue) until a lead
+developer or an admin moves it (**For Developers** / **For Designers** on the card, the same
+`size`, any one not handled). One For Developers is marked handled by a lead developer or a
+designer, one that goes against a decision in force by a designer only; a change For
+Developers is in Needs a designer only for such a decision or the presentation.
 
 ### Deciding straight away
 
@@ -557,9 +566,13 @@ Changes have a **Needs a designer** filter next to their others (Changes opens o
 Requests use **Your turn** instead): only the cards that wait for a designer's decision. One designer cannot read every change; this keeps the rest a click away.
 
 - **A change card**: you judge it when you write the card ([watch.md](watch.md) step 7), as
-  `attention: {level, reasons}` — `designer` for a new screen or a new address, a look that
-  breaks the product's patterns or its catalog elements, a missing state (empty, loading,
-  error), or a screen with an open request or a theme in feedback; else `fyi`. One to five
+  `attention: {level, reasons}` — `designer` for a new screen, a new address or a new
+  element, a look that breaks the product's patterns or its catalog elements, a missing state
+  (empty, loading, error), or a screen with an open request or a theme in feedback;
+  `developer` for a small difference made of what the catalog already has (copy, spacing, a
+  column in an existing table, a difference from its approved design or Figma frame of that
+  size): it goes For Developers; `fyi` when nothing differs from the catalog, the approved
+  design and the decisions: it is auto handled at once. One to five
   reasons, each a short phrase in the product's words that says what to look at ("Check the
   empty list: it shows nothing", "its own grey instead of the product's"). It leaves the filter once the person saw it, a designer marked it handled, or it is auto handled.
   The store adds "Differs from the approved design C-<n>" itself ([watch.md](watch.md) step 11).
@@ -615,11 +628,11 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   ("PR #12 shipped", "labelled design"), with its link and the card it came out of.
   A request made from a card (`request.from`: an issue's **Design this**, a change's
   **Adjust the design**) names that card at its top, and the card lists its requests. While one of them is open, the card offers no **Design this** or **Adjust the design**: the list links to it; a request closed or sent to developers brings the button back.
-- A change card counts the days since it appeared until a designer marks it handled
+- A change card counts the days since it appeared until someone marks it handled
   (status `handled`, a person's action only); past `change_due_days` the page shows it red
   as overdue. Its **What changed and why** folds, open by default. With `ci_gate` its `ci`
   (`{state: failing|passing|skipped|error, sha, tries}`, yours to write) shows as its GitHub check; marking it
-  handled, or not, queues a `ci` item (`ci_due`, [watch.md](watch.md) → CI gate).
+  handled, or not, or moving it between the tabs, queues a `ci` item (`ci_due`, [watch.md](watch.md) → CI gate).
 - **Comments on options** are pinned to an element and its view; people reply, mark them
   done or reopen them, and a designer, PM or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). The workspace's

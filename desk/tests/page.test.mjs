@@ -315,7 +315,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.doesNotMatch(await panel(1), /Move a request|Build live prototypes/, "a designer's card does not repeat a PM's");
     assert.match(await panel(2), /Everything a developer can, except Designs, and:\s+Close, reopen and delete requests\s+Approve or decide a request straight away[^\n]*\s+Build live prototypes/, "a PM moves a request along, under a designer; Designs stays a developer's");
     assert.doesNotMatch(await panel(2), /Approve designs|Choose what|Record a decision/, "approving against a decision stays a designer's");
-    assert.match(await panel(3), /Everything a developer can, and:\s+Move a request to For Developers/, "a lead developer says what is For Developers");
+    assert.match(await panel(3), /Everything a developer can, and:\s+Mark changes and issues For Developers handled\s+Move a request, a change or an issue to For Developers/, "a lead developer says what is For Developers");
     assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
     assert.doesNotMatch(await panel(4), /Approve designs|Choose what|Record a decision/);
     assert.match(await panel(4), /See Designs: ask a design's designer, mark it done/, "a developer sees Designs");
@@ -494,9 +494,11 @@ test("Needs a designer filters Changes, Your turn filters Requests, and Changes 
   assert.deepEqual(await desk.$$eval("#nav button", (bs) => bs.map((b) => b.dataset.tab)), ["requests", "new", "issues", "product", "people"], "the Desk opens on Requests");
   assert.match(await desk.textContent('[data-tab="new"]'), /^PR Changes/);
   await desk.click('[data-tab="new"]');
-  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on Open: none is handled");
+  assert.deepEqual(await rows(), ["c1", "c3", "c4"], "Changes opens on Open: none is handled, and the fyi change is auto handled");
   assert.match(await desk.textContent("#list .filters .on"), /^Open \d+$/, "Open carries its count");
   assert.equal(await desk.locator('[data-filter="newFilter:all"]').count(), 0, "there is no All");
+  await desk.click('[data-filter="newFilter:auto"]');
+  assert.deepEqual(await rows(), ["c2"], "Design Desk found nothing to look at: auto handled at once");
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
   assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");

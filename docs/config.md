@@ -18,8 +18,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   behind or at the oldest change still due: `work/.watch-cursor`);
   `max_changes_per_run` (`10`); `watch_paths` — UI globs for a repo without a profile;
   `watch_open_prs` (`enabled`) — open PRs get cards too; `ci_gate` (`disabled`) — `enabled`:
-  an open PR whose card needs a designer fails Design Desk's check on GitHub until a designer
-  marks it handled, never one that builds a Design Desk request. It covers new cards as they
+  Design Desk's check on GitHub passes an open PR nobody needs to look at and fails one that
+  waits for a designer or a lead developer until it is marked handled. It covers new cards as they
   are written and, through the inbox run, the open cards already on the Desk when it is
   turned on; a merged or closed PR is never touched ([watch.md](watch.md) → CI gate); `issue_label` (`design`; `none` off) —
   issues with it become `feature` requests; `proposals` (`enabled`), `max_proposals_per_week`
@@ -79,7 +79,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 - `change_due_days` (`21`), never asked — days a change card may wait for a designer to
   mark it handled before the Desk shows it red as overdue; `0`/`off` disables.
 - `change_auto_handled_days` (`14`), never asked — days after its PR merged that a change
-  nobody marked handled moves from Open and Needs a designer to **Auto handled**; `0`/`off` disables.
+  nobody marked handled moves from Open and Needs a designer to **Auto handled**; `0`/`off` disables
+  that move only: a change judged `fyi` is auto handled at once whatever the value.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
 - `## Desk people` table, `| email | role |`: `admin`, `designer`, `lead-developer`, `developer` or `pm`;
