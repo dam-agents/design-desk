@@ -52,6 +52,6 @@ picture attached, its titles and themes escaped ([desk.md](desk.md) → Links to
 • Shipped: <n> changes — <the two most visible titles>
 • Decided: <n> · Waiting for a decision: <n>
 • Themes in feedback: <the top one or two, with their counts>
-The whole digest is on the Design Desk (C-<n>): <link>"
+The whole digest is on the Design Desk (W-<n>): <link>"
 
 Then `design desk done` is not needed: the digest is not an inbox item. Back up `work/`.

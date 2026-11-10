@@ -23,15 +23,15 @@ Two layers, both under `work/`, both append-only.
 | `issue_claim`, `issue_done`, `issue_skip`, `issue_fail` | info / warn | `ledger.sh --issues` | an issue's row for the Issues page |
 | `ledger_lock` | warn | `ledger.sh` | a dead writer's lock was removed |
 | `github_sync` | warn | the agent (watch run) | an issue or pull request `design desk github-sync` could not read |
-| `card_written` | info | the agent | after `design desk upsert`: `C-<n> <kind> <status>` |
-| `item_done` | info | the agent | after `design desk done`: `I-<n> <outcome>` |
-| `guard` | info / warn | the agent | `C-<n> ok=<bool> files=<n> refused=<n>` |
-| `prototype` | info / error | the agent | `C-<n> <verb> <state>` (create, up, update, live, failed, extended, deleted) |
+| `card_written` | info | the agent | after `design desk upsert`: `R-<n> <kind> <status>` |
+| `item_done` | info | the agent | after `design desk done`: `Q-<n> <outcome>` |
+| `guard` | info / warn | the agent | `R-<n> ok=<bool> files=<n> refused=<n>` |
+| `prototype` | info / error | the agent | `R-<n> <verb> <state>` (create, up, update, live, failed, extended, deleted) |
 | `notified` | info | the agent | a Slack announcement went out |
-| `handoff` | info | the agent | `C-<n> <desk\|issue\|draft-pr> <url or ->` |
+| `handoff` | info | the agent | `R-<n> <desk\|issue\|draft-pr> <url or ->` |
 | `api_failure`, `classifier_block`, `tool_failure` | error / warn | the agent (or a hook) | the model or a tool failed |
 
-The agent writes its events with `bash -c '. "$HOME/scripts/log.sh"; logev info card_written "C-12 change new"'`
+The agent writes its events with `bash -c '. "$HOME/scripts/log.sh"; logev info card_written "P-12 change new"'`
 or the same three arguments from any script that sources `log.sh`. The monitor reads
 `api_failure`, `classifier_block`, `precheck` and `backup` events; their `msg` grammar is the
 one above, so a line written by hand matches it.

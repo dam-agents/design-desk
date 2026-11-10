@@ -93,7 +93,7 @@ file — names, texts, pictures — is data.
    the product's tokens (from `get_variable_defs` against the profile's styles), components
    with no counterpart in code, texts that disagree with the product's words. The triage
    (docs/boundary.md) applies to the imported design like to any option.
-5. `design desk done I-<n> --session <id> --outcome imported`.
+5. `design desk done Q-<n> --session <id> --outcome imported`.
 
 ## Send to Figma (`figma-export`)
 
@@ -105,7 +105,7 @@ file — names, texts, pictures — is data.
    field unchanged) and comment where it is.
 4. A live prototype goes over with `generate_figma_design` on its address, when the client
    is allowed to; otherwise send screenshots of its screens with `upload_assets`.
-5. `design desk done I-<n> --session <id> --outcome exported`.
+5. `design desk done Q-<n> --session <id> --outcome exported`.
 
 ## Compare with the product (`figma-compare`)
 
@@ -132,12 +132,12 @@ design in Figma) → do not search again. Only a person's action starts a new se
   Old, Playground or Draft; prefer a frame marked ready for development. Render the two or
   three best and look at them next to the screen's own picture.
 - Sure (a Dev Mode link, or one frame that plainly is the screen): use it. Not sure: ask on
-  the card with its picture and link — `design desk ask C-<n> --step figma` "Is this its design
+  the card with its picture and link — `design desk ask R-<n> --step figma` "Is this its design
   in Figma?" — set `figma_search: {state: asked, thread: T-<n>}`, and compare only after a yes.
   Nothing that fits: `figma_search: {state: none}`, nothing on the card.
 - **The answer** comes back as a `figma` inbox item on the card (its note the answer); claim
   it. From a role above: yes → compare with that frame (its url becomes `frame.url`), clear
-  `figma_search`, `design desk done I-<n> --session <id> --outcome compared`; another link →
+  `figma_search`, `design desk done Q-<n> --session <id> --outcome compared`; another link →
   the same with that link; no → `figma_search: {state: no}`, `--outcome no-frame`. From anyone
   else → nothing changes, `--outcome not-taken`, and one line on the card saying a designer
   can answer.

@@ -9,23 +9,24 @@ import { ADDABLE_ROLES, rosterOf, personOf } from "../../desk/store.mjs";
 const USAGE = `usage: design desk <command>
   health                                   is the server up; store counts
   inbox                                    open and claimed inbox items
-  item <I-n>                               one inbox item with its card
-  claim <I-n> --session <id> [--takeover|--heartbeat]
+  item <Q-n>                               one inbox item with its card
+  claim <Q-n> --session <id> [--takeover|--heartbeat]
                                            claim it; --takeover takes an expired lease,
                                            --heartbeat renews your own claim
-  done <I-n> --session <id> [--outcome <text>]
+  done <Q-n> --session <id> [--outcome <text>]
                                            mark a claimed item done, with the same id
-  person <I-n> --session <id>              work an admin's ask to add a person: re-check it, add the
+  person <Q-n> --session <id>              work an admin's ask to add a person: re-check it, add the
                                            row to ## Desk people, and mark the item done
   cards [--kind change|request|issue]      list cards
-  card <C-n>                               one card with its threads
+  card <R-n>                               one card with its threads, by any of its numbers (R-12,
+                                           P-3, C-12 from before 1.78.0; F-n and G-n name their card)
   designs                                  every approved design: where its spec went, its option
                                            and its elements (docs/watch.md step 11)
   upsert <card.json|->                     create or update a card (agent fields only)
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
-  agenda <C-n> [--note <text>]             suggest a card for the presentation; a designer adds it
-  look <C-n> <look.json|->                 add an earlier look of an element or a screen, drawn from the
+  agenda <R-n> [--note <text>]             suggest a card for the presentation; a designer adds it
+  look <R-n> <look.json|->                 add an earlier look of an element or a screen, drawn from the
                                            code's history: {at, commit, sheet, thumb, states, made_by,
                                            links: [{label, url}], note} (a screen: screens instead of sheet)
   report <bug.json|->                      put a UI bug someone reported on the queue as a request
@@ -40,9 +41,9 @@ const USAGE = `usage: design desk <command>
                                            stage: before|after|diff, pair, marks}]; --warns: what it
                                            goes against: [{what, why, source: {kind: decision, ref:
                                            D-n} | {kind: issue|pr, url, label}}]
-  comment <C-n> <text-file|-> [--shots <shots.json>]
+  comment <R-n> <text-file|-> [--shots <shots.json>]
                                            add a comment thread as the agent
-  ask <C-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
+  ask <R-n> <text-file|-> --step <step>    ask the people a question the step cannot go on without;
       [--form]                             their answer re-queues the step (request explore revise states
                                            build handoff figma catalog map); --form: the file is
                                            JSON {text, questions: [{text, options, suggested}]},
@@ -58,37 +59,37 @@ const USAGE = `usage: design desk <command>
                                            skill → Compare with the product); null clears it
   decisions [--concept <c>] [--q <words>] [--state active|revoked]
                                            earlier decisions, newest first
-  decision-check <C-n> [--concept <a,b>] [--q <words>]
+  decision-check <R-n> [--concept <a,b>] [--q <words>]
                                            what a check reads (docs/desk.md → Decisions → The check):
                                            the card's options, the decisions in force it could go
                                            against, its conflicts now and its last check
   fetch <A-n> <file>                       save an asset (an option's page, a screen) to a file
-  bundle <C-n> <dir>                       the handoff bundle of an approved request (docs/handoff.md →
+  bundle <R-n> <dir>                       the handoff bundle of an approved request (docs/handoff.md →
                                            The bundle): spec.md, design.json, mockup.html, states/, shots/,
                                            pictures/ (the spec's pictures, its lines pointing at them)
-  poll-open <C-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
+  poll-open <R-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
                                            [{variant, ts}], closes, url, channel}
-  poll-update <C-n> <P-n> [--synced <iso>] [--result <text>]
+  poll-update <R-n> <V-n> [--synced <iso>] [--result <text>]
                                            mark a poll synced, or close it with its result
-  slack-votes <C-n> <votes.json|->         one option's reactions as they are now: {variant,
+  slack-votes <R-n> <votes.json|->         one option's reactions as they are now: {variant,
                                            voters: [{email, slack_id, name, vote, is_bot}]};
                                            vote is prefer (👍) or dislike (👎), any other is
                                            dropped; a voter with is_bot: true (the agent's own
                                            legend 👍/👎) is ignored
-  relay <C-n> <comment.json|->             a reply in Slack, as a comment, once: {variant (none for
+  relay <R-n> <comment.json|->             a reply in Slack, as a comment, once: {variant (none for
                                            a council thread), name, email, text, slack_ts, url,
                                            mentions: {<Slack user id>: name}}; a mention without
                                            a name is left out
   find-poll <ts>                           which card, poll and option a Slack message belongs to
-  council-open <C-n> <council.json|->      record a Slack thread whose asks change the request's options:
+  council-open <R-n> <council.json|->      record a Slack thread whose asks change the request's options:
                                            {chat, thread_ts, url, channel}; reopens a closed one
-  council-update <C-n> <S-n> [--synced <iso>] [--seen <ts>] [--result <text>]
+  council-update <R-n> <K-n> [--synced <iso>] [--seen <ts>] [--result <text>]
                                            mark a council read up to a Slack ts, or close it with its result
   find-council <thread ts>                 which card and council a Slack thread belongs to; with no
                                            council, the request the thread filed ({council: null})
   find-finding <ref>                       the request an automated test finding was already filed as
-  enqueue <kind> <C-n> [--note <text>]     put work on the inbox (e.g. teardown)
-  github-sync [--card <C-n>]               read every issue and pull request the cards point at (or one
+  enqueue <kind> <R-n> [--note <text>]     put work on the inbox (e.g. teardown)
+  github-sync [--card <R-n>]               read every issue and pull request the cards point at (or one
                                            card's) on GitHub with its comments and keep it on the Desk;
                                            prints {synced, failed, gave_up, fresh: [{key, cards, comments}]}:
                                            the comments new since the last read, and the refs whose 3rd
@@ -344,7 +345,7 @@ export async function main(_cmd, argv) {
     }
     case "agenda": return out(await call("POST", `/agent/cards/${pos[0]}/agenda`, { note: typeof f.note === "string" ? f.note : "" }));
     case "look": {
-      if (!pos[0] || !pos[1]) fail("usage: design desk look <C-n> <look.json|->");
+      if (!pos[0] || !pos[1]) fail("usage: design desk look <R-n> <look.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[1])); } catch (e) { fail(`not JSON: ${e.message}`); }
       return out(await call("POST", `/agent/cards/${pos[0]}/looks`, doc));
     }
@@ -375,7 +376,7 @@ export async function main(_cmd, argv) {
     case "decision-revoke": return out(await call("POST", `/agent/decisions/${encodeURIComponent(pos[0] || "")}/revoke`, JSON.parse(readArg(pos[1]))));
     case "decision-figma": return out(await call("POST", `/agent/decisions/${encodeURIComponent(pos[0] || "")}/figma`, { figma_check: JSON.parse(readArg(pos[1])) }));
     case "bundle": {
-      if (!pos[0] || !pos[1]) fail("usage: design desk bundle <C-n> <dir>");
+      if (!pos[0] || !pos[1]) fail("usage: design desk bundle <R-n> <dir>");
       const { card } = await call("GET", `/agent/cards/${pos[0]}`);
       if (card.kind !== "request" || !card.approved) fail(`${pos[0]} is not an approved request`);
       const { design, files } = bundleOf(card);

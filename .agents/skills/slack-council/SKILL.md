@@ -47,7 +47,7 @@ round as a picture. Every option name, ask or quote in a reply is escaped
    report), which answers the thread; research, triage and the first options follow in the
    inbox run and reach the thread ([docs/requests.md](../../../docs/requests.md) → Answering
    in the thread). Then step 3, and end the turn.
-3. `design desk council-open C-<n> <file>` with `{chat, thread_ts, channel, url}`. A new
+3. `design desk council-open R-<n> <file>` with `{chat, thread_ts, channel, url}`. A new
    council then gets `council-update --seen <ts>`: after step 2 the newest message (what
    came before is the request itself), else the card's `origin.message_ts`. A reopened one
    keeps its `seen`.
@@ -61,7 +61,7 @@ A Slack turn in a council thread, or a `councils_due` entry with `close: false`.
    email Slack holds for their user id ([docs/desk.md](../../../docs/desk.md) → Roles, In
    Slack); a message from anyone not on the roster is set aside (not relayed, not an ask),
    and in a Slack turn its author gets the decline line of Who Slack serves.
-2. **Relay** every message from the roster that is not yours, once: `design desk relay C-<n> <file>` with
+2. **Relay** every message from the roster that is not yours, once: `design desk relay R-<n> <file>` with
    `{variant, name, email, text, slack_ts, url, mentions}`; `variant` only when it names one option;
    `mentions` maps each `<@U…>` in the text to the person's name (`describe_channel_users`),
    and a mention left without a name is dropped from the comment.
@@ -105,16 +105,16 @@ One `reply` in the thread per round, with the picture:
   "*<option name> — version <n>*: <what changed, one line per ask, with who asked>.
   <Consequences, when there are any: where else this shows, what needs a developer, an
   earlier decision it goes against, by its number `D-<n>` — each with its source.> <What was not done, and why.>
-  All options and versions are on the Design Desk (C-<n>): <link>. Ask here for more changes."
+  All options and versions are on the Design Desk (R-<n>): <link>. Ask here for more changes."
 - The card's link and access line as in `intake-slack` (*In that Slack turn*, step 5). Never a
-  password, an internal id ("card", "triage", "S-2"; the card's number `C-<n>` is not one) or
+  password, an internal id ("card", "triage", "K-2"; the card's number `R-<n>` is not one) or
   real customer data; made-up numbers say so.
 
 ## Close
 
 - **The thread agrees**: everyone who wrote since the last version agrees on one option and
   version, with no open concern and no ask left. Reply, `<option>` escaped as in The answer: "Looks like we agree on *<option>
-  v<n>*. A designer makes the final pick and the fine-tuning on the Design Desk (C-<n>): <link>."
+  v<n>*. A designer makes the final pick and the fine-tuning on the Design Desk (R-<n>): <link>."
   Comment the same on the card, then `council-update --result "Agreed on <option> v<n>"`.
   Never approve or change the request's status: that is the designer's, on the Desk. A new
   ask in the thread opens it again (Start → step 3).

@@ -1105,13 +1105,13 @@ test("a council remembers its Slack thread, reopens once closed, and relays repl
   s.upsertCard({ id: card.id, origin: { channel: "slack", chat: "C0123", thread_ts: "2.0", message_ts: "2.0", reporter: "Jana" } });
   assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: null, state: null });
   const { council } = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" });
-  assert.equal(council.id, "S-1");
-  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: "S-1", state: "open" });
+  assert.equal(council.id, "K-1");
+  assert.deepEqual(s.findCouncil("2.0"), { card: card.id, council: "K-1", state: "open" });
   const other = s.createRequest(alice, { problem: "Another." }).card;
   assert.equal(s.openCouncil(other.id, { chat: "C0123", thread_ts: "2.0" }).duplicate, true);
-  s.updateCouncil(card.id, "S-1", { synced: "2026-11-02T10:00:00Z", seen: "2.5" });
+  s.updateCouncil(card.id, "K-1", { synced: "2026-11-02T10:00:00Z", seen: "2.5" });
   assert.equal(s.getCard(card.id).councils[0].seen, "2.5");
-  assert.equal(s.updateCouncil(card.id, "S-1", { result: "Agreed on One button v2" }).council.state, "closed");
+  assert.equal(s.updateCouncil(card.id, "K-1", { result: "Agreed on One button v2" }).council.state, "closed");
   const reopened = s.openCouncil(card.id, { chat: "C0123", thread_ts: "2.0" }).council;
   assert.deepEqual([reopened.state, reopened.seen, reopened.result], ["open", "2.5", null]);
   assert.equal(s.getCard(card.id).councils.length, 1);
@@ -2567,4 +2567,35 @@ test("a request made from an open pull request: its spec waits, and goes back to
   const { card: other } = s.createRequest(alice, { title: "Bolder header", problem: "Too faint.", from: change.id });
   s.upsertCard({ id: change.id, source: { repo: "acme/widgets", pr: 31, url: "https://github.com/acme/widgets/pull/31", merged_at: "2026-11-10T10:00:00Z" } });
   assert.equal(s.getCard(other.id).from_pr, null);
+});
+
+test("every kind numbers its own series under its letter; items from before keep theirs", () => {
+  const dir = mkdtempSync(join(tmpdir(), "desk-store-"));
+  // A store from before 1.78.0: cards C-n, an inbox item I-n, a vote P-n, a council S-n, and a
+  // comparison with Figma and a sent design that had no number of their own.
+  const frame = { url: "https://www.figma.com/design/AbC123/App?node-id=12-40", name: "Agents list" };
+  writeFileSync(join(dir, "db.json"), JSON.stringify({ version: 1, seq: { card: 2, thread: 0, asset: 0, item: 4, decision: 0, poll: 2, council: 1 },
+    cards: {
+      "C-1": { id: "C-1", kind: "screen", title: "Agents list", status: "current", created: "2026-11-01T00:00:00Z", updated: "2026-11-01T00:00:00Z", figma_check: { verdict: "matches", frame, differences: [] }, threads: [] },
+      "C-2": { id: "C-2", kind: "request", title: "Calmer header", status: "handed-off", created: "2026-11-02T00:00:00Z", updated: "2026-11-02T00:00:00Z", threads: [], sends: [{ closed: { at: "2026-11-02T00:00:00Z" }, threads: [] }],
+        polls: [{ id: "P-2", state: "closed" }], councils: [{ id: "S-1", state: "closed" }] } },
+    threads: {}, assets: {}, inbox: { "I-4": { id: "I-4", kind: "request", card: "C-2", state: "done" } }, decisions: {} }));
+  const s = new Store(dir);
+  assert.equal(s.card("C-1").figma_check.id, "F-1", "a comparison from before gets its number");
+  assert.deepEqual([s.card("C-2").sends[0].design_id, s.card("C-2").design_id], ["G-1", "G-2"], "an earlier send first, then the one now");
+  assert.equal(s.card("F-1").id, "C-1", "a comparison's number names its card");
+  assert.equal(s.card("G-1").id, "C-2", "so does a sent design's");
+  // New items: their own letter, each series from 1; a letter used before goes on past it.
+  const change = s.upsertCard({ kind: "change", title: "A new header", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const screen = s.upsertCard({ kind: "screen", title: "Billing", path: "/billing" }).card;
+  const req = s.createRequest(alice, { title: "Quieter list", problem: "It shouts." });
+  assert.deepEqual([change.id, screen.id, req.card.id, req.inbox.id], ["P-3", "S-2", "R-1", "Q-1"]);
+  const element = s.upsertCard({ kind: "element", title: "Button" }).card;
+  const issue = s.upsertCard({ kind: "issue", title: "Spend per agent" }).card;
+  const week = s.upsertCard({ kind: "digest", title: "Week 45" }).card;
+  assert.deepEqual([element.id, issue.id, week.id], ["E-1", "I-5", "W-1"]);
+  const checked = s.upsertCard({ id: screen.id, figma_check: { verdict: "matches", frame, differences: [] } }).card;
+  assert.equal(checked.figma_check.id, "F-2");
+  assert.equal(s.upsertCard({ id: screen.id, figma_check: { verdict: "matches", frame, differences: [] } }).card.figma_check.id, "F-2", "compared again, it keeps its number");
+  assert.equal(s.listCards({ kind: "screen" }).find((c) => c.id === screen.id).figma.id, "F-2");
 });

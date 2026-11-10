@@ -23,14 +23,16 @@ the app: the agent never sets or changes an Environment's access. The platform t
    Environments, tell the operator, stop.
    **Ask first** — an item with `ask_first` (the designer left "Ask me first" ticked in the final check before Build it live):
    list the design decisions the option and its comments leave open (a missing state, copy,
-   a small screen…). None → build. Some → one form, `design desk ask C-<n> <file> --step build
+   a small screen…). None → build. Some → one form, `design desk ask R-<n> <file> --step build
    --form` with `{text, questions: [{text, options, suggested}]}`: at most 6 questions
    that change what gets built, 2–4 concrete options each, `suggested` your pick
    ([The questions form](desk.md#the-questions-form)). `done --outcome asked` and stop; the answer re-queues the
    build with the same option. Then a question left to you takes `suggested`, and the
    build's comment on the card names what you chose.
-2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree C-<n> <repo>` → a checkout of the
-   default branch on `design-desk/c<n>-<slug>`, printed as JSON with its path and base.
+2. **Worktree.** `bash "$HOME/scripts/proto.sh" worktree R-<n> <repo>` → a checkout of the
+   default branch on `design-desk/r<n>-<slug>`, printed as JSON with its path and base. The
+   name takes the card's number in lower case without the dash (`R-12` → `r12`; a card from
+   before 1.78.0, `C-12` → `c12`), so two kinds never share a branch or an Environment.
    An existing worktree of the card is reused (an update).
 3. **Change the code.** Implement what the person checked before pressing **Build it live**:
    the card's `live_pick` — the option (`variant`, also the item's `variant` and note), at the
@@ -44,32 +46,32 @@ the app: the agent never sets or changes an Environment's access. The platform t
    version that arrived since. A card with no `live_pick` (a build asked for before the final
    check existed) builds the option its note names, at its latest version; a closed request's
    `live_pick` is gone. An item without a note asks
-   which option (`design desk ask C-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
+   which option (`design desk ask R-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
    `git -C <worktree> commit -F <file>`, the file holding `design: <title>`, identity `Design Desk
    <design-desk@users.noreply.github.com>`.
 4. **Guard.** `design guard <worktree> --base <base> --profile <profile.json> --patch
-   /tmp/design-desk-c<n>/prototype.patch > /tmp/design-desk-c<n>/guard.json`. Not `ok` →
+   /tmp/design-desk-r<n>/prototype.patch > /tmp/design-desk-r<n>/guard.json`. Not `ok` →
    [boundary.md](boundary.md) → When the guard refuses. Upload the report and the patch
    (`--kind report`, `--kind patch`) and set `prototype: {state: "building", guard: {ok,
    summary, asset}, branch, base, patch: <the patch's asset>}` and `status: prototype`.
-5. **Environment.** `create_environment` with `name` = `c<n>`, the profile's
+5. **Environment.** `create_environment` with `name` = `r<n>`, the profile's
    `engine.endpoints`, `storage`, `start` when it names one, and `expires` =
    `<prototype_expiry_days>d`; no access argument (the tool takes none: the owner shares the
    Environment in the app). An Environment of that name already there is reused.
-6. **Install.** `bash "$HOME/scripts/proto.sh" run C-<n> up` **as a background task**
-   (an install takes many minutes), then poll `proto.sh run C-<n> status` until it says
+6. **Install.** `bash "$HOME/scripts/proto.sh" run R-<n> up` **as a background task**
+   (an install takes many minutes), then poll `proto.sh run R-<n> status` until it says
    `running` or `failed`. The profile's `bin/env up` installs the worktree into the
-   Environment over the Environment Link (`ssh env-c<n>`) and seeds the demo data.
+   Environment over the Environment Link (`ssh env-r<n>`) and seeds the demo data.
 7. **Publish.** The card already says what goes live (`live_pick`); say it once more in the
    build's comment ("<option>, version <n>, with <k> states"). `list_environments` gives the endpoint address of `engine.open_endpoint`;
-   `proto.sh run C-<n> credentials` gives the demo sign-in. Set `prototype: {state: "live",
-   url, login: {user, password, hint}, env: "c<n>", expires, …}` and `status: testing`.
-   Capture two or three screens of the changed screen: `proto.sh run C-<n> tunnel` prints
+   `proto.sh run R-<n> credentials` gives the demo sign-in. Set `prototype: {state: "live",
+   url, login: {user, password, hint}, env: "r<n>", expires, …}` and `status: testing`.
+   Capture two or three screens of the changed screen: `proto.sh run R-<n> tunnel` prints
    a local `url` (the public one needs a person's sign-in); then `DESK_DEMO_USER=… 
    DESK_DEMO_PASSWORD=… design capture <url> <dir> --routes <routes.json> --login
    <profile.json>` with the demo sign-in, add the shots to the card's `screens`, and
-   `proto.sh run C-<n> untunnel`. A profile without `tunnel` gets no prototype screens.
+   `proto.sh run R-<n> untunnel`. A profile without `tunnel` gets no prototype screens.
 8. `done --outcome live`.
 
 A failure at any step: `prototype.state: failed`, one comment on the card saying what did
@@ -79,7 +81,7 @@ for the operator only when the operator is debugging it; otherwise delete it.
 ## Update
 
 A `build` item on a card whose prototype is `live` is an update: the same worktree, the new
-change, the guard again, then `proto.sh run C-<n> update` (the profile rebuilds only what
+change, the guard again, then `proto.sh run R-<n> update` (the profile rebuilds only what
 changed — for a UI change, the UI) instead of `up`. Then capture the same screens as step 7 and
 answer the item's note with one comment, the update's only comment: it names what went live
 from the card's `live_pick` ("<option>, version <n>, with <k> states", as step 7 says it) and
@@ -89,7 +91,7 @@ before this update: each goes in by its `asset` with `stage: before`. The new ca
 the after pictures: each goes in as a `file` with `stage: after`. Both pictures of one screen
 carry the same `pair`, the screen's name, so every screen keeps its own pair. The after one's
 `marks` come from `design diff` against the before one (`design desk fetch <A-n>` saves it).
-Then `design desk comment C-<n> <file> --shots <shots.json>`, and add the new captures to the
+Then `design desk comment R-<n> <file> --shots <shots.json>`, and add the new captures to the
 card's `screens` as step 7 does.
 
 ## Expiry (`expiring_due`)
@@ -111,15 +113,15 @@ The patch and the guard report stay on the card.
 A closed request, a handed-off one past its expiry, or one a person switched off on the
 Desk (**Switch it off…** on the live prototype of a request still at `prototype` or
 `testing`, with no build waiting: the `switch-off` action of a role that builds; the request
-keeps its status, and **Build it again** brings it back): `proto.sh run C-<n> down` (when the
-profile has it), `delete_environment`, `proto.sh remove C-<n>` (the worktree and its branch,
+keeps its status, and **Build it again** brings it back): `proto.sh run R-<n> down` (when the
+profile has it), `delete_environment`, `proto.sh remove R-<n>` (the worktree and its branch,
 never the patch), `prototype.state: torn-down`. A pushed branch stays; it is the
 developer's.
 
 ## Push (`prototype_remote` only)
 
 With `prototype_remote` set, push the guarded branch there after step 4:
-`git -C <worktree> push <remote-url> design-desk/c<n>-<slug>`, never another branch name,
+`git -C <worktree> push <remote-url> design-desk/r<n>-<slug>`, never another branch name,
 never `--force` onto a branch a person changed. Without it, the patch on the card is the
 prototype's record. The pre-push hook (`scripts/git-hooks/pre-push`) accepts the repository
 only over `https://` or ssh, and refuses another repository or host, another branch and any

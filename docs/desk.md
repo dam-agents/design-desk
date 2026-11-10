@@ -59,20 +59,43 @@ How the page looks and behaves, its lists, filters, states, notifications and De
 
 ## Links to an item
 
-- **Every card has a number**, its id (`C-12`), shown grey by its title on its row and its
-  page. It is the one way to refer to an item: people write it in Slack, a comment or chat;
-  `design desk card C-12` reads it.
-- **An item's link** is the Desk's link with the number: `#C-12` opens it in its own tab,
-  `#presentation/C-12` on the presentation while it is on it (`#call/C-12`, its older form,
-  still opens there), `#requests` a tab, `#presentation` the presentation. The link icon beside an item's number (**Copy link** on a narrow screen) builds it from
-  `desk_link`; the header's **Search** takes a number or such a link; a `C-12` in text on the
-  Desk links to that item.
+- **Every item has a number**: its kind's letter and its place in that kind's own series,
+  shown grey by its title on its row and its page. It is the one way to refer to an item:
+  people write it in Slack, a comment or chat; `design desk card R-12` reads it.
+
+  | Letter | Item | Where it shows |
+  | --- | --- | --- |
+  | `P` | PR Change | Changes |
+  | `R` | Request | Requests |
+  | `I` | Issue | Issues |
+  | `S` | Screen | Product → Screens |
+  | `E` | Element | Product → Elements |
+  | `W` | Week (the digest) | Product → History |
+  | `F` | A comparison with Figma (`figma_check.id`); one per card, kept when it is compared again | Product → Differences |
+  | `G` | A design sent to developers (`design_id`); each send its own | Designs |
+  | `D` | Decision | Product → Decisions |
+
+  Each series starts at 1. `F` and `G` are items of their own on another card's record:
+  `design desk card F-3` reads the card it is on. Items made before 1.78.0 keep their numbers,
+  so links already shared keep working: a card's `C-12`, and the inbox's, a Slack vote's and a
+  council's own numbers (`I-4`, `P-2`, `S-1`), which are now `Q-` (inbox items), `V-` (votes)
+  and `K-` (councils); the series of a letter used before (`P`, `I`, `S`) goes on past its
+  highest number there, so no number is ever given twice. A comparison or a sent design from
+  before 1.78.0 got its number when the server first started on 1.78.0. Threads (`T-`) and
+  pictures (`A-`) are unchanged.
+- **An item's link** is the Desk's link with the number: `#R-12` opens it in its own tab,
+  `#presentation/R-12` on the presentation while it is on it (`#call/C-12`, its older form,
+  still opens there), `#F-3` on Product → Differences, `#G-5` on Designs, `#requests` a tab,
+  `#presentation` the presentation. The link icon beside an item's number (**Copy link** on a narrow screen) builds it from
+  `desk_link`; the header's **Search** takes a number (`R-12`, `r12`, or `12` alone, which
+  names a `C-12` first) or such a link; an `R-12` in text on the Desk links to that item.
 - **Numbers of parts and states.** Inside an item, each thing a person may point at has a
-  sub-number after a dot: `C-12.3` is an element's third situation, a screen's third
+  sub-number after a dot: `R-12.3` is an element's third situation, a screen's third
   picture as it is now (its before and after pictures included, in their order), or a
   request's third state of an element, counted across its options in order (it opens in its element's dialog); an older look of a
   screen is cited by its date. Each
-  shows its number by it; `#C-12.3` and a `C-12.3` in text open the item and scroll to it.
+  shows its number by it; `#R-12.3` and an `R-12.3` in text open the item and scroll to it.
+  A row of a comparison's table with Figma is `F-3.2`.
   Cite parts and states by these numbers in every answer.
 - **Text from Slack**: a Slack mention reads as the person's name. A relayed reply carries
   `mentions` (Slack user id → name), so the server writes `@Name`; a mention with no name
@@ -90,13 +113,13 @@ How the page looks and behaves, its lists, filters, states, notifications and De
   `#…`), matched by repository and number: its issue or change card first, then a request that
   came from it (`origin.url`; its status and what can be done); a link the Desk has no card for
   shows its number and repository and says it is not on the Desk. The GitHub text is not on the
-  Desk. An item's or a decision's number in text (`C-11`, `D-26`) previews it the same way:
+  Desk. An item's or a decision's number in text (`R-11`, `D-26`) previews it the same way:
   a request its status, any other item its kind and `summary`, a decision its text, who made
   it, its day, whether it is in force and whether a designer approved it. A note's label on an element (◎ …) previews that element alone, cut from its option. A preview shows half a second after the pointer rests on
   it. A link that previews shows no one-line tooltip.
-- **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#C-<n>`
-  in a channel message (the platform turns it into the share link and keeps `#C-<n>`),
-  `<desk_link>#C-<n>` anywhere else (GitHub). The access note: it opens only for people on
+- **In a message**, the item's title, its number and its link: `platform://artifacts/<desk_artifact>#R-<n>`
+  in a channel message (the platform turns it into the share link and keeps `#R-<n>`),
+  `<desk_link>#R-<n>` anywhere else (GitHub). The access note: it opens only for people on
   the Desk's list.
 - **Stopgap:** the platform's share page does not pass a link's `#…` into the page yet, so a
   link opens the Desk on its first tab and the number is the way on (Go to). The fix is the
@@ -199,7 +222,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   person's description, a redraw, notes worked in, three ways of a part, every state), an
   issue's sketch, a live prototype, a new decision, an answer to a question that asks for a
   change, a design asked for in Slack or chat.
-  1. `design desk decision-check C-<n> [--concept <a,b>] [--q <words>]`: the card's options,
+  1. `design desk decision-check R-<n> [--concept <a,b>] [--q <words>]`: the card's options,
      the decisions in force about its concepts (or, given, about those concepts and words
      instead), its conflicts now and its last check. Name the concepts the design touches; a card about nothing named reads every one.
      `truncated: true` (more than 60 of `total`): narrow with `--concept` or `--q` until it is
@@ -237,7 +260,7 @@ and `D-12` in text link to it as to a card (Links to an item).
   Desk never revokes on its own judgement: what goes against a decision records the conflict
   and asks in the card's thread whether `D-<n>` still holds.
 - **`decisions_due`**: the item names a `thread` and its `message` (`design desk item
-  I-<n>`; the designer's wording in `note`). Claim it; record it (`origin.kind: desk`, the
+  Q-<n>`; the designer's wording in `note`). Claim it; record it (`origin.kind: desk`, the
   message's author, concepts from the card, conflicts checked); answer in the thread
   "Recorded as D-<n>", with any conflict; done. A message that decides nothing: say so in the
   thread, done `not recorded: <why>`. An item with no `thread` is a **Close** with a decision: its
@@ -372,8 +395,8 @@ Inbox work is claimed in the store, so a ping session, a scheduled run and a dis
 never do one item twice.
 
 - Every claim and done names the run: `--session <run id>`, the worklist file's name (a
-  ping session: `ping-I-<n>`). An `export` does not survive from one command to the next.
-- `design desk claim I-<n> --session <id>` before working an item. A claim is a 15-minute
+  ping session: `ping-Q-<n>`). An `export` does not survive from one command to the next.
+- `design desk claim Q-<n> --session <id>` before working an item. A claim is a 15-minute
   lease. Every write you make on the item's card (an upsert, an asset, a comment, an answer)
   renews it; while the work writes nothing for longer (a build, a batch of shots), renew it
   with `--heartbeat` right before and after any one command that can run long. Exit 3 (`409`) on
@@ -381,14 +404,14 @@ never do one item twice.
   and another session took the item over: stop, post nothing more for it, and end the entry
   as skipped. A worklist entry with `takeover: true` → add `--takeover`; a claim whose
   heartbeat stopped is due again on the next inbox tick.
-- `design desk done I-<n> --session <id> --outcome "<one line>"` when its work is on the
+- `design desk done Q-<n> --session <id> --outcome "<one line>"` when its work is on the
   card. An answer (`design desk answer`) closes the question items it could have read; a
   follow-up that arrived meanwhile stays open for the next run.
 
 ## Questions
 
 A `questions_due` item points at a thread: on a card, or a private ask about a Desk page
-(`card: null`, below). Read the thread and its card, if any (`design desk item I-<n>`), then:
+(`card: null`, below). Read the thread and its card, if any (`design desk item Q-<n>`), then:
 
 1. Find the answer in the product: the card's sources first, then the profile's
    architecture pages and the code at the default branch (`scripts/checkout.sh`).
@@ -397,8 +420,8 @@ A `questions_due` item points at a thread: on a card, or a private ask about a D
    `![caption](asset:A-12)` lines, with the asset's real number,: the product's own screens and element drawings already
    on the Desk first, a fresh shot of the product (the `show` action) when none fits, a
    simple diagram when the point is a flow. Name every part and state you mean by its
-   number (`C-12.3`, Links to an item) so the reader can click straight to it. A new
-   picture is uploaded with `design desk asset <file> --kind screen --card C-n`.
+   number (`R-12.3`, Links to an item) so the reader can click straight to it. A new
+   picture is uploaded with `design desk asset <file> --kind screen --card R-n`.
    Write it to a file and `design desk answer T-<n> <file>`. When the question came through
    Slack, the reply also names the card and links it ([requests.md](requests.md) → Answering
    in the thread).
@@ -423,7 +446,7 @@ of the product in that state: the `show` action ([actions.md](actions.md)).
 The Desk keeps a copy of every issue and pull request its cards point at — the card's
 source, where it came from, its spec's issue, the ones its research cites (a comment on a cited
 one is never the card's own news) — with its text, state, labels, comments and a
-pull request's reviews: `design desk github-sync [--card C-n]` reads them on GitHub (only in
+pull request's reviews: `design desk github-sync [--card R-n]` reads them on GitHub (only in
 the `repos` the watch reads; a ref in any other is left out, `skipped`, and the watch gate
 never opens a run for it) and stores them (every watch run does it, and the watch gate opens a run when a copy is behind
 GitHub: [watch.md](watch.md) → Comments on GitHub),
@@ -448,7 +471,7 @@ and the chat's header shows it; the button counts that chat's messages, and Ente
 state and part picked there. It is on no card's list of conversations; the server hands
 it back only to its author (`GET /api/private`) and refuses everyone else any act on it.
 Its inbox item carries `private: true`, comes as `questions_due` like a question, and
-`design desk item I-<n>` returns the thread with it.
+`design desk item Q-<n>` returns the thread with it.
 
 Answer it as a question (above), with these differences:
 
@@ -460,12 +483,12 @@ Answer it as a question (above), with these differences:
    that option, state and part, or that page — and answer about it: "this", "here" and
    "it" mean that. Each item and each Desk page has its own chat and history; within one,
    each question is still its own: never carry an earlier one's option, state or part over. Start the answer by naming what it
-   is about in a few words ("The limit meter in option B, state Stopped (C-3.4): …"). A
+   is about in a few words ("The limit meter in option B, state Stopped (R-3.4): …"). A
    question about something else gets a short answer and the suggestion to ask it from
    that item's page.
    Its `refs` are the issues and pull requests the item points at: read them with their
    comments (`design desk github <refs>`; older than an hour → `design desk github-sync
-   --card C-n` first) and use what people said there, naming the comment as the source.
+   --card R-n` first) and use what people said there, naming the comment as the source.
 2. **Explain, never change.** A private ask changes no option, variant, card field,
    decision or queue: no revise, no `--shots`, no `design desk write`. A wish in it ("make
    it blue") gets the explanation and one sentence on how to ask in public (**Make a
@@ -512,8 +535,8 @@ Answer it as a question (above), with these differences:
 A `people_due` item is an admin's ask, on the People tab, to put a person on `## Desk people`
 with a role; it has no card. This is the one roster change that comes from the Desk.
 
-1. `design desk claim I-<n> --session <id>`.
-2. `design desk person I-<n> --session <id>`: it checks again that the asker is the owner or
+1. `design desk claim Q-<n> --session <id>`.
+2. `design desk person Q-<n> --session <id>`: it checks again that the asker is the owner or
    still an admin and that the email is not on the list, adds the row through the one writer of `work/CONFIG.md`, and
    marks the item done (`added`, or `not added: <reason>`); a row already there with that role
    is `added`. A non-zero exit (the file unreadable, the write failed) leaves the item claimed
@@ -540,7 +563,7 @@ opens its card.
 - Only a designer or an admin puts a card on it (**Add to presentation**), with a note and,
   for a request with options, its final version. The agent never adds one: it
   **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for
-  testing and handed-off work worth showing (`design desk agenda C-<n> --note "<why>"`); the
+  testing and handed-off work worth showing (`design desk agenda R-<n> --note "<why>"`); the
   suggestion shows on the card (a request's Add under **More**) and under the presentation until a
   designer adds it or says **Not now** (by the suggestion; for a request, on the Presentation page); after **Not now** the store keeps the card from being
   suggested again. Without a version picked (an older page), the option designers' votes clearly
@@ -575,7 +598,7 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   design and the decisions: it is auto handled at once. One to five
   reasons, each a short phrase in the product's words that says what to look at ("Check the
   empty list: it shows nothing", "its own grey instead of the product's"). It leaves the filter once the person saw it, a designer marked it handled, or it is auto handled.
-  The store adds "Differs from the approved design C-<n>" itself ([watch.md](watch.md) step 11).
+  The store adds "Differs from the approved design R-<n>" itself ([watch.md](watch.md) step 11).
 - **A request**: the store derives it from where the request stands, never from you:
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are drawn and wait to go to the team (Team feedback), its options are ready, or its
@@ -595,14 +618,14 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   The developer spec keeps what a developer builds from (styles, tokens, patch files, tests
   to update); the skill governs only how it is worded ([handoff.md](handoff.md) step 2).
 - Never write an inbox item or
-  thread id (`I-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
+  thread id (`Q-4`, `T-9`), a status name (`triage`, `feedback`, `spec`), a branch or an
   Environment name: refer to things by their title, another card by its title and number
   ([Links to an item](#links-to-an-item)), and to steps with the words the Desk
   shows ("Checking", "Team feedback", "Live — try it", "Sent to developers"). An issue or
   pull request is written `#12` / `PR #12` (the card's repository, else the first of `repos`)
   or `owner/name#12`; the page links it to GitHub.
 - When a step cannot go on without a person, ask once, with a suggested answer:
-  `design desk ask C-<n> <file> --step <step>`. Their answer puts the step back on the queue.
+  `design desk ask R-<n> <file> --step <step>`. Their answer puts the step back on the queue.
 - <a id="the-questions-form"></a>**The questions form** shows four parts and nothing else:
   the `text`, each question, its options, and the `suggested` one marked **recommended**.
   The `text` is one or two short sentences of what it is about, only what the question needs;
@@ -661,7 +684,7 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   (`polls_due`). The request then waits for its approver. A request that comes
   to `feedback` again from another step, or is reopened, starts a new vote.
 - When `notify` is `slack`, a request moving to `feedback`, `testing` or `handed-off` gets
-  one message in the bound channel, its title escaped ([Text to Slack](#links-to-an-item)): "<title> (C-<n>) — Options ready to vote on: <link>", "— Live
+  one message in the bound channel, its title escaped ([Text to Slack](#links-to-an-item)): "<title> (R-<n>) — Options ready to vote on: <link>", "— Live
   prototype ready to try: <link>" or "— Sent to developers: <link>", the link the card's
   ([Links to an item](#links-to-an-item)); attach a picture when it helps.
 - A request with a Slack `origin` gets its news in its own thread instead, after triage too,

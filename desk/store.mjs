@@ -244,6 +244,14 @@ function cleanCount(v, fallback = 3) {
   return n;
 }
 
+// A sent design on Designs (G) and a comparison with Figma (F) are items of their own
+// on a request's or another card's record, each with its own number.
+// Every kind of item numbers its own series under its own letter (docs/desk.md → Links to an
+// item). Items made before 1.78.0 keep their numbers: a card's `C-12`, an inbox item's `I-4`, a
+// Slack vote's `P-2`, a council's `S-1`. A letter an older series used (P, I, S) goes on past its
+// highest number there, so no number is ever given twice.
+export const LETTERS = { change: "P", request: "R", issue: "I", screen: "S", element: "E", digest: "W", figma: "F", design: "G", item: "Q", poll: "V", council: "K" };
+
 export function emptyDb() {
   return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {} };
 }
@@ -274,6 +282,21 @@ export class Store {
       if (e.includes("@") && !own(this.db.opened, e)) Object.defineProperty(this.db.opened, e, { value: this.clock(), enumerable: true, writable: true, configurable: true });
     }
     this.db.seq = { ...emptyDb().seq, ...this.db.seq };
+    // A letter's series starts where the numbers already given under that letter end.
+    if (!this.db.seq.letters) {
+      const top = {}, see = (id) => { const m = /^([A-Z])-(\d+)$/.exec(String(id || "")); if (m) top[m[1]] = Math.max(top[m[1]] || 0, Number(m[2])); };
+      for (const k of ["cards", "threads", "assets", "inbox", "decisions"]) Object.keys(this.db[k] || {}).forEach(see);
+      for (const c of Object.values(this.db.cards)) { for (const x of [...(c.polls || []), ...(c.councils || [])]) see(x.id); see(c.figma_check?.id); see(c.design_id); for (const x of c.sends || []) see(x.design_id); }
+      this.db.seq.letters = Object.fromEntries([...new Set(Object.values(LETTERS))].map((l) => [l, top[l] || 0]));
+    }
+    // A comparison with Figma made before it had a number of its own gets one, the oldest first.
+    for (const c of Object.values(this.db.cards).filter((x) => x.figma_check && !x.figma_check.id).sort((a, b) => String(a.figma_check.checked || a.created).localeCompare(String(b.figma_check.checked || b.created)) || String(a.id).localeCompare(String(b.id))))
+      c.figma_check = { id: this.nextOf("figma"), ...c.figma_check };
+    // So does a design sent to developers before then: each earlier send first, then the one now.
+    for (const c of Object.values(this.db.cards).filter((x) => x.kind === "request").sort((a, b) => String(a.created).localeCompare(String(b.created)) || String(a.id).localeCompare(String(b.id)))) {
+      for (const x of c.sends || []) if (!x.design_id) x.design_id = this.nextOf("design");
+      if (c.status === "handed-off" && !c.design_id) c.design_id = this.nextOf("design");
+    }
     for (const d of Object.values(this.db.decisions)) upgradeDecision(d);
     this.mtime = existsSync(this.dbPath) ? statSync(this.dbPath).mtimeMs : 0;
     this.writeInbox();
@@ -328,8 +351,16 @@ export class Store {
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
+  // The next number of a kind's own series, under its letter (LETTERS).
+  nextOf(kind) {
+    const l = LETTERS[kind];
+    if (!l) throw bad(`no series for ${kind}`);
+    this.db.seq.letters[l] = (this.db.seq.letters[l] || 0) + 1;
+    return `${l}-${this.db.seq.letters[l]}`;
+  }
 
-  card(id) { const c = own(this.db.cards, id); if (!c) throw missing(`no card ${id}`); return c; }
+  // A card by its number; a comparison's number (F-n) names the card it compares.
+  card(id) { const c = own(this.db.cards, id) || numberOwner(this.db.cards, id); if (!c) throw missing(`no card ${id}`); return c; }
   thread(id) { const t = own(this.db.threads, id); if (!t) throw missing(`no thread ${id}`); return t; }
   // A conversation a viewer acts on: another person's private ask is not there for them.
   threadFor(id, who) { const t = this.thread(id); if (!sees(t, who?.agent ? undefined : viewerKey(who))) throw missing(`no thread ${id}`); return t; }
@@ -455,7 +486,9 @@ export class Store {
         // An approved design a developer marked done (docs/desk-page.md → Designs).
         built: c.built?.at || null,
         // Earlier Designs records of a request sent, reopened and sent again (docs/desk-page.md → Designs).
-        sends: (c.sends || []).map((s) => ({ closed: s.closed, built: s.built?.at || null })),
+        sends: (c.sends || []).map((s) => ({ closed: s.closed, built: s.built?.at || null, design_id: s.design_id || null })),
+        // Its number on Designs while it is sent (G-n).
+        design_id: c.design_id || null,
       }));
   }
 
@@ -1107,7 +1140,7 @@ export class Store {
       // Carried options are changed right after triage, as new ones would be drawn.
       if (auto === true) request.auto = true;
     }
-    const id = this.next("card", "C");
+    const id = this.nextOf("request");
     c.id = id;
     this.db.cards[id] = c;
     const item = this.enqueue(from ? "follow-up" : "request", id, null, who);
@@ -1179,7 +1212,7 @@ export class Store {
       title: clean(titleOf(null, wanted.part), LIMITS.title, "title"), wanted,
       summary: "", sections: [], screens: cleanRefs(screens, this.db.assets, "screens"), variants: [], votes: {}, threads: [], acks: {}, prototype: { state: "none" },
     };
-    c.id = this.next("card", "C");
+    c.id = this.nextOf(kind);
     this.db.cards[c.id] = c;
     const item = this.enqueue(kind === "screen" ? "map" : "catalog", c.id, null, who);
     this.save();
@@ -1250,7 +1283,7 @@ export class Store {
         design_part: { asset: v.asset, selector: e.selector || null, shot: e.shot || null, view: e.view || null },
         design_states: states, states: states.map((x) => ({ name: x.name, how: x.how })), updated: at,
       });
-      if (!was) { card.id = this.next("card", "C"); this.db.cards[card.id] = card; }
+      if (!was) { card.id = this.nextOf("element"); this.db.cards[card.id] = card; }
       made = card.id;
     }
     // Which elements of the option are in the catalog, and their cards.
@@ -1448,9 +1481,9 @@ export class Store {
       // (docs/desk-page.md → Designs).
       if (c.status === "handed-off") {
         const at = this.clock();
-        c.sends = [...(c.sends || []), { approved: c.approved || null, spec: c.spec || null, dev_summary: c.dev_summary || null, built: c.built || null,
+        c.sends = [...(c.sends || []), { ...(c.design_id ? { design_id: c.design_id } : {}), approved: c.approved || null, spec: c.spec || null, dev_summary: c.dev_summary || null, built: c.built || null,
           threads: (c.threads || []).filter((t) => this.db.threads[t]?.dev && !(c.sends || []).some((s) => s.threads.includes(t))), closed: { by: person(who), at } }];
-        for (const k of ["overruled", "approved", "decided", "built", "dev_summary", "spec", "vote_ended"]) delete c[k];
+        for (const k of ["overruled", "approved", "decided", "built", "dev_summary", "spec", "vote_ended", "design_id"]) delete c[k];
         if ((c.variants || []).length) Object.assign(c, { status: "variants", team_feedback: { state: "waiting", since: at } });
         else c.status = "triage";
         c.updated = at;
@@ -1801,7 +1834,7 @@ export class Store {
 
   enqueue(kind, card, thread, who, note = "") {
     if (!INBOX_KINDS.includes(kind)) throw bad(`unknown inbox kind ${kind}`);
-    const id = this.next("item", "I");
+    const id = this.nextOf("item");
     const it = { id, kind, card, thread, by: person(who), note, created: this.clock(), state: "open" };
     // A question item knows how many messages its thread had, so an answer closes only
     // what it could have read.
@@ -1986,7 +2019,9 @@ export class Store {
       // The item read against its frame in Figma (the figma skill → Compare with the product).
       else if (k === "figma_check") {
         if (!FIGMA_KINDS.includes(next.kind)) throw bad(`figma_check belongs to a ${FIGMA_KINDS.join(", ")} card`);
-        next.figma_check = fields.figma_check === null ? null : keepDismissed(c?.figma_check, cleanFigmaCheck(fields.figma_check, this.db.assets, this.clock(), next.kind === "request" ? next.variants || [] : null));
+        // A comparison is an item of its own on Product → Differences, with its own number (F-n);
+        // comparing the same card again keeps it.
+        next.figma_check = fields.figma_check === null ? null : { id: c?.figma_check?.id || this.nextOf("figma"), ...keepDismissed(c?.figma_check, cleanFigmaCheck(fields.figma_check, this.db.assets, this.clock(), next.kind === "request" ? next.variants || [] : null)) };
       }
       else if (["bucket", "needs", "sketches", "style", "draw"].includes(k)) {
         if (next.kind !== "issue") throw bad(`${k} belongs to an issue`);
@@ -2047,7 +2082,10 @@ export class Store {
       Object.assign(next, { status: "variants", team_feedback: { state: "waiting", since: this.clock() } });
     // A request that comes to feedback from another step starts a new vote (docs/desk.md → Team feedback).
     if (next.kind === "request" && next.status === "feedback" && c && c.status !== "feedback") delete next.vote_ended;
-    if (!c) { next.id = this.next("card", "C"); }
+    if (!c) { next.id = this.nextOf(next.kind); }
+    // Sent to developers, a request's design is an item of its own on Designs, with its own number;
+    // a send after a reopen gets a new one (docs/desk-page.md → Designs).
+    if (next.kind === "request" && next.status === "handed-off" && c?.status !== "handed-off" && !next.design_id) next.design_id = this.nextOf("design");
     // A design written without its check against the decisions gets one queued; a write with
     // its check closes the check waiting for it (docs/desk.md → Decisions → The check).
     const same = (k) => JSON.stringify(c?.[k] ?? null) === JSON.stringify(next[k] ?? null);
@@ -2167,7 +2205,7 @@ export class Store {
     if (!Array.isArray(posts) || !posts.length) throw bad("a poll needs one post per option");
     for (const x of posts) if (!(c.variants || []).some((v) => v.id === x.variant)) throw bad(`no option ${x.variant}`);
     const poll = {
-      id: this.next("poll", "P"), state: "open", opened: this.clock(), synced: null,
+      id: this.nextOf("poll"), state: "open", opened: this.clock(), synced: null,
       chat: clean(String(chat || ""), 80, "chat"), root_ts: clean(String(root_ts || ""), 40, "root_ts"),
       channel: optText(channel, 80, "channel"), url: /^https:\/\//.test(String(url || "")) ? String(url).slice(0, 300) : null,
       closes: clean(String(closes || ""), 40, "closes"),
@@ -2204,7 +2242,7 @@ export class Store {
     const was = (c.councils || []).find((x) => x.thread_ts === ts);
     if (was) { Object.assign(was, { state: "open", opened: this.clock(), synced: null, closed: null, result: null }); c.updated = this.clock(); this.save(); return { council: was }; }
     const council = {
-      id: this.next("council", "S"), state: "open", opened: this.clock(), synced: null, seen: null,
+      id: this.nextOf("council"), state: "open", opened: this.clock(), synced: null, seen: null,
       chat: clean(String(chat || ""), 80, "chat"), thread_ts: ts,
       channel: optText(channel, 80, "channel"), url: /^https:\/\//.test(String(url || "")) ? String(url).slice(0, 300) : null,
     };
@@ -2948,10 +2986,18 @@ function cleanFigmaSearch(o, threads, at) {
 }
 
 // The list's summary of a comparison: the differences people did not take off the table.
+// The card a comparison with Figma (F-n) or a sent design (G-n) belongs to.
+function numberOwner(cards, id) {
+  const s = String(id || "");
+  if (/^F-\d+$/.test(s)) return Object.values(cards).find((c) => c.figma_check?.id === s) || null;
+  if (/^G-\d+$/.test(s)) return Object.values(cards).find((c) => c.design_id === s || (c.sends || []).some((x) => x.design_id === s)) || null;
+  return null;
+}
+
 function figmaRow(k) {
   const off = new Set((k.dismissed || []).map((d) => d.part));
   const count = (k.differences || []).filter((d) => !off.has(d.part)).length;
-  return { verdict: count ? k.verdict : "matches", count, frame: k.frame?.name || "", checked: k.checked || null, closed: Boolean(k.closed) };
+  return { id: k.id || null, verdict: count ? k.verdict : "matches", count, frame: k.frame?.name || "", checked: k.checked || null, closed: Boolean(k.closed) };
 }
 
 // A new comparison keeps the differences people took off the table while the frame is the
@@ -3271,9 +3317,9 @@ function researchLink(l, i, db) {
   const at = `research link ${i + 1}`;
   if (l?.ref != null) {
     const ref = String(l.ref).trim().toUpperCase();
-    if (!/^(?:C-\d+(?:\.\d+)?|D-\d+)$/.test(ref)) throw bad(`${at}: ref is an item's or a decision's number (C-12, C-12.3, D-4)`);
+    if (!/^(?:[A-Z]-\d+(?:\.\d+)?)$/.test(ref) || /^D-\d+\./.test(ref)) throw bad(`${at}: ref is an item's or a decision's number (R-12, R-12.3, D-4)`);
     // Its words, when none are given: the item's title or the decision's text.
-    const it = db && (ref.startsWith("D-") ? own(db.decisions, ref) : own(db.cards, ref.replace(/\.\d+$/, "")));
+    const it = db && (ref.startsWith("D-") ? own(db.decisions, ref) : (own(db.cards, ref.replace(/\.\d+$/, "")) || numberOwner(db.cards, ref.replace(/\.\d+$/, ""))));
     if (db && !it) throw bad(`${at}: no ${ref} on the Desk`);
     return { ref, label: optText(l.label, 120, "link label") || String(it?.title || it?.text || ref).replace(/\s+/g, " ").slice(0, 120) };
   }
