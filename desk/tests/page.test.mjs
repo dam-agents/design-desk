@@ -1690,7 +1690,7 @@ test("a worked-in note shows the place before and after, outlined, in the thread
     await desk.click('[data-card="r5"]');
     await desk.click("[data-convo] > summary");
     // Marked done, it folds to one line: who and their first words.
-    assert.match(await desk.textContent("#th-t3 > summary"), /Comment\s*Pat.* — Typo in the title\s*done/, "a done conversation folds to who and its first words");
+    assert.match(await desk.textContent("#th-t3 > summary"), /^Comment\s*pat@example\.com — Typo in the title\s*done$/, "a done conversation folds to who and its first words");
     await desk.click("#th-t3 > summary");
     await desk.waitForSelector("#th-t3 .changed");
     await loaded("#th-t3");
