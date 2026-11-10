@@ -262,6 +262,7 @@
   .chip.ok { background: var(--ok-soft); color: var(--ok); } .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); } .chip.info { background: var(--info-soft); color: var(--accent); }
   .chip.live { background: var(--live-soft); color: var(--live); }
+  .list-more { color: var(--muted); padding: 12px; text-align: center; font-size: 13px; }
   .empty { color: var(--muted); padding: 24px 12px; text-align: center; max-width: 60ch; margin: 0 auto; }
   /* A list's head, kept on top while the list scrolls: the tab's pages as tabs, then what
      narrows the page's list as a segmented filter (docs/desk-page.md → Pages and filters). */
@@ -2708,6 +2709,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const list = $("#list");
     const main = $("#main");
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
+    // Another tab, page or filter starts the list again at LIST_PAGE rows; it is
+    // set before every early return, so a list that returns early still counts as another view.
+    const view = [S.tab, S.productFilter, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
+    if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
     if (S.productFilter === "differences" && !figmaOn()) S.productFilter = "screens";
@@ -2749,10 +2754,28 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";
-    list.innerHTML = filters + cards.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
+    // The list draws LIST_PAGE rows and LIST_PAGE more each time its end scrolls into view
+    // (docs/desk-page.md → Lists). The open item is always drawn, and a Filtered by filter
+    // draws every row so it finds them all.
+    const at = S.card ? cards.findIndex((c) => c.id === S.card.id) : -1;
+    if (at >= S.listLimit) S.listLimit = Math.ceil((at + 1) / LIST_PAGE) * LIST_PAGE;
+    const all = S.pf && S.pf.view === pfView();
+    const drawn = all ? cards : cards.slice(0, S.listLimit);
+    list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
-      ${S.tab === "product" && S.productFilter === "differences" ? figmaFacts(c) : sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("");
+      ${S.tab === "product" && S.productFilter === "differences" ? figmaFacts(c) : sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("")
+      + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
+    listMore.disconnect();
+    const more = list.querySelector("[data-list-more]");
+    if (more) listMore.observe(more);
   }
+  const LIST_PAGE = 20;
+  const listMore = new IntersectionObserver((seen) => {
+    if (!seen.some((x) => x.isIntersecting)) return;
+    listMore.disconnect();
+    S.listLimit += LIST_PAGE;
+    renderList();
+  }, { rootMargin: "300px" });
 
   // ---------- people ----------
   async function loadPeople() {
