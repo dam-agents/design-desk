@@ -473,6 +473,10 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   assert.deepEqual([asked.status, asked.body.card.status, asked.body.card.team_feedback.by.email], [200, "feedback", "pat@example.com"], "its author asks the team");
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${mine}/feedback`, {})).status, 400, "once");
   assert.equal((await draw(mine, asked.body.card.variants[0].version)).body.card.status, "feedback", "a redraw after that stays with the team");
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${mine}/end-vote`, {})).status, 403, "ending the vote is not a viewer's");
+  const ended = await d.viewer("pat@example.com", `/api/cards/${mine}/end-vote`, {});
+  assert.deepEqual([ended.status, ended.body.card.vote_ended.by.email], [200, "pat@example.com"], "its author ends the vote");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${mine}/votes`, { variant: "v1", vote: "prefer" })).status, 400, "no vote after it ended");
 
   const slack = (await d.agent("/agent/cards", { kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } })).body.card.id;
   assert.equal((await draw(slack)).body.card.status, "feedback", "from Slack: on to the team by itself");

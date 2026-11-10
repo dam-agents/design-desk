@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.76.0 — 2026-11-10
+## 1.77.0 — 2026-11-10
 
 **Upgrade:**
 1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
@@ -20,6 +20,18 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    ([handoff.md](docs/handoff.md) → Review before it goes).
 4. **Operator-only, optional:** make the `design-desk` status a required check on the product's
    default branch, so nothing with UI merges until the Desk passes it.
+
+## 1.76.0 — 2026-11-10
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page). Nothing else: a card gets `vote_ended` only when
+   a person ends a vote ([desk.md](docs/desk.md) → Team feedback).
+
+## 1.75.3 — 2026-11-10
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
 
 ## 1.75.2 — 2026-11-10
 

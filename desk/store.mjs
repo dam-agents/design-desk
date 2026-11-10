@@ -425,7 +425,7 @@ export class Store {
         // A spec draft waits on a person: the list's dot reads it as the page does (docs/desk-page.md → A request's state in the list).
         spec: c.spec ? { review: c.spec.review || null } : null,
         // A Slack vote on its options: running, or one that ended (the list's Your turn, docs/desk-page.md → Pages and filters).
-        voting: (c.polls || []).some((x) => x.state === "open"), voted: (c.polls || []).some((x) => x.state === "closed"),
+        voting: !c.vote_ended && (c.polls || []).some((x) => x.state === "open"), voted: Boolean(c.vote_ended) || (c.polls || []).some((x) => x.state === "closed"),
         type: c.request?.type || null, reporter: c.origin?.reporter || null,
         // Whose tab a request is on: For Developers (a developer approves it) or For Designers (docs/desk.md → For Developers or For Designers).
         for: ["request", "change", "issue"].includes(c.kind) ? this.forOf(c) : null,
@@ -1042,6 +1042,7 @@ export class Store {
     const c = this.card(cardId);
     if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no variant ${variant}`);
     if (!["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
+    if (c.vote_ended) throw bad("The vote on these options has ended.");
     c.votes = c.votes || {};
     c.votes[variant] = c.votes[variant] || {};
     const key = who.email || who.sub;
@@ -1154,7 +1155,7 @@ export class Store {
     // Its options are ready, as after a run draws them: a request filed on the Desk waits for a
     // person to ask the team (docs/desk.md → Team feedback); one the agent filed goes on to feedback.
     if (["triage", "variants"].includes(c.status) && c.team_feedback?.state !== "open") {
-      if (c.created_by?.agent) c.status = "feedback";
+      if (c.created_by?.agent) { c.status = "feedback"; delete c.vote_ended; }
       else Object.assign(c, { status: "variants", team_feedback: c.team_feedback?.state === "waiting" ? c.team_feedback : { state: "waiting", since: at } });
     }
     c.updated = at;
@@ -1449,7 +1450,7 @@ export class Store {
         const at = this.clock();
         c.sends = [...(c.sends || []), { approved: c.approved || null, spec: c.spec || null, dev_summary: c.dev_summary || null, built: c.built || null,
           threads: (c.threads || []).filter((t) => this.db.threads[t]?.dev && !(c.sends || []).some((s) => s.threads.includes(t))), closed: { by: person(who), at } }];
-        for (const k of ["overruled", "approved", "decided", "built", "dev_summary", "spec"]) delete c[k];
+        for (const k of ["overruled", "approved", "decided", "built", "dev_summary", "spec", "vote_ended"]) delete c[k];
         if ((c.variants || []).length) Object.assign(c, { status: "variants", team_feedback: { state: "waiting", since: at } });
         else c.status = "triage";
         c.updated = at;
@@ -1461,6 +1462,7 @@ export class Store {
       delete c.overruled;
       delete c.approved;
       delete c.decided;
+      delete c.vote_ended;
       // Designs: sent, done, then declined and reopened, it is not built any more; its next handoff sums it up again.
       delete c.built;
       delete c.not_built;
@@ -1613,7 +1615,25 @@ export class Store {
     if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, PMs, developers, admins or the person who filed it ask the team for feedback.");
     c.status = "feedback";
     c.team_feedback = { state: "open", by: person(who), at: this.clock() };
+    // A new round of feedback is a new vote.
+    delete c.vote_ended;
     c.updated = this.clock();
+    this.save();
+    return { card: c };
+  }
+
+  // A person ends the team's vote: nobody votes on the options after it, comments stay open, and
+  // the request waits for its approver. A vote open in Slack is due to close at once, so the
+  // agent's next look closes it there and posts its result (docs/desk.md → Team feedback).
+  endVote(cardId, who) {
+    const c = this.card(cardId);
+    if (c.kind !== "request" || c.status !== "feedback") throw bad("The team is not voting on this request now.");
+    if (c.vote_ended) throw bad("The vote on these options has already ended.");
+    if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, PMs, developers, admins or the person who filed it end the vote.");
+    const at = this.clock();
+    c.vote_ended = { by: person(who), at };
+    for (const poll of c.polls || []) if (poll.state === "open") poll.closes = at;
+    c.updated = at;
     this.save();
     return { card: c };
   }
@@ -2025,6 +2045,8 @@ export class Store {
     // to feedback by itself, and so does one with no options to fine-tune.
     if (next.kind === "request" && next.status === "feedback" && c && ["triage", "variants"].includes(c.status) && !next.created_by?.agent && next.team_feedback?.state !== "open" && (next.variants || []).length)
       Object.assign(next, { status: "variants", team_feedback: { state: "waiting", since: this.clock() } });
+    // A request that comes to feedback from another step starts a new vote (docs/desk.md → Team feedback).
+    if (next.kind === "request" && next.status === "feedback" && c && c.status !== "feedback") delete next.vote_ended;
     if (!c) { next.id = this.next("card", "C"); }
     // A design written without its check against the decisions gets one queued; a write with
     // its check closes the check waiting for it (docs/desk.md → Decisions → The check).
