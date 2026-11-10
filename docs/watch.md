@@ -215,7 +215,7 @@ cites them; adding the repository to `repos` is the operator's call.
 - Every section has a source or says it has none; no invented reason.
 - Every screen was looked at, shows the change, and has a caption.
 - `attention` says whether a designer should look at it, with its reasons.
-- No internal identifiers beyond the PR link and another card's number (`R-<n>`,
+- No internal identifiers beyond the PR link and another card's number (`<card>`,
   [desk.md](desk.md) → Links to an item): no file paths in `what` and `why` (a path may
   appear only in `limits` when it names where a developer would work).
 - The ledger row is `carded`, `skipped` or `failed`; `/tmp/design-desk-<pr>` is removed.

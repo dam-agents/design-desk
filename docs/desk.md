@@ -422,7 +422,7 @@ A `questions_due` item points at a thread: on a card, or a private ask about a D
    on the Desk first, a fresh shot of the product (the `show` action) when none fits, a
    simple diagram when the point is a flow. Name every part and state you mean by its
    number (`R-12.3`, Links to an item) so the reader can click straight to it. A new
-   picture is uploaded with `design desk asset <file> --kind screen --card R-n`.
+   picture is uploaded with `design desk asset <file> --kind screen --card <card>`.
    Write it to a file and `design desk answer T-<n> <file>`. When the question came through
    Slack, the reply also names the card and links it ([requests.md](requests.md) → Answering
    in the thread).
@@ -447,7 +447,7 @@ of the product in that state: the `show` action ([actions.md](actions.md)).
 The Desk keeps a copy of every issue and pull request its cards point at — the card's
 source, where it came from, its spec's issue, the ones its research cites (a comment on a cited
 one is never the card's own news) — with its text, state, labels, comments and a
-pull request's reviews: `design desk github-sync [--card R-n]` reads them on GitHub (only in
+pull request's reviews: `design desk github-sync [--card <card>]` reads them on GitHub (only in
 the `repos` the watch reads; a ref in any other is left out, `skipped`, and the watch gate
 never opens a run for it) and stores them (every watch run does it, and the watch gate opens a run when a copy is behind
 GitHub: [watch.md](watch.md) → Comments on GitHub),
@@ -489,7 +489,7 @@ Answer it as a question (above), with these differences:
    that item's page.
    Its `refs` are the issues and pull requests the item points at: read them with their
    comments (`design desk github <refs>`; older than an hour → `design desk github-sync
-   --card R-n` first) and use what people said there, naming the comment as the source.
+   --card <card>` first) and use what people said there, naming the comment as the source.
 2. **Explain, never change.** A private ask changes no option, variant, card field,
    decision or queue: no revise, no `--shots`, no `design desk write`. A wish in it ("make
    it blue") gets the explanation and one sentence on how to ask in public (**Make a

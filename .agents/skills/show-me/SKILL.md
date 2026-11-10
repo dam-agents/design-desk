@@ -28,7 +28,7 @@ line of [docs/requests.md](../../../docs/requests.md) → Who Slack serves, no p
    fix, retry once; still stuck → answer in words with what blocked it.
 4. **Look** at the picture (Read it) before anyone else does.
 5. **Answer** with it:
-   - on the Desk: `design desk asset <file> --kind screen --card R-<n>`, then answer the
+   - on the Desk: `design desk asset <file> --kind screen --card <card>`, then answer the
      question with the picture in the text: `![<what it shows>](asset:<A-n>)`;
    - in Slack: `reply` with the picture attached; when the question is on a request's
      thread, also name its card and link it ([docs/desk.md](../../../docs/desk.md) → Links to
