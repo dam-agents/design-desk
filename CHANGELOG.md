@@ -21,6 +21,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 4. **Operator-only, optional:** make the `design-desk` status a required check on the product's
    default branch, so nothing with UI merges until the Desk passes it.
 
+## 1.75.2 — 2026-11-10
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
 ## 1.75.1 — 2026-11-09
 
 **Upgrade:**

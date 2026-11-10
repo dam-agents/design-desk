@@ -47,7 +47,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   again (a link in the value still opens). The filter holds on that tab's page. A row with no state of its own (a week of History)
   keeps its number where the others have it. Every list on the left shows the newest item first: a change by the day it
   shipped, a decision by the day it was made, any other item by the day it came onto the Desk.
-  The Presentation keeps the order a designer set.
+  The Presentation keeps the order a designer set. A list of items (every list but Decisions
+  and the Presentation) shows its first 20 rows and 20 more each time its end scrolls into view;
+  another tab, page or filter starts again at 20.
+  The open item is always shown, and a **Filtered by** filter looks through every row.
 - **Folds stay folded.** A folded box (the request, From Design Desk, an intro) stays folded
   when the page draws again, for example on another design tab. The page runs in a sandboxed
   frame where local storage can fail, so the page also keeps the choice in memory. A
