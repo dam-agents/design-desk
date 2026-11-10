@@ -5281,10 +5281,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // Sent before and reopened: what goes to GitHub now may close the earlier issue (docs/handoff.md, step 6).
       const earlier = github ? await earlierIssue(c) : null;
       // With the spec read before it goes, the approver may send it unread; never a request from Slack (docs/handoff.md → Review before it goes).
-      const unread = Boolean(S.me?.spec_review) && c.origin?.channel !== "slack";
-      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${S.me?.spec_review ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
+      // From a pull request still open, the spec waits too: Send to developers picks a new issue or a comment on it.
+      const unread = Boolean(S.me?.spec_review) && c.origin?.channel !== "slack" && !c.from_pr;
+      const waits = Boolean(S.me?.spec_review || c.from_pr);
+      res = await ask({ title: options.length ? "Approve a design" : "Approve without design options", body: `${waits ? `Design Desk writes the developer spec for ${what}. It waits here for you to read and edit; nothing goes to ${to} until you press **Send to developers**${c.from_pr ? `, where you pick a new issue or a comment on PR #${c.from_pr.pr}` : ""}${unread ? ", unless you tick the box below" : ""}.` : `Design Desk writes the developer spec for ${what} and sends it to ${to}. Once sent, it can't be taken back.`}${against.length ? `\n\n⚠ **It goes against ${against.join(", ")}.** Approve it only if the team means to; then revoke the decision, or Design Desk records this approval as going against it.` : ""}${earlier ? `\n\n${earlier.line}` : ""}`, ok: "Approve", choices: options.length && !built ? options : null, pick: options.length === 1 ? options[0].id : null, note: options.length ? null : "What should developers build? (optional)",
         ...(against.length ? { check: `I know it goes against ${against.join(", ")}` } : {}),
-        ...(github && !S.me?.spec_review ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
+        ...(github && !waits ? { check2: `Straight to implementation: the spec goes on ${to.startsWith("the GitHub issue it came from") ? "that issue" : "a GitHub issue (a new one, with the spec and pictures, if none is filed)"} with the coding agent's label, when its manifest names one` } : {}),
         ...(unread ? { check2: `Send it to ${to} as soon as the spec is written, without waiting for me to read it. Once sent, it can't be taken back` } : {}),
         ...(earlier?.open ? { check3: unread ? `${earlier.check} (only with the box above ticked; else you pick it when you send)` : earlier.check } : {}),
         send: (a) => post(built?.id || a.choice || a.note || "", { ...(against.length ? { overrule: a.check } : {}), ...(a.check2 ? (unread ? { auto_send: true } : { implement: true }) : {}), ...(a.check3 && (!unread || a.check2) ? { close_earlier: true } : {}) }) });
@@ -5658,13 +5660,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const earlier = route === "desk" ? null : await earlierIssue(c);
       const choices = route === "desk" ? null : [
         { id: "issue", name: "As an issue for developers", hint: "A developer picks it up and builds it from the spec and the design." },
-        { id: "agent", name: "Straight to the coding agent", hint: "The issue gets the coding agent's label, so it starts building; you follow its pull request here." }];
+        { id: "agent", name: "Straight to the coding agent", hint: "The issue gets the coding agent's label, so it starts building; you follow its pull request here." },
+        // It came from a pull request still open: the spec may go back to it as a comment (docs/handoff.md).
+        ...(c.from_pr ? [{ id: "comment", name: `As a comment on PR #${c.from_pr.pr}`, hint: "Its author changes the pull request it came from; Design Desk checks it again after the push." }] : [])];
       const r = await ask({ title: route === "desk" ? "Mark the spec ready for developers" : "Send the spec to developers",
         body: route === "desk" ? `This Desk keeps the spec of ${c.request?.type === "proposal" ? "a proposal" : "an idea"} here: developers read it on the Desk, and nothing goes to GitHub. To have it filed on GitHub instead, ask ${contact()} to change where ideas go (the \`handoff\` setting).`
           : `Design Desk sends the spec as it is now, with the approved design, its pictures and states, to GitHub.${earlier ? `\n\n${earlier.line}` : ""}`,
-        ok: route === "desk" ? "Mark ready" : "Send to developers", choices, pick: choices ? (c.approved?.implement ? "agent" : "issue") : null,
+        ok: route === "desk" ? "Mark ready" : "Send to developers", choices, pick: choices ? (c.from_pr ? "comment" : c.approved?.implement ? "agent" : "issue") : null,
         ...(earlier?.open ? { check3: earlier.check } : {}),
-        send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send", ...(choices ? { implement: a.choice === "agent" } : {}), ...(a.check3 ? { close_earlier: true } : {}) }) });
+        send: (a) => api("POST", `/api/cards/${S.card.id}/spec`, { action: "send", ...(choices ? { implement: a.choice === "agent", comment: a.choice === "comment" } : {}), ...(a.check3 ? { close_earlier: true } : {}) }) });
       if (r) { toast("The spec is on its way to developers."); await openCard(S.card.id); await refreshList(); }
       return;
     }

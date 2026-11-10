@@ -111,6 +111,14 @@ there instead of out. The body's last line before the marker names the Desk card
     Set `spec.pr_url`.
     Never mark it ready, never merge.
 
+**Back to its pull request** (the handoff item's `comment_on`, [docs/handoff.md](../../../docs/handoff.md)
+→ Review before it goes): read it first (`gh pr view <url> --json state`). Open → one comment
+on it with the spec, the pictures, the bundle and `implementer_mention` as its first line when
+set, ending with the marker; set `spec.pr_url` to the pull request's URL, so its change card
+builds this request and the watch compares the next push with the design
+([docs/watch.md](../../../docs/watch.md) step 11). Closed or merged → deliver as a new issue
+with the spec instead, and say so on the card in one agent comment.
+
 **Straight to implementation** (the handoff item's `implement`, [docs/handoff.md](../../../docs/handoff.md)
 step 5): add the label the coding agent's manifest names (`gh issue edit --add-label`) to the
 origin issue (`feature`) or to the issue filed above; with no issue filed (`pr-comment`,

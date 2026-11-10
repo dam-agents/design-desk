@@ -2498,3 +2498,21 @@ test("a merged change that builds an approved design adds its elements to the de
   s.upsertCard({ id: open.id, summary: "Shipped." });
   assert.equal(s.listCards({ kind: "element" }).length, 1, "a second write adds nothing twice");
 });
+
+test("a request made from an open pull request: its spec waits, and goes back to that pull request as a comment", () => {
+  const s = fresh();
+  const { card: change } = s.upsertCard({ kind: "change", title: "Tighter rows", source: { repo: "acme/widgets", pr: 31, url: "https://github.com/acme/widgets/pull/31" } });
+  const { card } = s.createRequest(alice, { title: "Airier rows", problem: "Too tight.", from: change.id });
+  assert.deepEqual(s.getCard(card.id).from_pr, { card: change.id, pr: 31, repo: "acme/widgets", url: "https://github.com/acme/widgets/pull/31" });
+  const spec = s.addAsset({ card: card.id, kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec", encoding: "utf8" }).asset.id;
+  assert.throws(() => s.upsertCard({ id: card.id, status: "spec", spec: { asset: spec, review: "sent" } }), /waits for a person's Send/);
+  s.upsertCard({ id: card.id, status: "spec", spec: { asset: spec, review: "draft" } });
+  const { inbox: item } = s.specAction(card.id, alice, { action: "send", comment: true });
+  assert.equal(item.comment_on, "https://github.com/acme/widgets/pull/31");
+  assert.equal(s.getCard(card.id).spec.sent.implement, false);
+
+  // Merged meanwhile: no comment route.
+  const { card: other } = s.createRequest(alice, { title: "Bolder header", problem: "Too faint.", from: change.id });
+  s.upsertCard({ id: change.id, source: { repo: "acme/widgets", pr: 31, url: "https://github.com/acme/widgets/pull/31", merged_at: "2026-11-10T10:00:00Z" } });
+  assert.equal(s.getCard(other.id).from_pr, null);
+});

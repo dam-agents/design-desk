@@ -324,7 +324,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.comment_on ? { comment_on: i.comment_on } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -492,6 +492,18 @@ export class Store {
     return r ? { card: r.id, title: r.title, at: r.updated, url: r.spec.issue_url || r.spec.pr_url || null } : null;
   }
 
+  // The open pull request a request came from (`request.from`, a change card): its spec may go
+  // back to it as a comment (docs/handoff.md → Review before it goes). Null once it merged or
+  // the Desk's GitHub copy says it is closed.
+  fromPr(c) {
+    const ch = c.kind === "request" && c.request?.from ? own(this.db.cards, c.request.from) : null;
+    if (ch?.kind !== "change" || !ch.source?.pr || ch.source.merged_at) return null;
+    const key = issueKey(ch.source.url) || (ch.source.repo ? `${String(ch.source.repo).toLowerCase()}#${ch.source.pr}` : null);
+    const gh = key ? own(this.db.github, key) : null;
+    if (gh?.state && !/^open$/i.test(gh.state)) return null;
+    return { card: ch.id, pr: ch.source.pr, repo: ch.source.repo || null, url: ch.source.url || null };
+  }
+
   // The Issues card of the issue a request's spec went to, once the issues run carded it.
   sentCardOf(c) {
     const key = c.kind === "request" ? issueKey(c.spec?.issue_url) : null;
@@ -551,7 +563,7 @@ export class Store {
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -1506,7 +1518,8 @@ export class Store {
       ...(shown ? { variant: shown.variant, version: shown.version } : (c.variants || []).some((v) => v.id === note) ? { variant: note } : {}) };
     // The approver sends the spec unread, as soon as it is written (docs/handoff.md → Review
     // before it goes); never a request from Slack, whose spec always waits for a person.
-    if (action === "approve" && autoSend && c.origin?.channel !== "slack") c.approved.auto_send = true;
+    // Nor one from an open pull request: a person picks there between a new issue and a comment on it.
+    if (action === "approve" && autoSend && c.origin?.channel !== "slack" && !this.fromPr(c)) c.approved.auto_send = true;
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
     if (action === "add-option") {
@@ -1540,7 +1553,7 @@ export class Store {
   // Design Desk writes the spec as a draft (`spec.review: "draft"`); a person reads it, edits
   // it, asks for changes, or sends it. Only a send lets it leave the Desk (docs/handoff.md →
   // Review before it goes). Every version stays: an edit or a rewrite keeps the one it replaces.
-  specAction(cardId, who, { action, text = "", note = "", implement = null, closeEarlier = false } = {}) {
+  specAction(cardId, who, { action, text = "", note = "", implement = null, closeEarlier = false, comment = false } = {}) {
     const c = this.card(cardId);
     if (who?.agent) throw forbidden("A person reads the spec and sends it; Design Desk writes it.");
     if (c.kind !== "request" || c.status !== "spec" || !c.spec?.asset) throw bad("There is no developer spec to look at yet.");
@@ -1570,14 +1583,18 @@ export class Store {
     if (action === "send") {
       // Here the person picks the route: an issue for developers, or straight to the coding
       // agent with its label (`implement`); left out, what Approve said holds.
-      const straight = implement == null ? Boolean(c.approved?.implement) : Boolean(implement);
-      c.spec = { ...c.spec, review: "sent", sent: { by: person(who), at, implement: straight } };
+      // Or back to the open pull request it came from, as a comment (`comment_on`).
+      const pr = comment ? this.fromPr(c) : null;
+      if (comment && !pr) throw bad("The pull request it came from is no longer open: send the spec as an issue.");
+      const straight = pr ? false : implement == null ? Boolean(c.approved?.implement) : Boolean(implement);
+      c.spec = { ...c.spec, review: "sent", sent: { by: person(who), at, implement: straight, ...(pr ? { comment_on: pr.url || `${pr.repo}#${pr.pr}` } : {}) } };
       if (c.approved) c.approved = { ...c.approved, implement: straight || undefined };
       if (c.approved && !straight) delete c.approved.implement;
       c.updated = at;
       const item = this.enqueue("handoff", cardId, null, who, c.approved?.variant || "");
       item.scope = "deliver";
       if (straight) item.implement = true;
+      if (pr) item.comment_on = pr.url || `${pr.repo}#${pr.pr}`;
       if (closeEarlier && earlierSend(c)) item.close_earlier = earlierSend(c);
       this.save();
       return { card: c, inbox: item };
@@ -1991,9 +2008,10 @@ export class Store {
     // (specAction) marks it sent, whatever `spec_review` says (docs/handoff.md step 3). The
     // stored origin counts too, so a write cannot rename it away, and the card is not handed
     // off before that send.
-    const slackBorn = [c?.origin, next.origin].some((o) => o?.channel === "slack");
-    if (slackBorn && !c?.spec?.sent && ((fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent)) || (next.status === "handed-off" && c?.status !== "handed-off")))
-      throw bad("a request from Slack waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 3)");
+    // So does one from a pull request still open: the person picks a new issue or a comment on it.
+    const waits = [c?.origin, next.origin].some((o) => o?.channel === "slack") || Boolean(c && this.fromPr(c));
+    if (waits && !c?.spec?.sent && ((fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent)) || (next.status === "handed-off" && c?.status !== "handed-off")))
+      throw bad("a request from Slack or from an open pull request waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 3)");
     if (!next.title) throw bad("a card needs a title");
     // One card per screen and per element: a card a person added that turns out to be one
     // already on the Desk is dropped with a pointer to it, never filled in as a second copy.
