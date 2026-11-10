@@ -23,7 +23,8 @@ description: >-
   Also makes everything the Designer kit did: decks, mockups, walkthroughs, charts,
   demo videos and copy. Optionally lists the planned issues that change the screens,
   each with what the UI will need, how it looks now and a sketch, and publishes the
-  team's design decisions as a public text page for coding agents. Runs an hourly watch,
+  team's design decisions as a public text page for coding agents, and can hold an
+  open pull request's check on GitHub until a designer has seen its new UI. Runs an hourly watch,
   a Desk inbox every 10 minutes, a daily issues check, a health monitor and a weekly
   self-audit; the Desk is one interactive artifact the owner shares with the team.
 category: productivity

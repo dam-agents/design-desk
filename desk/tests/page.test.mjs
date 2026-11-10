@@ -10,6 +10,10 @@ import { fileURLToPath } from "node:url";
 import { chromium, req } from "../../toolkit/lib/core.mjs";
 import { ROLES, ADDABLE_ROLES, abilities } from "../store.mjs";
 
+// Requests open on Your turn, which shows only what the viewer may act on. The tests look at
+// every request, so they start on Open, as a browser that picked it; TURN_FIRST keeps the default.
+const TURN_FIRST = "<script>window.TURN_FIRST = true;</script>";
+const OPEN_FIRST = `<script>try { if (!window.TURN_FIRST && !localStorage.getItem("desk-turn")) { localStorage.setItem("desk-turn", "1"); if (!localStorage.getItem("desk-reqFilter")) localStorage.setItem("desk-reqFilter", "open"); } } catch {}</script>`;
 const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "page.html"), "utf8");
 
 test("nothing on the page submits a form", () => {
@@ -21,6 +25,37 @@ test("nothing on the page submits a form", () => {
   assert.doesNotMatch(page, /<input\b[^>]*\btype=["']?(submit|image)\b/i);
   assert.doesNotMatch(page, /\brequestSubmit\(|\.submit\(\)|\bonsubmit\b/);
   assert.doesNotMatch(page, /addEventListener\("submit",\s*guard\(/);
+});
+
+// md()'s inline rules (docs/desk.md → Writing on the Desk), run on their own: a construct
+// never lands inside another's attribute, so no person's text becomes markup.
+test("markdown text never becomes an attribute or a handler", () => {
+  const esc = page.match(/const esc = [^\n]+/)[0];
+  const rules = page.match(/const INLINE = [\s\S]*?\n  };\n/)[0];
+  const inline = new Function(`${esc}\n${rules}\nreturn inline;`)();
+  const out = inline("![[x](asset:A-1)](https://a/src/onerror=alert(1)//)");
+  assert.doesNotMatch(out, /<a\b/, "the link stays text after the picture");
+  assert.equal((out.match(/"/g) || []).length % 2, 0);
+  assert.match(out, /<img alt="\[x" data-asset="A-1" \/>/);
+  assert.equal(inline('**a [b](https://x.test/"q) c** `<i>`'), '<b>a <a href="https://x.test/&quot;q" target="_blank" rel="noopener noreferrer">b</a> c</b> <code>&lt;i&gt;</code>');
+  assert.equal(inline("[**b**](https://x.test)"), '<a href="https://x.test" target="_blank" rel="noopener noreferrer"><b>b</b></a>');
+});
+
+// A conversation's controls follow `may`, which the server sends with each one: a control the
+// thread routes refuse for this reader is never drawn (docs/desk.md → Roles).
+test("a conversation shows Reply, Answer, Mark done and Reopen only to a reader who may use them", () => {
+  const mayIn = new Function(`${page.match(/const mayIn = [^\n]+/)[0]}\nreturn mayIn;`)();
+  assert.deepEqual([mayIn({ may: { reply: false, resolve: true } }, "reply"), mayIn({ may: { reply: true, resolve: false } }, "resolve"), mayIn({ may: { reply: true } }, "reply")], [false, false, true]);
+  const controls = { "data-send-reply": "reply", "data-send-form": "reply", "data-reopen": "reply", "data-resolve": "resolve" };
+  for (const [attr, move] of Object.entries(controls)) {
+    const at = [...page.matchAll(new RegExp(`${attr}="\\$\\{esc\\(th\\.id\\)\\}"`, "g"))].map((m) => m.index);
+    assert.ok(at.length > 0, attr);
+    // The guard opens the very template the control is in: no other backtick between them.
+    for (const i of at) {
+      const opened = page.slice(0, page.lastIndexOf("`", i) + 1);
+      assert.ok(opened.endsWith(`mayIn(th, "${move}") ? \``), `${attr} at offset ${i} is drawn without mayIn(th, "${move}") right before it`);
+    }
+  }
 });
 
 test("the new option dialog sends on its close, as the page's other dialogs do", () => {
@@ -76,14 +111,15 @@ async function launch(t, bridge) {
   Object.assign(process.env, browser.env);
   const server = createServer((r, res) => {
     res.setHeader("content-type", "text/html");
-    res.end(r.url === "/desk" ? page.replace("<script>", bridge + "<script>")
+    res.end(r.url === "/desk" ? page.replace("<script>", bridge + OPEN_FIRST + "<script>")
       : `<!doctype html><iframe sandbox="allow-scripts allow-modals" src="/desk" style="width:1000px;height:700px"></iframe>`);
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
   const top = await chrome.newPage();
   await top.goto(`http://127.0.0.1:${server.address().port}/`);
-  const desk = top.frames().find((f) => f.url().endsWith("/desk"));
+  // The page writes what it shows into its address (#requests, #C-12): the frame is found by its path.
+  const desk = top.frames().find((f) => new URL(f.url()).pathname === "/desk");
   const posts = (path) => desk.evaluate((p) => calls.filter((c) => c.method === "POST" && c.path === p), path);
   const settled = async (path, n, why) => { await top.waitForTimeout(300); assert.equal((await posts(path)).length, n, why); };
   return { top, desk, posts, settled, close: async () => { await chrome.close(); server.close(); } };
@@ -116,6 +152,10 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await rq.open(), true, "an empty request stays open");
     await desk.fill("#request-dialog textarea[name=problem]", "Make the send button bigger");
     assert.equal(await desk.isVisible("#rq-skills"), true, "an idea offers the skills");
+    assert.equal(await desk.evaluate(() => document.querySelector("#rq-skills").open), false, "the skills start folded");
+    assert.equal(await desk.isVisible("#rq-skill-list"), false, "their switches hide until it is opened");
+    await desk.click("#rq-skills > summary");
+    assert.equal(await desk.isVisible("#rq-skill-list input[data-skill]"), true, "opened, the switches show");
     await desk.click("#request-dialog #type-choice button[data-type=bug]");
     assert.equal(await desk.isVisible("#rq-skills"), false, "a bug offers no skills");
     assert.equal(await desk.isVisible("#rq-vision"), false, "a bug asks for no picture of how it should look");
@@ -269,14 +309,14 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tadmin", "pat@example.com\tPM"]);
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["admin your role", "designer", "PM", "lead developer", "developer", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
-    assert.match(await panel(0), /Everything a designer can, and:\s+See Designs[^\n]*\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
+    assert.match(await panel(0), /Everything a designer and a lead developer can, and:\s+See Designs[^\n]*\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
     assert.doesNotMatch(await panel(1), /See Designs/, "a designer has no Designs in the menu");
-    assert.doesNotMatch(await panel(0), /Move a request/, "moving a request between the tabs is named once, under a PM and a lead developer");
+    assert.doesNotMatch(await panel(0), /Move a request/, "moving a request between the tabs is named once, under a lead developer");
     assert.match(await panel(1), /Everything a PM can, and:\s+Approve designs[\s\S]*Add a decision/, "a role names the largest one below it");
     assert.doesNotMatch(await panel(1), /Move a request|Build live prototypes/, "a designer's card does not repeat a PM's");
-    assert.match(await panel(2), /Everything a lead developer can, except Designs, and:\s+Close, reopen and delete requests\s+Build live prototypes/, "a PM moves a request along, under a designer; Designs stays a developer's");
+    assert.match(await panel(2), /Everything a developer can, except Designs, and:\s+Close, reopen and delete requests\s+Approve or decide a request straight away[^\n]*\s+Build live prototypes/, "a PM moves a request along, under a designer; Designs stays a developer's");
     assert.doesNotMatch(await panel(2), /Approve designs|Choose what|Record a decision/, "approving against a decision stays a designer's");
-    assert.match(await panel(3), /Everything a developer can, and:\s+Move a request to For Developers/, "a lead developer says what is For Developers");
+    assert.match(await panel(3), /Everything a developer can, and:\s+Mark changes and issues For Developers handled\s+Move a request, a change or an issue to For Developers/, "a lead developer says what is For Developers");
     assert.match(await panel(4), /Everything a viewer can, and:\s+Vote on options[\s\S]*Start design options[\s\S]*Add a missing screen/, "a developer starts and changes, a designer decides");
     assert.doesNotMatch(await panel(4), /Approve designs|Choose what|Record a decision/);
     assert.match(await panel(4), /See Designs: ask a design's designer, mark it done/, "a developer sees Designs");
@@ -319,6 +359,17 @@ window.platform = { async request({ path }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
+// Requests open on Your turn: what the viewer may act on, here a vote not given yet.
+test("Requests open on Your turn, and a vote given takes the request out of it", (t) => open(t, TURN_FIRST + LIST.replace("can: { request: true }", "can: { request: true, vote: true }"), async (desk) => {
+  await desk.waitForSelector("#list .filters");
+  assert.match(await desk.textContent("#list .filters .on"), /^Your turn\s*1$/, "the default, with its count");
+  assert.deepEqual(await desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)), ["r1"], "Team feedback waits for this viewer's vote");
+}));
+test("Your turn leaves out a request the viewer voted on", (t) => open(t, TURN_FIRST + LIST.replace("can: { request: true }", "can: { request: true, vote: true }").replace('status: "feedback",', 'status: "feedback", voted_mine: true,'), async (desk) => {
+  await desk.waitForSelector("#list .filters");
+  assert.deepEqual(await desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)), []);
+}));
+
 // The page at the top level, so its browser storage survives a reload.
 async function open(t, bridge, fn) {
   const browser = chromium();
@@ -326,7 +377,7 @@ async function open(t, bridge, fn) {
   let pw;
   try { pw = req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
   Object.assign(process.env, browser.env);
-  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", bridge + "<script>")); });
+  const server = createServer((r, res) => { res.setHeader("content-type", "text/html"); res.end(page.replace("<script>", bridge + OPEN_FIRST + "<script>")); });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const chrome = await pw.chromium.launch({ executablePath: browser.executablePath, args: ["--no-sandbox", "--disable-gpu"] });
   try {
@@ -437,25 +488,28 @@ test("every button and label says on hover what it does or means", (t) => open(t
   }
 }));
 
-test("Needs a designer filters Changes, Ready filters Requests, and Changes opens on Open", (t) => open(t, LIST, async (desk) => {
+test("Needs a designer filters Changes, Your turn filters Requests, and Changes opens on Open", (t) => open(t, LIST, async (desk) => {
   const rows = async () => { await desk.waitForSelector("#list .filters"); return desk.$$eval("#list .row .open", (rs) => rs.map((r) => r.dataset.card)); };
   // Requests leads the menu; Changes and Issues follow, then Product and People.
   await desk.waitForSelector('[data-tab="requests"][aria-current="true"]');
   assert.deepEqual(await desk.$$eval("#nav button", (bs) => bs.map((b) => b.dataset.tab)), ["requests", "new", "issues", "product", "people"], "the Desk opens on Requests");
   assert.match(await desk.textContent('[data-tab="new"]'), /^PR Changes/);
   await desk.click('[data-tab="new"]');
-  assert.deepEqual(await rows(), ["c1", "c2", "c3", "c4"], "Changes opens on Open: none is handled");
+  assert.deepEqual(await rows(), ["c1", "c3", "c4"], "Changes opens on Open: none is handled, and the fyi change is auto handled");
   assert.match(await desk.textContent("#list .filters .on"), /^Open \d+$/, "Open carries its count");
   assert.equal(await desk.locator('[data-filter="newFilter:all"]').count(), 0, "there is no All");
+  await desk.click('[data-filter="newFilter:auto"]');
+  assert.deepEqual(await rows(), ["c2"], "Design Desk found nothing to look at: auto handled at once");
   await desk.click('[data-filter="newFilter:designer"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
   assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
   await desk.click('[data-tab="requests"]');
-  assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["reqFilter:unread", "reqFilter:open", "reqFilter:ready", "reqFilter:closed"], "Requests filter by Unread, Open, Ready and Closed");
+  assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["reqFilter:turn", "reqFilter:unread", "reqFilter:open", "reqFilter:closed"], "Requests filter by Your turn, Unread, Open and Closed");
   assert.match(await desk.textContent('[data-filter="reqFor:presentation"]'), /^For presentation/);
-  await desk.click('[data-filter="reqFilter:ready"]');
-  assert.deepEqual(await rows(), ["r1"], "Ready: options wait for someone to act");
-  assert.match(await desk.textContent('[data-filter="reqFilter:ready"]'), /^Ready\s*1$/);
+  await desk.click('[data-filter="reqFilter:turn"]');
+  assert.deepEqual(await rows(), [], "Your turn: this viewer may neither vote nor approve");
+  assert.match(await desk.textContent("#list"), /Nothing waits for you right now/);
+  assert.match(await desk.textContent('[data-filter="reqFilter:turn"]'), /^Your turn$/);
   await desk.reload();
   await desk.click('[data-tab="new"]');
   assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
@@ -506,6 +560,40 @@ test("a closed request keeps Add to presentation and Take off under More; Not no
   assert.equal(await desk.locator('#detail [data-act="queue"]').count(), 0, "a queued request offers no second Add");
   await desk.click('#detail [data-act="unqueue"]');
   await sent("DELETE", "/api/cards/C-4/agenda");
+}));
+
+// A list draws 20 rows and 20 more as its end scrolls into view; the open item is always drawn
+// (docs/desk-page.md → Lists).
+const LONG = `<script>
+const cards = Array.from({ length: 25 }, (_, i) => ({ id: \`C-\${i + 1}\`, kind: "change", title: \`Change \${i + 1}\`, acked: true,
+  created: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString(), source: { repo: "acme/widgets", pr: i + 1 } }));
+window.platform = { async request({ path }) {
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: {} }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: [] } : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a long list draws 20 rows, then the rest as its end scrolls into view", (t) => open(t, LONG, async (desk) => {
+  const rows = () => desk.locator("#list .row.item").count();
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector('.row.item:has([data-card="C-25"])');
+  assert.equal(await rows(), 20, "the first page has 20 rows");
+  assert.equal(await desk.locator('[data-card="C-1"]').count(), 0, "the oldest change waits for the scroll");
+  await desk.locator("#list [data-list-more]").scrollIntoViewIfNeeded();
+  await desk.waitForFunction(() => document.querySelectorAll("#list .row.item").length === 25);
+  assert.equal(await desk.locator("#list [data-list-more]").count(), 0, "nothing is left to load");
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-tab="new"]');
+  await desk.waitForSelector('.row.item:has([data-card="C-25"])');
+  assert.equal(await rows(), 20, "another tab starts the list again at 20");
+
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#C-1");
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="C-1"][aria-current="true"]');
+  assert.ok(await rows() > 20, "the open item is drawn though it is past the first 20");
 }));
 
 // Every item has a number by its title; a link with it, or Go to, opens the item in its tab
@@ -772,6 +860,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     const cf = (name) => desk.locator("#confirm-dialog .actions button", { hasText: name });
     assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
     assert.match(await desk.textContent("#detail .elements"), /All elements[\s\S]*Send button[\s\S]*1 state/);
+    // A tile keeps white space around its picture, inside the same 192 px.
+    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["10px", "10px", 192], "a tile pads its picture");
     await desk.click('#detail [data-el="part-send-button"]');
     await desk.waitForSelector("#element-dialog[open] .catalog");
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
@@ -893,7 +983,7 @@ test("numbers, notes and pins preview what they name; the search lists every num
   assert.equal(doc.match(/<\/script>/g).length, 1, "a note's text cannot end the preview's script");
   await desk.mouse.move(0, 0);
 
-  await desk.click('[data-act="workspace"]');
+  await desk.click('.vbar [data-act="workspace"]');
   await desk.waitForSelector("#ws-frame");
   const pin = (data) => desk.evaluate((d) => { const f = document.querySelector("#ws-frame"); dispatchEvent(new MessageEvent("message", { data: d, source: f.contentWindow })); }, data);
   await pin({ type: "desk-pin-tip", note: "t1", rect: { left: 40, top: 60, bottom: 72, width: 0 } });
@@ -925,16 +1015,8 @@ test("a request's brief sits apart from Design Desk's part; an issue link previe
     assert.deepEqual(await desk.locator("#detail .made-col figure").evaluateAll((xs) => xs.map((x) => x.dataset.zoom)), ["a2"], "Design Desk's picture sits under its part");
     assert.doesNotMatch(await desk.textContent("#detail"), /Screen: Agents/, "the screen line is gone");
 
-    // The request's steps close on a click outside them and on Escape; a click inside keeps them open.
-    const stepsOpen = () => desk.$eval("#detail details.stepper", (d) => d.open);
-    await desk.click("#detail details.stepper > summary");
-    await desk.click("#detail details.stepper ol");
-    assert.equal(await stepsOpen(), true, "a click inside keeps the steps open");
-    await desk.click("#detail h2");
-    assert.equal(await stepsOpen(), false, "a click outside closes the steps");
-    await desk.click("#detail details.stepper > summary");
-    await desk.press("body", "Escape");
-    assert.equal(await stepsOpen(), false, "Escape closes the steps");
+    // The request's five stages are a line along the state's bottom edge.
+    assert.equal(await desk.locator("#detail .status .line5 li").count(), 5, "five stages");
 
     await desk.hover("#detail .linked .anchor");
     await desk.waitForSelector("#peek");
@@ -1157,31 +1239,200 @@ for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
   }));
 }
 
-// At Team feedback the step pill always offers a move on: a live prototype for Design only,
-// else a developer for parts design cannot do, else Approve, else Send to Slack….
+// At Team feedback the state row leads with a way on when the viewer has one: a live prototype for
+// Design only, a developer for parts design cannot do. Approve is never in the row (it is on the
+// right) and Send to Slack… sits by the options.
 const BRIDGE_PILL = (triage, me) => BRIDGE_STORIES
   .replace('triage: { verdict: "design", reasons: [] }', `triage: ${JSON.stringify(triage)}`)
   .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me));
 const PILLS = [
-  ["Build a live prototype", { verdict: "design", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, '[data-act="build"]'],
-  ["Contact a developer", { verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, "[data-dev-ask]"],
-  ["Approve", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]'],
-  ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]'],
+  ["Build a live prototype", { verdict: "design", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, '[data-act="build"]', true],
+  ["Contact a developer", { verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, build: true } }, "[data-dev-ask]", true],
+  ["Approve", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true } }, '[data-act="approve"]', false],
+  ["Send to Slack…", { verdict: "product", reasons: [] }, { role: "designer", email: "alice@example.com", slack: true, can: { vote: true, comment: true, share: true } }, '[data-act="slack"]', false],
 ];
-for (const [label, triage, me, sel] of PILLS) {
-  test(`at Team feedback the step pill offers ${label}`, (t) => open(t, BRIDGE_PILL(triage, me), async (desk) => {
+// At Options drawn the row leads with Ask for feedback, with Contact a developer after it until it was opened; never Approve.
+test("at Options drawn the row offers Ask for feedback, and Contact a developer until it was opened", (t) => open(t, BRIDGE_PILL({ verdict: "needs-developer", reasons: [], cannot: ["Sort by spend: the list has no such order."] }, { role: "designer", email: "alice@example.com", can: { vote: true, comment: true, approve: true, close: true, revise: true } }).replace('status: "feedback"', 'status: "variants"'), async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.waitForSelector("#detail .moves [data-dev-ask]");
+  assert.equal(await desk.locator("#detail .moves .way.btn.primary[data-team-feedback]").count(), 1, "Ask for feedback is the row's button");
+  await desk.click("#detail .moves [data-dev-ask]");
+  await desk.waitForFunction(() => !document.querySelector("#detail .moves [data-dev-ask]"));
+  assert.equal(await desk.locator("#detail .moves [data-team-feedback]").count(), 1, "Ask for feedback stays");
+  assert.equal(await desk.locator('#detail .moves [data-act="approve"]').count(), 0, "never Approve in the row");
+}));
+
+for (const [label, triage, me, sel, inRow] of PILLS) {
+  test(`at Team feedback the state row ${inRow ? "leads with" : "does not hold"} ${label}`, (t) => open(t, BRIDGE_PILL(triage, me), async (desk) => {
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r7"]');
-    await desk.waitForSelector("#detail .steppill");
-    assert.equal(await desk.locator(`#detail .steppill ${sel}`).count(), 1, `the pill holds ${label}`);
-    assert.equal(await desk.locator("#detail .steppill .step-next").count(), 1, "one move, no more");
-    if (me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve stays in the row too");
-    // The state's ⓘ draws every way on: a move the viewer may make plainly, one they may not
+    await desk.waitForSelector("#detail .status .moves");
+    assert.equal(await desk.locator(`#detail .moves ${sel}`).count(), inRow ? 1 : 0, inRow ? `the row holds ${label}` : `${label} is not a way on in the row`);
+    assert.equal(await desk.locator("#detail .moves .way.btn.primary").count(), inRow ? 1 : 0, "one button, no more");
+    if (me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve is on the right");
+    // The state's help draws every way on: a move the viewer may make plainly, one they may not
     // greyed with why and who can.
-    const help = await desk.textContent("#detail .s-word .info .tip");
+    const help = await desk.textContent("#detail .s-word .help .tip");
     if (me.can.approve) assert.doesNotMatch(help, /✕ Approve/, "an approver's help offers Approve");
     else assert.match(help, /✕ ApproveNot now: A designer, a PM or a lead developer approves it/, "anyone else's says who approves it");
   }));
+}
+
+// Every state of a request's header, for every kind of viewer that changes it: the list's dot with
+// its word and ink, and on the page the stage, the same ink, the stage line and what leads the
+// state row. The ink says whom the request waits on — blue Design Desk (its mark blinks only while
+// Design Desk works), amber the team's votes or tries, magenta a person's move — so a blue header
+// never offers a move of a person's own. At Options drawn the row leads with Ask for feedback:
+// never Approve (it is on the right), and no live prototype anywhere, not under ⋯ nor in the
+// help; votes and Slack come at Team feedback.
+const ME = (can, extra = {}) => ({ role: "designer", email: "alice@example.com", ...extra, can: { vote: true, comment: true, ...can } });
+const DESIGN = { verdict: "design", reasons: [] }, PRODUCT = { verdict: "product", reasons: [] };
+const CANNOT = { verdict: "design", reasons: [], cannot: ["Sort by spend: the list has no such order."] };
+const ALL = { build: true, revise: true, approve: true, close: true, share: true, explore: true };
+const AT = "2026-11-01T00:00:00Z", WORK = (kind, scope) => [{ kind, ...(scope ? { scope } : {}), state: "claimed", created: AT }];
+const ASKS = [{ id: "T-1", kind: "asks", state: "open", messages: [{ text: "Which list should the column go in?" }] }];
+const OK = { variant: "v1", by: { email: "bob@example.com" }, at: AT };
+const LATER = "2099-01-01T00:00:00Z";
+const HEADERS = [
+  // [name, the request as it stands, viewer, the list's word, ink, (unused), (unused), Design Desk at work]
+  ["Checking, Design Desk at work", { status: "triage", triage: null, variants: [], waiting: WORK("request") }, ME(ALL), "Checking", "checking", 1, "Wait", true],
+  ["Checking, not started yet", { status: "triage", triage: null, variants: [] }, ME(ALL), "Checking", "checking", 1, "Wait", false],
+  ["Checking, a question to answer", { status: "triage", triage: null, variants: [], threads: ASKS }, ME(ALL), "Checking", "turn", 1, "Answer", false],
+  ["Checked, someone who starts the options", { status: "triage", triage: DESIGN, variants: [] }, ME(ALL), "Checked", "turn", 1, "Draw design options", false],
+  ["Checked, someone who may not start them", { status: "triage", triage: DESIGN, variants: [] }, ME({}), "Checked", "turn", 1, "Wait for a designer", false],
+  ["Drawing options, Design Desk at work", { status: "variants", triage: DESIGN, variants: [], waiting: WORK("explore") }, ME(ALL), "Drawing options", "checking", 2, "Wait", true],
+  ["Options drawn, Design Desk changes them", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" }, waiting: WORK("revise") }, ME(ALL), "Drawing options", "checking", 2, "Wait", true],
+  ["Options drawn, parts for a developer", { status: "variants", triage: CANNOT }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Contact a developer", false],
+  ["Options drawn, a designer who builds", { status: "variants", triage: DESIGN }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
+  ["Options drawn, held for its people", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" } }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
+  ["Options drawn, held, parts for a developer", { status: "variants", triage: CANNOT, team_feedback: { state: "waiting" } }, ME(ALL), "Options drawn", "turn", 2, "Contact a developer", false],
+  ["Options drawn, Product", { status: "variants", triage: PRODUCT }, ME(ALL, { slack: true }), "Options drawn", "turn", 2, "Ask for feedback", false],
+  ["Options drawn, someone who may not ask", { status: "variants", triage: DESIGN, team_feedback: { state: "waiting" } }, ME({}), "Options drawn", "turn", 2, "Wait for a designer", false],
+  ["Team feedback, a designer who builds", { status: "feedback", triage: DESIGN, team_feedback: { state: "open" } }, ME(ALL), "Team feedback", "waiting", 3, "Build a live prototype", false],
+  ["Team feedback, parts for a developer, no build", { status: "feedback", triage: { ...CANNOT, verdict: "needs-developer" }, team_feedback: { state: "open" } }, ME({ approve: true, close: true }), "Team feedback", "waiting", 3, "Contact a developer", false],
+  ["Team feedback, an approver", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" } }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
+  ["Team feedback, Slack for who cannot approve", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" } }, ME({ share: true }, { slack: true }), "Team feedback", "waiting", 3, "Send to Slack…", false],
+  ["Team feedback, no move of one's own", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" } }, ME({}), "Team feedback", "waiting", 3, "Wait for the team", false],
+  ["Team feedback, Design Desk redraws", { status: "feedback", triage: DESIGN, team_feedback: { state: "open" }, waiting: WORK("revise") }, ME(ALL), "Team feedback", "checking", 3, "Wait", true],
+  ["Building the prototype", { status: "prototype", triage: DESIGN, prototype: { state: "building" }, waiting: WORK("build") }, ME(ALL), "Building prototype", "checking", 4, "Wait", true],
+  ["Live, try it", { status: "testing", triage: DESIGN, prototype: { state: "live", url: "https://example.com/p", expires: LATER } }, ME(ALL), "Live — try it", "waiting", 4, "Open the prototype", false],
+  ["The prototype failed", { status: "prototype", triage: DESIGN, prototype: { state: "failed" } }, ME(ALL), "Prototype didn't work", "turn", 4, "Try again", false],
+  ["The prototype was switched off", { status: "testing", triage: DESIGN, prototype: { state: "torn-down", expires: LATER } }, ME(ALL), "Prototype switched off", "turn", 4, "Build it again", false],
+  ["Writing the spec", { status: "spec", triage: DESIGN, approved: OK, waiting: WORK("handoff") }, ME(ALL), "Writing the spec", "checking", 6, "Wait", true],
+  ["The spec, a question to answer", { status: "spec", triage: DESIGN, approved: OK, threads: ASKS }, ME(ALL), "Writing the spec", "turn", 6, "Answer", false],
+  ["Spec draft to read and send", { status: "spec", triage: DESIGN, approved: OK, spec: { review: "draft" } }, ME(ALL, { spec_review: true }), "Spec draft — read it, then send", "turn", 6, "Send to developers…", false],
+  ["Sending to developers", { status: "spec", triage: DESIGN, approved: OK, spec: { review: "sent" }, waiting: WORK("handoff", "deliver") }, ME(ALL, { spec_review: true }), "Sending to developers", "checking", 7, "Wait", true],
+  ["Sent, someone who sees Designs", { status: "handed-off", triage: DESIGN, approved: OK }, ME({ ...ALL, designs: true }), "Sent to developers", "approved", 6, "Show the design", false],
+  ["Sent, someone who does not", { status: "handed-off", triage: DESIGN, approved: OK }, ME(ALL), "Sent to developers", "approved", 6, null, false],
+  ["Closed", { status: "declined", triage: DESIGN }, ME(ALL), "Closed", "closed", null, null, false],
+  ["Decided without a design", { status: "declined", triage: DESIGN, decided: { by: { email: "bob@example.com" }, at: AT, text: "Keep the list as it is." } }, ME(ALL), "Decided without a design", "decided", null, null, false],
+  ["Team feedback, the Slack vote ended", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT, result: "Column won" }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback (finished)", "waiting", 3, "Approve", false],
+  ["Team feedback, the Slack vote still runs", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, polls: [{ state: "closed", closed: AT }, { state: "open", closes: LATER }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback", "waiting", 3, "Approve", false],
+  ["Team feedback, a person ended the vote", { status: "feedback", triage: PRODUCT, team_feedback: { state: "open" }, vote_ended: { by: { email: "bob@example.com" }, at: AT }, polls: [{ state: "open", closes: AT }] }, ME({ approve: true, close: true, share: true }, { slack: true }), "Team feedback (finished)", "waiting", 3, "Approve", false],
+  ["No options, every one taken out", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME(ALL), "No options", "turn", 2, "Draw design options", false],
+  ["No options, someone who may not draw them", { status: "variants", triage: DESIGN, variants: [], team_feedback: { state: "waiting" } }, ME({}), "No options", "turn", 2, "Wait for a designer", false],
+  ["The prototype failed, someone who may not build", { status: "prototype", triage: DESIGN, prototype: { state: "failed" } }, ME({}), "Prototype didn't work", "turn", 4, "Wait for a designer", false],
+  ["Spec draft, someone who may not send it", { status: "spec", triage: DESIGN, approved: OK, spec: { review: "draft" } }, ME({}, { spec_review: true }), "Spec draft — read it, then send", "turn", 6, "Wait for a designer", false],
+];
+// The request as the test stands it, on its page and as the list's row (a count, busy, asks).
+const BRIDGE_HEADER = (patch, me) => BRIDGE_STORIES
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me))
+  .replace('{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };', `{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };\nObject.assign(request, ${JSON.stringify(patch)});`)
+  .replace('localStorage.setItem("desk-guide-seen", "1");', `localStorage.setItem("desk-guide-seen", "1"); localStorage.setItem("desk-reqFilter", "${["handed-off", "declined"].includes(patch.status) ? "closed" : "open"}");`)
+  // The list gets the store's own projection (desk/store.mjs listCards), not the card: a field the
+  // projection leaves out shows here as a dot in the wrong ink or with the wrong word.
+  .replace("{ ...request, from: \"is1\", variants: 2, threads: undefined }", LIST_ROW);
+const LIST_ROW = `{ id: request.id, kind: "request", title: request.title, status: request.status, created: request.created, updated: request.created,
+  variants: (request.variants || []).length, triage: request.triage?.verdict || null, prototype: request.prototype?.state || null, team_feedback: request.team_feedback || null,
+  spec: request.spec ? { review: request.spec.review || null } : null, voting: !request.vote_ended && (request.polls || []).some((x) => x.state === "open"), voted: Boolean(request.vote_ended) || (request.polls || []).some((x) => x.state === "closed"),
+  busy: (request.waiting || []).length > 0, asks: (request.threads || []).some((t) => t.kind === "asks" && t.state === "open"),
+  decided: request.status === "declined" && request.decided?.at || null, type: request.request?.type || null, for: "designers", from: "is1", read: true, origin: null, by: null }`;
+// On the page the word is the stage; the list keeps the finer word.
+const STAGE = { triage: [1, "Checking"], variants: [2, "Options"], feedback: [3, "Feedback"], prototype: [3, "Feedback"], testing: [3, "Feedback"], spec: [4, "Approved"], "handed-off": [5, "With developers"] };
+// What leads the state row, by header: the viewer's first way on, else what they wait for.
+const NOTHING = "Nothing for you to do yet.", A_DESIGNER = "Waits on a designer.", VOTE = "Vote and comment on the options.", NO_REOPEN = "To bring it back, say so in a comment; a designer or a PM reopens it.";
+const LEAD = {
+  "Checking, Design Desk at work": NOTHING, "Checking, not started yet": "Waits on Design Desk.", "Checking, a question to answer": "Answer the question below",
+  "Checked, someone who starts the options": "Draw design options", "Checked, someone who may not start them": A_DESIGNER,
+  "Drawing options, Design Desk at work": NOTHING, "Options drawn, Design Desk changes them": NOTHING,
+  "Options drawn, parts for a developer": "Ask for feedback", "Options drawn, a designer who builds": "Ask for feedback", "Options drawn, held for its people": "Ask for feedback",
+  "Options drawn, held, parts for a developer": "Ask for feedback", "Options drawn, Product": "Ask for feedback", "Options drawn, someone who may not ask": A_DESIGNER,
+  "Team feedback, a designer who builds": "Build a live prototype", "Team feedback, parts for a developer, no build": "Contact a developer",
+  "Team feedback, an approver": VOTE, "Team feedback, Slack for who cannot approve": VOTE, "Team feedback, no move of one's own": VOTE, "Team feedback, Design Desk redraws": NOTHING,
+  "Building the prototype": NOTHING, "Live, try it": "Open the prototype", "The prototype failed": "Try again", "The prototype was switched off": "Build it again",
+  "Writing the spec": NOTHING, "The spec, a question to answer": "Answer the question below", "Spec draft to read and send": "Send to developers…", "Sending to developers": NOTHING,
+  "Sent, someone who sees Designs": "Show the design", "Sent, someone who does not": "Developers build it.", "Closed": NO_REOPEN, "Decided without a design": NO_REOPEN,
+  "Team feedback, a person ended the vote": "The vote ended.",
+  "Team feedback, the Slack vote ended": VOTE, "Team feedback, the Slack vote still runs": VOTE,
+  "No options, every one taken out": "Draw design options", "No options, someone who may not draw them": A_DESIGNER,
+  "The prototype failed, someone who may not build": A_DESIGNER, "Spec draft, someone who may not send it": A_DESIGNER,
+};
+const leadText = (desk) => desk.evaluate(() => document.querySelector("#detail .moves .way")?.textContent.trim() ?? null);
+for (const [name, patch, me, word, ink, , , busy] of HEADERS) {
+  const [stage, pageWord] = STAGE[patch.status] || [null, word];
+  test(`header: ${name} → ${word}, ${ink}, ${LEAD[name]}`, (t) => open(t, BRIDGE_HEADER(patch, me), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    // The list's dot (a closed request under Closed): the same ink, blinking only while Design Desk works.
+    const dot = '.row.item:has([data-card="r7"]) .sdot';
+    await desk.waitForSelector(dot);
+    assert.equal(await desk.getAttribute(dot, "data-s"), ink, "the dot's ink");
+    assert.equal(await desk.locator(`${dot} .tag.busy`).count(), busy ? 1 : 0, busy ? "the dot blinks" : "the dot stays lit");
+    assert.equal((await desk.textContent(`${dot} .w`)).trim(), word, "the dot's word");
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector("#detail .status");
+    assert.equal(await desk.evaluate(() => [...document.querySelector("#detail .s-word .help").childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim()), pageWord, "the page's word is the stage");
+    assert.equal(await desk.getAttribute("#detail .status", "data-o"), ink, "the header's ink");
+    assert.equal(await desk.locator("#detail .status[data-busy]").count(), busy ? 1 : 0, busy ? "the mark blinks" : "the mark stays lit");
+    if (stage) assert.equal(await desk.getAttribute("#detail .status .line5", "aria-label"), `Stage ${stage} of 5: ${pageWord}`);
+    else assert.equal(await desk.locator("#detail .status .line5").count(), 0, "a closed request has no stage line");
+    assert.equal(await leadText(desk), LEAD[name], "what leads the state row");
+    assert.ok(await desk.locator("#detail .moves .way.btn.primary").count() <= 1, "one button, no more");
+    assert.equal(await desk.locator('#detail .moves [data-act="approve"]').count(), 0, "Approve is never a way on in the row");
+    // Blue is Design Desk's turn: never a move of a person's own beside it.
+    if (ink === "checking") assert.equal(await desk.locator("#detail .moves .way.btn, #detail .moves .way.lnk").count(), 0, "a blue header offers no move");
+    if (busy) assert.equal(ink, "checking", "Design Desk at work is blue");
+    if (patch.status === "variants" && !busy && word === "Options drawn") {
+      const help = await desk.textContent("#detail .s-word .help .tip");
+      assert.equal(await desk.locator('#detail .moves [data-act="build"], #detail .moves [data-act="slack"]').count(), 0, "never a live prototype or Slack at Options drawn");
+      assert.doesNotMatch(help, /Vote and comment/, "nobody votes before Team feedback");
+      assert.doesNotMatch(help, /live prototype/, "no live prototype before Team feedback");
+      assert.equal(await desk.locator('#detail [data-act="build"]').count(), 0, "no Build anywhere at Options drawn");
+      assert.match(help, /Ask for feedback/, "the way on is to ask the team");
+      assert.equal(await desk.locator("#detail .btn.vote").count(), 0, "no vote pills yet");
+    }
+    // Every option taken out: drawing them again is the way on, and the right side keeps Approve and Close.
+    if (word === "No options") {
+      assert.match(await desk.textContent("#detail .s-word .help .tip"), /Draw design options/, "the help offers to draw them again");
+      assert.equal(await desk.locator('#detail [data-act="build"], #detail [data-team-feedback]').count(), 0, "no live prototype, no Ask for feedback without options");
+      if (me.can.close) assert.equal(await desk.locator('#detail .next .btn[data-act="close"]').count(), 1, "Close stays on the right");
+    }
+    if (["variants", "feedback"].includes(patch.status) && !busy && me.can.approve) assert.equal(await desk.locator('#detail .next .btn[data-act="approve"]').count(), 1, "the green Approve is on the right");
+    // Contact a developer opened: it leaves the row.
+    if (await desk.locator("#detail .moves [data-dev-ask]").count() && patch.status === "variants") {
+      await desk.click("#detail .moves [data-dev-ask]");
+      await desk.waitForFunction(() => !document.querySelector("#detail .moves [data-dev-ask]"));
+    }
+  }));
+}
+
+// Requests open on the viewer's own tab every visit, whatever tab the browser saw last: For
+// Developers for a developer or a lead developer, For Designers for everyone else.
+for (const [role, tab] of [["designer", "designers"], ["admin", "designers"], ["developer", "developers"], ["lead-developer", "developers"]]) {
+  for (const last of ["designers", "developers"]) {
+    test(`a ${role} opens Requests on For ${tab === "designers" ? "Designers" : "Developers"}, though ${last} was picked last`, (t) => open(t, BRIDGE_STORIES
+      .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify({ role, email: "alice@example.com", can: { vote: true, comment: true } }))
+      .replace('localStorage.setItem("desk-guide-seen", "1");', `localStorage.setItem("desk-guide-seen", "1"); localStorage.setItem("desk-reqFor", "${last}");`), async (desk) => {
+      await desk.click('[data-tab="requests"]');
+      await desk.waitForSelector('[data-filter="reqFor:designers"]');
+      assert.equal(await desk.getAttribute(`[data-filter="reqFor:${tab}"]`, "aria-current"), "page", "the viewer's own tab is on");
+      // A tab picked holds on this page, and the browser does not keep it.
+      const other = tab === "designers" ? "developers" : "designers";
+      await desk.click(`[data-filter="reqFor:${other}"]`);
+      assert.equal(await desk.getAttribute(`[data-filter="reqFor:${other}"]`, "aria-current"), "page");
+      assert.equal(await desk.evaluate(() => localStorage.getItem("desk-reqFor")), last, "the pick is not kept");
+    }));
+  }
 }
 
 // An item opened from another one's link opens on its own tab: the menu says where you are.
@@ -1230,12 +1481,12 @@ test("a spec in draft waits for a person: read it, edit it, then send it", (t) =
   .replace(': path === "/api/assets/A-1"', ': path === "/api/assets/A-9" ? { contentType: "text/markdown", encoding: "utf8", data: "# The spec\\n\\nGrey header." }\n    : path === "/api/assets/A-1"'), async (desk) => {
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
-  await desk.waitForSelector("#detail .steppill [data-spec-send]");
+  await desk.waitForSelector("#detail .moves [data-spec-send]");
   assert.equal(await desk.locator("#detail .spec-tools [data-spec-edit]").count(), 1, "Edit on the spec itself");
   assert.equal(await desk.locator("#detail .spec-tools [data-spec-changes]").count(), 1, "and Ask for changes…");
   assert.equal(await desk.locator("#detail .next [data-spec-edit]").count(), 0, "not in the row");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-body")?.textContent || ""));
-  assert.match(await desk.textContent("#detail"), /Spec draft — read it, then send/, "the state says the spec has not gone");
+  assert.match(await desk.textContent("#detail"), /Approved\s*the spec waits to be read/, "the state says the spec has not gone");
   await desk.click("#detail [data-spec-edit]");
   await desk.waitForFunction(() => /Grey header/.test(document.querySelector("#spec-text")?.value || ""), null, { timeout: 5000 });
   await desk.fill("#spec-text", "# The spec\n\nGrey header, 14 px.");
@@ -1381,6 +1632,8 @@ test("Draw design options asks how many, starting at the request's own count, an
   const { desk, posts, settled } = run;
   try {
     await desk.click('[data-tab="requests"]');
+    // The frame keeps no storage, so Requests open on Your turn; this request is under Open.
+    await desk.click('[data-filter="reqFilter:open"]');
     await desk.click('[data-card="r7"]');
     await desk.click('[data-act="explore"]');
     assert.equal(await desk.isChecked('#confirm-form input[name=choice][value="2"]'), true, "the request asked for two");
@@ -1436,7 +1689,13 @@ test("a worked-in note shows the place before and after, outlined, in the thread
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r5"]');
     await desk.click("[data-convo] > summary");
+    // Marked done, it folds to one line: who and their first words.
+    assert.match(await desk.textContent("#th-t3 > summary"), /^Comment\s*pat@example\.com — Typo in the title\s*done$/, "a done conversation folds to who and its first words");
+    await desk.click("#th-t3 > summary");
     await desk.waitForSelector("#th-t3 .changed");
+    // Opened, it names its option and jumps to the part, as an open note does.
+    assert.match(await desk.textContent("#th-t3 .head .chip"), /Option 1: Tabs/, "the option it is on");
+    assert.equal(await desk.locator('#th-t3 .head [data-goto="t3"]').count(), 1, "the jump to the part");
     await loaded("#th-t3");
     assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");
     assert.deepEqual(await pictures("#th-t3"), both, "the thread shows before and after");
@@ -1502,7 +1761,7 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
 // The review bar a build puts into every design (toolkit/chrome/review-bar.html), in the
 // workspace's frame: it acts in Select mode, and only a click on the design picks.
 const BAR = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "chrome", "review-bar.html"), "utf8");
-const WITH_BAR = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Billing"><button>Save</button></div></body>`;
+const WITH_BAR = `<body>${BAR}<div data-view="1" data-view-name="Start"><button data-clickable>Next</button></div><div data-view="2" data-view-name="Billing"><button>Save</button></div></body>`;
 // The second option has the same Billing screen under another number, and a Plans screen the first lacks.
 const WITH_BAR_2 = `<body>${BAR}<div data-view="1" data-view-name="Start"><button>Next</button></div><div data-view="2" data-view-name="Plans"><button>Pick</button></div><div data-view="3" data-view-name="Billing"><button>Pay</button></div></body>`;
 const BRIDGE_BAR = `<script>
@@ -1704,7 +1963,8 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   await card("bob", "C-5");
   assert.equal(await count('.btn[data-act="approve"]'), 1, "another developer does");
 
-  assert.match(await card("lou", "C-3"), /Approved[\s\S]*dana@example\.com[\s\S]*for developers/, "the card names who approved it");
+  await card("lou", "C-3");
+  assert.match(await desk.$eval("#detail .line5 li:nth-child(4)", (e) => e.dataset.tip || e.title), /^Approved: .*dana@example\.com for developers/, "the stage line names who approved it");
   assert.equal(await count("[data-size]"), 0, "an approved request keeps its size");
 
   // docs/handoff.md step 4: a question the spec leaves open is asked on the Desk, next to the spec.
@@ -1869,6 +2129,10 @@ test("a private ask: a corner chat that names its context, says only you see it,
   assert.match(await desk.$eval(".ask-panel header .chip", (c) => c.title || c.dataset.tip || ""), /Only you and Design Desk see these.*nothing goes to Slack/, "it says only you see it");
   assert.equal(await desk.$eval(".ask-body", (b) => Math.round(b.scrollTop + b.clientHeight) >= b.scrollHeight - 1), true, "it opens on the newest message");
   assert.equal(await desk.$$eval("[data-ask-starter]", (x) => x.length), 5, "five starters");
+  // One size for both sides: the person's bubble once inherited 12px from the header's `.me` chip
+  // while the answer read at 14px.
+  const sizes = await desk.$$eval(".ask-msg", (x) => x.map((n) => getComputedStyle(n).fontSize));
+  assert.deepEqual(sizes, ["14px", "14px"], "a question and its answer read at the same size");
   await desk.click('[data-ask-starter="fixed"]');
   await desk.waitForFunction(() => posted.length === 1);
   assert.deepEqual(await desk.evaluate(() => posted[0]), { path: "/api/private", body: { text: "What can't change, and why?", starter: "fixed", context: { card: "C-5", label: "C-5 Show limits" } } });
@@ -1876,12 +2140,22 @@ test("a private ask: a corner chat that names its context, says only you see it,
   await desk.click("[data-ask-send]");
   await desk.waitForFunction(() => posted.length === 2);
   assert.deepEqual(await desk.evaluate(() => [posted[1].body.text, posted[1].body.starter]), ["Is the bar too thin?", null], "a question of their own");
+  // A redraw replaces the box; it keeps the caret and the focus of whoever was typing in it. The
+  // card redraws on a hashchange, as when an answer lands; the box must be a new one after it.
+  await desk.fill("#ask-text", "Typing while an answer lands");
+  await desk.focus("#ask-text");
+  await desk.evaluate(() => { const t = document.querySelector("#ask-text"); t.setSelectionRange(9, 9); t.dataset.before = "1"; });
+  await desk.evaluate(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+  await desk.waitForFunction(() => { const t = document.querySelector("#ask-text"); return t && !t.dataset.before; });
+  assert.equal(await desk.evaluate(() => document.activeElement?.id), "ask-text", "the box keeps the focus");
+  assert.equal(await desk.evaluate(() => document.querySelector("#ask-text").selectionStart), 9, "and the caret");
+  assert.equal(await desk.inputValue("#ask-text"), "Typing while an answer lands", "and what was typed");
   await desk.click('[data-brief="T-2"]');
   assert.match(await desk.inputValue("#composer-text"), /fuel gauge/, "the brief lands as text in the page's public comments box");
   assert.equal(await desk.evaluate(() => posted.length), 2, "nothing is sent until the person sends it from the public box");
 }));
 
-// docs/desk.md → Lists and Folds stay folded; docs/requests.md → Triage. The page runs where local
+// docs/desk-page.md → Lists and Folds stay folded; docs/requests.md → Triage. The page runs where local
 // storage throws, as in its sandboxed frame.
 const FOLD = `<script>
 Object.defineProperty(window, "localStorage", { get() { throw new DOMException("denied", "SecurityError"); } });
@@ -1920,12 +2194,13 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.equal(await desk.locator("#list .chip", { hasText: "Design only" }).count(), 0, "no Design only label in the list");
 
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Needs a developer" }).count(), 0, "no Needs a developer label beside the title");
-  assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Needs a developer/, "the steps name it");
+  assert.match(await desk.$eval("#detail .line5 li:first-child", (e) => e.dataset.tip || e.title), /^Checking: Needs a developer/, "the stage line names it");
   assert.equal(await desk.locator(".made-col h4", { hasText: "What can be done" }).count(), 0, "no What can be done in the box");
   assert.doesNotMatch(await desk.textContent(".made-col"), /deliberate decision/, "no label on what is already known");
   assert.match(await desk.textContent(".standing details.fold summary"), /1 part needs a developer/, "what design cannot do folds under the status");
-  await desk.click(".steppill [data-dev-ask]");
-  assert.equal(await desk.$eval("#dev-parts", (d) => d.open), true, "the step Contact a developer opens what design cannot do");
+  await desk.click(".moves [data-dev-ask]");
+  assert.equal(await desk.$eval("#dev-parts", (d) => d.open), true, "Contact a developer opens what design cannot do");
+  assert.equal(await desk.locator(".moves [data-dev-ask]").count(), 0, "once opened, it leaves the row");
   assert.equal(await desk.locator("#dev-parts [data-dev-copy]").count(), 1, "with a question for a developer to copy");
 
   await desk.click('[data-brief-toggle="made"]');
@@ -1939,7 +2214,7 @@ test("lists show the newest first; a folded box stays folded on another option; 
   assert.equal(await desk.locator(".top2 > .brief:not(.made-col) .brief-toggle:not([hidden])").count(), 0, "a request of one short line has nothing to fold: no Show or Hide");
   assert.equal(await desk.locator(".top2 > .brief.clamped").count(), 0, "and it is never folded");
   assert.equal(await desk.locator("#detail .sub .chip", { hasText: "Design only" }).count(), 0, "no Design only label by the title");
-  assert.match(await desk.textContent("#detail details.stepper ol"), /Filed\s*Design only/, "the steps name the verdict");
+  assert.match(await desk.$eval("#detail .line5 li:first-child", (e) => e.dataset.tip || e.title), /^Checking: Design only/, "the stage line names the verdict");
 
   await desk.click('[data-tab="new"]');
   await desk.click('[data-filter="newFilter:open"]');
@@ -2053,6 +2328,8 @@ test("Differences from Figma: the Product page lists what is in the product, a b
   assert.equal(await desk.getAttribute('[data-filter="figFilter:differs"]', "aria-pressed"), "true", "back on Differs, a lit filter");
 
   // On the screen itself: folded to one line with the counts; × takes one off for everyone.
+  // The address already reads #C-1 (the page keeps it): another place first, so the link opens anew.
+  await desk.goto(`${base}#product`);
   await desk.goto(`${base}#C-1`);
   await desk.waitForSelector("[data-figbox]");
   assert.equal(await desk.$eval("[data-figbox]", (x) => x.open), false, "folded at first");
@@ -2224,7 +2501,7 @@ test("the bell counts what is For you, opens on it, reads a row only on its clic
   await desk.waitForFunction(() => !document.querySelector(".me-menu").open);
 }));
 
-// Every landing of a notification (docs/desk.md → Notifications): its option's tab, its votes,
+// Every landing of a notification (docs/desk-page.md → Notifications): its option's tab, its votes,
 // the spec, a revoked decision's why, a private answer in the chat, every message a row folds.
 const LANDINGS = `<script>
 window.posts = [];
@@ -2285,7 +2562,7 @@ test("a notification lands on its source: the option's tab, the votes, the spec 
   assert.equal(await desk.locator("#ask .ask-panel").count(), 0, "a public notification closes the private chat");
 }));
 
-// Designs (docs/desk.md → Designs): a developer's tab of approved designs; a designer reaches one only from a notification.
+// Designs (docs/desk-page.md → Designs): a developer's tab of approved designs; a designer reaches one only from a notification.
 const designsBridge = (role) => `<script>
 window.posts = [];
 const ask = { id: "T-1", card: "C-1", kind: "comment", dev: true, state: "open", messages: [{ by: { email: "bob@example.com", role: "developer" }, at: "2026-11-07T10:00:00Z", text: "Is the banner sticky?" }] };
@@ -2346,11 +2623,11 @@ test("Designs: a developer opens an approved design from its own tab, read-only,
   await desk.click('[data-post="designer"]');
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/C-1/threads"));
   assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/C-1/threads").body), { kind: "comment", text: "Does it show on mobile?", dev: true });
-  // The design and its request open each other: Open the request, then the step pill's Show the design.
+  // The design and its request open each other: Open the request, then the state row's Show the design.
   await desk.click("[data-show-request]");
-  await desk.waitForSelector("#detail .steppill [data-show-design]");
+  await desk.waitForSelector("#detail .moves [data-show-design]");
   assert.equal(await desk.getAttribute('[data-tab="requests"]', "aria-current"), "true", "the request opens on Requests");
-  assert.equal(await desk.textContent("#detail .steppill .step-next"), "Show the design");
+  assert.equal(await desk.textContent("#detail .moves .way.btn.primary"), "Show the design");
   await desk.click("[data-show-design]");
   await desk.waitForSelector("#detail [data-show-request]");
   assert.equal(await desk.getAttribute('[data-tab="designs"]', "aria-current"), "true", "back on Designs");
@@ -2376,13 +2653,13 @@ test("Designs: a designer has no tab, opens a design from its notification or it
   await desk.waitForSelector("#detail .design-asks");
   assert.equal(await desk.locator("#detail [data-built], #detail [data-post]").count(), 0, "the designer answers in the thread");
   assert.equal(await desk.locator("#detail .design-asks article [data-send-reply]").count(), 1);
-  // Its request is a click away; the request's step pill has no Show the design without Designs.
+  // Its request is a click away; the request's state row has no Show the design without Designs.
   await desk.click("[data-show-request]");
-  await desk.waitForSelector("#detail .steppill");
+  await desk.waitForSelector("#detail .status .line5");
   assert.equal(await desk.locator("#detail [data-show-design]").count(), 0);
 }));
 
-// A request sent, reopened and sent again (docs/desk.md → Designs, docs/handoff.md step 6); a live prototype switched off (docs/prototype.md → Teardown).
+// A request sent, reopened and sent again (docs/desk-page.md → Designs, docs/handoff.md step 6); a live prototype switched off (docs/prototype.md → Teardown).
 const sendsBridge = (role, over) => `<script>
 window.posts = [];
 const closed = { by: { email: "lee@example.com", role: "admin" }, at: "2026-11-07T12:00:00Z" };
@@ -2412,6 +2689,11 @@ test("Designs: an earlier send of a reopened request is its own closed row under
   assert.match(await desk.textContent("#detail .status"), /Closed[\s\S]*reopened by/);
   assert.equal(await desk.getAttribute('#detail .status a.btn:has-text("Issue")', "href"), "https://github.com/acme/widgets/issues/99", "the earlier send's issue");
   assert.equal(await desk.locator("#detail [data-built], #detail #composer").count(), 0, "no Mark as done, no box to ask");
+  // The page writes the record into its address, and a reload reads it back.
+  await desk.waitForFunction(() => location.hash === "#designs/C-1~1");
+  await desk.reload();
+  await desk.waitForFunction(() => /Closed[\s\S]*reopened by/.test(document.querySelector("#detail .status")?.textContent || ""));
+  assert.match(await desk.textContent("#list .row.item[aria-current], #list .row.item"), /C-1 · earlier send/, "a reload opens the same earlier send");
 }));
 
 test("a send after a reopen shows the earlier issue's state and assignee, and closes it only when ticked", (t) => open(t, sendsBridge("designer", { status: "spec", approved: { by: { email: "designer@example.com", role: "designer" }, at: "2026-11-07T13:00:00Z", variant: "v1" }, spec: { asset: "A-3", review: "draft" } }), async (desk) => {
@@ -2491,6 +2773,9 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 test("research sources say what they are; a page previews its section; code links are left out, older links show plainly", (t) => open(t, SOURCES, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   await desk.goto(`${base}#C-2`);
+  await desk.waitForSelector(".made-sec details.srcs:not([open])");
+  assert.equal((await desk.textContent(".made-sec .srcs > summary")).trim(), "9 sources · Issue, PR, PR Change, Decision, 2× Doc, ADR, Link, Item", "the sources start folded, counted by kind");
+  await desk.click(".made-sec .srcs > summary");
   await desk.waitForSelector(".made-sec ul li");
   const rows = await desk.$$eval(".made-sec ul li", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
   assert.deepEqual(rows, ["Issue · #5", "PR · Menu #6", "PR Change · C-1 A new header", "Decision · D-1 Search sits in the header",
@@ -2582,13 +2867,13 @@ const CHECKED = { kind: "request", status: "feedback", triage: { verdict: "desig
 test("a request's own work line leaves once its options are drawn, and shows again when it is reopened", (t) => open(t, DESK(DESIGNER, [
   { ...CHECKED, id: "r1", title: "Drawn", waiting: [{ kind: "request", state: "claimed", created: "2026-11-01T00:00:00Z" }] },
   { ...CHECKED, id: "r2", title: "Reopened", waiting: [{ kind: "request", state: "open", created: "2026-11-05T00:00:00Z" }] }]), async (desk) => {
-  const lines = () => desk.$$eval("#detail .working", (els) => els.map((e) => e.textContent).join(" "));
+  const lines = () => desk.$$eval("#detail .working, #detail .s-work", (els) => els.map((e) => e.textContent).join(" "));
   await desk.click('#list [data-card="r1"]');
   await desk.waitForSelector("#detail .crumb", { state: "attached" });
-  assert.doesNotMatch(await lines(), /Checking your request/, "options drawn after the item: no Checking line");
+  assert.doesNotMatch(await lines(), /Reading the screen/, "options drawn after the item: no Checking line");
   await desk.click('#list [data-card="r2"]');
   await desk.waitForFunction(() => document.querySelector("#detail h2")?.textContent.includes("Reopened"));
-  assert.match(await lines(), /Checking your request/, "a reopened request, checked again, says so");
+  assert.match(await lines(), /Reading the screen/, "a reopened request, checked again, says so");
 }));
 
 test("a caption that only repeats its stage is not said twice", (t) => open(t, DESK(DESIGNER, [{ id: "ch1", kind: "change", title: "Pairs", source: { repo: "acme/widgets", pr: 3 },
@@ -2619,4 +2904,117 @@ test("simple mode leaves the live prototype step out of the help", (t) => open(t
   const steps = await desk.textContent('#detail [data-intro="requests"] ol.steps');
   assert.match(steps, /New request/);
   assert.doesNotMatch(steps, /live prototype/i, "a step only about what simple mode hides leaves with it");
+}));
+
+// A dialog with something typed or picked asks before Escape or a click outside closes it;
+// its own Cancel closes it at once. The For Designers / For Developers switch is a lead
+// developer's and an admin's (docs/desk.md → Where it works, For Developers or For Designers).
+test("a dialog with work in it asks before Escape or a click outside closes it; Cancel closes it at once", (t) => open(t, DESK(DESIGNER, [BUSY]), async (desk) => {
+  const isOpen = (id) => desk.evaluate((i) => document.getElementById(i).open, id);
+  await desk.waitForSelector("#new-request");
+  await desk.click("#new-request");
+  assert.equal(await desk.isVisible("#rq-for"), false, "a designer does not pick the tab");
+  await desk.keyboard.press("Escape");
+  assert.equal(await isOpen("request-dialog"), false, "an empty dialog closes on Escape");
+
+  await desk.click("#new-request");
+  await desk.fill("#request-dialog textarea[name=problem]", "Make the list calmer");
+  await desk.keyboard.press("Escape");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.match(await desk.textContent("#cf-title"), /Close without sending/);
+  assert.equal(await isOpen("request-dialog"), true, "Escape keeps what was typed until the person says so");
+  await desk.click("#confirm-dialog .actions button:has-text('Cancel')");
+  assert.deepEqual([await isOpen("confirm-dialog"), await isOpen("request-dialog")], [false, true], "Cancel in the question goes back to the dialog");
+  await desk.mouse.click(4, 4);
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await isOpen("request-dialog"), true, "a click outside asks too");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => !document.getElementById("confirm-dialog").open && !document.getElementById("request-dialog").open, null, { timeout: 5000 });
+
+  await desk.click("#new-request");
+  await desk.click("#request-dialog #type-choice button[data-type=bug]");
+  await desk.keyboard.press("Escape");
+  await desk.waitForSelector("#confirm-dialog[open]");
+  assert.equal(await isOpen("request-dialog"), true, "a picked choice counts as work too");
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => !document.getElementById("request-dialog").open, null, { timeout: 5000 });
+
+  await desk.click("#new-request");
+  await desk.fill("#request-dialog textarea[name=problem]", "Make the list calmer");
+  await desk.click("#request-dialog .actions button:has-text('Cancel')");
+  assert.deepEqual([await isOpen("confirm-dialog"), await isOpen("request-dialog")], [false, false], "the dialog's own Cancel closes it at once");
+}));
+
+test("a lead developer picks For Designers or For Developers when filing", (t) => open(t, DESK({ ...DESIGNER, role: "lead-developer", can: { request: true, size: true } }, [BUSY]), async (desk) => {
+  await desk.waitForSelector("#new-request");
+  await desk.click("#new-request");
+  assert.equal(await desk.isVisible("#rq-for"), true);
+}));
+
+// A picture dropped anywhere on a dialog is added as if chosen with "choose a file".
+test("a picture dropped on a dialog is added to it", (t) => open(t, DESK(DESIGNER, [BUSY]), async (desk) => {
+  await desk.waitForSelector("#new-request");
+  await desk.click("#new-request");
+  await desk.evaluate(async () => {
+    const c = Object.assign(document.createElement("canvas"), { width: 40, height: 30 });
+    c.getContext("2d").fillRect(0, 0, 40, 30);
+    const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+    const dt = new DataTransfer(); dt.items.add(new File([blob], "shot.png", { type: "image/png" }));
+    const on = document.querySelector("#rq-problem-label");
+    on.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer: dt }));
+    on.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt }));
+  });
+  await desk.waitForSelector("#rq-thumbs img");
+  assert.equal(await desk.locator("#rq-thumbs img").count(), 1);
+  assert.match(await desk.textContent("#rq-drop"), /drop it here/);
+}));
+
+// The step pill's next move: Wait while Design Desk works, with a few words on what it does;
+// Answer while it waits on a person, when nothing pulses.
+const ASKING = { id: "r3", kind: "request", title: "Asking", status: "triage", asks: true,
+  threads: [{ id: "t9", kind: "asks", state: "open", step: "request", messages: [{ by: { agent: true }, at: "2026-11-01T00:00:00Z", text: "One question first." }],
+    questions: [{ text: "Which one?", options: ["A", "B"], suggested: "A" }] }] };
+test("the state row says there is nothing to do while Design Desk works, and to answer while it waits on a person", (t) => open(t, DESK(DESIGNER, [BUSY, ASKING]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r1"]');
+  await desk.click('#list [data-card="r1"]');
+  await desk.waitForSelector("#detail .moves .way");
+  assert.equal(await desk.textContent("#detail .moves .way"), "Nothing for you to do yet.");
+  assert.match(await desk.textContent("#detail .status .turn"), /Turn:\s*Design Desk/, "the turn is Design Desk's");
+  assert.equal(await desk.textContent("#detail .status .s-work"), "Drawing the options", "a few words on what it does");
+  assert.equal(await desk.textContent("#detail .status .s-eta"), "· in the queue, starts within 10 minutes", "and how long: not picked up yet");
+  assert.equal(await desk.locator("#detail .status > .working").count(), 0, "no second working line");
+  await desk.click('#list [data-card="r3"]');
+  await desk.waitForFunction(() => document.querySelector("#detail .moves .way")?.textContent === "Answer the question below");
+  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "turn", "a person's move, not checking");
+  assert.match(await desk.textContent("#detail .status .turn"), /Turn:\s*you/, "the turn is the viewer's");
+  assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "none", "nothing pulses");
+}));
+
+// The state's mark pulses only while Design Desk works: a checked request that waits for a
+// person to start the options reads Checking, done, in a person's ink, and its mark stays still.
+const STILL = { id: "r5", kind: "request", title: "Checked", status: "triage", triage: { verdict: "design", reasons: ["Look only."] } };
+test("the state's mark pulses while Design Desk works and stays still while it waits on a person", (t) => open(t, DESK({ ...DESIGNER, can: { request: true, explore: true } }, [BUSY, STILL]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r1"]');
+  await desk.click('#list [data-card="r1"]');
+  await desk.waitForSelector("#detail .status[data-busy]");
+  assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "pulse", "it works: the mark pulses");
+  await desk.click('#list [data-card="r5"]');
+  await desk.waitForFunction(() => document.querySelector("#detail .status") && !document.querySelector("#detail .status[data-busy]"));
+  assert.equal(await desk.getAttribute("#detail .status", "data-o"), "turn", "a person's move");
+  assert.match(await desk.textContent("#detail .s-word .s-sub"), /^done, no options yet/, "checked: the stage says it is done");
+  assert.equal(await desk.$eval("#detail .status .s-mark", (m) => getComputedStyle(m).animationName), "none", "it waits: nothing pulses");
+}));
+
+// What's already known: each part of Design Desk's short report is its own paragraph; a
+// request that asked for no options keeps the options box, with its one line in it.
+const KNOWN = { id: "r4", kind: "request", title: "Known", status: "feedback", request: { problem: "Calmer.", options: 0 }, triage: { verdict: "design", reasons: ["Look only."] },
+  research: { verdict: "clear", summary: "Nothing in the way. Where it lives: the Agents list. Already asked for: none found. History: spaced out in May.", links: [] } };
+test("the research summary splits into its parts; no options asked for keeps the options box", (t) => open(t, DESK({ ...DESIGNER, can: { request: true, explore: true } }, [KNOWN]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r4"]');
+  await desk.click('#list [data-card="r4"]');
+  await desk.waitForSelector("#detail .made-sec");
+  const ps = await desk.$$eval("#detail .made-sec .md p", (els) => els.map((e) => e.textContent.trim()));
+  assert.deepEqual(ps, ["Nothing in the way.", "Where it lives: the Agents list.", "Already asked for: none found.", "History: spaced out in May."]);
+  assert.deepEqual(await desk.$$eval("#detail .made-sec .md p b", (els) => els.map((e) => e.textContent)), ["Where it lives:", "Already asked for:", "History:"]);
+  assert.match(await desk.textContent("#detail .vpanel .frame.vempty"), /No options were asked for/);
 }));

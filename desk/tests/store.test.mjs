@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, abilities, rosterOf, readRole, personOf, namesOf, elementsOf } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, LIMITS, abilities, forgetIdle, rosterOf, readRole, personOf, namesOf, elementsOf } from "../store.mjs";
 
 const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
 const alice = { email: "alice@example.com", role: "designer" };
@@ -23,8 +23,8 @@ test("roles: guests read and talk, designers shape, builds follow config", () =>
   for (const a of ["explore", "revise", "refresh", "history", "change", "figma", "share", "add", "draw"]) assert.equal(can("developer", a), true, a);
   for (const a of ["approve", "close", "reopen", "queue", "handle", "choose", "decide"]) assert.equal(can("developer", a), false, a);
   assert.equal(can("guest", "explore"), false);
-  // A PM moves a request along: everything a lead developer may, and closing, reopening and live prototypes.
-  for (const a of ["explore", "revise", "size", "skip", "close", "reopen", "build"]) assert.equal(can("pm", a), true, a);
+  // A PM moves a request along: everything a lead developer may but the tab, and closing, reopening and live prototypes.
+  for (const a of ["explore", "revise", "skip", "close", "reopen", "build"]) assert.equal(can("pm", a), true, a);
   for (const a of ["approve", "queue", "handle", "choose", "decide", "people"]) assert.equal(can("pm", a), false, a);
   assert.equal(can("admin", "add"), true);
 });
@@ -117,6 +117,50 @@ test("a change card is found again by its pull request, people's data survives",
   assert.ok(b.acks[alice.email], "acks are not the agent's to overwrite");
 });
 
+test("a held check follows the handled mark: each mark queues one ci item, none without a check", () => {
+  const s = fresh();
+  const plain = s.upsertCard({ kind: "change", title: "Plain", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.handle(plain.id, alice);
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci").length, 0, "no check held: nothing to set");
+  const c = s.upsertCard({ kind: "change", title: "Held", source: { repo: "acme/widgets", pr: 8 } }).card;
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "red" } }), /failing, passing, skipped or error/);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "error" } }), /counts its tries/);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "error", tries: 4 } }), /1 to 3/);
+  assert.equal(s.upsertCard({ id: c.id, ci: { state: "error", tries: 2 } }).card.ci.tries, 2);
+  assert.throws(() => s.upsertCard({ id: c.id, ci: { state: "failing", sha: "nope" } }), /commit id/);
+  const r = s.createRequest(alice, { title: "A request", problem: "P." }).card;
+  assert.throws(() => s.upsertCard({ id: r.id, ci: { state: "failing" } }), /change card/);
+  s.upsertCard({ id: c.id, ci: { state: "failing", sha: "abc1234" } });
+  assert.equal(s.getCard(c.id).ci.state, "failing");
+  s.handle(c.id, alice);
+  const items = Object.values(s.db.inbox).filter((i) => i.kind === "ci" && i.card === c.id);
+  assert.deepEqual(items.map((i) => [i.state, i.by.email]), [["open", "alice@example.com"]]);
+  s.handle(c.id, alice, false);
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci" && i.card === c.id).length, 1, "an open item is reused, not doubled");
+  const skipped = s.upsertCard({ kind: "change", title: "Built from a request", source: { repo: "acme/widgets", pr: 10 } }).card;
+  s.upsertCard({ id: skipped.id, ci: { state: "skipped" } });
+  s.handle(skipped.id, alice);
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.kind === "ci" && i.card === skipped.id).length, 0, "a check never held needs no item");
+});
+
+test("Design Desk's message names the person whose claimed item it works on", () => {
+  const s = fresh();
+  const c = s.upsertCard({ kind: "change", title: "Held", source: { repo: "acme/widgets", pr: 8 } }).card;
+  s.openThread(c.id, { agent: true }, { kind: "comment", text: "On its own." });
+  s.upsertCard({ id: c.id, ci: { state: "failing", sha: "abc1234" } });
+  s.handle(c.id, alice);
+  const it = Object.values(s.db.inbox).find((i) => i.kind === "ci");
+  s.claim(it.id, "run-1");
+  s.openThread(c.id, { agent: true }, { kind: "comment", text: "Passed the check." });
+  assert.deepEqual(Object.values(s.db.threads).map((t) => t.messages[0].by), [{ agent: true }, { agent: true, for: { email: "alice@example.com" } }]);
+  // A claimed private ask on the same card is never the one named.
+  s.done(it.id, "run-1", "passed");
+  const priv = s.openPrivate({ email: "carol@example.com", role: "designer" }, { text: "Just between us?", context: { card: c.id } });
+  s.claim(priv.inbox.id, "run-2");
+  s.openThread(c.id, { agent: true }, { kind: "comment", text: "A public note." });
+  assert.deepEqual(Object.values(s.db.threads).filter((t) => t.kind === "comment").at(-1).messages[0].by, { agent: true });
+});
+
 test("a change card stays short, and a designer marks it handled", () => {
   const s = fresh();
   assert.throws(() => s.upsertCard({ kind: "change", title: "x".repeat(91) }), /longer than 90/);
@@ -201,8 +245,7 @@ test("For Developers: a lead developer moves it there, any developer but its aut
   const dana = { email: "dana@example.com", role: "developer" };
   assert.equal(can("lead-developer", "size"), true);
   assert.equal(can("admin", "size"), true);
-  for (const r of ["designer", "pm"]) assert.equal(can(r, "size"), true, r);
-  for (const r of ["developer", "guest"]) assert.equal(can(r, "size"), false, r);
+  for (const r of ["designer", "pm", "developer", "guest"]) assert.equal(can(r, "size"), false, r);
   assert.equal(can("lead-developer", "approve"), false, "a developer approves only a request For Developers, per card");
   assert.deepEqual(rosterOf([{ email: "x@example.com", role: "Lead Developer" }]), [{ email: "x@example.com", also: [], role: "lead-developer" }]);
 
@@ -260,6 +303,32 @@ test("the developer spec waits for a person: edit keeps every version, changes g
   const sent = s.specAction(card.id, alice, { action: "send" });
   assert.deepEqual([sent.inbox.kind, sent.inbox.scope, sent.card.spec.review], ["handoff", "deliver", "sent"]);
   assert.throws(() => s.specAction(card.id, alice, { action: "edit", text: "late" }), /already on its way|in progress|still/i);
+});
+
+test("a spec for a request from Slack is sent only by a person, whatever spec_review says", () => {
+  const s = fresh();
+  const spec = () => s.addAsset({ kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec", encoding: "utf8" }).asset.id;
+  const ready = (origin) => {
+    const { card } = s.createRequest({ agent: true }, { title: "Calmer header", problem: "Too loud.", origin });
+    s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] } });
+    const { inbox: item } = s.act(card.id, alice, "approve");
+    s.claim(item.id, `s-${card.id}`); s.done(item.id, `s-${card.id}`, "review");
+    return card.id;
+  };
+  const slack = ready({ channel: "slack", chat: "C0123", thread_ts: "1.0", reporter: "Dana" });
+  const approved = s.card(slack).status;
+  assert.throws(() => s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "sent" } }), /waits for a person's Send/, "spec_review disabled does not send it");
+  assert.throws(() => s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "draft", sent: { by: { email: "alice@example.com" } } } }), /waits for a person's Send/, "nor a send the agent writes itself");
+  assert.throws(() => s.upsertCard({ id: slack, origin: { channel: "chat", reporter: "Dana" }, status: "spec", spec: { asset: spec(), review: "sent" } }), /waits for a person's Send/, "nor a write that renames its origin");
+  assert.throws(() => s.upsertCard({ id: slack, status: "handed-off" }), /waits for a person's Send/, "nor a hand-off before the send");
+  assert.deepEqual([s.card(slack).spec, s.card(slack).status, s.card(slack).origin.channel], [null, approved, "slack"], "a refused write leaves the card as it was");
+  s.upsertCard({ id: slack, status: "spec", spec: { asset: spec(), review: "draft" } });
+  assert.equal(s.specAction(slack, alice, { action: "send" }).card.spec.review, "sent");
+  s.upsertCard({ id: slack, spec: { ...s.card(slack).spec, issue_url: "https://github.com/acme/widgets/issues/7" } });
+  assert.equal(s.card(slack).spec.issue_url, "https://github.com/acme/widgets/issues/7", "after a person's send the agent records where it went");
+  const chat = ready({ channel: "chat", reporter: "Lukas" });
+  s.upsertCard({ id: chat, status: "spec", spec: { asset: spec(), review: "sent" } });
+  assert.equal(s.card(chat).spec.review, "sent", "any other request goes straight on with spec_review disabled");
 });
 
 test("For Developers: the reporter of a request the agent filed is its author; a decision in force needs a designer", () => {
@@ -368,6 +437,15 @@ test("while its prototype is live, approve takes live_pick back at feedback; an 
   s.upsertCard({ id: other.id, variants: [{ id: "v1", version: 1, name: "Quiet", asset }, { id: "v2", drop: true }] });
   assert.equal(s.getCard(other.id).live_pick, undefined, "a dropped option does not go live");
   assert.deepEqual([s.item(waiting.id).state, s.item(waiting.id).outcome], ["done", "not built: its option was taken off the card"]);
+});
+
+test("a triage keeps what a developer wires to build the design (build)", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { title: "Provider name on the row", problem: "Show the provider." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: [], build: ["Send the provider's name with each chat."] } });
+  assert.deepEqual(s.getCard(card.id).triage.build, ["Send the provider's name with each chat."]);
+  s.upsertCard({ id: card.id, triage: { verdict: "design", reasons: [] } });
+  assert.deepEqual(s.getCard(card.id).triage.build, [], "a triage without it keeps none");
 });
 
 test("a request that needs a developer gets no live prototype", () => {
@@ -744,6 +822,43 @@ test("no option is the winner; votes only suggest one, and the presentation show
   assert.equal(s.queueForCall(card.id, alice, "", "v2").card.agenda.variant, "v2");
 });
 
+test("a reply, an answer, a reopen and Mark done take the ability of what they start", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "triaged"); }
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Big", asset: a }] });
+  const guest = { email: "guest@example.com", role: "guest" };
+  const asks = (step) => s.openThread(card.id, { agent: true }, { kind: "asks", text: "Which one?", step }).thread.id;
+  assert.deepEqual(["request", "explore", "build", "figma", "map"].map((step) => s.threadNeed(asks(step), guest)), ["request", "revise", "build", "figma", "add"], "an answer takes its step's ability");
+  const note = s.openThread(card.id, alice, { kind: "change", text: "Bigger", anchor: { variant: "v1", selector: "button", label: "Upload" } }).thread.id;
+  assert.deepEqual([s.threadNeed(note, guest), s.threadNeed(note, guest, "resolve")], ["change", "change"], "a change note's follow-up takes change");
+  const talk = s.openThread(card.id, alice, { kind: "question", text: "Why blue?" }).thread.id;
+  const own = s.openThread(card.id, guest, { kind: "question", text: "Why so big?" }).thread.id;
+  assert.deepEqual([s.threadNeed(talk, guest), s.threadNeed(talk, guest, "resolve"), s.threadNeed(own, guest, "resolve"), s.threadNeed(talk, alice, "resolve")], ["comment", "resolve", "comment", "comment"], "anyone replies; marking another's done takes resolve");
+  assert.deepEqual(["guest", "developer", "designer"].map((r) => can(r, "resolve")), [false, true, true]);
+  assert.equal(abilities("guest").resolve, false, "the page and the People tab hear of it");
+});
+
+test("pictures and pages have a total: past it an upload is refused, and the refusal names what frees room", () => {
+  const s = fresh();
+  s.db.assets.A0 = { id: "A0", file: "A0.png", bytes: LIMITS.assetsBytes - 2 };
+  assert.throws(() => s.addAsset({ kind: "image", name: "x", contentType: "image/png", data: "abc", encoding: "utf8" }), /deleting a closed request/);
+  assert.equal(s.addAsset({ kind: "image", name: "x", contentType: "image/png", data: "ab", encoding: "utf8" }).asset.bytes, 2, "up to the total it is taken");
+});
+
+test("the rate windows forget idle callers past 500, never one still in a window", () => {
+  const now = 100_000_000, WINDOW = 10 * 60 * 1000;
+  const m = new Map(Array.from({ length: 501 }, (_, i) => [`p${i}`, { writes: [now - 2 * WINDOW], items: [] }]));
+  m.set("writing", { writes: [now - 1000], items: [] });
+  m.set("asked", { writes: [], items: [now - 30 * 60 * 1000] });
+  forgetIdle(m, now, WINDOW);
+  assert.deepEqual([...m.keys()], ["writing", "asked"]);
+  const few = new Map([["idle", { writes: [], items: [] }]]);
+  forgetIdle(few, now, WINDOW);
+  assert.equal(few.size, 1, "a small map is left alone");
+});
+
 test("every state of a part: drawn per option, versioned, noted on its own; a build names what goes live", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
@@ -761,6 +876,10 @@ test("every state of a part: drawn per option, versioned, noted on its own; a bu
   // The agent's question resumes the same option and part.
   s.claim(item.id, "run-2"); s.done(item.id, "run-2", "asked");
   const { thread: q } = s.openThread(card.id, { agent: true }, { kind: "asks", text: "The upload button?", step: "states" });
+  const guest = { email: "guest@example.com", role: "guest" };
+  assert.deepEqual([s.threadNeed(q.id, guest), can("guest", s.threadNeed(q.id, guest)), can("developer", s.threadNeed(q.id, bob))], ["revise", false, true], "an answer that resumes a step takes that step's ability");
+  const { thread: talk } = s.openThread(card.id, alice, { kind: "question", text: "Why blue?" });
+  assert.deepEqual([s.threadNeed(talk.id, guest), s.threadNeed(talk.id, guest, "resolve"), s.threadNeed(talk.id, alice, "resolve")], ["comment", "resolve", "comment"], "a guest replies, marks done only their own");
   const { inbox: resumed } = s.reply(q.id, alice, "Yes.");
   assert.deepEqual([resumed.kind, resumed.variant, resumed.part.label], ["states", "v1", "Button “Upload”"]);
   s.claim(resumed.id, "run-3"); s.done(resumed.id, "run-3", "drew");
@@ -968,11 +1087,11 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"].via, "slack");
   s.slackVotes(card.id, "v1", []);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"], undefined);
-  // The agent's own legend 👍/👎/⚠️ comes back among the reactions; it is a bot's, not a vote.
+  // The agent's own legend 👍/👎 comes back among the reactions; it is a bot's, not a vote.
   s.slackVotes(card.id, "v1", [{ key: "slack:UBOT", vote: "prefer", is_bot: true, name: "Design Desk" }, { key: "slack:UBOT", vote: "dislike", is_bot: true, name: "Design Desk" },
     { key: "slack:U2", vote: "concern", name: "Petr" }, { key: "slack:U3", vote: "dislike", name: "Eva" }]);
   assert.equal(s.getCard(card.id).votes.v1["slack:UBOT"], undefined, "a bot's reaction is never a vote");
-  assert.equal(s.getCard(card.id).votes.v1["slack:U2"].vote, "concern");
+  assert.equal(s.getCard(card.id).votes.v1["slack:U2"], undefined, "Slack votes 👍 or 👎 only: a concern there is a reply, never a vote");
   assert.equal(s.getCard(card.id).votes.v1["slack:U3"].vote, "dislike", "a 👎 in Slack is a vote against the option");
   s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" });
   assert.equal(s.relayComment(card.id, { variant: "v1", name: "Jana", text: "Clearer.", slack_ts: "1.2" }).duplicate, true);
@@ -2203,4 +2322,249 @@ test("github refs that cannot be read: counted, given up after 3, cleared by a r
   assert.throws(() => s.failGithub(["nope"]), /owner\/repo#number/);
   s.putGithub([{ key: "acme/widgets#50000", kind: "issue", title: "Found", updated: "2026-11-08T10:00:00Z" }]);
   assert.deepEqual(refs(), [{ key: "acme/widgets#50000", updated: "2026-11-08T10:00:00Z", tries: 0 }], "a read clears the count");
+});
+
+// docs/desk.md → Team feedback: End the vote.
+test("End the vote: no more votes, an open Slack vote is due to close, a new round starts a new vote", () => {
+  const s = fresh();
+  const guest = { email: "gus@example.com", role: "guest" };
+  const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "checked"); }
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Table", asset: a }] });
+  assert.throws(() => s.endVote(card.id, alice), (e) => e.status === 400 && /not voting/.test(e.message), "nothing to end before the team is asked");
+  s.openFeedback(card.id, alice);
+  s.vote(card.id, bob, { variant: "v1", vote: "prefer" });
+  const { poll } = s.openPoll(card.id, { chat: "C0123", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2099-01-01T00:00:00Z" });
+  assert.throws(() => s.endVote(card.id, guest), (e) => e.status === 403, "not a viewer's");
+  const ended = s.endVote(card.id, bob).card;
+  assert.equal(ended.vote_ended.by.email, "bob@example.com", "who ended it");
+  assert.equal(ended.polls.find((x) => x.id === poll.id).closes, ended.vote_ended.at, "the vote in Slack is due to close now");
+  assert.equal(ended.polls[0].state, "open", "closing it there stays the agent's");
+  const row = () => s.listCards({ kind: "request" }).find((x) => x.id === card.id);
+  assert.deepEqual([row().voted, row().voting], [true, false], "the list's row says the vote ended, though the poll is still open in Slack");
+  assert.throws(() => s.vote(card.id, bob, { variant: "v1", vote: "dislike" }), (e) => e.status === 400 && /has ended/.test(e.message), "no more votes");
+  assert.equal(s.card(card.id).votes.v1["bob@example.com"].vote, "prefer", "the votes cast stay");
+  assert.throws(() => s.endVote(card.id, alice), (e) => e.status === 400 && /already ended/.test(e.message), "once");
+  // The options go back to their people and to the team again: a new vote.
+  s.upsertCard({ id: card.id, status: "variants" });
+  s.openFeedback(card.id, alice);
+  assert.equal(s.card(card.id).vote_ended, undefined, "asking for feedback again starts a new vote");
+  s.vote(card.id, bob, { variant: "v1", vote: "dislike" });
+
+  // Every other way into a feedback round starts a new vote too: a run's write from another
+  // step, a person's own option on a request the agent filed, a closed request reopened.
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const filed = s.upsertCard({ kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } }).card;
+  s.upsertCard({ id: filed.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: a }] });
+  // A later write moves the request back to feedback; its options stay as they are.
+  const round = () => { s.upsertCard({ id: filed.id, status: "feedback" }); return s.card(filed.id); };
+  assert.equal(s.card(filed.id).status, "feedback", "from Slack: on to the team by itself");
+  s.endVote(filed.id, alice);
+  s.upsertCard({ id: filed.id, status: "variants" });
+  assert.equal(round().vote_ended, undefined, "a run's write back to feedback starts a new vote");
+  s.endVote(filed.id, alice);
+  s.upsertCard({ id: filed.id, status: "variants" });
+  s.addOwnOption(filed.id, alice, { images: [{ contentType: "image/png", data: png }] });
+  assert.deepEqual([s.card(filed.id).status, s.card(filed.id).vote_ended], ["feedback", undefined], "a person's own option after a redraw starts a new vote");
+  s.vote(filed.id, bob, { variant: "v1", vote: "prefer" });
+  s.endVote(filed.id, alice);
+  s.act(filed.id, alice, "close");
+  s.act(filed.id, alice, "reopen");
+  assert.equal(s.card(filed.id).vote_ended, undefined, "a reopened request starts a new vote");
+});
+
+test("Ask for feedback tells every developer; a row says who voted; a claimed item says since when", () => {
+  const s = fresh();
+  const carol = { email: "carol@example.com", role: "designer" };
+  const { card } = s.createRequest(alice, { problem: "Two ways to show the plan." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "checked"); }
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Table", asset: a }] });
+  const asked = (who) => s.notifications(who).items.find((x) => x.event === "feedback-asked");
+  assert.equal(asked(bob), undefined, "not while the options are held");
+  s.openFeedback(card.id, alice);
+  assert.equal(asked(bob).for_you, true, "a developer's, whoever filed it");
+  assert.equal(asked(carol).for_you, false, "another designer sees it under All");
+  assert.equal(asked(alice), undefined, "never one's own doing");
+  s.vote(card.id, bob, { variant: "v1", vote: "prefer" });
+  const row = (who) => s.listCards({ kind: "request", viewer: who.email, who }).find((x) => x.id === card.id);
+  assert.deepEqual([row(bob).voted_mine, row(carol).voted_mine], [true, false]);
+  // Approve with the box ticked: the spec goes as soon as it is written (docs/handoff.md).
+  const r = s.act(card.id, alice, "approve", "v1", { autoSend: true });
+  assert.equal(r.card.approved.auto_send, true);
+  assert.equal(s.getCard(card.id).waiting.find((w) => w.kind === "handoff").started, undefined, "not started before its claim");
+  s.claim(r.inbox.id, "run-2");
+  assert.ok(s.getCard(card.id).waiting.find((w) => w.kind === "handoff").started);
+});
+
+test("a request from Slack never sends its spec unread", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "From a thread." });
+  for (const i of Object.values(s.db.inbox)) { s.claim(i.id, "run-1"); s.done(i.id, "run-1", "checked"); }
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] } });
+  s.db.cards[card.id].origin = { channel: "slack", reporter: "Dana" };
+  assert.equal(s.act(card.id, alice, "approve", "Build it.", { autoSend: true }).card.approved.auto_send, undefined);
+});
+
+test("a merged change that builds a sent design marks it done, unless a person took it back", () => {
+  const s = fresh();
+  const sent = (title, n) => { const r = s.createRequest(alice, { title, problem: "Why.", type: "feature" }).card; return s.upsertCard({ id: r.id, status: "handed-off", spec: { pr_url: `https://github.com/acme/widgets/pull/${n}` } }).card; };
+  const change = (n, merged) => s.upsertCard({ kind: "change", title: `PR ${n}`, source: { repo: "acme/widgets", pr: n, url: `https://github.com/acme/widgets/pull/${n}`, ...(merged ? { merged_at: "2026-11-01T10:00:00Z" } : {}) } }).card;
+  const one = sent("Spend column", 41);
+  const open = change(41, false);
+  assert.equal(s.getCard(one.id).built, undefined, "an open pull request builds nothing yet");
+  s.upsertCard({ id: open.id, source: { ...open.source, merged_at: "2026-11-01T10:00:00Z" } });
+  assert.deepEqual([s.getCard(one.id).built.by, s.getCard(one.id).built.change], [{ agent: true }, open.id]);
+  const two = sent("Tidy", 42);
+  s.markBuilt(two.id, bob); s.markBuilt(two.id, bob, false);
+  change(42, true);
+  assert.equal(s.getCard(two.id).built, undefined, "Not done yet is a person's word");
+  s.markBuilt(two.id, bob);
+  assert.equal(s.getCard(two.id).built.by.email, bob.email);
+});
+
+test("a write on a card renews the claims on it; a claim on another card keeps its time", () => {
+  let now = Date.UTC(2026, 9, 1, 8);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const one = s.createRequest(alice, { problem: "One." }), two = s.createRequest(alice, { problem: "Two." });
+  s.claim(one.inbox.id, "run-1"); s.claim(two.inbox.id, "run-2");
+  const at = s.item(one.inbox.id).claimed_at;
+  now += 10 * 60e3;
+  s.renewClaims({ card: one.card.id });
+  assert.notEqual(s.item(one.inbox.id).claimed_at, at, "the lease starts again");
+  assert.equal(s.item(one.inbox.id).claimed_started, at, "since when it is worked on stays");
+  assert.equal(s.item(two.inbox.id).claimed_at, at);
+  now += 10 * 60e3;
+  assert.throws(() => s.claim(one.inbox.id, "run-3", { takeover: true }), /claimed by run-1/, "20 minutes after the claim, 10 after the write: still held");
+  assert.equal(s.claim(two.inbox.id, "run-3", { takeover: true }).item.claimed_by, "run-3", "no write for 20 minutes: taken over");
+  s.renewClaims({ thread: "T-999" }); s.renewClaims({});
+});
+
+test("People: an added person counts as opened once they loaded the Desk, whatever the letters' case", () => {
+  const s = fresh();
+  const admin = { email: "lee@example.com", role: "admin" };
+  const roster = [{ email: "lee@example.com", role: "admin" }];
+  const { inbox } = s.askForPerson(admin, { email: "dee@example.com", role: "designer" }, roster);
+  s.claim(inbox.id, "run-1"); s.done(inbox.id, "run-1", "added");
+  const opened = () => s.peopleAsks().find((a) => a.email === "dee@example.com").opened;
+  assert.equal(opened(), false, "on the list, and the Desk not loaded yet");
+  s.markOpened({ sub: "no-address" });
+  assert.equal(opened(), false, "someone else's load, with no address, is not theirs");
+  s.markOpened({ email: "Dee@Example.com", emails: ["Dee@Example.com"], role: "designer" });
+  assert.equal(opened(), true, "a load alone counts: no card opened, no preference set");
+  const at = s.db.opened["dee@example.com"];
+  s.markOpened({ email: "dee@example.com", role: "designer" });
+  assert.equal(s.db.opened["dee@example.com"], at, "the first load alone is kept");
+});
+
+test("a store from before the sign-in record starts it from who already used the Desk", () => {
+  const s = fresh();
+  const admin = { email: "lee@example.com", role: "admin" };
+  for (const email of ["dee@example.com", "new@example.com"]) { const { inbox } = s.askForPerson(admin, { email, role: "designer" }, [{ email: "lee@example.com", role: "admin" }]); s.claim(inbox.id, "run-1"); s.done(inbox.id, "run-1", "added"); }
+  // The store as an older version left it: no record, and Dee's preference under the address as she signed in.
+  delete s.db.opened;
+  s.db.prefs["Dee@Example.com"] = { theme: "dark" };
+  s.db.seen["sub-123"] = "2026-10-01T08:00:00Z";
+  s.save();
+  const old = new Store(s.dir);
+  const opened = (email) => old.peopleAsks().find((a) => a.email === email).opened;
+  assert.equal(opened("dee@example.com"), true, "she set a preference: she loaded the Desk");
+  assert.equal(opened("new@example.com"), false, "nothing known of them");
+  assert.deepEqual(Object.keys(old.db.opened), ["dee@example.com"], "addresses only, lower-cased; a key that is no address is left out");
+  old.markOpened({ email: "new@example.com", role: "designer" });
+  assert.equal(new Store(s.dir).peopleAsks().find((a) => a.email === "new@example.com").opened, true, "a store with the record is read as it is");
+});
+
+test("a claimed item says how long its kind usually takes, once three of them finished", () => {
+  let now = Date.UTC(2026, 9, 1, 8);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const work = (minutes) => { const { card, inbox } = s.createRequest(alice, { problem: "x" }); s.claim(inbox.id, "run"); if (minutes != null) { now += minutes * 60e3; s.done(inbox.id, "run", "checked"); } return card; };
+  work(4); work(20);
+  assert.equal(s.getCard(work(null).id).waiting[0].usual_min, undefined, "two finished: no estimate yet");
+  work(6);
+  const w = s.getCard(work(null).id).waiting[0];
+  assert.equal(w.usual_min, 6, "the median of 4, 6 and 20");
+  assert.ok(w.started);
+});
+
+test("PR Changes and Issues: For Developers, a lead developer marks handled; a designer's otherwise", () => {
+  const s = fresh();
+  const lee = { email: "lee@example.com", role: "lead-developer" };
+  const row = (id) => s.listCards().find((c) => c.id === id);
+  const { card: small } = s.upsertCard({ kind: "change", title: "Tighter rows", source: { repo: "acme/widgets", pr: 11 }, attention: { level: "developer", reasons: ["spacing only"] } });
+  assert.equal(row(small.id).for, "developers", "the agent's developer level puts it For Developers");
+  assert.deepEqual(row(small.id).attention, { level: "developer", reasons: ["spacing only"] }, "not in Needs a designer");
+  assert.equal(s.getCard(small.id).for, "developers", "the card read and the list read agree");
+  assert.throws(() => s.handle(small.id, bob), (e) => e.status === 403, "a developer does not mark it");
+  s.handle(small.id, lee);
+  assert.equal(s.getCard(small.id).status, "handled");
+  s.handle(small.id, lee, false);
+
+  const { card: big } = s.upsertCard({ kind: "change", title: "A new settings page", source: { repo: "acme/widgets", pr: 12 }, attention: { level: "designer", reasons: ["a new screen"] } });
+  assert.equal(row(big.id).for, "designers");
+  assert.throws(() => s.handle(big.id, lee), (e) => e.status === 403 && /For Developers/.test(e.message), "For Designers stays a designer's");
+  // A lead developer moves it; a difference from an approved design stays on its tab.
+  s.setSize(big.id, lee, true);
+  assert.deepEqual([row(big.id).for, row(big.id).attention.level], ["developers", "developer"]);
+  s.handle(big.id, lee);
+  assert.throws(() => s.setSize(big.id, lee, false), /already handled/);
+  s.setSize(small.id, lee, false);
+  assert.deepEqual([row(small.id).for, row(small.id).attention.level], ["designers", "designer"], "moved For Designers, it waits for a designer");
+  s.suggestForCall(small.id, "Worth showing");
+  s.setSize(small.id, lee, true);
+  assert.equal(row(small.id).attention.level, "designer", "the presentation still needs a designer");
+
+  // A change nobody needs to look at stays fyi: the page shows it auto handled.
+  const { card: plain } = s.upsertCard({ kind: "change", title: "Same list", source: { repo: "acme/widgets", pr: 13 }, attention: { level: "fyi", reasons: ["follows the list pattern"] } });
+  assert.deepEqual([row(plain.id).for, row(plain.id).attention.level], ["designers", "fyi"]);
+
+  // Issues follow the same rules.
+  const { card: is } = s.upsertCard({ kind: "issue", title: "Show the limit", status: "open", bucket: "sprint", source: { repo: "acme/widgets", issue: 5, url: "https://github.com/acme/widgets/issues/5" }, attention: { level: "developer", reasons: ["a column in the existing table"] } });
+  assert.equal(row(is.id).for, "developers");
+  assert.deepEqual(s.getCard(is.id).attention, { level: "developer", reasons: ["a column in the existing table"] }, "an issue's judgement reads back");
+  assert.deepEqual(row(is.id).attention, s.getCard(is.id).attention, "the list read and the card read agree");
+  s.handle(is.id, lee);
+  assert.ok(s.getCard(is.id).handled);
+  s.handle(is.id, lee, false);
+  s.setSize(is.id, lee, false);
+  assert.equal(row(is.id).for, "designers");
+  assert.throws(() => s.handle(is.id, lee), (e) => e.status === 403);
+  assert.equal(can("lead-developer", "handle-small"), true);
+  assert.equal(can("developer", "handle-small"), false);
+});
+
+test("a merged change that builds an approved design adds its elements to the design catalog", () => {
+  const s = fresh();
+  const html = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
+  const pic = s.addAsset({ kind: "image", contentType: "image/png", data: Buffer.from("png").toString("base64") }).asset.id;
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  s.upsertCard({ id: card.id, triage: { verdict: "design" }, status: "feedback", variants: [{ id: "v1", name: "Limits", asset: html, elements: [{ id: "banner", name: "Limit banner", change: "new", shot: pic }] }] });
+  s.act(card.id, alice, "approve", "v1");
+  s.upsertCard({ id: card.id, status: "handed-off" });
+  const open = s.upsertCard({ kind: "change", title: "Limit banner", source: { repo: "acme/widgets", pr: 21 }, design_check: { request: card.id, verdict: "matches", summary: "As designed.", differences: [] } }).card;
+  assert.equal(s.getCard(card.id).in_catalog, undefined, "not before it ships");
+  s.upsertCard({ id: open.id, source: { repo: "acme/widgets", pr: 21, merged_at: "2026-11-10T10:00:00Z" } });
+  const added = s.getCard(card.id).in_catalog.elements.banner;
+  assert.equal(s.getCard(added).design.element, "banner");
+  s.upsertCard({ id: open.id, summary: "Shipped." });
+  assert.equal(s.listCards({ kind: "element" }).length, 1, "a second write adds nothing twice");
+});
+
+test("a request made from an open pull request: its spec waits, and goes back to that pull request as a comment", () => {
+  const s = fresh();
+  const { card: change } = s.upsertCard({ kind: "change", title: "Tighter rows", source: { repo: "acme/widgets", pr: 31, url: "https://github.com/acme/widgets/pull/31" } });
+  const { card } = s.createRequest(alice, { title: "Airier rows", problem: "Too tight.", from: change.id });
+  assert.deepEqual(s.getCard(card.id).from_pr, { card: change.id, pr: 31, repo: "acme/widgets", url: "https://github.com/acme/widgets/pull/31" });
+  const spec = s.addAsset({ card: card.id, kind: "spec", name: "spec.md", contentType: "text/markdown", data: "# Spec", encoding: "utf8" }).asset.id;
+  assert.throws(() => s.upsertCard({ id: card.id, status: "spec", spec: { asset: spec, review: "sent" } }), /waits for a person's Send/);
+  s.upsertCard({ id: card.id, status: "spec", spec: { asset: spec, review: "draft" } });
+  const { inbox: item } = s.specAction(card.id, alice, { action: "send", comment: true });
+  assert.equal(item.comment_on, "https://github.com/acme/widgets/pull/31");
+  assert.equal(s.getCard(card.id).spec.sent.implement, false);
+
+  // Merged meanwhile: no comment route.
+  const { card: other } = s.createRequest(alice, { title: "Bolder header", problem: "Too faint.", from: change.id });
+  s.upsertCard({ id: change.id, source: { repo: "acme/widgets", pr: 31, url: "https://github.com/acme/widgets/pull/31", merged_at: "2026-11-10T10:00:00Z" } });
+  assert.equal(s.getCard(other.id).from_pr, null);
 });

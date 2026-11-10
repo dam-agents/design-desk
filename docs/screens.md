@@ -18,7 +18,8 @@ Environments feature on.
 | `pr<n>` | `screens-pr<n>` | an open pull request's head | until its screens are taken, or the pull request merges or closes |
 
 At most `max_screen_prs` (`2`) `pr<n>` instances at a time; past that, an open pull
-request's card gets its pictures when it merges.
+request's card gets its pictures when it merges. A pull request from a fork never gets one
+(`screens.sh` refuses it): its card uses the pictures it carries until it merges.
 `bash "$HOME/scripts/screens.sh"` does the mechanics; the platform tools make and delete the
 Environments.
 
@@ -26,7 +27,7 @@ Environments.
 
 1. **Environment.** `list_environments`; missing → `create_environment` with `name` from the
    table, the profile's `engine.endpoints`, `storage`, and `expires` at the platform's
-   default. On every later use, `update_environment` moves `expires` on, so `main` never lapses.
+   default; no access argument (the owner shares it in the app, [prototype.md](prototype.md) → Build, step 5). On every later use, `update_environment` moves `expires` on, so `main` never lapses.
 2. **Install** as a background task: `bash "$HOME/scripts/screens.sh" sync <repo>` for
    `main`, `… sync <repo> --pr <n>` for an open pull request. It moves the instance's
    worktree to the head and runs the profile's `bin/env up`, which takes the images the

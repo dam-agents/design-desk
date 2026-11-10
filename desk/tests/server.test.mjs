@@ -33,6 +33,7 @@ async function desk(t, config = "", roster = ROSTER) {
   return {
     viewer: (email, path, body, role) => send(path, as(email, role), body),
     agent: (path, body) => send(path, { "x-desk-agent-token": token }, body),
+    dir: join(work, "desk"), pid: proc.pid,
   };
 }
 
@@ -238,6 +239,15 @@ test("a decision says whose it is: the design side or a developer, by the role n
   assert.deepEqual([ok.status, ok.body.decision.unapproved, ok.body.decision.approved.by.email], [200, false, "alice@example.com"]);
   assert.deepEqual(await pending(), [ids[3], ids[4]].sort());
 
+  // GitHub text: a role it claims counts for nothing, and even a designer's address there waits.
+  const form = (author, origin) => d.agent("/agent/decisions", { concepts: ["forms"], text: "Forms submit on blur", author, origin });
+  const claimed = (await form({ login: "eve", role: "designer" }, { kind: "issue", url: "https://github.com/acme/widgets/issues/5" })).body.decision.id;
+  const mailed = (await form({ email: "alice@example.com" }, { kind: "commit", url: "https://github.com/acme/widgets/commit/abc" })).body.decision.id;
+  const claimedD = (await d.viewer("alice@example.com", `/api/decisions/${claimed}`)).body.decision;
+  assert.deepEqual([claimedD.side, claimedD.unapproved], [null, true], "the role an issue claims is not read");
+  assert.deepEqual(await pending(), [ids[3], ids[4], claimed, mailed].sort());
+  assert.equal((await d.viewer("alice@example.com", `/api/decisions/${mailed}/approve`, {})).status, 200, "a designer approves one from GitHub");
+
   // What a check reads: by the card's concepts, or by the concepts and words asked for instead.
   const card = (await d.agent("/agent/cards", { kind: "change", title: "Rows", concepts: ["rows"], source: { repo: "acme/widgets", pr: 3 } })).body.card.id;
   const read = async (q) => (await d.agent(`/agent/cards/${card}/decision-check${q}`)).body;
@@ -270,6 +280,49 @@ test("a private ask reaches only its author over the API; another viewer cannot 
   assert.equal((await d.agent(`/agent/items/${item.id}`)).body.thread.id, id, "the agent reads the thread with its item");
   assert.equal((await d.agent(`/agent/threads/${id}/answer`, { text: "One is a list, one a grid." })).status, 200);
   assert.deepEqual(await mine("bob@example.com"), []);
+});
+
+test("a reply, an answer, a reopen and Mark done take the ability of what they start; each conversation says what its reader may do", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button.", options: 0 });
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Big", asset: asset.id }] })).status, 200);
+  const ask = async (step, questions) => (await d.agent(`/agent/cards/${card.id}/ask`, { text: "Which one?", step, ...(questions ? { questions } : {}) })).body.thread.id;
+  const request = await ask("request");
+  const revise = await ask("explore", [{ text: "Size?", options: ["Big", "Small"] }]);
+  const open = async (kind, extra = {}) => (await d.viewer("alice@example.com", `/api/cards/${card.id}/threads`, { kind, text: "Bigger?", ...extra })).body.thread.id;
+  const note = await open("change", { anchor: { variant: "v1", selector: "button", label: "Upload" } });
+  const talk = await open("question");
+  const post = async (email, id, step, body = { text: "Yes." }) => (await d.viewer(email, `/api/threads/${id}/${step}`, body)).status;
+  const guest = "guest@example.com", dev = "bob@example.com", form = { answers: [{ choice: "Big" }] };
+  assert.deepEqual([await post(guest, request, "messages"), await post(guest, revise, "answers", form), await post(guest, note, "messages"), await post(guest, talk, "resolve", {})], [403, 403, 403, 403],
+    "a guest resumes no step, follows up no change note and marks no one else's conversation done");
+  const may = async (email) => Object.fromEntries((await d.viewer(email, `/api/cards/${card.id}`)).body.card.threads.map((th) => [th.id, th.may]));
+  const g = await may(guest), b = await may(dev);
+  assert.deepEqual([g[request].reply, g[revise].reply, g[note].reply, g[talk].reply, g[talk].resolve], [false, false, false, true, false], "the page hears what a guest may do");
+  assert.deepEqual([b[request].reply, b[revise].reply, b[note].reply, b[talk].resolve], [true, true, true, true], "and what a developer may");
+  assert.equal(await post(guest, talk, "messages"), 201, "a guest still replies in a conversation");
+  assert.deepEqual([await post(dev, revise, "answers", form), await post(dev, note, "messages"), await post(dev, talk, "resolve", {})], [200, 201, 200], "a developer answers, follows up and marks done");
+  assert.equal(await post("alice@example.com", note, "resolve", {}), 200);
+  assert.deepEqual([await post(guest, note, "reopen", {}), await post(dev, note, "reopen", {})], [403, 200], "reopening a change note takes change");
+  assert.deepEqual([(await d.viewer(guest, "/api/me")).body.can.resolve, (await d.viewer(dev, "/api/me")).body.can.resolve], [false, true]);
+});
+
+// The rate windows: forgetIdle itself is tested in store.test.mjs; here, that spend calls it,
+// so the map never keeps every caller for ever.
+test("every spend forgets idle callers past 500", () => {
+  const src = readFileSync(SERVER, "utf8");
+  const spend = src.slice(src.indexOf("function spend("), src.indexOf("\n}\n", src.indexOf("function spend(")));
+  assert.match(spend, /\n  forgetIdle\(usage, now, WINDOW_MS\);/);
+});
+
+test("an unexpected error answers in plain words and keeps its text, which can name the machine's paths, in the log", async (t) => {
+  const d = await desk(t);
+  mkdirSync(join(d.dir, `db.json.tmp-${d.pid}`));
+  const r = await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." });
+  assert.equal(r.status, 500);
+  assert.equal(r.body.error, "Something went wrong on the Desk. Try again; the operator sees it in the log.");
+  assert.equal(r.body.error.includes(d.dir), false);
 });
 
 test("GitHub on the Desk: only the agent writes the copy, a person reads it", async (t) => {
@@ -420,6 +473,10 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   assert.deepEqual([asked.status, asked.body.card.status, asked.body.card.team_feedback.by.email], [200, "feedback", "pat@example.com"], "its author asks the team");
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${mine}/feedback`, {})).status, 400, "once");
   assert.equal((await draw(mine, asked.body.card.variants[0].version)).body.card.status, "feedback", "a redraw after that stays with the team");
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${mine}/end-vote`, {})).status, 403, "ending the vote is not a viewer's");
+  const ended = await d.viewer("pat@example.com", `/api/cards/${mine}/end-vote`, {});
+  assert.deepEqual([ended.status, ended.body.card.vote_ended.by.email], [200, "pat@example.com"], "its author ends the vote");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${mine}/votes`, { variant: "v1", vote: "prefer" })).status, 400, "no vote after it ended");
 
   const slack = (await d.agent("/agent/cards", { kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } })).body.card.id;
   assert.equal((await draw(slack)).body.card.status, "feedback", "from Slack: on to the team by itself");
@@ -427,15 +484,24 @@ test("team feedback: a Desk request waits for a person to ask the team, one from
   assert.equal((await d.agent("/agent/cards", { id: none, status: "feedback", triage: { verdict: "design", reasons: ["Words only."] } })).body.card.status, "feedback", "no options to fine-tune: on by itself");
 });
 
-test("a PM moves a request along — size, close, reopen, build by default — and marks no presentation presented", async (t) => {
+// Who files a request For Developers (docs/desk.md → For Developers or For Designers): the
+// dialog's switch counts for a lead developer and an admin; anyone else's lands For Designers.
+test("only a lead developer or an admin files a request For Developers", async (t) => {
+  const d = await desk(t);
+  const filed = async (email) => (await d.viewer(email, "/api/requests", { problem: "Rows are too airy.", options: 0, audience: "developers" })).body.card.size.small;
+  for (const email of ["lou@example.com", "lee@example.com"]) assert.equal(await filed(email), true, `${email} may`);
+  for (const email of ["alice@example.com", "pat@example.com", "bob@example.com"]) assert.equal(await filed(email), false, `${email} may not`);
+});
+
+test("a PM moves a request along — close, reopen, build by default — and marks no presentation presented", async (t) => {
   const d = await desk(t);
   const me = (await d.viewer("pat@example.com", "/api/me")).body;
-  assert.deepEqual([me.role, me.can.size, me.can.close, me.can.reopen, me.can.build, me.can.queue], ["pm", true, true, true, true, false], "prototype_requesters unset: a PM builds");
+  assert.deepEqual([me.role, me.can.size, me.can.close, me.can.reopen, me.can.build, me.can.queue], ["pm", false, true, true, true, false], "prototype_requesters unset: a PM builds, and leaves the tab to a lead developer");
   assert.equal((await d.viewer("bob@example.com", "/api/me")).body.can.build, false, "a developer does not");
   const id = (await d.viewer("alice@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
   assert.equal((await d.agent("/agent/cards", { id, status: "feedback", triage: { verdict: "design", reasons: ["Spacing only."] } })).status, 200);
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/size`, { small: true })).status, 403, "a developer does not move it");
-  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/size`, { small: true })).status, 200, "a PM does");
+  assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/size`, { small: true })).status, 403, "nor does a PM");
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "close" })).status, 403, "a developer does not close it");
   assert.equal((await d.viewer("pat@example.com", `/api/cards/${id}/actions`, { action: "close" })).body.card.status, "declined", "a PM does");
   assert.equal((await d.viewer("bob@example.com", `/api/cards/${id}/actions`, { action: "reopen" })).status, 403, "a developer does not reopen it");

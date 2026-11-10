@@ -88,7 +88,8 @@ its card, marked `dropped` (Left the design), until the part comes back. Such a 
 `option`, `version`, `element`, `change`, `of`: the product's element it changes),
 `design_part` and `design_states` (the option's pictures), and no `source` or `sheet`.
 Product → Elements marks it **From an approved design**, apart from the product's own, and
-the product's element it changes links to it. It is not redrawn: Update the drawing and Draw
+the product's element it changes links to it. When a merged change builds the request, the store adds every element of its approved
+option not yet there, as the button would. It is not redrawn: Update the drawing and Draw
 how it looked before are refused. The change that ships it is compared with it
 ([watch.md](watch.md) step 11); the card then says whether it shipped as designed.
 

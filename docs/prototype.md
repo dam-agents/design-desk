@@ -5,7 +5,8 @@ with the approved design, guarded ([boundary.md](boundary.md)), installed on its
 **Environment** with demo data, which everyone on the owner's list opens and clicks through.
 
 An Environment is a sandbox this agent creates and owns: its own machine, its own addresses,
-an access list, an expiry, and no credentials of the agent. The platform tools are
+an expiry, and no credentials of the agent. Who can open it is the owner's call, made in
+the app: the agent never sets or changes an Environment's access. The platform tools are
 `create_environment`, `list_environments`, `update_environment`, `wake_environment` and
 `delete_environment`; they exist only while the owner has the Environments feature on.
 
@@ -45,7 +46,7 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    `live_pick` is gone. An item without a note asks
    which option (`design desk ask C-<n> <file> --step build`) and stop. Votes only advise. Touch only the paths `boundary.allow` admits.
    Commit everything on the branch, new files included: `git -C <worktree> add -A` then
-   `git -C <worktree> commit -m "design: <title>"`, identity `Design Desk
+   `git -C <worktree> commit -F <file>`, the file holding `design: <title>`, identity `Design Desk
    <design-desk@users.noreply.github.com>`.
 4. **Guard.** `design guard <worktree> --base <base> --profile <profile.json> --patch
    /tmp/design-desk-c<n>/prototype.patch > /tmp/design-desk-c<n>/guard.json`. Not `ok` →
@@ -54,7 +55,8 @@ an access list, an expiry, and no credentials of the agent. The platform tools a
    summary, asset}, branch, base, patch: <the patch's asset>}` and `status: prototype`.
 5. **Environment.** `create_environment` with `name` = `c<n>`, the profile's
    `engine.endpoints`, `storage`, `start` when it names one, and `expires` =
-   `<prototype_expiry_days>d`. An Environment of that name already there is reused.
+   `<prototype_expiry_days>d`; no access argument (the tool takes none: the owner shares the
+   Environment in the app). An Environment of that name already there is reused.
 6. **Install.** `bash "$HOME/scripts/proto.sh" run C-<n> up` **as a background task**
    (an install takes many minutes), then poll `proto.sh run C-<n> status` until it says
    `running` or `failed`. The profile's `bin/env up` installs the worktree into the
@@ -119,4 +121,8 @@ developer's.
 With `prototype_remote` set, push the guarded branch there after step 4:
 `git -C <worktree> push <remote-url> design-desk/c<n>-<slug>`, never another branch name,
 never `--force` onto a branch a person changed. Without it, the patch on the card is the
-prototype's record.
+prototype's record. The pre-push hook (`scripts/git-hooks/pre-push`) accepts the repository
+only over `https://` or ssh, and refuses another repository or host, another branch and any
+change under `.github/`, whatever characters its path holds; it is a local guard only.
+**Operator-only:** the real control is on GitHub — a ruleset or a fine-grained token that lets
+the agent's identity push `design-desk/*` branches and nothing else.

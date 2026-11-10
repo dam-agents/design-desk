@@ -33,7 +33,8 @@ runtime state in `work/CONFIG.md`, never a definition change.
   configuration must never crash a run — degrade per key, log once, continue with what
   still works.
 - Safe defaults: anything that contacts people or publishes content defaults to **off**
-  and stays strictly opt-in.
+  and stays strictly opt-in. The documented exceptions, the operator's product decision, are
+  `agent_manifest: dam`, `watch_open_prs`, `bug_reports` and `issue_writeback` ([config.md](config.md)).
 - Keys woven into external dedup markers are immutable once used — no change may alter
   how a marker is written or matched in a way that orphans past outputs.
 

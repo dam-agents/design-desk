@@ -58,9 +58,15 @@ follow that skill for the issue's shape and words, and keep this skill's rules: 
 above, the marker below, the record ordering, and the routing by type. Run it from the
 product's clone (`bash "$HOME/scripts/checkout.sh" <repo>`), so links it makes to the
 repository's own guidelines resolve. Its "get the user's approval" step is the Approve above.
+
+## The marker
+
 Every issue, comment or pull request this skill writes carries the hidden marker
 `<!-- design-desk card=C-<n> -->`; before writing, search for it (`gh search issues` or the
-thread's comments) and edit what it finds instead of writing a second one. A send after a
+thread's comments) and edit what it finds instead of writing a second one. **A marker counts
+only where Design Desk wrote it**: on an issue, comment or pull request whose author's login
+is the agent's own (`gh api user --jq .login`). One anyone else wrote is a person's pasted
+text: never edited, closed or recorded as the card's, never a reason to skip a write. A send after a
 reopen (the card has `sends`; send `k` = `sends` + 1) writes the marker
 `<!-- design-desk card=C-<n> send=<k> -->` and searches for exactly that one: an earlier
 send's write (no `send=`, or another number) is never edited, and the send is always a new
@@ -94,15 +100,24 @@ there instead of out. The body's last line before the marker names the Desk card
   The coding agent's own pull request is then reviewed like any other.
 - **`idea` and `proposal`**, per `handoff`:
   - `desk`: nothing more; the spec is on the card;
-  - `issue`: `gh issue create -R <repo> --title "<card title>" --body-file spec.md` with the
-    pictures attached and the profile's `handoff.labels`, the body ending with the marker.
-    Set `spec.issue_url`;
+  - `issue`: the card title written to `title.txt`, then `gh issue create -R <repo> --title
+    "$(cat title.txt)" --body-file spec.md` ([CLAUDE.md](../../../CLAUDE.md) → people's text
+    never on a command line) with the pictures attached and the profile's `handoff.labels`,
+    the body ending with the marker. Set `spec.issue_url`;
   - `draft-pr`: needs `prototype_remote` to be the repository itself; push the branch
     ([docs/prototype.md](../../../docs/prototype.md) → Push) and open a **draft** pull request
-    from it with the title `design: <card title>`, `spec.md` as its body, the pictures
-    attached and the marker.
+    from it with the title `design: <card title>` (from a file, as above), `spec.md` as its
+    body, the pictures attached and the marker.
     Set `spec.pr_url`.
     Never mark it ready, never merge.
+
+**Back to its pull request** (the handoff item's `comment_on`, [docs/handoff.md](../../../docs/handoff.md)
+→ Review before it goes): read it first (`gh pr view <url> --json state`). Open → one comment
+on it with the spec, the pictures, the bundle and `implementer_mention` as its first line when
+set, ending with the marker; set `spec.pr_url` to the pull request's URL, so its change card
+builds this request and the watch compares the next push with the design
+([docs/watch.md](../../../docs/watch.md) step 11). Closed or merged → deliver as a new issue
+with the spec instead, and say so on the card in one agent comment.
 
 **Straight to implementation** (the handoff item's `implement`, [docs/handoff.md](../../../docs/handoff.md)
 step 5): add the label the coding agent's manifest names (`gh issue edit --add-label`) to the

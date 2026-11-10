@@ -59,8 +59,8 @@ read from) and `source` (`repo`, `saved` or `default`).
   clients) and `render_wrappers` (`{src, export}` providers every tile renders inside).
 - `boundary` — the guard's input ([boundary.md](boundary.md)). Without `allow`, nothing can
   be a design change and the guard refuses to run. `ignored_ok` lists the ignored build
-  outputs the product's own install leaves in a worktree (dependency folders and `dist/`
-  are always fine).
+  outputs the product's own install leaves in a worktree (dependency and build folders are
+  fine at the root, in `style.ui_dir` or outside the UI paths: [boundary.md](boundary.md)).
 - `docs` — where the "why" lives, read when explaining.
 - `screens`, `capture` — where each screen is in code and at which address it renders.
   `capture.login` signs in with the demo account `bin/env credentials` prints.
@@ -70,7 +70,8 @@ read from) and `source` (`repo`, `saved` or `default`).
 - `catalog.elements` — the elements worth having in the catalog: `{name, group, file,
   export}` ([catalog.md](catalog.md)).
 - `skills` — the product's own skills by action, each `{skill, source}`: the skill's name and
-  the repository the platform installs it from ([actions.md](actions.md)), for example
+  the repository it comes from, installed only as the operator confirms ([actions.md](actions.md) →
+  Another skill for an action), for example
   `"options": {"skill": "dam-prototyper", "source": "dam-agents/dam-prototyper"}`.
 - `figma` — `{library}`: the link of the product's Figma library, for linking its components
   to code (the `figma` skill).

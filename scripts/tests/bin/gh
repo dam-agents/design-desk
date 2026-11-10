@@ -12,6 +12,7 @@ case "$args" in
       *) cat "$STUB_DIR/search.json";;
     esac;;
   *"api user"*) echo '{"login":"design-bot"}' | { if [[ "$args" == *"--jq"* ]]; then echo design-bot; else cat; fi; };;
+  *"--jq .private"*) cat "$STUB_DIR/private.txt" 2>/dev/null || { echo "stub: no such repository" >&2; exit 1; };;
   *milestones*) cat "$STUB_DIR/milestones.json" 2>/dev/null || echo '[]';;
   *repos/*/issues/*)
     n="$(printf '%s' "$args" | sed -E 's#.*issues/([0-9]+).*#\1#')"
@@ -19,5 +20,8 @@ case "$args" in
   *pulls/*/files*)
     n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+)/files.*#\1#')"
     f="$STUB_DIR/files-$n.txt"; [ -f "$f" ] && cat "$f";;
+  *repos/*/pulls/[0-9]*) # one pull request: "<head repo>\t<base repo>", as pr_same_repo's --jq asks
+    n="$(printf '%s' "$args" | sed -E 's#.*pulls/([0-9]+).*#\1#')"
+    f="$STUB_DIR/pull-$n.tsv"; [ -f "$f" ] || { echo "stub: no pull $n" >&2; exit 1; }; cat "$f";;
   *) echo "stub: unhandled gh $args" >&2; exit 1;;
 esac

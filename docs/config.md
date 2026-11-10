@@ -13,16 +13,22 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 
 - `display_name` (`Design Desk`) — the Desk's title.
 - `repos` — comma-separated `[host/]owner/name` the watch reads (default `none`: no watch);
-  `watch_since` — ISO time, written at onboarding: a PR merged earlier never gets a card;
+  `watch_since` — ISO time, written at onboarding: a PR merged earlier never gets a card
+  (the hourly search starts later by itself, two days before the last pass that left nothing
+  behind or at the oldest change still due: `work/.watch-cursor`);
   `max_changes_per_run` (`10`); `watch_paths` — UI globs for a repo without a profile;
-  `watch_open_prs` (`enabled`) — open PRs get cards too; `issue_label` (`design`; `none` off) —
+  `watch_open_prs` (`enabled`) — open PRs get cards too; `ci_gate` (`disabled`) — `enabled`:
+  Design Desk's check on GitHub passes an open PR nobody needs to look at and fails one that
+  waits for a designer or a lead developer until it is marked handled. It covers new cards as they
+  are written and, through the inbox run, the open cards already on the Desk when it is
+  turned on; a merged or closed PR is never touched ([watch.md](watch.md) → CI gate); `issue_label` (`design`; `none` off) —
   issues with it become `feature` requests; `proposals` (`enabled`), `max_proposals_per_week`
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;
   `default_style` — `auto` | `brand` | `carbon` | `wireframe` | `repo:<owner/name>`.
 - `prototype_requesters` (`designer, pm, admin`; roles read as in `## Desk people`, so `lead developer`
   is `lead-developer`), `max_prototypes` (`2`; `0` = none),
-  `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own), `prototype_remote` (`none` | the repo a prototype branch
+  `prototype_expiry_days` (`7`), `spec_review` (`enabled`) — a person reads, edits and sends the developer spec before it leaves the Desk ([handoff.md](handoff.md) → Review before it goes; `disabled`: it goes on its own, save a request from Slack), `prototype_remote` (`none` | the repo a prototype branch
   is pushed to); `handoff` — `desk` (default) | `issue` | `draft-pr`, for ideas and
   proposals; `issue_writeback` (`enabled`) — a feature's design goes back into its issue;
   `implementer` — `pr-comment` (default) | `issue`, how an adjustment or a bug reaches the
@@ -31,7 +37,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   id, written when it is first published; `desk_link` — its share link, written once the owner
   shared it; items' links are built from it (empty: no **Copy link**,
   [desk.md](desk.md) → Links to an item); `bug_reports` (`enabled`) — Slack messages about
-  a UI bug go on the Desk's queue; `notify` — `disabled` (default) | `slack`:
+  a UI bug go on the Desk's queue; `qa_bot` — the Slack user id whose messages count as
+  automated test findings (empty: none; the `intake-slack` skill); `notify` — `disabled` (default) | `slack`:
   announce new cards and request steps in the bound channel.
 - `run_model` (`default`), `dispatch` (`enabled`), `work_repo` (`none`; env
   `GITHUB_REPO_WORK` wins), `audit_report` (`enabled`), `agent_manifest` (`dam`: publish the
@@ -49,12 +56,12 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   `max_issue_drawings` (`5`) — issues drawn a day.
 - `digest` (`desk`) — where the weekly UX digest goes: `desk` | `slack` (the Desk and the
   bound channel) | `disabled`.
-- `slack_polls` (`disabled`) — `enabled`: designers, PMs and developers share options in Slack for 👍 / 👎 / ⚠️ votes
+- `slack_polls` (`disabled`) — `enabled`: designers, PMs and developers share options in Slack for 👍 / 👎 votes
   and replies (the `slack-polls` skill); `slack_poll_channel` — where (empty: the bound channel); a request from Slack votes in its own thread.
 - `slack_send` (`disabled`) — `enabled`: **Send to Slack… → Send the designs** posts pictures of a request's
   options to `slack_poll_channel` (the `slack-polls` skill → Send); a request from Slack has the
   button whatever this says, and its pictures go to its own thread.
-- `slack_council` (`disabled`) — `enabled`: anyone in a request's Slack thread asks for changes
+- `slack_council` (`disabled`) — `enabled`: anyone on the roster in a request's Slack thread asks for changes
   and gets new options or versions back there (the `slack-council` skill); `council_sync_min`
   (`30`) — how often an open thread is read for asks that do not mention the agent.
 - `figma` (`disabled`) — `enabled` once Figma is connected (the `figma` skill): imports, exports
@@ -63,12 +70,17 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   switch in their menu. `figma_file` — a Figma file link that exports go to (empty: a new
   file per request).
 - `## Skills` table, `| action | skill |`: another installed skill for an action
-  ([actions.md](actions.md)); it wins over the product profile's choice.
+  ([actions.md](actions.md)); it wins over the product profile's choice. A third column
+  `| source |` holds the `<repo>@<sha>` the operator confirmed for a profile's skill; a
+  profile's skill does an action only with a row whose pin matches its `source`.
 - `request_skills` (`copy, impact, brand, walkthrough, figma`), never asked — the installed
   skills a person switches on or off for one request in New request; one not installed is
   not offered, `figma` only with `figma` enabled ([requests.md](requests.md) → Variants).
 - `change_due_days` (`21`), never asked — days a change card may wait for a designer to
   mark it handled before the Desk shows it red as overdue; `0`/`off` disables.
+- `change_auto_handled_days` (`14`), never asked — days after its PR merged that a change
+  nobody marked handled moves from Open and Needs a designer to **Auto handled**; `0`/`off` disables
+  that move only: a change judged `fyi` is auto handled at once whatever the value.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
 - `## Desk people` table, `| email | role |`: `admin`, `designer`, `lead-developer`, `developer` or `pm`;

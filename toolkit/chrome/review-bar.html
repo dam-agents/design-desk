@@ -6,6 +6,10 @@
      the previous one). The "Show hotspots" switch outlines only what the prototype wires: a
      data-goto-view, a data-menu-trigger, an onclick, or data-clickable on a control a small
      script toggles; a click anywhere else but a field flashes them, as a prototype tool does.
+     Notes: an explanation for the team sits on a part as data-design-note="…", never as a
+     drawn element. "Show hotspots" shows only when the design wires something, and the
+     "Show notes" switch only when the design has a note; it numbers
+     the notes on the screen shown, and pointing at a number reads its note.
      Title: <html data-review-title="#123 · Issue title">.
      Empty state: populated content in [data-populated], the empty one in [data-empty-view].
      Menus: trigger data-menu-trigger="id" (+ data-menu-side="top", data-menu-align="start");
@@ -32,7 +36,15 @@
   #review .switch[aria-checked="true"] .track{background:#0f62fe;}
   #review .switch[aria-checked="true"] .track::after{left:14px;}
   #review .switch:focus-visible .track{outline:2px solid #0f62fe;outline-offset:2px;}
-  html.review-hot :is([data-goto-view],[data-menu-trigger],[onclick],[data-clickable]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;background-color:rgba(15,98,254,.08) !important;}
+  #review .switch[hidden]{display:none;}
+  #review .switch[data-notes][aria-checked="true"] .track{background:#8a3ffc;}
+  #review-notes{position:absolute;left:0;top:0;width:0;height:0;z-index:9998;font:400 12px/1.45 "IBM Plex Sans",system-ui,sans-serif;}
+  #review-notes .pin{all:unset;position:absolute;box-sizing:border-box;width:20px;height:20px;border-radius:50%;background:#8a3ffc;color:#fff;font:600 11px/20px "IBM Plex Sans",system-ui,sans-serif;text-align:center;cursor:pointer;box-shadow:0 0 0 2px #fff;}
+  #review-notes .pin:focus-visible{outline:2px solid #0f62fe;outline-offset:2px;}
+  #review-notes .bubble{position:absolute;z-index:1;box-sizing:border-box;width:max-content;max-width:280px;padding:8px 10px;border-radius:6px;background:#fff;color:#161616;border:1px solid #8a3ffc;box-shadow:0 4px 14px rgba(0,0,0,.14);white-space:normal;}
+  .dark #review-notes .bubble{background:#262626;color:#f4f4f4;}
+  /* Only an outline: it takes no room and leaves the product's own colors as they are. */
+  html.review-hot :is([data-goto-view],[data-menu-trigger],[onclick],[data-clickable]):not(#review *){outline:2px solid rgba(15,98,254,.75) !important;outline-offset:1px;}
 </style>
 <div id="review">
   <b id="review-title"></b>
@@ -41,6 +53,7 @@
   <span class="seg" data-group="empty"><button data-empty="0" aria-pressed="true">Populated</button><button data-empty="1" aria-pressed="false">Empty state</button></span>
   <span class="style" id="review-style"></span>
   <button class="switch" data-hot role="switch" aria-checked="true" title="Hotspots are what does something in this prototype: they open a screen, a dialog or a menu. Outlines them."><span class="track"></span>Show hotspots</button>
+  <button class="switch" data-notes role="switch" aria-checked="false" hidden title="Notes Design Desk left on parts of this design: why a part looks as it does. Numbers them; point at a number to read it."><span class="track"></span>Show notes</button>
   <span class="seg" data-group="theme"><button data-theme="light" aria-pressed="true">Light</button><button data-theme="dark" aria-pressed="false">Dark</button></span>
 </div>
 <script>
@@ -66,7 +79,7 @@
       document.querySelectorAll("[data-view]").forEach((v) => v.classList.toggle("review-shown", v.dataset.view === n));
       document.querySelectorAll("#review [data-review-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.reviewView === n));
       const back = document.getElementById("review-back"); if (back) back.hidden = !trail.length;
-      syncEmpty();
+      syncEmpty(); openNote = null; drawNotes();
     };
     // A control wired to another view walks the flow; Back retraces it.
     const go = (n) => { const from = shown(); if (n === "back") { if (trail.length) show(trail.pop()); } else if (n !== from) { if (from) trail.push(from); show(n); } scrollTo(0, 0); };
@@ -75,6 +88,33 @@
     // A field takes a click to type into: not wired, not outlined, and no dead spot either.
     const FIELD = 'input,select,textarea,label,summary,[contenteditable]';
     let flash = null;
+    // Notes: numbered marks beside the parts that carry data-design-note on the screen shown,
+    // in a layer of the bar's own; the design itself never changes.
+    const NOTE = "[data-design-note]";
+    let openNote = null, hoverNote = null;
+    const notesOn = () => de.classList.contains("review-notes");
+    function drawNotes() {
+      const layer = document.getElementById("review-notes");
+      if (!layer) return;
+      layer.textContent = "";
+      if (!notesOn()) return;
+      const v = document.querySelector("[data-view].review-shown") || document.body;
+      const xs = [...v.querySelectorAll(NOTE)].filter((el) => el.getClientRects().length && (el.dataset.designNote || "").trim());
+      xs.forEach((el, i) => {
+        const r = el.getBoundingClientRect(), n = i + 1;
+        const pin = document.createElement("button");
+        pin.className = "pin"; pin.textContent = n; pin.dataset.note = n;
+        pin.setAttribute("aria-label", `Note ${n}`); pin.setAttribute("aria-expanded", String(openNote === n));
+        const x = Math.max(scrollX + 2, r.right + scrollX - 10), y = Math.max(scrollY + 2, r.top + scrollY - 10);
+        pin.style.left = `${x}px`; pin.style.top = `${y}px`;
+        layer.appendChild(pin);
+        if (openNote !== n && hoverNote !== n) return;
+        const b = document.createElement("div");
+        b.className = "bubble"; b.setAttribute("role", "note"); b.textContent = el.dataset.designNote.trim();
+        b.style.top = `${y + 24}px`; layer.appendChild(b);
+        b.style.left = `${Math.max(scrollX + 8, Math.min(x, scrollX + innerWidth - b.offsetWidth - 8))}px`;
+      });
+    }
     addEventListener("DOMContentLoaded", () => {
       const seg = document.getElementById("review-views");
       document.querySelectorAll("[data-view]").forEach((v, i) => {
@@ -84,9 +124,19 @@
         seg.appendChild(b);
       });
       if (!seg.children.length) seg.remove();
+      const layer = document.createElement("div"); layer.id = "review-notes"; document.body.appendChild(layer);
+      layer.addEventListener("click", (e) => { const p = e.target.closest(".pin"); if (!p) return; const n = Number(p.dataset.note); openNote = openNote === n ? null : n; drawNotes(); });
+      layer.addEventListener("mouseover", (e) => { const p = e.target.closest(".pin"); const n = p ? Number(p.dataset.note) : null; if (n !== hoverNote) { hoverNote = n; drawNotes(); } });
+      layer.addEventListener("mouseleave", () => { if (hoverNote !== null) { hoverNote = null; drawNotes(); } });
+      // Each switch shows only when the design has what it shows: a note, a wired hotspot.
+      const nb = document.querySelector("#review [data-notes]"); if (nb) nb.hidden = !document.querySelector(NOTE);
+      const hb = document.querySelector("#review [data-hot]");
+      if (hb && ![...document.querySelectorAll(HOT)].some((x) => !x.closest("#review"))) { hb.hidden = true; de.classList.remove("review-hot"); }
+      addEventListener("scroll", drawNotes, true); addEventListener("resize", drawNotes);
       document.querySelectorAll("#review button").forEach((b) => b.addEventListener("click", () => {
         if (b.dataset.reviewBack !== undefined) { go("back"); return; }
         if (b.dataset.hot !== undefined) { const on = !de.classList.contains("review-hot"); de.classList.toggle("review-hot", on); b.setAttribute("aria-checked", on); return; }
+        if (b.dataset.notes !== undefined) { const on = !notesOn(); de.classList.toggle("review-notes", on); b.setAttribute("aria-checked", on); openNote = null; drawNotes(); return; }
         press(b);
         if (b.dataset.reviewView) { trail.length = 0; show(b.dataset.reviewView); scrollTo(0, 0); }
         if (b.dataset.empty) de.classList.toggle("review-empty", b.dataset.empty === "1");
@@ -116,8 +166,12 @@
       });
     });
     addEventListener("click", (e) => {
+      // A note's number is the bar's own: it neither closes a menu nor flashes the hotspots.
+      if (e.target.closest("#review-notes")) return;
       if (!e.target.closest("[data-menu-open]")) closeMenus();
       if (e.target.closest("#review")) return;
+      // A click in the design may open or move a part: the notes follow it.
+      if (notesOn()) setTimeout(drawNotes, 0);
       const to = e.target.closest("[data-goto-view]");
       if (to) { e.preventDefault(); go(to.dataset.gotoView); return; }
       if (!e.target.closest(HOT) && !e.target.closest(FIELD) && !de.classList.contains("review-hot")) { de.classList.add("review-hot"); clearTimeout(flash); flash = setTimeout(() => { if (document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") !== "true") de.classList.remove("review-hot"); }, 700); }

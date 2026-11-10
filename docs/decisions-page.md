@@ -7,8 +7,10 @@ must look. Only with `decisions_page: dam` (default `off`; `public`, the first s
 ## What is on it
 
 `preflight.sh issues` renders it once a day into `work/decisions-page.md`, deterministically
-from the Desk store: the decisions in force (text, why, concepts, when, who decided as a
-**role**, where as a **kind**, what it replaces, Not approved yet), an index by concept, and
+from the Desk store: the decisions in force that are approved ([desk.md](desk.md) → Decisions →
+Approved by a designer; one waiting is left out, so text no designer confirmed is never
+published), each with text, why, concepts, when, who decided as a **role**, where as a
+**kind** and what it replaces, an index by concept, and
 the revoked ones in one line each. It holds no names, logins, e-mails, links, keys or pictures.
 The renderer redacts every free text (a decision's text, why, concepts, a revoke's reason):
 every link (`https://…`, `www.…`, `host/path` for a dotted name in any script (marks, zero-width joiners and punycode `xn--` included), `localhost` or an IP, `user@host:path`, a Slack `<…|…>` link), every Slack `<@…>`,

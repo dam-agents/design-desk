@@ -17,7 +17,8 @@ cat > "$WORK_DIR/desk/inbox.json" <<JSON
  {"id":"I-7","kind":"person","card":null,"thread":null,"created":"$new","person":{"email":"alex@example.com","role":"pm"}},
  {"id":"I-8","kind":"person","card":null,"thread":null,"created":"$new"},
  {"id":"I-9","kind":"decision","card":"C-1","thread":"T-1","created":"$new"},
- {"id":"I-10","kind":"decision-check","card":"C-2","thread":null,"created":"$new"}],
+ {"id":"I-10","kind":"decision-check","card":"C-2","thread":null,"created":"$new"},
+ {"id":"I-11","kind":"ci","card":"C-6","thread":null,"created":"$new"}],
  "claimed":[
  {"id":"I-4","kind":"explore","card":"C-3","thread":null,"created":"$old","claimed_by":"s1","claimed_at":"$old"},
  {"id":"I-5","kind":"handoff","card":"C-4","thread":null,"created":"$new","claimed_by":"s2","claimed_at":"$new"}]}
@@ -35,6 +36,7 @@ assert "a screen someone added sorted" '[.map_due[].id] == ["I-6"]' "$out"
 assert "a person an admin asked for sorted, with no card; one without its payload is not due" '[.people_due[] | select(.card == null) | .person.email] == ["alex@example.com"]' "$out"
 assert "a comment to record as a decision sorted" '[.decisions_due[].id] == ["I-9"]' "$out"
 assert "a check against the decisions sorted" '[.checks_due[].id] == ["I-10"]' "$out"
+assert "a handled mark on a held pull request sorted" '[.ci_due[].id] == ["I-11"]' "$out"
 assert "stale claim taken over" '[.variants_due[] | select(.takeover) | .id] == ["I-4"]' "$out"
 assert "fresh claim left alone" '[.handoffs_due[].id] == []' "$out"
 assert "expiring prototype" '[.expiring_due[].card] == ["C-2"]' "$out"
@@ -46,9 +48,9 @@ plan="$(bash "$ROOT/scripts/dispatch.sh" plan "$wl")"
 assert "three units (I-4 explore, I-3 build, I-6 map), I-2 stays" '[.[].id] == ["I-4", "I-3", "I-6"]' "$plan"
 assert "a unit names its file, not the item text" '.[0].task | test("worklist is already computed") and test("I-4")' "$plan"
 u="$(printf '%s' "$plan" | jq -r '.[0].worklist')"
-assert "the unit holds its one item and no quick ones" '(.variants_due | length == 1) and (.questions_due == null) and (.people_due == null) and (.decisions_due == null) and (.checks_due == null) and (.dispatched.id == "I-4")' "$(cat "$u")"
+assert "the unit holds its one item and no quick ones" '(.variants_due | length == 1) and (.questions_due == null) and (.people_due == null) and (.decisions_due == null) and (.checks_due == null) and (.ci_due == null) and (.dispatched.id == "I-4")' "$(cat "$u")"
 rest="$(bash "$ROOT/scripts/dispatch.sh" rest "$wl" I-4 I-3)"
-assert "the rest keeps the first and the quick ones" '(.prototypes_due | length == 0) and (.requests_due | length == 1) and (.questions_due | length == 1) and (.decisions_due | length == 1) and (.checks_due | length == 1)' "$(cat "$(printf '%s' "$rest" | jq -r .worklist)")"
+assert "the rest keeps the first and the quick ones" '(.prototypes_due | length == 0) and (.requests_due | length == 1) and (.questions_due | length == 1) and (.decisions_due | length == 1) and (.checks_due | length == 1) and (.ci_due | length == 1)' "$(cat "$(printf '%s' "$rest" | jq -r .worklist)")"
 printf -- '- dispatch: disabled\n' > "$WORK_DIR/CONFIG.md"
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"; printf '%s' "$out" > "$wl"
 assert "dispatch disabled keeps all" 'length == 0' "$(bash "$ROOT/scripts/dispatch.sh" plan "$wl")"
@@ -69,6 +71,7 @@ JSON
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
 assert "polls due: never synced, and the one whose request moved on" '[.polls_due[] | [.id, .close]] == [["P-2", false], ["P-3", true]]' "$out"
 assert "the slack-polls skill is read" '.read_set | index(".agents/skills/slack-polls/SKILL.md")' "$out"
+assert "the explain skill is read whatever is due" '(.questions_due | length) == 0 and (.read_set | index(".agents/skills/explain/SKILL.md")) != null' "$out"
 
 # A closing time is a time in whatever offset it is written (a vote was closed a minute
 # after it opened because a "+01:00" value read as the epoch), and a closing time nobody
@@ -145,6 +148,26 @@ assert "a claim nobody can date is taken over, a fresh offset one is not" '[.var
 assert "an expiry nobody can read is never due, open or closed" '[.expiring_due[].card] == ["C-10"]' "$out"
 assert "a sync time nobody can read is due, a fresh offset one is not" '[.polls_due[] | [.id, .close]] == [["P-7", false]]' "$out"
 assert "an opening time nobody can read never idles a council" '[.councils_due[] | [.id, .close, .why]] == [["S-7", true, "idle"], ["S-8", false, null]]' "$out"
+# ci_gate: an open PR's judged card whose check was never set is due once as G-<card>.
+printf '{"updated":"%s","open":[],"claimed":[]}' "$new" > "$WORK_DIR/desk/inbox.json"
+cat > "$WORK_DIR/desk/db.json" <<'JSON'
+{"cards":{
+ "C-1":{"id":"C-1","kind":"change","status":"new","source":{"repo":"a/b","pr":1},"attention":{"level":"designer","reasons":["r"]}},
+ "C-2":{"id":"C-2","kind":"change","status":"new","source":{"repo":"a/b","pr":2},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"failing"}},
+ "C-3":{"id":"C-3","kind":"change","status":"new","source":{"repo":"a/b","pr":3,"merged_at":"2026-11-01T00:00:00Z"},"attention":{"level":"designer","reasons":["r"]}},
+ "C-4":{"id":"C-4","kind":"change","status":"new","source":{"repo":"a/b","pr":4},"attention":{"level":"fyi","reasons":["r"]}},
+ "C-5":{"id":"C-5","kind":"change","status":"new","source":{"repo":"a/b","pr":5},"attention":{"level":"fyi","reasons":["r"]},"design_check":{"verdict":"differs"}},
+ "C-6":{"id":"C-6","kind":"change","status":"new","source":{"repo":"a/b","pr":6},"conflicts":[{"decision":"D-1"}]},
+ "C-7":{"id":"C-7","kind":"change","status":"new","source":{"repo":"a/b","pr":7},"ci":{"state":"error","tries":2}},
+ "C-8":{"id":"C-8","kind":"change","status":"new","source":{"repo":"a/b","pr":8},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"skipped","tries":3}},
+ "C-9":{"id":"C-9","kind":"change","status":"new","source":{"repo":"a/b","pr":9},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"skipped"}}},
+ "decisions":{"D-1":{"id":"D-1","status":"active"}}}
+JSON
+assert "ci_gate off: no card is due for the gate" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+printf -- '- ci_gate: enabled\n' > "$WORK_DIR/CONFIG.md"
+assert "ci_gate on: open judged cards with no check yet, and a failed write under its cap" '[.ci_due[] | [.id, .retry]] == [["G-C-1", false], ["G-C-4", false], ["G-C-5", false], ["G-C-6", false], ["G-C-7", true], ["G-C-9", false]]' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+echo '{"cards":' > "$WORK_DIR/desk/db.json"
+assert "a Desk store the gate cannot read is an error line, and the run stays open" '(.nothing_to_do == false) and (.logs | any(test("could not read the Desk.s cards for the CI gate")))' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"
 assert "a broken inbox file is an error" '.error | test("not an inbox")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"

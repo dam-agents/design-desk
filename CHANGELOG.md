@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.66.2 — 2026-11-08
+## 1.78.0 — 2026-11-10
 
 **Upgrade:**
 1. Restart the Desk server (`rc-service --user design-desk-server restart`): a ping names
@@ -15,6 +15,213 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 2. Republish the page ([desk.md](docs/desk.md) → Publishing the page): each conversation's
    ping runs in a platform session of its own, where the platform offers `sendPrompt`'s
    `conversation` option.
+
+## 1.77.2 — 2026-11-10
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page). Nothing else: a design built before this hides
+   an empty Show hotspots or Show notes switch on the Desk too.
+
+## 1.77.1 — 2026-11-10
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page).
+2. Nothing else to run for Slack votes: the next vote posts one message per option (picture and words)
+   with 👍 and 👎 only. On a vote already open, a ⚠️ reaction no longer counts; a concern is a reply
+   in the option's thread, relayed as a comment (`slack-polls` → Sync).
+
+## 1.77.0 — 2026-11-10
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page).
+2. Nothing else to run: change cards judged `fyi` now show as Auto handled. With `ci_gate: enabled`,
+   the next inbox run sets Design Desk's check on every judged open PR that has none yet,
+   PRs that build a Desk design included ([watch.md](docs/watch.md) → CI gate).
+3. Nothing for the comment route: a request made from a change whose pull request is still open
+   now waits for Send to developers, which offers a comment on that pull request
+   ([handoff.md](docs/handoff.md) → Review before it goes).
+4. **Operator-only, optional:** make the `design-desk` status a required check on the product's
+   default branch, so nothing with UI merges until the Desk passes it.
+
+## 1.76.0 — 2026-11-10
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page). Nothing else: a card gets `vote_ended` only when
+   a person ends a vote ([desk.md](docs/desk.md) → Team feedback).
+
+## 1.75.3 — 2026-11-10
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.75.2 — 2026-11-10
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.75.1 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page). Nothing else.
+
+## 1.75.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page).
+2. Nothing else: the watch writes `work/.watch-cursor` itself after its next pass that leaves
+   nothing behind, and docs and scripts are read per run. From here on a migration reads
+   `bash "$HOME/scripts/upgrade-steps.sh"` ([persistence.md](docs/persistence.md) → Definition version & upgrade).
+
+## 1.74.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.73.2 — 2026-11-09
+
+**Upgrade:**
+Nothing — docs, skills and `scripts/preflight.sh` are re-read per run.
+
+## 1.73.1 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.73.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page).
+2. Add `- ci_gate: disabled` to `work/CONFIG.md` with `design config write`; ask the operator
+   whether to turn it on ([watch.md](docs/watch.md) → CI gate). Once on, the inbox run also
+   judges the open cards already on the Desk (`ci_due` entries `G-<card>`); nothing to do by
+   hand. `change_auto_handled_days` (14) needs no line.
+3. Run `bash "$HOME/scripts/verify-onboarding.sh" --config` and apply each `FAIL` line's `fix:`.
+4. The kit's description changed: no schedule changes.
+
+## 1.72.0 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.71.4 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.71.3 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.71.2 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.71.1 — 2026-11-09
+
+**Upgrade:**
+Nothing — `scripts/preflight.sh` is read per run.
+
+## 1.71.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): a triage keeps
+   its `build` list.
+2. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+3. Nothing for designs already built: designs built from now on keep a note for the team in
+   `data-design-note`, shown by the review bar's Show notes switch.
+
+## 1.70.2 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.70.1 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`): only a lead
+   developer or an admin picks or moves For Designers / For Developers.
+2. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+
+## 1.70.0 — 2026-11-09
+
+**Upgrade:**
+Nothing — `~/bin/design` runs the toolkit from the checkout, so the stricter guard applies once
+the change is pulled ([boundary.md](docs/boundary.md) → The guard). A prototype it now refuses
+goes the usual way: rewrite an accident, or take the part out as `needs-developer`.
+
+## 1.69.0 — 2026-11-09
+
+**Upgrade:**
+1. Add `- qa_bot:` to `work/CONFIG.md` when missing (`design config write`,
+   [docs/config.md](docs/config.md)). **Operator-only:** give the Quality Inspector's Slack user
+   id; until then its findings are read as people's bug reports.
+2. Run `bash "$HOME/scripts/verify-onboarding.sh" --live` and apply each `FAIL` line's `fix:`.
+   **Operator-only:** a backup repository that is not private is made private, with access
+   for the operator only ([docs/desk.md](docs/desk.md) → Private asks).
+3. List to the operator every skill a product profile brought (`design skill --repo <repo>`:
+   each one not confirmed is a line in `notes`). **Operator-only:** confirm each; write its
+   `## Skills` row with the `| source |` pin ([docs/actions.md](docs/actions.md) → Another
+   skill for an action). Until then `design skill` gives the action to the bundled skill.
+4. Rewrite and republish the agent manifest (new trust rules, [docs/manifest.md](docs/manifest.md)).
+5. Restart the Desk server (`rc-service --user design-desk-server restart`): the store refuses a
+   spec sent, or a hand-off, on a request from Slack until a person's Send to developers.
+
+## 1.68.0 — 2026-11-09
+
+**Upgrade:**
+1. Run `bash "$HOME/scripts/install-toolkit.sh"`: packages install by `npm ci --ignore-scripts`
+   alone (a `FAIL packages` line means `toolkit/package-lock.json` drifted; report it), then
+   `design doctor`.
+2. `rm -rf /tmp/design-desk`: build scratch now lives in a private per-user folder.
+3. A repo build whose CSS or components import a package its lockfile names no version of now
+   fails instead of installing `latest`; a fork's pull request gets no prototype from its head
+   and no `pr<n>` screens instance ([requests.md](docs/requests.md) → Adjusting a developer's UI).
+4. Stopgaps (record in `work/LESSONS.md`): repository code (component bundles, Tailwind
+   configs) runs in a child node with only `PATH` in its env, but can still read files on disk;
+   Chromium falls back to `--no-sandbox` when its sandbox cannot start. The fix for both is an
+   OS sandbox in the agent image.
+5. **Operator-only:** limit the agent's GitHub identity to `design-desk/*` branches with a
+   ruleset or a fine-grained token; the pre-push hook is a local guard only
+   ([prototype.md](docs/prototype.md) → Push). It accepts the repository only over `https://`
+   or ssh: a `prototype_remote` push over another scheme now fails.
+6. A `backup failed: … is not this user's own` line: something else holds the backup clone's
+   or lock's name in `/dev/shm`; remove it and run the persist again
+   ([persistence.md](docs/persistence.md) → Backup & restore).
+
+## 1.67.0 — 2026-11-09
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`), then republish
+   the page ([desk.md](docs/desk.md) → Publishing the page).
+2. Decisions from a pull request, issue, commit or architecture page now wait for a designer's
+   approval, whoever wrote them; the decisions page publishes only approved ones. Tell the
+   operator in the chat UI that the Not approved filter may list some again.
+3. A decision's role comes from the roster, except where the Desk saw it said (the Desk, an
+   approval, chat, a call): one from Slack no longer keeps a role its message claims.
+4. `design desk github-sync` and the watch gate read only the watched `repos`; a card's link
+   to any other repository keeps no preview (`skipped`). Tell the operator in the chat UI.
+5. Past 2 GiB of pictures and pages every upload is refused, the agent's own too; deleting a
+   closed request frees room.
+
+Each conversation on a card says what its reader may do in it (`may`), so the page shows
+Reply, Answer, Mark done and Reopen only to who may use them; `resolve` (marking someone
+else's conversation done) is listed on People.
+
+## 1.66.2 — 2026-11-09
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page).
+2. **Operator-only, optional:** to sharpen an element picture drawn before this version, shoot
+   that state again per [requests.md](docs/requests.md) → Every state of a part, step 4.
 
 ## 1.66.1 — 2026-11-08
 

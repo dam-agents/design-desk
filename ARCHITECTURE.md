@@ -87,6 +87,7 @@ Everything lives under `work/`, a plain directory backed up to a private reposit
 | `work/desk/inbox.json` | the work the Desk is waiting for, rewritten by the server on every change |
 | `work/CHANGES.tsv` | one row per merged PR seen, written by `scripts/ledger.sh` under a lock |
 | `work/ISSUES.tsv` | one row per issue read for the Issues page, written the same way (`ledger.sh --issues`) |
+| `work/.watch-cursor` | when the watch last left nothing behind, and under which `watch_since`: where its next search of merged pull requests starts |
 | `work/output/` | deliverables and their sources |
 | `work/logs/`, `work/*.log`, `work/MONITOR.json`, `work/audit/` | logs, the monitor ledger, audit history |
 

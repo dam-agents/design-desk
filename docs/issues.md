@@ -49,8 +49,12 @@ Every entry carries the issue's `title`, `url`, `author`, `updated`, `bucket`,
    - `summary` — one sentence: the problem it solves; at most 180;
    - `needs` — one to three bullets of at most 200: what the UI will need (a new screen, a
      changed part, a new state, new words), naming screens as the product map does; a
-     need a developer must build first says so ("needs a developer: a field the product
-     does not keep yet").
+     need that makes the product work differently says so ("needs a developer: spend counted
+     per day, not per week"); plumbing such as a field or an endpoint is not called out
+     ([boundary.md](boundary.md) → What needs a developer);
+   - `attention` — `{level, reasons}` as on a change card ([desk.md](desk.md) → Needs a
+     designer): `developer` when the needs are small changes made of what the catalog already
+     has, so it goes For Developers; else `designer`.
    A card whose needs changed in substance also gets `sketches: []` and `screens: []`: the
    next pass draws it again. The store finds a card by its issue, so a retry never makes a
    second one.
@@ -87,7 +91,8 @@ direction, not options.
    static page on sample data in the product's own style, built from the "now" screen's
    markup when there is one and changed only where the needs and the item's note say; `design build …
    --style <the profile's style>`, then `design shot`, a JPEG under 700 KB, looked at. A part
-   a developer must build is drawn and labelled "needs a developer". No real person or
+   that makes the product work differently is drawn and labelled "needs a developer"; plumbing
+   is drawn with a sample value. No real person or
    data; every number is made up.
 5. Upload each (`design desk asset <file> --kind screen --card C-<n>`), then one
    `design desk upsert` `{id, screens, sketches, style, draw: {failures: 0, note: ""}}` with its
@@ -104,7 +109,8 @@ person's **Draw it** tries again.
 
 ## On the Desk
 
-- The **Issues** tab lists the open cards: **This sprint** first, then **Next sprint**,
+- The **Issues** tab has the two tabs **For Designers** and **For Developers**, as PR Changes
+  ([desk.md](desk.md) → For Developers or For Designers); each lists the open cards: **This sprint** first, then **Next sprint**,
   **Assigned**, **For design** (`label`) and **All**; each row names its issue and author; hovering or focusing the row (or any link to the issue) shows its summary and needs.
 - **Draw it** (designer, admin, lead developer, developer, PM) puts a `draw` item on the inbox. **Design this** files a
   `feature` request from the card (`request.from`); its research starts from the card and
@@ -116,13 +122,14 @@ person's **Draw it** tries again.
   it out of the plan's filters (it stays in **All**, the first filter and the default, with its
   purple Designed dot), and its card links the
   request. The pre-flight never offers it to draw. An issue Design Desk opened itself (its
-  body carries the card's marker) is read like any other, so it lands there linked.
+  own login wrote it with the card's marker, [`handoff-github` → The marker](../.agents/skills/handoff-github/SKILL.md#the-marker))
+  is read like any other, so it lands there linked.
 - **The pull request that builds it.** A change card whose pull request a sent request's spec
   went to (`spec.pr_url`), or one of the pull requests the Desk's GitHub copy lists under the
   spec's issue (`linked`), carries `builds` (the request, its title and date): its page links
   the request, and the request's Sent to developers box links that change card next to the
   pull request's row.
-- **Handled.** A designer marks an issue **Handled** on its page when design has nothing to do
+- **Handled.** A designer, or a lead developer on one For Developers, marks an issue **Handled** on its page when design has nothing to do
   with it (`POST /api/cards/<id>/handled`, the card's `handled: {by, at}`; its `status` stays the
   run's): it leaves every list but **Handled**, and the pre-flight never offers it to draw. **Not
   handled yet** brings it back.

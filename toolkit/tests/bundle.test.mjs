@@ -7,7 +7,7 @@ import { bundleOf, acceptanceOf, specPictures } from "../bin/desk.mjs";
 const card = {
   id: "C-7", title: "Calmer header", request: { type: "idea", problem: "The header is too loud." },
   approved: { by: { email: "alice@example.com" }, at: "2026-11-06T10:00:00Z", variant: "v2", version: 3, implement: true },
-  triage: { verdict: "needs-developer", can: ["Grey header"], cannot: ["Sort by spend: no such order in the data."] },
+  triage: { verdict: "needs-developer", can: ["Grey header"], cannot: ["Sort by spend: no such order in the data."], build: ["Send the header's count with the list."] },
   variants: [{ id: "v1", name: "Bold", asset: "A-1" }, { id: "v2", name: "Quiet", asset: "A-2", version: 3,
     elements: [{ id: "e1", name: "Header", change: "changed", how: "Grey, smaller.", selector: "header" }],
     states: [{ id: "s1", name: "Empty list", part: "Header", element: "e1", how: "No agents yet.", asset: "A-3", shot: "A-4", stories: ["u1"] }],
@@ -23,7 +23,9 @@ test("the bundle carries the approved option, its states, the boundary and the a
   assert.deepEqual(design.approved.option, { id: "v2", name: "Quiet", version: 3 }, "the option a person approved, not the first");
   assert.equal(design.approved.straight_to_implementation, true);
   assert.equal(design.approved.by, null, "no e-mail address in a file that may go public");
+  assert.equal(design.request.problem, undefined, "the requester's raw words never reach a coding agent");
   assert.deepEqual(design.boundary.needs_developer, ["Sort by spend: no such order in the data."]);
+  assert.deepEqual(design.boundary.build, ["Send the header's count with the list."], "what a developer wires reaches the bundle");
   assert.deepEqual(design.elements[0].states, ["s1"], "an element lists its states");
   assert.equal(design.states[0].shot, "shots/s1-empty-list.png");
   assert.deepEqual(design.stories, [{ id: "u1", text: "As an admin I see the list calmly", met: "yes" }]);

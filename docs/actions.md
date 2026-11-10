@@ -36,7 +36,7 @@ its `SKILL.md` is; read it before doing the action.
 | `figma-import` | a Figma frame as an option rebuilt from the product's parts | Import from Figma; a Figma link in a request or chat | `figma` |
 | `figma-export` | an option or a prototype into Figma as layers | Send to Figma; a request's `figma` switch in New request; chat | `figma` |
 | `figma-compare` | where a screen, an element, a shipped change or an option differs from its frame in Figma, on the Desk | a request with a Figma link; the watch run; a drawing made again; chat | `figma` |
-| `share-options` | post the options to Slack, one message each, for 👍 / 👎 / ⚠️ votes and replies | Send to Slack… (at Team feedback) → Ask for a vote; chat | `slack-polls` |
+| `share-options` | post the options to Slack, one message each (picture and words), for 👍 / 👎 votes and replies | Send to Slack… (at Team feedback) → Ask for a vote; chat | `slack-polls` |
 | `send-designs` | post pictures of the options to Slack: the request's own thread, else the channel | Send to Slack… → Send the designs (`slack_due`, `scope: send`) | `slack-polls` |
 | `poll-sync` | bring Slack votes and replies to the Desk; close the vote with its result | every 30 minutes while a vote is open | `slack-polls` |
 | `council` | each ask in a request's Slack thread as a new option or version, answered there before/after | an ask in a Slack thread; `councils_due` | `slack-council` |
@@ -60,7 +60,19 @@ A product's design profile names the skills it brings (`skills` in `profile.json
 
 The order is: the `## Skills` table, then the product's profile, then the bundled skill; a
 chosen skill that is not installed falls back to the next, and `design skill` names what is
-missing and where to install it from. Onboarding installs the skills a profile names.
+missing and where to install it from.
+
+**A profile's skill is the operator's to allow.** It is installed only after the operator
+confirmed it in the direct session, from its `source` pinned to a commit, and the
+confirmation is the action's `## Skills` row with that pin in a third column
+(`| options | dam-prototyper | dam-agents/dam-prototyper@<sha> |`); never from a scheduled
+run. `design skill <action> --repo <repo>` enforces it: a profile's skill does the action
+only when that row names the same skill and its pin matches the profile's `source` (the same
+repository and, where the profile's `source` names a commit, the same commit). A profile's
+skill without such a row, a pinned row whose pin no longer matches, and a pinned row read
+without `--repo` are set aside with a line in `notes`, and the bundled skill does the action
+until the operator confirms again; tell the operator what `notes` says. A row without a pin
+is the operator's own override and is used as it stands, with no line in `notes`.
 
 A skill that replaces a bundled one keeps the action's contract:
 

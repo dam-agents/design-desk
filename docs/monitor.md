@@ -21,7 +21,7 @@ Domain conditions:
 | Alert | Condition | Clears when |
 | --- | --- | --- |
 | `desk_down` | the Desk server did not answer `127.0.0.1:5555/health` on two ticks in a row | it answers again |
-| `inbox_stuck` | an inbox item has waited open for more than 2 h (the inbox schedule or the pings are not working), or its `created` time cannot be read | no open item is older than 2 h or undated; an inbox file the monitor cannot read is logged and clears nothing |
+| `inbox_stuck` | an inbox item has waited open for more than 30 minutes (the inbox schedule or the pings are not working), or its `created` time cannot be read | no open item is older than 30 minutes or undated; an inbox file the monitor cannot read is logged and clears nothing |
 
 **The ledger** — `work/MONITOR.json`: an `alerts_due` entry is claimed when emitted and
 due again 30 min later until `monitor.sh ack <id>…` records it as sent, so a session that

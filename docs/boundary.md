@@ -18,8 +18,9 @@ file is how that promise is kept and how it is explained.
 Edge cases, decided once:
 
 - **Showing information the screen already shows** somewhere else on it is design. Showing a
-  field it does not show today is `needs-developer`, even when the screen receives it: the
-  field may be private, or not loaded for every user, and a developer decides that.
+  field it does not show today is design too, with the field in `build` for the developer
+  (the live prototype shows it with a sample value); it is `needs-developer` only when the
+  field is private or decides who sees what, because that is a rule.
 - Copy lives in the markup. A string in the code around it (a constant, a toast) is code,
   because a string there can just as well be an address or a status.
 - **Hiding** something behind a disclosure is design; **removing** it is not.
@@ -27,6 +28,19 @@ Edge cases, decided once:
   whether something is offered is not.
 - Copy that changes meaning ("Delete" → "Archive") is not design when the action stays the
   same: it would mislead. Wording that keeps the meaning is design.
+
+## What needs a developer
+
+The table says what a **live prototype** can change; it is not the triage verdict. Almost every
+design ends with a developer building it, and that alone never makes a request
+`needs-developer`. The verdict is for a part where the product would have to **work differently**:
+its logic or rules, how a feature works, how its parts fit together (its architecture), who may
+see or do what (security), or a feature that would have to be rebuilt. It is the same line the
+`impact` skill draws for **Under the hood**, so the triage and that text never disagree. The
+small plumbing a developer adds on the way — a new field, a parameter, an endpoint, an API, a
+control wired to an action the product already has, a picked value saved where the product
+already saves — is ordinary building: it goes in triage's `build` and the spec, the verdict
+stays `design`, and the live prototype shows the look with sample values. When in doubt, `design`.
 
 ## Explaining a "not as a design change"
 
@@ -56,20 +70,32 @@ checks the exact diff of a prototype and prints one JSON object:
 How it decides: the profile's `boundary.allow` and `boundary.deny` path lists first (a rename
 by both paths); then, for code, a fingerprint of each changed file — the modules it uses,
 every statement outside the markup in its order, and what the markup wires to behaviour
-(handlers, links, values, conditions, lists, data passed to components, and any attribute
-whose expression calls or assigns). Markup structure, classes, styles, copy and
-presentational components are not in it, so moving, restyling and rewording leave it
-unchanged. New markup may only read what the old markup read, call formatting and the new
-view state's setters, and add no condition on existing data. Files git ignores in the
-worktree (other than dependency and build folders) fail the check: they would ship with the
-install unseen.
+(handlers, links, values, conditions, lists, data passed to components, every attribute
+outside the presentational list — literal or not —, the components it renders, elements
+that load or submit such as `script`, `iframe`, `form`, and what a class or a style reads).
+Markup structure, classes, styles, copy and presentational components are not in it, so
+moving, restyling and rewording leave it unchanged. New markup may only read what the old
+markup read, call formatting and the view state its own function adds, add no condition on
+existing data, and render only presentational components (new in the diff or named in
+`presentational_imports`). An action keeps its place: moved under another condition, onto
+another element, or offered twice, it is behaviour. A style sheet, an inline style or an SVG
+that loads from anywhere but a plain local path or an image data URL, runs script, or disables
+or hides a control fails; it is read as the browser reads it (escapes, entities, comments, any
+prefix or letter case), and an inline style the guard cannot read counts as one that does. A
+symbolic link fails too.
+Files git ignores in the worktree fail the check — they would ship with the install unseen —
+except dependency and build folders and logs at the root, in `style.ui_dir` or outside the UI
+paths, and the profile's `ignored_ok`; never one the diff imports.
 
 When the guard refuses:
 
 1. Read the issues. A refusal you caused by accident (you passed a handler differently, you
    reformatted a condition) → write it the way the original did and run the guard again.
-2. A refusal that is the request itself → that part is `needs-developer`: take it out of the
-   prototype, keep it in the variants, and record it for the spec.
+2. A refusal that is the request itself → judge the refused part by **What needs a developer**
+   above. Plumbing (a field, an endpoint, wiring to an existing action) goes in `build`: the
+   prototype keeps its look with a sample value instead of the wiring, and the verdict stays
+   `design`. A part that makes the product work differently is `needs-developer`: take it out
+   of the prototype, keep it in the variants, and record it for the spec.
 3. Never change the profile's boundary, the guard, or a file's imports to get a pass, and
    never install, push or hand off a diff the guard has not passed.
 

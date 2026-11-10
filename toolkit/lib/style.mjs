@@ -8,7 +8,7 @@
 // when one is saved, then carbon.
 import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync } from "node:fs";
 import { join, dirname, relative, resolve } from "node:path";
-import { TOOLKIT, WORK, SCRATCH, DATA, cfg, fail, warn, ensureDir, run, req, slugOf, fontFaces, fontsourceDir, plexFaces } from "./core.mjs";
+import { TOOLKIT, WORK, DATA, cfg, fail, warn, ensureDir, run, req, slugOf, fontFaces, fontsourceDir, plexFaces, scratch as scratchDir, privateTmp, isolatedEnv } from "./core.mjs";
 import { loadProfile, cloneRepo, lockedVersions } from "./profile.mjs";
 import { toolchain, linkModules, bareImports } from "./toolchain.mjs";
 import { themeCss } from "./theme.mjs";
@@ -76,7 +76,7 @@ function cssClosure(file, seen = new Set()) {
 // CSS for a build. `scanFile` is the prototype's own markup, written where Tailwind
 // will @source it, so every utility the prototype uses is generated exactly as the app has it.
 export function compileCss(style, html) {
-  const scratch = ensureDir(join(SCRATCH, "build"));
+  const scratch = scratchDir("build");
   if (style.kind !== "repo") {
     const dir = ensureDir(join(scratch, "fallback"));
     linkModules(join(TOOLKIT, "node_modules"), dir);
@@ -112,10 +112,10 @@ export function compileCss(style, html) {
   if (cfgFile && existsSync(cfgFile)) for (const n of bareImports(readFileSync(cfgFile, "utf8"))) imports.add(n);
   const specs = major >= 4 ? { tailwindcss: v, "@tailwindcss/cli": v } : { tailwindcss: v };
   const locked = lockedVersions(root, uiDir, [...imports]);
-  for (const n of imports) {
-    if (locked[n]) specs[n] = locked[n];
-    else { warn(`${n} is imported by the repo's CSS but not in its lockfile; installing latest`); specs[n] = "latest"; }
-  }
+  // Never "latest": a public package of that name need not be the one the repo means.
+  const unlocked = [...imports].filter((n) => !locked[n]);
+  if (unlocked.length) fail(`the repo's CSS imports ${unlocked.join(", ")}, which its lockfile names no version of — it is never installed from npm at "latest" (a public package of that name may not be the repo's); build with --style brand or carbon, and say so`);
+  for (const n of imports) specs[n] = locked[n];
   const tc = toolchain(`tw-${slugOf(style.repo)}`, specs);
   // node_modules must resolve from the entry's directory and from the UI package.
   for (const d of new Set([dirname(entry), uiDir])) if (!existsSync(join(d, "node_modules"))) linkModules(tc.nm, d);
@@ -124,10 +124,13 @@ export function compileCss(style, html) {
   const input = join(dirname(entry), ".design-input.css");
   const out = join(scratch, "repo.css");
   writeFileSync(scan, html);
+  // The repo's Tailwind config and plugins are its code: Tailwind runs with an env of PATH alone.
+  const box = privateTmp("tailwind");
+  const tw = (args) => run(process.execPath, [tc.bin("tailwindcss"), ...args], { cwd: uiDir, env: isolatedEnv(box) });
   try {
     if (major >= 4) {
       writeFileSync(input, readFileSync(entry, "utf8") + `\n@source "./.design-scan.html";\n`);
-      const r = run(tc.bin("tailwindcss"), ["-i", input, "-o", out, "--minify"], { cwd: uiDir });
+      const r = tw(["-i", input, "-o", out, "--minify"]);
       if (r.status !== 0) fail(`tailwind ${v} failed on ${profile.css_entry}: ${r.stderr}`);
     } else {
       // v3: wrap the repo's config and add the prototype to its content globs.
@@ -136,11 +139,11 @@ export function compileCss(style, html) {
 const c = base.default || base;
 const content = Array.isArray(c.content) ? c.content : (c.content && c.content.files) || [];
 module.exports = { ...c, content: [...content, ${JSON.stringify(scan)}] };\n`);
-      const r = run(tc.bin("tailwindcss"), ["-c", wrap, "-i", entry, "-o", out, "--minify"], { cwd: uiDir });
+      const r = tw(["-c", wrap, "-i", entry, "-o", out, "--minify"]);
       rmSync(wrap, { force: true });
       if (r.status !== 0) fail(`tailwind ${v} failed: ${r.stderr}`);
     }
-  } finally { rmSync(scan, { force: true }); rmSync(input, { force: true }); }
+  } finally { rmSync(scan, { force: true }); rmSync(input, { force: true }); rmSync(box, { recursive: true, force: true }); }
   return readFileSync(out, "utf8");
 }
 
@@ -178,11 +181,14 @@ export function fontCss(style) {
   return out.join("\n");
 }
 
-function installFontsource(family) {
+// A family name comes from uploaded brand CSS or a repo: only a plain name becomes a
+// package name, and npm runs no install script of it.
+export function installFontsource(family) {
+  if (!/^[a-z0-9][a-z0-9 -]{0,60}$/i.test(family)) { warn(`"${family}" is not a plain font family name — not fetched from Fontsource`); return null; }
   const pkg = `@fontsource/${family.toLowerCase().replace(/\s+/g, "-")}`;
   const dir = ensureDir(join(DATA, "fonts"));
   if (!existsSync(join(dir, "package.json"))) writeFileSync(join(dir, "package.json"), '{"name":"design-desk-fonts","private":true}\n');
-  const r = run("npm", ["i", "-q", "--no-audit", "--no-fund", "--no-save", pkg], { cwd: dir });
+  const r = run("npm", ["i", "-q", "--no-audit", "--no-fund", "--no-save", "--ignore-scripts", pkg], { cwd: dir });
   if (r.status !== 0) return null;
   return fontsourceDir(family);
 }

@@ -81,7 +81,7 @@ config_json() {
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
     --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
     --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg issue_next_sprint "$(cfg issue_next_sprint)" --arg issue_news_label "$(cfg issue_news_label)" \
-    --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" \
+    --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" --arg ci_gate "$(cfg ci_gate)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -127,7 +127,8 @@ config_json() {
       issue_next_sprint: ($issue_next_sprint | if . == "" then "milestone" else . end),
       issue_news_label: ($issue_news_label | if . == "" then "none" else . end),
       max_issue_drawings: ($max_issue_drawings | tonumber? // 5),
-      decisions_page: ($decisions_page | if . == "dam" or . == "public" then "dam" else "off" end)}'
+      decisions_page: ($decisions_page | if . == "dam" or . == "public" then "dam" else "off" end),
+      ci_gate: ($ci_gate | if . == "enabled" then "enabled" else "disabled" end)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
@@ -194,12 +195,12 @@ search() {
   while [ "$page" -le 5 ]; do
     got="$(gh api ${hostargs[@]+"${hostargs[@]}"} -X GET search/issues -f q="$q" -f sort=updated -f order=desc -f per_page=100 -f page="$page" 2>/dev/null)" || return 1
     jq -e '.items | type == "array"' >/dev/null 2>&1 <<<"$got" || return 1
-    [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && log "$1: the search reported incomplete results — the rest come next run"
+    [ "$(jq -r '.incomplete_results' <<<"$got")" = "true" ] && { log "$1: the search reported incomplete results — the rest come next run"; : > "$WORK/.search-partial"; }
     out="$(jq -c --slurpfile more <(jq -c .items <<<"$got") '.items += $more[0]' <<<"$out")"  # a page is too big for an argument
     [ "$(jq '.items | length' <<<"$got")" -eq 100 ] || break
     page=$((page + 1))
   done
-  [ "$page" -gt 5 ] && log "$1: more than 500 results for \"$q\" — the oldest wait for later passes"
+  [ "$page" -gt 5 ] && { log "$1: more than 500 results for \"$q\" — the oldest wait for later passes"; : > "$WORK/.search-partial"; }
   printf '%s' "$out"
 }
 
@@ -215,18 +216,44 @@ watch_mode() {
   [ -n "$SINCE" ] || fail_out "watch_since is not set in work/CONFIG.md — onboarding writes it; without it every merged PR in history would be due"
   since_day="${SINCE%%T*}"
   ensure_ledger
+  # The merged search starts where the ledger may still need it, not at onboarding: two days
+  # before the last pass that left nothing behind (work/.watch-cursor), or at the oldest merge
+  # whose row is still due, in progress or failed under 3 tries, whichever is earlier; never
+  # before watch_since. A pass that deferred a change, could not read a candidate's files or
+  # got a partial search moves no cursor: nothing unread may age out of the window,
+  # and a cursor written under another watch_since (its second line) is not used: the operator
+  # moved the start, and the search goes back to it once.
+  local CURSOR="$WORK/.watch-cursor" merged_from="$since_day" cur open_min
+  rm -f "$WORK/.search-partial"
+  cur="$(head -1 "$CURSOR" 2>/dev/null)"
+  if [[ "$cur" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$ ]] && [ "$(sed -n 2p "$CURSOR" 2>/dev/null)" = "$SINCE" ]; then
+    merged_from="$(date -u -d "@$(( $(iso2epoch "$cur") - 172800 ))" +%Y-%m-%d 2>/dev/null || echo "$since_day")"
+    open_min="$(awk -F'\t' 'NR>1 { st[$1 "#" $2]=$4; m[$1 "#" $2]=$3; a[$1 "#" $2]=$7 } END { for (k in st) if (m[k] != "" && (st[k] == "due" || st[k] == "in_progress" || (st[k] == "failed" && a[k] + 0 < 3))) print m[k] }' "$LEDGER" | sort | head -1)"
+    [ -n "$open_min" ] && [[ "${open_min%%T*}" < "$merged_from" ]] && merged_from="${open_min%%T*}"
+    [[ "$merged_from" < "$since_day" ]] && merged_from="$since_day"
+  fi
   local DUE ISSUES; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"; ISSUES="$(mktemp "${TMPDIR:-/tmp}/design-desk-issues.XXXXXX")"
-  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0
+  local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0
   # One files call per new candidate; a backlog is spread over passes so a pass stays
   # well inside the Precheck's budget (about 2 s a call through the gateway).
   local MAX_LOOKUPS="${WATCH_MAX_LOOKUPS:-25}"
   local stale_s=$((3 * 3600))
   local OPEN_PRS LABEL; OPEN_PRS="$(jq -r '.watch_open_prs' <<<"$CONF")"; LABEL="$(jq -r '.issue_label' <<<"$CONF")"
   # The ledger's last row for (repo, number) decides: kind of work, or a reason to skip.
+  declare -A LAST_STATUS=() LAST_UPDATED=() LAST_ATTEMPTS=()
   decide() {  # <repo> <number> <state: merged|open|issue> → prints kind or nothing
-    local row status updated attempts
-    row="$(awk -F'\t' -v r="$1" -v p="$2" 'NR>1 && $1==r && $2==p' "$LEDGER" | tail -1)"
-    status="$(cut -f4 <<<"$row")"; updated="$(cut -f6 <<<"$row")"; attempts="$(cut -f7 <<<"$row")"
+    local status updated attempts
+    # The ledger is read once, with no process per pull request (a fork is slow in a small sandbox):
+    # the last row of a (repo, number) wins, as `tail -1` did.
+    if [ -z "${LEDGER_LOADED:-}" ]; then
+      local _k _s _u _a
+      # awk, not `read`: a tab is whitespace to IFS, so empty columns would collapse.
+      while IFS=$'\x1f' read -r _k _s _u _a; do
+        LAST_STATUS["$_k"]="$_s"; LAST_UPDATED["$_k"]="$_u"; LAST_ATTEMPTS["$_k"]="$_a"
+      done < <(awk -F'\t' -v OFS='\037' 'NR>1 { r[$1 "#" $2]=$4 OFS $6 OFS $7 } END { for (k in r) print k OFS r[k] }' "$LEDGER")
+      LEDGER_LOADED=1
+    fi
+    status="${LAST_STATUS["$1#$2"]:-}"; updated="${LAST_UPDATED["$1#$2"]:-}"; attempts="${LAST_ATTEMPTS["$1#$2"]:-}"
     case "$status" in
       carded|skipped|dispatched) return 0;;
       open) [ "$3" = merged ] && echo merged; return 0;;   # carded while open; now it shipped
@@ -241,7 +268,7 @@ watch_mode() {
     local slug; slug="$(repo_slug "$repo")"
     local hostargs=(); case "$repo" in */*/*) hostargs=(--hostname "${repo%%/*}");; esac
     local items more found
-    found="$(search "$repo" "repo:$slug is:pr is:merged merged:>=$since_day")" \
+    found="$(search "$repo" "repo:$slug is:pr is:merged merged:>=$merged_from")" \
       || fail_out "could not list merged pull requests of $repo (gh api search/issues failed) — is the GitHub connection granted?"
     items="$(jq -c '.items |= map(. + {state: "merged"})' <<<"$found")"
     # Open pull requests too: a developer's UI is seen, and adjusted, before it ships.
@@ -250,10 +277,12 @@ watch_mode() {
       items="$(jq -c --slurpfile more <(jq -c '.items | map(. + {state: "open"})' <<<"$more") '.items += $more[0]' <<<"$items")"  # a page is too big for an argument
     fi
     paths="$(ui_paths_for "$repo")"; ere="$(globs_to_ere "$paths")"
+    local SINCE_Z; SINCE_Z="$(date -u -d "@$(iso2epoch "$SINCE")" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "$SINCE")"
     while IFS=$'\t' read -r num state merged title url author draft; do
       [ -n "$num" ] || continue
       seen=$((seen + 1))
-      [ "$state" = open ] || [ "$(iso2epoch "$merged")" -ge "$(iso2epoch "$SINCE")" ] || continue
+      # Both are UTC ISO times ending in Z, so a text comparison orders them; no `date` per pull request.
+      [ "$state" = open ] || ! [[ "$merged" < "$SINCE_Z" ]] || continue
       local kind; kind="$(decide "$repo" "$num" "$state")"
       [ -n "$kind" ] || continue
       if [ "$ndue" -ge "$MAXN" ] || [ "$lookups" -ge "$MAX_LOOKUPS" ]; then deferred=$((deferred + 1)); continue; fi
@@ -261,7 +290,7 @@ watch_mode() {
       # Per candidate: its files, to keep only PRs that touch the UI.
       local files ui n
       files="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/pulls/$num/files?per_page=100" --paginate --jq '.[].filename' 2>/dev/null)" \
-        || { log "$repo#$num: could not read its files — retried next run"; continue; }
+        || { log "$repo#$num: could not read its files — retried next run"; unread=$((unread + 1)); continue; }
       ui="$(printf '%s\n' "$files" | grep -E "$ere" || true)"
       n=$(printf '%s\n' "$ui" | grep -c . || true)
       if [ "$n" -eq 0 ]; then
@@ -294,15 +323,18 @@ watch_mode() {
   # The issues and pull requests the Desk's cards point at whose copy on the Desk is behind
   # GitHub: never read, or changed since (a comment changes it). One search per repository.
   # A ref never read whose last 3 reads failed (a mistyped number, a private repository) opens
-  # no run (docs/watch.md → Comments on GitHub).
-  local gh_due='[]' REFS="$DESK_DIR/github-refs.json" r since hits
+  # no run, nor does a ref outside the watched repositories: github-sync never reads one
+  # (docs/watch.md → Comments on GitHub).
+  local gh_due='[]' REFS="$DESK_DIR/github-refs.json" REFS_W r since hits watched
+  watched="$(printf '%s' "$REPOS" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "") | ascii_downcase | split("/") | .[-2:] | join("/") | select(test("/")))')"
   if [ -f "$REFS" ]; then
-    gh_due="$(jq -c '[.refs[] | select(.updated == null and (.tries // 0) < 3) | .key]' "$REFS")"
-    for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' "$REFS"); do
-      since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' "$REFS")"
+    REFS_W="$(jq -c --argjson w "$watched" '{refs: [.refs[] | select((.key | split("#")[0] | ascii_downcase) as $r | $w | index($r) != null)]}' "$REFS")"
+    gh_due="$(jq -c '[.refs[] | select(.updated == null and (.tries // 0) < 3) | .key]' <<<"$REFS_W")"
+    for r in $(jq -r '[.refs[] | select(.updated != null) | .key | split("#")[0]] | unique | .[:10][]' <<<"$REFS_W"); do
+      since="$(jq -r --arg r "$r" '[.refs[] | select((.key | split("#")[0]) == $r and .updated != null) | .updated] | min' <<<"$REFS_W")"
       local hostargs=()
       hits="$(search "$r" "repo:$r updated:>=${since%%T*}")" || { log "$r: could not check its issues and pull requests for new comments — next run"; continue; }
-      gh_due="$(jq -c --arg r "$r" --slurpfile refs "$REFS" --argjson due "$gh_due" \
+      gh_due="$(jq -c --arg r "$r" --slurpfile refs <(printf '%s' "$REFS_W") --argjson due "$gh_due" \
         '$due + [.items[] as $i | $refs[0].refs[] | select(.key == ($r + "#" + ($i.number | tostring)) and .updated != null and $i.updated_at > .updated) | .key] | unique' <<<"$hits")"
     done
   fi
@@ -311,6 +343,8 @@ watch_mode() {
   [ "$skipped" -gt 0 ] && log "$skipped PRs touch no UI file — skipped"
   [ "$deferred" -gt 0 ] && log "$deferred more PRs wait for the next run (max_changes_per_run=$MAXN, at most $MAX_LOOKUPS file lookups a pass)"
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
+  if [ "$deferred" -eq 0 ] && [ "$unread" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
+  rm -f "$WORK/.search-partial"
   local arr iss; arr="$(jq -s '.' "$DUE")"; iss="$(jq -s '.' "$ISSUES")"; rm -f "$DUE" "$ISSUES"
   [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || [ "$ngh" -gt 0 ] || quiet_out
   logev info preflight "watch: $ndue changes, $nissues issues, $ngh GitHub copies due"
@@ -369,7 +403,8 @@ decisions_page() {
       | map(select(length >= 3)) | unique | sort_by(-length) | map(esc) | join("|")
       | if . == "" then "" else "(?<p>^|[^\\p{L}\\p{N}_])(?:" + . + ")(?![\\p{L}\\p{N}_])" end' "$DB" > "$PAGE.names" 2>/dev/null \
   || { rm -f "$PAGE.names"; DEC_BLOCKED="cannot read the names to mask from the roster or the Desk store at $DB"; log "decisions page: $DEC_BLOCKED — not published"; return; }
-  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf).
+  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf); a
+  # decision not approved there (withSide) is not published.
   # A row's email cell may list several addresses, each of them that person's (docs/config.md).
   roster="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
     | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
@@ -378,20 +413,21 @@ decisions_page() {
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub($nre[0]);
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def role: (.author.role // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+    def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
     def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
     def side: role as $r | (.origin.kind // "") as $k
       | if (["admin", "designer", "pm"] | index($r)) != null then "design"
         elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
+    def unapproved: (.origin.kind // "") as $k | side != "design" or (["pr", "issue", "commit", "doc"] | index($k)) != null;
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
     [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all
-    | ($all | map(select((.status // "active") == "active")) | sort_by(num)) as $on
+    | ($all | map(select((.status // "active") == "active" and (.approved != null or (unapproved | not)))) | sort_by(num)) as $on
     | ($all | map(select(.status == "revoked")) | sort_by(num)) as $off
     | ([ $all[] | .recorded, .at, .revoked.at?, (.history // [])[]?.at, .approved.at? ] | map(select(type == "string")) | max // "") as $last
     | "# Design decisions: \($name | line)",
       "",
-      "The design decisions this product'"'"'s team has made, kept by Design Desk. Follow every decision in force when you change what a person sees in the product: a screen, a part, a state, a word. A change that must go against one says so in its pull request, names the decision (D-<n>), and waits for a designer: never work around one silently. \"Not approved yet\" means a designer has not confirmed it; it still holds. A revoked decision binds nothing: it is listed so that an old reference to it makes sense.",
+      "The design decisions this product'"'"'s team has made, kept by Design Desk. Follow every decision in force when you change what a person sees in the product: a screen, a part, a state, a word. A change that must go against one says so in its pull request, names the decision (D-<n>), and waits for a designer: never work around one silently. A revoked decision binds nothing: it is listed so that an old reference to it makes sense.",
       "",
       "In force: \($on | length) · Revoked: \($off | length) · Last change: \(if $last == "" then "none" else ($last | day) end)",
       "",
@@ -403,8 +439,7 @@ decisions_page() {
           | "### \(.id) · \((.concepts // []) | map(line) | join(", "))", "", (.text | line), "",
             (if ((.why // "") | line) != "" then "Why: \(.why | line)", "" else empty end),
             ("Decided \(.at // .recorded // "" | day)\(if who then " by \(who)" else "" end)\(if from then ", from \(from)" else "" end)."
-              + (if (.replaces // []) | length > 0 then " Replaces \(.replaces | join(", "))." else "" end)
-              + (if side != "design" and .approved == null then " Not approved yet." else "" end)),
+              + (if (.replaces // []) | length > 0 then " Replaces \(.replaces | join(", "))." else "" end)),
             "")
       else "No decision is in force yet.", "" end),
       (if ($off | length) > 0 then
@@ -573,7 +608,7 @@ issues_mode() {
   jq -n --argjson news "$news" --argjson draw "$draw" --argjson sprints "$sprints" --argjson nexts "$nexts" --argjson dec "$DEC_DUE" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     --arg title "$(jq -r '.[] | "#\(.issue)"' <<<"$(jq -c --argjson a "$draw" '$a + .' <<<"$news")" | title_for Read issues)" \
     '{mode:"issues", nothing_to_do:false, title:$title, sprint:$sprints, next_sprint:$nexts,
-      read_set: (["docs/issues.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end) + (if ($dec | length) > 0 then ["docs/decisions-page.md"] else [] end)),
+      read_set: (["docs/issues.md", ".agents/skills/explain/SKILL.md"] + (if ($draw | length) > 0 then ["docs/screens.md"] else [] end) + (if ($dec | length) > 0 then ["docs/decisions-page.md"] else [] end)),
       issue_news_due:$news, drawings_due:$draw, decisions_page_due:$dec, config:$config, logs:$logs}'
 }
 
@@ -645,18 +680,42 @@ inbox_mode() {
         | select($why != null or ((.synced | epoch) as $at | $at == null or ($now - $at) >= $every))
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
+  # With ci_gate on, an open pull request's change card is due as `G-<card>` when it is judged
+  # (its attention, a design check, a decision in force it goes against, a suggestion for the
+  # presentation) and its check was never set (no `ci`, or the `skipped` that before 1.76.0
+  # meant a PR not held): the agent passes or holds it
+  # (docs/watch.md → CI gate). The cards already on the Desk when the key was turned on, and any a run missed.
+  # A card whose last status write failed (`ci.state: error`) is due again until its 3rd try
+  # (docs/watch.md → CI gate). A read that fails is an error line, never an empty list.
+  local gate="[]" gate_err=""
+  if [ -f "$DB" ] && [ "$(jq -r .ci_gate <<<"$CONF")" = enabled ]; then
+    if ! gate="$(jq -c '(.decisions // {}) as $d
+        | [ (.cards // {})[] | select(.kind == "change" and (.source | type) == "object" and .source.pr != null
+              and (.source.merged_at // null) == null and .status != "archived")
+          | (((.attention | type) == "object") or ((.design_check | type) == "object")
+             or ([(.conflicts // [])[] | objects | ($d[.decision | tostring] | if type == "object" then .status else null end)] | index("active")) != null
+             or (.call_suggestion // null) != null) as $wait
+          | (.ci | if type == "object" then . else null end) as $ci
+          | select((($ci == null or ($ci.state == "skipped" and $ci.tries == null)) and $wait) or ($ci.state == "error" and ($ci.tries // 0) < 3))
+          | {id: ("G-" + .id), card: .id, gate: true, retry: ($ci.state == "error")} ]' "$DB" 2>&1)"; then
+      log "could not read the Desk's cards for the CI gate: ${gate%%$'\n'*} — no pull request is judged this run"
+      logev error preflight "inbox: CI gate read failed"
+      gate="[]"; gate_err=1
+    fi
+  fi
   local n; n="$(jq 'length' <<<"$items")"
-  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ]; then
+  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ] && [ "$(jq 'length' <<<"$gate")" -eq 0 ] && [ -z "$gate_err" ]; then
     log "Desk inbox empty"; printf '%s due=0\n' "$NOW_ISO" >> "$WORK/INBOX.log"; quiet_out
   fi
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind)\(if .card then " on \(.card)" else "" end)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): prototype of \(.card) expires \(.expires) — extend or let it go"' <<<"$expiring")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack vote on \(.card) — \(if .close then "close it" else "sync it" end)"' <<<"$polls")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack thread on \(.card) — \(if .close then "close it (\(.why))" else "read it" end)"' <<<"$councils")
+  while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.card) waits for a designer — judge it for the CI gate"' <<<"$gate")
   printf '%s due=%s expiring=%s\n' "$NOW_ISO" "$n" "$(jq 'length' <<<"$expiring")" >> "$WORK/INBOX.log"
   logev info preflight "inbox: $n items due"
-  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson councils "$councils" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; elif [ "$(jq 'length' <<<"$polls")" -gt 0 ]; then printf 'Sync Slack votes'; else printf 'Read Slack threads'; fi; })" '
+  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson councils "$councils" --argjson gate "$gate" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; elif [ "$(jq 'length' <<<"$polls")" -gt 0 ]; then printf 'Sync Slack votes'; elif [ "$(jq 'length' <<<"$councils")" -gt 0 ]; then printf 'Read Slack threads'; else printf 'Hold pull requests for a designer'; fi; })" '
     def pick(k): [ $items[] | select(.kind as $x | k | index($x)) ];
     { mode:"inbox", nothing_to_do:false, title:$title,
       questions_due: pick(["question"]),
@@ -675,15 +734,20 @@ inbox_mode() {
       people_due: [ pick(["person"])[] | select(.person != null) ],
       decisions_due: pick(["decision"]),
       checks_due: pick(["decision-check"]),
+      ci_due: (pick(["ci"]) + $gate),
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
       config:$config, logs:$logs }
-    | .read_set = (["docs/desk.md"]
-        + (if (.questions_due | length) > 0 then [".agents/skills/explain/SKILL.md"] else [] end)
+    # A pass with only chores (a Slack vote to sync, a GitHub check to set, a prototype about to expire)
+    # follows none of the procedures in docs/desk.md: it reads its own doc or skill instead.
+    # The explain skill holds the writing rules and is read whatever is due.
+    | .read_set = ((if ([$items[] | select(.kind != "ci")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
+        + [".agents/skills/explain/SKILL.md"]
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
+        + (if (.ci_due | length) > 0 then ["docs/watch.md"] else [] end)
         + (if (.catalog_due | length) > 0 then ["docs/catalog.md"] else [] end)
         + (if (.map_due | length) > 0 then ["docs/map.md", "docs/screens.md"] else [] end)
         + (if (.figma_due | length) > 0 then [".agents/skills/figma/SKILL.md"] else [] end)
@@ -868,7 +932,7 @@ digest_mode() {
   fi
   log "digest $period ($(jq -r .dates <<<"$out")): $(jq -r '"\(.changes|length) changes, \(.requests_new|length) new requests, \(.decisions|length) decisions, \(.revoked|length) revoked, \(.feedback|length) pieces of feedback"' <<<"$out")"
   jq -n --argjson d "$out" --arg period "$period" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md"], config:$config, logs:$logs} | del(.done)'
+    '$d + {mode:"digest", nothing_to_do:false, period:$period, title:("Weekly UX digest " + $period), read_set:["docs/digest.md", ".agents/skills/explain/SKILL.md"], config:$config, logs:$logs} | del(.done)'
 }
 
 case "$MODE" in
