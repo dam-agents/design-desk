@@ -51,7 +51,7 @@ have) — and maybe their screenshot.
 
 1. Claim the item. Match `wanted` and the screenshot against the profile's `screens` and
    `capture.routes`, then the product's routes and navigation.
-2. Two candidates, or none you are sure of → `design desk ask C-<n> <file> --step map` with
+2. Two candidates, or none you are sure of → `design desk ask S-<n> <file> --step map` with
    your best guess, then done with `--outcome asked`; their answer queues it again.
 3. Already mapped (the store refuses a second card of one `path`: `409` names it), or no
    such screen in the product → `status: dropped` and one section saying which screen it is
@@ -59,7 +59,7 @@ have) — and maybe their screenshot.
 4. Otherwise **Build it** steps 2–4 for this one screen, `wanted.show` in the recipe's data,
    `design desk upsert` with the card's `id`, `path`, the instance's pictures (they replace
    the person's) and `status: current`.
-5. `design desk done I-<n> --session <id> --outcome mapped` (or `dropped`).
+5. `design desk done Q-<n> --session <id> --outcome mapped` (or `dropped`).
 
 ## Check again (`map_due`, `scope: refresh`)
 
@@ -68,7 +68,7 @@ screen's pictures again with its recipe (**Build it** step 2), and `design desk 
 with the card's `id`: the same pictures mark it `checked`, new ones redraw it (`drawn`, its
 earlier pictures kept in `history`). Redrawn, with `figma: enabled`: compare it with its frame
 in Figma (the `figma` skill → Compare with the product). A screen that is gone from the product → `status: stale`
-and one section saying where it went. Then `design desk done I-<n> --session <id> --outcome
+and one section saying where it went. Then `design desk done Q-<n> --session <id> --outcome
 checked` (or `redrawn`, `stale`).
 
 ## Keep it current

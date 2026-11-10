@@ -69,7 +69,7 @@ The person deciding sees it on the card, and every later step builds on it.
    under the report, in one quiet line that counts them by kind, and open on a click:
    - a GitHub issue or pull request: `{label, url}`;
    - an item or a decision on the Desk, a request, a discussion's card, a decision, by its
-     number: `{ref: "C-12" | "C-12.3" | "D-4", label?}`;
+     number: `{ref: "R-12" | "R-12.3" | "D-4", label?}`;
    - a Markdown page (a doc, an ADR, a design note) on GitHub: `{label, url, section,
      excerpt}`, the url to the section's heading (`…/docs/x.md#heading`), `section` its
      heading, `excerpt` the words in it that say it (at most 600 characters), shown in the
@@ -87,7 +87,7 @@ The person deciding sees it on the card, and every later step builds on it.
    a card saved before this rule, the page leaves out a link to code and shows any other link
    as a plain Link.
 
-   Then `design desk github-sync --card <C-n>`: the Desk reads every issue and pull request
+   Then `design desk github-sync --card <R-n>`: the Desk reads every issue and pull request
    the research cites in a watched repository (`repos`; any other is `skipped`), so each link's preview shows its state, labels and latest comments
    about the design ([desk.md](desk.md) → GitHub on the Desk).
 
@@ -118,7 +118,7 @@ A request whose New request switched **Ask me questions first** on is questioned
 triage, with the `grill` action's skill (`design skill grill --repo <repo>`; bundled:
 `grill-me`).
 
-1. Each run asks **one** question: `design desk ask C-<n> <file> --step request` with one
+1. Each run asks **one** question: `design desk ask R-<n> <file> --step request` with one
    question in `questions` (its options and `suggested`), then `design desk upsert`
    `{id, grill: {state: "asking", asked: <n>}}` and close your item `--outcome asked`. The
    person's answer puts the request back on the queue.
@@ -132,7 +132,7 @@ triage, with the `grill` action's skill (`design skill grill --repo <repo>`; bun
 Triage answers one question before any work: **what of this can be done as a design change?**
 The person deciding should know it before a single variant exists.
 
-1. Claim the item; read the card (`design desk item I-<n>`). A follow-up (`request.from`)
+1. Claim the item; read the card (`design desk item Q-<n>`). A follow-up (`request.from`)
    also reads the change card it came from.
 2. Find the screen in the product: the profile's screen map, then the code at the default
    branch (`scripts/checkout.sh <repo>`). Read the components the request touches and what
@@ -160,14 +160,14 @@ The person deciding should know it before a single variant exists.
    question for a developer** copies a link to the request, its state and these parts. Once a
    person opened it, it leaves their row: the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
-   `product`: they asked for options, so `design desk enqueue explore C-<n>`, unless
+   `product`: they asked for options, so `design desk enqueue explore R-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request
    with `request.auto` (filed by someone who may start options, with `request.options` above
    0, or options carried over: `request.carry`) whose verdict is not `product`.
-6. `design desk done I-<n> --outcome triaged`.
+6. `design desk done Q-<n> --outcome triaged`.
 
 A request too vague to triage gets **one question from you** instead, with your best guess
-as the suggested answer: `design desk ask C-<n> <file> --step request`. The Desk shows it at
+as the suggested answer: `design desk ask R-<n> <file> --step request`. The Desk shows it at
 the top of the request; the person's answer puts the request back on the queue. Close your
 item with `--outcome asked`.
 
@@ -236,7 +236,7 @@ Compare with the product); a note from **Work into the design** is a `revise` li
     "decision", ref: "D-<n>"}` or `{kind: "issue"|"pr", url, label}`. The page shows each as a
     warning box under the answer, linked to its source.
     **An applied note always shows what it did**: `design desk fetch` the option's previous
-    asset, then `design desk card C-<n> | jq '.card.threads[] | select(.id == "T-<n>") | .anchor'
+    asset, then `design desk card R-<n> | jq '.card.threads[] | select(.id == "T-<n>") | .anchor'
     | design compare <previous.html> <new.html> <dir> --anchor - > <dir>/T-<n>.json`. A note
     about the dark theme takes a second run with `--dark` into `<dir>/T-<n>-dark.json`, and
     `jq -s '[.[].shots[]]' <dir>/T-<n>.json <dir>/T-<n>-dark.json > <dir>/T-<n>-all.json` joins
@@ -308,7 +308,7 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   part in the product's words; `change` `new` or `changed`; `how` one sentence on what is new or
   different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
-  (`C-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
+  (`E-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
   option's design as **All elements**; one opens in a dialog with its states. A part picked in the design workspace
   that is (or sits inside) an element with states drawn offers **See every state**: the same
   dialog, only to look through them, with no button that draws or adds. A state belongs to the
@@ -339,7 +339,7 @@ view_name}`; none when they only named it) and their words (`note`). It works on
 sent to developers too: the states document the approved design and change nothing of it. Make it with the `states` action's skill (`design skill states --repo <repo>`).
 
 1. Claim; read the option's latest file (`design desk fetch`) and its source under
-   `work/output/`. Find the part in it; a part you cannot find → `design desk ask C-<n> <file>
+   `work/output/`. Find the part in it; a part you cannot find → `design desk ask R-<n> <file>
    --step states` with your best guess, done `--outcome asked`.
 2. **Which states.** Read the product's component the part is drawn from (`design states <file>
    --export <Component> --root <clone>`, [catalog.md](catalog.md) → Its dimensions) and choose
@@ -387,11 +387,11 @@ sent to developers too: the states document the approved design and change nothi
    the new `shot`. The store records the option version each state was drawn for (`of`); a
    build refuses an option whose states are older than it, and the final check says which.
    **Two runs on one card** (a `states` and a `revise` dispatched to two sessions): just before
-   its upsert, each run reads the card again (`design desk card C-<n>`) and sends every option
+   its upsert, each run reads the card again (`design desk card R-<n>`) and sends every option
    and state as it read it, `version` included, changing only its own. The store refuses (409)
    an option or a state sent at a version older than the card's: read the card again, apply
    your change to what is there now, and send it again.
-6. `design desk done I-<n> --session <id> --outcome "drew <k> states of <part>"`.
+6. `design desk done Q-<n> --session <id> --outcome "drew <k> states of <part>"`.
 
 ## UI bugs
 
@@ -427,7 +427,7 @@ A request with a Slack `origin` (a bug, a design someone asked for) is answered 
 thread they started: `reply` with `chatId` = `origin.chat` and `threadTs` =
 `origin.thread_ts`, never a new post, whatever `notify` says. Which replies the thread hears
 is the one list per audience in [Who Slack serves](#who-slack-serves); nothing else is sent.
-Every reply names the card (`C-<n>`) and links it, in the words the Desk shows and in plain
+Every reply names the card (`R-<n>`) and links it, in the words the Desk shows and in plain
 words ([desk.md](desk.md) → Writing on the Desk), people's text in it escaped
 ([desk.md](desk.md) → Links to an item, Text to Slack).
 
@@ -452,7 +452,7 @@ A change card (an open or merged pull request) has **Adjust the design**: it fil
 of type `adjustment` with `request.from` = the change card. Research reads the pull request
 first. Variants start from the UI the developer built (its screens on the change card are
 the "before"); a live prototype branches from the pull request's head when it is still open
-(`proto.sh worktree C-<n> <repo> --ref pull/<n>/head`), else from the default branch. A pull
+(`proto.sh worktree R-<n> <repo> --ref pull/<n>/head`), else from the default branch. A pull
 request from a fork gets no prototype from its head (`proto.sh` refuses it: the pushed branch
 would run the fork's code in the repository's workflows); say so on the card and keep to variants.
 
@@ -530,8 +530,8 @@ nothing else:
 - **A UI bug report**, with `bug_reports: enabled`, is queued like anyone's, and its thread
   hears only: the one question of `intake-slack` step 2 (only when the report does not say
   which screen or what is wrong); the reply of `intake-slack` step 5; and, when the request
-  is handed off or closed, one last reply: "“<title>” (C-<n>) is now with the developers:
-  <link>" or "“<title>” (C-<n>) is closed: <link>". No verdict, no reasons, no picture.
+  is handed off or closed, one last reply: "“<title>” (R-<n>) is now with the developers:
+  <link>" or "“<title>” (R-<n>) is closed: <link>". No verdict, no reasons, no picture.
   A finding of the `qa_bot` (`intake-slack` → Automated test findings) hears its step 4
   reply and that last reply.
 - **Anything else** — a question, a design, a picture, a deliverable, a council ask, a reply

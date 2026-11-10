@@ -92,7 +92,7 @@ where you found it in `sources`.
 On a card, one `design desk upsert` with:
 
 ```json
-{"id": "C-12", "impact": {
+{"id": "R-12", "impact": {
   "concept": "an agent's weekly spend",
   "places": [{"where": "Agents list", "how": "the amount on each row, amber near the limit", "kind": "screen"},
              {"where": "Slack spend alert", "how": "“Agent X reached its spend limit”", "kind": "message"}],

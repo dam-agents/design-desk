@@ -85,8 +85,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   fifth of a second, so what stands under the box moves rather than jumps; folded from below,
   the page brings the box's top back into view.
 - **Search.** The header's one search finds words in every item's title, summary and source
-  and in the decisions (`GET /api/decisions?q=`); an item's number (`C-12`, `12`), a
-  decision's (`D-3`), and while one is typed (`C-`, `C-1`, `D-`) every item or decision whose
+  and in the decisions (`GET /api/decisions?q=`); an item's number (`R-12`, `r12`, `12`; [desk.md](desk.md#links-to-an-item)), a
+  decision's (`D-3`), and while one is typed (`R-`, `R-1`, `D-`) every item or decision whose
   number starts so, newest first; a GitHub issue or pull request by its number (`#4512`, `PR 4512`) or link,
   matched to the card it is or came from; and a Desk link. Hits show as you type; Enter or a
   click opens one; ↑ ↓ pick, Escape closes. A GitHub number with no card offers its page on
@@ -279,10 +279,12 @@ its messages included, is For you.
 ## Designs
 
 A menu tab right after Requests, only for `developer`, `lead-developer` and `admin`: the
-requests sent to developers (`handed-off`), **To build** and **Done**, nothing else. An item
+requests sent to developers (`handed-off`), **To build** and **Done**, nothing else. Each send is an
+item of its own with its own number, `G-<n>` (`design_id`, given when the request is handed off; a
+send after a reopen gets a new one), shown on its row and its page. An item
 shows, read-only: a status strip (**Approved**, or **Done**, with who approved it and when,
 and who marked it done) holding the links to the issue or pull request it went to, the pull request it comes from
-(a PR change it adjusts, or its origin) and the Figma frame, and **Mark as done** (`POST /api/cards/C-<n>/built`, `built: {by, at}`; **Not done yet**
+(a PR change it adjusts, or its origin) and the Figma frame, and **Mark as done** (`POST /api/cards/R-<n>/built`, `built: {by, at}`; **Not done yet**
 takes it back, `not_built`). The store marks it done itself (`built: {by: {agent}, at, change}`) when a merged change card
 that builds it is written: its pull request is the spec's or links its issue, or its `design_check` says `matches`;
 never one a person took back. And **Open the request**, the same request on Requests; the
@@ -290,10 +292,10 @@ approved option as approved, **UX decisions** (`dev_summary`, the [handoff](hand
 AI-marked; none, none shown), the issue's text (the sent spec) and **Ask the designer**: a
 comment thread with `dev: true` (`threads` with `dev` from a role that sees Designs). One marked done folds to one line (its asker — its first words), under the open ones, as on every item. Its
 messages are For you for the designer who approved the request, or every `designer` and
-`admin` when a non-designer approved it, and land on `#designs/C-<n>`: they open the page
+`admin` when a non-designer approved it, and land on its own number (`#G-<n>`): they open the page
 without the menu. The request shows the same thread as *Developer asks*, and for a role that sees Designs its
 state row holds **Show the design**, which opens it here. Answer nothing on it:
 it is between people. Each closed record of a request reopened after it was sent (`sends`)
-stays under **Done** as its own row (`C-<n>~<k>`, **· earlier send**), read-only: **Closed**,
+stays under **Done** as its own row (its own `G-<n>`, **· earlier send**; `#R-<n>~<k>` still opens it), read-only: **Closed**,
 who reopened it and when, its issue, its summary and its questions, with no box to ask and no
 Mark as done.
