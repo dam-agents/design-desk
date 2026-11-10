@@ -2356,8 +2356,10 @@ test("End the vote: no more votes, an open Slack vote is due to close, a new rou
   // step, a person's own option on a request the agent filed, a closed request reopened.
   const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
   const filed = s.upsertCard({ kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Carla" } }).card;
-  const round = () => { s.upsertCard({ id: filed.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: a }] }); return s.card(filed.id); };
-  assert.equal(round().status, "feedback", "from Slack: on to the team by itself");
+  s.upsertCard({ id: filed.id, status: "feedback", triage: { verdict: "design", reasons: ["Look only."] }, variants: [{ id: "v1", name: "Calm", asset: a }] });
+  // A later write moves the request back to feedback; its options stay as they are.
+  const round = () => { s.upsertCard({ id: filed.id, status: "feedback" }); return s.card(filed.id); };
+  assert.equal(s.card(filed.id).status, "feedback", "from Slack: on to the team by itself");
   s.endVote(filed.id, alice);
   s.upsertCard({ id: filed.id, status: "variants" });
   assert.equal(round().vote_ended, undefined, "a run's write back to feedback starts a new vote");
