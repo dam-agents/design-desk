@@ -1970,11 +1970,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A change's row names its PR's author and nothing more: no Automatic line under it.
     if (c.kind === "change" && !machine) run = "";
     if (machine) author = JOB[run] || run;
+    // The card it came out of: the change a proposal or a touch-up started from.
+    const parent = S.cards.find((x) => x.id === (o.event?.card || c.design?.card || from));
+    // A run's event about that same card only repeats based on:, so `PR #12 shipped` is left out.
+    if (parent && o.event?.card === parent.id) event = "";
     const what = [run && !machine && esc(JOB[run] || run), event].filter(Boolean).join(" · ");
     const auto = machine ? event : run || o.automated ? `<span class="auto" title="Filed on its own, not by a person">${icon("auto")}<span>Automatic${what ? ` · ${what}` : ""}</span></span>` : event;
-    // The card it came out of: the change a proposal or a touch-up started from.
     // Named by its kind and number, its title on hover: a title can be long or the agent's own.
-    const parent = S.cards.find((x) => x.id === (o.event?.card || c.design?.card || from));
     const from_ = parent ? `<span><span class="k">based on:</span> <button class="anchor" data-card="${esc(parent.id)}" title="Opens ${esc(parent.title)}">${esc(({ change: "PR Change", issue: "Issue", request: "Request", digest: "Digest", screen: "Screen", element: "Element" })[parent.kind] || "Card")} ${esc(parent.id)}</button></span>` : "";
     // Where the team planned an issue, as one more word of the line: `in: This sprint`.
     const planned = c.kind === "issue" && !c.designed && c.bucket ? `<span title="Where the team planned this issue"><span class="k">in:</span> <b>${esc(c.bucket === "sprint" && c.source?.milestone ? c.source.milestone : BUCKET[c.bucket] || c.bucket)}</b></span>` : "";
