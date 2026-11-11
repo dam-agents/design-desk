@@ -1098,8 +1098,10 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   const a = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
   s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "One button", asset: a }] });
   assert.throws(() => s.act(card.id, alice, "slack-share", "{}") && s.act(card.id, alice, "slack-share", "{}"), /already working/);
-  const { poll } = s.openPoll(card.id, { chat: "C0123", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2026-11-06T14:00:00Z" });
+  const { poll } = s.openPoll(card.id, { chat: "C0123", root_ts: "1.0", posts: [{ variant: "v1", ts: "1.1" }], closes: "2026-11-06T14:00:00Z", head_ts: "1.0", head_text: "Which design?" });
   assert.deepEqual(s.findPoll("1.1"), { card: card.id, poll: poll.id, state: "open", variant: "v1" });
+  assert.deepEqual([poll.head_ts, poll.head_text], ["1.0", "Which design?"], "the opening message is kept, so the agent can edit it with the tally");
+  assert.equal(s.openPoll(card.id, { chat: "C0123", root_ts: "2.0", posts: [{ variant: "v1", ts: "2.1" }], closes: "2026-11-06T14:00:00Z" }).poll.head_ts, null, "without one, no tally");
   s.vote(card.id, alice, { variant: "v1", vote: "concern" });
   s.slackVotes(card.id, "v1", [{ key: alice.email, vote: "prefer" }, { key: "slack:U1", vote: "prefer", name: "Jana" }]);
   assert.equal(s.getCard(card.id).votes.v1[alice.email].vote, "concern");
