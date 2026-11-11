@@ -1796,9 +1796,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (res.status >= 400 && res.status < 500 && data.error) throw new Said(data.error);
     if (res.status >= 400) throw new Error(`${res.status}`);
     // A call that did not go out is said, not swallowed: the work then waits for the next look at the inbox.
+    // One platform session per conversation, not one for everything a person asks.
     if (data.ping) {
       const missed = () => { try { toast("Design Desk could not be called right away. It picks this up within 10 minutes."); } catch {} };
-      try { const sent = bridge.sendPrompt(data.ping); if (sent && typeof sent.catch === "function") sent.catch(missed); } catch { missed(); }
+      const opts = data.ping_conversation ? { conversation: data.ping_conversation } : undefined;
+      try { const sent = bridge.sendPrompt(data.ping, opts); if (sent && typeof sent.catch === "function") sent.catch(missed); } catch { missed(); }
     }
     return data;
   }

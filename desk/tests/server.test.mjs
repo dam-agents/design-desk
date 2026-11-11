@@ -530,3 +530,14 @@ test("Designs: a developer or an admin marks a design done and asks its designer
   const notDev = await d.viewer("alice@example.com", `/api/cards/${card.id}/threads`, { kind: "comment", text: "A note.", dev: true });
   assert.equal(notDev.body.thread.dev, undefined, "only who sees Designs asks the designer");
 });
+
+test("a ping names its conversation: a thread, else the card, so each runs in a session of its own", async (t) => {
+  const d = await desk(t);
+  const made = await d.viewer("alice@example.com", "/api/requests", { problem: "The list is busy." });
+  assert.equal(made.body.ping_conversation, made.body.card.id, "a request and its work: the card");
+  const asked = await d.viewer("alice@example.com", "/api/private", { text: "How do the options differ?" });
+  assert.equal(asked.body.ping_conversation, asked.body.thread.id, "a private ask: its thread");
+  const other = await d.viewer("alice@example.com", "/api/private", { text: "And the header?" });
+  assert.notEqual(other.body.ping_conversation, asked.body.ping_conversation, "two asks by one person are two conversations");
+  assert.match(asked.body.ping, /^Design Desk: a teammate is waiting on the Desk \(ref Q-\d+\)/);
+});

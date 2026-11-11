@@ -20,7 +20,7 @@ window.platform = (() => {
   const q = new URLSearchParams(location.search);
   const as = q.get("as") || "alice@example.com", role = q.get("role") || "viewer";
   return Object.freeze({
-    sendPrompt(p) { console.log("[sendPrompt]", p); },
+    sendPrompt(p, o) { console.log("[sendPrompt]", p, o || ""); },
     async request({ method, path, body, contentType }) {
       const r = await fetch("/relay" + path, { method, body, headers: { "content-type": contentType || "text/plain", "x-as": as, "x-role": role } });
       return { status: r.status, contentType: r.headers.get("content-type"), body: await r.text() };
