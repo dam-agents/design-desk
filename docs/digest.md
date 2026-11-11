@@ -41,7 +41,9 @@ automated test findings, comments, concerns and questions people left.
   requests close to a decision);
 - `screens` — up to two before/after pairs, of the week's most visible changes. A pair is two
   pictures with `stage: "before"` and `stage: "after"` and one `pair` name, in the product's words
-  for the screen; the Desk draws them side by side under that name. Take both from the change's
+  for the screen; the Desk draws them side by side under that name. Each pair on the card has its
+  own name: the page draws one pair per name, so when two changes show the same screen, add the
+  change's title to each (`<screen> — <change's title>`). Take both from the change's
   card (`screens`), never one without the other. The two show the same screen at a similar size:
   a strip next to a whole screen misleads, so a change whose pictures do not match gets none.
   A caption starts in lower case, because the page puts Before and After in front of it, and says
