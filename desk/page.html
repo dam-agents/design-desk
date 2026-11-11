@@ -473,6 +473,7 @@
   /* Where a request came from, and the requests a card started. */
   .linked { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); font-size: 13px; max-width: var(--measure); margin: 8px 0; }
   .linked .k { color: var(--muted); }
+  .linked.from { flex-wrap: nowrap; } .linked.from > .anchor { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .linked.from > .k, .linked.from > a { flex-shrink: 0; white-space: nowrap; }
   /* The number reads with its title, on the same baseline, as in a heading. */
   .linked { align-items: baseline; } .linked .num { margin-left: -6px; font-size: 11px; }
   .linked .lk { display: inline-flex; align-items: baseline; gap: 10px; min-width: 0; max-width: 100%; } .linked .lk .num { margin-left: -6px; }
@@ -4429,7 +4430,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!p) return "";
     const s = p.source || {};
     const out = s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${p.kind === "issue" ? `Issue #${esc(s.issue || "")}` : `PR #${esc(s.pr || "")}`} ↗</a>` : "";
-    return `<div class="linked"><span class="k">${p.kind === "issue" ? "Designs the issue" : p.kind === "change" ? "Adjusts the change" : "Comes from"}</span><button class="anchor" data-card="${esc(p.id)}">${esc(p.title)}</button>${num(p)}${out}</div>`;
+    return `<div class="linked from"><span class="k">${p.kind === "issue" ? "Designs the issue" : p.kind === "change" ? "Adjusts the PR Change" : "Comes from"}</span><button class="anchor" data-card="${esc(p.id)}" title="${esc(p.title)}">${esc(p.title)}</button>${out}</div>`;
   }
   // Where the spec went, as its own card on the request: the GitHub issue or pull request, and
   // its Issues card once the issues run read it (docs/handoff.md step 5). Once the request is
