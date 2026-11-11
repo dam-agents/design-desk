@@ -1623,6 +1623,11 @@ test("the design tags the parts a decision shaped: the picked one framed solid, 
   await desk.waitForSelector("#ws-side .why-sel");
   assert.match(await desk.textContent("#ws-side .why-sel"), /Why it is like this[\s\S]*D-3[\s\S]*Spend always shows per week[\s\S]*D-4[\s\S]*Totals in bold/,
     "the Spend cell names D-3 and the D-4 of the row it sits in");
+  // A decision opens the workspace in Click through, though Select was used last.
+  await desk.click("[data-ws-close]");
+  await desk.click('.why-strip [data-why="D-3"]');
+  await desk.waitForSelector('[data-ws-mode="off"].on');
+  assert.equal(await desk.locator('[data-ws-mode="select"].on').count(), 0, "a decision opens the workspace in Click through");
 }));
 
 test("Draw design options asks how many, starting at the request's own count, and sends the one picked", async (t) => {
@@ -1701,6 +1706,16 @@ test("a worked-in note shows the place before and after, outlined, in the thread
     assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");
     assert.deepEqual(await pictures("#th-t3"), both, "the thread shows before and after");
     assert.equal(await desk.locator("#th-t1 .changed").count(), 0, "a message without pictures shows none");
+
+    // The jump to the part opens the workspace in Click through, though Select was used last.
+    await desk.click('[data-act="workspace"]');
+    await desk.click('[data-ws-mode="select"]');
+    await desk.click("[data-ws-close]");
+    if (!(await desk.isVisible('#th-t3 .head [data-goto="t3"]'))) await desk.click("#th-t3 > summary");
+    await desk.click('#th-t3 .head [data-goto="t3"]');
+    await desk.waitForSelector('[data-ws-mode="off"].on');
+    assert.equal(await desk.locator('[data-ws-mode="select"].on').count(), 0, "a note's part opens the workspace in Click through");
+    await desk.click("[data-ws-close]");
 
     await desk.click('[data-act="workspace"]');
     await desk.waitForSelector("#ws-side .notes");
@@ -1843,6 +1858,7 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     // Another version lets the part go.
     await desk.selectOption("#ws-version", "1");
     await cleared();
+    await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Selected"));
     await desk.selectOption("#ws-version", "2");
     await frame.click('[data-view="1"] button');
     await picked();

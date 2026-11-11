@@ -5956,7 +5956,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); await openCard(c.id); return;
     }
     if ("catalogOpen" in ds) { S.elFilter = "design"; S.productFilter = "elements"; await showTab("product"); return; }
-    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
+    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
     // A story is shown in place, so the design above keeps its frame, and it plays there.
     if (ds.story) { S.story = ds.story; const v = (S.card.variants || []).find((x) => x.id === S.variant), box = $("#stories"); if (box && v) box.outerHTML = renderStories(S.card, v); playStory(); return; }
     if (ds.vote) {
@@ -5971,7 +5971,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.goto) {
       const th = (S.card.threads || []).find((x) => x.id === ds.goto);
       if (!th?.anchor?.variant) return;
-      S.variant = th.anchor.variant; S.ws.state = th.anchor.state || null; S.ws.open = true; S.ws.check = false; S.ws.version = null;
+      S.variant = th.anchor.variant; S.ws.state = th.anchor.state || null; S.ws.open = true; S.ws.check = false; S.ws.mode = "off"; S.ws.version = null;
       S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       renderWorkspace(); return;
     }
@@ -6628,7 +6628,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const an = th?.anchor;
     if (an?.variant && (c?.variants || []).some((v) => v.id === an.variant)) {
       S.variant = an.variant;
-      S.ws = { ...S.ws, open: true, check: false, version: null, edit: null, alt: null, note: th.id, state: an.state || null,
+      S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, edit: null, alt: null, note: th.id, state: an.state || null,
         filter: th.state === "resolved" ? "all" : S.ws.filter || "open",
         selected: an.selector ? { selector: an.selector, text: an.text || "", tag: an.tag || "", label: an.label || an.text || "an element", view: an.view, view_name: an.view_name } : null };
       renderDetail(); renderWorkspace();
