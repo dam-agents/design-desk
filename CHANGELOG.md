@@ -7,6 +7,12 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.79.2 — 2026-11-11
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page). Nothing else: the open
+   item in the list on the left is grey, like the active tab in the menu.
+
 ## 1.79.1 — 2026-11-11
 
 **Upgrade:**

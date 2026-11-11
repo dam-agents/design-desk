@@ -196,8 +196,10 @@
   .list { border-right: 1px solid var(--line); overflow: auto; padding: 12px; background: var(--panel); }
   .detail { overflow: auto; padding: 24px var(--pad-x) 64px; }
   .row { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 10px 12px; cursor: pointer; margin-bottom: 4px; }
-  .row:hover { background: var(--soft); }
-  .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow); }
+  /* The open item is grey like the active tab in the menu; --row-bg is what a hovered state dot fades into. */
+  .row { --row-bg: var(--panel); }
+  .row:hover { --row-bg: color-mix(in srgb, var(--soft) 55%, var(--panel)); background: var(--row-bg); }
+  .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { --row-bg: var(--soft); background: var(--row-bg); }
   /* A title is bold until this person first opens the item (docs/desk-page.md → Read and unread). */
   .row .t { font-weight: 400; display: flex; gap: 8px; align-items: baseline; } .row.unread .t { font-weight: 600; }
   .row .s { color: var(--muted); font-size: var(--fs-meta); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -774,7 +776,7 @@
   .sdot .tag.busy { animation: pulse 1.2s ease-in-out infinite; }
   .sdot .tag.busy::before, .sdot .tag.t-checking::before { background: currentColor; box-shadow: none; }
   .sdot .tag .w { display: inline-block; max-width: 0; overflow: hidden; opacity: 0; vertical-align: bottom; transition: max-width .45s ease, opacity .35s ease; }
-  .row .sdot:hover .tag, .row .open:focus-visible .sdot .tag { animation: none; height: var(--dh); background: color-mix(in srgb, var(--t) 16%, var(--panel)); padding: 0 10px 0 8px; gap: 6px; box-shadow: -8px 0 8px var(--panel); }
+  .row .sdot:hover .tag, .row .open:focus-visible .sdot .tag { animation: none; height: var(--dh); background: color-mix(in srgb, var(--t) 16%, var(--panel)); padding: 0 10px 0 8px; gap: 6px; box-shadow: -8px 0 8px var(--row-bg); }
   .row .sdot:hover .tag::before, .row .open:focus-visible .sdot .tag::before { width: 7px; }
   .row .sdot:hover .tag.busy::before, .row .open:focus-visible .sdot .tag.busy::before { animation: pulse 1.2s ease-in-out infinite; }
   .row .sdot:hover .tag .w, .row .open:focus-visible .sdot .tag .w { max-width: 24ch; opacity: 1; }
@@ -839,7 +841,6 @@
   .vpanel:has(> .vbar) .frame { border: 0; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 5px 16px rgba(0,0,0,.08); }
   .tabs.vtabs button[aria-pressed="true"] { background: var(--canvas); border-bottom-color: var(--canvas); }
   .tally .chip { border: 1px solid color-mix(in srgb, currentColor 25%, var(--line)); }
-  .row[aria-current="true"], .row.item:has(> .open[aria-current="true"]) { box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.04); }
 
   /* ---------- one set of controls on every page ---------- */
   /* Buttons: one shape (8px corners), one height per size, never wrapping. */
