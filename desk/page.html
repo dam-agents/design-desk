@@ -3381,6 +3381,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // What the chat showed when last drawn: it animates only what is new, never a redraw.
   let askShown = { open: false, ctx: "", said: 0 };
+  // The asks as last drawn: a poll redraws the chat only when they changed.
+  let askDrawn = "";
   function renderAsk() {
     let root = $("#ask");
     if (!can("ask")) { root?.remove(); return; }
@@ -3392,6 +3394,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const said = here.reduce((n, t) => n + (t.messages || []).length, 0);
     const was = askShown, ctxKey = JSON.stringify(ctx);
     askShown = { open: S.ask.open, ctx: ctxKey, said };
+    askDrawn = JSON.stringify(S.ask.asks);
     if (!S.ask.open) {
       root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Ask privately about this ${askWhat(ctx)}${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
       if (was.open) root.querySelector(".ask-fab")?.classList.add("enter");
@@ -3402,7 +3405,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const hadFocus = document.activeElement === box, caret = box ? box.selectionStart : null;
     const answerOf = (th) => [...th.messages].reverse().find((m) => m.by?.agent);
     const size = askSize();
-    root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
+    // keepFocus puts a focused button (send, a starter, close, a brief) back; the box is kept above.
+    keepFocus(root, () => { root.innerHTML = `<section class="ask-panel" role="dialog" aria-label="Private ask"${size ? ` style="width:${size.w}px;height:${size.h}px"` : ""}>
       <div class="ask-grip" data-ask-grip title="Drag to resize"></div>
       <header><div><b>Private ask</b> <span class="chip" title="Only you and Design Desk see these questions and answers: nobody else on the Desk, and nothing goes to Slack. Design Desk explains; it never changes the design from here.">🔒 only you</span></div><button class="btn small" data-ask-close title="Close; your questions stay here">✕</button></header>
       <div class="ask-ctx" title="Design Desk answers about what you had open when you asked">About: <b>${esc(ctx.label)}</b></div>
@@ -3413,7 +3417,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         <div class="starters">${starters(ctx).map(([k, l]) => `<button class="btn small" data-ask-starter="${k}" data-ask-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
         <textarea id="ask-text" maxlength="4000" placeholder="Your question…" title="Enter sends, Shift+Enter starts a new line"></textarea>
         <div class="bar"><button class="btn primary" data-ask-send>Ask privately about this ${askWhat(ctx)}</button></div>
-      </footer></section>`;
+      </footer></section>`; });
     $("#ask-text").value = keep;
     if (hadFocus) { const t = $("#ask-text"); t.focus(); if (caret !== null) t.setSelectionRange(caret, caret); }
     if (!was.open) root.querySelector(".ask-panel").classList.add("enter");
@@ -6669,18 +6673,20 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     || [...document.querySelectorAll("textarea, input:not([type]), input[type=text]")].some((x) => x.value.trim());
   document.addEventListener("click", (e) => { if (e.target.closest("[data-reload]")) location.reload(); });
 
-  // One timer: every 15 s, every 4 s while the open request waits for Design Desk or the Desk can't be reached.
+  // One timer: every 15 s, every 4 s while the open request or a private ask waits for Design Desk, or the Desk can't be reached.
   let tick = 0;
   async function poll() {
     tick += 1;
     if (document.hidden) return;
-    const fast = S.offline || (S.card && waitingKinds(S.card).length > 0);
+    const asking = S.ask.asks.some((t) => t.needs_agent);
+    const fast = S.offline || asking || (S.card && waitingKinds(S.card).length > 0);
     if (!fast && tick % 4 !== 0) return;
     try {
       await refreshList();
       await loadNotes().catch(() => {});
       if (S.card) await openCard(S.card.id, { quiet: true });
-      if (S.ask.open || S.ask.asks.some((t) => t.needs_agent)) { await loadAsks(); if (!S.ask.dragging && !$("#ask-text")?.value && !document.activeElement?.closest?.("#ask")) renderAsk(); }
+      // An answer shows as it lands, with the person still in the box: the redraw keeps their text, focus and caret.
+      if (S.ask.open || asking) { await loadAsks(); if (!S.ask.dragging && JSON.stringify(S.ask.asks) !== askDrawn) renderAsk(); }
       if (S.tab === "people" && S.people?.asks?.some((a) => a.state !== "done")) { await loadPeople(); if (S.tab === "people") renderDetail(); }
       if (S.offline) { S.offline = false; S.stale = false; renderBanners(); }
     } catch (e) {
