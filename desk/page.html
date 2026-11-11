@@ -4758,8 +4758,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     let selectedPath = "", selectedShown = false;
     const pick = (el, path) => { selected = el; selectedPath = path; selectedShown = false; };
     // Shown means the person can see it: in the page, laid out, not hidden, not fully transparent (it or a box round it).
-    const showing = (el) => el.isConnected && (el.checkVisibility ? el.checkVisibility({ visibilityProperty: true, opacityProperty: true, contentVisibilityAuto: true }) : el.getClientRects().length > 0);
-    const letGo = () => { if (!selected || editing) return false; if (showing(selected)) { selectedShown = true; return false; } if (!selectedShown) return false; const selector = selectedPath; pick(null, ""); parent.postMessage({ type: "desk-unpicked", selector }, "*"); return true; };
+    // Not contentVisibilityAuto: a part only scrolled out of view is still on the page.
+    const showing = (el) => el.isConnected && (el.checkVisibility ? el.checkVisibility({ visibilityProperty: true, opacityProperty: true }) : el.getClientRects().length > 0);
+    // A design that draws the part again replaces its node: the part picked is found again by its path.
+    const letGo = () => { if (!selected || editing) return false; if (!selected.isConnected) selected = find(selectedPath) || selected; if (showing(selected)) { selectedShown = true; return false; } if (!selectedShown) return false; const selector = selectedPath; pick(null, ""); parent.postMessage({ type: "desk-unpicked", selector }, "*"); return true; };
     const layer = document.createElement("div");
     layer.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483647";
     document.documentElement.appendChild(layer);
@@ -6147,7 +6149,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
     if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }
     if ("wsNotes" in e.target.dataset) { S.ws.notes = e.target.checked; store.set("desk-notes", S.ws.notes ? "1" : "0"); renderWorkspace(); return; }
-    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); }
+    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); }
   });
 
   document.addEventListener("keydown", (e) => {

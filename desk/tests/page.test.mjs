@@ -1783,7 +1783,8 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
 test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks; an element of the option has every state drawn", async (t) => {
-  const run = await launch(t, BRIDGE_BAR.replace("can: { comment: true,", "can: { revise: true, comment: true,"));
+  // Tabs has an earlier version, to pick in the version picker.
+  const run = await launch(t, BRIDGE_BAR.replace("can: { comment: true,", "can: { revise: true, comment: true,").replace('name: "Tabs", asset: "A-1",', 'name: "Tabs", asset: "A-1", version: 2, history: [{ version: 1, asset: "A-1" }],'));
   if (!run) return;
   const { top, desk, posts } = run;
   try {
@@ -1832,6 +1833,17 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
       assert.equal(await solid(), false, `a part closed by ${what} is let go`);
       await frame.evaluate(() => { document.querySelector('[data-view="1"]').style.cssText = ""; });
     }
+    // A part the design draws again stays selected: it is found again by its path.
+    await frame.click('[data-view="1"] button');
+    await picked();
+    await frame.evaluate(() => { const b = document.querySelector('[data-view="1"] button'); b.replaceWith(b.cloneNode(true)); });
+    await top.waitForTimeout(1000);
+    assert.notEqual(await desk.textContent("#ws-side .sel b"), "Nothing selected", "a part drawn again keeps its selection");
+    assert.equal(await solid(), true, "and its frame");
+    // Another version lets the part go.
+    await desk.selectOption("#ws-version", "1");
+    await cleared();
+    await desk.selectOption("#ws-version", "2");
     await frame.click('[data-view="1"] button');
     await picked();
     await desk.click('[data-ws-mode="off"]');
@@ -1845,7 +1857,7 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.click("[data-ws-close]");
     await desk.click('#detail [data-el="save"]');
     await desk.waitForSelector("#element-dialog[open] [data-el-states]");
-    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 1[\s\S]*In the design[\s\S]*Draw every state/);
+    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 2[\s\S]*In the design[\s\S]*Draw every state/);
     await desk.click("#element-dialog [data-el-states]");
     await desk.fill("#confirm-form [name=note]", "The error first.");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Draw the states" }).click();
