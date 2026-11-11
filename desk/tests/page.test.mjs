@@ -1821,8 +1821,19 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await frame.click('#review [data-review-view="1"]');
     await desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent === "Nothing selected");
     assert.equal(await solid(), false, "another page of the design lets the part go");
+    // Closed by the design itself, as a menu closes: hidden or fully transparent, it or a box round it.
+    const picked = () => desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent !== "Nothing selected");
+    const cleared = () => desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent === "Nothing selected");
+    for (const [what, css] of [["opacity", "opacity:0"], ["visibility", "visibility:hidden"], ["display", "display:none"]]) {
+      await frame.click('[data-view="1"] button');
+      await picked();
+      await frame.evaluate((c) => { document.querySelector('[data-view="1"]').style.cssText = c; }, css);
+      await cleared();
+      assert.equal(await solid(), false, `a part closed by ${what} is let go`);
+      await frame.evaluate(() => { document.querySelector('[data-view="1"]').style.cssText = ""; });
+    }
     await frame.click('[data-view="1"] button');
-    await desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent !== "Nothing selected");
+    await picked();
     await desk.click('[data-ws-mode="off"]');
     assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "Click through lets the part go");
     await frame.waitForFunction(() => document.documentElement.style.cursor === "");

@@ -4757,7 +4757,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // One that never showed (a note's part the design has not opened) stays picked.
     let selectedPath = "", selectedShown = false;
     const pick = (el, path) => { selected = el; selectedPath = path; selectedShown = false; };
-    const letGo = () => { if (!selected || editing) return; if (selected.isConnected && (selected.checkVisibility ? selected.checkVisibility({ visibilityProperty: true }) : selected.getClientRects().length)) { selectedShown = true; return; } if (!selectedShown) return; const selector = selectedPath; pick(null, ""); parent.postMessage({ type: "desk-unpicked", selector }, "*"); };
+    // Shown means the person can see it: in the page, laid out, not hidden, not fully transparent (it or a box round it).
+    const showing = (el) => el.isConnected && (el.checkVisibility ? el.checkVisibility({ visibilityProperty: true, opacityProperty: true, contentVisibilityAuto: true }) : el.getClientRects().length > 0);
+    const letGo = () => { if (!selected || editing) return false; if (showing(selected)) { selectedShown = true; return false; } if (!selectedShown) return false; const selector = selectedPath; pick(null, ""); parent.postMessage({ type: "desk-unpicked", selector }, "*"); return true; };
     const layer = document.createElement("div");
     layer.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483647";
     document.documentElement.appendChild(layer);
@@ -4799,7 +4801,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     let lastView = null;
     const openView = (d) => { const vs = [...document.querySelectorAll("[data-view]")]; const t = vs.find((v) => d.view_name && v.dataset.viewName === d.view_name) || (!d.view_name && vs.find((v) => v.dataset.view === d.view)); if (t && !t.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(t.dataset.view) + '"]')?.click(); };
     const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
-    new MutationObserver(() => { viewMoved(); draw(); }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    // A class or style change (another page, a menu closing) may hide the part picked: checked once a frame, and the
+    // layer is redrawn only when the part is let go, so a design that animates a class never redraws the layer for it.
+    let looking = 0;
+    const lookAgain = () => { if (looking || !selected) return; looking = requestAnimationFrame(() => { looking = 0; if (letGo()) draw(); }); };
+    new MutationObserver(() => { viewMoved(); lookAgain(); }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden"] });
     // Show notes is kept across options: the Desk hears each flip of the switch and, when the
     // frame loads, names the state to start in.
     const notesSwitch = () => document.querySelector("#review [data-notes]");
