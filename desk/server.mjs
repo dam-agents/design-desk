@@ -363,8 +363,12 @@ const decisionQuery = (url) => ({ concept: url.searchParams.get("concept") || ""
 // The page sends the agent a ping with only the item id; the agent reads the work
 // from this store, never from the prompt (a viewer can send any prompt text). A guest's
 // work waits for the inbox schedule instead of starting a session of its own.
+// Each conversation gets a session of its own on the platform: a thread (a question, a
+// private ask), else the card (a request and the work on it), else the item alone.
 function withPing(result, s, who) {
-  return result.inbox && s.ping && who.deskRole !== "guest" ? { ...result, ping: `Design Desk: a teammate is waiting on the Desk (ref ${result.inbox.id}). Follow CLAUDE.md → "Desk pings".` } : result;
+  if (!(result.inbox && s.ping && who.deskRole !== "guest")) return result;
+  const i = result.inbox;
+  return { ...result, ping: `Design Desk: a teammate is waiting on the Desk (ref ${i.id}). Follow CLAUDE.md → "Desk pings".`, ping_conversation: i.thread || i.card || i.id };
 }
 
 async function agentRoute(req, res, url) {

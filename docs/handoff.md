@@ -15,7 +15,7 @@ sent; the developer or coding agent gets only answers.
    revise), it is what the prototype shows: the card's `live_pick` — its option, `version` and
    assets (`live_pick.asset`, `states[].asset`), which `approved.variant` and `approved.version`
    repeat; write the spec from those, not from a newer version drawn since.
-2. Write `/tmp/design-desk-c<n>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
+2. Write `/tmp/design-desk-r<n>/spec.md` in plain words ([desk.md](desk.md) → Writing on the
    Desk): a developer reads it, but so do the designers who approved it. These sections:
    - **Summary** — the problem and the approved direction, three sentences.
    - **Why** — the request in your own words, the decisions taken on the Desk (which
@@ -26,7 +26,7 @@ sent; the developer or coding agent gets only answers.
      the card names it for the approver.
    - **The design** — the prototype link and demo sign-in while it lives, the variant
      names, and the screens as pictures, before and after: upload each (`design desk asset
-     <file> --kind image --card C-<n>`) and write it as `![<view>](asset:A-<n>)`, so the
+     <file> --kind image --card R-<n>`) and write it as `![<view>](asset:A-<n>)`, so the
      Desk shows it to the people who review the spec; the deliver skill attaches them to
      GitHub ([handoff-github](../.agents/skills/handoff-github/SKILL.md) → The pictures) and
      the bundle saves them under `pictures/`.
@@ -60,7 +60,7 @@ sent; the developer or coding agent gets only answers.
    judgement that changes what gets built (a state, a copy, a breakpoint, an edge case the
    options never showed, which of two readings of a note) and that the card, its threads and
    the answers of an earlier pass do not settle. None → go on. Some → one form,
-   `design desk ask C-<n> <file> --step handoff --form` with `{text, questions: [{text,
+   `design desk ask R-<n> <file> --step handoff --form` with `{text, questions: [{text,
    options, suggested}]}`: at most 6 questions, 2–4 concrete options each, `suggested` your
    pick ([The questions form](desk.md#the-questions-form)). Keep
    `status: spec`, `done --outcome asked` and stop. The answer re-queues the handoff with the
@@ -90,15 +90,15 @@ card the people who may approve it read the spec, and:
   `comment_on`, the default there). Approve then asks no such thing; with `spec_review: disabled` Approve still does.
 ## Sending it
 
-5. **The bundle.** `design desk bundle C-<n> /tmp/design-desk-c<n>/handoff`: `spec.md` (the
+5. **The bundle.** `design desk bundle R-<n> /tmp/design-desk-r<n>/handoff`: `spec.md` (the
    text for people), `design.json` (the same design for a coding agent: the approved option,
    the boundary and what needs a developer, every element and state with its selector in the
    mockup, the user stories, the acceptance criteria, the decisions it follows, the
    prototype's branch and patch), `mockup.html` (the approved option, the exact reference),
    `states/` and `shots/` (each state alone), `pictures/` (the spec's pictures, its lines pointing at them). Look at `design.json`: every element has its
    states, every acceptance line names something on the screens. With `prototype_remote` set,
-   commit the folder as `handoff/C-<n>/` on the request's `design-desk/` branch (the
-   prototype's, else `design-desk/c<n>-handoff` from the default branch), run `design guard`
+   commit the folder as `handoff/R-<n>/` on the request's `design-desk/` branch (the
+   prototype's, else `design-desk/r<n>-handoff` from the default branch), run `design guard`
    on that exact diff ([boundary.md](boundary.md)), and push only when it passes; a refusal
    pushes nothing, and the delivery carries `design.json` in the issue alone.
 6. **A send after a reopen.** A request sent before, reopened by an admin and approved again
@@ -106,7 +106,7 @@ card the people who may approve it read the spec, and:
    spec — never an edit of, or a comment on, an earlier send's issue, comment or pull request,
    a `feature` included (its new issue links the origin issue) — naming the earlier one
    (`sends[-1].spec.issue_url` or `pr_url`). Its marker names the send
-   (`<!-- design-desk card=C-<n> send=<k> -->`), and the search before writing matches only
+   (`<!-- design-desk card=R-<n> send=<k> -->`), and the search before writing matches only
    that marker, so an earlier send's write is never found and edited (`handoff-github` → The
    marker).
 
@@ -148,7 +148,7 @@ card the people who may approve it read the spec, and:
    **✓ Designed** ([issues.md](issues.md) → On the Desk). What it sends asks nothing of its reader:
    it is the spec as the Desk settled it, and it names the Desk card as the place for a
    question that still comes up. It carries the bundle: `design.json` in a folded block
-   ("For a coding agent"), the link to the pushed `handoff/C-<n>/` folder when there is one,
+   ("For a coding agent"), the link to the pushed `handoff/R-<n>/` folder when there is one,
    and one line for the coding agent: build from `design.json` and `mockup.html`, check each
    state against `shots/`, and tick every acceptance line in the pull request.
 7. Write `dev_summary` (`design desk upsert`): the UX decisions the request's threads, votes,

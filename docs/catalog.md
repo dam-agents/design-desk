@@ -34,7 +34,7 @@ The profile lists the elements worth having under `catalog.elements`
 2. **The code.** `bash "$HOME/scripts/checkout.sh" <repo>`; the element's file and export
    come from the card's `source` or the profile's `catalog.elements`. A card added with
    **+ Add** has only `wanted` (`part`, `where`, `show`) and maybe a screenshot: find the
-   component from them. Unsure → `design desk ask C-<n> <file> --step catalog` with your
+   component from them. Unsure → `design desk ask E-<n> <file> --step catalog` with your
    best guess, then done with `--outcome asked`. Already drawn (the store refuses a second card of one `source`: `409` names
    it) or not in the code → `status: dropped`, one section saying which element or why,
    then done with `--outcome dropped`. In step 4, `wanted.show` comes first.
@@ -65,12 +65,12 @@ The profile lists the elements worth having under `catalog.elements`
    `design desk upsert` with `kind: element` and the fields above, `status: current`.
    With `figma: enabled`, compare the drawing with the element's frame in Figma (the `figma`
    skill → Compare with the product), finding the frame first when it has none.
-8. `design desk done I-<n> --session <id> --outcome drawn`.
+8. `design desk done Q-<n> --session <id> --outcome drawn`.
 
 ## Keeping it current
 
 - The watch run marks an element `stale` when a merged change touched its file (or a child
-  the sheet depends on) and enqueues a redraw: `design desk enqueue catalog C-<n>`
+  the sheet depends on) and enqueues a redraw: `design desk enqueue catalog E-<n>`
   ([watch.md](watch.md) step 10).
 - A designer, PM or developer can press **Update the drawing** on an element.
 - "Build the catalog" in chat: create one element card per entry of `catalog.elements`
@@ -120,10 +120,10 @@ card's *Draw how it looked before*, later *Draw older versions*): the earlier ve
    states are the ones of that time: a prop that did not exist yet has no tile. It does not
    render → leave that commit out and say which in the done outcome; never draw it by hand.
    After each commit, drawn or not: `git -C <dir> worktree remove --force "$tmp/<sha>"`.
-4. Upload the sheet and its thumbnail as in step 7, then `design desk look C-<n> <look.json>`:
+4. Upload the sheet and its thumbnail as in step 7, then `design desk look E-<n> <look.json>`:
    `{at: <merge time>, commit, sheet, thumb, states: [names], made_by: [the change card of
    that PR, if the Desk has one], links: [{label: "PR #<n>", url}]}`. `at` may carry an
    offset (`%cI`); the store keeps it in UTC. Each version shows up as it is added.
 5. On every end of the item, drawn or failed: `git -C <dir> worktree prune` and
    `rm -rf "$tmp"`, so no `/tmp/design-desk-*` stays. Then
-   `design desk done I-<n> --session <id> --outcome "drew <k> earlier versions"`.
+   `design desk done Q-<n> --session <id> --outcome "drew <k> earlier versions"`.
