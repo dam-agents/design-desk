@@ -2,7 +2,7 @@
 name: slack-polls
 description: >-
   Post a design request's options to Slack for the team to vote on and discuss: one message
-  per option, its picture and its words together, votes as 👍 / 👎 reactions, comments and concerns as thread replies, all
+  per option, its picture and its words together, votes as 👍 / 👎 reactions, comments and concerns as thread replies (tagging the agent unless it reads the whole channel), all
   brought back to the Desk; the result is posted when the vote closes. Use when someone
   picks Ask for a vote under Send to Slack… (`slack_due`), when an open vote is due to sync or close
   (`polls_due`), when someone picks Send the designs under Send to Slack… (`slack_due` with `scope:
@@ -38,9 +38,12 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
 2. **The opening message**, in these words:
    "🗳️ *<request title>* — which design should we take? <the note, when there is one>
    Vote on each option below with 👍 (I like it) or 👎 (I don't). A concern or a why is a reply
-   in its thread. Voting closes <closes, in the reader's words: "Friday at 15:00">.
+   in its thread<, tagging me>. Voting closes <closes, in the reader's words: "Friday at 15:00">.
    Details on the Design Desk (R-<n>): <link>". The link is the card's
-   ([docs/desk.md](../../../docs/desk.md) → Links to an item). Keep the `ts` the posting tool
+   ([docs/desk.md](../../../docs/desk.md) → Links to an item). The part in angle brackets goes in unless
+   `work/manifest-channels.json` records this conversation as `ambient: true` (the agent reads
+   every message there, [docs/manifest.md](../../../docs/manifest.md) → Sources); `false` or no
+   record → it goes in, since only a reply that tags the agent reaches it (Sync → 3). Keep the `ts` the posting tool
    returns: the opening message carries the tally (**The tally** below).
 3. **One message per option**, in order: its picture attached to the message that carries its
    words, "*Option <A/B/C>: <name>* — <its one line on when it wins>". Never the picture in one
@@ -48,14 +51,14 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
    A post with a picture returns its `ts` like any other, and that `ts` is the one you record
    and react to. Should a result name none (rare: Slack was slow to record the file), never
    guess one: `read_thread` shows it where the thread is readable, else that option is not
-   recorded and the card says so.
+   recorded and the card says so (`design desk comment R-<n> <file>`).
    When the request has a live
    prototype, one more message: "Try it live: the link and the demo account are on the Desk".
    Never a password in Slack.
 4. Add 👍 and 👎 to each option's message, so a vote is one click and people see both choices
    (where the platform does not let you react to your own post, the opening message's legend
-   says them). Never ⚠️: a concern is a reply in the option's thread, and it reaches the Desk as
-   a comment on that option (Sync → 3).
+   says them). Never ⚠️: a concern is a reply in the option's thread, and it reaches the Desk as a comment
+   on that option (Sync → 3) when it reaches the agent: tagged, or any reply in an ambient channel.
 5. Record the poll: `design desk poll-open R-<n> <poll.json>` with `{chat, root_ts, posts:
    [{variant, ts}], closes, channel, head_ts, head_text}` — `root_ts` is the opening message's
    `ts` (in a request thread, the thread's), each post's `ts` the option's, `head_ts` and
@@ -98,8 +101,8 @@ Every 30 minutes while a vote is open, in the inbox run:
    over their reaction.
 3. Replies under an option's post (`read_thread` reads only a thread you were shown: the
    request's own Slack thread, one you started with `start_thread`, or one a person tagged you
-   in; the thread under a plain `post` is refused. So the way in is every reply that tags you in
-   it, which reaches you as a Slack turn): each one from a person
+   in; the thread under a plain `post` is refused. So the way in is every reply that reaches you
+   as a Slack turn: one that tags you, or any reply in an ambient channel): each one from a person
    on the roster (by the email Slack holds for them, [docs/desk.md](../../../docs/desk.md) →
    Roles, In Slack; anyone else's is not relayed) becomes a comment on that option, once — `design desk relay R-<n> <comment.json>` with `{variant,
    name, email, text, slack_ts, mentions}`, `mentions` mapping each `<@U…>` in the text to
@@ -115,7 +118,7 @@ On its date, or when the request moved on (approved, closed):
 1. Sync once more (above), without its tally edit: step 3 makes the last one.
 2. The result per option, every vote the card holds counted, the Desk's and Slack's: "B: 7 👍,
    2 👎, 1 ⚠️ on the Desk". A ⚠️ comes only from the Desk's page (Slack votes 👍 or 👎), so it
-   says so, and is left out when there is none; a concern in Slack is a reply, on the Desk. The
+   says so, and is left out when there is none; a concern in Slack is a reply, on the Desk as a comment (Share → 4). The
    vote advises; no option is the winner: the person who approves on the Desk picks one.
 3. Edit the opening message to its closed state (**The tally**, below). Then post the result as a
    `reply` under the poll's `chat` and `root_ts` (**Where it posts**), since an edit notifies no one: "🗳️ *<request title>* — the vote is closed. <result>. The team decides
@@ -147,7 +150,7 @@ rewrites that message in place: the post shows exactly the text and card it pass
 
 ## In a Slack turn
 
-Someone tags you in an option's thread. **Role first**: their role from the email Slack holds
+Someone tags you in an option's thread, or replies there in an ambient channel. **Role first**: their role from the email Slack holds
 for their user id ([docs/desk.md](../../../docs/desk.md) → Roles, In Slack). Not on the roster
 → the decline line of [docs/requests.md](../../../docs/requests.md) → Who Slack serves, no
 relay, no picture, and stop. Otherwise `design desk find-poll <thread ts>` names the card,

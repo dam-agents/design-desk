@@ -10,7 +10,9 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.81.1 — 2026-11-11
 
 **Upgrade:**
-Nothing — `slack-polls` and `docs/digest.md` are re-read per run.
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): its Slack vote hints say a
+   reply reaches the Desk when it tags the agent, or in a channel the agent reads in full.
+   `slack-polls` and `docs/digest.md` are re-read per run.
 
 ## 1.81.0 — 2026-11-11
 
