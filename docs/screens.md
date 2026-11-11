@@ -63,7 +63,7 @@ Environments.
 5. **Publish** each as a screen with `source: "instance"` and a one-line caption, and set the
    card's `instance`: `{url, login: {user, password, hint}, name, ref, commit, updated}`, the
    address of `engine.open_endpoint` from `list_environments` and the demo account. Keep the
-   recipe under `work/output/screens/C-<n>/` for the next run.
+   recipe under `work/output/screens/S-<n>/` for the next run.
 
 ## Before and after (a merged change)
 
@@ -96,7 +96,7 @@ People add screenshots on a card with **Add screenshots**. For each new screen w
 - It shows the change → write its caption, keep `source` and `by`.
 - It does not (another screen, an old version, a sign-in page) → take it off the card and
   answer in one comment who added what and why it was left out, in plain words.
-- Then `design desk done I-<n> --session <id> --outcome checked`.
+- Then `design desk done Q-<n> --session <id> --outcome checked`.
 
 ## Clean up
 

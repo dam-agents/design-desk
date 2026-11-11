@@ -70,7 +70,8 @@ if [ "$STRUCTURE" = 1 ]; then
   else fail definition "$HOME_DIR is not the definition checkout" "ONBOARDING.md → Step 1"; fi
   if [ -z "$(git -C "$HOME_DIR" status --porcelain 2>/dev/null)" ]; then ok definition_clean "nothing untracked or changed"
   else fail definition_clean "the checkout shows changes or untracked files: $(git -C "$HOME_DIR" status --porcelain | head -3 | tr '\n' ' ')" "fix .gitignore (allowlist) or revert the change; never git clean"; fi
-  head -1 "$HOME_DIR/.gitignore" 2>/dev/null | grep -qx '/\*' && ok gitignore "allowlist" || fail gitignore "the .gitignore is not an allowlist" "restore it from origin/main"
+  # The allowlist opens with `/*`; the comment lines above it do not count.
+  grep -v -E '^[[:space:]]*(#|$)' "$HOME_DIR/.gitignore" 2>/dev/null | head -1 | grep -qx '/\*' && ok gitignore "allowlist" || fail gitignore "the .gitignore is not an allowlist" "restore it from origin/main"
   if [ -f "$HOME_DIR/.design-desk-onboarded" ]; then ok sentinel "$(cat "$HOME_DIR/.design-desk-onboarded")"
   else fail sentinel "no onboarding sentinel" "ONBOARDING.md → Step 6"; fi
   if [ ! -x "$HOME_DIR/bin/design" ]; then fail toolkit "~/bin/design is missing" "bash \"\$HOME/scripts/install-toolkit.sh\""
@@ -105,7 +106,7 @@ if [ "$STRUCTURE" = 1 ]; then
   if [ -f "$WORK/CHANGES.tsv" ]; then
     [ "$(head -1 "$WORK/CHANGES.tsv")" = "$(printf 'repo\tpr\tmerged_at\tstatus\tcard\tupdated\tattempts\tnote')" ] && ok changes_ledger "header intact" \
       || fail changes_ledger "work/CHANGES.tsv has a different header" "move it aside; scripts/ledger.sh writes a new one"
-    bad="$(awk -F'\t' 'NR>1 && (NF!=8 || $4 !~ /^(due|in_progress|carded|skipped|failed)$/)' "$WORK/CHANGES.tsv" | head -2)"
+    bad="$(awk -F'\t' 'NR>1 && (NF!=8 || $4 !~ /^(due|in_progress|open|carded|skipped|failed)$/)' "$WORK/CHANGES.tsv" | head -2)"
     [ -z "$bad" ] && ok changes_rows "rows well formed" || fail changes_rows "malformed rows: $(printf '%s' "$bad" | tr '\t\n' '| ')" "rows are written only by scripts/ledger.sh and preflight.sh; remove the hand-written ones"
   fi
   if [ -f "$WORK/desk/db.json" ]; then

@@ -539,5 +539,5 @@ test("a ping names its conversation: a thread, else the card, so each runs in a 
   assert.equal(asked.body.ping_conversation, asked.body.thread.id, "a private ask: its thread");
   const other = await d.viewer("alice@example.com", "/api/private", { text: "And the header?" });
   assert.notEqual(other.body.ping_conversation, asked.body.ping_conversation, "two asks by one person are two conversations");
-  assert.match(asked.body.ping, /^Design Desk: a teammate is waiting on the Desk \(ref I-\d+\)/);
+  assert.match(asked.body.ping, /^Design Desk: a teammate is waiting on the Desk \(ref Q-\d+\)/);
 });
