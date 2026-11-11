@@ -667,6 +667,8 @@
   .pact-stat .l { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
   .pact-stat .l svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .pact-stat.none .n { color: var(--muted); font-weight: 500; }
+  .pact-box.pact-none { display: block; }
+  .pact-box.pact-none p { margin: 0; }
   @media (max-width: 700px) { .pact-box { grid-template-columns: 1fr; } .pact-spark { justify-self: start; text-align: left; } .pact-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (prefers-reduced-motion: reduce) { .people .who .chev { transition: none; } }
   .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 6px; }
@@ -2914,7 +2916,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     ["approved", "Approved", '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>'],
     ["decisions", "Decisions", '<path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>']];
   function personActivity(x, a) {
-    a = a || { weeks: Array(12).fill(0) };
+    // No record (a Desk server older than this page sends none): say it cannot be shown, never zeros as a fact.
+    if (!a) return `<div class="pact-box pact-none"><p class="sub">What they did on the Desk can't be shown right now. It shows once the Desk server is restarted; if it stays so, tell ${esc(contact())}.</p></div>`;
     const initials = (x.name || x.email).split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
     const first = a.first ? `<span><span class="k">On the Desk since</span> <span class="v" title="${esc(when(a.first))}">${esc(day(a.first))}</span></span>`
       : `<span class="chip warn" title="This address has not loaded the Desk; only the Desk's owner shares it">Has not opened the Desk yet</span>`;

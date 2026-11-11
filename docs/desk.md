@@ -553,7 +553,8 @@ keeps anyway, nothing logged for it (`peopleActivity`, sent with `GET /api/peopl
 first loaded the Desk (`opened`), when they last did something, how many requests they filed,
 comments they wrote, votes they gave, requests they approved and decisions they recorded, and
 how many of those fell in each of the last 12 weeks. A private ask never counts, and what
-someone opened (`reads`) is never shown.
+someone opened (`reads`) is never shown. A server that sends no `activity` (one older than the
+page) makes the row say it can't be shown right now, never zeros.
 
 ## The presentation
 

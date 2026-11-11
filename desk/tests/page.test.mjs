@@ -306,7 +306,13 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // People: the roster with its roles, and what each role adds to the one below it.
     await desk.click('[data-tab="people"]');
     await desk.waitForSelector("table.people");
-    assert.deepEqual(await desk.locator("table.people tbody tr").allInnerTexts(), ["lead@example.com you\tadmin", "pat@example.com\tPM"]);
+    assert.deepEqual((await desk.locator("table.people tbody tr").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead@example.com you admin", "pat@example.com PM"]);
+    // A row folds open to what that person did; a server that sends no activity shows that it can't, never zeros.
+    await desk.click('[data-person-open="pat@example.com"]');
+    assert.match(await desk.locator("tr.pact").innerText(), /can't be shown right now/);
+    assert.equal(await desk.locator("tr.pact .pact-stat").count(), 0, "no counts without a record");
+    await desk.click('[data-person-open="pat@example.com"]');
+    assert.equal(await desk.locator("tr.pact").count(), 0, "a second click folds it");
     assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["admin your role", "designer", "PM", "lead developer", "developer", "viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
     assert.match(await panel(0), /Everything a designer and a lead developer can, and:\s+See Designs[^\n]*\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
