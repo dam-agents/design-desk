@@ -7,6 +7,12 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.81.1 — 2026-11-11
+
+**Upgrade:**
+1. Republish the Desk page ([desk.md](docs/desk.md) → Publishing the page): an option's Why it
+   looks like this is a folded section under its buttons, naming its decisions. No server restart, no data change.
+
 ## 1.81.0 — 2026-11-11
 
 **Upgrade:**

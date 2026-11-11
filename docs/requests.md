@@ -296,7 +296,8 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   --state active` for the request's concepts; one the research found and recorded counts too);
   `how` one or two plain sentences on how this option follows it; `parts` the elements it
   shaped (`{selector, label, view}`, at most 6, as for stories). At most 12 per option, each
-  decision once. The page tags those parts in the design workspace, says on a selected part
+  decision once. The page shows them in an option's **Why it looks like this** section, folded
+  at first with the decisions' numbers in its head, each with its `how`; it tags those parts in the design workspace, says on a selected part
   which decisions it rests on, and lists the option on the decision's page. Name only what
   truly shaped a part, never a decision to decorate one; a part with no decision behind it gets
   none. An entry without `reasons` keeps the option's from before; a revised option whose parts
