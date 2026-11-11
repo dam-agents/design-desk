@@ -3208,15 +3208,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!ov || !card) return;
     for (const t of ov.querySelectorAll("[data-pframe]")) t.setAttribute("aria-current", String(Number(t.dataset.pframe) === P.f));
     ov.querySelector("[data-pframe][aria-current=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    // The bar's arrows walk the same pictures as the keys; none before the first or after the last,
+    // an item with no pictures included.
+    ov.querySelector('[data-pstep="-1"]').disabled = P.n === 0 && P.f <= 0;
+    ov.querySelector('[data-pstep="1"]').disabled = P.n === S.agenda.length - 1 && P.f >= P.frames.length - 1;
     const stage = $("#pstage"), side = $("#pside");
     if (!f) { stage.innerHTML = `<div class="pnote hint">Nothing drawn yet.</div>`; side.innerHTML = ""; return; }
     stage.innerHTML = `${picBox(f)}<div class="pcap">${esc(f.label)}${f.tag ? ` <span class="chip">${esc(f.tag)}</span>` : ""}</div>`;
     const ths = f.text ? [] : frameThreads(card, f);
     side.innerHTML = f.text ? "" : `${ths.map((th) => `<div class="pc${th.state === "resolved" ? " done" : ""}">${th.messages.map((m) => `<p><b>${esc(noteBy(m.by) || "someone")}</b> ${esc(m.text)}</p>`).join("")}</div>`).join("")}
       ${can("comment") ? `<textarea id="pc-text" maxlength="4000" placeholder="Comment on ${esc(f.label)}…" aria-label="Comment on ${esc(f.label)}"></textarea><button class="btn small primary" data-pcomment>Comment</button>` : ""}`;
-    // The bar's arrows walk the same pictures as the keys; none before the first or after the last.
-    ov.querySelector('[data-pstep="-1"]').disabled = P.n === 0 && P.f === 0;
-    ov.querySelector('[data-pstep="1"]').disabled = P.n === S.agenda.length - 1 && P.f === P.frames.length - 1;
     await loadSlidePics(stage);
   }
   async function present(i = 0, frame = null) {
