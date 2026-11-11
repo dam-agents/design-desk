@@ -1382,6 +1382,45 @@ export class Store {
         opened: Boolean(own(this.db.opened, String(i.person.email).toLowerCase())) }));
   }
 
+  // What each person on the roster did on the Desk, for People (docs/desk.md → People).
+  // Nothing new is logged: it is read from what the store keeps anyway, as the bell is: when
+  // they first loaded the Desk, what they filed, wrote, voted on, approved and decided. A
+  // private ask never counts. `weeks`: their doings in each of the last 12 weeks, the oldest first.
+  peopleActivity(roster) {
+    const now = Date.parse(this.clock()), WEEK = 7 * 864e5;
+    const out = {}, byAddr = new Map();
+    for (const r of roster) {
+      const a = { first: null, last: null, filed: 0, comments: 0, votes: 0, approved: 0, decisions: 0, weeks: Array(12).fill(0) };
+      out[r.email] = a;
+      for (const e of [r.email, ...(r.also || [])]) {
+        byAddr.set(e, a);
+        const t = own(this.db.opened, e);
+        if (t && (!a.first || t < a.first)) a.first = t;
+      }
+    }
+    const of = (by) => (by?.email && !by.agent ? byAddr.get(String(by.email).toLowerCase()) : null);
+    const hit = (by, at, what) => {
+      const a = of(by);
+      if (!a || !at) return;
+      a[what] += 1;
+      if (!a.last || at > a.last) a.last = at;
+      const w = Math.floor((now - Date.parse(at)) / WEEK);
+      if (w >= 0 && w < 12) a.weeks[11 - w] += 1;
+    };
+    for (const c of Object.values(this.db.cards)) {
+      if (["request", "issue"].includes(c.kind)) hit(of(c.created_by) ? c.created_by : c.origin, c.created, "filed");
+      for (const byKey of Object.values(c.votes || {})) for (const [email, v] of Object.entries(byKey || {})) hit({ email }, v.at, "votes");
+      if (c.approved?.at) hit(c.approved.by, c.approved.at, "approved");
+      for (const tid of c.threads || []) {
+        const t = own(this.db.threads, tid);
+        if (!t || t.kind === "private") continue;
+        for (const m of t.messages || []) hit(m.by, m.at, "comments");
+      }
+    }
+    for (const d of Object.values(this.db.decisions)) hit(d.author, d.recorded || d.at, "decisions");
+    return out;
+  }
+
   // A person loaded the Desk: kept once per address, lower-cased, so People can tell an added
   // person the Desk was shared with from one it was not (docs/desk.md → People). The first
   // load alone writes; a store from before this record starts it when it is read (load).
