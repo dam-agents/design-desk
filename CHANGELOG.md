@@ -16,6 +16,12 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    (`design desk agenda` is gone; [desk.md](docs/desk.md) → The presentation). A card's old
    `call_suggestion` and `call_dismissed` stay in the store, unread; no data change.
 
+## 1.81.1 — 2026-11-11
+
+**Upgrade:**
+1. Republish the Desk page ([desk.md](docs/desk.md) → Publishing the page): an option's Why it
+   looks like this is a folded section under its buttons, naming its decisions. No server restart, no data change.
+
 ## 1.81.0 — 2026-11-11
 
 **Upgrade:**

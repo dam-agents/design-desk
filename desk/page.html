@@ -751,11 +751,17 @@
   /* Why an option looks as it does: the decisions it rests on, tagged on the parts they shaped. */
   .dtag { display: inline-flex; align-items: center; gap: 3px; flex: none; padding: 0 7px; border-radius: 999px; border: 1px solid var(--why); color: var(--why); background: var(--panel); font: 600 11.5px/18px var(--font); white-space: nowrap; }
   .dtag.gone { border-color: var(--bad); color: var(--bad); text-decoration: line-through; }
-  .why-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0; max-width: var(--measure); }
-  .why-strip .k, .why .k, .why-sel .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-  .why-strip button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 2px 10px 2px 3px; cursor: pointer; font-size: var(--fs-meta); }
-  .why-strip button:hover { border-color: var(--why); background: var(--why-soft); }
-  .why-strip button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34ch; }
+  .why .k, .why-sel .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .why-tags { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .why-list { list-style: none; margin: 0; padding: 0; max-width: var(--measure); }
+  .why-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--line); }
+  .why-list li:first-child { border-top: 0; padding-top: 2px; }
+  .why-list .wt { line-height: 1.45; }
+  .why-list .how { margin: 3px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+  .why-list .gone-note { margin: 3px 0 0; font-size: var(--fs-meta); color: var(--bad); }
+  .why-list .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 5px; font-size: var(--fs-meta); }
+  .why-list .acts button { border: 0; background: none; padding: 0; font: inherit; color: var(--why); cursor: pointer; }
+  .why-list .acts button:hover { text-decoration: underline; text-underline-offset: 3px; }
   .why { display: grid; gap: 8px; }
   .why .head { display: flex; align-items: baseline; gap: 8px; } .why .head h3 { margin: 0; }
   .reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -3102,10 +3108,21 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // each with the parts of the design it shaped. One no longer in force is crossed out.
   const gone = (c, id) => c.cited?.[id]?.status === "revoked";
   const dtag = (c, id) => `<span class="dtag ${gone(c, id) ? "gone" : ""}">◆ ${esc(id)}</span>`;
-  function whyStrip(c, v) {
+  // A section of the option, as All elements is: each decision in full, how the option follows
+  // it, and a button that opens the design with the parts it shaped tagged.
+  function whySection(c, v) {
     const rs = v.reasons || [];
     if (!rs.length) return "";
-    return `<div class="why-strip"><span class="k">Why it looks like this</span>${rs.map((r) => `<button data-why="${esc(r.decision)}" title="${esc(c.cited?.[r.decision]?.text || r.decision)} — opens the design with the parts it shaped tagged">${dtag(c, r.decision)}<span class="${gone(c, r.decision) ? "revoked-text" : ""}">${esc(c.cited?.[r.decision]?.text || "")}</span></button>`).join("")}</div>`;
+    const rows = rs.map((r) => {
+      const d = c.cited?.[r.decision] || {}, x = gone(c, r.decision), n = (r.parts || []).length;
+      return `<li>${dtag(c, r.decision)}<div><div class="wt ${x ? "revoked-text" : ""}">${esc(d.text || r.decision)}</div>
+        ${x ? `<p class="gone-note">⚠ No longer in force, so the parts it shaped may need another look.</p>` : ""}
+        ${r.how ? `<p class="how">${esc(r.how)}</p>` : ""}
+        <div class="acts">${n ? `<button data-why="${esc(r.decision)}" title="Opens the design with the parts it shaped tagged">Show ${plural(n, "part", "parts")} in the design</button>` : ""}<a href="#${esc(r.decision)}" data-ref="${esc(r.decision)}">Who decided it and why →</a></div></div></li>`;
+    }).join("");
+    // Folded by default; its head names the decisions, so a glance tells which ones.
+    const head = `<span class="why-tags">${rs.slice(0, 6).map((r) => dtag(c, r.decision)).join("")}${rs.length > 6 ? ` +${rs.length - 6}` : ""}</span>`;
+    return sect("why", "Why it looks like this", rs.length, head, `<ol class="why-list">${rows}</ol>`);
   }
 
   // ---------- the presentation ----------
@@ -4426,8 +4443,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // A section of the option's panel — All elements, its design, User stories: one heading with
   // its count and half a line, folding with +/−; how a person leaves it holds while the page is
-  // open. Elements and the design start open, the stories folded.
-  const SECT_OPEN = { elements: true, design: true, stories: false };
+  // open. Elements and the design start open, Why it looks like this and the stories folded.
+  const SECT_OPEN = { why: false, elements: true, design: true, stories: false };
   // The option's design (the mockup) starts open in simple mode too.
   const sectOpen = (key) => S.sect[key] ?? SECT_OPEN[key];
   const sect = (key, title, n, hint, body) => `<details class="fold big sect ${key}" data-sect="${key}"${key === "stories" ? ' id="stories" data-stories' : ""}${sectOpen(key) ? " open" : ""}><summary><h3>${title}${n != null ? `<span class="n">${n}</span>` : ""}</h3>${hint ? `<span class="hint">${hint}</span>` : ""}</summary>${body}</details>`;
@@ -4445,7 +4462,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
       <div class="vpanel">
-      ${simple() ? "" : whyStrip(c, v)}${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
+      ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
         <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
@@ -4453,6 +4470,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         ${voteButtons(c, v.id, mine)}
       </div>
       ${renderPolls(c)}${renderCouncils(c)}
+      ${simple() ? "" : whySection(c, v)}
       ${renderOptionElements(c, v)}
       ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`)}
       ${againstBox(c, v.id)}${c.figma_check?.variant === v.id ? figmaBox(c) : ""}

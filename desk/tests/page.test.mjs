@@ -1620,10 +1620,14 @@ request.variants[0].reasons = [{ decision: "D-3", how: "The column reads per wee
 test("an option says why it looks as it does: its decisions on the request and in the workspace panel", (t) => open(t, BRIDGE_WHY, async (desk) => {
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
-  await desk.waitForSelector(".why-strip");
-  assert.match(await desk.textContent(".why-strip"), /Why it looks like this.*D-3.*Spend always shows per week.*D-4.*Totals in bold/);
-  assert.equal(await desk.locator('.why-strip [data-why="D-4"] .dtag.gone').count(), 1, "a revoked decision is crossed out");
-  await desk.click('.why-strip [data-why="D-3"]');
+  await desk.waitForSelector('details[data-sect="why"]');
+  assert.equal(await desk.$eval('details[data-sect="why"]', (d) => d.open), false, "the section starts folded");
+  assert.match(await desk.textContent('details[data-sect="why"] > summary'), /Why it looks like this\s*2\s*◆ D-3\s*◆ D-4/, "its head names the decisions");
+  await desk.click('details[data-sect="why"] > summary');
+  assert.match(await desk.textContent(".why-list"), /D-3[\s\S]*Spend always shows per week[\s\S]*The column reads per week[\s\S]*D-4[\s\S]*Totals in bold[\s\S]*No longer in force/);
+  assert.equal(await desk.locator('.why-list .dtag.gone').count(), 1, "a revoked decision is crossed out");
+  assert.equal(await desk.locator('.why-list [data-why="D-4"]').count(), 0, "a decision that shaped no part offers none to show");
+  await desk.click('.why-list [data-why="D-3"]');
   await desk.waitForSelector("#ws-side .why");
   assert.equal(await desk.getAttribute('.reason[data-reason="D-3"]', "aria-current"), "true", "the decision clicked is picked in the workspace");
   assert.match(await desk.textContent("#ws-side .why"), /2 decisions[\s\S]*1 decision no longer in force[\s\S]*The column reads per week[\s\S]*Spend column/);
@@ -1643,7 +1647,8 @@ const BRIDGE_WHY_NESTED = BRIDGE_WHY.replace('parts: [{ selector: "#spend", labe
 test("the design tags the parts a decision shaped: the picked one framed solid, a nested part without a repeat, a revoked one red; a selected part names every decision it sits in", (t) => open(t, BRIDGE_WHY_NESTED, async (desk) => {
   await desk.click('[data-tab="requests"]');
   await desk.click('[data-card="r7"]');
-  await desk.click('.why-strip [data-why="D-3"]');
+  await desk.$eval('details[data-sect="why"]', (d) => { d.open = true; });
+  await desk.click('.why-list [data-why="D-3"]');
   const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
   await frame.waitForSelector("#spend");
   const tags = () => frame.evaluate(() => [...document.querySelectorAll("div")].filter((d) => /^rgb\((13, 125, 120|179, 38, 30)\)/.test(d.style.borderColor))
@@ -1667,7 +1672,8 @@ test("the design tags the parts a decision shaped: the picked one framed solid, 
     "the Spend cell names D-3 and the D-4 of the row it sits in");
   // A decision opens the workspace in Click through, though Select was used last.
   await desk.click("[data-ws-close]");
-  await desk.click('.why-strip [data-why="D-3"]');
+  await desk.$eval('details[data-sect="why"]', (d) => { d.open = true; });
+  await desk.click('.why-list [data-why="D-3"]');
   await desk.waitForSelector('[data-ws-mode="off"].on');
   assert.equal(await desk.locator('[data-ws-mode="select"].on').count(), 0, "a decision opens the workspace in Click through");
 }));
