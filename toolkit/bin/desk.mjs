@@ -25,7 +25,6 @@ const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n
   upsert <card.json|->                     create or update a card (agent fields only)
   request <request.json|->                 file a request the agent opens (an issue's feature, a proposal):
                                            {type, title, problem, goal, from, origin, screens}
-  agenda <card> [--note <text>]            suggest a card for the presentation; a designer adds it
   look <E-n|S-n> <look.json|->             add an earlier look of an element or a screen, drawn from the
                                            code's history: {at, commit, sheet, thumb, states, made_by,
                                            links: [{label, url}], note} (a screen: screens instead of sheet)
@@ -344,7 +343,6 @@ export async function main(_cmd, argv) {
       let doc; try { doc = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); }
       return out(await call("POST", "/agent/requests", doc));
     }
-    case "agenda": return out(await call("POST", `/agent/cards/${pos[0]}/agenda`, { note: typeof f.note === "string" ? f.note : "" }));
     case "look": {
       if (!pos[0] || !pos[1]) fail("usage: design desk look <E-n|S-n> <look.json|->");
       let doc; try { doc = JSON.parse(readArg(pos[1])); } catch (e) { fail(`not JSON: ${e.message}`); }

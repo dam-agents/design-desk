@@ -92,9 +92,8 @@ The person deciding sees it on the card, and every later step builds on it.
    about the design ([desk.md](desk.md) → GitHub on the Desk).
 
    Keep the full notes as an asset (`--kind report`) and set `research.asset`.
-7. A `deliberate`, `duplicate` or `collision` verdict is suggested for the presentation with the
-   question it raises (`design desk agenda` → [desk.md](desk.md) → The presentation), and the
-   triage says what that means for the request.
+7. A `deliberate`, `duplicate` or `collision` verdict: the triage says what that means for the
+   request.
 8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
    else the same thing shows up, under the hood whether the product would have to work
    differently (its logic, architecture, security; a short plain text, not a list), and the

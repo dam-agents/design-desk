@@ -352,10 +352,8 @@ const cards = [
   { id: "c1", kind: "change", title: "A new settings page", acked: false, attention: { level: "designer", reasons: ["a new screen"] } },
   { id: "c2", kind: "change", title: "Tighter rows", acked: false, attention: { level: "fyi", reasons: ["follows the list pattern"] } },
   { id: "c3", kind: "change", title: "Seen already", acked: true, attention: { level: "designer", reasons: ["its own grey"] } },
-  { id: "c4", kind: "change", title: "Seen, and suggested", acked: true, suggested: { note: "A new pattern" }, attention: { level: "designer", reasons: ["its own grey", "Suggested for the presentation"] } },
   { id: "r1", kind: "request", title: "Calmer empty list", status: "feedback", attention: { level: "designer", reasons: ["Options are ready: pick one or ask for changes"] } },
   { id: "r2", kind: "request", title: "Bigger send button", status: "triage" },
-  { id: "r3", kind: "request", title: "Shipped and worth showing", status: "handed-off", suggested: { note: "Worth showing" }, attention: { level: "designer", reasons: ["Suggested for the presentation"] } },
 ];
 window.platform = { async request({ path }) {
   const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { request: true } }
@@ -501,13 +499,13 @@ test("Needs a designer filters Changes, Your turn filters Requests, and Changes 
   assert.deepEqual(await desk.$$eval("#nav button", (bs) => bs.map((b) => b.dataset.tab)), ["requests", "new", "issues", "product", "people"], "the Desk opens on Requests");
   assert.match(await desk.textContent('[data-tab="new"]'), /^PR Changes/);
   await desk.click('[data-tab="new"]');
-  assert.deepEqual(await rows(), ["c1", "c3", "c4"], "Changes opens on Open: none is handled, and the fyi change is auto handled");
+  assert.deepEqual(await rows(), ["c1", "c3"], "Changes opens on Open: none is handled, and the fyi change is auto handled");
   assert.match(await desk.textContent("#list .filters .on"), /^Open \d+$/, "Open carries its count");
   assert.equal(await desk.locator('[data-filter="newFilter:all"]').count(), 0, "there is no All");
   await desk.click('[data-filter="newFilter:auto"]');
   assert.deepEqual(await rows(), ["c2"], "Design Desk found nothing to look at: auto handled at once");
   await desk.click('[data-filter="newFilter:designer"]');
-  assert.deepEqual(await rows(), ["c1", "c4"], "only what waits for a designer: not what you saw, unless it is suggested");
+  assert.deepEqual(await rows(), ["c1"], "only what waits for a designer: not what you saw");
   assert.doesNotMatch(await desk.textContent("#list"), /Needs a designer:/, "the rows carry no Needs a designer chip");
   await desk.click('[data-tab="requests"]');
   assert.deepEqual(await desk.$$eval("#list .filters [data-filter]", (bs) => bs.map((b) => b.dataset.filter)), ["reqFilter:turn", "reqFilter:unread", "reqFilter:open", "reqFilter:closed"], "Requests filter by Your turn, Unread, Open and Closed");
@@ -518,17 +516,16 @@ test("Needs a designer filters Changes, Your turn filters Requests, and Changes 
   assert.match(await desk.textContent('[data-filter="reqFilter:turn"]'), /^Your turn$/);
   await desk.reload();
   await desk.click('[data-tab="new"]');
-  assert.deepEqual(await rows(), ["c1", "c4"], "the filter you picked is kept");
+  assert.deepEqual(await rows(), ["c1"], "the filter you picked is kept");
 }));
 
 // A request's presentation actions sit under More, and stay there once the request is closed
-// (docs/desk.md → The presentation): Add and Take off each send their call; Not now sits by the
-// suggestion on the Presentation page.
+// (docs/desk.md → The presentation): Add and Take off each send their call.
 const CALL = `<script>
 window.calls = [];
 const cards = [
   { id: "C-4", kind: "request", title: "Shipped, on the call", status: "handed-off", agenda: { status: "queued", by: { email: "d@example.com" } } },
-  { id: "C-5", kind: "request", title: "Shipped, suggested", status: "handed-off", call_suggestion: { note: "Worth showing" }, suggested: { note: "Worth showing" } },
+  { id: "C-5", kind: "request", title: "Shipped, not on it", status: "handed-off" },
 ];
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
@@ -540,7 +537,7 @@ window.platform = { async request({ method, path, body }) {
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
-test("a closed request keeps Add to presentation and Take off under More; Not now is on the Presentation", (t) => open(t, CALL, async (desk) => {
+test("a closed request keeps Add to presentation and Take off under More", (t) => open(t, CALL, async (desk) => {
   const base = desk.url().replace(/#.*$/, "");
   const more = async (id) => {
     if (!desk.url().endsWith(`#${id}`)) await desk.goto(`${base}#${id}`);
@@ -550,12 +547,6 @@ test("a closed request keeps Add to presentation and Take off under More; Not no
   };
   const sent = (method, path) => desk.waitForFunction(([m, p]) => calls.some((c) => c.method === m && c.path === p), [method, path]);
 
-  await more("C-5");
-  assert.doesNotMatch(await desk.textContent("#detail"), /suggests it for the presentation/, "no suggestion strip on the card");
-  assert.equal(await desk.locator('#detail [data-act="not-now"]').count(), 0, "Not now is not under More");
-  await desk.goto(`${base}#presentation`);
-  await desk.click('#detail [data-not-now="C-5"]');
-  await sent("DELETE", "/api/cards/C-5/suggestion");
   await more("C-5");
   await desk.click('#detail [data-act="queue"]');
   await desk.click("#cf-ok");
@@ -732,6 +723,51 @@ test("the presentation: mark an item presented, in the list and while presenting
   await desk.click('#detail [data-present="0"]');
   await desk.click('#present [data-presented="C-2"]');
   await desk.waitForFunction(() => calls.filter((c) => c.path === "/api/cards/C-2/presented").length === 2);
+}));
+
+// A slide (docs/desk.md → The presentation → A slide): every picture of the item in the strip,
+// opening on the option picked; a comment goes on the picture on the stage.
+const SLIDES = `<script>
+window.calls = [];
+const page = (t) => ({ contentType: "text/html", encoding: "utf8", data: "<h1>" + t + "</h1>" });
+const q = (o) => ({ status: "queued", by: { email: "d@example.com" }, at: new Date().toISOString(), brief: "Pick one.", ...o });
+const cards = [
+  { id: "R-2", kind: "request", title: "Bigger send button", status: "feedback", request: { problem: "Too small." }, triage: { verdict: "design", cannot: ["A queue on the server."] }, agenda: q({ variant: "v2" }),
+    variants: [{ id: "v1", name: "Calm", asset: "A-1", elements: [{ id: "e1", name: "Send button", change: "changed" }] }, { id: "v2", name: "Bold", asset: "A-2", elements: [{ id: "e2", name: "Offline hint", change: "new" }] }] },
+  { id: "C-7", kind: "change", title: "Stopped agents", source: { pr: 11 }, agenda: q(), attention: { level: "designer", reasons: ["A new dot"] }, elements: ["E-1"],
+    screens: [{ asset: "A-3", stage: "before", pair: "List" }, { asset: "A-3", stage: "after", pair: "List" }] },
+  { id: "E-1", kind: "element", title: "Status dot" },
+];
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const one = path.startsWith("/api/cards/") && cards.find((c) => c.id === decodeURIComponent(path.slice(11)));
+  const answer = path === "/api/me" ? { role: "designer", email: "d@example.com", can: { queue: true, comment: true } }
+    : path === "/api/cards" ? { cards } : path === "/api/agenda" ? { agenda: cards.slice(0, 2), presented: [] }
+    : path.startsWith("/api/assets/") ? page(path.slice(12)) : one ? { card: one } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a slide is pictures: every option and part in the strip, a comment on the picture shown", (t) => open(t, SLIDES, async (desk) => {
+  await desk.goto(desk.url().replace(/#.*$/, "") + "#presentation");
+  await desk.reload();
+  await desk.click('#detail [data-present="0"]');
+  await desk.waitForSelector("#present .pstrip");
+  assert.equal(await desk.locator("#present [data-pframe]").count(), 5, "both options and their parts, and the line of what no picture shows");
+  assert.match(await desk.textContent("#present .pcap"), /^Bold/, "opens on the option the designer picked");
+  await desk.click('#present [data-pframe="3"]');
+  assert.match(await desk.textContent("#present .pcap"), /Offline hint/);
+  await desk.fill("#pc-text", "Too grey");
+  await desk.click("#present [data-pcomment]");
+  await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/R-2/threads"));
+  const sent = await desk.evaluate(() => JSON.parse(calls.find((c) => c.path === "/api/cards/R-2/threads").body));
+  assert.deepEqual([sent.kind, sent.text, sent.anchor.variant, sent.anchor.label], ["comment", "Too grey", "v2", "Offline hint"]);
+  await desk.click('#present [data-pstep="1"]');
+  assert.match(await desk.textContent("#present .pcap"), /^Not in the pictures/, "the bar's arrow walks the item's pictures first");
+  await desk.click('#present [data-pstep="1"]');
+  await desk.waitForFunction(() => document.querySelector("#present .pt")?.textContent.startsWith("Stopped agents"));
+  assert.equal(await desk.locator("#present [data-pframe]").count(), 3, "the before and after, and the part it changed");
 }));
 
 // A designer's Desk with an overdue change of two pictures, one with where it changed, and
