@@ -133,9 +133,11 @@ rewrites that message in place: the post shows exactly the text and card it pass
   words>. Vote with 👍 or 👎 on each option below." (at Close: "The team decides on the Design
   Desk.").
 - **No `head_ts`** (a poll opened before the tally), or the platform has no `edit_post`: no
-  tally. A refused edit (too fast, a card refused, not found) is logged and left for the next
-  sync; never post a new message in its place, and never an edit to an option's post (it
-  carries a picture, which an edit refuses).
+  tally. A refused edit (too fast, a card refused, not found) is logged. At Sync it waits for
+  the next sync. At Close there is none, so retry once at once (after the wait a "too fast"
+  names); refused again, log it and go on: the result reply carries the final votes. Never
+  post a new message in its place, and never edit an option's post (it carries a picture,
+  which an edit refuses).
 
 ## In a Slack turn
 
