@@ -685,7 +685,34 @@
   .crumb [data-copy-link] { margin-left: auto; }
   /* Beside the list the list is the way back: the back button shows only where the list hides. */
   @media (min-width: 861px) { .crumb [data-back] { display: none; } .crumb:not(:has([data-copy-link])) { display: none; } }
-  .pbar { position: sticky; top: -28px; z-index: 5; margin: -28px -48px 0; padding: 12px 48px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  /* A slide of the presentation (docs/desk.md → The presentation → A slide): a thin bar, the
+     picture on the stage, its comments beside it, and every picture of the item in the strip. */
+  #present { position: fixed; inset: 0; z-index: 75; background: var(--bg); display: flex; flex-direction: column; }
+  #present .pbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  #present .pbar .pt { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #present .pbrief { padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); max-height: 30vh; overflow: auto; } #present .pbrief :is(p, ul) { margin: 0; max-width: var(--measure); }
+  #present .pmain { flex: 1; display: grid; grid-template-columns: 1fr 280px; min-height: 0; }
+  #present .pstage { display: grid; grid-template-rows: 1fr auto; min-height: 0; padding: 12px 16px; gap: 6px; }
+  #present .pstage > :first-child { min-height: 0; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; overflow: hidden; display: grid; place-items: center; }
+  #present .pstage :is(img) { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  #present .pstage iframe, #present .ppic:has(iframe) { width: 100%; height: 100%; border: 0; display: block; }
+  #present .ppic { width: 100%; height: 100%; display: grid; place-items: center; }
+  #present .pcap { font-size: var(--fs-meta); color: var(--muted); }
+  #present .pnote { background: var(--panel); color: var(--ink); padding: 24px; place-items: start; } #present .pnote ul { margin: 0; padding-left: 20px; font-size: 18px; } #present .pnote li { margin-bottom: 8px; }
+  #present .pside { border-left: 1px solid var(--line); padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+  #present .pside .pc { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: var(--fs-ui, 13px); } #present .pside .pc.done { opacity: .55; } #present .pside .pc p { margin: 0 0 4px; }
+  #present .pside textarea { width: 100%; min-height: 72px; resize: vertical; font: inherit; box-sizing: border-box; } #present .pside [data-pcomment] { align-self: flex-end; }
+  #present .pstrip { display: flex; gap: 16px; overflow-x: auto; padding: 8px 16px 12px; border-top: 1px solid var(--line); }
+  #present .pgroup { flex: none; } #present .pg { display: block; font-size: var(--fs-meta); color: var(--muted); margin-bottom: 4px; white-space: nowrap; }
+  #present .pthumbs { display: flex; gap: 6px; }
+  #present .pthumb { position: relative; width: 112px; height: 72px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: #fff; overflow: hidden; cursor: pointer; }
+  #present .pthumb[aria-current=true] { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #present .pthumb img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: block; }
+  /* A page in the strip is drawn at four times the thumb and shrunk, so it reads as the whole page. */
+  #present .pthumb iframe { position: absolute; left: 0; top: 0; width: 400%; height: 400%; transform: scale(.25); transform-origin: 0 0; border: 0; pointer-events: none; display: block; }
+  #present .pthumb .ppic { display: block; width: 100%; height: 100%; overflow: hidden; } #present .pthumb .ptext { display: grid; place-items: center; height: 100%; font-size: 24px; color: var(--muted); background: var(--panel); }
+  #present .pcount { position: absolute; top: 3px; right: 3px; min-width: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 11px; line-height: 16px; }
+  @media (max-width: 860px) { #present .pmain { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } #present .pside { border-left: 0; border-top: 1px solid var(--line); max-height: 30vh; } }
   /* the design workspace */
   #workspace { position: fixed; inset: 0; z-index: 70; background: var(--bg); display: grid; grid-template-rows: auto 1fr; }
   #workspace[hidden] { display: none; }
@@ -1591,7 +1618,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       build: (el) => /another option/.test(textOf(el)) ? "Goes back to choose which option to build" : "Design Desk builds a private copy of the product with this design and made-up data. You pick the option and check it first.",
       queue: "Puts it on the presentation for the team's next design meeting; Design Desk writes a short brief",
       unqueue: "Takes it off the presentation; nothing else changes",
-      "not-now": "Design Desk stops suggesting it for the presentation",
       "clear-call": "Marks everything on the presentation as presented today, for everyone",
       revise: "Design Desk redraws the options, working in every open comment",
       close: "Design Desk stops working on it and switches off its live prototype; you can record what you decided. You confirm first and can reopen it later.",
@@ -1714,10 +1740,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   };
   const BTN_ICON = {
     act: { workspace: "pen", explore: "spark", build: (el) => /another option/.test(textOf(el)) ? "undo" : "screen", approve: () => S.card?.kind === "request" && !(S.card.variants || []).length ? "send" : "check",
-      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus", "not-now": "off",
+      reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
-    notNow: "off", adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
+    adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
   };
   const OWN_SIGN = /^[^\p{L}\p{N}]/u;
   function iconFor(el) {
@@ -2643,12 +2669,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   document.fonts?.ready.then(alignRight);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
-  // saw it or a designer marked it handled, a request until it is closed, and either while it is suggested for the presentation.
+  // saw it or a designer marked it handled, and a request until it is closed.
   const designerReasons = (c) => {
     if (c.attention?.level !== "designer") return [];
     // A change you opened, or one a designer handled, leaves your Needs a designer.
-    if (!(c.kind === "change" && (c.read || c.acked || c.handled || autoHandled(c))) && !closed(c)) return c.attention.reasons;
-    return c.suggested ? ["Suggested for the presentation"] : [];
+    return !(c.kind === "change" && (c.read || c.acked || c.handled || autoHandled(c))) && !closed(c) ? c.attention.reasons : [];
   };
   const forDesigner = (c) => designerReasons(c).length > 0;
   const ATTN = { designer: ["warn", "A designer should look at this; the reasons follow", "Needs a designer"], developer: ["info", "A lead developer looks at this; the reasons follow", "For Developers"], fyi: ["ok", "Nothing here waits for a designer's decision", "Nothing to decide"] };
@@ -2739,7 +2764,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const side = (c) => !mixed || S.elFilter === "all" || (S.elFilter === "design") === Boolean(c.design);
       return newestFirst(S.cards.filter((c) => c.kind === kind && !gone(c) && side(c)));
     }
-    if (presenting()) return S.cards.filter((c) => S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id));
+    if (presenting()) return S.cards.filter((c) => S.agenda.some((a) => a.id === c.id));
     if (S.tab === "requests") return requestCards(S.reqFilter);
     if (S.tab === "issues") return issueCards(S.issueFilter);
     return [];
@@ -3086,13 +3111,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // ---------- the presentation ----------
   // A filter on Requests (docs/desk.md → The presentation): what designers chose to show at
   // the team's design meeting, each in its final version; a designer marks each one presented.
-  // Cards Design Desk suggests for it; a designer adds them, or not.
-  const suggested = () => S.cards.filter((c) => c.suggested && c.status !== "declined" && !S.agenda.some((a) => a.id === c.id));
   const markButton = (a) => can("queue") ? `<button class="btn small" data-presented="${esc(a.id)}">✓ Mark as presented</button>` : "";
   // The presentation in the other lists' style: a row is its title and one line of facts, grey
   // words and values in ink, no chips (docs/desk.md → The presentation).
   const pkv = (k, v) => `<span><span class="k">${k}:</span> <b>${v}</b></span>`;
-  // A row of what is to present or suggested stays on the presentation page and jumps to its item;
+  // A row of what is to present stays on the presentation page and jumps to its item;
   // a presented one opens its card.
   // As every list: the item's state dot in the corner, a red ! under it, bold until first opened.
   const agendaRow = (c, title, facts, jump = false) => {
@@ -3101,15 +3124,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   };
   const addedBy = (a) => a.agenda.by?.email ? (isMe(a.agenda.by.email) ? "You" : nameOf(a.agenda.by.email)) : "Design Desk";
   function renderAgendaList(filters = "") {
-    const items = S.agenda, ideas = suggested(), done = S.presented || [];
+    const items = S.agenda, done = S.presented || [];
     $("#list").innerHTML = filters + (items.length ? `<div class="side-head">To present · in this order</div>${items.map((a, i) => agendaRow(a, `${i + 1}. ${esc(a.title)}`,
         (a.option ? pkv("presenting", esc(a.option)) : "") + pkv("added by", esc(addedBy(a))), true)).join("")}`
       : `<div class="empty">The presentation is what the team shows at its next design meeting. A designer puts things on it: open a request and choose Add to presentation.</div>`)
-      + (ideas.length ? `<div class="side-head">Suggested by Design Desk</div>${ideas.map((c) => agendaRow(c, esc(c.title), pkv("suggested by", "Design Desk") + (c.suggested.note ? `<span>${esc(c.suggested.note)}</span>` : ""), true)).join("")}` : "")
       + (done.length ? `<div class="side-head">Presented</div>${done.map((a) => agendaRow(a, esc(a.title), pkv("presented", esc(dayWord(a.agenda.call))) + (a.option ? pkv("option", esc(a.option)) : ""))).join("")}` : "");
   }
   function renderAgendaDetail() {
-    const items = S.agenda, ideas = suggested();
+    const items = S.agenda;
     // The page opens with the same box as a request: what it is, its count, and its buttons.
     const box = ghStatus("live", items.length ? `To present · ${plural(items.length, "item", "items")}` : "Nothing to present", "What designers chose to show at the team's next design meeting, each in its final version. Present from here, then mark each one as presented.", "",
       (items.length ? `<button class="btn primary" data-present="0">▶ Present</button>` : "") + (can("queue") && items.length > 1 ? `<button class="btn" data-act="clear-call">Mark all as presented</button>` : ""), "");
@@ -3118,9 +3140,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${items.map((a, i) => `<div class="agenda-item" id="ag-${esc(a.id)}"><div class="ai-head"><h3>${i + 1}. ${esc(a.title)}${num(a)}</h3><div class="actions">${markButton(a)}<button class="btn small" data-card="${esc(a.id)}">Open</button></div></div>
         <div class="prov">${a.option ? pkv("presenting", esc(a.option)) : ""}${pkv("added by", esc(addedBy(a)))}</div>
         ${a.agenda.note ? `<p class="hint">“${esc(a.agenda.note)}”</p>` : ""}
-        <p class="k-head">What we decide</p>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("")}
-      ${ideas.length ? `<h3>Suggested by Design Desk</h3><p class="hint">Not on the presentation until a designer adds it: open it and choose Add to presentation (on a request, under More), or Not now here.</p>
-        ${ideas.map((c) => `<div class="agenda-item" id="ag-${esc(c.id)}"><div class="ai-head"><h3>${esc(c.title)}${num(c)}</h3><div class="actions">${can("queue") ? `<button class="btn small" data-not-now="${esc(c.id)}" title="Design Desk stops suggesting it for the presentation">Not now</button>` : ""}<button class="btn small" data-card="${esc(c.id)}">Open</button></div></div>${c.suggested.note ? `<div class="prov"><span>${esc(c.suggested.note)}</span></div>` : ""}</div>`).join("")}` : ""}`;
+        <p class="k-head">What we decide</p>${md(a.agenda.brief || "Design Desk is writing a short brief.", a)}</div>`).join("")}`;
+
   }
   // Mark one item presented (or put it back with Undo); the presentation steps on to the next.
   async function markPresented(id, presented = true) {
@@ -3133,27 +3154,99 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (presented && !ov) toast("Marked as presented.");
   }
 
-  // Presenting: one item at a time, full screen; arrows or the buttons move.
-  async function present(i = 0) {
+  // Presenting: one item at a time, full screen, as pictures with almost no words
+  // (docs/desk.md → The presentation → A slide). The stage shows one picture of the item; the
+  // strip under it holds every picture the item has, so nothing in it is left off the slide;
+  // beside the stage, the comments on that picture and a box to add one during the meeting.
+  const P = { card: null, n: 0, frames: [], f: 0, brief: false };
+  const STAGE = { before: "before", after: "after", diff: "what changed" };
+  // Every picture of an item, in its kind's order; words only for what no picture shows.
+  function slideFrames(card, pick) {
+    const F = [], vs = card.variants || [];
+    if (card.kind === "request") {
+      for (const [k, v] of vs.entries()) {
+        const group = `${k + 1} · ${v.name}${v.id === pick?.id ? " ✓" : ""}`;
+        F.push({ group, label: v.name, asset: v.asset, variant: v.id, start: v.id === pick?.id });
+        for (const e of elementsOf(v)) F.push({ group, label: e.name, variant: v.id, selector: e.selector || null, asset: e.shot || (e.derived ? e.asset : null), pic: e.shot ? null : elementPic(v, e), tag: CHANGE[e.change]?.[0] || "" });
+      }
+      for (const x of (card.screens || []).filter((x) => !x.source || x.source === "person")) F.push({ group: "Asked", label: x.caption || "Their picture", asset: x.asset });
+    } else if (card.kind === "change") {
+      for (const x of card.screens || []) F.push({ group: x.pair || "Screens", label: x.stage ? `${x.pair || "Screen"} · ${STAGE[x.stage] || x.stage}` : x.caption || "Screen", asset: x.asset });
+      for (const e of (card.elements || []).map((id) => S.cards.find((x) => x.id === id)).filter(Boolean)) F.push({ group: "Parts", label: e.title, ...(e.screens?.[0]?.asset || e.sheet ? { asset: e.screens?.[0]?.asset || e.sheet } : { text: ["No picture of it yet."] }) });
+    } else if (card.kind === "issue") {
+      for (const x of card.screens || []) F.push({ group: "Now", label: x.caption || "Now", asset: x.asset });
+      for (const x of card.sketches || []) F.push({ group: "Could look", label: x.caption || "Sketch", asset: x.asset, tag: "Sketch" });
+    } else F.push(...(card.kind === "element" && card.sheet ? [{ group: "", label: card.title, asset: card.sheet }] : (card.screens || []).map((x) => ({ group: "", label: x.caption || card.title, asset: x.asset }))));
+    // What the pictures cannot show, as one card of short lines at the end.
+    const lines = [...(card.kind === "issue" ? card.needs || [] : []), ...(card.triage?.cannot || []), ...(card.impact?.behind?.text ? [card.impact.behind.text] : [])];
+    if (lines.length) F.push({ group: "Not in the pictures", label: "Not in the pictures", text: lines });
+    return F.filter((f) => f.asset || f.pic || f.text);
+  }
+  // The comments on one picture: those anchored to it (its option and its name).
+  const frameThreads = (card, f) => (card.threads || []).filter((th) => th.kind !== "asks" && th.anchor && (th.anchor.label || "") === f.label && (th.anchor.variant || null) === (f.variant || null));
+  const frameKey = (f) => `${f.variant || ""}|${f.label}`;
+  // A picture's place: an image or a page, loaded once it is in the page.
+  const picBox = (f) => f.text ? `<div class="pnote"><ul>${f.text.map((x) => `<li>${txt(x)}</li>`).join("")}</ul></div>` : f.pic || `<div class="ppic" data-passet="${esc(f.asset)}"></div>`;
+  async function loadSlidePics(root) {
+    for (const el of root.querySelectorAll("[data-passet]")) {
+      if (el.dataset.loaded) continue; el.dataset.loaded = "1";
+      try {
+        const a = await asset(el.dataset.passet);
+        if (a.contentType.startsWith("image/")) el.innerHTML = `<img alt="" src="${dataUrl(a)}">`;
+        else { const fr = document.createElement("iframe"); fr.setAttribute("sandbox", "allow-scripts"); if (el.closest(".pthumb")) { fr.tabIndex = -1; fr.setAttribute("scrolling", "no"); } fr.srcdoc = decode(a); el.replaceChildren(fr); }
+      } catch {}
+    }
+    await loadPictures(root);
+  }
+  // The stage, its comments and the strip's current picture, without reading the card again.
+  async function drawFrame() {
+    const ov = $("#present"), card = P.card, f = P.frames[P.f];
+    if (!ov || !card) return;
+    for (const t of ov.querySelectorAll("[data-pframe]")) t.setAttribute("aria-current", String(Number(t.dataset.pframe) === P.f));
+    ov.querySelector("[data-pframe][aria-current=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const stage = $("#pstage"), side = $("#pside");
+    if (!f) { stage.innerHTML = `<div class="pnote hint">Nothing drawn yet.</div>`; side.innerHTML = ""; return; }
+    stage.innerHTML = `${picBox(f)}<div class="pcap">${esc(f.label)}${f.tag ? ` <span class="chip">${esc(f.tag)}</span>` : ""}</div>`;
+    const ths = f.text ? [] : frameThreads(card, f);
+    side.innerHTML = f.text ? "" : `${ths.map((th) => `<div class="pc${th.state === "resolved" ? " done" : ""}">${th.messages.map((m) => `<p><b>${esc(noteBy(m.by) || "someone")}</b> ${esc(m.text)}</p>`).join("")}</div>`).join("")}
+      ${can("comment") ? `<textarea id="pc-text" maxlength="4000" placeholder="Comment on ${esc(f.label)}…" aria-label="Comment on ${esc(f.label)}"></textarea><button class="btn small primary" data-pcomment>Comment</button>` : ""}`;
+    await loadSlidePics(stage);
+  }
+  async function present(i = 0, frame = null) {
     const items = S.agenda;
     if (!items.length) return;
     const n = Math.max(0, Math.min(i, items.length - 1));
     const card = asShown((await api("GET", `/api/cards/${encodeURIComponent(items[n].id)}`)).card);
     let ov = $("#present");
-    if (!ov) { ov = document.createElement("div"); ov.id = "present"; ov.style.cssText = "position:fixed;inset:0;z-index:75;background:var(--bg);overflow:auto;padding:28px 48px"; document.body.append(ov); }
+    if (!ov) { ov = document.createElement("div"); ov.id = "present"; document.body.append(ov); }
     // The option the designer picked when adding it; an older entry without one shows the favourite.
-    const fav = (card.variants || []).find((v) => v.id === card.agenda?.variant) || favourite(card) || card.variants?.[0];
-    const visual = card.kind === "element" && card.sheet ? card.sheet : fav?.asset || card.screens?.[0]?.asset || null;
+    const pick = (card.variants || []).find((v) => v.id === card.agenda?.variant) || favourite(card) || card.variants?.[0];
+    const same = P.card?.id === card.id, was = same ? frameKey(P.frames[P.f] || { label: "" }) : null;
+    P.card = card; P.n = n; P.frames = slideFrames(card, pick);
+    P.f = frame === "last" ? P.frames.length - 1 : same ? Math.max(0, P.frames.findIndex((f) => frameKey(f) === was)) : Math.max(0, P.frames.findIndex((f) => f.start));
     ov.dataset.index = String(n);
-    ov.innerHTML = `<div class="sub pbar" style="justify-content:space-between"><button class="btn small" data-exit-present>✕ Exit</button><span>${n + 1} / ${items.length} · Presentation</span><span><button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""}>← Previous</button> ${markButton(items[n])} <button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""}>Next →</button></span></div>
-      <h2 style="font-size:28px;margin-top:12px">${txt(card.title, card)}${num(card)}${titleLink(card)}</h2>${card.summary ? `<p class="lead">${txt(card.summary, card)}</p>` : ""}
-      <div class="panel" style="max-width:calc(var(--measure) + 10ch)"><b>What we decide</b>${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>
-      ${fav && (card.variants || []).length > 1 ? `<p class="sub" style="margin-top:12px">Presenting <b>${esc(fav.name)}</b> · options: ${card.variants.map((v) => esc(v.name)).join(" · ")}</p>` : ""}
-      ${visual ? `<iframe class="frame" id="present-frame" sandbox="allow-scripts" style="height:60vh;margin-top:16px"></iframe>` : ""}`;
-    if (visual) {
-      const a = await asset(visual);
-      $("#present-frame").srcdoc = a.contentType.startsWith("image/") ? `<img src="${dataUrl(a)}" style="max-width:100%">` : decode(a);
-    }
+    const groups = [...new Set(P.frames.map((f) => f.group))];
+    ov.innerHTML = `<div class="pbar"><button class="btn small" data-exit-present aria-label="Exit">✕</button><span class="pt">${txt(card.title, card)}${num(card)}</span><span class="hint">${n + 1}/${items.length}</span>
+        <button class="btn small" data-pbrief aria-pressed="${P.brief}" title="What we decide">ⓘ</button>${markButton(items[n])}<button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""} aria-label="Previous">←</button><button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""} aria-label="Next">→</button></div>
+      ${P.brief ? `<div class="pbrief">${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>` : ""}
+      <div class="pmain"><div id="pstage" class="pstage"></div><aside id="pside" class="pside" aria-label="Comments"></aside></div>
+      <div class="pstrip">${groups.map((g) => `<div class="pgroup">${g ? `<span class="pg">${esc(g)}</span>` : ""}<div class="pthumbs">${P.frames.map((f, k) => f.group !== g ? "" : `<button class="pthumb" data-pframe="${k}" title="${esc(f.label)}">${f.text ? `<span class="ptext">≡</span>` : picBox(f)}${(() => { const c = frameThreads(card, f).filter((th) => th.state !== "resolved").length; return c ? `<span class="pcount">${c}</span>` : ""; })()}</button>`).join("")}</div></div>`).join("")}</div>`;
+    await drawFrame();
+    await loadSlidePics(ov.querySelector(".pstrip"));
+  }
+  // The arrows walk the pictures, then on to the next item.
+  async function presentStep(d) {
+    const k = P.f + d;
+    if (k >= 0 && k < P.frames.length) { P.f = k; await drawFrame(); return; }
+    const n = P.n + d;
+    if (n >= 0 && n < S.agenda.length) await present(n, d < 0 ? "last" : null);
+  }
+  async function presentComment() {
+    const f = P.frames[P.f], text = $("#pc-text")?.value.trim();
+    if (!f || !text) return;
+    await api("POST", `/api/cards/${encodeURIComponent(P.card.id)}/threads`, { kind: "comment", text, anchor: { variant: f.variant || null, asset: f.asset || null, selector: f.selector || null, label: f.label } });
+    await present(P.n);
+    $("#pc-text")?.focus();
   }
 
   // ---------- assets ----------
@@ -3369,7 +3462,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const snipAsset = an?.asset || (av && ((an.state && (av.states || []).find((x) => x.id === an.state)?.asset) || av.asset)) || "";
       // A note from the design workspace names its option first, by its number and name, as its tab does.
       const on = av ? `Option ${(c.variants || []).indexOf(av) + 1}: ${av.name}` : "A removed option";
-      const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>` : "";
+      const anchor = an?.variant ? `<span class="chip" title="The design option this note is on"><b>${esc(on)}</b></span><button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snipAsset)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}">◎ ${esc(an.label || an.text || "the whole option")}${an.view_name ? ` · ${esc(an.view_name)}` : ""}</button>`
+        // A comment from the presentation on a picture of a change, an issue or a screen names that picture.
+        : an?.label ? `<span class="chip" title="The picture this comment is on">◎ ${esc(an.label)}</span>` : "";
       const state = th.state === "resolved" ? `<span class="chip ok" title="Someone marked it done">done</span>` : th.state === "answered" ? `<span class="chip" title="Design Desk answered it">answered</span>` : "";
       const kind = `<span class="chip ${tone}" title="${esc(th.dev ? "A developer asks the designer how the approved design is meant" : KIND_TIP[th.kind] || "")}">${esc(name)}</span>`;
       // A conversation marked done folds to one line: who started it and their first words; a click
@@ -3922,8 +4017,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `<ol class="line5" aria-label="Stage ${i + 1} of ${STAGES.length}: ${esc(STAGES[i])}">${STAGES.map((l, k) => `<li class="${k < i ? "done" : k === i ? "now" : ""}" title="${esc(`${l}: ${subs[k]}`)}"${k === i ? ' aria-current="step"' : ""}><span class="l">${k < i ? '<span class="ck" aria-hidden="true">✓</span>' : ""}${esc(l)}</span></li>`).join("")}</ol>`;
   }
 
-  // Only a designer puts a card on the presentation, with its final version; Design Desk
-  // only suggests one (docs/desk.md → The presentation).
+  // Only a designer puts a card on the presentation, with its final version (docs/desk.md → The presentation).
   function agendaButton(c) {
     if (simple()) return "";
     const shown = c.agenda?.variant ? optionName(c, c.agenda.variant) : "";
@@ -3935,8 +4029,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const recent = Date.now() <= Date.parse(c.agenda?.undo_until);
     const was = c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}${shown ? ` · ${esc(shown)}` : ""}</span>${can("queue") && recent ? `<button class="btn small" data-unpresent="${esc(c.id)}">Undo</button>` : ""}` : "";
     const add = can("queue") ? `<button class="btn" data-act="queue">▶ Add to presentation</button>` : "";
-    if (!c.call_suggestion) return was + add;
-    return `${was}<span class="chip" title="${esc(c.call_suggestion.note)}">💡 Design Desk suggests it for the presentation${c.call_suggestion.note ? `: ${esc(c.call_suggestion.note)}` : ""}</span>${add}${can("queue") ? `<button class="btn small" data-act="not-now">Not now</button>` : ""}`;
+    return was + add;
   }
 
 
@@ -5433,8 +5526,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (m) return { tab: view(m[1]), id: `${numbered(m[2], m[3])}${m[4] ? `~${m[4]}` : ""}`, ...(m[5] ? { sub: Number(m[5]) } : {}) };
     return view(h) ? { tab: view(h), id: null } : null;
   }
-  // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it
-  // or suggested for it, with a filter that shows it. The list is read again for a card newer than it.
+  // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it, with a filter that shows it. The list is read again for a card newer than it.
   const HOME = { change: "new", digest: "product", request: "requests", issue: "issues", screen: "product", element: "product" };
   async function goTo(to) {
     $("#present")?.remove();
@@ -5460,7 +5552,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (to.sub) { const n = document.getElementById(`no-${to.id}-${to.sub}`); if (n) { n.scrollIntoView({ block: "center" }); n.classList.add("flash"); setTimeout(() => n.classList.remove("flash"), 2000); } else toast(`${to.id} has no number ${to.sub}.`); }
       return true;
     }
-    const onCall = S.agenda.some((a) => a.id === c.id) || suggested().some((x) => x.id === c.id);
+    const onCall = S.agenda.some((a) => a.id === c.id);
     const design = to.tab === "designs" && c.kind === "request" && c.status === "handed-off";
     S.tab = to.tab === "presentation" && onCall ? "requests" : design ? "designs" : HOME[c.kind] || "new";
     if (design) S.designFilter = c.built ? "done" : "todo";
@@ -5512,7 +5604,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       toast("Added to the presentation. Design Desk will write a short brief.");
       await refreshList(); await openCard(c.id); return;
     }
-    if (name === "not-now") { await api("DELETE", `/api/cards/${c.id}/suggestion`); await refreshList(); await openCard(c.id); return; }
     if (name === "unqueue") { await api("DELETE", `/api/cards/${c.id}/agenda`); await refreshList(); await openCard(c.id); return; }
     if (name === "delete") {
       const r = await ask({ title: `Delete ${c.id} for good?`, body: "The request, its options, comments and pictures are deleted for everyone. This cannot be undone; the decisions recorded from it stay.", ok: "Delete it", send: () => api("DELETE", `/api/cards/${c.id}`) });
@@ -5791,7 +5882,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.personOpen) { S.personOpen = S.personOpen === ds.personOpen ? null : ds.personOpen; renderDetail(); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.presented) { await markPresented(ds.presented); return; }
-    if (ds.notNow) { await api("DELETE", `/api/cards/${encodeURIComponent(ds.notNow)}/suggestion`); await refreshList(); renderDetail(); return; }
     if (ds.unpresent) { await markPresented(ds.unpresent, false); return; }
     // A presentation row: the page stays, scrolls to the item and marks it a moment.
     if (ds.jump) {
@@ -5893,6 +5983,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       return;
     }
     if (ds.present !== undefined) { await present(Number(ds.present)); return; }
+    // On a slide: a picture from the strip, the brief shown or hidden, a comment on the picture.
+    if (ds.pframe !== undefined) { P.f = Number(ds.pframe); await drawFrame(); return; }
+    if ("pbrief" in ds) { P.brief = !P.brief; await present(P.n); return; }
+    if ("pcomment" in ds) { await presentComment(); return; }
     if ("exitPresent" in ds) { $("#present")?.remove(); return; }
     if ("ack" in ds) { await api("POST", `/api/cards/${S.card.id}/ack`); await refreshList(); await openCard(S.card.id); return; }
     if ("handle" in ds) { await api("POST", `/api/cards/${S.card.id}/handled`, { handled: ds.handle === "1" }); await refreshList(); await openCard(S.card.id); return; }
@@ -6219,9 +6313,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (z && e.key === "Escape" && !z.closest("dialog")) { z.remove(); return; }
     if (z?.list?.length > 1 && ["ArrowRight", "ArrowLeft"].includes(e.key)) { gallery(z.list, z.index + (e.key === "ArrowRight" ? 1 : -1)).catch(fail); return; }
     const ov = $("#present");
+    // While a comment is written, Enter sends it and Escape leaves the box; the arrows are the text's.
+    if (ov && e.target.id === "pc-text") {
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); presentComment().catch(fail); }
+      if (e.key === "Escape") e.target.blur();
+      return;
+    }
     if (ov && ["ArrowRight", "ArrowLeft", "Escape"].includes(e.key)) {
       if (e.key === "Escape") { ov.remove(); return; }
-      present(Number(ov.dataset.index) + (e.key === "ArrowRight" ? 1 : -1)).catch(fail);
+      presentStep(e.key === "ArrowRight" ? 1 : -1).catch(fail);
       return;
     }
     if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; S.ws.check = false; renderWorkspace(); renderDetail(); return; }

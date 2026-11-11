@@ -119,7 +119,7 @@ steps say; the decision notes of step 4 are always yours to read.
     → Where a card came from): `label` "PR #<n> shipped" once `source.merged_at` is set,
     else "PR #<n> opened"; research it from what you just read, and enqueue `explore`: the
     inbox run makes two or three design proposals the team can pick from, adjust and comment
-    on. Suggest it for the presentation (`design desk agenda R-<n> --note "Design Desk proposes"`).
+    on.
 13. **CI gate** (`ci_gate: enabled`), right after the card is written: [CI gate](#ci-gate).
 14. **Announce** only when `notify` is `slack`: one message per run in the bound channel with
     each new card's title, number and link ([desk.md](desk.md) → Links to an item), the title
@@ -153,8 +153,7 @@ Merged and closed pull requests are never touched: their checks no longer matter
   head as above and upsert the new `sha`. A card a person marked handled stays handled.
 - **Cards already on the Desk.** The gate's first step runs when a card is written, so the
   inbox pre-flight also lists, while `ci_gate` is `enabled`, every judged change card of an
-  open PR (its `attention`, a `design_check`, a decision in force it goes against, a
-  suggestion for the presentation) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
+  open PR (its `attention`, a `design_check`, a decision in force it goes against) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
   true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
   item to claim: set the check as in **Set it** and upsert `ci`. A card with `ci` is never due this way
   again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`
