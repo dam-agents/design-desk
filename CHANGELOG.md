@@ -14,6 +14,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    opened from now on shows its tally in its opening message, edited at each sync and at close
    (`slack-polls` → The tally); one opened earlier gets none.
 
+## 1.79.3 — 2026-11-11
+
+**Upgrade:**
+1. Republish the Desk page ([desk.md](docs/desk.md) → Publishing the page). No server restart, no data change.
+
 ## 1.79.2 — 2026-11-11
 
 **Upgrade:**

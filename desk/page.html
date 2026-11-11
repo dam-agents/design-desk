@@ -1810,7 +1810,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
   const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "turn", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
-    ws: { open: false, mode: "select", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
+    ws: { open: false, mode: "off", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
@@ -4753,6 +4753,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // CSS path, the text and a plain label.
   function frameScript() {
     let mode = "off", selected = null, hover = null, pins = [], editing = null, under = null;
+    // A part picked that showed and no longer does (another page, a closed menu) is let go, and the Desk hears of it.
+    // One that never showed (a note's part the design has not opened) stays picked.
+    let selectedPath = "", selectedShown = false;
+    const pick = (el, path) => { selected = el; selectedPath = path; selectedShown = false; };
+    // Shown means the person can see it: in the page, laid out, not hidden, not fully transparent (it or a box round it).
+    // Not contentVisibilityAuto: a part only scrolled out of view is still on the page.
+    const showing = (el) => el.isConnected && (el.checkVisibility ? el.checkVisibility({ visibilityProperty: true, opacityProperty: true }) : el.getClientRects().length > 0);
+    // A design that draws the part again replaces its node: the part picked is found again by its path.
+    const letGo = () => { if (!selected || editing) return false; if (!selected.isConnected) selected = find(selectedPath) || selected; if (showing(selected)) { selectedShown = true; return false; } if (!selectedShown) return false; const selector = selectedPath; pick(null, ""); parent.postMessage({ type: "desk-unpicked", selector }, "*"); return true; };
     const layer = document.createElement("div");
     layer.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483647";
     document.documentElement.appendChild(layer);
@@ -4783,7 +4792,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const elementOf = (el) => { const hits = els.map((x) => ({ key: x.key, node: find(x.selector) })).filter((x) => x.node && x.node.contains(el)); return (hits.find((x) => !hits.some((y) => y.node !== x.node && x.node.contains(y.node))) || {}).key || null; };
     // A played story's numbered frames show only while the design's Show hotspots switch is on.
     const hot = () => document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") === "true";
-    const draw = () => { layer.textContent = ""; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#9a6200" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
+    const draw = () => { letGo(); layer.textContent = ""; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#9a6200" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
       // A part inside another part the same decision shaped does not repeat its number.
       const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
       for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
@@ -4794,7 +4803,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     let lastView = null;
     const openView = (d) => { const vs = [...document.querySelectorAll("[data-view]")]; const t = vs.find((v) => d.view_name && v.dataset.viewName === d.view_name) || (!d.view_name && vs.find((v) => v.dataset.view === d.view)); if (t && !t.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(t.dataset.view) + '"]')?.click(); };
     const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
-    new MutationObserver(viewMoved).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    // A class or style change (another page, a menu closing) may hide the part picked: checked once a frame, and the
+    // layer is redrawn only when the part is let go, so a design that animates a class never redraws the layer for it.
+    let looking = 0;
+    const lookAgain = () => { if (looking || !selected) return; looking = requestAnimationFrame(() => { looking = 0; if (letGo()) draw(); }); };
+    new MutationObserver(() => { viewMoved(); lookAgain(); }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden"] });
     // Show notes is kept across options: the Desk hears each flip of the switch and, when the
     // frame loads, names the state to start in.
     const notesSwitch = () => document.querySelector("#review [data-notes]");
@@ -4803,7 +4816,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (document.readyState === "loading") addEventListener("DOMContentLoaded", emptySwitches); else emptySwitches();
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
-    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { selected = find(d.selector); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(find(d.selector), d.selector || ""); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     // A user story played: a pointer goes to each part that does it, in order, outlines it and
     // clicks it when it is something to press; a new story stops the one playing. The Desk can
     // pause, resume and stop it, and hears each step; only the design scrolls, never the Desk.
@@ -4857,8 +4870,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (mode === "off" || !e.isTrusted || e.target.closest("#review")) return;
       if (editing && editing.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
-      const el = e.target; selected = el; hover = null; draw();
-      parent.postMessage({ type: "desk-picked", selector: css(el), tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), ...viewOf(el) }, "*");
+      const el = e.target; pick(el, css(el)); hover = null; draw();
+      parent.postMessage({ type: "desk-picked", selector: selectedPath, tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), ...viewOf(el) }, "*");
       if (mode === "edit") startEdit(el);
     }, true);
     function startEdit(el) {
@@ -5058,7 +5071,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     side.innerHTML = `<div class="sel ${sel ? "" : "none"}">
         <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
         <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
-        ${sel ? "" : `<p class="hint">Click a part of the design. A note without a selection is about the whole option.</p>`}
+        ${sel ? "" : `<p class="hint">${S.ws.mode === "off" && !old ? "Press Select above the design to pick a part." : "Click a part of the design."} A note without a selection is about the whole option.</p>`}
         ${whyOfSelected(c, v, sel)}
         ${sel ? `<button class="sel-x" data-ws-clear aria-label="Clear the selection" title="Clear the selection">✕</button>` : ""}
         ${sel && (can("revise") && !S.ws.state || drawn) ? `<div class="actions" style="margin:6px 0 0">${drawn ? `<button class="btn small" data-ws-states-of="${esc(drawn.key)}" title="Every state drawn of ${esc(drawn.name)}, to look through; nothing new is drawn from here">See every state (${drawn.states.length})</button>` : ""}${can("revise") && !S.ws.state ? `<button class="btn small" data-act="alternatives" title="Describe how you picture this part; Design Desk draws three ways and you pick one">Try 3 ways</button>` : ""}</div>` : ""}
@@ -5187,6 +5200,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       return;
     }
     if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
+    // The part picked no longer shows in the design (another page, a closed menu): nothing is selected.
+    if (d.type === "desk-unpicked") { if (S.ws.selected?.selector && S.ws.selected.selector === d.selector) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); } return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
     if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
     if (d.type === "desk-edited") {
@@ -5428,7 +5443,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // ---------- events ----------
   async function act(name) {
     const c = S.card;
-    if (name === "workspace") { S.ws.open = true; S.ws.check = false; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); return; }
+    // The workspace opens in Click through: most people come to look through the design; Select is one click away.
+    if (name === "workspace") { S.ws.open = true; S.ws.check = false; S.ws.mode = "off"; renderWorkspace(); return; }
     if (name === "queue") {
       const opts = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
       const r = await ask({ title: "Add to presentation", body: `The team looks at it at its next design meeting, and Design Desk writes a short brief of what to decide.${opts.length ? " Which version is the final one?" : ""}`, ok: "Add to presentation",
@@ -5940,7 +5956,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); await openCard(c.id); return;
     }
     if ("catalogOpen" in ds) { S.elFilter = "design"; S.productFilter = "elements"; await showTab("product"); return; }
-    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
+    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
     // A story is shown in place, so the design above keeps its frame, and it plays there.
     if (ds.story) { S.story = ds.story; const v = (S.card.variants || []).find((x) => x.id === S.variant), box = $("#stories"); if (box && v) box.outerHTML = renderStories(S.card, v); playStory(); return; }
     if (ds.vote) {
@@ -5955,7 +5971,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.goto) {
       const th = (S.card.threads || []).find((x) => x.id === ds.goto);
       if (!th?.anchor?.variant) return;
-      S.variant = th.anchor.variant; S.ws.state = th.anchor.state || null; S.ws.open = true; S.ws.check = false; S.ws.version = null;
+      S.variant = th.anchor.variant; S.ws.state = th.anchor.state || null; S.ws.open = true; S.ws.check = false; S.ws.mode = "off"; S.ws.version = null;
       S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       renderWorkspace(); return;
     }
@@ -5998,7 +6014,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if ("wsBuild" in ds) { await buildChecked(); return; }
     if ("wsEdit" in ds) { S.ws.check = false; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); frameSay({ type: "desk-mode", mode: S.ws.mode }); return; }
-    if (ds.wsMode) { S.ws.mode = ds.wsMode; renderWorkspace(); frameSay({ type: "desk-mode", mode: ds.wsMode }); return; }
+    // Click through uses the design as it is: the part picked before is let go.
+    if (ds.wsMode) {
+      S.ws.mode = ds.wsMode;
+      if (ds.wsMode === "off") { S.ws.selected = null; S.ws.edit = null; }
+      renderWorkspace(); frameSay({ type: "desk-mode", mode: ds.wsMode });
+      if (ds.wsMode === "off") frameSay({ type: "desk-select", selector: null });
+      return;
+    }
     // Why it looks like this: the tags on the design, one decision's parts, one part of it.
     if ("wsWhy" in ds) { S.ws.why = !S.ws.why; if (!S.ws.why) S.ws.reason = null; store.set("desk-why", S.ws.why ? "1" : "0"); renderWorkspace(); return; }
     if (ds.reasonPart) {
@@ -6126,7 +6149,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
     if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }
     if ("wsNotes" in e.target.dataset) { S.ws.notes = e.target.checked; store.set("desk-notes", S.ws.notes ? "1" : "0"); renderWorkspace(); return; }
-    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; renderWorkspace(); }
+    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); }
   });
 
   document.addEventListener("keydown", (e) => {
@@ -6605,7 +6628,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const an = th?.anchor;
     if (an?.variant && (c?.variants || []).some((v) => v.id === an.variant)) {
       S.variant = an.variant;
-      S.ws = { ...S.ws, open: true, check: false, version: null, edit: null, alt: null, note: th.id, state: an.state || null,
+      S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, edit: null, alt: null, note: th.id, state: an.state || null,
         filter: th.state === "resolved" ? "all" : S.ws.filter || "open",
         selected: an.selector ? { selector: an.selector, text: an.text || "", tag: an.tag || "", label: an.label || an.text || "an element", view: an.view, view_name: an.view_name } : null };
       renderDetail(); renderWorkspace();

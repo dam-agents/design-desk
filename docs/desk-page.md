@@ -28,6 +28,11 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   developer joins them wherever a part needs one, until it was opened. Approve is never in the row.
   With no way of the viewer's own, the row says what they wait for; with a question open, to answer
   it below: Design Desk's open questions stand right under the box, never inside it. **Open in the design workspace** sits at the row's right end, never among the ways on.
+  The workspace opens in **Click through**, the design used as it is; **Select** is one click away, and
+  **Edit text** for whoever may change the design; an older version shows neither (**Make more changes**
+  after a final check opens in Select). A part selected is let go
+  by Click through, by another option, state or version, and once it no longer shows in the design
+  (another page, a closed menu); a note's part the design has not opened yet stays selected.
   What is about the request, not its step (the presentation, For Developers or For Designers, Redraw
   the options, New request from this, Delete), is under **⋯** at the right end of the box's top
   row, after Approve and Close; that row ends where Open in the design workspace ends.
