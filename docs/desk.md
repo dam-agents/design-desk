@@ -548,6 +548,13 @@ with a role; it has no card. This is the one roster change that comes from the D
    `opened: {<address>: at}`, lower-cased, from the page's first load), with the owner's move and
    **Copy email** for the owner.
 
+A person's row on People folds open to what they did on the Desk, read from what the store
+keeps anyway, nothing logged for it (`peopleActivity`, sent with `GET /api/people`): when they
+first loaded the Desk (`opened`), when they last did something, how many requests they filed,
+comments they wrote, votes they gave, requests they approved and decisions they recorded, and
+how many of those fell in each of the last 12 weeks. A private ask never counts, and what
+someone opened (`reads`) is never shown.
+
 ## The presentation
 
 The team meets regularly; the Desk keeps the list of what to show at the next design meeting,

@@ -642,6 +642,33 @@
   .people { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 6px 0 4px; }
   .people th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
   .people td { padding: 8px 10px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+  /* A person's row folds open to what they did on the Desk (docs/desk.md → People). */
+  .people .who { all: unset; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 6px; }
+  .people .who:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .people .who .chev { width: 14px; height: 14px; color: var(--muted); transition: transform .15s ease; flex: none; }
+  .people .who[aria-expanded="true"] .chev { transform: rotate(90deg); }
+  .people tr.open > td { border-bottom-color: transparent; background: var(--soft); }
+  .people tr.pact > td { padding: 0 10px 14px; background: var(--soft); }
+  .pact-box { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 18px 28px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .pact-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .pact-av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--accent) 18%, var(--panel)); color: var(--ink); font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+  .pact-head .k { color: var(--muted); font-size: 12px; }
+  .pact-head .v { font-weight: 600; }
+  .pact-head .line { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  .pact-spark { justify-self: end; text-align: right; }
+  .pact-spark svg { display: block; width: 168px; height: 40px; }
+  .pact-spark rect { fill: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .pact-spark rect.now { fill: var(--accent); }
+  .pact-spark rect.zero { fill: var(--line); }
+  .pact-spark .k { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  .pact-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .pact-stat { border-radius: 10px; padding: 10px 12px; background: var(--soft); display: flex; flex-direction: column; gap: 2px; }
+  .pact-stat .n { font-size: 22px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .pact-stat .l { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
+  .pact-stat .l svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .pact-stat.none .n { color: var(--muted); font-weight: 500; }
+  @media (max-width: 700px) { .pact-box { grid-template-columns: 1fr; } .pact-spark { justify-self: start; text-align: left; } .pact-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (prefers-reduced-motion: reduce) { .people .who .chev { transition: none; } }
   .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 6px; }
   .roles .panel h4 { margin: 0 0 4px; display: flex; gap: 8px; align-items: center; } .roles .panel p { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
   .roles .panel ul { margin: 0; padding-left: 18px; font-size: 13px; } .roles .panel li { margin-bottom: 3px; }
@@ -2879,13 +2906,40 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     try { S.people = await api("GET", "/api/people"); }
     catch { S.people = { error: `The list of people can't be loaded right now. Try again in a minute; if it keeps happening, tell ${contact()}.` }; }
   }
+  // What one person did on the Desk: when they first came, when they last did something, what
+  // they did, and how busy each of the last 12 weeks was. A private ask never counts.
+  const PACT = [["filed", "Requests filed", '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15h6"/>'],
+    ["comments", "Comments", '<path d="M4 5h16v11H9l-5 4z"/>'],
+    ["votes", "Votes", '<path d="M7 11v9H4v-9zM7 11l4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7"/>'],
+    ["approved", "Approved", '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>'],
+    ["decisions", "Decisions", '<path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>']];
+  function personActivity(x, a) {
+    a = a || { weeks: Array(12).fill(0) };
+    const initials = (x.name || x.email).split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+    const first = a.first ? `<span><span class="k">On the Desk since</span> <span class="v" title="${esc(when(a.first))}">${esc(day(a.first))}</span></span>`
+      : `<span class="chip warn" title="This address has not loaded the Desk; only the Desk's owner shares it">Has not opened the Desk yet</span>`;
+    const last = `<span><span class="k">Last active</span> <span class="v"${a.last ? ` title="${esc(when(a.last))}"` : ""}>${a.last ? esc(dayWord(a.last)) : "Nothing yet"}</span></span>`;
+    const w = a.weeks, top = Math.max(1, ...w), bw = 10, gap = 4, h = 40;
+    const bars = w.map((n, i) => { const bh = n ? Math.max(4, Math.round((n / top) * (h - 2))) : 2; const ago = 11 - i;
+      return `<rect class="${n ? (ago === 0 ? "now" : "") : "zero"}" x="${i * (bw + gap)}" y="${h - bh}" width="${bw}" height="${bh}" rx="2"><title>${ago === 0 ? "This week" : ago === 1 ? "Last week" : `${ago} weeks ago`}: ${n} ${n === 1 ? "thing" : "things"}</title></rect>`; }).join("");
+    const total = w.reduce((s, n) => s + n, 0);
+    const stats = PACT.map(([k, label, path]) => `<div class="pact-stat${a[k] ? "" : " none"}"><span class="n">${a[k] || 0}</span><span class="l"><svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg>${label}</span></div>`).join("");
+    return `<div class="pact-box"><div class="pact-head"><span class="pact-av" aria-hidden="true">${esc(initials)}</span><div class="line">${first}${last}</div></div>
+      <div class="pact-spark"><svg viewBox="0 0 ${12 * (bw + gap) - gap} ${h}" role="img" aria-label="${total} things in the last 12 weeks">${bars}</svg><div class="k">${total ? `${total} in the last 12 weeks` : "Quiet the last 12 weeks"}</div></div>
+      <div class="pact-stats">${stats}</div></div>`;
+  }
   function renderPeople() {
     const P = S.people;
     if (!P) return `<div class="empty">Loading…</div>`;
     if (P.error) return `<h2>People and roles</h2><div class="panel">${esc(P.error)}</div>`;
     const order = Object.keys(ROLE_ABOUT);
     const people = [...P.people].sort((a, b) => order.indexOf(a.role) - order.indexOf(b.role) || a.email.localeCompare(b.email));
-    const rows = people.map((x) => `<tr><td>${x.name ? `<b>${esc(x.name)}</b> ` : ""}${esc(x.email)}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>`).join("");
+    // A row folds open to what that person did on the Desk: read from what the Desk keeps anyway.
+    const rows = people.map((x) => {
+      const open = S.personOpen === x.email;
+      const who = `<button class="who" data-person-open="${esc(x.email)}" aria-expanded="${open}" title="${open ? "Hide" : "Show"} what they did on the Desk"><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${x.name ? `<b>${esc(x.name)}</b> ` : ""}${esc(x.email)}</span></button>`;
+      return `<tr class="${open ? "open" : ""}"><td>${who}${(x.also || []).length ? ` <span class="hint">also ${esc(x.also.join(", "))}</span>` : ""}${isMe(x.email) ? ` <span class="chip" title="This is you">you</span>` : ""}</td><td>${roleIcon(x.role)}${esc(roleName(x.role))}</td></tr>${open ? `<tr class="pact"><td colspan="2">${personActivity(x, P.activity?.[x.email])}</td></tr>` : ""}`;
+    }).join("");
     const shown = order.filter((r) => P.roles[r]);
     const mayAll = Object.fromEntries(shown.map((r) => [r, ABILITIES.filter(([acts, , on]) => (!on || S.me?.[on]) && acts.every((a) => P.roles[r][a]))]));
     const own = (row) => Boolean(row[3]);
@@ -5714,6 +5768,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.showDesign) { await goTo({ id: ds.showDesign, tab: "designs" }); return; }
     if (ds.showRequest) { await goTo({ id: ds.showRequest, tab: "requests" }); return; }
     if (ds.copyEmail) { await copyText(ds.copyEmail, "the email"); return; }
+    if (ds.personOpen) { S.personOpen = S.personOpen === ds.personOpen ? null : ds.personOpen; renderDetail(); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.presented) { await markPresented(ds.presented); return; }
     if (ds.notNow) { await api("DELETE", `/api/cards/${encodeURIComponent(ds.notNow)}/suggestion`); await refreshList(); renderDetail(); return; }
