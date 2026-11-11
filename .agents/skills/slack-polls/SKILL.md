@@ -40,9 +40,10 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
    Vote on each option below with 👍 (I like it) or 👎 (I don't). A concern or a why is a reply
    in its thread<, tagging me>. Voting closes <closes, in the reader's words: "Friday at 15:00">.
    Details on the Design Desk (R-<n>): <link>". The link is the card's
-   ([docs/desk.md](../../../docs/desk.md) → Links to an item). The part in angle brackets goes in unless
-   `work/manifest-channels.json` records this conversation as `ambient: true` (the agent reads
-   every message there, [docs/manifest.md](../../../docs/manifest.md) → Sources); `false` or no
+   ([docs/desk.md](../../../docs/desk.md) → Links to an item). Every placeholder is always filled, save
+   two: the note, left out when there is none, and `<, tagging me>`, which goes in unless
+   `work/manifest-channels.json` records the poll's channel as `ambient: true` (its row by the
+   channel's name from `describe_channel`; the agent reads every message there, [docs/manifest.md](../../../docs/manifest.md) → Sources); `false` or no
    record → it goes in, since only a reply that tags the agent reaches it (Sync → 3). Keep the `ts` the posting tool
    returns: the opening message carries the tally (**The tally** below).
 3. **One message per option**, in order: its picture attached to the message that carries its
