@@ -3243,3 +3243,32 @@ test("the research summary splits into its parts; no options asked for keeps the
   assert.deepEqual(await desk.$$eval("#detail .made-sec .md p b", (els) => els.map((e) => e.textContent)), ["Where it lives:", "Already asked for:", "History:"]);
   assert.match(await desk.textContent("#detail .vpanel .frame.vempty"), /No options were asked for/);
 }));
+
+const KIT = { repo: "acme/widgets", commit: "3f9c2ab71d", at: "2026-11-11T10:00:00Z",
+  tokens: { color: [{ name: "--primary", value: "#3b5bdb", file: "web/src/app.css" }, { name: "--ring", value: "var(--primary)", file: "web/src/app.css" }, { name: "--odd", value: "url(x)", file: "web/src/app.css" }],
+    shadow: [{ name: "--shadow-sm", value: "0 1px 2px rgba(0,0,0,.08)", file: "web/src/app.css" }] },
+  components: [{ name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary" }, { name: "ghost", classes: "hover:bg-muted" }] }] };
+const withKit = (me) => DESK(me, []).replace('path === "/api/agenda"', `path === "/api/kit" ? { kit: ${JSON.stringify(KIT)} } : path === "/api/agenda"`);
+
+test("Product → Kit is an admin's: its named values and its components' variants, a tile each, drawn only when safe", (t) => open(t, withKit({ ...DESIGNER, role: "admin" }), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.click('[data-filter="productFilter:kit"]');
+  await desk.waitForSelector('[data-kit="t:color"]');
+  assert.deepEqual(await desk.$$eval("#list .row .t", (r) => r.map((x) => x.textContent)), ["Colors", "Shadows", "Button · variant"]);
+  assert.match(await desk.textContent("#list .row"), /3 named values\s*from: web\/src\/app\.css/);
+  await desk.click('[data-kit="t:color"]');
+  await desk.waitForSelector("#detail .kit-grid");
+  assert.match(await desk.textContent("#detail .sub"), /Read from acme\/widgets at 3f9c2ab/);
+  assert.deepEqual(await desk.$$eval("#detail .kit-tile", (ts) => ts.map((x) => x.querySelector(".kit-pic i")?.style.backgroundColor || x.querySelector(".kit-pic").textContent)),
+    ["rgb(59, 91, 219)", "rgb(59, 91, 219)", "no preview"], "a value naming another is drawn as that one; one the Desk cannot draw says so");
+  await desk.click('[data-back]');
+  await desk.click('[data-kit="c:0"]');
+  await desk.waitForFunction(() => /Button has 2 variants, from variants in its code \(cva\) in web\/src\/components\/ui\/button\.tsx/.test(document.querySelector("#detail")?.textContent || ""));
+  assert.match(await desk.textContent("#detail .kit-tile"), /default\s*default\s*bg-primary/);
+}));
+
+test("Product → Kit is not on the page for a designer", (t) => open(t, withKit(DESIGNER), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.waitForSelector('[data-filter="productFilter:decisions"]');
+  assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 0);
+}));

@@ -855,6 +855,18 @@ test("an element's smart controls: options the page can show, one way each; a no
   assert.deepEqual(t.anchor.controls, [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }]);
 });
 
+test("the kit: one per Desk, replaced whole, kept to the names and sizes the page draws", () => {
+  const s = fresh();
+  assert.equal(s.getKit().kit, null, "none until the agent sends one");
+  assert.throws(() => s.setKit([]), /object/);
+  const { kit } = s.setKit({ repo: "acme/widgets", commit: "abc", root: "/home/agent/checkouts/x", tokens: { color: [{ name: "--primary", value: "#fff", file: "a.css" }, { name: "primary", value: "#000" }], "Bad Kind": [{ name: "--x", value: "1" }], shadow: [] },
+    components: [{ name: "Button", file: "b.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary", extra: 1 }] }, { name: "Empty", options: [] }] });
+  assert.deepEqual(kit.tokens, { color: [{ name: "--primary", value: "#fff", file: "a.css" }] }, "a name that is no custom property, a kind with a bad name, an empty kind: left out");
+  assert.deepEqual(kit.components, [{ name: "Button", file: "b.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary" }] }]);
+  assert.equal(kit.root, undefined, "the agent's own paths stay off the Desk");
+  assert.equal(s.setKit({ tokens: {}, components: [] }).kit.repo, null, "the next one replaces it whole");
+});
+
 test("a reply, an answer, a reopen and Mark done take the ability of what they start", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "People miss the upload button." });

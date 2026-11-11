@@ -26,7 +26,8 @@ const USAGE = `usage: design <command> [args]
   capture <base-url> <outdir> --routes <routes.json> [--login <profile.json>]
                                        screens of a running app, signed in as the profile's demo account
   pr-shots <owner/name> <pr> <outdir>  the images a pull request's body and comments carry
-  kit --root <clone> [--ui-dir <dir>]  the product's kit: its named values and its components' variants,
+  kit --root <clone> [--repo <owner/name>] [--ui-dir <dir>]
+                                       the product's kit: its named values and its components' variants,
                                        for an element's smart controls; prints JSON
   states <file.tsx> [--export <Component>] [--root <clone>]
                                        a component's state dimensions (props, values, conditions, hooks)

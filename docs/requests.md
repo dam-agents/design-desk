@@ -340,7 +340,9 @@ Drawing or revising an option:
 1. `design kit --root <clone>` prints the product's kit: its named values (`tokens`: color,
    shadow, radius, space, font-size…, each with its file) and its components' variants
    (`components`: cva variants, a prop typed as a union of words, a CSS class family; each with
-   its file, prop, options and default). It reads files only; run it once per drawing run.
+   its file, prop, options and default). It reads files only; run it once per drawing run, with
+   `--repo <owner/name>`, and send what it printed: `design desk kit <kit.json>` replaces the
+   kit Product → Kit shows ([desk-page.md](desk-page.md) → Product → Kit).
 2. For each element in `elements` that people would restyle (a button, a badge, a card), give
    `controls` (at most 8): `[{id, label, kind, current, source, options: [{id, label, token,
    apply}]}]`. Only what the kit has for that element: its component's variants (the three

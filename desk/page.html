@@ -356,6 +356,19 @@
   .eltile .elpic iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .eltile .elname { font-weight: 600; font-size: var(--fs-ui, 13px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .eltile .elmeta { display: flex; flex-wrap: wrap; gap: 4px; align-self: end; }
+  /* Product → Kit: the product's named values and its components' variants, a tile each, as the elements are. */
+  .kit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .kit-tile { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 8px; min-width: 0; }
+  .kit-pic { display: grid; place-items: center; height: 88px; border-radius: 6px; background: #fff; border: 1px solid var(--line); overflow: hidden; color: #1b1b1a; }
+  .kit-pic .sw { width: 100%; height: 100%; }
+  .kit-pic .sh { width: 56%; height: 48%; background: #fff; border-radius: 8px; }
+  .kit-pic .rd { width: 56px; height: 56px; background: #e7edfc; border: 2px solid #2f5bd3; }
+  .kit-pic .sp { height: 14px; max-width: 90%; background: #2f5bd3; border-radius: 3px; opacity: .8; }
+  .kit-pic .tx { font-size: 32px; line-height: 1; max-width: 100%; overflow: hidden; }
+  .kit-pic .bd { width: 56px; height: 40px; border: 0 solid #2f5bd3; border-radius: 6px; }
+  .kit-pic .var { font: 600 13px/1.3 var(--font); padding: 6px 12px; border-radius: 6px; border: 1px dashed var(--line); color: var(--muted); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kit-tile .kname { font-weight: 600; font-size: var(--fs-ui, 13px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 6px; align-items: center; }
+  .kit-tile .kval { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
   /* One element of an option: its states and what each covers, in a dialog over the request. */
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
   dialog.eldlg > div { padding: 18px 20px 20px; }
@@ -2491,6 +2504,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const backBar = () => {
     const decisions = S.tab === "product" && S.productFilter === "decisions";
     const it = decisions ? S.decision : S.card, link = it && itemLink(it);
+    if (S.tab === "product" && S.productFilter === "kit") return `<div class="crumb"><button class="btn small" data-back>← Kit</button></div>`;
     return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : presenting() ? "Presentation" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(it.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
   };
   // Requests leads; PR Changes and Issues follow smaller with grey counts, then Product and People.
@@ -2888,6 +2902,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
     if (S.productFilter === "differences" && !figmaOn()) S.productFilter = "screens";
+    // Kit kept from an earlier visit leaves for someone who is not an admin.
+    if (S.productFilter === "kit" && !kitOn()) S.productFilter = "screens";
     // Closed is drawn only while one is closed: reopening the last one goes back to Differs.
     if (S.figFilter === "closed" && !figmaCards("closed").length) S.figFilter = "differs";
     const cards = visibleCards();
@@ -2904,7 +2920,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const head = S.tab === "new" ? pages("chgFor", [chgTab("designers", "For Designers"), chgTab("developers", "For Developers")], (k) => chgFor() === k)
       : S.tab === "issues" ? pages("issFor", [issTab("designers", "For Designers"), issTab("developers", "For Developers")], (k) => issFor() === k)
       : S.tab === "requests" ? pages("reqFor", [forTab("designers", "For Designers"), forTab("developers", "For Developers"), ...full([["presentation", "For presentation", S.agenda.length]])], (k) => k === "presentation" ? !reqList : reqList && reqFor() === k)
-      : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
+      : S.tab === "product" && !simple() ? pages("productFilter", [["screens", "Screens"], ["elements", "Elements"], ["decisions", "Decisions"], ...(kitOn() ? [["kit", "Kit"]] : []), ...(figmaOn() ? [["differences", "Differences"]] : []), ["history", "History"]], (k) => S.productFilter === k, add) : "";
     const filter = S.tab === "new" ? seg("newFilter", [["open", "Open", newCards("open").length], ["handled", "Handled", newCards("handled").length], ["auto", "Auto handled", newCards("auto").length], ["designer", "Needs a designer", newCards("designer").length, `<span class="ai-tag" title="Design Desk judges which changes a designer should see">AI</span>`]])
       : S.tab === "requests" && reqList ? seg("reqFilter", [["turn", "Your turn", requestCards("turn").length], ["unread", "Unread", requestCards("unread").length], ["open", "Open", requestCards("open").length], ["closed", "Closed", requestCards("closed").length]])
       : S.tab === "designs" ? seg("designFilter", [["todo", "To build", designCards("todo").length], ["done", "Done", designCards("done").length]])
@@ -2914,6 +2930,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(head); return; }
+    if (S.tab === "product" && S.productFilter === "kit") { renderKitList(head); return; }
     if (presenting()) { renderAgendaList(filters); return; }
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
@@ -3042,6 +3059,59 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const decState = (d) => d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"]
     : d.unapproved ? ["unapproved", "Not approved", `${NOT_APPROVED_TIP}.`] : ["in-force", "In force", "This decision holds today; anything against it warns"];
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
+  // ---------- Product → Kit ----------
+  // What the product's UI is made of, as `design kit` read it from its code (docs/desk-page.md →
+  // Product → Kit): its named values by kind and its components' variants. An admin's page for now.
+  const kitOn = () => S.me?.role === "admin";
+  const KIT_KINDS = { color: "Colors", shadow: "Shadows", radius: "Corners", space: "Spacing", "font-size": "Text sizes", "font-weight": "Text weights", border: "Borders" };
+  const KIT_HOW = { cva: "variants in its code (cva)", prop: "a prop it takes", class: "a family of CSS classes" };
+  async function loadKit() { try { S.kit = (await api("GET", "/api/kit")).kit || null; } catch { S.kit = null; } }
+  const kitParts = (k) => [
+    ...Object.entries(k?.tokens || {}).map(([kind, ts]) => ({ id: `t:${kind}`, kind, title: KIT_KINDS[kind] || kind, n: ts.length, what: ts.length === 1 ? "named value" : "named values", files: [...new Set(ts.map((t) => t.file).filter(Boolean))] })),
+    ...(k?.components || []).map((c, i) => ({ id: `c:${i}`, comp: c, title: c.prop && c.prop !== "class" ? `${c.name} · ${c.prop}` : c.name, n: c.options.length, what: "variants", files: [c.file].filter(Boolean) })),
+  ];
+  function renderKitList(head) {
+    const list = $("#list"), k = S.kit;
+    const top = `<div class="listhead">${head}</div>`;
+    if (k === undefined) {
+      if (!S.kitLoading) { S.kitLoading = true; loadKit().then(() => { S.kitLoading = false; if (S.tab === "product" && S.productFilter === "kit") { renderList(); renderDetail(); } }); }
+      list.innerHTML = `${top}<div class="empty">Loading the kit…</div>`; return;
+    }
+    const parts = kitParts(k);
+    if (!parts.length) { list.innerHTML = `${top}<div class="empty">No kit yet. Design Desk reads it from the product's code the next time it draws design options in the product's style.</div>`; return; }
+    const from = (p) => p.files.length ? `<span><span class="k">from:</span> ${esc(p.files.slice(0, 2).join(", "))}${p.files.length > 2 ? ` +${p.files.length - 2}` : ""}</span>` : "";
+    list.innerHTML = top + parts.map((p) => `<div class="row item"><button class="open" data-kit="${esc(p.id)}" aria-current="${S.kitPart === p.id}"><div class="t"><span>${esc(p.title)}</span></div></button>
+      <div class="prov plain"><span>${p.n} ${p.what}</span>${from(p)}</div></div>`).join("");
+  }
+  // A named value as CSS the Desk can draw: another one it names resolved, an HSL triple wrapped; else nothing.
+  function kitValue(k, v) {
+    const all = Object.values(k?.tokens || {}).flat();
+    for (let i = 0; i < 5; i++) { const m = String(v).match(/^var\((--[\w-]+)\)$/); if (!m) break; const t = all.find((x) => x.name === m[1]); if (!t) return ""; v = t.value; }
+    v = String(v).trim();
+    if (/^[\d.]+\s+[\d.]+%\s+[\d.]+%$/.test(v)) v = `hsl(${v})`;
+    return /^[#\w\s().,%/+*-]{1,160}$/.test(v) && !/var\(|url\(|expression/i.test(v) ? v : "";
+  }
+  function kitPic(kind, css) {
+    if (!css) return `<span class="var">no preview</span>`;
+    return { color: `<i class="sw" style="background:${esc(css)}"></i>`, shadow: `<i class="sh" style="box-shadow:${esc(css)}"></i>`, radius: `<i class="rd" style="border-radius:${esc(css)}"></i>`,
+      space: `<i class="sp" style="width:${esc(css)}"></i>`, "font-size": `<span class="tx" style="font-size:min(${esc(css)}, 40px)">Aa</span>`, "font-weight": `<span class="tx" style="font-weight:${esc(css)}">Aa</span>`,
+      border: `<i class="bd" style="border-width:${esc(css)}"></i>` }[kind] || `<span class="var">${esc(css)}</span>`;
+  }
+  function renderKit() {
+    const k = S.kit, p = kitParts(k).find((x) => x.id === S.kitPart);
+    const read = k ? `<div class="sub"><span>Read from ${esc(k.repo || "the product's code")}${k.commit ? ` at ${esc(k.commit.slice(0, 7))}` : ""}</span>${k.at ? `<span>${esc(day(k.at))}</span>` : ""}</div>` : "";
+    if (!p) return `<p class="pick">What the product's UI is made of, read from its code: its named colors, shadows, corners, spacing and text sizes, and the variants of its components. The look palette in the design workspace offers only these. Pick one on the left.</p>`;
+    if (p.kind) {
+      const ts = k.tokens[p.kind];
+      return `${backBar()}<h2>${esc(p.title)}</h2>${read}
+        <p class="hint">${p.n} ${p.what} the product defines. Design Desk offers them first when someone changes a part's look.</p>
+        <ol class="kit-grid">${ts.map((t) => `<li class="kit-tile"><div class="kit-pic">${kitPic(p.kind, kitValue(k, t.value))}</div><div class="kname" title="${esc(t.name)}">${esc(t.name)}</div><div class="kval">${esc(t.value)}</div>${t.file ? `<div class="hint">${esc(t.file)}</div>` : ""}</li>`).join("")}</ol>`;
+    }
+    const c = p.comp;
+    return `${backBar()}<h2>${esc(p.title)}</h2>${read}
+      <p class="hint">${esc(c.name)} has ${c.options.length} variants, from ${esc(KIT_HOW[c.how] || "its code")}${c.file ? ` in ${esc(c.file)}` : ""}. Design Desk offers a part of this kind only these.</p>
+      <ol class="kit-grid">${c.options.map((o) => `<li class="kit-tile"><div class="kit-pic"><span class="var">${esc(o.name)}</span></div><div class="kname">${esc(o.name)}${o.name === c.default ? ` <span class="chip" title="What the component shows when nothing else is asked">default</span>` : ""}</div>${o.classes || o.class ? `<div class="kval">${esc(o.classes || `.${o.class}`)}</div>` : ""}</li>`).join("")}</ol>`;
+  }
   function renderDecisionList(filters) {
     const list = $("#list");
     const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["unapproved", "Not approved"], ["revoked", "Revoked"], ["", "All"]], "dstate")}</div></div>`;
@@ -5608,6 +5678,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (d.type === "desk-unpicked") { if (S.ws.selected?.selector && S.ws.selected.selector === d.selector) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); } return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
     if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; S.ws.plColor = null;
+      // Another part opens the palette afresh: on Suggested when it has smart controls.
+      if (S.ws.look?.selector !== S.ws.selected.selector) S.ws.plTab = null;
       const look = cleanLook(d.look); S.ws.look = look ? { selector: S.ws.selected.selector, look } : null;
       renderWorkspace(); if (S.ws.mode !== "edit" && !lookable()) $("#ws-text")?.focus(); }
     // The look palette: the part's look after a change (a drag of its handle too), what the design is made of.
@@ -5711,13 +5783,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderDetailBody() {
     const d = $("#detail");
     // Every open item, decision and People fill the pane: each part is as wide as the page (`.fill`).
-    d.classList.toggle("fill", Boolean(S.card || S.decision) || S.tab === "people");
-    const now = [S.tab, S.card?.id || "", S.decision?.id || "", presenting() ? "p" : ""].join("|");
+    d.classList.toggle("fill", Boolean(S.card || S.decision || (S.productFilter === "kit" && S.kitPart)) || S.tab === "people");
+    const now = [S.tab, S.card?.id || "", S.decision?.id || "", S.kitPart || "", presenting() ? "p" : ""].join("|");
     if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); d.classList.remove("enter"); void d.offsetWidth; d.classList.add("enter"); clearTimeout(entered); entered = setTimeout(() => d.classList.remove("enter"), 400); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
     if (S.tab === "people") { d.innerHTML = `<div class="guide">${renderPeople()}</div>`; return; }
     if (presenting() && !S.card) { renderAgendaDetail(); return; }
+    if (S.tab === "product" && S.productFilter === "kit") {
+      d.innerHTML = renderKit();
+      $("#main").classList.toggle("has-detail", Boolean(S.kitPart));
+      return;
+    }
     if (S.tab === "product" && S.productFilter === "decisions") {
       d.innerHTML = S.decision ? renderDecision(S.decision) : `<p class="pick">Every decision the team made about the product, with where it was made. Pick one, or search for one at the top.</p>${renderIntro()}`;
       $("#main").classList.toggle("has-detail", Boolean(S.decision));
@@ -6182,7 +6259,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const [k, v] = ds.filter === "reqFor:presentation" ? ["reqFilter", "presentation"] : ds.filter.split(":");
       if (k === "reqFor" && S.reqFilter === "presentation") S.reqFilter = "open";
       S.justRead.clear();
-      S[k] = v; if (FILTERS[k] && KEPT(k)) store.set(`desk-${k}`, v); S.card = null; S.decision = null; if (v === "decisions") await loadDecisions(); renderList(); renderDetail(); return; }
+      S[k] = v; if (FILTERS[k] && KEPT(k)) store.set(`desk-${k}`, v); S.card = null; S.decision = null; S.kitPart = null; if (v === "decisions") await loadDecisions(); if (v === "kit") await loadKit(); renderList(); renderDetail(); return; }
+    if (ds.kit) { S.kitPart = ds.kit; renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
     if ("addDecision" in ds) { openDecisionDialog(); return; }
     if ("pfClear" in ds) { S.pf = null; renderList(); return; }
@@ -6258,7 +6336,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("lookSide" in ds) { S.lookSide = !S.lookSide; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); return; }
     if ("addProduct" in ds) { openProductDialog(); return; }
     if ("addPerson" in ds) { openPersonDialog(); return; }
-    if ("back" in ds) { S.card = null; S.decision = null; renderList(); renderDetail(); return; }
+    if ("back" in ds) { S.card = null; S.decision = null; S.kitPart = null; renderList(); renderDetail(); return; }
     if (ds.zoomSnip) { await zoomSnip(el); return; }
     if (ds.zoom) {
       const list = [];
@@ -6485,7 +6563,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.plShow) {
       const e = looksNow()[ds.plShow]; if (!e) return;
       S.ws.selected = { selector: ds.plShow, text: e.text || "", tag: e.tag || "", label: e.label, view: e.view, view_name: e.view_name };
-      S.ws.edit = null; S.ws.look = null; S.ws.lookAsked = null; S.ws.mode = "select";
+      S.ws.edit = null; S.ws.look = null; S.ws.lookAsked = null; S.ws.plTab = null; S.ws.mode = "select";
       frameSay({ type: "desk-mode", mode: "select" }); frameSay({ type: "desk-select", selector: ds.plShow }); renderWorkspace(); return;
     }
     if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }

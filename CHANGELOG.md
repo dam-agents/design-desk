@@ -13,8 +13,9 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
    ([desk.md](docs/desk.md) → Publishing the page): the design workspace gets a look palette (an
    admin's for now), an option's elements may carry smart controls, and a note keeps what was
-   picked in `anchor.style` and `anchor.controls`. No state format changes; `design kit` needs no
-   install.
+   picked in `anchor.style` and `anchor.controls`. An admin also gets Product → Kit; it fills the next
+   time a drawing run sends `design desk kit`. The store gains an optional `kit` (no migration);
+   `design kit` needs no install.
 
 ## 1.81.0 — 2026-11-11
 
