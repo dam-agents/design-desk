@@ -33,6 +33,16 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   after a final check opens in Select). A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
   (another page, a closed menu); a note's part the design has not opened yet stays selected.
+  **The look palette:** in Select, an admin (for now; whoever may change the design later) gets **Change the look** in the
+  side panel, under the part selected and its note: tabs Text, Fill, Spacing, Layout (a flex or grid
+  part only) and Size, with steppers, segmented choices, colors, and a resize handle on the part's
+  corner in the design. An element with smart controls opens on **Suggested** first: only the
+  choices the product has for it, each named with its source ([requests.md](requests.md) → Smart
+  controls); a variant drawn in full replaces the element in the preview. A change shows at once in the design only, a preview nothing saves. Steps
+  follow the design's own text sizes, a spacing and a corner scale; colors offer the design's named
+  colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
+  Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
+  **Send** makes one `change` note per part with `anchor.style` ([requests.md](requests.md) → revise).
   What is about the request, not its step (the presentation, For Developers or For Designers, Redraw
   the options, New request from this, Delete), is under **⋯** at the right end of the box's top
   row, after Approve and Close; that row ends where Open in the design workspace ends.

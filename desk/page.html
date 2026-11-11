@@ -714,6 +714,53 @@
   .checklist button { width: 100%; text-align: left; justify-content: flex-start; }
   .checklist button[aria-current="true"] { border-color: var(--accent); }
   .ws-stage .frame { flex: 1; height: auto; min-height: 0; }
+  /* The look palette: in the side panel, under the part selected and its note. */
+  #ws-palette { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); font-size: var(--fs-ui); display: grid; grid-template-columns: minmax(0, 1fr); }
+  #ws-palette[hidden] { display: none; }
+  #ws-palette button:not(.btn) { font: inherit; color: inherit; cursor: pointer; }
+  #ws-palette button[disabled] { opacity: .35; cursor: default; }
+  .pl-head { padding: 10px 12px 6px; }
+  .pl-head h3 { margin: 0; }
+  .pl-tabs { display: flex; gap: 2px; margin: 0 8px; padding: 3px; border-radius: 9px; background: var(--soft); }
+  .pl-tabs button { flex: 1; border: 0; background: none; border-radius: 7px; padding: 3px 4px; color: var(--muted) !important; font-size: var(--fs-meta) !important; }
+  .pl-tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink) !important; font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+  .pl-body { padding: 8px 12px 4px; display: grid; gap: 6px; }
+  .pl-row { display: grid; grid-template-columns: 72px 1fr 22px; align-items: center; gap: 6px; min-height: 30px; }
+  .pl-k { color: var(--muted); font-size: var(--fs-meta); }
+  .pl-row.on .pl-k { color: var(--accent); font-weight: 600; }
+  .pl-step { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .pl-step button { width: 30px; height: 28px; border: 0; background: none; font-size: 16px !important; line-height: 1; }
+  .pl-step button:hover:not([disabled]) { background: var(--soft); }
+  .pl-v { flex: 1; text-align: center; font-variant-numeric: tabular-nums; font-size: var(--fs-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-inline: 1px solid var(--line); line-height: 28px; }
+  .pl-seg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--soft); }
+  .pl-seg button { flex: 1; min-width: 0; border: 0; background: none; border-radius: 6px; padding: 3px 2px; font-size: var(--fs-meta) !important; color: var(--muted) !important; white-space: nowrap; }
+  .pl-seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink) !important; box-shadow: 0 0 0 1px var(--line); }
+  .pl-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pl-chips button { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 2px 9px; font-size: var(--fs-meta) !important; color: var(--muted) !important; }
+  .pl-chips button[aria-pressed="true"] { border-color: var(--accent); color: var(--ink) !important; background: var(--info-soft); }
+  .pl-color { display: flex; align-items: center; gap: 8px; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: none; text-align: left; }
+  .pl-color[aria-expanded="true"] { border-color: var(--accent); }
+  .pl-color i, .pl-sw { flex: none; width: 18px; height: 18px; border-radius: 5px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 28%, transparent);
+    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%), linear-gradient(45deg, #ccc 25%, #fff 25%, #fff 75%, #ccc 75%); background-size: 8px 8px; background-position: 0 0, 4px 4px; }
+  .pl-color span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-meta); }
+  .pl-reset { width: 22px; height: 22px; border: 0; border-radius: 6px; background: none; color: var(--accent) !important; padding: 0; }
+  .pl-reset:hover { background: var(--soft); }
+  .pl-swatches { display: grid; gap: 4px; margin: 0 0 4px 70px; }
+  .pl-sub { color: var(--muted); font-size: 11.5px; }
+  .pl-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pl-sw { width: 22px; height: 22px; border: 0; padding: 0; }
+  .pl-sw[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pl-other { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: var(--fs-meta); }
+  .pl-other input { width: 28px; height: 22px; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: none; }
+  .pl-off { margin: 0; color: var(--warn); font-size: 11.5px; }
+  .pl-note { margin: 0; font-size: 11.5px; }
+  .pl-foot { display: flex; align-items: center; gap: 6px; padding: 8px 12px 10px; border-top: 1px solid var(--line); margin-top: 6px; }
+  .pl-foot .hint { flex: 1; margin: 0; font-size: 11.5px; }
+  .pl-sum { margin: 6px 12px 0; font-size: 11.5px; }
+  .ws-looks { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; background: var(--panel); }
+  .ws-looks ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 10px; }
+  .ws-looks li .hint { margin: 2px 0 6px; }
+  .ws-looks .bar { display: flex; gap: 6px; }
   .ws-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 16px; display: grid; gap: 14px; align-content: start; }
   .sel { padding: 10px 12px; border-radius: var(--radius); border: 2px solid var(--accent); background: var(--info-soft); }
   .sel { position: relative; } .sel .sel-x { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: var(--fs-ui); line-height: 1; cursor: pointer; }
@@ -1840,7 +1887,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
   const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "turn", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
-    ws: { open: false, mode: "off", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null } };
+    ws: { open: false, mode: "off", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null,
+      // The look palette: changes not sent yet per drawing (S.ws.shown) and part, the look of the part selected, what the design is made of.
+      looks: {}, look: null, pal: null, plTab: null, plColor: null } };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? esc(u) : "#");
@@ -4853,7 +4902,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const draw = () => { letGo(); layer.textContent = ""; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#9a6200" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
       // A part inside another part the same decision shaped does not repeat its number.
       const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
-      for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); };
+      for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); lookFrame(); };
     addEventListener("scroll", draw, true); addEventListener("resize", draw); setInterval(draw, 700);
     // The screen shown is kept across options: the Desk names the one to open when the frame
     // loads, and from then on hears of each screen the person moves to.
@@ -4918,7 +4967,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-play") playStory(d.steps || []);
       if (d.type === "desk-play-pause") { paused = true; tell("paused"); } if (d.type === "desk-play-resume") { paused = false; tell("playing"); } if (d.type === "desk-play-stop") stopStory(); });
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-hot]")) setTimeout(draw, 0); });
-    addEventListener("mouseover", (e) => { if (pins.some((p) => p.why) && under !== e.target) { under = e.target; draw(); } if (mode === "off" || editing) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
+    addEventListener("mouseover", (e) => { if (pins.some((p) => p.why) && under !== e.target) { under = e.target; draw(); } if (mode === "off" || editing || layer.contains(e.target)) return; hover = e.target.closest("#review") ? null : e.target; draw(); }, true);
     addEventListener("submit", (e) => { if (mode !== "off") e.preventDefault(); }, true);
     addEventListener("click", (e) => {
       // The review bar always acts (views, Show hotspots, theme), and so do its clicks for a note.
@@ -4929,9 +4978,93 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (editing && editing.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
       const el = e.target; pick(el, css(el)); hover = null; draw();
-      parent.postMessage({ type: "desk-picked", selector: selectedPath, tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), ...viewOf(el) }, "*");
+      parent.postMessage({ type: "desk-picked", selector: selectedPath, tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), kind: kind(el), look: lookOf(el), ...viewOf(el) }, "*");
       if (mode === "edit") startEdit(el);
     }, true);
+    // The look palette: the Desk changes a part's look here as a preview (an inline style), nothing is
+    // saved; the Desk sends what changed to Design Desk as a note. The frame reports the part's look,
+    // and, while the palette shows, a handle on its corner to resize it.
+    const LOOK = ["font-size", "font-weight", "text-align", "color", "background-color", "border-radius", "padding-block", "padding-inline", "gap", "flex-direction", "align-items", "justify-content", "width", "height"];
+    const changedLook = new Map();
+    const ownText = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) || (el.children.length <= 3 && Boolean(textOf(el)));
+    function lookOf(el) {
+      const s = getComputedStyle(el), r = el.getBoundingClientRect(), m = changedLook.get(el);
+      return { "font-size": s.fontSize, "font-weight": s.fontWeight, "text-align": s.textAlign, color: s.color, "background-color": s.backgroundColor, "border-radius": s.borderTopLeftRadius,
+        "padding-block": s.paddingTop, "padding-inline": s.paddingLeft, gap: s.rowGap === "normal" ? "0px" : s.rowGap, "flex-direction": s.flexDirection, "align-items": s.alignItems,
+        "justify-content": s.justifyContent, width: Math.round(r.width) + "px", height: Math.round(r.height) + "px", display: s.display, text: ownText(el),
+        set: m ? Object.fromEntries([...m.keys()].map((k) => [k, el.style.getPropertyValue(k)])) : {} };
+    }
+    const setLook = (el, prop, value) => {
+      if (!LOOK.includes(prop)) return;
+      let m = changedLook.get(el); if (!m) changedLook.set(el, (m = new Map()));
+      if (!m.has(prop)) m.set(prop, el.style.getPropertyValue(prop));
+      if (value == null) { const o = m.get(prop); if (o) el.style.setProperty(prop, o); else el.style.removeProperty(prop); m.delete(prop); return; }
+      if (/^[#\w\s().,%-]{1,60}$/.test(String(value))) el.style.setProperty(prop, String(value), "important");
+    };
+    const sayLook = (el, sel) => say({ type: "desk-look", selector: sel, look: lookOf(el) });
+    let handles = false, dragging = null;
+    function lookFrame() {
+      if (!selected || !handles || mode !== "select") return;
+      const r = selected.getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      const h = document.createElement("div");
+      h.title = "Drag to resize";
+      h.style.cssText = "position:absolute;left:" + (r.right + scrollX - 6) + "px;top:" + (r.bottom + scrollY - 6) + "px;width:12px;height:12px;background:#2f5bd3;border:2px solid #fff;border-radius:3px;box-sizing:border-box;box-shadow:0 1px 3px rgba(0,0,0,.35);pointer-events:auto;cursor:nwse-resize";
+      h.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); const b = selected.getBoundingClientRect(); dragging = { el: selected, sel: selectedPath, x: e.clientX, y: e.clientY, w: b.width, h: b.height }; };
+      layer.appendChild(h);
+    }
+    // A drag ends on its release, or, released outside the design, on the next move with no button held.
+    const dragEnd = () => { const d = dragging; dragging = null; pinPressed = Date.now(); sayLook(d.el, d.sel); };
+    addEventListener("pointermove", (e) => { if (!dragging) return; if (!e.buttons) return dragEnd(); const d = dragging; setLook(d.el, "width", Math.max(8, Math.round(d.w + e.clientX - d.x)) + "px"); setLook(d.el, "height", Math.max(8, Math.round(d.h + e.clientY - d.y)) + "px"); draw(); }, true);
+    // The click that ends a drag picks nothing.
+    addEventListener("pointercancel", () => { if (dragging) dragEnd(); }, true);
+    addEventListener("pointerup", () => { if (dragging) dragEnd(); }, true);
+    addEventListener("message", (e) => { const d = e.data || {};
+      if (d.type === "desk-handles") { handles = Boolean(d.on); draw(); }
+      if (d.type === "desk-look-set") { const el = find(d.selector); if (!el) return; for (const [p, v] of Object.entries(d.look || {})) setLook(el, p, v); if (d.quiet) return; sayLook(el, d.selector); draw(); }
+      if (d.type === "desk-look-get") { const el = find(d.selector); if (el) sayLook(el, d.selector); }
+      if (d.type === "desk-look-keep") { const el = find(d.selector); if (el) changedLook.delete(el); ctlBefore.delete(d.selector); }
+      if (d.type === "desk-controls") applyControls(d.selector, Array.isArray(d.applies) ? d.applies : []); });
+    // Smart controls: the element as drawn, then each option picked — a drawing of another variant
+    // kept in the page (<template data-desk-option>) first, then classes and styles on it.
+    const ctlBefore = new Map();
+    function applyControls(sel, applies) {
+      let el = find(sel); if (!el) return;
+      // The part picked is (in) the element: it stays picked on the element drawn anew, whatever its tag.
+      const held = Boolean(selected && el.contains(selected)), whole = selected === el;
+      if (ctlBefore.has(sel)) { const t = document.createElement("template"); t.innerHTML = ctlBefore.get(sel); const back = t.content.firstElementChild; if (back) { el.replaceWith(back); el = back; } }
+      else if (applies.length) ctlBefore.set(sel, el.outerHTML);
+      if (!applies.length) ctlBefore.delete(sel);
+      const list = [...applies].sort((a, b) => (b?.template ? 1 : 0) - (a?.template ? 1 : 0));
+      for (const a of list) {
+        if (!a || typeof a !== "object") continue;
+        if (a.template) { const n = document.querySelector('template[data-desk-option="' + CSS.escape(String(a.template)) + '"]')?.content.firstElementChild?.cloneNode(true); if (n) { el.replaceWith(n); el = n; } }
+        if (a.class) { for (const c of String(a.class.remove || "").split(/\s+/).filter(Boolean)) el.classList.remove(c); for (const c of String(a.class.add || "").split(/\s+/).filter(Boolean)) el.classList.add(c); }
+        if (a.style) for (const [p, v] of Object.entries(a.style)) if (/^[a-z][a-z-]*$/.test(p) && /^[^<>{};"\\]{1,200}$/.test(String(v))) el.style.setProperty(p, String(v), "important");
+      }
+      if (held && !selected.isConnected) selected = (whole ? el : find(selectedPath)) || el;
+      if (selected?.isConnected) sayLook(selected, selectedPath);
+      draw();
+    }
+    // What the design is made of, for the palette to offer first: the colors and sizes it names
+    // (its custom properties on :root) and the colors and text sizes it uses.
+    function designPalette() {
+      const root = getComputedStyle(document.documentElement), named = new Set(), probe = document.createElement("i");
+      const walk = (rules) => { for (const r of rules || []) { if (r.cssRules) walk(r.cssRules); if (r.style && /(^|,)\s*(:root|html)\b/.test(r.selectorText || "")) for (const k of r.style) if (k.startsWith("--")) named.add(k); } };
+      for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch {} }
+      probe.style.cssText = "position:absolute;visibility:hidden"; document.documentElement.appendChild(probe);
+      const colors = [], sizes = [];
+      for (const n of named) { const v = root.getPropertyValue(n).trim(); if (!v) continue;
+        if (CSS.supports("color", v) && !/^(inherit|initial|unset|currentcolor|transparent)$/i.test(v)) { probe.style.color = v; colors.push({ name: n, value: getComputedStyle(probe).color }); }
+        else if (/^-?[\d.]+(px|rem)$/.test(v)) { probe.style.width = v; sizes.push({ name: n, px: parseFloat(getComputedStyle(probe).width) }); } }
+      probe.remove();
+      const count = new Map(), fonts = new Set();
+      for (const el of [document.body, ...document.body.querySelectorAll("*")].slice(0, 3000)) { if (el.closest("#review")) continue; const s = getComputedStyle(el);
+        for (const c of [s.color, s.backgroundColor]) if (!/rgba\(.*,\s*0\)$/.test(c)) count.set(c, (count.get(c) || 0) + 1);
+        if (ownText(el)) fonts.add(parseFloat(s.fontSize)); }
+      say({ type: "desk-palette", colors: colors.slice(0, 40), sizes: sizes.slice(0, 60), used: [...count].sort((a, b) => b[1] - a[1]).slice(0, 16).map((x) => x[0]), fonts: [...fonts].filter((x) => x > 0).sort((a, b) => a - b).slice(0, 30) });
+    }
+    if (document.readyState === "loading") addEventListener("DOMContentLoaded", designPalette); else designPalette();
     function startEdit(el) {
       if (el.children.length > 3 || !textOf(el)) return;
       const before = el.innerText; editing = el;
@@ -5022,11 +5155,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (S.ws.shown !== key || !$("#ws-frame")) {
       ws.innerHTML = `<div class="ws-top" id="ws-top"></div><div class="ws-body"><div class="ws-stage"><div class="actions" style="margin:0" id="ws-tools"></div><div id="ws-states"></div>
         <iframe class="frame" id="ws-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div><aside class="ws-side" id="ws-side"></aside></div>`;
-      S.ws.shown = key;
-      loadWsFrame(c, v, showing.asset, d.asset);
+      S.ws.shown = key; S.ws.look = null; S.ws.pal = null; S.ws.plColor = null;
+      loadWsFrame(c, v, showing.asset, d.asset, key);
     }
     if (S.ws.check) S.ws.looked.add(`${v.id}|${S.ws.state || ""}`);
     const old = showing.version !== (d.version || 1);
+    S.ws.old = old;
     const shaper = can("change") && !locked(S.card);
     $("#ws-top").innerHTML = S.ws.check ? `
       <span class="title" title="${esc(c.title)}">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span><span class="grow"></span><button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
@@ -5045,10 +5179,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
       ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
       ${pinned(c, v).length ? `<label class="switch ws-switch" title="Shows or hides the comments' numbers on the design; the list beside keeps them"><input type="checkbox" role="switch" data-ws-notes ${S.ws.notes ? "checked" : ""} /><span>Comments</span></label>` : ""}
-      <span class="hint">${S.ws.mode === "select" ? "Click any part of the design to select it." : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
+      <span class="hint">${S.ws.mode === "select" ? (shaper && lookAdmin() ? "Click any part of the design; change its look on the right." : "Click any part of the design to select it.") : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
     $("#ws-states").innerHTML = wsAlts(c, v) + wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
     sendPins(c, v);
+    renderPalette();
   }
 
   // The ways a part could look, drawn from what a person wrote: the option as it is, then
@@ -5108,6 +5243,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderWsSide(c, v, old) {
     const side = $("#ws-side");
     const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
+    // The palette is drawn again with the side: the control in use keeps the focus.
+    const pf = $("#ws-palette")?.contains(document.activeElement) ? document.activeElement : null;
+    S.ws.plFocus = pf ? [...pf.attributes].filter((a) => a.name.startsWith("data-pl")).map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("") : "";
     const shaper = can("change") && !locked(S.card);
     const sel = S.ws.selected;
     const altBusy = (c.waiting || []).some((w) => w.kind === "revise" && w.scope === "alternatives");
@@ -5139,7 +5277,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button>` : ""}</div>
       </div>`}
       </div>
+      <div id="ws-palette" role="group" hidden></div>
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
+      ${old ? "" : lookList()}
       ${renderWsNotes(c, v, sel)}
       ${renderWhy(c, v)}`;
     loadPictures(side);
@@ -5202,7 +5342,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     </div>`;
   }
 
-  async function loadWsFrame(c, v, assetId, latest) {
+  async function loadWsFrame(c, v, assetId, latest, key) {
     const frame = $("#ws-frame");
     try {
       const a = await asset(assetId);
@@ -5214,7 +5354,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         frame.contentWindow?.postMessage({ type: "desk-view", ...(S.ws.view || {}) }, "*");
         sayReviewNotes(frame);
         sendPins(S.card, v);
-        if (S.ws.selected?.selector) frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*");
+        // Look changes not sent yet show again on this drawing, as they were left.
+        for (const [selector, e] of Object.entries(S.ws.looks[key] || {})) if (Object.keys(e.picks || {}).length) sayControls(selector);
+        for (const [selector, e] of Object.entries(S.ws.looks[key] || {})) frame.contentWindow?.postMessage({ type: "desk-look-set", selector, look: e.set, quiet: true }, "*");
+        S.ws.handles = null; S.ws.lookAsked = null;
+        if (S.ws.selected?.selector) { frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*"); renderPalette(); }
         else { const r = (v.reasons || []).find((x) => x.decision === S.ws.reason); if (r?.parts[0]) frame.contentWindow?.postMessage({ type: "desk-show", selector: r.parts[0].selector }, "*"); }
       };
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
@@ -5226,10 +5370,212 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
     // The option's elements with states drawn: a part picked inside one names it, for See every state.
-    const els = elementsOf(v).filter((e) => e.states.length).flatMap((e) => [...new Set([e.selector, ...e.states.map((x) => x.selector)].filter(Boolean))].map((selector) => ({ key: e.key, selector })));
+    const els = elementsOf(v).filter((e) => e.states.length || e.controls?.length).flatMap((e) => [...new Set([e.selector, ...e.states.map((x) => x.selector)].filter(Boolean))].map((selector) => ({ key: e.key, selector })));
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-elements", els }, "*");
   }
   const frameSay = (msg) => $("#ws-frame")?.contentWindow?.postMessage(msg, "*");
+
+  // ---------- the look palette ----------
+  // In the side panel under the part selected, for whoever may change the design: its size, colors, spacing and
+  // alignment, changed at once as a preview in the design (docs/desk-page.md → The look palette).
+  // Nothing is saved until it is sent: Design Desk then makes the new version, checked against the decisions.
+  const LOOK_NAMES = { "font-size": "text size", "font-weight": "text weight", "text-align": "text alignment", color: "text color", "background-color": "background",
+    "border-radius": "corner rounding", "padding-block": "space inside, top and bottom", "padding-inline": "space inside, left and right", gap: "space between items",
+    "flex-direction": "direction", "align-items": "alignment across", "justify-content": "spread along", width: "width", height: "height" };
+  const SPACE = [0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80], RADIUS = [0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 999];
+  const FONTS = [11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
+  const looksNow = () => (S.ws.looks[S.ws.shown] ||= {});
+  // For now only an admin gets the palette (docs/desk-page.md → The look palette).
+  const lookAdmin = () => S.me?.role === "admin" && can("change");
+  const lookable = () => Boolean(S.ws.open && S.card && lookAdmin() && !locked(S.card) && !S.ws.check && !S.ws.old && !S.ws.alt && S.ws.mode === "select" && S.ws.selected?.selector);
+  const lookChanges = (e) => Object.entries(e?.set || {}).map(([prop, to]) => ({ prop, from: String(e.base[prop] ?? ""), to: String(to) }));
+  // Smart controls picked (docs/requests.md → Smart controls): which, from which option to which, and the kit's source.
+  const pickChanges = (e) => Object.entries(e?.picks || {}).map(([cid, oid]) => { const c = (e.ctl || []).find((x) => x.id === cid), lab = (id) => c?.options.find((o) => o.id === id)?.label || id;
+    return { control: cid, label: c?.label || cid, from: lab(c?.current), to: lab(oid), source: c?.source || "" }; });
+  const changeCount = (e) => lookChanges(e).length + pickChanges(e).length;
+  const changeWords = (e) => [...pickChanges(e).map((x) => `${x.label} ${x.from} → ${x.to}${x.source ? ` (from ${x.source})` : ""}`), ...lookChanges(e).map((x) => `${LOOK_NAMES[x.prop]} ${sayValue(x.prop, x.from)} → ${sayValue(x.prop, x.to)}`)];
+  const emptyLook = (e) => !Object.keys(e.set || {}).length && !Object.keys(e.picks || {}).length;
+  // The element with smart controls the part picked is, or sits in.
+  function smartOf(v, sel) {
+    if (!sel?.selector) return null;
+    const els = elementsOf(v).filter((e) => e.controls?.length && e.selector);
+    return els.find((e) => e.key === sel.element) || els.find((e) => e.selector === sel.selector) || null;
+  }
+  function pickControl(el, cid, oid) {
+    const c = el.controls.find((x) => x.id === cid); if (!c || !c.options.some((o) => o.id === oid)) return;
+    const all = looksNow();
+    let e = all[el.selector];
+    if (!e) e = all[el.selector] = { label: el.name, text: "", tag: "", view: el.view || null, view_name: el.view_name || null, base: {}, set: {} };
+    e.picks ||= {}; e.ctl = el.controls;
+    if (oid === c.current) delete e.picks[cid]; else e.picks[cid] = oid;
+    if (emptyLook(e)) delete all[el.selector];
+    sayControls(el.selector);
+    renderWorkspace();
+  }
+  // The frame draws the element as picked: back to how it was, then each option picked (a drawing
+  // of a variant swaps the element, so the look changes are said again after it).
+  function sayControls(selector) {
+    const el = elementsOf(wsVariant(S.card)).find((x) => x.selector === selector && x.controls?.length), e = looksNow()[selector];
+    const applies = !el || !e?.picks ? [] : Object.entries(e.picks).map(([cid, oid]) => el.controls.find((c) => c.id === cid)?.options.find((o) => o.id === oid)?.apply).filter(Boolean);
+    frameSay({ type: "desk-controls", selector, applies });
+    for (const [s2, e2] of Object.entries(looksNow())) if (Object.keys(e2.set || {}).length) frameSay({ type: "desk-look-set", selector: s2, look: e2.set, quiet: s2 !== S.ws.selected?.selector });
+  }
+  const hex = (v) => { const m = String(v).match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/); if (!m) return String(v); if (m[4] !== undefined && Number(m[4]) === 0) return "none";
+    const h = "#" + [m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join(""); return m[4] !== undefined && Number(m[4]) < 1 ? `${h} at ${Math.round(m[4] * 100)}%` : h; };
+  const tokenNamed = (v) => { const t = String(v).match(/^var\((--[\w-]+)\)$/); return t ? (S.ws.pal?.colors || []).find((x) => x.name === t[1]) || { name: t[1], value: "" } : null; };
+  // No background shows as a checkerboard: the swatch gets no color of its own.
+  const swatchStyle = (v) => { const c = colorOf(v); return c === "transparent" || /^rgba\(.*,\s*0\)$/.test(c) ? "" : `style="background:${c}"`; };
+  const colorOf = (v) => { const t = tokenNamed(v), c = t ? t.value : String(v); return /^(#[0-9a-f]{3,8}|rgba?\([\d.,\s%]+\)|transparent)$/i.test(c) ? c : "transparent"; };
+  function sayValue(prop, v) {
+    v = String(v ?? "");
+    const t = tokenNamed(v); if (t) return t.value ? `${t.name} (${hex(t.value)})` : t.name;
+    if (/color/.test(prop)) { const k = (S.ws.pal?.colors || []).find((x) => x.value === v); return k ? `${k.name} (${hex(v)})` : hex(v); }
+    if (prop === "border-radius" && parseFloat(v) >= 999) return "fully round";
+    if (prop === "font-weight") return { 400: "regular", 500: "medium", 600: "semibold", 700: "bold" }[v] || v;
+    return v.replace(/^flex-/, "").replace(/^space-between$/, "spread out");
+  }
+  const lookText = (e) => `Change the look of ${e.label}${e.view_name ? ` in ${e.view_name}` : ""}: ${changeWords(e).join("; ")}.`;
+  // What the frame says of a part's look, kept to the names and lengths the palette uses.
+  function cleanLook(l) {
+    if (!l || typeof l !== "object") return null;
+    const out = { text: Boolean(l.text), display: String(l.display || "").slice(0, 40), set: {} };
+    for (const k of Object.keys(LOOK_NAMES)) out[k] = String(l[k] ?? "").slice(0, 80);
+    for (const [k, v] of Object.entries(l.set && typeof l.set === "object" ? l.set : {})) if (k in LOOK_NAMES && v) out.set[k] = String(v).slice(0, 80);
+    return out;
+  }
+  const lookNorm = (p, v) => p === "text-align" ? ({ start: "left", end: "right", "-webkit-center": "center", justify: "left" }[v] || v)
+    : p === "align-items" || p === "justify-content" ? ({ normal: p === "align-items" ? "stretch" : "flex-start", start: "flex-start", end: "flex-end", left: "flex-start", right: "flex-end" }[v] || v) : v;
+  // One property of the part selected: a value, or null to put it back as it was.
+  function lookSet(prop, value) {
+    const sel = S.ws.selected, cur = S.ws.look;
+    if (!sel?.selector || cur?.selector !== sel.selector || !(prop in LOOK_NAMES)) return;
+    const all = looksNow();
+    let e = all[sel.selector];
+    if (!e) e = all[sel.selector] = { label: sel.label, text: sel.text, tag: sel.tag, view: sel.view || null, view_name: sel.view_name || null, base: { ...cur.look, set: undefined }, set: {} };
+    // An element entry made by a smart control has no look before it yet: the look as it is now.
+    if (!Object.keys(e.base).length) e.base = { ...cur.look, set: undefined };
+    const back = value == null || value === e.base[prop];
+    if (back) delete e.set[prop]; else e.set[prop] = value;
+    if (emptyLook(e)) delete all[sel.selector];
+    frameSay({ type: "desk-look-set", selector: sel.selector, look: { [prop]: back ? null : value } });
+  }
+  // Sent: the frame keeps showing the change until the new version, but no longer counts it.
+  const lookSent = (selector) => { delete looksNow()[selector]; frameSay({ type: "desk-look-keep", selector }); };
+  function lookUndo(selector) {
+    const e = looksNow()[selector]; if (!e) return;
+    delete looksNow()[selector];
+    if (Object.keys(e.picks || {}).length) frameSay({ type: "desk-controls", selector, applies: [] });
+    frameSay({ type: "desk-look-set", selector, look: Object.fromEntries(Object.keys(e.set).map((k) => [k, null])), quiet: selector !== S.ws.selected?.selector });
+  }
+  async function sendLooks(selectors) {
+    const c = S.card, v = wsVariant(c), all = looksNow();
+    let n = 0;
+    for (const s of selectors) {
+      const e = all[s]; if (!e || !changeCount(e)) continue;
+      const style = lookChanges(e), controls = pickChanges(e);
+      const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), selector: s, text: e.text, tag: e.tag, label: e.label, view: e.view, view_name: e.view_name, ...(style.length ? { style } : {}), ...(controls.length ? { controls } : {}) };
+      await api("POST", `/api/cards/${c.id}/threads`, { kind: "change", text: lookText(e), anchor });
+      lookSent(s); n++;
+    }
+    if (!n) return;
+    toast(`Sent. Design Desk changes the look${n > 1 ? ` of ${n} parts` : ""}; the new version appears here by itself.`);
+    await openCard(c.id);
+  }
+  function lookList() {
+    // The part selected (and the element it sits in) shows its changes in the palette above; this lists the others.
+    const mine = lookable() ? paletteKeys() : [];
+    const all = looksNow(), keys = Object.keys(all).filter((k) => changeCount(all[k]) && !mine.includes(k));
+    if (!keys.length || !lookAdmin() || locked(S.card)) return "";
+    return `<div class="ws-looks"><h3 style="margin:0 0 4px">${lookable() ? "Other parts, not sent yet" : "Look changes, not sent yet"}</h3>
+      <p class="hint" style="margin:0 0 8px">Only you see them, here in the design. Send them and Design Desk makes a new version with them.</p>
+      <ul>${keys.map((k) => { const e = all[k]; return `<li><button class="link" data-pl-show="${esc(k)}" title="Selects this part in the design">${esc(e.label)}</button>
+        <div class="hint">${esc(changeWords(e).join("; "))}</div>
+        <div class="bar"><button class="btn small" data-pl-undo="${esc(k)}" title="Puts this part back as it was">Undo</button><button class="btn small primary" data-pl-send="${esc(k)}" title="Design Desk changes this part as shown and the new version appears here">Send to Design Desk</button></div></li>`; }).join("")}</ul>
+      ${keys.length > 1 ? `<button class="btn small primary" data-pl-send-all title="One note per part; Design Desk makes one new version with all of them">Send all ${keys.length}</button>` : ""}</div>`;
+  }
+  // The entries the palette shows: the part selected, and the element with smart controls it sits in.
+  const paletteKeys = () => { const sel = S.ws.selected, sm = smartOf(wsVariant(S.card), sel); return [...new Set([sel?.selector, sm?.selector].filter(Boolean))]; };
+  function renderPalette() {
+    const p = $("#ws-palette"); if (!p) return;
+    const sel = S.ws.selected, on = lookable();
+    if (S.ws.handles !== on) { S.ws.handles = on; frameSay({ type: "desk-handles", on }); }
+    if (on && S.ws.look?.selector !== sel.selector && S.ws.lookAsked !== sel.selector) { S.ws.lookAsked = sel.selector; frameSay({ type: "desk-look-get", selector: sel.selector }); }
+    if (!on || S.ws.look?.selector !== sel.selector) { p.hidden = true; p.innerHTML = ""; return; }
+    const fa = S.ws.plFocus || ""; S.ws.plFocus = "";
+    const L = S.ws.look.look, e = looksNow()[sel.selector], isSet = (k) => Boolean(e && k in e.set), val = (k) => (isSet(k) ? e.set[k] : L[k]);
+    const grid = /grid/.test(L.display), flex = /flex/.test(L.display);
+    // Design Desk's controls for the element come first: the choices the product already has for it.
+    const sm = smartOf(wsVariant(S.card), sel), se = sm ? looksNow()[sm.selector] : null;
+    const tabs = [sm && ["smart", "Suggested"], L.text && ["text", "Text"], ["fill", "Fill"], ["space", "Spacing"], (flex || grid) && ["layout", "Layout"], ["size", "Size"]].filter(Boolean);
+    const tab = tabs.find((t) => t[0] === S.ws.plTab)?.[0] || (sm ? "smart" : ["img", "svg", "picture", "video"].includes(sel.tag) ? "size" : tabs[0][0]);
+    const reset = (k) => isSet(k) ? `<button class="pl-reset" data-pl-reset="${k}" title="Back to how it was: ${esc(sayValue(k, e.base[k]))}" aria-label="Undo this change">↺</button>` : `<span class="pl-reset"></span>`;
+    const row = (k, label, inner) => `<div class="pl-row ${isSet(k) ? "on" : ""}"><span class="pl-k">${label}</span>${inner}${reset(k)}</div>`;
+    const step = (k, label) => { const less = stepOf(k, val(k), -1), more = stepOf(k, val(k), 1);
+      return row(k, label, `<span class="pl-step"><button data-pl-step="${k}|-1" title="Less ${LOOK_NAMES[k]}${less ? `: ${esc(sayValue(k, less))}` : ""}" aria-label="Less" ${less ? "" : "disabled"}>−</button><span class="pl-v">${esc(sayValue(k, val(k)))}</span><button data-pl-step="${k}|1" title="More ${LOOK_NAMES[k]}${more ? `: ${esc(sayValue(k, more))}` : ""}" aria-label="More" ${more ? "" : "disabled"}>+</button></span>`); };
+    const seg = (k, label, opts) => row(k, label, `<span class="pl-seg">${opts.map(([v, t, tip]) => `<button data-pl-set="${k}|${v}" aria-pressed="${lookNorm(k, val(k)) === v}" title="${esc(tip)}">${t}</button>`).join("")}</span>`);
+    const color = (k, label) => row(k, label, `<button class="pl-color" data-pl-colors="${k}" aria-expanded="${S.ws.plColor === k}" title="Pick the ${LOOK_NAMES[k]}"><i ${swatchStyle(val(k))}></i><span>${esc(sayValue(k, val(k)))}</span></button>`) + (S.ws.plColor === k ? swatches(k, val(k), isSet(k)) : "");
+    const body = {
+      text: () => step("font-size", "Size") + seg("font-weight", "Weight", [["400", "Aa", "Regular"], ["500", "<b style=\"font-weight:500\">Aa</b>", "Medium"], ["600", "<b style=\"font-weight:600\">Aa</b>", "Semibold"], ["700", "<b>Aa</b>", "Bold"]])
+        + seg("text-align", "Align", [["left", "Left", "Text to the left"], ["center", "Center", "Text in the middle"], ["right", "Right", "Text to the right"]]) + color("color", "Color"),
+      fill: () => color("background-color", "Background") + step("border-radius", "Corners"),
+      space: () => step("padding-block", "Inside ↕") + step("padding-inline", "Inside ↔") + (flex || grid ? step("gap", "Between") : ""),
+      layout: () => (flex ? seg("flex-direction", "Direction", [["row", "Row", "Items side by side"], ["column", "Column", "Items one under another"]]) : "")
+        + seg("align-items", "Align", [["flex-start", "Start", "Items at the start"], ["center", "Center", "Items in the middle"], ["flex-end", "End", "Items at the end"], ["stretch", "Fill", "Items fill the space"]])
+        + (flex ? seg("justify-content", "Spread", [["flex-start", "Start", "Items packed at the start"], ["center", "Center", "Items packed in the middle"], ["space-between", "Apart", "Items spread out to the edges"], ["flex-end", "End", "Items packed at the end"]]) : "")
+        + step("gap", "Between"),
+      size: () => step("width", "Width") + step("height", "Height") + `<p class="hint pl-note">Or drag the blue handle at the part's bottom-right corner.</p>`,
+      smart: () => smartBody(sm, se),
+    }[tab]();
+    const mine = paletteKeys().map((k) => looksNow()[k]).filter(Boolean), n = mine.reduce((a, x) => a + changeCount(x), 0), keys = paletteKeys().filter((k) => looksNow()[k]).join("\n");
+    p.setAttribute("aria-label", `Change the look of ${sel.label}`);
+    p.innerHTML = `<div class="pl-head"><h3>Change the look</h3></div>
+      <div class="pl-tabs" role="tablist">${tabs.map(([k, t]) => `<button role="tab" data-pl-tab="${k}" aria-selected="${k === tab}" title="${esc({ smart: `What the product already has for ${sm?.name || "this part"}, picked by Design Desk`, text: "Its text: size, weight, alignment, color", fill: "Its background and corners", space: "The space inside it and between its items", layout: "How its items line up", size: "Its width and height" }[k])}">${t}</button>`).join("")}</div>
+      <div class="pl-body">${body}</div>
+      ${n ? `<p class="hint pl-sum">Not sent yet, only you see it: ${esc(mine.flatMap(changeWords).join("; "))}</p>` : ""}
+      <div class="pl-foot">${n ? `<span class="hint">${plural(n, "change", "changes")}</span><button class="btn small" data-pl-undo="${esc(keys)}" title="Puts this part back as it was">Undo all</button><button class="btn small primary" data-pl-send="${esc(keys)}" title="Design Desk changes this part as shown and the new version appears here">Send</button>`
+        : `<span class="hint">Changes show at once, only here. Send them and Design Desk makes a new version.</span>`}</div>`;
+    p.hidden = false;
+    if (fa) p.querySelector(fa)?.focus();
+  }
+  // The element's smart controls: a few words a choice, a scale a stepper, more a row of chips; ↺ back to the option drawn.
+  function smartBody(sm, se) {
+    const picks = se?.picks || {};
+    const rows = sm.controls.map((c) => {
+      const cur = picks[c.id] ?? c.current, on = cur !== c.current, i = c.options.findIndex((o) => o.id === cur);
+      const opt = (o, inner) => `<button data-pl-pick="${esc(c.id)}|${esc(o.id)}" aria-pressed="${o.id === cur}" title="${esc(c.label)}: ${esc(o.label)}${o.token ? ` (${esc(o.token)})` : ""}">${inner ?? esc(o.label)}</button>`;
+      const prev = c.options[i - 1], next = c.options[i + 1];
+      const inner = c.kind === "scale"
+        ? `<span class="pl-step"><button ${prev ? `data-pl-pick="${esc(c.id)}|${esc(prev.id)}"` : "disabled"} title="${prev ? `${esc(c.label)}: ${esc(prev.label)}` : "The first one"}" aria-label="Less">−</button><span class="pl-v">${esc(c.options[i]?.label || "")}</span><button ${next ? `data-pl-pick="${esc(c.id)}|${esc(next.id)}"` : "disabled"} title="${next ? `${esc(c.label)}: ${esc(next.label)}` : "The last one"}" aria-label="More">+</button></span>`
+        : c.options.length <= 4 && c.options.every((o) => o.label.length <= 9) ? `<span class="pl-seg">${c.options.map((o) => opt(o)).join("")}</span>` : `<span class="pl-chips">${c.options.map((o) => opt(o)).join("")}</span>`;
+      const back = c.options.find((o) => o.id === c.current)?.label || "";
+      return `<div class="pl-row ${on ? "on" : ""}"><span class="pl-k">${esc(c.label)}</span>${inner}${on ? `<button class="pl-reset" data-pl-pick="${esc(c.id)}|${esc(c.current)}" title="Back to how it was: ${esc(back)}" aria-label="Undo this change">↺</button>` : `<span class="pl-reset"></span>`}</div>`;
+    }).join("");
+    const from = [...new Set(sm.controls.map((c) => c.source).filter(Boolean))];
+    return `<p class="hint pl-note">${esc(sm.name)}: only what the product already has${from.length ? `, from ${esc(from.join(", "))}` : ""}.</p>${rows}`;
+  }
+  // The next value on the scale: the design's own text sizes among the usual ones, a spacing and a corner scale, 8px for sizes.
+  function stepOf(k, v, dir) {
+    const cur = parseFloat(v); if (Number.isNaN(cur)) return null;
+    if (k === "width" || k === "height") { const n = Math.round(cur / 8) * 8 + dir * 8; return n >= 8 ? `${n}px` : null; }
+    const own = (S.ws.pal?.fonts || []).filter((x) => x >= 8 && x <= 120);
+    const scale = k === "font-size" ? [...new Set([...own, ...FONTS])].sort((a, b) => a - b) : k === "border-radius" ? RADIUS : SPACE;
+    const n = dir > 0 ? scale.find((x) => x > cur + 0.25) : [...scale].reverse().find((x) => x < cur - 0.25);
+    return n === undefined ? null : `${n}px`;
+  }
+  // The product's colors first (the design's named ones), then the others it uses, then any color — marked as not the product's.
+  function swatches(k, cur, set) {
+    const pal = S.ws.pal || {}, named = pal.colors || [];
+    const sw = (x) => `<button class="pl-sw" ${swatchStyle(x.c)} data-pl-set="${k}|${esc(x.v)}" aria-pressed="${x.v === cur || x.c === cur}" title="${esc(x.tip)}" aria-label="${esc(x.tip)}"></button>`;
+    const tok = named.map((t) => ({ v: `var(${t.name})`, c: t.value, tip: `${t.name} · ${hex(t.value)}` }));
+    const used = (pal.used || []).filter((c) => !named.some((t) => t.value === c)).map((c) => ({ v: c, c, tip: `${hex(c)} · used in this design` }));
+    if (k === "background-color") used.push({ v: "transparent", c: "transparent", tip: "No background" });
+    const known = !set || /^var\(/.test(cur) || [...tok, ...used].some((x) => x.c === cur || x.v === cur);
+    const h = /^#[0-9a-f]{6}$/i.test(hex(colorOf(cur))) ? hex(colorOf(cur)) : "#000000";
+    return `<div class="pl-swatches">${tok.length ? `<span class="pl-sub">The product's colors</span><div class="pl-grid">${tok.map(sw).join("")}</div>` : ""}
+      ${used.length ? `<span class="pl-sub">${tok.length ? "Also used in this design" : "Colors used in this design"}</span><div class="pl-grid">${used.map(sw).join("")}</div>` : ""}
+      <label class="pl-other" title="Any color; it may not be one of the product's">Other color <input type="color" data-pl-color="${k}" value="${h}" /></label>
+      ${known ? "" : `<p class="pl-off">Not one of this design's colors: the product may have no such color yet.</p>`}</div>`;
+  }
 
   addEventListener("message", (e) => {
     const frame = $("#ws-frame");
@@ -5261,7 +5607,32 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The part picked no longer shows in the design (another page, a closed menu): nothing is selected.
     if (d.type === "desk-unpicked") { if (S.ws.selected?.selector && S.ws.selected.selector === d.selector) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); } return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
-    if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; renderWorkspace(); if (S.ws.mode !== "edit") $("#ws-text")?.focus(); }
+    if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; S.ws.plColor = null;
+      const look = cleanLook(d.look); S.ws.look = look ? { selector: S.ws.selected.selector, look } : null;
+      renderWorkspace(); if (S.ws.mode !== "edit" && !lookable()) $("#ws-text")?.focus(); }
+    // The look palette: the part's look after a change (a drag of its handle too), what the design is made of.
+    if (d.type === "desk-palette") {
+      const arr = (x, n) => (Array.isArray(x) ? x.slice(0, n) : []);
+      S.ws.pal = { colors: arr(d.colors, 40).filter((t) => /^--[\w-]{1,60}$/.test(t?.name)).map((t) => ({ name: t.name, value: String(t.value || "").slice(0, 60) })),
+        used: arr(d.used, 16).map((c) => String(c).slice(0, 60)), fonts: arr(d.fonts, 30).map(Number).filter((x) => x > 0) };
+      renderPalette(); return;
+    }
+    if (d.type === "desk-look") {
+      const sel = String(d.selector || "").slice(0, 500), look = cleanLook(d.look);
+      if (!look || sel !== S.ws.selected?.selector) return;
+      const all = looksNow(), prev = S.ws.look?.selector === sel ? S.ws.look.look : null;
+      let e = all[sel];
+      for (const [k, v] of Object.entries(look.set)) {
+        if (!e && prev) { const s = S.ws.selected; e = all[sel] = { label: s.label, text: s.text, tag: s.tag, view: s.view || null, view_name: s.view_name || null, base: { ...prev, set: undefined }, set: {} }; }
+        if (e && e.set[k] !== v && !/^var\(/.test(e.set[k] || "")) e.set[k] = v;
+      }
+      if (e) for (const k of Object.keys(e.set)) if (e.set[k] === e.base[k]) delete e.set[k];
+      if (e && emptyLook(e)) delete all[sel];
+      S.ws.look = { selector: sel, look };
+      // The color picker the browser opens closes when its input is drawn again: the side waits for its change.
+      if (!$("#ws-palette")?.contains(document.activeElement) || !document.activeElement.matches("input[type=color]")) renderWorkspace();
+      return;
+    }
     if (d.type === "desk-edited") {
       S.ws.selected = pickOf(d.to); S.ws.edit = { from: String(d.from || ""), to: String(d.to || "") };
       renderWorkspace();
@@ -5758,11 +6129,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   async function wsSend(only) {
     const c = S.card, v = wsVariant(c);
-    const text = $("#ws-text")?.value.trim(); if (!text || !v) return;
     const sel = S.ws.selected;
-    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}) };
     const kind = can("change") && only !== "comment" ? "change" : "comment";
+    // A change to the part selected takes its look changes not sent yet with it.
+    const look = kind === "change" && sel?.selector ? looksNow()[sel.selector] : null, lc = look ? lookChanges(look) : [], pc = look ? pickChanges(look) : [];
+    const typed = $("#ws-text")?.value.trim() || "";
+    const text = [typed, lc.length || pc.length ? lookText(look) : ""].filter(Boolean).join("\n\n"); if (!text || !v) return;
+    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}), ...(lc.length ? { style: lc } : {}), ...(pc.length ? { controls: pc } : {}) };
     await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
+    if (lc.length || pc.length) lookSent(sel.selector);
     $("#ws-text").value = ""; S.ws.edit = null;
     toast(kind === "change" ? "Sent. Design Desk is changing it; the design updates here by itself." : "Comment added.");
     await openCard(c.id);
@@ -6097,6 +6472,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       return;
     }
     if ("wsSend" in ds) { await wsSend(ds.wsSend); return; }
+    // The look palette
+    if (ds.plTab) { S.ws.plTab = ds.plTab; S.ws.plColor = null; renderPalette(); return; }
+    if (ds.plPick) { const sm = smartOf(wsVariant(S.card), S.ws.selected), [cid, oid] = ds.plPick.split("|"); if (sm) pickControl(sm, cid, oid); return; }
+    if (ds.plStep) { const [k, dir] = ds.plStep.split("|"), e = looksNow()[S.ws.selected?.selector], n = stepOf(k, e && k in e.set ? e.set[k] : S.ws.look?.look[k], Number(dir)); if (n) lookSet(k, n); return; }
+    if (ds.plSet) { const i = ds.plSet.indexOf("|"); lookSet(ds.plSet.slice(0, i), ds.plSet.slice(i + 1)); return; }
+    if (ds.plReset) { lookSet(ds.plReset, null); return; }
+    if (ds.plColors) { S.ws.plColor = S.ws.plColor === ds.plColors ? null : ds.plColors; renderPalette(); return; }
+    if (ds.plUndo) { for (const k of ds.plUndo.split("\n")) lookUndo(k); renderWorkspace(); return; }
+    if (ds.plSend) { await sendLooks(ds.plSend.split("\n")); return; }
+    if ("plSendAll" in ds) { await sendLooks(Object.keys(looksNow())); return; }
+    if (ds.plShow) {
+      const e = looksNow()[ds.plShow]; if (!e) return;
+      S.ws.selected = { selector: ds.plShow, text: e.text || "", tag: e.tag || "", label: e.label, view: e.view, view_name: e.view_name };
+      S.ws.edit = null; S.ws.look = null; S.ws.lookAsked = null; S.ws.mode = "select";
+      frameSay({ type: "desk-mode", mode: "select" }); frameSay({ type: "desk-select", selector: ds.plShow }); renderWorkspace(); return;
+    }
     if (ds.wsFilter) { S.ws.filter = ds.wsFilter; renderWorkspace(); return; }
     if ("wsClear" in ds) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); return; }
     if (ds.wsNote) {
@@ -6203,7 +6594,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   });
   document.addEventListener("click", (e) => { if (!e.target.closest?.("header .search")) hitsClose(); }, true);
 
+  document.addEventListener("input", (e) => { if (e.target.dataset?.plColor) lookSet(e.target.dataset.plColor, e.target.value); });
   document.addEventListener("change", (e) => {
+    if (e.target.dataset?.plColor) { lookSet(e.target.dataset.plColor, e.target.value); e.target.blur(); renderWorkspace(); return; }
     if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
     if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }

@@ -822,6 +822,39 @@ test("no option is the winner; votes only suggest one, and the presentation show
   assert.equal(s.queueForCall(card.id, alice, "", "v2").card.agenda.variant, "v2");
 });
 
+test("a change note keeps the look changes picked in the palette, as CSS values", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Big", asset: a }] });
+  const look = s.openThread(card.id, alice, { kind: "change", text: "Red", anchor: { variant: "v1", selector: "button", label: "Upload", style: [{ prop: "background-color", from: "rgb(0, 0, 0)", to: "var(--danger)" }, { nope: 1 }] } }).thread;
+  assert.deepEqual(look.anchor.style, [{ prop: "background-color", from: "rgb(0, 0, 0)", to: "var(--danger)" }]);
+  assert.equal(s.openThread(card.id, alice, { kind: "change", text: "Plain", anchor: { variant: "v1", label: "Upload" } }).thread.anchor.style, null);
+});
+
+test("an element's smart controls: options the page can show, one way each; a note keeps what was picked", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "People miss the save button." });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<button id=save>Save</button>", encoding: "utf8" }).asset.id;
+  const kind = { id: "kind", label: "Button type", current: "primary", source: "web/src/components/ui/button.tsx", options: [
+    { id: "primary", label: "Primary", apply: { class: { add: "primary", remove: "ghost" } } },
+    { id: "ghost", label: "Ghost", apply: { template: "save-ghost" } },
+    { id: "pill", label: "Pill", token: "--radius-full", apply: { style: { "border-radius": "var(--radius-full)" } } }] };
+  const el = (x) => ({ id: "save", name: "Save button", change: "changed", selector: "#save", ...x });
+  const up = (x) => s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Bold", asset, elements: [el(x)] }] });
+  up({ controls: [kind] });
+  assert.deepEqual(s.card(card.id).variants[0].elements[0].controls, [{ ...kind, kind: "choice", options: kind.options }]);
+  for (const [why, x, msg] of [
+    ["no selector", { selector: null, shot: null, controls: [kind] }, /selector|picture/],
+    ["two ways", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { class: { add: "a" }, style: { color: "red" } } }, kind.options[1]] }] }, /apply is one of/],
+    ["a current that is no option", { controls: [{ ...kind, current: "big" }] }, /current/],
+    ["markup in a class", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { class: { add: "<b>" } } }, kind.options[1]] }] }, /class lists/],
+    ["one option", { controls: [{ ...kind, options: [kind.options[0]] }] }, /options/],
+  ]) assert.throws(() => up(x), msg, why);
+  const t = s.openThread(card.id, alice, { kind: "change", text: "Ghost", anchor: { variant: "v1", selector: "#save", label: "Save button", controls: [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }] } }).thread;
+  assert.deepEqual(t.anchor.controls, [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }]);
+});
+
 test("a reply, an answer, a reopen and Mark done take the ability of what they start", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "People miss the upload button." });

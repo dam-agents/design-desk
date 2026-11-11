@@ -26,6 +26,8 @@ const USAGE = `usage: design <command> [args]
   capture <base-url> <outdir> --routes <routes.json> [--login <profile.json>]
                                        screens of a running app, signed in as the profile's demo account
   pr-shots <owner/name> <pr> <outdir>  the images a pull request's body and comments carry
+  kit --root <clone> [--ui-dir <dir>]  the product's kit: its named values and its components' variants,
+                                       for an element's smart controls; prints JSON
   states <file.tsx> [--export <Component>] [--root <clone>]
                                        a component's state dimensions (props, values, conditions, hooks)
   guard <worktree> --base <ref> [--profile <profile.json>]
@@ -53,7 +55,7 @@ const table = {
   doctor: "./doctor.mjs", repo: "./repo.mjs", profile: "./profile.mjs", build: "./build.mjs", shot: "./shot.mjs",
   capture: "./capture.mjs", "pr-shots": "./pr-shots.mjs", guard: "./guard.mjs", desk: "./desk.mjs", config: "./config.mjs", states: "./states.mjs",
   "deck-new": "./deck.mjs", "deck-pdf": "./deck.mjs", "deck-check": "./deck.mjs", video: "./video.mjs", stills: "./video.mjs",
-  "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs", skill: "./skill.mjs", where: "./where.mjs", diff: "./diff.mjs", compare: "./compare.mjs", figma: "./figma.mjs",
+  "video-new": "./video.mjs", brand: "./brand.mjs", icons: "../lib/icons.mjs", skill: "./skill.mjs", where: "./where.mjs", diff: "./diff.mjs", compare: "./compare.mjs", figma: "./figma.mjs", kit: "./kit.mjs",
 };
 if (!cmd || !table[cmd]) { process.stdout.write(USAGE); process.exit(cmd ? 2 : 0); }
 const mod = await import(table[cmd]);

@@ -14,6 +14,8 @@ export const LIMITS = {
   optionStates: 24,
   // The parts one option changes or adds, each a tile under it (docs/requests.md → The option's elements).
   optionElements: 24,
+  // An element's smart controls, and the options of one (docs/requests.md → Smart controls).
+  controls: 8, controlOptions: 12,
   // What a shipped change does otherwise than the approved design it builds (docs/watch.md → Approved design).
   designDifferences: 12,
   // The ways of one part a person picks from (docs/requests.md → Alternatives of a part).
@@ -2687,6 +2689,10 @@ function cleanAnchor(a) {
     view: typeof a.view === "string" ? a.view.slice(0, 40) : null,
     view_name: typeof a.view_name === "string" ? a.view_name.slice(0, 120) : null,
     edit: a.edit && typeof a.edit === "object" ? { from: String(a.edit.from || "").slice(0, 300), to: String(a.edit.to || "").slice(0, 300) } : null,
+    // Look changes made in the workspace's palette: a CSS property, the value before and the one picked.
+    // Smart controls picked: which control, from which option to which, and the kit's source of it.
+    controls: Array.isArray(a.controls) && a.controls.length ? a.controls.slice(0, 12).filter((x) => x && typeof x.control === "string").map((x) => ({ control: x.control.slice(0, 40), label: String(x.label ?? "").slice(0, 40), from: String(x.from ?? "").slice(0, 40), to: String(x.to ?? "").slice(0, 40), source: String(x.source ?? "").slice(0, 200) })) : null,
+    style: Array.isArray(a.style) && a.style.length ? a.style.slice(0, 20).filter((x) => x && typeof x.prop === "string").map((x) => ({ prop: x.prop.slice(0, 40), from: String(x.from ?? "").slice(0, 80), to: String(x.to ?? "").slice(0, 80) })) : null,
   };
 }
 
@@ -3161,7 +3167,52 @@ function cleanOptionElements(list, assets, cards, n) {
     const of = x.element == null || x.element === "" ? null : String(x.element);
     if (of && (own(cards, of)?.kind !== "element" || own(cards, of).design)) throw bad(`variant ${n}, element ${i + 1}: ${of} is not an element of the product`);
     return { id, name: clean(x.name, 80, "element name"), change: x.change, how: optText(x.how, 300, "how"), selector, shot: x.shot ?? null,
-      ...(x.view ? { view: String(x.view).slice(0, 40), view_name: optText(x.view_name, 120, "view name") } : {}), element: of };
+      ...(x.view ? { view: String(x.view).slice(0, 40), view_name: optText(x.view_name, 120, "view name") } : {}), element: of,
+      ...(x.controls == null ? {} : { controls: cleanControls(x.controls, selector, `variant ${n}, element ${i + 1}`) }) };
+  });
+}
+
+// An element's smart controls (docs/requests.md → Smart controls): the choices its product
+// already has for it (another kind of button, a shadow, a corner), each from the kit, each with
+// how the workspace previews it in the option's page: a class swap, a style, or a drawing of
+// that variant kept in the page as <template data-desk-option="id">.
+const CSS_PROP = /^[a-z][a-z-]{0,39}$/, CSS_VALUE = /^[^<>{};"\\]{1,200}$/, CLASSES = /^[^<>"'`{};\\]{0,500}$/;
+function cleanControls(list, selector, where) {
+  if (!Array.isArray(list) || list.length > LIMITS.controls) throw bad(`${where}: controls is a list of at most ${LIMITS.controls}`);
+  if (list.length && !selector) throw bad(`${where}: controls need the element's selector in the option's page`);
+  const ids = new Set();
+  return list.map((c, k) => {
+    const at = `${where}, control ${k + 1}`;
+    const id = String(c?.id || "");
+    if (!STATE_ID.test(id) || ids.has(id)) throw bad(`${at}: its id must be short and its own`);
+    ids.add(id);
+    const opts = Array.isArray(c.options) ? c.options : [];
+    if (opts.length < 2 || opts.length > LIMITS.controlOptions) throw bad(`${at}: options is a list of 2 to ${LIMITS.controlOptions}`);
+    const oids = new Set();
+    const options = opts.map((o, j) => {
+      const oid = String(o?.id || "");
+      if (!STATE_ID.test(oid) || oids.has(oid)) throw bad(`${at}, option ${j + 1}: its id must be short and its own`);
+      oids.add(oid);
+      const a = o.apply || {}, kinds = ["class", "style", "template"].filter((x) => a[x] != null);
+      if (kinds.length !== 1) throw bad(`${at}, option ${j + 1}: apply is one of class, style or template`);
+      let apply;
+      if (a.class) {
+        const add = String(a.class.add || ""), remove = String(a.class.remove || "");
+        if (!CLASSES.test(add) || !CLASSES.test(remove)) throw bad(`${at}, option ${j + 1}: class.add and class.remove are class lists`);
+        apply = { class: { add, remove } };
+      } else if (a.style) {
+        const e = Object.entries(a.style);
+        if (!e.length || e.length > 8 || e.some(([p, v]) => !CSS_PROP.test(p) || !CSS_VALUE.test(String(v)))) throw bad(`${at}, option ${j + 1}: style is up to 8 CSS properties and values`);
+        apply = { style: Object.fromEntries(e.map(([p, v]) => [p, String(v)])) };
+      } else {
+        if (!STATE_ID.test(String(a.template))) throw bad(`${at}, option ${j + 1}: template is the id of a <template data-desk-option> in the page`);
+        apply = { template: String(a.template) };
+      }
+      return { id: oid, label: clean(o.label, 40, "option label"), apply, ...(o.token ? { token: String(o.token).slice(0, 80) } : {}) };
+    });
+    const current = String(c.current || "");
+    if (!oids.has(current)) throw bad(`${at}: current is the id of the option the page shows`);
+    return { id, label: clean(c.label, 40, "control label"), kind: c.kind === "scale" ? "scale" : "choice", current, source: optText(c.source, 200, "source"), options };
   });
 }
 
