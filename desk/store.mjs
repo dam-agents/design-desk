@@ -2200,7 +2200,9 @@ export class Store {
   // The agent posts a request's options to Slack, one reply per option, and people vote
   // with reactions. The poll remembers where the posts are; the agent syncs it while it
   // is open and closes it on its date or when the request moves on.
-  openPoll(cardId, { chat, root_ts, posts, closes, url = null, channel = null }) {
+  // `head_ts` and `head_text` are the opening message as posted, so the agent can edit it in
+  // place with the tally (none on a poll opened before 1.80.0: it gets no tally).
+  openPoll(cardId, { chat, root_ts, posts, closes, url = null, channel = null, head_ts = null, head_text = null }) {
     const c = this.card(cardId);
     if (!Array.isArray(posts) || !posts.length) throw bad("a poll needs one post per option");
     for (const x of posts) if (!(c.variants || []).some((v) => v.id === x.variant)) throw bad(`no option ${x.variant}`);
@@ -2209,6 +2211,7 @@ export class Store {
       chat: clean(String(chat || ""), 80, "chat"), root_ts: clean(String(root_ts || ""), 40, "root_ts"),
       channel: optText(channel, 80, "channel"), url: /^https:\/\//.test(String(url || "")) ? String(url).slice(0, 300) : null,
       closes: clean(String(closes || ""), 40, "closes"),
+      head_ts: optText(head_ts, 40, "head_ts") || null, head_text: optText(head_text, 3000, "head_text") || null,
       posts: posts.slice(0, 6).map((x) => ({ variant: String(x.variant), ts: clean(String(x.ts || ""), 40, "ts") })),
     };
     c.polls = [...(c.polls || []), poll];

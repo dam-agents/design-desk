@@ -68,7 +68,8 @@ const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n
                                            The bundle): spec.md, design.json, mockup.html, states/, shots/,
                                            pictures/ (the spec's pictures, its lines pointing at them)
   poll-open <R-n> <poll.json|->            record a Slack vote just posted: {chat, root_ts, posts:
-                                           [{variant, ts}], closes, url, channel}
+                                           [{variant, ts}], closes, url, channel, head_ts,
+                                           head_text} (head_*: the opening message, to edit)
   poll-update <R-n> <V-n> [--synced <iso>] [--result <text>]
                                            mark a poll synced, or close it with its result
   slack-votes <R-n> <votes.json|->         one option's reactions as they are now: {variant,
