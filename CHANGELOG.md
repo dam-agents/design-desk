@@ -14,6 +14,11 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    ([desk.md](docs/desk.md) → Publishing the page): a person's row on People folds open to what
    they did on the Desk. No state format changes.
 
+## 1.79.3 — 2026-11-11
+
+**Upgrade:**
+1. Republish the Desk page ([desk.md](docs/desk.md) → Publishing the page). No server restart, no data change.
+
 ## 1.79.2 — 2026-11-11
 
 **Upgrade:**

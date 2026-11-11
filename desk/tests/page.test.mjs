@@ -1612,6 +1612,7 @@ test("the design tags the parts a decision shaped: the picked one framed solid, 
     { red: false, solid: true, faint: false, label: "◆ D-3" },
     { red: true, solid: false, faint: true, label: "" },
   ], "D-3 picked: its table framed solid with its number, the Spend cell inside without a repeat, the revoked row red and faint");
+  await desk.click('[data-ws-mode="select"]');
   await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
   // On CI a pick sometimes never reaches the side panel (2 runs of many; the cause is not found):
   // a pick that did not arrive is clicked once or twice more. Clicking a part again only picks it again.
@@ -1622,6 +1623,11 @@ test("the design tags the parts a decision shaped: the picked one framed solid, 
   await desk.waitForSelector("#ws-side .why-sel");
   assert.match(await desk.textContent("#ws-side .why-sel"), /Why it is like this[\s\S]*D-3[\s\S]*Spend always shows per week[\s\S]*D-4[\s\S]*Totals in bold/,
     "the Spend cell names D-3 and the D-4 of the row it sits in");
+  // A decision opens the workspace in Click through, though Select was used last.
+  await desk.click("[data-ws-close]");
+  await desk.click('.why-strip [data-why="D-3"]');
+  await desk.waitForSelector('[data-ws-mode="off"].on');
+  assert.equal(await desk.locator('[data-ws-mode="select"].on').count(), 0, "a decision opens the workspace in Click through");
 }));
 
 test("Draw design options asks how many, starting at the request's own count, and sends the one picked", async (t) => {
@@ -1700,6 +1706,16 @@ test("a worked-in note shows the place before and after, outlined, in the thread
     assert.match(await desk.textContent("#th-t3 .changed"), /Title/, "the pair names the place");
     assert.deepEqual(await pictures("#th-t3"), both, "the thread shows before and after");
     assert.equal(await desk.locator("#th-t1 .changed").count(), 0, "a message without pictures shows none");
+
+    // The jump to the part opens the workspace in Click through, though Select was used last.
+    await desk.click('[data-act="workspace"]');
+    await desk.click('[data-ws-mode="select"]');
+    await desk.click("[data-ws-close]");
+    if (!(await desk.isVisible('#th-t3 .head [data-goto="t3"]'))) await desk.click("#th-t3 > summary");
+    await desk.click('#th-t3 .head [data-goto="t3"]');
+    await desk.waitForSelector('[data-ws-mode="off"].on');
+    assert.equal(await desk.locator('[data-ws-mode="select"].on').count(), 0, "a note's part opens the workspace in Click through");
+    await desk.click("[data-ws-close]");
 
     await desk.click('[data-act="workspace"]');
     await desk.waitForSelector("#ws-side .notes");
@@ -1782,7 +1798,8 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
 test("in Select mode the review bar acts: a hover or a click on it picks nothing, a click on the design picks; an element of the option has every state drawn", async (t) => {
-  const run = await launch(t, BRIDGE_BAR.replace("can: { comment: true,", "can: { revise: true, comment: true,"));
+  // Tabs has an earlier version, to pick in the version picker.
+  const run = await launch(t, BRIDGE_BAR.replace("can: { comment: true,", "can: { revise: true, comment: true,").replace('name: "Tabs", asset: "A-1",', 'name: "Tabs", asset: "A-1", version: 2, history: [{ version: 1, asset: "A-1" }],'));
   if (!run) return;
   const { top, desk, posts } = run;
   try {
@@ -1791,6 +1808,10 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.click('[data-act="workspace"]');
     const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
     await frame.waitForSelector('#review [data-review-view="2"]');
+    // The workspace opens in Click through: the design acts as it is until Select is pressed.
+    assert.equal(await desk.getAttribute('[data-ws-mode="off"]', "class"), "btn small on", "Click through is the tool picked on opening");
+    assert.equal(await frame.evaluate(() => document.documentElement.style.cursor), "", "the design is not in Select mode");
+    await desk.click('[data-ws-mode="select"]');
     await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair"); // Select mode reached the frame
     // The frame outlines what the pointer is on with a dashed box; nothing else here is dashed.
     const outlined = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
@@ -1810,13 +1831,49 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
     assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
 
+    // The part picked is let go once it no longer shows, and by Click through.
+    const solid = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Selected"));
+    assert.equal(await solid(), true, "the part picked is framed");
+    await frame.click('#review [data-review-view="1"]');
+    await desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent === "Nothing selected");
+    assert.equal(await solid(), false, "another page of the design lets the part go");
+    // Closed by the design itself, as a menu closes: hidden or fully transparent, it or a box round it.
+    const picked = () => desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent !== "Nothing selected");
+    const cleared = () => desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent === "Nothing selected");
+    for (const [what, css] of [["opacity", "opacity:0"], ["visibility", "visibility:hidden"], ["display", "display:none"]]) {
+      await frame.click('[data-view="1"] button');
+      await picked();
+      await frame.evaluate((c) => { document.querySelector('[data-view="1"]').style.cssText = c; }, css);
+      await cleared();
+      assert.equal(await solid(), false, `a part closed by ${what} is let go`);
+      await frame.evaluate(() => { document.querySelector('[data-view="1"]').style.cssText = ""; });
+    }
+    // A part the design draws again stays selected: it is found again by its path.
+    await frame.click('[data-view="1"] button');
+    await picked();
+    await frame.evaluate(() => { const b = document.querySelector('[data-view="1"] button'); b.replaceWith(b.cloneNode(true)); });
+    await top.waitForTimeout(1000);
+    assert.notEqual(await desk.textContent("#ws-side .sel b"), "Nothing selected", "a part drawn again keeps its selection");
+    assert.equal(await solid(), true, "and its frame");
+    // Another version lets the part go.
+    await desk.selectOption("#ws-version", "1");
+    await cleared();
+    await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Selected"));
+    await desk.selectOption("#ws-version", "2");
+    await frame.click('[data-view="1"] button');
+    await picked();
+    await desk.click('[data-ws-mode="off"]');
+    assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "Click through lets the part go");
+    await frame.waitForFunction(() => document.documentElement.style.cursor === "");
+    assert.equal(await solid(), false, "and its frame leaves the design");
+
     // Draw every state is an element's, under the option: the workspace has none; the element's
     // dialog sends the option, the element and its part.
     assert.equal(await desk.locator('#ws-side [data-act="states"]').count(), 0, "the workspace has no Draw every state");
     await desk.click("[data-ws-close]");
     await desk.click('#detail [data-el="save"]');
     await desk.waitForSelector("#element-dialog[open] [data-el-states]");
-    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 1[\s\S]*In the design[\s\S]*Draw every state/);
+    assert.match(await desk.textContent("#element-dialog"), /Save button[\s\S]*New[\s\S]*Tabs · version 2[\s\S]*In the design[\s\S]*Draw every state/);
     await desk.click("#element-dialog [data-el-states]");
     await desk.fill("#confirm-form [name=note]", "The error first.");
     await desk.locator("#confirm-dialog .actions button", { hasText: "Draw the states" }).click();
@@ -1884,7 +1941,6 @@ test("the screen shown stays when the person switches options, where the other o
     await desk.click('[data-card="r6"]');
     await desk.click('[data-act="workspace"]');
     const frame = await frameShows("1");
-    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
     await frame.click('#review [data-review-view="2"]');
     await desk.click('[data-ws-variant="v2"]');
     await frameShows("3"); // Billing, under its own number in this option
