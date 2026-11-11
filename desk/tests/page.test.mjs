@@ -1612,6 +1612,7 @@ test("the design tags the parts a decision shaped: the picked one framed solid, 
     { red: false, solid: true, faint: false, label: "◆ D-3" },
     { red: true, solid: false, faint: true, label: "" },
   ], "D-3 picked: its table framed solid with its number, the Spend cell inside without a repeat, the revoked row red and faint");
+  await desk.click('[data-ws-mode="select"]');
   await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
   // On CI a pick sometimes never reaches the side panel (2 runs of many; the cause is not found):
   // a pick that did not arrive is clicked once or twice more. Clicking a part again only picks it again.
@@ -1791,6 +1792,10 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.click('[data-act="workspace"]');
     const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
     await frame.waitForSelector('#review [data-review-view="2"]');
+    // The workspace opens in Click through: the design acts as it is until Select is pressed.
+    assert.equal(await desk.getAttribute('[data-ws-mode="off"]', "class"), "btn small on", "Click through is the tool picked on opening");
+    assert.equal(await frame.evaluate(() => document.documentElement.style.cursor), "", "the design is not in Select mode");
+    await desk.click('[data-ws-mode="select"]');
     await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair"); // Select mode reached the frame
     // The frame outlines what the pointer is on with a dashed box; nothing else here is dashed.
     const outlined = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
@@ -1809,6 +1814,19 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await frame.click('[data-view="2"] button');
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
     assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
+
+    // The part picked is let go once it no longer shows, and by Click through.
+    const solid = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Selected"));
+    assert.equal(await solid(), true, "the part picked is framed");
+    await frame.click('#review [data-review-view="1"]');
+    await desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent === "Nothing selected");
+    assert.equal(await solid(), false, "another page of the design lets the part go");
+    await frame.click('[data-view="1"] button');
+    await desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent !== "Nothing selected");
+    await desk.click('[data-ws-mode="off"]');
+    assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "Click through lets the part go");
+    await frame.waitForFunction(() => document.documentElement.style.cursor === "");
+    assert.equal(await solid(), false, "and its frame leaves the design");
 
     // Draw every state is an element's, under the option: the workspace has none; the element's
     // dialog sends the option, the element and its part.
@@ -1884,7 +1902,6 @@ test("the screen shown stays when the person switches options, where the other o
     await desk.click('[data-card="r6"]');
     await desk.click('[data-act="workspace"]');
     const frame = await frameShows("1");
-    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
     await frame.click('#review [data-review-view="2"]');
     await desk.click('[data-ws-variant="v2"]');
     await frameShows("3"); // Billing, under its own number in this option
