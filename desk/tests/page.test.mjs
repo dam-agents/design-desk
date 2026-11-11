@@ -763,7 +763,9 @@ test("a slide is pictures: every option and part in the strip, a comment on the 
   await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/R-2/threads"));
   const sent = await desk.evaluate(() => JSON.parse(calls.find((c) => c.path === "/api/cards/R-2/threads").body));
   assert.deepEqual([sent.kind, sent.text, sent.anchor.variant, sent.anchor.label], ["comment", "Too grey", "v2", "Offline hint"]);
-  await desk.click('#present [data-present="1"]');
+  await desk.click('#present [data-pstep="1"]');
+  assert.match(await desk.textContent("#present .pcap"), /^Not in the pictures/, "the bar's arrow walks the item's pictures first");
+  await desk.click('#present [data-pstep="1"]');
   await desk.waitForFunction(() => document.querySelector("#present .pt")?.textContent.startsWith("Stopped agents"));
   assert.equal(await desk.locator("#present [data-pframe]").count(), 3, "the before and after, and the part it changed");
 }));

@@ -341,7 +341,7 @@ Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue
 developer or an admin moves it (**For Developers** / **For Designers** on the card, the same
 `size`, any one not handled). One For Developers is marked handled by a lead developer or a
 designer, one that goes against a decision in force by a designer only; a change For
-Developers is in Needs a designer only for such a decision or the presentation.
+Developers is in Needs a designer only for such a decision.
 
 ### Deciding straight away
 
@@ -559,7 +559,7 @@ page) makes the row say it can't be shown right now, never zeros.
 ## The presentation
 
 The team meets regularly; the Desk keeps the list of what to show at the next design meeting,
-the **Presentation** page of Requests. (The store and the CLI keep its older name, `agenda`.)
+the **Presentation** page of Requests. (The store and the `/api/agenda` route keep its older name, `agenda`.)
 
 The page shows it in the other pages' style: in the list, each item is its title, its number and
 its state dot (and the red **!**) as on every list, and one line of facts (`presenting:`, `added

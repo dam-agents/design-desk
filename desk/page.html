@@ -3182,9 +3182,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (lines.length) F.push({ group: "Not in the pictures", label: "Not in the pictures", text: lines });
     return F.filter((f) => f.asset || f.pic || f.text);
   }
-  // The comments on one picture: those anchored to it (its option and its name).
-  const frameThreads = (card, f) => (card.threads || []).filter((th) => th.kind !== "asks" && th.anchor && (th.anchor.label || "") === f.label && (th.anchor.variant || null) === (f.variant || null));
-  const frameKey = (f) => `${f.variant || ""}|${f.label}`;
+  // A picture's anchor, as the store keeps it (desk/store.mjs cleanAnchor: a label of at most
+  // 120 characters); its key finds the picture's comments and keeps its place on a redraw.
+  const frameAnchor = (f) => ({ variant: f.variant || null, asset: f.asset || null, selector: f.selector || null, label: (f.label || "").slice(0, 120) });
+  const anchorKey = (a) => [a.variant || "", a.asset || "", a.selector || "", (a.label || "").slice(0, 120)].join("\u0000");
+  const frameKey = (f) => anchorKey(frameAnchor(f));
+  // The comments on one picture: those anchored to all of it (its option, picture, part and name).
+  const frameThreads = (card, f) => (card.threads || []).filter((th) => th.kind !== "asks" && th.anchor?.label && anchorKey(th.anchor) === frameKey(f));
   // A picture's place: an image or a page, loaded once it is in the page.
   const picBox = (f) => f.text ? `<div class="pnote"><ul>${f.text.map((x) => `<li>${txt(x)}</li>`).join("")}</ul></div>` : f.pic || `<div class="ppic" data-passet="${esc(f.asset)}"></div>`;
   async function loadSlidePics(root) {
@@ -3210,6 +3214,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ths = f.text ? [] : frameThreads(card, f);
     side.innerHTML = f.text ? "" : `${ths.map((th) => `<div class="pc${th.state === "resolved" ? " done" : ""}">${th.messages.map((m) => `<p><b>${esc(noteBy(m.by) || "someone")}</b> ${esc(m.text)}</p>`).join("")}</div>`).join("")}
       ${can("comment") ? `<textarea id="pc-text" maxlength="4000" placeholder="Comment on ${esc(f.label)}…" aria-label="Comment on ${esc(f.label)}"></textarea><button class="btn small primary" data-pcomment>Comment</button>` : ""}`;
+    // The bar's arrows walk the same pictures as the keys; none before the first or after the last.
+    ov.querySelector('[data-pstep="-1"]').disabled = P.n === 0 && P.f === 0;
+    ov.querySelector('[data-pstep="1"]').disabled = P.n === S.agenda.length - 1 && P.f === P.frames.length - 1;
     await loadSlidePics(stage);
   }
   async function present(i = 0, frame = null) {
@@ -3221,13 +3228,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!ov) { ov = document.createElement("div"); ov.id = "present"; document.body.append(ov); }
     // The option the designer picked when adding it; an older entry without one shows the favourite.
     const pick = (card.variants || []).find((v) => v.id === card.agenda?.variant) || favourite(card) || card.variants?.[0];
-    const same = P.card?.id === card.id, was = same ? frameKey(P.frames[P.f] || { label: "" }) : null;
+    const same = P.card?.id === card.id, was = same && P.frames[P.f] ? frameKey(P.frames[P.f]) : null;
     P.card = card; P.n = n; P.frames = slideFrames(card, pick);
     P.f = frame === "last" ? P.frames.length - 1 : same ? Math.max(0, P.frames.findIndex((f) => frameKey(f) === was)) : Math.max(0, P.frames.findIndex((f) => f.start));
     ov.dataset.index = String(n);
     const groups = [...new Set(P.frames.map((f) => f.group))];
     ov.innerHTML = `<div class="pbar"><button class="btn small" data-exit-present aria-label="Exit">✕</button><span class="pt">${txt(card.title, card)}${num(card)}</span><span class="hint">${n + 1}/${items.length}</span>
-        <button class="btn small" data-pbrief aria-pressed="${P.brief}" title="What we decide">ⓘ</button>${markButton(items[n])}<button class="btn small" data-present="${n - 1}" ${n === 0 ? "disabled" : ""} aria-label="Previous">←</button><button class="btn small" data-present="${n + 1}" ${n === items.length - 1 ? "disabled" : ""} aria-label="Next">→</button></div>
+        <button class="btn small" data-pbrief aria-pressed="${P.brief}" title="What we decide">ⓘ</button>${markButton(items[n])}<button class="btn small" data-pstep="-1" aria-label="Previous picture">←</button><button class="btn small" data-pstep="1" aria-label="Next picture">→</button></div>
       ${P.brief ? `<div class="pbrief">${md(card.agenda?.brief || "Design Desk is writing a short brief.", card)}</div>` : ""}
       <div class="pmain"><div id="pstage" class="pstage"></div><aside id="pside" class="pside" aria-label="Comments"></aside></div>
       <div class="pstrip">${groups.map((g) => `<div class="pgroup">${g ? `<span class="pg">${esc(g)}</span>` : ""}<div class="pthumbs">${P.frames.map((f, k) => f.group !== g ? "" : `<button class="pthumb" data-pframe="${k}" title="${esc(f.label)}">${f.text ? `<span class="ptext">≡</span>` : picBox(f)}${(() => { const c = frameThreads(card, f).filter((th) => th.state !== "resolved").length; return c ? `<span class="pcount">${c}</span>` : ""; })()}</button>`).join("")}</div></div>`).join("")}</div>`;
@@ -3244,7 +3251,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   async function presentComment() {
     const f = P.frames[P.f], text = $("#pc-text")?.value.trim();
     if (!f || !text) return;
-    await api("POST", `/api/cards/${encodeURIComponent(P.card.id)}/threads`, { kind: "comment", text, anchor: { variant: f.variant || null, asset: f.asset || null, selector: f.selector || null, label: f.label } });
+    await api("POST", `/api/cards/${encodeURIComponent(P.card.id)}/threads`, { kind: "comment", text, anchor: frameAnchor(f) });
     await present(P.n);
     $("#pc-text")?.focus();
   }
@@ -5984,6 +5991,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.present !== undefined) { await present(Number(ds.present)); return; }
     // On a slide: a picture from the strip, the brief shown or hidden, a comment on the picture.
+    if (ds.pstep !== undefined) { await presentStep(Number(ds.pstep)); return; }
     if (ds.pframe !== undefined) { P.f = Number(ds.pframe); await drawFrame(); return; }
     if ("pbrief" in ds) { P.brief = !P.brief; await present(P.n); return; }
     if ("pcomment" in ds) { await presentComment(); return; }
