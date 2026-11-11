@@ -21,7 +21,7 @@ stop).
 **Where it posts** (every procedure below): a request with a Slack `origin` posts in its
 thread — every message is a `reply` with `chatId` = `origin.chat` and `threadTs` =
 `origin.thread_ts`, and the poll's `chat` and `root_ts` are that thread's. Any other request
-posts in the channel above (`send_channel_message`; replies under its own opening message).
+posts in the channel above (`post`; replies under its own opening message).
 Titles, notes and names in every message are escaped first ([docs/desk.md](../../../docs/desk.md)
 → Links to an item, Text to Slack).
 
@@ -45,6 +45,10 @@ opening message, the note is left out, and steps 1 and 5 skip the claim and the 
 3. **One message per option**, in order: its picture attached to the message that carries its
    words, "*Option <A/B/C>: <name>* — <its one line on when it wins>". Never the picture in one
    message and the words in another: the reactions and the thread belong to that one message.
+   A post with a picture returns its `ts` like any other, and that `ts` is the one you record
+   and react to. Should a result name none (rare: Slack was slow to record the file), never
+   guess one: `read_thread` shows it where the thread is readable, else that option is not
+   recorded and the card says so.
    When the request has a live
    prototype, one more message: "Try it live: the link and the demo account are on the Desk".
    Never a password in Slack.
@@ -92,8 +96,10 @@ Every 30 minutes while a vote is open, in the inbox run:
    member list gives their email, else "in Slack" (a reaction counts from anyone in the
    channel: it is not a message, and the vote only advises); a person's own vote on the Desk wins
    over their reaction.
-3. Replies under an option's post (`read_thread` where the platform offers the thread, and
-   every reply that tags you in it, which reaches you as a Slack turn): each one from a person
+3. Replies under an option's post (`read_thread` reads only a thread you were shown: the
+   request's own Slack thread, one you started with `start_thread`, or one a person tagged you
+   in; the thread under a plain `post` is refused. So the way in is every reply that tags you in
+   it, which reaches you as a Slack turn): each one from a person
    on the roster (by the email Slack holds for them, [docs/desk.md](../../../docs/desk.md) →
    Roles, In Slack; anyone else's is not relayed) becomes a comment on that option, once — `design desk relay R-<n> <comment.json>` with `{variant,
    name, email, text, slack_ts, mentions}`, `mentions` mapping each `<@U…>` in the text to
@@ -136,8 +142,8 @@ rewrites that message in place: the post shows exactly the text and card it pass
   tally. A refused edit (too fast, a card refused, not found) is logged. At Sync it waits for
   the next sync. At Close there is none, so retry once at once (after the wait a "too fast"
   names); refused again, log it and go on: the result reply carries the final votes. Never
-  post a new message in its place, and never edit an option's post (it carries a picture,
-  which an edit refuses).
+  post a new message in its place, and never edit an option's post (people vote on it as
+  posted).
 
 ## In a Slack turn
 

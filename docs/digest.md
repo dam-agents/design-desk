@@ -45,7 +45,7 @@ Refer to everything by its title, a card or a decision also by its number, which
 
 ## Slack (`digest: slack`)
 
-One message in the bound channel (`send_channel_message`), with the week's most telling
+One message in the bound channel (`post`), with the week's most telling
 picture attached, its titles and themes escaped ([desk.md](desk.md) → Links to an item, Text to Slack):
 
 "📰 *UX this week* — <summary>
