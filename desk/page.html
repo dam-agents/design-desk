@@ -850,6 +850,10 @@
   .reason .parts .btn::before { content: "◆"; color: var(--why); margin-right: 4px; font-size: 9px; }
   .reason .more { display: inline-block; margin-top: 6px; font-size: var(--fs-meta); }
   .reason .gone-note { margin: 6px 0 0; font-size: var(--fs-meta); color: var(--bad); }
+  /* A decision is one line until it is picked; picked, it shows all its words, its parts and its link. */
+  .reason:not([aria-current="true"]) .rh b, .why-sel button:not([aria-current="true"]) span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .reason:not([aria-current="true"]) :is(.parts, .more) { display: none; }
+  .why, .reasons, .reason, .why-sel, .why-sel button { min-width: 0; }
   .ws-side .link { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s ease; } .ws-side .link:hover { text-decoration-color: currentColor; }
   .why-sel { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
   .why-sel button { display: flex; gap: 6px; align-items: flex-start; text-align: left; border: 0; background: none; padding: 2px 0; cursor: pointer; font-size: 13px; }
@@ -2981,7 +2985,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const pages = (key, opts, on, extra = "") => `<nav class="subtabs" aria-label="Pages">${opts.map(([k, l, n]) => `<button class="${on(k) ? "on" : ""}" data-filter="${key}:${k}" aria-current="${on(k) ? "page" : "false"}">${counted(l, n)}</button>`).join("")}${extra}</nav>`;
     const reqList = S.reqFilter !== "presentation";
     const add = S.tab !== "product" ? "" : ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>`
-      : S.productFilter === "decisions" && can("decide") ? `<button class="btn small primary" data-add-decision title="Record a decision the team made, in your name">+ Add</button>` : "";
+      : "";
     // Requests: For Designers and For Developers, each with its open count, and the presentation.
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const chgTab = (k, l) => [`${k}`, l, newCards("open", k).length];
@@ -3204,7 +3208,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   function renderDecisionList(filters) {
     const list = $("#list");
-    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["unapproved", "Not approved"], ["revoked", "Revoked"], ["", "All"]], "dstate")}</div></div>`;
+    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["unapproved", "Not approved"], ["revoked", "Revoked"], ["", "All"]], "dstate")}${can("decide") ? `<button class="btn small primary" data-add-decision title="Record a decision the team made, in your name" style="margin-left:auto;align-self:center">+ Add</button>` : ""}</div></div>`;
     // As every list on the Desk: its words, its number and a dot for where it stands; a red ! under the
     // dot when it goes against a decision in force; then when it was decided, where, and by whom.
     const row = (d) => {
@@ -5555,7 +5559,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
       ${old ? "" : lookList()}
       ${renderWsNotes(c, v, sel)}
-      ${renderWhy(c, v)}`;
+      ${renderWhy(c, v, sel)}`;
     loadPictures(side);
     const nt = $("#ws-text");
     if (nt) { nt.value = keep; if (focused) { nt.focus(); if (caret) nt.setSelectionRange(caret[0], caret[1]); } }
@@ -5563,28 +5567,29 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   const showReason = () => $('.reason[aria-current="true"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   // The decisions that shaped the selected part: the reasons naming it, or a part it sits in.
+  const reasonsOfSelected = (v, sel) => sel?.selector
+    ? (v.reasons || []).filter((r) => (sel.why || []).includes(r.decision) || r.parts.some((p) => p.selector === sel.selector)) : [];
   function whyOfSelected(c, v, sel) {
-    if (!sel?.selector) return "";
-    const rs = (v.reasons || []).filter((r) => (sel.why || []).includes(r.decision) || r.parts.some((p) => p.selector === sel.selector));
+    const rs = reasonsOfSelected(v, sel);
     if (!rs.length) return "";
-    return `<div class="why-sel"><span class="k">Why it is like this</span>${rs.map((r) => `<button data-reason="${esc(r.decision)}">${dtag(c, r.decision)}<span class="${gone(c, r.decision) ? "revoked-text" : ""}">${esc(c.cited?.[r.decision]?.text || r.how)}</span></button>`).join("")}</div>`;
+    return `<div class="why-sel"><span class="k">Why it is like this</span>${rs.map((r) => `<button data-reason="${esc(r.decision)}" aria-current="${S.ws.reason === r.decision}">${dtag(c, r.decision)}<span class="${gone(c, r.decision) ? "revoked-text" : ""}">${esc(c.cited?.[r.decision]?.text || r.how)}</span></button>`).join("")}</div>`;
   }
-  // Every decision the option rests on: what it says, how the option follows it, the parts it
-  // shaped (each shown in the design on a click) and a link to who decided it and why.
-  function renderWhy(c, v) {
-    const rs = v.reasons || [];
+  // Every decision the option rests on: what it says, the parts it
+  // shaped (each shown in the design on a click) and a link to who decided it and why. The
+  // decisions the selected part's box already shows are left out, so none shows twice.
+  function renderWhy(c, v, sel) {
+    const shown = new Set(reasonsOfSelected(v, sel).map((r) => r.decision));
+    const rs = (v.reasons || []).filter((r) => !shown.has(r.decision));
     if (!rs.length) return "";
     if (!S.ws.why) return `<p class="hint">◆ ${plural(rs.length, "decision", "decisions")} shaped this option. <button class="link" data-ws-why>Show why it looks like this</button></p>`;
     const off = rs.filter((r) => gone(c, r.decision)).length;
     return `<section class="why"><div class="head"><h3>Why it looks like this</h3><span class="hint">${plural(rs.length, "decision", "decisions")}</span></div>
-      <p class="hint" style="margin:0">The team's decisions this option follows. Each one is tagged <span class="dtag">◆ D-…</span> on the parts it shaped; pick one to see them.</p>
       ${off ? `<p><span class="chip bad" title="A decision this option follows no longer holds">⚠ ${plural(off, "decision", "decisions")} no longer in force</span></p>` : ""}
       <ol class="reasons">${rs.map((r) => {
         const d = c.cited?.[r.decision] || {}, x = gone(c, r.decision);
         return `<li class="reason ${x ? "gone" : ""}" data-reason="${esc(r.decision)}" aria-current="${S.ws.reason === r.decision}">
           <div class="rh">${dtag(c, r.decision)}<b class="${x ? "revoked-text" : ""}">${esc(d.text || r.decision)}</b></div>
           ${x ? `<p class="gone-note">⚠ This decision no longer holds, so the parts it shaped may need another look.</p>` : ""}
-          <p class="how">${esc(r.how)}</p>
           ${r.parts.length ? `<div class="parts">${r.parts.map((p, i) => `<button class="btn small" data-reason-part="${esc(r.decision)}|${i}">${esc(p.label)}</button>`).join("")}</div>` : ""}
           <a class="more" href="#${esc(r.decision)}" data-ref="${esc(r.decision)}">Who decided it and why →</a></li>`; }).join("")}</ol></section>`;
   }
@@ -5806,8 +5811,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <div class="pl-tabs" role="tablist">${tabs.map(([k, t]) => `<button role="tab" data-pl-tab="${k}" aria-selected="${k === tab}" title="${esc({ smart: `What the product already has for ${sm?.name || "this part"}, picked by Design Desk`, text: "Its text: size, weight, alignment, color", fill: "Its background and corners", space: "The space inside it and between its items", layout: "How its items line up", size: "Its width and height" }[k])}">${t}</button>`).join("")}</div>
       <div class="pl-body">${body}</div>
       ${n ? `<p class="hint pl-sum">Not sent yet, only you see it: ${esc(mine.flatMap(changeWords).join("; "))}</p>` : ""}
-      <div class="pl-foot">${n ? `<span class="hint">${plural(n, "change", "changes")}</span><button class="btn small" data-pl-undo="${esc(keys)}" title="Puts this part back as it was">Undo all</button><button class="btn small primary" data-pl-send="${esc(keys)}" title="Design Desk changes this part as shown and the new version appears here">Send</button>`
-        : `<span class="hint">Changes show at once, only here. Send them and Design Desk makes a new version.</span>`}</div>`;
+      ${n ? `<div class="pl-foot"><span class="hint">${plural(n, "change", "changes")}</span><button class="btn small" data-pl-undo="${esc(keys)}" title="Puts this part back as it was">Undo all</button><button class="btn small primary" data-pl-send="${esc(keys)}" title="Design Desk changes this part as shown and the new version appears here">Send</button></div>` : ""}`;
     p.hidden = false;
     if (fa) p.querySelector(fa)?.focus();
   }

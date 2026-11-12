@@ -1630,7 +1630,7 @@ test("an option says why it looks as it does: its decisions on the request and i
   await desk.click('.why-list [data-why="D-3"]');
   await desk.waitForSelector("#ws-side .why");
   assert.equal(await desk.getAttribute('.reason[data-reason="D-3"]', "aria-current"), "true", "the decision clicked is picked in the workspace");
-  assert.match(await desk.textContent("#ws-side .why"), /2 decisions[\s\S]*1 decision no longer in force[\s\S]*The column reads per week[\s\S]*Spend column/);
+  assert.match(await desk.textContent("#ws-side .why"), /2 decisions[\s\S]*1 decision no longer in force[\s\S]*Spend column/);
   assert.match(await desk.textContent('.reason[data-reason="D-4"]'), /no longer holds/);
   await desk.click('.reason[data-reason="D-3"]');
   assert.equal(await desk.getAttribute('.reason[data-reason="D-3"]', "aria-current"), "false", "a second click lets it go");
