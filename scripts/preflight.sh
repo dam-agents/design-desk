@@ -233,8 +233,12 @@ watch_mode() {
     [[ "$merged_from" < "$since_day" ]] && merged_from="$since_day"
   fi
   local DUE ISSUES RELS; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"; ISSUES="$(mktemp "${TMPDIR:-/tmp}/design-desk-issues.XXXXXX")"; RELS="$(mktemp "${TMPDIR:-/tmp}/design-desk-releases.XXXXXX")"
-  local nrel=0 KNOWN_RELS='[]'
-  [ -f "$DESK_DIR/releases.json" ] && KNOWN_RELS="$(jq -c '.keys // []' "$DESK_DIR/releases.json" 2>/dev/null || echo '[]')"
+  # The releases the Desk keeps. A file that cannot be read is not "none kept": then no release is
+  # due this pass, or every one would be due again.
+  local nrel=0 KNOWN_RELS='[]' RELS_OK=1
+  if [ -f "$DESK_DIR/releases.json" ] && ! KNOWN_RELS="$(jq -ce '.keys | arrays' "$DESK_DIR/releases.json" 2>/dev/null)"; then
+    KNOWN_RELS='[]'; RELS_OK=0; log "the Desk's releases.json cannot be read — no release is due until it can"
+  fi
   local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0
   # One files call per new candidate; a backlog is spread over passes so a pass stays
   # well inside the Precheck's budget (about 2 s a call through the gateway).
@@ -325,17 +329,21 @@ watch_mode() {
     # Desk does not keep yet, with the pull requests in it since the release published before it,
     # read from the merge and squash messages ("(#12)", "Merge pull request #12") of the commits
     # between the two tags. At most 5 new releases a pass; a repository with no releases has none.
-    local rels rtag rname rurl rpub rpre prev prs
-    if rels="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/releases?per_page=30" 2>/dev/null)"; then
+    # Each call's own status is checked before its output is read: this script sets no pipefail,
+    # and a failed read must never pass for an empty answer.
+    local rels rtag rname rurl rpub rpre prev prs msgs
+    if [ "$RELS_OK" = 0 ]; then :
+    elif rels="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/releases?per_page=30" 2>/dev/null)" && jq -e 'type == "array"' <<<"$rels" >/dev/null 2>&1; then
       prev=""
       # \037, not a tab: a tab is whitespace to IFS, so a release with no name would shift the columns.
       while IFS=$'\037' read -r rtag rname rurl rpub rpre; do
         [ -n "$rtag" ] || continue
         if [[ "$rpub" < "$SINCE_Z" ]] || jq -e --arg k "$repo#$rtag" 'index($k) != null' <<<"$KNOWN_RELS" >/dev/null || [ "$nrel" -ge 5 ]; then prev="$rtag"; continue; fi
         if [ -z "$prev" ]; then log "$repo $rtag: no earlier release to compare it with — kept without its pull requests"; prs='[]'
-        elif ! prs="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$prev...$rtag?per_page=100" --paginate --jq '.commits[].commit.message | split("\n")[0]' 2>/dev/null \
-            | grep -oE '\(#[0-9]+\)|Merge pull request #[0-9]+' | grep -oE '[0-9]+' | sort -un | jq -Rcs 'split("\n") | map(select(length > 0) | tonumber)')"; then
-          log "$repo $rtag: could not compare it with $prev — next run"; prev="$rtag"; continue
+        elif ! msgs="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$prev...$rtag?per_page=100" --paginate --jq '.commits[].commit.message | split("\n")[0]' 2>/dev/null)"; then
+          log "$repo $rtag: could not compare it with $prev — not kept, next run"; prev="$rtag"; continue
+        else
+          prs="$(printf '%s\n' "$msgs" | grep -oE '\(#[0-9]+\)|Merge pull request #[0-9]+' | grep -oE '[0-9]+' | sort -un | jq -Rcs 'split("\n") | map(select(length > 0) | tonumber)')"
         fi
         jq -cn --arg repo "$repo" --arg tag "$rtag" --arg name "$rname" --arg url "$rurl" --arg pub "$rpub" --argjson pre "$rpre" --arg prev "$prev" --argjson prs "${prs:-[]}" \
           '{repo:$repo, tag:$tag, name:(if $name == "" then $tag else $name end), url:$url, published_at:$pub, prerelease:$pre, previous:(if $prev == "" then null else $prev end), prs:$prs}' >> "$RELS"
@@ -343,7 +351,7 @@ watch_mode() {
         prev="$rtag"
       done < <(jq -r '[.[] | select((.draft | not) and .published_at != null)] | sort_by(.published_at) | .[] | [.tag_name, ((.name // "") | gsub("[\t\n\u001f]"; " ")), .html_url, .published_at, (.prerelease | tostring)] | join("\u001f")' <<<"$rels")
     else
-      log "$repo: could not list its releases — next run"
+      log "$repo: could not read its releases — next run"
     fi
   done
   # The issues and pull requests the Desk's cards point at whose copy on the Desk is behind

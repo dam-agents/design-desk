@@ -3512,7 +3512,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const at = ps.findIndex((p) => p.key === S.histAt);
     if (at >= S.listLimit) S.listLimit = Math.ceil((at + 1) / LIST_PAGE) * LIST_PAGE;
     const drawn = ps.slice(0, S.listLimit);
-    list.innerHTML = top + drawn.map((p) => `<div class="row item"><button class="open" data-hist="${esc(p.key)}" aria-current="${S.histAt === p.key}"><div class="t"><span>${esc(p.title)}</span></div></button>
+    list.innerHTML = top + drawn.map((p) => `<div class="row item"><button class="open" data-hist="${esc(p.key)}" aria-current="${S.histAt === p.key}"><div class="t"><span>${esc(p.title)}</span></div>${p.digest ? againstDot(p.digest) : ""}</button>
       <div class="prov plain">${p.when ? `<span>${esc(p.when)}</span>` : ""}${p.rel?.prerelease ? `<span>pre-release</span>` : ""}<span>${esc(histCount(p.items) || (p.digest ? "the week's summary" : "nothing on the Desk"))}</span></div></div>`).join("")
       + (drawn.length < ps.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
     listMore.disconnect();

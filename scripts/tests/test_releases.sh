@@ -30,6 +30,18 @@ echo '{"keys":["acme/widgets#v1.2.0-rc.1","acme/widgets#v1.2.0"]}' > "$DESK_DIR/
 out2="$(bash "$ROOT/scripts/preflight.sh" watch)"
 assert "nothing left to do" '.nothing_to_do == true' "$out2"
 
+# A compare that fails keeps no record: the release waits for the next pass, never kept with no pull requests.
+rm -f "$DESK_DIR/releases.json" "$STUB_DIR/compare-v1.2.0-rc.1...v1.2.0.txt"
+out4="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "a release whose compare failed is not due" '[.releases_due[].tag] == ["v1.2.0-rc.1"]' "$out4"
+assert "and the pass says so" '[.logs[] | select(test("v1.2.0: could not compare"))] | length == 1' "$out4"
+
+# A releases.json the Desk wrote that cannot be read is not "none kept": no release is due.
+echo 'not json' > "$DESK_DIR/releases.json"
+out5="$(bash "$ROOT/scripts/preflight.sh" watch)"
+assert "nothing due while the Desk's list cannot be read" '.nothing_to_do == true' "$out5"
+assert "and the pass says why" '[.logs[] | select(test("releases.json cannot be read"))] | length == 1' "$out5"
+
 # A repository whose releases cannot be read is logged, never a failed pass.
 rm -f "$DESK_DIR/releases.json"; echo 'not json' > "$STUB_DIR/releases.json"
 out3="$(bash "$ROOT/scripts/preflight.sh" watch)"

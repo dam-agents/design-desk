@@ -2083,7 +2083,7 @@ test("the look palette is for admins, designers and lead developers: a PM select
 
 test("a decision: what goes against it warns with a link to it; a designer revokes it with a reason", async (t) => {
   const decision = `const decision = { id: "D-1", concepts: ["header"], text: "The header stays one line", why: "", author: { name: "Dana", login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" }, at: "2026-10-01T00:00:00Z", status: "active", side: "developer" };`;
-  const bridge = BRIDGE.replace("const digest =", `${decision}\nchange.conflicts = [{ decision: "D-1", why: "It wraps the header to two lines.", text: decision.text, status: "active" }];\nchange.against = ["D-1"]; requests[1].against = ["D-10", "D-11", "D-12", "D-13"];\nchange.decisions = ["D-2"]; change.cited = { "D-2": { text: "Headers use the brand colour", status: "revoked" } };\nchange.impact = { concept: "the header", places: [], decisions: [{ id: "D-2", when: "2026-09-01" }] };\nconst digest =`)
+  const bridge = BRIDGE.replace("const digest =", `${decision}\nchange.conflicts = [{ decision: "D-1", why: "It wraps the header to two lines.", text: decision.text, status: "active" }];\nchange.against = ["D-1"]; requests[1].against = ["D-10", "D-11", "D-12", "D-13"]; earlier.against = ["D-1"];\nchange.decisions = ["D-2"]; change.cited = { "D-2": { text: "Headers use the brand colour", status: "revoked" } };\nchange.impact = { concept: "the header", places: [], decisions: [{ id: "D-2", when: "2026-09-01" }] };\nconst digest =`)
     .replace("can: { request: true,", "can: { decide: true, request: true,")
     .replace(': path === "/api/cards/ch1"', ': path === "/api/decisions/D-1" ? { decision, refs: [{ id: "ch1", kind: "change", title: "A new header", how: "conflicts" }] }\n    : path.startsWith("/api/decisions?") ? { decisions: [decision] }\n    : path === "/api/cards/ch1"');
   const run = await launch(t, bridge);
@@ -2097,6 +2097,11 @@ test("a decision: what goes against it warns with a link to it; a designer revok
     const many = '.row.item:has([data-card="r3"]) .vdot';
     assert.equal(await desk.textContent(many), "Goes against D-10, D-11, D-12 +1", "the label names three, then +N");
     assert.match(await desk.getAttribute(`${many} .tag`, "data-tip") || await desk.getAttribute(`${many} .tag`, "title"), /D-10, D-11, D-12, D-13/, "the hint names them all");
+    // A week whose digest goes against a decision says so on its tile in Product → History.
+    await desk.click('[data-tab="product"]');
+    await desk.click('[data-filter="productFilter:history"]');
+    await desk.click('[data-hist-by="weeks"]');
+    assert.equal(await desk.textContent('.row.item:has([data-hist="2026-W44"]) .vdot'), "Goes against D-1", "the week's tile carries its digest's red !");
     await desk.click('[data-tab="new"]');
     await desk.click('[data-card="ch1"]');
     await desk.waitForSelector("#detail .against");

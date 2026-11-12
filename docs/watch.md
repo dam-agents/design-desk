@@ -204,7 +204,9 @@ Every watch pass also reads the watched repositories' releases on GitHub. Its `r
 lists each release published since `watch_since` that the Desk does not keep yet: `{repo, tag,
 name, url, published_at, prerelease, previous, prs}`, where `prs` are the pull requests between
 the release published before it (`previous`) and this one, read from the merge and squash
-messages of the commits between the two tags. A release candidate is a release like any other:
+messages of the commits between the two tags. When GitHub does not return a repository's releases
+or a release's commits, that release is not listed and the pass logs it; the next pass tries again.
+While the Desk's `releases.json` cannot be read, no release is due. A release candidate is a release like any other:
 what is published is what people run. Keep them as they are, in one call:
 `design desk releases <file>` with the list written to a file. Nothing else is due for them: no
 card, no message. Product → History puts each shipped change in the first release that has its

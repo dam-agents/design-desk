@@ -254,7 +254,8 @@ could not be read, and why.
 What happened to the product, put together on the page from what the Desk keeps: the changes
 that shipped (by the day they merged), the decisions made, the requests filed. Under the page
 tabs, one segmented filter, kept in the browser: **Days**, **Weeks** (the default) and
-**Releases**. The list has one tile a period, the newest first, with its date and its counts, and no chips.
+**Releases**. The list has one tile a period, the newest first, with its date and its counts, and no chips; a
+week whose digest goes against a decision carries its red **!**.
 Days and weeks are UTC; a week runs Monday to Sunday, so its tile is the weekly digest's week
 ([digest.md](digest.md)). **Releases** are the product's releases on GitHub as the watch run keeps
 them ([watch.md](watch.md) → Releases): a change is in the first release that has its pull
