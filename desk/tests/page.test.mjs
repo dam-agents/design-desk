@@ -933,10 +933,13 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click("#element-dialog [data-el-close]");
     await desk.waitForSelector('.vbar [data-act="workspace"]');
     await desk.click('.vbar [data-act="workspace"]');
+    await desk.click('[data-ws-menu="states"]');
     await desk.click('[data-ws-state="error"]');
-    assert.match(await desk.textContent("#ws-states"), /Send button[\s\S]*State 1 of 1[\s\S]*Failed: The message did not go\./);
+    assert.match(await desk.textContent("#ws-sub"), /State[\s\S]*Send button ·[\s\S]*Failed[\s\S]*1 of 1/);
+    assert.match(await desk.textContent("#ws-context"), /Failed[\s\S]*The message did not go\./, "the state's use stands above the design");
     await desk.click('[data-ws-step="1"]');
-    assert.match(await desk.textContent("#ws-states"), /1 state\b/, "the step goes back round to the option");
+    await desk.waitForFunction(() => /As drawn/.test(document.querySelector("#ws-sub")?.textContent || "")).catch(() => {});
+    assert.match(await desk.textContent("#ws-sub"), /As drawn/, "the step goes back round to the option");
     await desk.click("[data-ws-close]");
 
     // Build opens the final check of the only option: it builds exactly the version it
@@ -1682,7 +1685,7 @@ test("the design tags the parts a decision shaped: the picked one framed solid, 
     { red: true, solid: false, faint: true, label: "" },
   ], "D-3 picked: its table framed solid with its number, the Spend cell inside without a repeat, the revoked row red and faint");
   await desk.click('[data-ws-mode="select"]');
-  await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+  await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent))); // the tool's pointer reached the frame
   // On CI a pick sometimes never reaches the side panel (2 runs of many; the cause is not found):
   // a pick that did not arrive is clicked once or twice more. Clicking a part again only picks it again.
   for (let i = 0; i < 3 && !(await desk.$("#ws-side .why-sel")); i++) {
@@ -1696,8 +1699,8 @@ test("the design tags the parts a decision shaped: the picked one framed solid, 
   await desk.click("[data-ws-close]");
   await desk.$eval('details[data-sect="why"]', (d) => { d.open = true; });
   await desk.click('.why-list [data-why="D-3"]');
-  await desk.waitForSelector('[data-ws-mode="off"].on');
-  assert.equal(await desk.locator('[data-ws-mode="select"].on').count(), 0, "a decision opens the workspace in Click through");
+  await desk.waitForSelector('[data-ws-mode="off"][aria-pressed="true"]');
+  assert.equal(await desk.locator('[data-ws-mode="select"][aria-pressed="true"]').count(), 0, "a decision opens the workspace in Click through");
 }));
 
 test("Draw design options asks how many, starting at the request's own count, and sends the one picked", async (t) => {
@@ -1783,17 +1786,17 @@ test("a worked-in note shows the place before and after, outlined, in the thread
     await desk.click("[data-ws-close]");
     if (!(await desk.isVisible('#th-t3 .head [data-goto="t3"]'))) await desk.click("#th-t3 > summary");
     await desk.click('#th-t3 .head [data-goto="t3"]');
-    await desk.waitForSelector('[data-ws-mode="off"].on');
-    assert.equal(await desk.locator('[data-ws-mode="select"].on').count(), 0, "a note's part opens the workspace in Click through");
+    await desk.waitForSelector('[data-ws-mode="off"][aria-pressed="true"]');
+    assert.equal(await desk.locator('[data-ws-mode="select"][aria-pressed="true"]').count(), 0, "a note's part opens the workspace in Click through");
     await desk.click("[data-ws-close]");
 
     await desk.click('[data-act="workspace"]');
     await desk.waitForSelector("#ws-side .notes");
     await desk.click('[data-ws-filter="done"]');
     await desk.click('[data-ws-note="t3"]');
-    await desk.waitForSelector("#ws-side .changed");
-    await loaded("#ws-side");
-    assert.deepEqual(await pictures("#ws-side"), both, "the workspace note shows before and after");
+    await desk.waitForSelector("#ws-pop .changed");
+    await loaded("#ws-pop");
+    assert.deepEqual(await pictures("#ws-pop"), both, "the comment opened in place shows before and after");
   } finally {
     await run.close();
   }
@@ -1828,13 +1831,14 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     await desk.click('[data-ws-filter="done"]');
     assert.deepEqual(await shown(), ["t3"]);
     await desk.click('[data-ws-note="t3"]');
-    await desk.click('#ws-side [data-reopen="t3"]');
+    await desk.click('#ws-pop [data-reopen="t3"]');
     await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/threads/t3/reopen"));
     await desk.click('[data-ws-filter="open"]');
     await desk.click('[data-ws-note="t1"]');
-    assert.match(await desk.textContent('[data-ws-note="t1"]'), /Save is easy to miss[\s\S]*Agreed/, "a picked note shows its whole conversation");
-    await desk.fill('#ws-side [data-reply="t1"]', "Make it primary");
-    await desk.click('#ws-side [data-send-reply="t1"]');
+    await desk.waitForSelector("#ws-pop:not([hidden])");
+    assert.match(await desk.textContent("#ws-pop"), /Save is easy to miss[\s\S]*Agreed/, "a picked note opens its whole conversation in place");
+    await desk.fill('#ws-pop [data-reply="t1"]', "Make it primary");
+    await desk.click('#ws-pop [data-send-reply="t1"]');
     assert.deepEqual(await sent("/api/threads/t1/messages", 1), { text: "Make it primary" });
     await desk.waitForSelector('#ws-side [data-work-in="t1,t2"]');
     await desk.click('#ws-side [data-work-in="t1,t2"]');
@@ -1877,34 +1881,35 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     await desk.click('[data-card="r6"]');
     await desk.click('[data-act="workspace"]');
     const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
-    await frame.waitForSelector('#review [data-review-view="2"]');
+    await frame.waitForSelector('#review [data-review-view="2"]', { state: "attached" });
     // The workspace opens in Click through: the design acts as it is until Select is pressed.
-    assert.equal(await desk.getAttribute('[data-ws-mode="off"]', "class"), "btn small on", "Click through is the tool picked on opening");
-    assert.equal(await frame.evaluate(() => document.documentElement.style.cursor), "", "the design is not in Select mode");
+    assert.equal(await desk.getAttribute('[data-ws-mode="off"]', "aria-pressed"), "true", "Click through is the tool picked on opening");
+    const tool = () => frame.evaluate(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
+    assert.equal(await tool(), false, "the design keeps its own pointer");
+    // The design's own bar is hidden in the workspace: its pages are in the Desk's bar above the design.
+    assert.equal(await frame.isHidden("#review"), true, "the design's own bar is hidden");
+    await desk.waitForSelector('[data-ws-page="2"]');
+    assert.match(await desk.textContent(".ws-pages"), /Pages[\s\S]*Start[\s\S]*Billing/, "the design's pages are named above it");
     await desk.click('[data-ws-mode="select"]');
-    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair"); // Select mode reached the frame
-    // The frame outlines what the pointer is on with a dashed box; nothing else here is dashed.
-    const outlined = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
-
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent))); // Select mode reached the frame
+    await desk.click('[data-ws-panel="props"]');
+    // The frame tints and outlines what the pointer is on.
     await frame.hover('[data-view="1"] button');
-    await frame.waitForFunction(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "dashed"));
-    await frame.hover('#review [data-review-view="2"]');
-    await top.waitForTimeout(300);
-    assert.equal(await outlined(), false, "a hover on the review bar outlines nothing");
+    await frame.waitForFunction(() => [...document.querySelectorAll("div")].some((d) => d.style.zIndex === "2147483646" && d.style.opacity === "1"));
 
-    await frame.click('#review [data-review-view="2"]');
-    await top.waitForTimeout(300);
-    assert.match(await frame.getAttribute('[data-view="2"]', "class"), /review-shown/, "the bar switched the view");
-    assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "a click on the review bar picks nothing");
+    await desk.click('[data-ws-page="2"]');
+    await frame.waitForFunction(() => /review-shown/.test(document.querySelector('[data-view="2"]').className));
+    assert.equal(await desk.getAttribute('[data-ws-page="2"]', "aria-selected"), "true", "the page picked shows as picked");
+    assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "a move to another page picks nothing");
 
     await frame.click('[data-view="2"] button');
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
-    assert.match(await desk.textContent("#ws-side .sel"), /in Billing/, "a click on the design picks it, with its view");
+    assert.match(await desk.textContent("#ws-side .sel"), /on Billing/, "a click on the design picks it, with its view");
 
     // The part picked is let go once it no longer shows, and by Click through.
-    const solid = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Selected"));
-    assert.equal(await solid(), true, "the part picked is framed");
-    await frame.click('#review [data-review-view="1"]');
+    const solid = () => frame.evaluate(() => [...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
+    assert.equal(await solid(), true, "the part picked is framed, named by its kind");
+    await desk.click('[data-ws-page="1"]');
     await desk.waitForFunction(() => document.querySelector("#ws-side .sel b")?.textContent === "Nothing selected");
     assert.equal(await solid(), false, "another page of the design lets the part go");
     // Closed by the design itself, as a menu closes: hidden or fully transparent, it or a box round it.
@@ -1928,13 +1933,13 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
     // Another version lets the part go.
     await desk.selectOption("#ws-version", "1");
     await cleared();
-    await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Selected"));
+    await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
     await desk.selectOption("#ws-version", "2");
     await frame.click('[data-view="1"] button');
     await picked();
     await desk.click('[data-ws-mode="off"]');
     assert.equal(await desk.textContent("#ws-side .sel b"), "Nothing selected", "Click through lets the part go");
-    await frame.waitForFunction(() => document.documentElement.style.cursor === "");
+    await frame.waitForFunction(() => ![...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
     assert.equal(await solid(), false, "and its frame leaves the design");
 
     // Draw every state is an element's, under the option: the workspace has none; the element's
@@ -1992,7 +1997,7 @@ test("the look palette: in the side panel under the part picked, a preview only,
     await frame.waitForSelector("button.primary");
     assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette in Click through");
     await desk.click('[data-ws-mode="select"]');
-    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent))); // the tool's pointer reached the frame
     await frame.click("button.primary");
     await desk.waitForSelector("#ws-palette:not([hidden]) [data-pl-tab]");
     assert.deepEqual(await desk.$$eval("#ws-palette [data-pl-tab]", (b) => b.map((x) => x.textContent)), ["Text", "Fill", "Spacing", "Size"], "a button that is no flex box has no Layout");
@@ -2066,7 +2071,7 @@ test("the look palette is for admins, designers and lead developers: a PM select
     const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
     await frame.waitForSelector("button.primary");
     await desk.click('[data-ws-mode="select"]');
-    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent))); // the tool's pointer reached the frame
     await frame.click("button.primary");
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
     assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette for a PM");
@@ -2130,13 +2135,14 @@ test("the screen shown stays when the person switches options, where the other o
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r6"]');
     await desk.click('[data-act="workspace"]');
-    const frame = await frameShows("1");
-    await frame.click('#review [data-review-view="2"]');
+    await frameShows("1");
+    // The design's pages are in the Desk's bar above it; its own bar is hidden in the workspace.
+    await desk.click('[data-ws-page="2"]');
     await desk.click('[data-ws-variant="v2"]');
     await frameShows("3"); // Billing, under its own number in this option
     await desk.click('[data-ws-variant="v1"]');
-    const back = await frameShows("2");
-    await back.click('#review [data-review-view="1"]');
+    await frameShows("2");
+    await desk.click('[data-ws-page="1"]');
     await desk.click('[data-ws-variant="v2"]');
     await frameShows("1");
   } finally {
@@ -2780,7 +2786,8 @@ test("the bell counts what is For you, opens on it, reads a row only on its clic
   await desk.click("#bell-btn");
   await desk.click('#notes [data-only="0"]');
   await desk.click('#notes [data-note="0"]');
-  await desk.waitForSelector('[data-ws-note="t2"][aria-current="true"] .m.spot');
+  await desk.waitForSelector('[data-ws-note="t2"][aria-current="true"]');
+  await desk.waitForSelector("#ws-pop .m.spot");
   assert.notEqual(await desk.$eval('[data-ws-note="t2"]', (li) => getComputedStyle(li).display), "grid", "a workspace note is not drawn as a bell row");
   await desk.click("[data-ws-close]");
   // The shared click-away rule: a menu button without data-keep closes its menu.

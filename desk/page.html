@@ -1308,7 +1308,7 @@
   .note[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .note .h { font-size: var(--fs-ui); gap: 8px; margin-bottom: 8px; }
   .note .n { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: inline-grid; place-items: center; font-size: var(--fs-meta); font-weight: 600; flex: none; }
-  .note.done .n { background: var(--muted); }
+  .note.done .n { background: var(--ok); color: var(--bg); }
   .note .a, .note .m { font-size: var(--fs-ui); }
   @media (max-width: 860px) { #workspace { inset: 0; border-radius: 0; border: 0; } }
   @media (prefers-reduced-motion: reduce) { #workspace { animation: none; } }
@@ -1319,6 +1319,176 @@
   .ws-top .ws-close { order: 0; gap: 12px; padding: 8px 12px 8px 16px; font-weight: 600; border-radius: var(--r-md); }
   .ws-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   kbd { font: var(--fs-meta) var(--font); padding: 0 8px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-xs); color: var(--muted); font-weight: 400; }
+  /* The design workspace, laid out as a design tool: the request on top, the options as tabs, the pages
+     and states of the one shown, the design on a canvas with one floating tool bar, Comments and Properties beside. */
+  #workspace { display: flex; flex-direction: column; }
+  .ws-body { flex: 1; }
+  .ws-top { flex-wrap: nowrap; gap: 10px; padding: 8px 12px 8px 20px; border-bottom: 0; }
+  .ws-top .chip { flex: none; }
+  .ws-tabs { background: var(--panel); padding: 0 16px; border-bottom: 1px solid var(--line); min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .ws-tabs .vtabs { margin: 0 0 -1px; flex-wrap: nowrap; }
+  .ws-tabs .vtabs button { background: var(--soft); white-space: nowrap; gap: 6px; }
+  .ws-tabs .vtabs button[aria-pressed="true"] { background: var(--bg); border-bottom-color: var(--bg); }
+  .ws-tabs .vtabs button.busy { box-shadow: inset 0 2px 0 #b26b00; }
+  .ws-tbusy { display: inline-grid; place-items: center; width: 16px; height: 16px; color: #b26b00; font-size: 12px; }
+  .ws-tbusy .spin { margin: 0; width: 12px; height: 12px; border-color: #b26b00; border-right-color: transparent; }
+  .ws-count { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; line-height: 17px; text-align: center; box-sizing: border-box; font-variant-numeric: tabular-nums; }
+  .ws-sub { display: flex; align-items: center; gap: 12px; padding: 6px 16px; background: var(--bg); border-bottom: 1px solid var(--line); min-height: 44px; box-sizing: border-box; flex-wrap: wrap; }
+  .ws-sub[hidden] { display: none; }
+  .ws-sub .vsep { align-self: center; height: 20px; margin: 0; }
+  .ws-pages { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ws-pages .k { color: var(--muted); font-size: var(--fs-meta); font-weight: 600; }
+  .ws-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); overflow-x: auto; scrollbar-width: none; max-width: 52vw; }
+  .ws-seg button { border: 0; background: none; border-radius: 7px; padding: 3px 10px; font: inherit; font-size: var(--fs-meta); color: var(--muted); white-space: nowrap; cursor: pointer; }
+  .ws-seg button:hover { color: var(--ink); }
+  .ws-seg button[aria-selected="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.06); }
+  .ws-ibtn, .ws-back { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--muted); border-radius: 7px; padding: 4px; cursor: pointer; }
+  .ws-ibtn:hover, .ws-back:hover, .ws-ibtn[aria-expanded="true"] { background: var(--soft); color: var(--ink); }
+  .ws-ibtn .ico, .ws-back .ico, .ws-pick .ico, .ws-ver .ico { width: 16px; height: 16px; }
+  .ico { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .ws-pick { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 3px 6px 3px 10px; font: inherit; font-size: var(--fs-meta); font-weight: 600; cursor: pointer; }
+  .ws-pick .hint { display: inline; font-weight: 400; }
+  .ws-pick[aria-expanded="true"] { border-color: var(--accent); }
+  .ws-menuwrap { position: relative; display: inline-flex; }
+  .ws-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 220px; display: grid; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+  .ws-top .ws-menu { left: auto; right: 0; }
+  .ws-menu > button, .ws-menu > a { display: flex; align-items: center; gap: 8px; border: 0; background: none; text-align: left; padding: 6px 10px; border-radius: 7px; font: inherit; font-size: var(--fs-ui); color: var(--ink); cursor: pointer; text-decoration: none; }
+  .ws-menu > button span:first-child { flex: 1; }
+  .ws-menu > button:hover, .ws-menu > a:hover { background: var(--soft); }
+  .ws-menu > button[aria-checked="true"] { background: var(--info-soft); font-weight: 600; }
+  .ws-mgroup { padding: 8px 10px 2px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .ws-ver { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+  .ws-ver select { width: auto; padding: 3px 6px; font-size: var(--fs-meta); }
+  .ws-agent { display: inline-flex; align-items: center; gap: 8px; max-width: 46ch; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, #b26b00 10%, var(--panel)); color: #8a5300; font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; overflow: hidden; }
+  .ws-agent > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+    .ws-body { min-height: 0; }
+  .ws-stage { padding: 0; gap: 0; }
+  .ws-canvas { position: relative; flex: 1; min-height: 0; display: flex; padding: 16px 16px 76px; background: color-mix(in srgb, var(--ink) 5%, var(--bg)); }
+  .ws-canvas .frame { flex: 1; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 1px var(--line); transition: box-shadow .3s; }
+  /* Design Desk changing the option shown: its design glows. */
+  .ws-canvas.busy .frame { box-shadow: 0 0 0 2px #e8a33c, 0 0 0 6px color-mix(in srgb, #e8a33c 25%, transparent); animation: ws-glow 1.8s ease-in-out infinite; }
+  @keyframes ws-glow { 50% { box-shadow: 0 0 0 2px #e8a33c, 0 0 0 9px color-mix(in srgb, #e8a33c 12%, transparent); } }
+  @media (prefers-reduced-motion: reduce) { .ws-canvas.busy .frame { animation: none; } }
+  .ws-context { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); z-index: 3; display: grid; gap: 6px; width: max-content; max-width: min(640px, calc(100% - 48px)); pointer-events: none; }
+  .ws-context:empty { display: none; }
+  .ctx { pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.14); font-size: var(--fs-meta); }
+  .ctx > div { display: grid; gap: 1px; flex: 1; min-width: 0; }
+  .ctx b { font-size: var(--fs-ui); }
+  .ctx span { color: var(--muted); }
+  .ctx.warn { border-color: color-mix(in srgb, var(--warn, #b26b00) 50%, var(--line)); }
+  .ctx.alt { border-color: var(--accent); }
+  /* The tool bar: floating at the bottom of the canvas, icons only, the key in each tooltip. */
+  .ws-toolbar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 14px; background: #1e1e1e; box-shadow: 0 8px 30px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06) inset; }
+  .ws-toolbar .tool { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: none; color: #e6e6e6; cursor: pointer; }
+  .ws-toolbar .tool .ico { width: 20px; height: 20px; }
+  .ws-toolbar .tool:hover { background: rgba(255,255,255,.1); }
+  .ws-toolbar .tool[aria-pressed="true"]:not(.tog) { background: var(--warn); color: var(--bg); }
+  .ws-toolbar .tog { width: 34px; height: 34px; color: #8f8f8f; }
+  .ws-toolbar .tog .ico { width: 18px; height: 18px; }
+  .ws-toolbar .tog[aria-pressed="true"] { color: #fff; background: rgba(255,255,255,.14); }
+  .ws-toolbar .tsep { width: 1px; height: 22px; margin: 0 6px; background: rgba(255,255,255,.18); }
+  .ws-toolbar .tool:hover::after, .ws-toolbar .tool:focus-visible::after { content: attr(data-label) "   " attr(data-key); white-space: pre; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); padding: 4px 8px; border-radius: 6px; background: #1e1e1e; color: #fff; font-size: 12px; font-weight: 500; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+  .ws-toolbar .tool[title]:hover { cursor: pointer; }
+  /* A comment in place, beside its part. */
+  .ws-pop { position: absolute; z-index: 6; width: 400px; max-height: calc(100% - 100px); overflow: auto; display: grid; gap: 10px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.24); font-size: var(--fs-ui); }
+  .ws-pop[hidden] { display: none; }
+  .ws-pop .ph { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ws-pop .ph b { min-width: 0; overflow-wrap: anywhere; }
+  .ws-pop .ph .hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .ws-pop .ph b + .chip { margin-left: auto; }
+  .ws-pop .ph .ws-ibtn { margin-left: auto; flex: none; }
+  .ws-pop .ph .chip + .ws-ibtn { margin-left: 0; }
+  .ws-pop .pa, .ws-pop .pn { flex: none; width: 26px; height: 26px; border-radius: 50% 50% 50% 3px; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--warn); color: var(--bg); }
+  .ws-pop .pa { border-radius: 50%; background: var(--soft); color: var(--ink); }
+  .ws-pop .pn.done { background: var(--ok); color: #fff; }
+  .ws-pop textarea { min-height: 72px; resize: vertical; }
+  .ws-pop .bar { display: flex; justify-content: flex-end; gap: 6px; }
+  .ws-pop .pmsgs { display: grid; gap: 8px; max-height: 300px; overflow: auto; }
+  .ws-pop .m { padding: 8px 10px; border-radius: 10px; background: var(--soft); }
+  .ws-pop .m.a { background: var(--info-soft); }
+  .ws-pop .m .who { font-size: var(--fs-meta); color: var(--muted); margin-bottom: 2px; }
+  #workspace .ws-pop .ws-reply { width: 100%; box-sizing: border-box; margin: 0; min-height: 36px; height: 36px; resize: none; transition: height 80ms ease-out; }
+  #workspace .ws-pop .ws-reply:focus, #workspace .ws-pop .ws-reply:not(:placeholder-shown) { height: 76px; }
+  .ws-pop .bar { align-items: center; } .ws-pop .bar .grow { flex: 1; } .ws-pop .bar .btn { min-height: 36px; }
+  .ws-pop .ws-done { width: 36px; height: 36px; justify-content: center; border-radius: 9px; } .ws-pop .ws-done .ico { width: 22px; height: 22px; }
+  .ws-pop .ws-done:hover { color: var(--ok); background: var(--ok-soft); } .ws-pop .reply:empty { display: none; } .ws-pop .reply input { flex: 1; }
+  .ws-pop .bar:empty { display: none; }
+  /* The side: Comments and Properties, as a design tool's panel. */
+  .ws-side { padding: 0; gap: 0; display: flex; flex-direction: column; }
+  .ws-ptabs { display: flex; gap: 4px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+  .ws-ptabs button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 8px 10px 9px; font: inherit; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+  .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: 11px; line-height: 17px; text-align: center; box-sizing: border-box; }
+  .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: #0d99ff; }
+  .ws-pbody { padding: 14px 16px 80px; display: grid; gap: 12px; align-content: start; }
+  .sel .ws-wholebox { margin-top: 10px; background: var(--bg); }
+
+  /* The design fills the canvas down to its bottom edge, the tool bar over it; the canvas scrolls a bar's
+     height further, so the bottom of the design comes up above the tool bar. */
+  .ws-stage { position: relative; }
+  .ws-canvas { padding: 12px 12px 0; overflow-y: auto; gap: 8px; }
+  .ws-canvas::after { content: ""; flex: 0 0 64px; }
+  .ws-artboard { flex: 0 0 auto; height: calc(100% - 12px); }
+  .ws-toolbar { bottom: 12px; }
+  .ws-wholebox { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  #workspace .ws-wholebox textarea { min-height: 56px; resize: vertical; border: 0; padding: 2px; background: none; box-shadow: none; outline: none; font: inherit; }
+  .ws-wholebox:focus-within { border-color: var(--ink); }
+  .ws-wholebox .bar { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; } .ws-wholebox .bar .hint { flex: 1 1 100%; margin: 0; font-size: var(--fs-meta); }
+  .ws-chead { display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+  .ws-workall { justify-self: start; }
+  .ws-ghead { margin: 4px 0 -4px; font-size: var(--fs-meta); color: var(--muted); }
+  .ws-ghead .hint { display: inline; font-weight: 400; }
+  .ws-side .note { cursor: pointer; padding: 10px 12px; display: block; }
+  .ws-side .note .h { margin-bottom: 4px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ws-side .note .h .chip { flex: none; }
+  .ws-side .note .where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; color: var(--muted); }
+  .ws-side .note .n { border-radius: 50% 50% 50% 3px; background: var(--warn); color: var(--bg); }
+  .ws-side .note.working .n { background: var(--warn); color: var(--bg); }
+  .ws-side .note.done .n { background: var(--ok); color: #fff; width: 18px; height: 18px; font-size: 10px; } .ws-side .note.working .n .dd-spin { font-size: 12px; }
+  .ws-side .note .first { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ws-side .note .a { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 4px; color: var(--muted); font-size: var(--fs-ui); }
+  .ws-empty { margin: 8px 0; }
+  .ws-side .sel .actions .btn .ico { width: 14px; height: 14px; }
+  #workspace.checking .ws-side { padding: 18px; gap: 12px; }
+
+  /* Workspace controls on the panel's surface; the design on a grey canvas of its own. */
+  .ws-top, .ws-sub { background: var(--panel); }
+  .ws-top { border-bottom: 1px solid var(--line); min-height: 52px; box-sizing: border-box; }
+  .ws-top .title { font-size: var(--fs-ui); color: var(--muted); font-weight: 600; max-width: 24ch; flex: 0 1 auto; }
+  .ws-top .vsep { height: 20px; align-self: center; margin: 0 2px; }
+  .ws-opts { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .ws-opts .k { color: var(--muted); font-size: var(--fs-meta); font-weight: 600; }
+  .ws-opts .ws-seg { max-width: none; }
+  .ws-opt { display: inline-flex !important; align-items: center; gap: 6px; padding: 3px 8px 3px 4px !important; }
+  .ws-opt .ono { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); font-size: 11px; font-weight: 700; }
+  .ws-opt[aria-selected="true"] .ono { background: var(--ink); color: var(--bg); }
+  .ws-opt .nm { max-width: 11ch; overflow: hidden; text-overflow: ellipsis; }
+  .ws-opt .ws-ncount { display: inline-flex; align-items: center; gap: 1px; color: var(--muted); font-size: 10px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ws-opt .ws-ncount .ico { width: 11px; height: 11px; }
+  .ws-opt .vclose { margin-left: 0; padding: 0 3px; border-radius: 4px; font-size: 10px; color: var(--muted); opacity: 0; }
+  .ws-opt:hover .vclose { opacity: 1; } .ws-opt .vclose:hover { background: var(--soft); color: var(--ink); }
+  .ws-add { width: 28px; height: 28px; justify-content: center; font-size: 18px; border: 1px dashed var(--line) !important; }
+  /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
+     round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
+     font size, its color the text color. Queued: still and faint. */
+  .dd-spin { position: relative; display: inline-block; width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; color: var(--warn); animation: dd-spin-turn 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::before, .dd-spin::after { content: ""; position: absolute; top: 29.167%; width: 37.5%; height: 41.667%; background: currentColor; border-radius: 0 999px 999px 0; animation: dd-spin-left 5s cubic-bezier(.65,0,.35,1) infinite; }
+  .dd-spin::before { left: 7.5%; }
+  .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
+  .dd-spin.queued, .dd-spin.queued::before, .dd-spin.queued::after { animation: none; }
+  .dd-spin.queued { opacity: .5; }
+  .dd-spin.light { color: #fff; }
+  @keyframes dd-spin-turn { 0%, 72% { transform: rotate(0); } 94%, 100% { transform: rotate(360deg); } }
+  @keyframes dd-spin-left { 0%, 12% { transform: scaleX(1); } 20%, 34% { transform: scaleX(-1); } 42%, 100% { transform: scaleX(1); } }
+  @keyframes dd-spin-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before, .dd-spin::after { animation-duration: 10s; } }
+  .ws-sub { min-height: 40px; padding: 4px 16px; }
+  .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 3ch; text-align: center; }
+  .ws-canvas { flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
+  .ws-artboard { display: flex; }
+  .ws-context { position: static; transform: none; width: auto; max-width: none; justify-items: center; }
+  .ctx { width: min(640px, 100%); box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
   /* Design Desk working on it now: the tag's dot pulses. */
   .tag.busy::before { background: currentColor; box-shadow: none; animation: pulse 1.2s ease-in-out infinite; }
   /* Motion (docs/desk-page.md → Motion): short and soft, only for people who did not ask their
@@ -1905,7 +2075,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       reopen: "undo", revise: "redo", close: "cross", states: "layers", slack: "send", unqueue: "minus",
       draw: "pen", refresh: "redo", history: "clock", "figma-import": "down", "figma-export": "up" },
     size: { small: "bolt", designer: "person" },
-    adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen", wsSend: (el) => el.dataset.wsSend === "comment" ? "chat" : "send",
+    adjust: "pen", addShots: "image", wsEdit: "pen", wsBuild: "screen",
   };
   const OWN_SIGN = /^[^\p{L}\p{N}]/u;
   function iconFor(el) {
@@ -5414,6 +5584,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // CSS path, the text and a plain label.
   function frameScript() {
     let mode = "off", selected = null, hover = null, pins = [], editing = null, under = null;
+    // Each tool's own pointer over the whole design, over its buttons and fields too; Click through keeps the design's.
+    const toolCursor = document.createElement("style");
+    document.documentElement.appendChild(toolCursor);
+    const SELECT_CURSOR = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27%3E%3Cpath d=%27M4 2.5l15 8.6-6.6 1.7-3.4 6.2z%27 fill=%27%23161616%27 stroke=%27%23fff%27 stroke-width=%271.6%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E") 4 2, default';
+    const COMMENT_CURSOR = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27%3E%3Cpath d=%27M3 21V8a5 5 0 0 1 5-5h8a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5H8z%27 fill=%27%23fff%27 stroke=%27%23161616%27 stroke-width=%271.6%27/%3E%3C/svg%3E") 3 21, crosshair';
     // A part picked that showed and no longer does (another page, a closed menu) is let go, and the Desk hears of it.
     // One that never showed (a note's part the design has not opened) stays picked.
     let selectedPath = "", selectedShown = false;
@@ -5447,29 +5622,72 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The pins are drawn afresh every moment, so leaving one is read from the pointer, not the pin.
     // Opened on the press: the pin is redrawn before a click could land on it, and that click is not a pick.
     let pinTip = false, pinPressed = 0;
-    addEventListener("mousemove", (e) => { if (pinTip && !e.target.closest?.("[data-note-pin]")) { pinTip = false; say({ type: "desk-pin-tip", note: null }); } }, true);
+    addEventListener("mousemove", (e) => { const x = e.clientX + scrollX, y = e.clientY + scrollY, hit = pinAt.find((r) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom)?.note || null;
+      if (hit === pinHover) return; pinHover = hit; pinTip = Boolean(hit); draw();
+      say(hit ? { type: "desk-pin-tip", note: hit, rect: { left: e.clientX, top: e.clientY, bottom: e.clientY + 12, width: 0 } } : { type: "desk-pin-tip", note: null }); }, true);
     const box = (el, color, label, solid, note) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (solid ? "solid " : "dashed ") + color + ";border-radius:5px;box-sizing:border-box"; if (label) { const b = document.createElement("span"); b.textContent = label; b.style.cssText = "position:absolute;left:-2px;top:-21px;background:" + color + ";color:#fff;font:600 11px/19px system-ui,sans-serif;padding:0 7px;border-radius:10px;white-space:nowrap"; if (note) { b.dataset.notePin = note; b.style.pointerEvents = "auto"; b.style.cursor = "pointer"; b.onmouseenter = (e) => { pinTip = true; say({ type: "desk-pin-tip", note, rect: { left: e.clientX, top: e.clientY, bottom: e.clientY + 12, width: 0 } }); }; b.onpointerdown = (e) => { e.stopPropagation(); e.preventDefault(); pinPressed = Date.now(); say({ type: "desk-pin-open", note }); }; } d.appendChild(b); } layer.appendChild(d); };
     // A part a decision shaped: a dashed frame with a small mark in its corner; the decisions'
     // numbers show on the part under the pointer and, framed solid, on the decision picked,
     // while the others keep only a faint frame. A decision no longer in force is red.
     const tag = (el, text, focus, quiet, gone, full) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; const c = gone ? "#b3261e" : "#0d7d78"; const d = document.createElement("div"); d.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border-radius:5px;box-sizing:border-box;" + (focus ? "border:2px solid " + c + ";background:" + (gone ? "rgba(179,38,30,.07)" : "rgba(13,125,120,.08)") : "border:1px dashed " + c + (quiet ? ";opacity:.3" : "")); layer.appendChild(d); if (quiet || !text) return; const b = document.createElement("span"); if (!full) { b.textContent = "◆"; b.style.cssText = "position:absolute;right:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:#fff;color:" + c + ";border:1px solid " + c + ";font:9px/13px system-ui,sans-serif;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.18)"; d.appendChild(b); return; } b.textContent = "◆ " + text; b.style.cssText = "position:absolute;right:-2px;" + (r.top + scrollY < 22 ? "bottom:-20px" : "top:-20px") + ";background:" + (focus ? c : "#fff") + ";color:" + (focus ? "#fff" : c) + ";border:1px solid " + c + ";font:600 11px/17px system-ui,sans-serif;padding:0 6px;border-radius:9px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.18)" + (gone ? ";text-decoration:line-through" : ""); d.appendChild(b); };
+    // A comment's pin: a numbered bubble on the part's top-left corner, as in a design tool; the part
+    // is outlined while its comment is open or its pin is pointed at. One Design Desk works on carries its spinner.
+    const spinCss = document.createElement("style");
+    // The DD pair, as on the Desk (.dd-spin), on a white disc beside a pin Design Desk works on.
+    spinCss.textContent = ".desk-dd{position:absolute;right:-10px;top:-10px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);font-size:14px;display:grid;place-items:center}.desk-dd i{position:relative;display:block;width:1em;height:1em;color:#9a6200;animation:dd-t 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before,.desk-dd i::after{content:'';position:absolute;top:29.167%;width:37.5%;height:41.667%;background:currentColor;border-radius:0 999px 999px 0;animation:dd-l 5s cubic-bezier(.65,0,.35,1) infinite}.desk-dd i::before{left:7.5%}.desk-dd i::after{left:55%;animation-name:dd-r}@keyframes dd-t{0%,72%{transform:rotate(0)}94%,100%{transform:rotate(360deg)}}@keyframes dd-l{0%,12%{transform:scaleX(1)}20%,34%{transform:scaleX(-1)}42%,100%{transform:scaleX(1)}}@keyframes dd-r{0%,40%{transform:scaleX(1)}48%,58%{transform:scaleX(-1)}66%,100%{transform:scaleX(1)}}@media (prefers-reduced-motion:reduce){.desk-dd i,.desk-dd i::before,.desk-dd i::after{animation-duration:10s}}";
+    document.documentElement.appendChild(spinCss);
+    // The pins drawn and where (page coordinates): the pointer over one is found from these, so a redraw never flickers it.
+    let pinHover = null, pinAt = [];
+    const commentPin = (el, p) => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return;
+      const done = p.state === "done", c = done ? "#1f7a4d" : "#9a6200", big = p.focus || pinHover === p.note;
+      if (big) { const o = document.createElement("div"); o.style.cssText = "position:absolute;left:" + (r.left + scrollX - 3) + "px;top:" + (r.top + scrollY - 3) + "px;width:" + (r.width + 6) + "px;height:" + (r.height + 6) + "px;border:2px " + (p.focus ? "solid " : "dashed ") + c + ";border-radius:5px;box-sizing:border-box"; layer.appendChild(o); }
+      const s = p.focus ? 30 : done ? 20 : 26, b = document.createElement("span");
+      b.textContent = p.n; b.dataset.notePin = p.note;
+      b.style.cssText = "position:absolute;left:" + Math.max(scrollX + 2, r.left + scrollX - s / 2) + "px;top:" + Math.max(scrollY + 2, r.top + scrollY - s + 6) + "px;width:" + s + "px;height:" + s + "px;box-sizing:border-box;border-radius:50% 50% 50% 3px;background:" + c + ";color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)" + (p.focus ? ",0 0 0 3px " + c + "55" : "") + ";font:700 " + (p.focus ? 13 : done ? 10 : 12) + "px/" + (s - 4) + "px system-ui,sans-serif;text-align:center;pointer-events:auto;cursor:pointer" + (done && !big ? ";opacity:.75" : "");
+      if (p.state === "working") { const dd = document.createElement("span"); dd.className = "desk-dd"; dd.appendChild(document.createElement("i")); b.appendChild(dd); }
+      b.onpointerdown = (e) => { e.stopPropagation(); e.preventDefault(); pinPressed = Date.now(); say({ type: "desk-pin-open", note: p.note }); };
+      layer.appendChild(b); const br = b.getBoundingClientRect(); pinAt.push({ note: p.note, left: br.left + scrollX, top: br.top + scrollY, right: br.right + scrollX, bottom: br.bottom + scrollY }); };
     const shaped = (el) => [...new Set(pins.filter((p) => p.why && find(p.selector)?.contains(el)).map((p) => p.why))];
     // The innermost element with states drawn that holds the part picked: its key, or none.
     let els = [];
     const elementOf = (el) => { const hits = els.map((x) => ({ key: x.key, node: find(x.selector) })).filter((x) => x.node && x.node.contains(el)); return (hits.find((x) => !hits.some((y) => y.node !== x.node && x.node.contains(y.node))) || {}).key || null; };
     // A played story's numbered frames show only while the design's Show hotspots switch is on.
     const hot = () => document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") === "true";
-    const draw = () => { letGo(); layer.textContent = ""; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el) box(el, p.state === "story" ? "#2f5bd3" : p.state === "done" ? "#1f7a4d" : p.state === "working" ? "#9a6200" : "#6b6b66", p.label || "#" + p.n, p.state === "story", p.note); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
+    const draw = () => { letGo(); layer.textContent = ""; pinAt = []; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el && p.note) commentPin(el, p); else if (el) box(el, "#2f5bd3", p.label || "#" + p.n, true); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
       // A part inside another part the same decision shaped does not repeat its number.
       const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
-      for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } if (hover && mode !== "off" && hover !== selected) box(hover, "#2f5bd3", null, false); if (selected) box(selected, "#2f5bd3", mode === "edit" ? "Editing" : "Selected", true); lookFrame(); };
+      for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } hoverMove(mode !== "off" && hover !== selected ? hover : null); if (selected) box(selected, mode === "comment" ? "#b26b00" : "#2f5bd3", mode === "edit" ? "Editing" : mode === "comment" ? null : kind(selected), true); lookFrame(); anchorSay(); };
+    // The part under the pointer, while a tool picks: a faint tint and outline that fade in and out.
+    const hoverBox = document.createElement("div");
+    hoverBox.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483646;box-sizing:border-box;border-radius:5px;opacity:0;transition:opacity 80ms ease-out,background-color 80ms ease-out,border-color 80ms ease-out";
+    document.documentElement.appendChild(hoverBox);
+    document.documentElement.addEventListener("mouseleave", () => { hover = null; hoverMove(null); });
+    const hoverMove = (el) => { const r = el?.getBoundingClientRect(); if (!r || (!r.width && !r.height)) { hoverBox.style.opacity = "0"; return; }
+      const c = mode === "comment" ? "178,107,0" : "47,91,211";
+      Object.assign(hoverBox.style, { left: r.left + scrollX - 3 + "px", top: r.top + scrollY - 3 + "px", width: r.width + 6 + "px", height: r.height + 6 + "px", border: "1.5px solid rgba(" + c + ",.75)", backgroundColor: "rgba(" + c + ",.07)", opacity: "1" }); };
+    // The part a comment opened in place is about: the Desk hears where it is whenever it moves.
+    let track = "", trackAt = "";
+    const anchorSay = () => { if (!track) return; const el = find(track); const r = el && showing(el) ? el.getBoundingClientRect() : null; const k = r ? [r.left, r.top, r.width, r.height].map(Math.round).join() : "";
+      if (k === trackAt) return; trackAt = k; say({ type: "desk-anchor", selector: track, rect: r ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null }); };
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-track") { track = d.selector || ""; trackAt = "-"; anchorSay(); } });
+    // The design's own bar is hidden in the workspace: the Desk shows its pages and switches, and drives them.
+    const chrome = () => { const sw = (q) => { const b = document.querySelector("#review " + q); return b && !b.hidden ? b.getAttribute("aria-checked") === "true" : null; };
+      const seg = document.querySelector('#review [data-group="empty"]');
+      say({ type: "desk-chrome", views: [...document.querySelectorAll("[data-view]")].map((v) => ({ view: v.dataset.view, name: v.dataset.viewName || "View " + v.dataset.view })), view: shownView()?.dataset.view || "",
+        back: Boolean(document.querySelector("#review #review-back:not([hidden])")), hot: sw("[data-hot]"), notes: sw("[data-notes]"), empty: seg && !seg.hidden ? de.classList.contains("review-empty") : null, dark: document.querySelector('#review [data-group="theme"]') ? de.classList.contains("dark") : null }); };
+    addEventListener("message", (e) => { const d = e.data || {};
+      if (d.type === "desk-flip") { const q = { hot: "[data-hot]", notes: "[data-notes]", empty: '[data-empty="' + (de.classList.contains("review-empty") ? 0 : 1) + '"]', dark: '[data-theme="' + (de.classList.contains("dark") ? "light" : "dark") + '"]', back: "[data-review-back]" }[d.what]; if (q) document.querySelector("#review " + q)?.click(); setTimeout(chrome, 0); }
+      if (d.type === "desk-chrome-get") chrome(); });
+    // The tools' keys work while the design has the focus too.
+    addEventListener("keydown", (e) => { if (editing || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable]:not([contenteditable=false])")) return; if (e.key.length === 1 || e.key === "Escape") { say({ type: "desk-key", key: e.key, shift: e.shiftKey }); if (e.key !== "Escape") e.preventDefault(); } }, true);
     addEventListener("scroll", draw, true); addEventListener("resize", draw); setInterval(draw, 700);
+    if (document.readyState === "loading") addEventListener("DOMContentLoaded", () => setTimeout(chrome)); else setTimeout(chrome);
     // The screen shown is kept across options: the Desk names the one to open when the frame
     // loads, and from then on hears of each screen the person moves to.
     const shownView = () => document.querySelector("[data-view].review-shown");
     let lastView = null;
     const openView = (d) => { const vs = [...document.querySelectorAll("[data-view]")]; const t = vs.find((v) => d.view_name && v.dataset.viewName === d.view_name) || (!d.view_name && vs.find((v) => v.dataset.view === d.view)); if (t && !t.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(t.dataset.view) + '"]')?.click(); };
-    const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); };
+    const viewMoved = () => { if (lastView === null) return; const v = shownView(); const k = v ? v.dataset.view : ""; if (k === lastView) return; lastView = k; parent.postMessage({ type: "desk-view", view: k, view_name: v.dataset.viewName || "" }, "*"); chrome(); };
     // A class or style change (another page, a menu closing) may hide the part picked: checked once a frame, and the
     // layer is redrawn only when the part is let go, so a design that animates a class never redraws the layer for it.
     let looking = 0;
@@ -5483,11 +5701,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (document.readyState === "loading") addEventListener("DOMContentLoaded", emptySwitches); else emptySwitches();
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
-    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(find(d.selector), d.selector || ""); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; toolCursor.textContent = mode === "off" ? "" : "html, html *:not(#review *) { cursor: " + (mode === "edit" ? "text" : mode === "comment" ? COMMENT_CURSOR : SELECT_CURSOR) + " !important; }"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(find(d.selector), d.selector || ""); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     // The bar's own state, said to the Desk on every change and set again after a replay's fresh load.
     const de = document.documentElement, hotSwitch = () => document.querySelector("#review [data-hot]");
     const barState = () => ({ type: "desk-bar", dark: de.classList.contains("dark"), empty: de.classList.contains("review-empty"), hot: hotSwitch()?.getAttribute("aria-checked") === "true" });
-    addEventListener("click", (e) => { if (e.target.closest?.("#review")) setTimeout(() => say(barState()), 0); });
+    addEventListener("click", (e) => { if (e.target.closest?.("#review")) setTimeout(() => { say(barState()); chrome(); }, 0); });
     addEventListener("message", (e) => {
       const d = e.data || {};
       if (d.type !== "desk-bar-set") return;
@@ -5555,7 +5773,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (editing && editing.contains(e.target)) return;
       e.preventDefault(); e.stopPropagation();
       const el = e.target; pick(el, css(el)); hover = null; draw();
-      parent.postMessage({ type: "desk-picked", selector: selectedPath, tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), kind: kind(el), look: lookOf(el), ...viewOf(el) }, "*");
+      const pr = el.getBoundingClientRect();
+      parent.postMessage({ type: "desk-picked", selector: selectedPath, tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), kind: kind(el), look: lookOf(el), rect: { left: pr.left, top: pr.top, right: pr.right, bottom: pr.bottom }, ...viewOf(el) }, "*");
       if (mode === "edit") startEdit(el);
     }, true);
     // The look palette: the Desk changes a part's look here as a preview (an inline style), nothing is
@@ -5725,7 +5944,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderWorkspaceBody() {
     const ws = $("#workspace");
     const c = S.card, v = S.ws.open && c ? wsVariant(c) : null;
-    if (!v) { S.ws.open = false; S.ws.shown = null; ws.hidden = true; ws.innerHTML = ""; return; }
+    if (!v) { S.ws.open = false; S.ws.shown = null; S.ws.pop = null; ws.hidden = true; ws.innerHTML = ""; return; }
     const d = wsDrawing(v);
     const versions = [{ version: d.version || 1, asset: d.asset }, ...(d.history || [])];
     // The final check shows only what goes live: the latest version.
@@ -5733,35 +5952,94 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const key = `${c.id}|${v.id}|${S.ws.state || ""}|${S.ws.alt || ""}|${showing.asset}`;
     ws.hidden = false;
     if (S.ws.shown !== key || !$("#ws-frame")) {
-      ws.innerHTML = `<div class="ws-top" id="ws-top"></div><div class="ws-body"><div class="ws-stage"><div class="actions" style="margin:0" id="ws-tools"></div><div id="ws-states"></div>
-        <iframe class="frame" id="ws-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div><aside class="ws-side" id="ws-side"></aside></div>`;
-      S.ws.shown = key; S.ws.look = null; S.ws.pal = null; S.ws.plColor = null;
+      ws.innerHTML = `<div class="ws-top" id="ws-top"></div><div class="ws-sub" id="ws-sub"></div>
+        <div class="ws-body"><div class="ws-stage" id="ws-stage"><div class="ws-canvas" id="ws-canvas"><div class="ws-context" id="ws-context"></div><div class="ws-artboard">
+          <iframe class="frame" id="ws-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe></div></div>
+          <div class="ws-pop" id="ws-pop" role="dialog" hidden></div><div class="ws-toolbar" id="ws-toolbar" role="toolbar" aria-label="Tools"></div></div>
+        <aside class="ws-side" id="ws-side"></aside></div>`;
+      S.ws.shown = key; S.ws.look = null; S.ws.pal = null; S.ws.plColor = null; S.ws.chrome = null; S.ws.anchor = null;
       loadWsFrame(c, v, showing.asset, d.asset, key);
     }
     if (S.ws.check) S.ws.looked.add(`${v.id}|${S.ws.state || ""}`);
     const old = showing.version !== (d.version || 1);
     S.ws.old = old;
-    const shaper = can("change") && !locked(S.card);
-    $("#ws-top").innerHTML = S.ws.check ? `
-      <span class="title" title="${esc(c.title)}">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span><span class="grow"></span><button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
-      : `
-      <span class="title" title="${esc(c.title)}">${esc(c.title)}</span>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${(c.variants || []).map((x) => `<button data-ws-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${(c.variants || []).indexOf(x) + 1}</span>${esc(x.name)}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
-      <span class="grow"></span>
-      ${S.me?.figma && can("figma") ? `<button class="btn small" data-act="figma-import">Import from Figma</button><button class="btn small" data-act="figma-export">Send to Figma</button>` : ""}
-      ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
-    // The version picker sits with the design's own tools, so the bar above keeps its height.
-    const versionPick = versions.length > 1 ? `<select id="ws-version" style="width:auto;padding:3px 8px;font-size: var(--fs-meta)">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select>` : "";
-    $("#ws-tools").innerHTML = S.ws.check ? `<span class="hint">Click through it as people will use it: every screen, and every state above. This is exactly what goes live.</span>`
-      : old ? `${versionPick}<span class="chip warn" title="Pick the latest version beside to comment or change it">You are looking at version ${showing.version}. Notes go to the latest version.</span>` : `${versionPick ? `${versionPick}<span class="vsep" aria-hidden="true"></span>` : ""}
-      <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
-      ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
-      <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
-      ${pinned(c, v).length ? `<label class="switch ws-switch" title="Shows or hides the comments' numbers on the design; the list beside keeps them"><input type="checkbox" role="switch" data-ws-notes ${S.ws.notes ? "checked" : ""} /><span>Comments</span></label>` : ""}`;
-    $("#ws-states").innerHTML = wsAlts(c, v) + wsStates(c, v);
+    if (old || S.ws.check) { S.ws.pop = null; if (S.ws.mode !== "off") S.ws.mode = "off"; }
+    $("#workspace").classList.toggle("checking", Boolean(S.ws.check));
+    $("#ws-top").innerHTML = wsTop(c, v);
+    const sub = [wsPages(), wsStates(c, v), wsAlts(c, v)].filter(Boolean);
+    const versionPick = versions.length > 1 && !S.ws.check ? `<label class="ws-ver" title="Earlier versions, to look at; comments go to the latest">${wsIcon("history")}<select id="ws-version">${versions.map((h, i) => `<option value="${h.version}" ${showing.version === h.version ? "selected" : ""}>Version ${h.version}${i === 0 ? " (latest)" : ""}</option>`).join("")}</select></label>` : "";
+    $("#ws-sub").innerHTML = `${sub.join(`<span class="vsep" aria-hidden="true"></span>`)}<span class="grow"></span>${versionPick}`;
+    $("#ws-sub").hidden = !sub.length && !versionPick;
+    $("#ws-context").innerHTML = wsContext(c, v, old, showing);
+    $("#ws-toolbar").innerHTML = wsToolbar(c, v, old);
+    $("#ws-canvas").classList.toggle("busy", busyOn(c, v.id).some((w) => w.state === "claimed"));
+    $("#ws-canvas").dataset.mode = S.ws.mode;
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
+    renderPop(c, v);
     sendPins(c, v);
     renderPalette();
+  }
+
+  // What Design Desk does on one option now: changing it, drawing its states, other ways of a part, bringing it from Figma.
+  function busyOn(c, vid) {
+    const changes = notesOf(c).filter((n) => n.anchor.variant === vid && n.kind === "change" && n.state !== "resolved" && !n.messages[n.messages.length - 1]?.by?.agent);
+    return (c.waiting || []).filter((w) => !workDone(c, w) && ["revise", "states", "figma"].includes(w.kind) && (w.variant ? w.variant === vid : w.kind === "revise" && w.scope !== "alternatives" && changes.length))
+      .map((w) => ({ ...w, what: w.kind === "states" ? `Drawing every state${w.part ? ` of ${w.part}` : ""}` : w.kind === "figma" ? "Bringing it in from Figma"
+        : w.scope === "alternatives" ? `Drawing other ways${w.part ? ` ${w.part}` : " a part"} could look` : `Changing it${changes.length ? ` for ${plural(changes.length, "comment", "comments")}` : ""}` }));
+  }
+  const busyWhen = (w) => w.state === "claimed" && w.started ? `started ${ago(w.started) === "just now" ? "just now" : `${ago(w.started)} ago`}${w.usual_min ? `, usually about ${w.usual_min} min` : ""}` : "in the queue, starts within 10 minutes";
+
+  const ICONS = {
+    through: '<path d="M9 11.5V5.5a1.5 1.5 0 0 1 3 0v5m0-1a1.5 1.5 0 0 1 3 0v1.5m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.5a6 6 0 0 1-4.8-2.4L3.6 15.4a1.6 1.6 0 0 1 2.5-2L9 16"/>',
+    select: '<path d="M14 3.5H4.5a1 1 0 0 0-1 1V14" stroke-dasharray="2.6 2.4"/><path d="M10 10l10 4-4.2 1.6L14 20z" fill="currentColor"/>',
+    comment: '<path d="M4 20.5V9a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5H8z"/>',
+    text: '<path d="M5 7V4.5h14V7M12 4.5v15M9 19.5h6"/>',
+    pins: '<path d="M4 20.5V9a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5H8z"/><path d="M10.5 8.5h1.5v5"/>',
+    why: '<path d="M12 3.5l8.5 8.5-8.5 8.5L3.5 12z"/><path d="M12 9v3.5M12 15.5h.01"/>',
+    hot: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+    notes: '<path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4M9 12.5h6M9 16h4"/>',
+    empty: '<rect x="4" y="4" width="16" height="16" rx="2.5" stroke-dasharray="3 2.6"/>',
+    dark: '<path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"/>',
+    history: '<path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.5M4 4v4.5h4.5M12 8v4.5l3 2"/>',
+    figma: '<path d="M9 3h3v6H9a3 3 0 0 1 0-6zM12 3h3a3 3 0 0 1 0 6h-3zM9 9h3v6H9a3 3 0 0 1 0-6zM15 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM9 15h3v3a3 3 0 1 1-3-3z"/>',
+    chev: '<path d="M7 10l5 5 5-5"/>', prev: '<path d="M14.5 6l-6 6 6 6"/>', next: '<path d="M9.5 6l6 6-6 6"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>', done: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4 4.6-5"/>', back: '<path d="M19 12H5m6-6l-6 6 6 6"/>',
+  };
+  const wsIcon = (k) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+
+  // The bar on top: the request, what Design Desk does on it now, Figma, and the one way out.
+  function wsTop(c, v) {
+    const busy = [v, ...(c.variants || []).filter((x) => x.id !== v.id)].flatMap((x) => busyOn(c, x.id).map((w) => ({ ...w, on: x.name }))).concat(working(c).includes("explore") ? [{ state: "claimed", what: "Drawing a new option" }] : []);
+    const on = busy.filter((w) => w.state === "claimed"), agent = busy.length ? `<span class="ws-agent ${on.length ? "on" : ""}" title="${esc(busy.map((w) => `${w.on ? `${w.on}: ` : ""}${w.what} (${busyWhen(w)})`).join("\n"))}"><span class="dd-spin ${on.length ? "" : "queued"}"></span><span>Design Desk: ${esc(busy.map((w) => `${w.what}${w.on ? ` · ${w.on}` : ""}`)[0])}${busy.length > 1 ? ` <b>+${busy.length - 1}</b>` : ""}</span></span>` : "";
+    const fig = S.me?.figma && can("figma") && !S.ws.check, menu = S.ws.menu === "figma";
+    const figBtn = fig || v.figma_url ? `<span class="ws-menuwrap"><button class="ws-ibtn" data-ws-menu="figma" aria-expanded="${menu}" title="Figma">${wsIcon("figma")}${wsIcon("chev")}</button>${menu ? `<div class="ws-menu" role="menu">${fig ? `<button role="menuitem" data-act="figma-import">Import from Figma</button><button role="menuitem" data-act="figma-export">Send to Figma</button>` : ""}${v.figma_url ? `<a role="menuitem" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}</div>` : ""}</span>` : "";
+    const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
+      : `<span class="title" title="${esc(c.title)}">${esc(c.title)}</span><span class="vsep" aria-hidden="true"></span>`;
+    const opts = S.ws.check ? "" : `<div class="ws-opts" role="tablist" aria-label="Design options"><span class="k">Option</span><span class="ws-seg">${(c.variants || []).map((x, i) => wsTab(c, x, i, x.id === v.id)).join("")}</span>${wsAddOption(c)}</div>`;
+    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+  }
+
+  // An option's tab: its number and name, a spinner while Design Desk changes it (a clock while it waits to), its open comments.
+  function wsTab(c, x, i, on) {
+    const b = busyOn(c, x.id), now = b.some((w) => w.state === "claimed");
+    const open = notesOf(c).filter((n) => n.anchor.variant === x.id && n.state !== "resolved").length;
+    const tip = [`${i + 1} · ${x.name}`, ...b.map((w) => `Design Desk: ${w.what} (${busyWhen(w)})`), open ? plural(open, "open comment", "open comments") : ""].filter(Boolean).join(". ");
+    return `<button role="tab" class="ws-opt${b.length ? " busy" : ""}" data-ws-variant="${esc(x.id)}" aria-pressed="${on}" aria-selected="${on}" title="${esc(tip)}"><span class="ono">${i + 1}</span><span class="nm">${esc(x.name)}</span>${b.length ? `<span class="dd-spin ${now ? "" : "queued"}"></span>` : ""}${open ? `<span class="ws-ncount" aria-label="${plural(open, "open comment", "open comments")}">${wsIcon("comment")}${open}</span>` : ""}${on ? closeTab(c, x) : ""}</button>`;
+  }
+
+  // One more option, as an icon at the end of the options; a spinner while Design Desk draws it.
+  function wsAddOption(c) {
+    if (closed(c) || locked(c) || !can("explore")) return "";
+    if (working(c).includes("explore")) return `<button class="ws-ibtn ws-add" disabled title="Design Desk is drawing a new option; it appears here by itself"><span class="dd-spin"></span></button>`;
+    if ((c.variants || []).length >= 6) return "";
+    return `<button class="ws-ibtn ws-add" data-act="add-option" title="Add one more option: describe it for Design Desk to draw, or use your own pictures">+</button>`;
+  }
+
+  // The design's pages, from its own bar, which the workspace hides.
+  function wsPages() {
+    const ch = S.ws.chrome;
+    if (!ch || (ch.views || []).length < 2) return "";
+    return `<div class="ws-pages" role="tablist" aria-label="Pages of the design"><span class="k">Pages</span>${ch.back ? `<button class="ws-back" data-ws-flip="back" title="Back to the page before">${wsIcon("back")}</button>` : ""}<span class="ws-seg">${ch.views.map((x) => `<button role="tab" data-ws-page="${esc(x.view)}" aria-selected="${x.view === ch.view}">${esc(x.name)}</button>`).join("")}</span></div>`;
   }
 
   // The ways a part could look, drawn from what a person wrote: the option as it is, then
@@ -5769,23 +6047,54 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function wsAlts(c, v) {
     const alts = v.alternatives || [];
     if (!alts.length || S.ws.check) return "";
-    const part = alts[0].part;
-    return `<div class="ws-alts"><span class="k">${esc(part)}: try</span><button class="btn small ${S.ws.alt ? "" : "on"}" data-ws-alt="" title="The option as it is now">As it is now</button>
-      ${alts.map((x, i) => `<button class="btn small ${x.id === S.ws.alt ? "on" : ""}" data-ws-alt="${esc(x.id)}" title="${esc(x.how || x.name)}">${String.fromCharCode(65 + i)} · ${esc(x.name)}</button>`).join("")}</div>`;
+    return `<div class="ws-pages"><span class="k">${esc(alts[0].part)}: try</span><span class="ws-seg"><button data-ws-alt="" aria-selected="${!S.ws.alt}" title="The option as it is now">As it is now</button>
+      ${alts.map((x, i) => `<button data-ws-alt="${esc(x.id)}" aria-selected="${x.id === S.ws.alt}" title="${esc(x.how || x.name)}">${String.fromCharCode(65 + i)} · ${esc(x.name)}</button>`).join("")}</span></div>`;
   }
 
-  // The option's states in a row above the design, grouped by the part they are of, with
-  // a step back and forth through the option and every state.
+  // The option's states: one menu, grouped by the part they are of, with a step back and forth.
   function wsStates(c, v) {
     const sts = v.states || [];
     if (!sts.length) return "";
     const open = (id) => notesOf(c).filter((n) => n.anchor.variant === v.id && (n.anchor.state || null) === id && n.state !== "resolved").length;
-    const badge = (id) => { const n = open(id); return n ? ` <span class="chip" title="${plural(n, "open note", "open notes")}">${n}</span>` : ""; };
-    const i = sts.findIndex((x) => x.id === S.ws.state), cur = sts[i];
-    return `<div class="ws-states"><button class="btn small ${cur ? "" : "on"}" data-ws-state="" title="The option as it was drawn">The option${badge(null)}</button>
-      ${[...new Set(sts.map((x) => x.part))].map((p) => `<span class="k">${esc(p)}</span>${sts.filter((x) => x.part === p).map((x) => `<button class="btn small ${x.id === S.ws.state ? "on" : ""}" data-ws-state="${esc(x.id)}" title="${esc(x.how || x.name)}">${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="This state's version ${x.version}">v${x.version}</span>` : ""}${badge(x.id)}</button>`).join("")}`).join("")}
-      <span class="grow"></span><span class="step-by"><button class="btn small" data-ws-step="-1" title="Previous state">‹</button><span class="hint">${cur ? `State ${i + 1} of ${sts.length}` : `${plural(sts.length, "state", "states")}`}</span><button class="btn small" data-ws-step="1" title="Next state">›</button></span></div>
-      ${cur?.how ? `<p class="hint">${esc(cur.name)}: ${esc(cur.how)}</p>` : ""}`;
+    const badge = (id) => { const n = open(id); return n ? `<span class="ws-count" title="${plural(n, "open comment", "open comments")}">${n}</span>` : ""; };
+    const i = sts.findIndex((x) => x.id === S.ws.state), cur = sts[i], menu = S.ws.menu === "states";
+    const item = (x) => `<button role="menuitemradio" aria-checked="${(S.ws.state || null) === (x?.id || null)}" data-ws-state="${esc(x?.id || "")}" title="${esc(x?.how || "The option as it was drawn")}"><span>${esc(x ? x.name : "As drawn")}</span>${x && (x.version || 1) > 1 ? `<span class="chip" title="This state's version ${x.version}">v${x.version}</span>` : ""}${badge(x?.id || null)}</button>`;
+    return `<div class="ws-pages"><span class="k">State</span><span class="ws-menuwrap"><button class="ws-pick" data-ws-menu="states" aria-expanded="${menu}" title="${plural(sts.length, "state", "states")} drawn">${cur ? `<span class="hint">${esc(cur.part)} ·</span> ${esc(cur.name)}` : "As drawn"}${wsIcon("chev")}</button>
+      ${menu ? `<div class="ws-menu" role="menu">${item(null)}${[...new Set(sts.map((x) => x.part))].map((p) => `<div class="ws-mgroup">${esc(p)}</div>${sts.filter((x) => x.part === p).map(item).join("")}`).join("")}</div>` : ""}</span>
+      <span class="step-by"><button class="ws-ibtn" data-ws-step="-1" title="Previous state">${wsIcon("prev")}</button><span class="hint">${cur ? `${i + 1} of ${sts.length}` : `${sts.length}`}</span><button class="ws-ibtn" data-ws-step="1" title="Next state">${wsIcon("next")}</button></span></div>`;
+  }
+
+  // Above the design: an alternative or an older version shown, the state's use.
+  function wsContext(c, v, old, showing) {
+    const out = [];
+    const alt = (v.alternatives || []).find((x) => x.id === S.ws.alt);
+    if (alt) {
+      const stale = (alt.of || 1) < (v.version || 1), k = String.fromCharCode(65 + v.alternatives.indexOf(alt));
+      out.push(`<div class="ctx alt"><div><b>${k} · ${esc(alt.name)}</b><span>${esc(alt.how || `Another way ${alt.part} could look.`)} Only ${esc(alt.part)} differs.${stale ? " Drawn for an earlier version." : ""}</span></div>
+        ${can("revise") && !stale ? `<button class="btn primary small" data-ws-pick="${esc(alt.id)}" title="It becomes version ${(v.version || 1) + 1} of ${esc(v.name)}; the version before stays in its history">Use this one</button>` : ""}<button class="btn small" data-ws-alt="">Back</button></div>`);
+    }
+    if (old) out.push(`<div class="ctx warn"><div><b>Version ${showing.version}</b><span>An earlier version, to look at. Comments go to the latest.</span></div><button class="btn small" data-ws-latest>Show the latest</button></div>`);
+    const st = (v.states || []).find((x) => x.id === S.ws.state);
+    if (st?.how && !S.ws.check) out.push(`<div class="ctx"><div><b>${esc(st.name)}</b><span>${esc(st.how)}</span></div></div>`);
+    return out.join("");
+  }
+
+  // The tools, as in a design tool: one floating bar, icons with their keys. Then what the design shows.
+  function wsToolbar(c, v, old) {
+    const shaper = can("change") && !locked(c), live = !old && !S.ws.check, ch = S.ws.chrome || {};
+    const tool = (mode, key, label, ic, tip) => `<button class="tool" data-ws-mode="${mode}" aria-pressed="${S.ws.mode === mode}" data-label="${label}" data-key="${key}" aria-label="${label} (${key})" title="${esc(tip)}">${wsIcon(ic)}</button>`;
+    const flip = (attr, on, key, label, ic, tip) => `<button class="tool tog" ${attr} aria-pressed="${Boolean(on)}" data-label="${label}" data-key="${key}" aria-label="${label} (${key})" title="${esc(tip)}">${wsIcon(ic)}</button>`;
+    const tools = [tool("off", "P", "Click through", "through", "Use the design as people will: open pages and menus"),
+      live && tool("select", "V", "Select", "select", "Click a part to see why it looks as it does and change its look"),
+      live && (can("comment") || can("change")) && tool("comment", "C", "Comment", "comment", "Click a part to comment on it or ask Design Desk to change it"),
+      live && shaper && tool("edit", "T", "Edit text", "text", "Click a text and type the new words")].filter(Boolean);
+    const shows = [pinned(c, v).length && !S.ws.check && flip("data-ws-pins", S.ws.notes, "⇧C", "Comment pins", "pins", "Shows or hides the comments' numbers on the design"),
+      (v.reasons || []).length && !S.ws.check && flip("data-ws-why", S.ws.why, "D", "Decisions", "why", "Marks the parts a decision shaped"),
+      ch.hot != null && flip('data-ws-flip="hot"', ch.hot, "H", "Hotspots", "hot", "Outlines what does something in this design"),
+      ch.notes != null && flip('data-ws-flip="notes"', ch.notes, "N", "Design notes", "notes", "Design Desk's notes on why a part looks as it does"),
+      ch.empty != null && flip('data-ws-flip="empty"', ch.empty, "E", "Empty state", "empty", "Shows the page with no data"),
+      ch.dark != null && flip('data-ws-flip="dark"', ch.dark, "L", "Dark theme", "dark", "Shows the design in its dark theme")].filter(Boolean);
+    return `${tools.join("")}${shows.length ? `<span class="tsep" aria-hidden="true"></span>${shows.join("")}` : ""}`;
   }
 
   // The last look before a build: what goes live, its states, and what is still open.
@@ -5818,51 +6127,32 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <p class="hint">Design Desk builds exactly this version, with made-up data; the first build can take up to an hour. The request then says which option and version is live.</p>`;
   }
 
+  // The side panel: Comments, every comment on the option; Properties, the part selected and its look.
   function renderWsSide(c, v, old) {
     const side = $("#ws-side");
-    const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
-    // The palette is drawn again with the side: the control in use keeps the focus.
     const pf = $("#ws-palette")?.contains(document.activeElement) ? document.activeElement : null;
     S.ws.plFocus = pf ? [...pf.attributes].filter((a) => a.name.startsWith("data-pl")).map((a) => `[${a.name}="${CSS.escape(a.value)}"]`).join("") : "";
-    const shaper = can("change") && !locked(S.card);
-    const sel = S.ws.selected;
-    const altBusy = (c.waiting || []).some((w) => w.kind === "revise" && w.scope === "alternatives");
-    const busy = working(c).filter((k) => ["revise", "states", "figma", "explore"].includes(k)).map((k) => (k === "revise" && altBusy ? "alternatives" : k));
-    // The note is written inside the box of what it is about: the part selected, or the whole option.
-    const alt = (v.alternatives || []).find((x) => x.id === S.ws.alt);
-    if (alt) {
-      const stale = (alt.of || 1) < (v.version || 1);
-      side.innerHTML = `<div class="sel"><div class="k">Alternative of ${esc(alt.part)}</div><b>${esc(alt.name)}</b>
-        ${alt.how ? `<p class="hint">${esc(alt.how)}</p>` : ""}${alt.ask ? `<p class="hint">You asked: “${esc(alt.ask)}”</p>` : ""}
-        ${stale ? `<p><span class="chip warn">Drawn for an earlier version of ${esc(v.name)}</span></p>` : ""}
-        <div class="actions" style="margin:8px 0 0">${can("revise") && !stale ? `<button class="btn primary small" data-ws-pick="${esc(alt.id)}" title="It becomes version ${(v.version || 1) + 1} of ${esc(v.name)}; the version before stays in its history">Use this one → version ${(v.version || 1) + 1}</button>` : ""}<button class="btn small" data-ws-alt="">Back to the option</button></div></div>
-        <p class="hint">Only ${esc(alt.part)} differs from the option as it is now. Click through it; the other alternatives are in the row above the design.</p>`;
-      loadPictures(side);
-      return;
-    }
-    // The selected part's element with states drawn in the option's catalog: its states open from here, to look through.
-    const drawn = !sel ? null : sel.element ? elementsOf(v).find((e) => e.key === sel.element && e.states.length) || null : drawnElementAt(v, sel.selector);
-    side.innerHTML = `<div class="sel ${sel ? "" : "none"}">
-        <div class="k">${S.ws.edit ? "Editing" : "Selected"}</div>
-        <b>${esc(sel ? sel.label : "Nothing selected")}</b>${sel?.view_name ? ` <span class="hint" style="display:inline">in ${esc(sel.view_name)}</span>` : ""}
-        ${sel ? "" : `<p class="hint">${S.ws.mode === "off" && !old ? "Press Select above the design to pick a part." : "Click a part of the design."} A note without a selection is about the whole option.</p>`}
-        ${whyOfSelected(c, v, sel)}
-        ${sel ? `<button class="sel-x" data-ws-clear aria-label="Clear the selection" title="Clear the selection">✕</button>` : ""}
-        ${sel && (can("revise") && !S.ws.state || drawn) ? `<div class="actions" style="margin:6px 0 0">${drawn ? `<button class="btn small" data-ws-states-of="${esc(drawn.key)}" title="Every state drawn of ${esc(drawn.name)}, to look through; nothing new is drawn from here">See every state (${drawn.states.length})</button>` : ""}${can("revise") && !S.ws.state ? `<button class="btn small" data-act="alternatives" title="Describe how you picture this part; Design Desk draws three ways and you pick one">Try 3 ways</button>` : ""}</div>` : ""}
-        ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
-        ${old ? "" : `<div class="composer" style="margin:10px 0 0">
-        <textarea id="ws-text" maxlength="4000" placeholder="${shaper ? (sel ? "What should change in this part? e.g. make it a secondary button" : "What should change in this option?") : "Your comment on this part…"}"></textarea>
-        <div class="bar"><button class="btn primary" data-ws-send>${shaper ? "Send to Design Desk" : "Comment"}</button>${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button>` : ""}</div>
-      </div>`}
-      </div>
-      <div id="ws-palette" role="group" hidden></div>
-      ${busy.map((k) => `<div class="working"><span class="spin"></span><div>${esc(WORK[k])}</div></div>`).join("")}
-      ${old ? "" : lookList()}
-      ${renderWsNotes(c, v, sel)}
-      ${renderWhy(c, v, sel)}`;
+    const panel = S.ws.panel || "comments";
+    const kept = ["#ws-whole", "#ws-part"].map((q) => { const b = $(q); return { q, focus: document.activeElement === b, value: b?.value || "", caret: b ? [b.selectionStart, b.selectionEnd] : null }; });
+    const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved").length;
+    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button></div>
+      <div class="ws-pbody">${panel === "comments" ? renderWsNotes(c, v, old) : wsProps(c, v, old)}</div>`;
+    for (const k of kept) { const b = $(k.q); if (!b) continue; b.value = k.value; if (k.focus) { b.focus(); b.setSelectionRange(k.caret[0], k.caret[1]); } }
     loadPictures(side);
-    const nt = $("#ws-text");
-    if (nt) { nt.value = keep; if (focused) { nt.focus(); if (caret) nt.setSelectionRange(caret[0], caret[1]); } }
+  }
+
+  function wsProps(c, v, old) {
+    const sel = S.ws.selected, alt = (v.alternatives || []).find((x) => x.id === S.ws.alt);
+    if (alt) return `<div class="sel"><div class="k">Alternative of ${esc(alt.part)}</div><b>${esc(alt.name)}</b>${alt.how ? `<p class="hint">${esc(alt.how)}</p>` : ""}${alt.ask ? `<p class="hint">You asked: “${esc(alt.ask)}”</p>` : ""}</div>`;
+    const drawn = !sel ? null : sel.element ? elementsOf(v).find((e) => e.key === sel.element && e.states.length) || null : drawnElementAt(v, sel.selector);
+    const talk = !old && (can("comment") || can("change")), shaper = can("change") && !locked(c);
+    const head = sel ? `<div class="sel"><div class="k">${S.ws.edit ? "Editing" : "Selected"}</div><b>${esc(sel.label)}</b>${sel.view_name ? ` <span class="hint" style="display:inline">on ${esc(sel.view_name)}</span>` : ""}
+        <button class="sel-x" data-ws-clear aria-label="Clear the selection" title="Clear the selection (Esc)">✕</button>
+        ${whyOfSelected(c, v, sel)}
+        ${talk ? wsBox("part", shaper ? "What should change?" : "Your comment…", shaper, "") : ""}
+        <div class="actions" style="margin:8px 0 0">${drawn ? `<button class="btn" data-ws-states-of="${esc(drawn.key)}" title="Every state drawn of ${esc(drawn.name)}, to look through; nothing new is drawn from here">Every state (${drawn.states.length})</button>` : ""}${can("revise") && !S.ws.state && !old ? `<button class="btn" data-act="alternatives" title="Describe how you picture this part; Design Desk draws three ways and you pick one">Try 3 ways</button>` : ""}</div></div>`
+      : `<div class="sel none"><div class="k">${esc(v.name)} · version ${esc(v.version || 1)}</div><b>Nothing selected</b><p class="hint">${old ? "An earlier version: show the latest to select a part." : `Press <kbd>V</kbd> and click a part of the design to see why it looks as it does${lookAdmin() && !locked(c) ? " and change its look" : ""}.`}</p></div>`;
+    return `${head}<div id="ws-palette" role="group" hidden></div>${old ? "" : lookList()}${renderWhy(c, v, sel)}`;
   }
 
   const showReason = () => $('.reason[aria-current="true"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -5894,40 +6184,91 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
           <a class="more" href="#${esc(r.decision)}" data-ref="${esc(r.decision)}">Who decided it and why →</a></li>`; }).join("")}</ol></section>`;
   }
 
-  // Notes on this option: open first, each with its whole conversation once picked, a reply,
-  // Done or Reopen, and Work it in for a comment a designer, PM or developer hands to Design Desk.
-  function renderWsNotes(c, v, sel) {
-    const all = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n));
-    const st = (v.states || []).find((x) => x.id === S.ws.state);
+  // Every comment on this option, the state shown first, the others under their state. A comment
+  // opens in place on the design; Work in all hands the open ones to Design Desk.
+  const wsMsg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}${warnsOf(m)}${changed(m)}</div>`;
+  function renderWsNotes(c, v, old) {
+    const all = notesOf(c).filter((n) => n.anchor.variant === v.id);
     const f = S.ws.filter || "open";
     const notes = all.filter((n) => f === "all" || (f === "done") === (n.state === "resolved"));
     const count = (k) => all.filter((n) => k === "all" || (k === "done") === (n.state === "resolved")).length;
     const workIn = all.filter((n) => workable(c, n));
-    // No notes on this option: no section at all.
-    if (!all.length) return "";
-    const msg = (m) => `<div class="m ${m.by?.agent ? "a" : ""}"><div class="who">${who(m.by)} · ${esc(when(m.at))}</div>${esc(m.text)}${warnsOf(m)}${changed(m)}</div>`;
-    return `<div><h3 style="margin:0 0 8px">Notes on ${esc(v.name)}${st ? ` · ${esc(st.name)}` : ""}</h3>
-      <div style="margin:0 0 8px">${seg("wsFilter", [["open", "Open", count("open")], ["done", "Done", count("done")], ["all", "All", count("all")]], "ws-filter", f)}</div>
-      ${workIn.length > 1 ? `<div class="actions" style="margin:0 0 8px"><button class="btn small" data-work-in="${esc(workIn.map((n) => n.id).join(","))}">Work in all ${workIn.length} open comments</button></div>` : ""}
-      ${notes.length ? `<ol class="notes">${notes.map((th) => {
-        const [st, label] = noteState(c, th); const last = th.messages[th.messages.length - 1];
-        const open = th.id === S.ws.note || (Boolean(sel?.selector) && sel.selector === th.anchor.selector);
-        const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
-        return `<li class="note ${st === "done" ? "done" : ""}" data-ws-note="${esc(th.id)}" aria-current="${open}">
-          <div class="h"><span class="n" title="Note #${th.n}">${th.n}</span><span>${esc(where)}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}" title="${st === "done" ? "Marked done" : st === "working" ? "Design Desk is changing the design for it" : "Still open"}">${esc(label)}</span></div>
-          ${open ? th.messages.map(msg).join("") : `<div>${esc(th.messages[0].text)}</div>${th.messages.length > 1 ? `<div class="a">${last?.by?.agent ? "" : `${who(last.by)}: `}${esc(last.text)}</div>` : ""}${th.messages.length > 2 ? `<div class="hint">${th.messages.length - 1} replies</div>` : ""}`}
-          ${open ? (th.state !== "resolved" ? `<div class="reply">${mayIn(th, "reply") ? `<input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Reply</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}">Done</button>` : ""}${workable(c, th) ? `<button class="btn small" data-work-in="${esc(th.id)}">Work it in</button>` : ""}</div>` : mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : "") : ""}</li>`; }).join("")}</ol>`
-        : `<p class="hint">${all.length ? (f === "open" ? "Nothing open. Everything here is done." : "None here.") : "No notes yet."}</p>`}
-    </div>`;
+    const talk = !old && (can("comment") || can("change"));
+    const sts = v.states || [], drawings = [S.ws.state || null, ...[null, ...sts.map((x) => x.id)].filter((x) => x !== (S.ws.state || null))];
+    const nameOf = (id) => id ? sts.find((x) => x.id === id)?.name || id : "As drawn";
+    const li = (th) => {
+      const [st, label] = noteState(c, th), last = th.messages[th.messages.length - 1];
+      const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
+      return `<li class="note ${st === "done" ? "done" : ""} ${st}" data-ws-note="${esc(th.id)}" aria-current="${th.id === S.ws.note}" tabindex="0">
+        <div class="h"><span class="n" title="Comment #${th.n}">${st === "working" ? `<span class="dd-spin light"></span>` : th.n}</span><span class="where">${esc(where)}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${esc(label)}</span></div>
+        <div class="first">${esc(th.messages[0].text)}</div>${th.messages.length > 1 ? `<div class="a">${last?.by?.agent ? "<b>Design Desk:</b> " : `${who(last.by)}: `}${esc(last.text)}</div>` : ""}${th.messages.length > 2 ? `<div class="hint">${th.messages.length - 1} replies</div>` : ""}</li>`;
+    };
+    const groups = drawings.map((id) => [id, notes.filter((n) => (n.anchor.state || null) === id)]).filter(([, ns]) => ns.length);
+    const shaper = can("change") && !locked(c), whole = S.ws.state ? `the whole state “${nameOf(S.ws.state)}”` : `the whole option ${v.name}`;
+    const box = talk ? wsBox("whole", shaper ? `What should change in ${whole}?` : `Comment on ${whole}…`, shaper, `On ${esc(whole)}. For one part: <kbd>C</kbd>, then click it.`) : "";
+    return `${box}<div class="ws-chead">${seg("wsFilter", [["open", "Open", count("open")], ["done", "Done", count("done")], ["all", "All", count("all")]], "ws-filter", f)}</div>
+      ${workIn.length > 1 ? `<button class="btn small ws-workall" data-work-in="${esc(workIn.map((n) => n.id).join(","))}" title="Design Desk changes the design for each of them">Work in all ${workIn.length} open comments</button>` : ""}
+      ${groups.length ? groups.map(([id, ns]) => `${sts.length ? `<h4 class="ws-ghead">${esc(nameOf(id))}${id === (S.ws.state || null) ? ` <span class="hint">shown now</span>` : ""}</h4>` : ""}<ol class="notes">${ns.map(li).join("")}</ol>`).join("")
+        : `<p class="hint ws-empty">${all.length ? (f === "open" ? "Nothing open. Everything here is done." : "None here.") : talk ? "No comments yet. Press <kbd>C</kbd>, then click a part of the design." : "No comments yet."}</p>`}`;
   }
 
+  // A comment in place, as in a design tool: a new one beside the part it is about, or an
+  // existing one opened from its number on the design or from the list.
+  function renderPop(c, v) {
+    const pop = $("#ws-pop"); if (!pop) return;
+    const p = S.ws.pop, th = p?.kind === "thread" ? notesOf(c).find((x) => x.id === p.id) : null;
+    if (!p || (p.kind === "thread" && !th)) { if (S.ws.pop) S.ws.pop = null; if (!pop.hidden) frameSay({ type: "desk-track", selector: "" }); pop.hidden = true; pop.innerHTML = ""; return; }
+    const t = $("#ws-text"), focused = document.activeElement === t, keep = t?.value || "", caret = t ? [t.selectionStart, t.selectionEnd] : null;
+    const r = pop.querySelector("[data-reply]"), rKeep = r?.value || "", rFocus = document.activeElement === r;
+    const shaper = can("change") && !locked(c), sel = S.ws.target;
+    if (p.kind === "new") {
+      const on = sel ? sel.label : S.ws.state ? `the whole state “${wsDrawing(v).name}”` : `the whole option ${v.name}`;
+      pop.innerHTML = `<div class="ph"><span class="pa">${esc(initials(S.me))}</span><b>New comment</b><span class="hint">on ${esc(on)}</span><button class="ws-ibtn" data-ws-pop-close aria-label="Close" title="Close (Esc)">${wsIcon("close")}</button></div>
+        ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
+        <textarea id="ws-text" maxlength="4000" rows="3" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change?") : "Your comment…"}"></textarea>
+        <div class="bar">${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send title="⌘↵">Comment</button>`}</div>`;
+    } else {
+      const [st, label] = noteState(c, th);
+      const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
+      pop.innerHTML = `<div class="ph"><span class="pn ${st}">${th.n}</span><b>${esc(where)}</b><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${st === "working" ? `<span class="dd-spin"></span> ` : ""}${esc(label)}</span><button class="ws-ibtn" data-ws-pop-close aria-label="Close" title="Close (Esc)">${wsIcon("close")}</button></div>
+        <div class="pmsgs">${th.messages.map(wsMsg).join("")}</div>
+        ${th.state !== "resolved" ? `${mayIn(th, "reply") ? `<textarea class="ws-reply" rows="1" placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000"></textarea>` : ""}
+          <div class="bar">${mayIn(th, "resolve") ? `<button class="ws-ibtn ws-done" data-resolve="${esc(th.id)}" title="Mark done" aria-label="Mark done">${wsIcon("done")}</button>` : ""}<span class="grow"></span>${mayIn(th, "reply") ? `<button class="btn" data-send-reply="${esc(th.id)}" title="Your reply, for the team (Enter)">Reply</button>` : ""}${workable(c, th) ? `<button class="btn primary" data-work-in="${esc(th.id)}" title="Design Desk changes the design for it">Work it in</button>` : ""}</div>`
+          : mayIn(th, "reply") ? `<div class="bar"><span class="grow"></span><button class="btn" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}`;
+    }
+    pop.className = `ws-pop ${p.kind}`;
+    pop.hidden = false;
+    loadPictures(pop);
+    const nt = $("#ws-text"); if (nt) { nt.value = keep; if (focused || p.focus) { nt.focus(); if (caret && focused) nt.setSelectionRange(caret[0], caret[1]); p.focus = false; } }
+    const nr = pop.querySelector("[data-reply]"); if (nr) { nr.value = rKeep; if (rFocus) nr.focus(); }
+    placePop();
+  }
+  // A box to write a comment in the side panel, and its buttons: Send to Design Desk (a change) and Just comment.
+  const wsBox = (where, placeholder, shaper, hint) => `<div class="ws-wholebox"><textarea id="ws-${where}" rows="2" maxlength="4000" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}"></textarea>
+      <div class="bar">${hint ? `<span class="hint">${hint}</span>` : ""}${shaper ? `<button class="btn" data-ws-send-${where}="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send-${where} title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send-${where} title="⌘↵">Comment</button>`}</div></div>`;
+  const initials = (me) => String(me?.my_name || me?.name || me?.email || "?").split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+  // Beside the part, right of it when there is room, else left; a comment on the whole option at the top.
+  function placePop() {
+    const pop = $("#ws-pop"), f = $("#ws-frame"), cv = $("#ws-stage");
+    if (!pop || pop.hidden || !f || !cv) return;
+    const fr = f.getBoundingClientRect(), cr = cv.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight, r = S.ws.pop?.anchored === false ? null : S.ws.anchor;
+    let x, y;
+    if (!r) { x = (cr.width - pw) / 2; y = 64; }
+    else { x = fr.left - cr.left + r.right + 14; if (x + pw > cr.width - 12) x = fr.left - cr.left + r.left - pw - 14; if (x < 12) x = Math.min(cr.width - pw - 12, fr.left - cr.left + r.left); y = fr.top - cr.top + (x > fr.left - cr.left + r.left && x < fr.left - cr.left + r.right ? r.bottom + 10 : r.top - 6); }
+    pop.style.left = `${Math.max(12, Math.min(x, cr.width - pw - 12))}px`;
+    pop.style.top = `${Math.max(12, Math.min(y, cr.height - ph - 72))}px`;
+  }
+  addEventListener("resize", placePop);
+
+  const WS_BAR_HIDDEN = `<style data-desk-ws>:root{--review-h:0px} html #review{display:none !important}</style>`;
   async function loadWsFrame(c, v, assetId, latest, key) {
     const frame = $("#ws-frame");
     try {
       const a = await asset(assetId);
       if ($("#ws-frame") !== frame) return;
-      frame.srcdoc = withScript(decode(a));
+      frame.srcdoc = withScript(decode(a)).replace(/(<\/body>)(?![\s\S]*<\/body>)|$/, (m) => `${WS_BAR_HIDDEN}${m}`);
       frame.onload = () => {
+        if (S.ws.pop?.anchored) frame.contentWindow?.postMessage({ type: "desk-track", selector: S.ws.selected?.selector || "" }, "*");
         const old = assetId !== latest;
         frame.contentWindow?.postMessage({ type: "desk-mode", mode: old || S.ws.check ? "off" : S.ws.mode }, "*");
         frame.contentWindow?.postMessage({ type: "desk-view", ...(S.ws.view || {}) }, "*");
@@ -5945,7 +6286,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The comments pinned on this option's drawing; the Comments switch hides them from the design only.
   const pinned = (c, v) => notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector);
   function sendPins(c, v) {
-    const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: n.anchor.selector, state: noteState(c, n)[0] }));
+    const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: n.anchor.selector, state: noteState(c, n)[0], focus: S.ws.pop?.kind === "thread" && S.ws.pop.id === n.id }));
     if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
     // The option's elements with states drawn: a part picked inside one names it, for See every state.
@@ -6164,7 +6505,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A note's number in the design: what it says on hover, the note itself on a click.
     if (d.type === "desk-pin-tip") {
       const th = d.note && notesOf(S.card).find((x) => x.id === d.note), m = th?.messages?.[0];
-      if (!m) return tipHide();
+      if (!m || S.ws.pop?.id === th.id) return tipHide();
       const by = m.by?.agent ? "Design Desk" : m.by?.name || m.by?.email || "Someone";
       const f = frame.getBoundingClientRect(), r = d.rect || {}, el = document.createElement("span");
       el.dataset.tip = `#${th.n} · ${by}: ${String(m.text || "").replace(/\s+/g, " ").slice(0, 280)}${th.messages.length > 1 ? ` (+${th.messages.length - 1} ${th.messages.length === 2 ? "reply" : "replies"})` : ""}`;
@@ -6172,24 +6513,42 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       document.body.append(el); tipShow(el, true); el.remove();
       return;
     }
+    if (d.type === "desk-chrome") {
+      const b = (x) => (x == null ? null : Boolean(x));
+      S.ws.chrome = { views: (Array.isArray(d.views) ? d.views : []).slice(0, 30).map((x) => ({ view: String(x?.view || "").slice(0, 40), name: String(x?.name || "").slice(0, 80) })), view: String(d.view || "").slice(0, 40), back: Boolean(d.back), hot: b(d.hot), notes: b(d.notes), empty: b(d.empty), dark: b(d.dark) };
+      renderWorkspace(); return;
+    }
+    if (d.type === "desk-anchor") { const r = d.rect; S.ws.anchor = r && [r.left, r.top, r.right, r.bottom].every(Number.isFinite) ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null; placePop(); return; }
+    if (d.type === "desk-key") { wsKey(String(d.key || "").slice(0, 12), Boolean(d.shift)); return; }
+    // A comment's number on the design opens it there, in place: its pin outlines the part; the side panel and the selection stay as they are.
     if (d.type === "desk-pin-open") {
       tipHide();
-      // A pin of a comment the list's filter hides switches the list to the tab it is on.
-      const th = (S.card?.threads || []).find((x) => x.id === d.note), f = S.ws.filter || "open";
-      if (th && f !== "all" && (f === "done") !== (th.state === "resolved")) { S.ws.filter = th.state === "resolved" ? "done" : "open"; renderWorkspace(); }
-      const li = document.querySelector(`[data-ws-note="${CSS.escape(String(d.note || ""))}"]`);
-      if (li) { li.click(); li.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+      const th = notesOf(S.card).find((x) => x.id === d.note);
+      if (!th?.anchor) return;
+      S.ws.note = th.id; S.ws.menu = null;
+      S.ws.pop = { kind: "thread", id: th.id, anchored: Boolean(th.anchor.selector) }; S.ws.anchor = null;
+      renderWorkspace();
+      frameSay({ type: "desk-track", selector: th.anchor.selector || "" });
       return;
     }
     if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
     // The part picked no longer shows in the design (another page, a closed menu): nothing is selected.
     if (d.type === "desk-unpicked") { if (S.ws.selected?.selector && S.ws.selected.selector === d.selector) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); } return; }
     // In Edit text the frame keeps the focus: the person is typing into the design.
+    if (d.type === "desk-picked" && (S.ws.mode === "comment" || S.ws.mode === "edit")) {
+      S.ws.target = pickOf(d.text); S.ws.edit = null;
+      const r = d.rect; S.ws.anchor = r && [r.left, r.top, r.right, r.bottom].every(Number.isFinite) ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null;
+      if (S.ws.mode === "comment") wsComposer(); else { S.ws.pop = null; renderWorkspace(); }
+      return;
+    }
     if (d.type === "desk-picked") { S.ws.selected = { ...pickOf(d.text), why: (Array.isArray(d.why) ? d.why : []).map(String).slice(0, 12) }; S.ws.edit = null; S.ws.note = null; S.ws.plColor = null;
       // Another part opens the palette afresh: on Suggested when it has smart controls.
       if (S.ws.look?.selector !== S.ws.selected.selector) S.ws.plTab = null;
       const look = cleanLook(d.look); S.ws.look = look ? { selector: S.ws.selected.selector, look } : null;
-      renderWorkspace(); if (S.ws.mode !== "edit" && !lookable()) $("#ws-text")?.focus(); }
+      const r = d.rect; S.ws.anchor = r && [r.left, r.top, r.right, r.bottom].every(Number.isFinite) ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null;
+      // Select shows the part in Properties.
+      if (S.ws.mode === "select") { S.ws.panel = "props"; S.ws.pop = null; frameSay({ type: "desk-track", selector: "" }); }
+      renderWorkspace(); }
     // The look palette: the part's look after a change (a drag of its handle too), what the design is made of.
     if (d.type === "desk-palette") {
       const arr = (x, n) => (Array.isArray(x) ? x.slice(0, n) : []);
@@ -6214,9 +6573,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       return;
     }
     if (d.type === "desk-edited") {
-      S.ws.selected = pickOf(d.to); S.ws.edit = { from: String(d.from || ""), to: String(d.to || "") };
-      renderWorkspace();
-      const t = $("#ws-text"); if (t && !t.value.trim()) t.value = `Change the text “${S.ws.edit.from}” to “${S.ws.edit.to}”.`;
+      S.ws.target = pickOf(d.to); const ed = { from: String(d.from || ""), to: String(d.to || "") };
+      wsComposer(); S.ws.edit = ed; renderWorkspace();
+      const t = $("#ws-text"); if (t && !t.value.trim()) t.value = `Change the text “${ed.from}” to “${ed.to}”.`;
       t?.focus();
     }
   });
@@ -6715,18 +7074,20 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     await refreshList(); await openCard(c.id);
   }
 
-  async function wsSend(only) {
-    const c = S.card, v = wsVariant(c);
-    const sel = S.ws.selected;
+  // A comment from its box in place (on the part selected), or from the Comments panel's box (on the whole option or state).
+  async function wsSend(only, from = "pop") {
+    const whole = from === "whole", c = S.card, v = wsVariant(c), box = $({ pop: "#ws-text", whole: "#ws-whole", part: "#ws-part" }[from]);
+    const sel = from === "pop" ? S.ws.target : from === "part" ? S.ws.selected : null;
     const kind = can("change") && only !== "comment" ? "change" : "comment";
     // A change to the part selected takes its look changes not sent yet with it.
     const look = kind === "change" && sel?.selector ? looksNow()[sel.selector] : null, lc = look ? lookChanges(look) : [], pc = look ? pickChanges(look) : [];
-    const typed = $("#ws-text")?.value.trim() || "";
+    const typed = box?.value.trim() || "";
     const text = [typed, lc.length || pc.length ? lookText(look) : ""].filter(Boolean).join("\n\n"); if (!text || !v) return;
-    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit ? { edit: S.ws.edit } : {}), ...(lc.length ? { style: lc } : {}), ...(pc.length ? { controls: pc } : {}) };
+    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}), ...(lc.length ? { style: lc } : {}), ...(pc.length ? { controls: pc } : {}) };
     await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
     if (lc.length || pc.length) lookSent(sel.selector);
-    $("#ws-text").value = ""; S.ws.edit = null;
+    box.value = "";
+    if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); if (S.ws.mode !== "select") frameSay({ type: "desk-select", selector: null }); }
     toast(kind === "change" ? "Sent. Design Desk is changing it; the design updates here by itself." : "Comment added.");
     await openCard(c.id);
   }
@@ -6934,7 +7295,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (ds.sendReply) {
       // The workspace and the card both show a note's reply box: the one next to this button.
-      const input = el.parentElement.querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
+      const input = (el.closest("#ws-pop") || el.parentElement).querySelector(`[data-reply="${CSS.escape(ds.sendReply)}"]`); const text = input?.value.trim(); if (!text) return;
       const r = await api("POST", `/api/threads/${ds.sendReply}/messages`, { text });
       if (r.inbox) toast("Sent. Design Desk is on it.");
       await refreshList(); await openCard(S.card.id); return;
@@ -6989,7 +7350,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); await openCard(c.id); return;
     }
     if ("catalogOpen" in ds) { S.elFilter = "design"; S.productFilter = "elements"; await showTab("product"); return; }
-    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why }; renderWorkspace(); showReason(); return; }
+    if (ds.why) { S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, state: null, alt: null, selected: null, edit: null, why: true, reason: ds.why, panel: "props" }; renderWorkspace(); showReason(); return; }
     // A story is shown in place, so the design above keeps its frame, and it plays there.
     if (ds.story) { S.story = ds.story; const v = (S.card.variants || []).find((x) => x.id === S.variant), box = $("#stories"); if (box && v) box.outerHTML = renderStories(S.card, v); playStory(); return; }
     if (ds.vote) {
@@ -7042,18 +7403,23 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const v = wsVariant(S.card), ids = [null, ...(v?.states || []).map((x) => x.id)];
       const at = ids.indexOf(S.ws.state || null);
       S.ws.state = ds.wsStep ? ids[(at + Number(ds.wsStep) + ids.length) % ids.length] : ds.wsState || null;
-      S.ws.selected = null; S.ws.edit = null; S.ws.version = null; S.ws.note = null;
+      S.ws.selected = null; S.ws.edit = null; S.ws.version = null; S.ws.note = null; S.ws.menu = null;
       renderWorkspace(); return;
     }
     if ("wsBuild" in ds) { await buildChecked(); return; }
     if ("wsEdit" in ds) { S.ws.check = false; S.ws.mode = can("change") || can("comment") ? "select" : "off"; renderWorkspace(); frameSay({ type: "desk-mode", mode: S.ws.mode }); return; }
-    // Click through uses the design as it is: the part picked before is let go.
-    if (ds.wsMode) {
-      S.ws.mode = ds.wsMode;
-      if (ds.wsMode === "off") { S.ws.selected = null; S.ws.edit = null; }
-      renderWorkspace(); frameSay({ type: "desk-mode", mode: ds.wsMode });
-      if (ds.wsMode === "off") frameSay({ type: "desk-select", selector: null });
-      return;
+    if (ds.wsMode) { wsTool(ds.wsMode); return; }
+    if (ds.wsMenu) { S.ws.menu = S.ws.menu === ds.wsMenu ? null : ds.wsMenu; renderWorkspace(); return; }
+    // The page picked is kept, so the next option or version opens on it where it has it.
+    if (ds.wsPage) { const x = (S.ws.chrome?.views || []).find((y) => y.view === ds.wsPage); S.ws.view = { view: ds.wsPage, view_name: x?.name || "" }; frameSay({ type: "desk-view", view: ds.wsPage }); return; }
+    if (ds.wsFlip) { frameSay({ type: "desk-flip", what: ds.wsFlip }); return; }
+    if ("wsPins" in ds) { S.ws.notes = !S.ws.notes; store.set("desk-notes", S.ws.notes ? "1" : "0"); renderWorkspace(); return; }
+    if (ds.wsPanel) { S.ws.panel = ds.wsPanel; renderWorkspace(); return; }
+    if ("wsPopClose" in ds) { wsPopClose(); return; }
+    if ("wsLatest" in ds) { S.ws.version = null; renderWorkspace(); return; }
+    if ("wsNew" in ds) {
+      S.ws.target = ds.wsNew === "whole" ? null : S.ws.selected; S.ws.edit = null;
+      wsComposer(); return;
     }
     // Why it looks like this: the tags on the design, one decision's parts, one part of it.
     if ("wsWhy" in ds) { S.ws.why = !S.ws.why; if (!S.ws.why) S.ws.reason = null; store.set("desk-why", S.ws.why ? "1" : "0"); renderWorkspace(); return; }
@@ -7071,6 +7437,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       return;
     }
     if ("wsSend" in ds) { await wsSend(ds.wsSend); return; }
+    if ("wsSendWhole" in ds) { await wsSend(ds.wsSendWhole, "whole"); return; }
+    if ("wsSendPart" in ds) { await wsSend(ds.wsSendPart, "part"); return; }
     // The look palette
     if (ds.plTab) { S.ws.plTab = ds.plTab; S.ws.plColor = null; renderPalette(); return; }
     if (ds.plPick) { const sm = smartOf(wsVariant(S.card), S.ws.selected), [cid, oid] = ds.plPick.split("|"); if (sm) pickControl(sm, cid, oid); return; }
@@ -7096,12 +7464,59 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws.note = th.id;
       if ((th.anchor.state || null) !== (S.ws.state || null)) { S.ws.state = th.anchor.state || null; S.ws.version = null; }
       S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
-      S.ws.edit = null;
+      S.ws.edit = null; S.ws.pop = { kind: "thread", id: th.id, anchored: Boolean(th.anchor.selector) }; S.ws.anchor = null;
       renderWorkspace();
       frameSay({ type: "desk-select", selector: th.anchor.selector || null });
+      frameSay({ type: "desk-track", selector: th.anchor.selector || "" });
       return;
     }
   }));
+
+  // The tools: Click through (P), Select (V), Comment (C), Edit text (T). Click through lets the part picked go.
+  function wsTool(mode) {
+    if (S.ws.old || S.ws.check) mode = "off";
+    if (mode === "edit" && !(can("change") && !locked(S.card))) return;
+    if (mode === "comment" && !(can("comment") || can("change"))) return;
+    S.ws.mode = mode; S.ws.menu = null;
+    if (mode === "off") { S.ws.selected = null; S.ws.edit = null; S.ws.pop = null; frameSay({ type: "desk-select", selector: null }); }
+    if (S.ws.pop?.kind === "new") { S.ws.pop = null; S.ws.target = null; S.ws.edit = null; frameSay({ type: "desk-track", selector: "" }); frameSay({ type: "desk-select", selector: mode === "select" ? S.ws.selected?.selector || null : null }); }
+    renderWorkspace(); frameSay({ type: "desk-mode", mode });
+  }
+  // A new comment on the part selected, or on the whole option, written in place.
+  function wsComposer() {
+    S.ws.note = null; S.ws.menu = null;
+    S.ws.pop = { kind: "new", anchored: Boolean(S.ws.target?.selector), focus: true };
+    renderWorkspace();
+    frameSay({ type: "desk-track", selector: S.ws.target?.selector || "" });
+  }
+  function wsPopClose() {
+    const was = S.ws.target; S.ws.pop = null; S.ws.note = null; S.ws.edit = null; S.ws.target = null;
+    frameSay({ type: "desk-track", selector: "" });
+    if (was && S.ws.mode !== "select") frameSay({ type: "desk-select", selector: S.ws.selected?.selector || null });
+    renderWorkspace();
+  }
+  // The workspace's keys, from the Desk or from the design: tools, what the design shows, Escape one step back.
+  function wsKey(key, shift) {
+    if (!S.ws.open || document.querySelector("dialog[open]")) return false;
+    const k = key.toLowerCase();
+    if (key === "Escape") {
+      if (S.ws.menu) { S.ws.menu = null; renderWorkspace(); }
+      else if (S.ws.pop) wsPopClose();
+      else if (S.ws.selected) { S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); }
+      else { S.ws.open = false; S.ws.check = false; renderWorkspace(); renderDetail(); }
+      return true;
+    }
+    const tool = { p: "off", v: "select", c: "comment", t: "edit" }[k];
+    if (k === "c" && shift) { if (pinned(S.card, wsVariant(S.card)).length) { S.ws.notes = !S.ws.notes; store.set("desk-notes", S.ws.notes ? "1" : "0"); renderWorkspace(); } return true; }
+    if (tool) { wsTool(tool); return true; }
+    if (k === "d") { S.ws.why = !S.ws.why; if (!S.ws.why) S.ws.reason = null; store.set("desk-why", S.ws.why ? "1" : "0"); renderWorkspace(); return true; }
+    const flip = { h: "hot", n: "notes", e: "empty", l: "dark" }[k];
+    if (flip && S.ws.chrome?.[flip] != null) { frameSay({ type: "desk-flip", what: flip }); return true; }
+    return false;
+  }
+  // A menu of the workspace closes on a click anywhere else.
+  // On the click, not the press: the bar drawn again keeps the click's own target, so the click still acts.
+  document.addEventListener("click", (e) => { if (S.ws.menu && !e.target.closest(".ws-menuwrap")) { S.ws.menu = null; renderWorkspace(); } }, true);
 
   // ---------- search (docs/desk-page.md → Search) ----------
   // The header's one search: words over every item's title, summary and source and over the
@@ -7222,7 +7637,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       presentStep(e.key === "ArrowRight" ? 1 : -1).catch(fail);
       return;
     }
-    if (e.key === "Escape" && S.ws.open && !document.querySelector("dialog[open]")) { S.ws.open = false; S.ws.check = false; renderWorkspace(); renderDetail(); return; }
+    if (S.ws.open && e.key === "Enter" && (e.metaKey || e.ctrlKey) && ["ws-whole", "ws-part"].includes(e.target.id)) { const k = e.target.id.slice(3); e.preventDefault(); $(`[data-ws-send-${k}]:not([data-ws-send-${k}=comment])`)?.click(); return; }
+    if (S.ws.open && e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.id === "ws-text") { e.preventDefault(); $("#ws-pop [data-ws-send]:not([data-ws-send=comment])")?.click(); return; }
+    if (S.ws.open && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "Escape" || !e.target.closest("input, textarea, select, [contenteditable]")) && wsKey(e.key, e.shiftKey)) { e.preventDefault(); return; }
     if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && (S.card?.history || []).length && !S.ws.open && !document.querySelector("dialog[open]") && !e.target.closest("input, textarea, select, [contenteditable]")) {
       const looks = looksOf(S.card), k = looks.findIndex((l) => lookKey(l) === S.look) + (e.key === "ArrowLeft" ? 1 : -1);
       if (k >= 0 && k < looks.length) { e.preventDefault(); S.look = lookKey(looks[k]); S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); }
@@ -7688,16 +8105,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ask.open = true; renderAsk();
       return spot(document.querySelector(`#ask [data-m="${CSS.escape(`${x.thread}:${x.msg ?? 0}`)}"]`) || $("#ask .ask-panel"), "nearest");
     }
-    // A note from the design workspace opens there, on its option, state and part, the note
-    // picked with its whole conversation; a done one shows under All.
+    // A note from the design workspace opens there, on its option and state, its whole conversation
+    // in place beside its part, picked in Comments; a done one shows under All.
     const an = th?.anchor;
     if (an?.variant && (c?.variants || []).some((v) => v.id === an.variant)) {
       S.variant = an.variant;
-      S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, edit: null, alt: null, note: th.id, state: an.state || null,
-        filter: th.state === "resolved" ? "all" : S.ws.filter || "open",
-        selected: an.selector ? { selector: an.selector, text: an.text || "", tag: an.tag || "", label: an.label || an.text || "an element", view: an.view, view_name: an.view_name } : null };
+      S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, edit: null, alt: null, note: th.id, state: an.state || null, selected: null, target: null,
+        filter: th.state === "resolved" ? "all" : S.ws.filter || "open", panel: "comments", pop: { kind: "thread", id: th.id, anchored: Boolean(an.selector) }, anchor: null };
       renderDetail(); renderWorkspace();
-      const li = document.querySelector(`[data-ws-note="${CSS.escape(th.id)}"]`), ms = li ? [...li.querySelectorAll(".m")] : [];
+      frameSay({ type: "desk-track", selector: an.selector || "" });
+      const li = document.querySelector(`[data-ws-note="${CSS.escape(th.id)}"]`), ms = [...document.querySelectorAll("#ws-pop .m")];
       for (const [tid, m] of (x.marks || []).slice(1)) if (tid === th.id && ms[m]) spot(ms[m], "nearest");
       spot(ms[x.msg ?? 0] || li, "nearest");
       return;
