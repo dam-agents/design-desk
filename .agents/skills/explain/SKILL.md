@@ -97,7 +97,7 @@ A change card takes only the layers the reader acts on; an answer usually needs 
 | Research | "Already asked for: none found. Where it lives: the Agents list. History: … In flight: nothing. Who to ask: nobody." | "Nothing is in the way: nobody asked for this before and nobody is changing it now. **Where it lives:** each row of the Agents list. **History:** the rows were spaced out in May to fit long names (PR #40)." |
 | Triage reason | "This requires changes to the spend aggregation logic in the backend." | "The product counts spend per week only. A daily bar needs it to count per day, and a developer decides that first." |
 | Answer | "Great question! The list is paginated through the API, which returns 50 records per request." | "The list shows 50 agents at a time; the rest appear as you scroll." |
-| A reason a designer should look | "a missing state" | "Check the empty list: it shows nothing at all" |
+| A reason a designer should look | "a missing state"; "feels crowded" | "The approved design shows an empty list; the change shows nothing at all" |
 
 ## Grounding — never invent a reason
 
@@ -115,7 +115,15 @@ one list for the whole summary) you name it in the sentence:
 
 When no source says why, write exactly that, in the text: "The change does not say why.
 <Author> made it and would know." A guessed reason presented as fact is the one mistake this
-skill exists to prevent; a plausible guess may be offered only labelled as a guess.
+skill exists to prevent. **Not even labelled**: a guess is not written, and neither is an opinion.
+
+**Design Desk states what it can point to and gives no opinion.** What goes into a text is a
+fact from a source: the code, the pull request, the issue, the approved design, a Figma frame,
+the catalog, a decision that counts. A decision that waits for a designer's approval (Not
+approved) is not a source: it is not cited as a reason, a conflict or a rule, and a text may say
+only that it exists and waits. What the product *could* do better, what looks odd to you, what
+you would have drawn — none of it is a finding. Where nothing differs from a source, write that
+nothing differs, or write nothing.
 
 ## Constraints, kindly
 
@@ -134,3 +142,4 @@ Never "it is not possible", never "the system does not allow it", never blame.
 - Does every sentence change what the reader does or knows? Cut the rest.
 - Does anything repeat the title, a picture or another sentence?
 - Is every "why" sourced, or marked as not documented?
+- Could the reader take any sentence for your taste instead of a fact from a source? Cut it.

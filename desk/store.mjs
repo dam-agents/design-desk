@@ -264,9 +264,12 @@ export function emptyDb() {
 const NOTE_FAMILY = { comment: "talk", reply: "talk", question: "talk", answer: "talk", "agent-asks": "talk", "dev-question": "talk", vote: "vote" };
 
 export class Store {
-  constructor(dir, { clock = now } = {}) {
+  // `needsApproval(decision)`: the server says whether a decision in force still waits for a designer
+  // (docs/desk.md → Decisions → Approved by a designer); it needs the roster, which the store does not read.
+  constructor(dir, { clock = now, needsApproval = () => false } = {}) {
     this.dir = dir;
     this.clock = clock;
+    this.needsApproval = needsApproval;
     this.dbPath = join(dir, "db.json");
     this.assetDir = join(dir, "assets");
     mkdirSync(this.assetDir, { recursive: true });
@@ -381,8 +384,12 @@ export class Store {
   }
   item(id) { const i = own(this.db.inbox, id); if (!i) throw missing(`no inbox item ${id}`); return i; }
   decision(id) { const d = own(this.db.decisions, id); if (!d) throw missing(`no decision ${id}`); return d; }
-  // A card's warnings: the decisions it goes against that are still in force.
-  activeConflicts(c) { return (c.conflicts || []).filter((x) => own(this.db.decisions, x.decision)?.status === "active"); }
+  // A decision that counts: in force and confirmed (a designer's own, or approved by one). One
+  // that waits for approval is recorded and shown, but no card is checked against it, warned about
+  // it or held for it, and no text cites it as a reason (docs/desk.md → Decisions).
+  holds(d) { return Boolean(d) && d.status === "active" && !this.needsApproval(d); }
+  // A card's warnings: the decisions it goes against that count.
+  activeConflicts(c) { return (c.conflicts || []).filter((x) => this.holds(own(this.db.decisions, x.decision))); }
 
   // ---------- the decision check (docs/desk.md → Decisions → The check) ----------
 
@@ -398,11 +405,11 @@ export class Store {
   }
   // The decisions in force a card could go against: by its concepts, or by the concepts and
   // words asked for instead (to narrow a long read); a card about nothing named reads every one.
-  decisionsFor(c, { concepts = [], q = "" } = {}) {
+  decisionsFor(c, { concepts = [], q = "" } = {}, { waiting = false } = {}) {
     const asked = concepts.map((x) => String(x).trim().toLowerCase()).filter(Boolean);
     const words = String(q || "").toLowerCase().split(/[\s,]+/).filter((w) => w.length > 2);
     const about = asked.length || words.length ? asked : this.conceptsOf(c);
-    return Object.values(this.db.decisions).filter((d) => d.status === "active" && ((!about.length && !words.length)
+    return Object.values(this.db.decisions).filter((d) => d.status === "active" && (waiting ? this.needsApproval(d) : !this.needsApproval(d)) && ((!about.length && !words.length)
       || about.some((a) => d.concepts.some((x) => x.includes(a) || a.includes(x)))
       || words.some((w) => `${d.text} ${d.why} ${d.concepts.join(" ")}`.toLowerCase().includes(w))))
       .sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
@@ -416,6 +423,7 @@ export class Store {
   }
   // A new decision, or one in force again: every card worked on that is about the same thing is checked again.
   checkAgainst(d) {
+    if (!this.holds(d)) return;
     for (const c of Object.values(this.db.cards)) {
       const about = this.conceptsOf(c);
       if (!about.length || !this.checkable(c) || !about.some((a) => d.concepts.some((x) => x.includes(a) || a.includes(x)))) continue;
@@ -433,6 +441,8 @@ export class Store {
       options: (c.variants || []).map((v) => ({ id: v.id, name: v.name, version: v.version || 1 })),
       decisions: all.slice(0, LIMITS.checkRead).map((d) => ({ id: d.id, text: d.text, why: d.why, concepts: d.concepts, at: d.at, author: d.author })),
       total: all.length, truncated: all.length > LIMITS.checkRead,
+      // In force but not approved: read them, never cite one as a reason or write one as a conflict.
+      waiting: this.decisionsFor(c, { concepts, q }, { waiting: true }).slice(0, 20).map((d) => ({ id: d.id, text: d.text, author: d.author })),
       conflicts: this.activeConflicts(c), last: c.decision_check || null };
   }
 
@@ -593,7 +603,7 @@ export class Store {
   getCard(id, { viewer } = {}) {
     const c = this.card(id);
     // A conflict carries the decision's words and where it stands, so the page warns without another read.
-    const conflicts = (c.conflicts || []).map((x) => { const d = own(this.db.decisions, x.decision); return { ...x, text: d?.text || "", status: d?.status || "revoked", replaced_by: d?.revoked?.replaced_by || null }; });
+    const conflicts = (c.conflicts || []).map((x) => { const d = own(this.db.decisions, x.decision); return { ...x, text: d?.text || "", status: d ? (d.status === "active" && !this.holds(d) ? "unapproved" : d.status) : "revoked", replaced_by: d?.revoked?.replaced_by || null }; });
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
@@ -2037,7 +2047,7 @@ export class Store {
       }
       // The decisions a card follows, and those it goes against (docs/desk.md → Decisions).
       else if (k === "decisions") { if (!Array.isArray(fields.decisions)) throw bad("decisions must be a list of D-n"); next.decisions = [...new Set(fields.decisions.slice(0, 20).map((id) => this.decision(String(id)).id))]; }
-      else if (k === "conflicts") next.conflicts = cleanConflicts(fields.conflicts, this.db.decisions, next.variants);
+      else if (k === "conflicts") next.conflicts = cleanConflicts(fields.conflicts, this.db.decisions, next.variants, { holds: (d) => this.holds(d), had: new Set((c?.conflicts || []).map((x) => x.decision)) });
       // The check this write was made with (docs/desk.md → Decisions → The check); stamped below, once the options are known.
       else if (k === "decision_check") next.decision_check = cleanDecisionCheck(fields.decision_check, this.db.decisions);
       // A shipped change read against the approved design it builds (docs/watch.md → Approved design).
@@ -2434,7 +2444,7 @@ export class Store {
     if (pics.length) d.pictures = pics;
     const old = [...new Set(replaces.slice(0, 10).map((id) => this.decision(String(id))))];
     for (const o of old) if (o.status !== "active") throw bad(`replaces: ${o.id} is no longer in force`);
-    const against = cleanConflicts(conflicts, this.db.decisions);
+    const against = cleanConflicts(conflicts, this.db.decisions, null, { holds: (x) => this.holds(x) });
     if (against.some((x) => old.some((o) => o.id === x.decision))) throw bad("a decision replaces an earlier one or goes against it, not both");
     d.id = this.next("decision", "D");
     if (old.length) d.replaces = old.map((o) => o.id);
@@ -2504,6 +2514,8 @@ export class Store {
     if (d.approved) throw bad(`${d.id} is already approved`);
     d.approved = { by: { email: who.email || null, role: who.role || null, ...(who.name ? { name: who.name } : {}) }, at: this.clock() };
     d.history = [...(d.history || []), { what: "approved", ...d.approved }].slice(-20);
+    // From now on it counts: the cards about the same thing are checked against it.
+    this.checkAgainst(d);
     this.save();
     return { decision: d };
   }
@@ -2959,13 +2971,15 @@ function cleanDecisionCheck(x, decisions) {
 }
 
 // The decisions a card or a decision goes against, each with why; only those in force.
-function cleanConflicts(list, decisions, variants = null) {
+// `holds` says a decision counts (in force and approved); one the card already had stays as it is.
+function cleanConflicts(list, decisions, variants = null, { holds = () => true, had = new Set() } = {}) {
   if (!Array.isArray(list)) throw bad("conflicts must be a list");
   if (list.length > 10) throw bad("conflicts: at most 10");
   return list.map((x) => {
     const d = own(decisions, String(x?.decision || ""));
     if (!d) throw bad(`conflicts: no decision ${x?.decision}`);
     if (d.status !== "active") throw bad(`conflicts: ${d.id} is no longer in force`);
+    if (!had.has(d.id) && !holds(d)) throw bad(`conflicts: ${d.id} is not approved yet, so nothing is checked against it; a designer approves it first`);
     const variant = x.variant == null || x.variant === "" ? null : String(x.variant);
     if (variant && !(variants || []).some((v) => v.id === variant)) throw bad(`conflicts: no option ${variant}`);
     return { decision: d.id, why: clean(x.why, 400, "conflict why"), ...(variant ? { variant } : {}) };

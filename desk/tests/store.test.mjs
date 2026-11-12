@@ -1501,6 +1501,34 @@ test("decisions: a designer asks to record a person's comment, once", () => {
   assert.ok(inbox(s).open.some((i) => i.kind === "decision"));
 });
 
+test("decisions: one waiting for a designer's approval is never a conflict, a reason or a check; approving it makes it count", () => {
+  const waiting = new Set();
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: (d) => waiting.has(d.id) });
+  const d = s.addDecision({ concepts: ["prices"], text: "Prices show tax", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
+  waiting.add(d.id);
+  const c = s.createRequest(alice, { title: "Prices", problem: "Show prices" }).card;
+  assert.throws(() => s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "It drops the tax." }] }), /not approved yet/);
+  const check = s.decisionCheck(c.id, { concepts: ["prices"] });
+  assert.deepEqual(check.decisions.map((x) => x.id), [], "the check reads only what counts");
+  assert.deepEqual(check.waiting.map((x) => x.id), [d.id], "it names what waits, apart");
+  // A conflict a card already had stays on it but warns nothing, and no one waits for it.
+  waiting.delete(d.id);
+  s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "It drops the tax." }] });
+  assert.equal(s.attentionOf(s.card(c.id)).reasons.some((r) => /Goes against/.test(r)), true);
+  waiting.add(d.id);
+  assert.deepEqual(s.activeConflicts(s.card(c.id)), []);
+  assert.equal(s.getCard(c.id).conflicts[0].status, "unapproved", "the page does not warn");
+  assert.equal(s.listCards().find((x) => x.id === c.id).conflicts, 0);
+  // A decision that waits queues no check on the cards about the same thing; one that counts does.
+  const inboxItems = () => Object.values(s.db.inbox).filter((i) => i.kind === "decision-check" && i.state === "open").length;
+  const before = inboxItems();
+  s.checkAgainst(d);
+  assert.equal(inboxItems(), before, "nothing is queued for a decision that waits");
+  waiting.delete(d.id);
+  s.checkAgainst(d);
+  assert.equal(s.activeConflicts(s.card(c.id)).length, 1, "approved, it warns again");
+});
+
 test("decisions: conflicts warn, wait for a designer and gate approval; revoking clears them", () => {
   const s = fresh();
   const d = s.addDecision({ concepts: ["prices"], text: "Prices show tax", author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision;
