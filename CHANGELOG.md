@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.82.2 — 2026-11-12
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): its Slack vote hints say a
+   reply reaches the Desk when it tags the agent, or in a channel the agent reads in full.
+   `slack-polls` and `docs/digest.md` are re-read per run.
+
 ## 1.82.1 — 2026-11-12
 
 **Upgrade:**

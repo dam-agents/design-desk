@@ -1628,7 +1628,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       revise: "Design Desk redraws the options, working in every open comment",
       close: "Design Desk stops working on it and switches off its live prototype; you can record what you decided. You confirm first and can reopen it later.",
       states: "Design Desk draws a part of this option in every state it can be in: hovered, disabled, loading, empty, with an error…",
-      slack: "Posts pictures of the designs to Slack, or asks the team there for a vote — into the thread the request came from, else the team's channel; votes and replies come back here",
+      slack: "Posts pictures of the designs to Slack, or asks the team there for a vote — into the thread the request came from, else the team's channel; votes and replies that reach Design Desk come back here",
       "figma-import": "Paste a link to a Figma frame: Design Desk adds it as a design option built from the product's real parts",
       "figma-export": "Design Desk puts this option into Figma as editable layers and links it here",
       draw: "Design Desk takes a picture of how it looks now and sketches how it could look. It takes a few minutes.",
@@ -4162,7 +4162,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : go(label, "A private copy of the product with this option's look, with made-up data. The first one can take up to an hour.");
     const slack = () => {
       const modes = slackModes(c), poll = (c.polls || []).find((x) => x.state === "open");
-      if (modes.length) return go("Send to Slack…", modes.includes("vote") ? "Pictures of the options you tick, or a vote on them; replies come back here." : `Pictures of the options you tick${poll ? `; the vote there runs until ${when(poll.closes)}` : ""}.`);
+      if (modes.length) return go("Send to Slack…", modes.includes("vote") ? "Pictures of the options you tick, or a vote on them; replies that reach Design Desk come back here." : `Pictures of the options you tick${poll ? `; the vote there runs until ${when(poll.closes)}` : ""}.`);
       if (!S.me?.slack && !S.me?.slack_send && c.origin?.channel !== "slack") return no("Send to Slack…", "Slack is not set up for this Desk.");
       if (!can("share")) return no("Send to Slack…", `Your role does not send to Slack; ${ask}.`);
       if (working(c).some((k) => k.startsWith("slack"))) return no("Send to Slack…", "Design Desk is sending to Slack now.");
@@ -4486,7 +4486,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return polls.slice(-2).map((p) => p.state === "open" && c.vote_ended
       ? `<p class="hint">💬 The vote in Slack ended${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack` : ""}. Design Desk closes it there and posts its result.${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
       : p.state === "open"
-      ? `<p class="hint">💬 Voting in Slack until ${esc(when(p.closes))}${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack so far` : ""}. Reactions and replies there come to this page.${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
+      ? `<p class="hint">💬 Voting in Slack until ${esc(when(p.closes))}${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack so far` : ""}. Reactions there come to this page, and replies that tag Design Desk (any reply, where it reads the whole channel).${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
       : `<p class="hint">💬 Slack vote closed ${esc(day(p.closed))}${p.result ? `: ${esc(p.result)}` : ""}${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`).join("");
   }
 
@@ -5819,7 +5819,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     f.reset();
     const where = c.origin?.channel === "slack" ? "in the Slack thread this request came from" : "to the team's Slack channel";
     $("#sl-send-hint").textContent = `Design Desk takes a picture of each design you tick and posts them ${where}, with a link back here. Comments and the decision stay here on the Desk.`;
-    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍 or 👎 and write a concern or a why as a reply in each option's thread; the votes and replies come to this page, and the result is posted when the vote closes.`;
+    $("#sl-vote-hint").textContent = `Design Desk posts the options ${where}, one message per option with its picture. People vote with 👍 or 👎 and write a concern or a why as a reply in each option's thread, tagging Design Desk unless it reads the whole channel; the votes and those replies come to this page, and the result is posted when the vote closes.`;
     const vs = c.variants || [];
     $("#sl-options").innerHTML = vs.map((v) => `<label><input type="checkbox" name="option" value="${esc(v.id)}" checked /> ${esc(v.name)}${tallyText(c, v.id) ? ` <span class="sub">${esc(tallyText(c, v.id))}</span>` : ""}</label>`).join("");
     const at = (hours) => new Date(Date.now() + hours * 3600e3).toISOString();
