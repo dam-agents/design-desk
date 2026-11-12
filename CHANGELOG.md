@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.88.1 — 2026-11-12
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): on a window where the header
+   wraps, the bell's list opens on the screen, not off its left edge, and stays on it when the
+   window is resized while it is open. No data migration.
+
 ## 1.88.0 — 2026-11-12
 
 **Upgrade:**

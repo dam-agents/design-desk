@@ -7750,8 +7750,21 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   $("#bell").addEventListener("toggle", guard(async () => {
     if (!$("#bell").open) { renderBell(); return; }
     // Opening it reads nothing: a row is read once clicked, or with Mark as read.
-    renderNotes(); renderBell();
+    renderNotes(); renderBell(); fitBell();
   }));
+  // On a narrow window the header wraps and the bell sits at the left: the list, aligned
+  // to the bell's right edge, would start off the screen; move it back in, and keep its right
+  // edge on the screen too. Measured again on the frame after every resize while it is open
+  // (the new layout is in place by then), so a resized window never keeps an old offset.
+  function fitBell() {
+    if (!$("#bell").open) return;
+    const menu = $("#notes");
+    menu.style.right = "";
+    const { left, right } = menu.getBoundingClientRect();
+    if (left < 12) menu.style.right = `${left - 12}px`;
+    else if (right > innerWidth - 12) menu.style.right = `${right - innerWidth + 12}px`;
+  }
+  addEventListener("resize", () => requestAnimationFrame(fitBell));
 
   // An update restarts the server and republishes this page: the page open before it may
   // never reach the Desk again, so after RELOAD_AFTER without an answer it loads itself
