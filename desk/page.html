@@ -5980,11 +5980,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     renderPalette();
   }
 
-  // What Design Desk does on one option now: changing it, drawing its states, other ways of a part, bringing it from Figma.
+  // What Design Desk does on one option now: changing it, drawing its states, other ways of a part, sending it to Figma.
   function busyOn(c, vid) {
     const changes = notesOf(c).filter((n) => n.anchor.variant === vid && n.kind === "change" && n.state !== "resolved" && !n.messages[n.messages.length - 1]?.by?.agent);
     return (c.waiting || []).filter((w) => !workDone(c, w) && ["revise", "states", "figma"].includes(w.kind) && (w.variant ? w.variant === vid : w.kind === "revise" && w.scope !== "alternatives" && changes.length))
-      .map((w) => ({ ...w, what: w.kind === "states" ? `Drawing every state${w.part ? ` of ${w.part}` : ""}` : w.kind === "figma" ? "Bringing it in from Figma"
+      .map((w) => ({ ...w, what: w.kind === "states" ? `Drawing every state${w.part ? ` of ${w.part}` : ""}` : w.kind === "figma" ? "Sending it to Figma"
         : w.scope === "alternatives" ? `Drawing other ways${w.part ? ` ${w.part}` : " a part"} could look` : `Changing it${changes.length ? ` for ${plural(changes.length, "comment", "comments")}` : ""}` }));
   }
   const busyWhen = (w) => w.state === "claimed" && w.started ? `started ${ago(w.started) === "just now" ? "just now" : `${ago(w.started)} ago`}${w.usual_min ? `, usually about ${w.usual_min} min` : ""}` : "in the queue, starts within 10 minutes";
@@ -6009,7 +6009,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // The bar on top: the request, what Design Desk does on it now, Figma, and the one way out.
   function wsTop(c, v) {
-    const busy = [v, ...(c.variants || []).filter((x) => x.id !== v.id)].flatMap((x) => busyOn(c, x.id).map((w) => ({ ...w, on: x.name }))).concat(working(c).includes("explore") ? [{ state: "claimed", what: "Drawing a new option" }] : []);
+    const busy = [v, ...(c.variants || []).filter((x) => x.id !== v.id)].flatMap((x) => busyOn(c, x.id).map((w) => ({ ...w, on: x.name }))).concat(working(c).includes("explore") ? [{ state: "claimed", what: "Drawing a new option" }] : [])
+      .concat((c.waiting || []).filter((w) => w.kind === "figma" && !w.variant && !workDone(c, w)).map((w) => ({ ...w, what: "Bringing a frame in from Figma" })));
     const on = busy.filter((w) => w.state === "claimed"), agent = busy.length ? `<span class="ws-agent ${on.length ? "on" : ""}" title="${esc(busy.map((w) => `${w.on ? `${w.on}: ` : ""}${w.what} (${busyWhen(w)})`).join("\n"))}"><span class="dd-spin ${on.length ? "" : "queued"}"></span><span>Design Desk: ${esc(busy.map((w) => `${w.what}${w.on ? ` · ${w.on}` : ""}`)[0])}${busy.length > 1 ? ` <b>+${busy.length - 1}</b>` : ""}</span></span>` : "";
     const fig = S.me?.figma && can("figma") && !S.ws.check, menu = S.ws.menu === "figma";
     const figBtn = fig || v.figma_url ? `<span class="ws-menuwrap"><button class="ws-ibtn" data-ws-menu="figma" aria-expanded="${menu}" title="Figma">${wsIcon("figma")}${wsIcon("chev")}</button>${menu ? `<div class="ws-menu" role="menu">${fig ? `<button role="menuitem" data-act="figma-import">Import from Figma</button><button role="menuitem" data-act="figma-export">Send to Figma</button>` : ""}${v.figma_url ? `<a role="menuitem" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}</div>` : ""}</span>` : "";

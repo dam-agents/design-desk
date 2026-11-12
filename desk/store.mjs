@@ -1625,6 +1625,8 @@ export class Store {
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
     if (action === "draw-now") item.scope = "now";
+    // Sent to Figma: the option it is, so the page shows Design Desk at work on it.
+    if (action === "figma-export") item.variant = note;
     if (action === "add-option") {
       item.scope = "add";
       if (base) item.variant = base.id;
