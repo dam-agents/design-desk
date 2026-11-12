@@ -222,7 +222,9 @@ and `D-12` in text link to it as to a card (Links to an item).
   against the decisions in force first — triage, impact, a change card, options (a new one, a
   person's description, a redraw, notes worked in, three ways of a part, every state), an
   issue's sketch, a live prototype, a new decision, an answer to a question that asks for a
-  change, a design asked for in Slack or chat.
+  change, a design asked for in Slack or chat. How a request's screen looks today (`now`,
+  [requests.md](requests.md) → How it looks today) is the product as it is, not a design: it
+  is drawn without the check and carries no conflicts.
   1. `design desk decision-check R-<n> [--concept <a,b>] [--q <words>]`: the card's options,
      the decisions in force about its concepts (or, given, about those concepts and words
      instead), its conflicts now and its last check. Name the concepts the design touches; a card about nothing named reads every one.
@@ -280,7 +282,7 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | members (every role but `guest`) | also mark someone else's conversation done |
 | `pm`, `developer`, `lead-developer` | also vote, file a request, start a follow-up from a change, add screenshots |
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
-| `pm`, `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
+| `pm`, `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a request's screen looks today, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options, and end its vote (Team feedback, below) |
 | a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |

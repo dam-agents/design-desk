@@ -2655,3 +2655,22 @@ test("a change card's environment: https only, keeps when it was deployed, clear
   assert.equal(s.upsertCard({ id: c.id, environment: { ...env, expires: "2026-11-19T08:00:00.000Z" } }).card.environment.expires, "2026-11-19T08:00:00Z");
   assert.equal(s.upsertCard({ id: c.id, environment: null }).card.environment, null);
 });
+
+test("a request keeps how its screen looks today, and Draw how it looks today queues only that", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { title: "Calmer header", problem: "The header shouts." });
+  assert.throws(() => s.act(card.id, alice, "draw-now"), /still checking/);
+  const asset = s.addAsset({ kind: "variant", name: "now", contentType: "text/html", data: "<b>today</b>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "variants", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Grey", asset }] });
+  const res = s.act(card.id, alice, "draw-now");
+  assert.deepEqual([res.inbox.kind, res.inbox.scope], ["explore", "now"]);
+  assert.equal(res.card.status, "variants", "the status stays as it is");
+  assert.throws(() => s.act(card.id, alice, "draw-now"), /already|busy|working|wait/i, "a second ask for it waits");
+  assert.equal(s.openFeedback(card.id, alice).card.status, "feedback", "the team is asked while it draws");
+  assert.equal(s.act(card.id, alice, "add-option", "A darker one").inbox.scope, "add", "the options' own work goes on");
+  assert.throws(() => s.upsertCard({ id: card.id, now: { asset: "A-999" } }), /no asset/);
+  s.upsertCard({ id: card.id, now: { asset, name: "Orders" } });
+  assert.deepEqual([s.card(card.id).now.asset, s.card(card.id).now.name], [asset, "Orders"]);
+  s.upsertCard({ id: card.id, now: null });
+  assert.equal(s.card(card.id).now, null);
+});
