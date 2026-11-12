@@ -68,7 +68,7 @@ test("the readers each find their own shape, and leave what is not one", () => {
   assert.deepEqual(unionVariants(`id?: "a" | "b"`, "f.tsx"), [], "a prop that is no look");
   assert.deepEqual(classFamilies(`.card-primary {}`, "f.css"), [], "one class is no family");
   assert.deepEqual(cssTokens(`.x { --brand: #fff; }`, "f.css"), [], "a value on another rule is not the product's");
-  assert.deepEqual(cssTokens(`html.dark { --primary: #000; } @media (prefers-color-scheme: dark) { :root { --fg: #eee; } } [data-theme="light"] { --accent: #f00; } :root { --primary: #fff; }`, "f.css").map((t) => t.name + "=" + t.value),
+  assert.deepEqual(cssTokens(`html.dark { --primary: #000; } @media (prefers-color-scheme: dark) { .x { color: red; } :root { --fg: #eee; } html { --bg: #000; } } [data-theme="light"] { --accent: #f00; } :root { --primary: #fff; }`, "f.css").map((t) => t.name + "=" + t.value),
     ["--accent=#f00", "--primary=#fff"], "a dark theme read first is still no product value; a light one is");
   assert.throws(() => readKit(join(tmpdir(), "dd-kit-none")), /cannot read/, "a root that is not there is no empty kit");
   assert.throws(() => readKit(repo(), { uiDir: "app" }), /UI folder app/, "nor is a UI folder that is not there");

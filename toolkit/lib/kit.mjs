@@ -127,8 +127,14 @@ export function classFamilies(text, file) {
 // query's own rule) is an override, not the product's value.
 export function cssTokens(text, file) {
   const out = [];
+  // Every dark media block, start to end: a rule anywhere inside one is a dark override.
+  const dark = [];
+  for (const d of text.matchAll(/@media[^{]*prefers-color-scheme\s*:\s*dark[^{]*\{/gi)) {
+    const block = balanced(text, d.index + d[0].length - 1);
+    dark.push([d.index, block ? d.index + d[0].length - 1 + block.length : text.length]);
+  }
   for (const m of text.matchAll(/(:root|html|@theme(?:\s+\w+)?|\[data-theme[^\]]*\]|\.light)(?![\w-])[^{};]*\{/g)) {
-    if (/dark/i.test(m[0]) || /prefers-color-scheme:\s*dark[^{]*\{[^{}]*$/i.test(text.slice(0, m.index))) continue;
+    if (/dark/i.test(m[0]) || dark.some(([a, b]) => m.index > a && m.index < b)) continue;
     const block = balanced(text, m.index + m[0].length - 1);
     if (!block) continue;
     for (const d of block.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
@@ -153,7 +159,8 @@ export function kindOf(name, value) {
 
 // Where each part of the kit is used: the files that name a value (`var(--name)`), that render a
 // component (`<Button`), that ask for one of its variants (`<Button variant="ghost"`; no prop: its
-// default) or that carry a class of a family (`btn-ghost`). A component's own file is no use of it. Each
+// default) or that carry a class of a family (`btn-ghost`). The file that defines a value or a
+// component is no use of it. Each
 // list is `used_in`, at most LIMIT.used files, sorted. A value Tailwind turns into classes
 // (`bg-primary` from `--color-primary`) is not followed: only `var()` is.
 const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -177,7 +184,7 @@ export function usage(root, files, byKind, components) {
     if (classRe && !STYLE.test(rel)) for (const m of text.matchAll(classRe)) add(classUse, m[1], rel);
   }
   const list = (set, not) => set ? [...set].filter((f) => f !== not).sort().slice(0, LIMIT.used) : [];
-  for (const ts of Object.values(byKind)) for (const t of ts) t.used_in = list(tokenUse.get(t.name));
+  for (const ts of Object.values(byKind)) for (const t of ts) t.used_in = list(tokenUse.get(t.name), t.file);
   for (const c of components) {
     if (c.how === "class") { for (const o of c.options) o.used_in = list(classUse.get(o.class)); c.used_in = [...new Set(c.options.flatMap((o) => o.used_in))].sort().slice(0, LIMIT.used); continue; }
     c.used_in = list(tagUse.get(c.name), c.file);

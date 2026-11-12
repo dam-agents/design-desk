@@ -3148,7 +3148,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!files.length) return `<div class="kit-used">Not used in the code it read</div>`;
     const els = S.cards.filter((c) => c.kind === "element" && c.source?.file && files.includes(c.source.file));
     const rest = files.filter((f) => !els.some((c) => c.source.file === f));
-    const more = rest.length ? `${rest.length} ${rest.length === 1 ? "file" : "files"}${files.length >= 30 ? " (the first 30)" : ""}` : "";
+    const more = rest.length ? `${rest.length} ${rest.length === 1 ? "file" : "files"}${files.length >= 30 ? " (it lists at most 30)" : ""}` : "";
     const folded = more ? `<details><summary>${els.length ? `and ${more}` : `Used in ${more}`}</summary><ul>${rest.map((f) => `<li>${kitSrc(k, f)}</li>`).join("")}</ul></details>` : "";
     return `<div class="kit-used">${els.length ? `<span class="k">used in:</span>${els.map((c) => `<button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>`).join("")}` : ""}${folded}</div>`;
   }
@@ -3165,7 +3165,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const c = p.comp;
     return `${backBar()}<h2>${esc(p.title)}</h2>${read}
       <p class="hint">${esc(c.name)} has ${c.options.length} variants, from ${esc(KIT_HOW[c.how] || "its code")}${c.file ? ` in ${kitSrc(k, c.file)}` : ""}. Design Desk offers a part of this kind only these.</p>
-      ${Array.isArray(c.used_in) ? `<p class="hint">${c.used_in.length ? `${c.how === "class" ? "Its classes are" : "It is"} used in ${c.used_in.length}${c.used_in.length >= 30 ? " or more" : ""} ${c.used_in.length === 1 ? "file" : "files"}; each variant says where.` : "It is not used in the code it read."}</p>` : ""}
+      ${Array.isArray(c.used_in) ? `<p class="hint">${c.used_in.length ? `${c.how === "class" ? "Its classes are" : "It is"} used in ${c.used_in.length} ${c.used_in.length === 1 ? "file" : "files"}${c.used_in.length >= 30 ? " (it lists at most 30)" : ""}; each variant says where.` : "It is not used in the code it read."}</p>` : ""}
       <ol class="kit-grid">${c.options.map((o) => `<li class="kit-tile"><div class="kit-pic"><span class="var">${esc(o.name)}</span></div><div class="kname">${esc(o.name)}${o.name === c.default ? ` <span class="chip" title="What the component shows when nothing else is asked">default</span>` : ""}</div>${o.classes || o.class ? `<div class="kval">${esc(o.classes || `.${o.class}`)}</div>` : ""}${kitUsed(k, o.used_in)}</li>`).join("")}</ol>`;
   }
   function renderDecisionList(filters) {
