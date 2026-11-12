@@ -82,8 +82,9 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   nobody marked handled moves from Open and Needs a designer to **Auto handled**; `0`/`off` disables
   that move only: a change judged `fyi` is auto handled at once whatever the value.
 - `pr_environment_days` (`7`), never asked — days a pull request's own environment (a change
-  card's `environment`, [watch.md](watch.md) step 7) runs after it was deployed; past it the
-  card shows the link greyed out as gone. `0`/`off`: never shown as gone.
+  card's `environment`, [watch.md](watch.md) step 7) runs after it was deployed, when the platform
+  gives no expiry for it; past it the card shows the link greyed out as gone. `0`/`off`: never
+  shown as gone without that expiry.
 - Monitor thresholds, never asked: `model_alert_threshold` (2), `classifier_alert_threshold`
   (20), `heartbeat_gap_min` (60) — `0`/`off` disables.
 - `## Desk people` table, `| email | role |`: `admin`, `designer`, `lead-developer`, `developer` or `pm`;

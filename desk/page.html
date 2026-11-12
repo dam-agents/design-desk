@@ -3582,14 +3582,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderEnvironment(c) {
     const e = c.environment;
     if (!e?.url || c.source?.merged_at) return "";
-    // It runs `pr_environment_days` after it was deployed (docs/config.md); past that it shows gone.
-    const days = S.me?.env_days ?? 7, ends = days > 0 && e.since ? Date.parse(e.since) + days * 864e5 : null;
+    // It runs until the platform's own expiry (docs/watch.md step 7); without one, `pr_environment_days`
+    // after it was deployed (docs/config.md). Past that it shows gone.
+    const days = S.me?.env_days ?? 7, ends = e.expires ? Date.parse(e.expires) : days > 0 && e.since ? Date.parse(e.since) + days * 864e5 : null;
     const gone = ends !== null && Date.now() > ends, until = ends ? esc(day(new Date(ends).toISOString())) : "";
     const kv = (k, v, tip = "") => `<span${tip ? ` title="${esc(tip)}"` : ""}><span class="k">${k}:</span> <b>${v}</b></span>`;
     const meta = `<span class="one-line">${e.label ? kv("as", esc(e.label)) : ""}${gone ? `<span class="chip">No longer running</span>`
-      : until ? kv("until", until, `Its environment runs ${days} days after it was deployed`) : ""}</span>`;
+      : until ? kv("until", until, e.expires ? "When the platform takes its environment down" : `Its environment runs ${days} days after it was deployed`) : ""}</span>`;
     // Folded, it is one line with its action; open, how to sign in and what to try.
-    const open = gone ? `<span class="btn small" aria-disabled="true" title="It ran ${esc(days)} days from ${esc(day(e.since))}; ask the pull request's author to deploy it again">Open the environment ↗</span>`
+    const open = gone ? `<span class="btn small" aria-disabled="true" title="It ran until ${until}; ask the pull request's author to deploy it again">Open the environment ↗</span>`
       : `<a class="btn small primary" href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer" title="The developers' running copy of this pull request, from its description">Open the environment ↗</a>`;
     const l = e.login;
     const body = gone ? "" : `${l ? `<dl class="kv"><dt>Sign in</dt><dd>${l.user ? `<code>${esc(l.user)}</code>${l.password ? ` / <code>${esc(l.password)}</code>` : ""}${l.hint ? " " : ""}` : ""}${l.hint ? esc(l.hint) : ""}</dd></dl>` : ""}

@@ -2644,7 +2644,7 @@ test("a change card's environment: https only, keeps when it was deployed, clear
   const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => now });
   const env = { url: "https://app-pr-7.env.example.com", label: "demo", login: { hint: "your platform account" }, steps: ["Open the agents list"], missing: "No processes there." };
   const c = s.upsertCard({ kind: "change", title: "Filter agents by owner", source: { repo: "acme/widgets", pr: 7 }, environment: env }).card;
-  assert.deepEqual(c.environment, { ...env, since: "2026-11-02T08:00:00Z", login: { user: "", password: "", hint: "your platform account" } });
+  assert.deepEqual(c.environment, { ...env, since: "2026-11-02T08:00:00Z", expires: null, login: { user: "", password: "", hint: "your platform account" } });
   // The same address keeps its first date; a new one starts again; the agent's own date wins.
   now = "2026-11-05T08:00:00Z";
   assert.equal(s.upsertCard({ id: c.id, environment: env }).card.environment.since, "2026-11-02T08:00:00Z");
@@ -2652,5 +2652,6 @@ test("a change card's environment: https only, keeps when it was deployed, clear
   assert.equal(s.upsertCard({ id: c.id, environment: { ...env, since: "2026-11-01T10:00:00.000Z" } }).card.environment.since, "2026-11-01T10:00:00Z");
   assert.throws(() => s.upsertCard({ id: c.id, environment: { url: "http://app.example.com" } }), /https/);
   assert.throws(() => s.upsertCard({ id: c.id, environment: { ...env, since: "soon" } }), /date/);
+  assert.equal(s.upsertCard({ id: c.id, environment: { ...env, expires: "2026-11-19T08:00:00.000Z" } }).card.environment.expires, "2026-11-19T08:00:00Z");
   assert.equal(s.upsertCard({ id: c.id, environment: null }).card.environment, null);
 });

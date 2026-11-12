@@ -3088,13 +3088,13 @@ function cleanImpact(o, cards, decisions = {}) {
 function cleanEnvironment(o) {
   if (typeof o !== "object" || !o) throw bad("environment must be an object");
   if (!/^https:\/\//.test(String(o.url || ""))) throw bad("environment.url must be an https address");
-  const since = o.since == null || o.since === "" ? null : String(o.since);
-  if (since && Number.isNaN(Date.parse(since))) throw bad("environment.since must be a date");
+  const date = (k) => { const v = o[k] == null || o[k] === "" ? null : String(o[k]); if (v && Number.isNaN(Date.parse(v))) throw bad(`environment.${k} must be a date`); return v ? new Date(v).toISOString().replace(/\.\d{3}Z$/, "Z") : null; };
+  const since = date("since"), expires = date("expires");
   // How to sign in and what to try, as the pull request says it: a demo account, never a person's.
   const login = o.login && typeof o.login === "object" ? { user: optText(o.login.user, 120, "user"), password: optText(o.login.password, 200, "password"), hint: optText(o.login.hint, 160, "sign-in hint") } : null;
   if (o.steps !== undefined && o.steps !== null && !Array.isArray(o.steps)) throw bad("environment.steps must be a list");
   const steps = (o.steps || []).slice(0, 5).map((x) => clean(x, 160, "step"));
-  return { url: String(o.url).slice(0, 500), label: optText(o.label, 60, "environment label"), since: since ? new Date(since).toISOString().replace(/\.\d{3}Z$/, "Z") : null,
+  return { url: String(o.url).slice(0, 500), label: optText(o.label, 60, "environment label"), since, expires,
     login: login && (login.user || login.hint) ? login : null, steps, missing: optText(o.missing, 200, "what the environment lacks") };
 }
 

@@ -73,11 +73,14 @@ steps say; the decision notes of step 4 are always yours to read.
      each value as the body gives it, never guessed and never from someone else's comment:
      `url` the https address; `label` the body's word for it ("demo"); `since` when it was
      deployed if the PR says so, else left out (the store keeps when it first saw that address);
+     `expires` the platform's own: the Environment `list_environments` lists with that address
+     (one shared with the owner counts), its `expires`, read again each time the card is written;
      `login` `{user, password, hint}` — a demo account the body gives, or a `hint` alone ("your
      platform account"), never a person's own password; `steps` — up to five short steps to
      try the change there, in the product's words; `missing` — one sentence on what that
      install cannot show. The card shows it as **Try the pull request** until the PR merges,
-     greyed out as no longer running `pr_environment_days` (`7`) after `since`.
+     greyed out as no longer running after `expires`, or, with none, `pr_environment_days` (`7`)
+     after `since`.
    A reason you cannot find is written as not documented, with the PR author as the person
    to ask. Two open questions at most, the ones a designer should decide.
    - `impact` — where else the same thing shows up and what the change touches, from earlier
