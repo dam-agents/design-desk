@@ -328,7 +328,8 @@ watch_mode() {
     local rels rtag rname rurl rpub rpre prev prs
     if rels="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/releases?per_page=30" 2>/dev/null)"; then
       prev=""
-      while IFS=$'\t' read -r rtag rname rurl rpub rpre; do
+      # \037, not a tab: a tab is whitespace to IFS, so a release with no name would shift the columns.
+      while IFS=$'\037' read -r rtag rname rurl rpub rpre; do
         [ -n "$rtag" ] || continue
         if [[ "$rpub" < "$SINCE_Z" ]] || jq -e --arg k "$repo#$rtag" 'index($k) != null' <<<"$KNOWN_RELS" >/dev/null || [ "$nrel" -ge 5 ]; then prev="$rtag"; continue; fi
         if [ -z "$prev" ]; then log "$repo $rtag: no earlier release to compare it with — kept without its pull requests"; prs='[]'
@@ -340,7 +341,7 @@ watch_mode() {
           '{repo:$repo, tag:$tag, name:(if $name == "" then $tag else $name end), url:$url, published_at:$pub, prerelease:$pre, previous:(if $prev == "" then null else $prev end), prs:$prs}' >> "$RELS"
         nrel=$((nrel + 1)); log "$repo $rtag: released $rpub, $(jq length <<<"${prs:-[]}") pull requests — releases_due"
         prev="$rtag"
-      done < <(jq -r '[.[] | select((.draft | not) and .published_at != null)] | sort_by(.published_at) | .[] | [.tag_name, ((.name // "") | gsub("[\t\n]"; " ")), .html_url, .published_at, (.prerelease | tostring)] | @tsv' <<<"$rels")
+      done < <(jq -r '[.[] | select((.draft | not) and .published_at != null)] | sort_by(.published_at) | .[] | [.tag_name, ((.name // "") | gsub("[\t\n\u001f]"; " ")), .html_url, .published_at, (.prerelease | tostring)] | join("\u001f")' <<<"$rels")
     else
       log "$repo: could not list its releases — next run"
     fi
