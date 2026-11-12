@@ -2033,8 +2033,8 @@ test("the look palette: in the side panel under the part picked, a preview only,
   }
 });
 
-test("the look palette is an admin's for now: a designer selects a part and gets none", async (t) => {
-  const run = await launch(t, `<script>window.ROLE = "designer";</script>` + BRIDGE_LOOK);
+test("the look palette is for admins, designers and lead developers: a developer selects a part and gets none", async (t) => {
+  const run = await launch(t, `<script>window.ROLE = "developer";</script>` + BRIDGE_LOOK);
   if (!run) return;
   const { desk } = run;
   try {
@@ -2047,7 +2047,7 @@ test("the look palette is an admin's for now: a designer selects a part and gets
     await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
     await frame.click("button.primary");
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
-    assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette for a designer");
+    assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette for a developer");
   } finally {
     await run.close();
   }
