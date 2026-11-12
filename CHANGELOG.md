@@ -14,7 +14,7 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    ([desk.md](docs/desk.md) → Publishing the page): the design workspace gets a look palette (an
    admin's for now), an option's elements may carry smart controls, and a note keeps what was
    picked in `anchor.style` and `anchor.controls`. An admin also gets Product → Kit; it fills the next
-   time a drawing run sends `design desk kit`. The store gains an optional `kit` (no migration);
+   time a drawing run sends `design desk kit`, with where each value and variant is used. The store gains an optional `kit` (no migration);
    `design kit` needs no install.
 
 ## 1.81.0 — 2026-11-11

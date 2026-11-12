@@ -33,6 +33,8 @@ export function Button() { return null; }`);
 export function Badge({ tone = "neutral" }: Props) { return null; }`);
   put("web/src/components/ui/button.test.tsx", `type T = { variant?: "x" | "y" };`);
   put("server/api.ts", `type Q = { status?: "open" | "closed" };`);
+  put("web/src/pages/settings.tsx", `export const S = () => <div style={{ color: "var(--primary)" }}><Button variant="secondary">Save</Button><Button>Ok</Button><a className="btn-ghost">x</a></div>;`);
+  put("web/src/pages/home.tsx", `export const H = () => <Button variant={"secondary"} size="lg" />;`);
   return root;
 }
 
@@ -42,12 +44,23 @@ test("a kit: the light theme's named values by kind, and every component's varia
   assert.deepEqual(Object.keys(kit.tokens).sort(), ["color", "font-size", "radius", "shadow", "space"], "a line height is no kind the palette offers");
   assert.equal(kit.tokens.shadow[0].file, "web/src/app.css");
   const by = (name, prop) => kit.components.find((c) => c.name === name && c.prop === prop);
-  assert.deepEqual(by("Button", "variant"), { name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default",
+  const bare = ({ used_in, ...c }) => ({ ...c, options: c.options.map(({ used_in: _, ...o }) => o) });
+  assert.deepEqual(bare(by("Button", "variant")), { name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default",
     options: [{ name: "default", classes: "bg-primary text-white" }, { name: "secondary", classes: "bg-muted text-fg" }, { name: "ghost", classes: "hover:bg-muted" }] });
   assert.equal(by("Button", "size").default, "sm");
   assert.deepEqual(by("Badge", "tone").options.map((o) => o.name), ["neutral", "success", "danger"]);
   assert.deepEqual(by("Btn", "class").options.map((o) => o.class), ["btn-primary", "btn-secondary", "btn-ghost"]);
   assert.equal(kit.components.some((c) => c.prop === "status" || c.options.some((o) => o.name === "x")), false, "outside the UI folder and tests are not read");
+});
+
+test("a kit says where each value and variant is used: the files that name it, render it or ask for it", () => {
+  const kit = readKit(repo(), { uiDir: "web" });
+  assert.deepEqual(kit.tokens.color.find((t) => t.name === "--primary").used_in, ["web/src/pages/settings.tsx"]);
+  assert.deepEqual(kit.tokens.radius[0].used_in, [], "a value no file names is used nowhere");
+  const button = kit.components.find((c) => c.name === "Button" && c.prop === "variant");
+  assert.deepEqual(button.used_in, ["web/src/pages/home.tsx", "web/src/pages/settings.tsx"], "its own file is no use of it");
+  assert.deepEqual(button.options.map((o) => [o.name, o.used_in]), [["default", ["web/src/pages/settings.tsx"]], ["secondary", ["web/src/pages/home.tsx", "web/src/pages/settings.tsx"]], ["ghost", []]], "no prop asks for its default");
+  assert.deepEqual(kit.components.find((c) => c.name === "Btn").options.map((o) => [o.name, o.used_in]), [["primary", []], ["secondary", []], ["ghost", ["web/src/pages/settings.tsx"]]], "a class in a style file is its definition, not a use");
 });
 
 test("the readers each find their own shape, and leave what is not one", () => {

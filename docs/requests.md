@@ -343,7 +343,9 @@ mode:
 1. `design kit --root <clone>` prints the product's kit: its named values (`tokens`: color,
    shadow, radius, space, font-size…, each with its file) and its components' variants
    (`components`: cva variants, a prop typed as a union of words, a CSS class family; each with
-   its file, prop, options and default). It reads files only, and fails on a root, UI folder or
+   its file, prop, options and default). Each value, component and variant also has `used_in`:
+   the files that name the value (`var(--name)`), render the component, ask for the variant (no
+   prop: its default) or carry the class — not its own file, at most 30. It reads files only, and fails on a root, UI folder or
    profile it cannot read (a file it cannot read is named on stderr); run it once per drawing run, with
    `--repo <owner/name>`, and send what it printed: `design desk kit <kit.json>` replaces the
    kit Product → Kit shows ([desk-page.md](desk-page.md) → Product → Kit).

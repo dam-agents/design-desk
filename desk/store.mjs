@@ -2528,15 +2528,17 @@ export class Store {
   setKit(k) {
     if (!k || typeof k !== "object" || Array.isArray(k)) throw bad("the kit is an object: {repo, commit, tokens, components}");
     const str = (v, n) => String(v ?? "").slice(0, n);
+    // Where a part is used (docs/requests.md → Smart controls): repository paths, at most 30.
+    const used = (v) => Array.isArray(v) ? { used_in: [...new Set(v.map((f) => str(f, 200)).filter(Boolean))].slice(0, 30) } : {};
     const tokens = {};
     for (const [kind, list] of Object.entries(k.tokens && typeof k.tokens === "object" ? k.tokens : {}).slice(0, 12)) {
       if (!/^[a-z][a-z-]{0,19}$/.test(kind) || !Array.isArray(list)) continue;
-      const ts = list.slice(0, 200).filter((t) => t && /^--[\w-]{1,80}$/.test(String(t.name))).map((t) => ({ name: String(t.name), value: str(t.value, 160), file: str(t.file, 200) }));
+      const ts = list.slice(0, 200).filter((t) => t && /^--[\w-]{1,80}$/.test(String(t.name))).map((t) => ({ name: String(t.name), value: str(t.value, 160), file: str(t.file, 200), ...used(t.used_in) }));
       if (ts.length) tokens[kind] = ts;
     }
     const components = (Array.isArray(k.components) ? k.components : []).slice(0, 80).filter((c) => c && Array.isArray(c.options) && c.options.length).map((c) => ({
-      name: str(c.name, 80) || "Component", file: str(c.file, 200), prop: str(c.prop, 40), how: ["cva", "prop", "class"].includes(c.how) ? c.how : "prop", default: c.default == null ? null : str(c.default, 40),
-      options: c.options.slice(0, 16).map((o) => ({ name: str(o?.name, 40), ...(o?.classes ? { classes: str(o.classes, 500) } : {}), ...(o?.class ? { class: str(o.class, 80) } : {}) })) }));
+      name: str(c.name, 80) || "Component", file: str(c.file, 200), prop: str(c.prop, 40), how: ["cva", "prop", "class"].includes(c.how) ? c.how : "prop", default: c.default == null ? null : str(c.default, 40), ...used(c.used_in),
+      options: c.options.slice(0, 16).map((o) => ({ name: str(o?.name, 40), ...(o?.classes ? { classes: str(o.classes, 500) } : {}), ...(o?.class ? { class: str(o.class, 80) } : {}), ...used(o?.used_in) })) }));
     this.db.kit = { repo: str(k.repo, 120) || null, commit: str(k.commit, 40) || null, ui_dir: k.ui_dir ? str(k.ui_dir, 120) : null, at: this.clock(), tokens, components };
     this.save();
     return { kit: this.db.kit };

@@ -9,7 +9,7 @@ import { join, relative, basename, extname } from "node:path";
 
 const SKIP = new Set(["node_modules", ".git", "dist", "build", "coverage", ".next", ".turbo", "vendor", "target", ".mise", "storybook-static", "out"]);
 const CODE = /\.(tsx|jsx|ts|js|vue|svelte)$/, STYLE = /\.(css|scss|pcss)$/;
-const LIMIT = { files: 4000, size: 300 * 1024, tokens: 200, components: 80, options: 16 };
+const LIMIT = { files: 4000, size: 300 * 1024, tokens: 200, components: 80, options: 16, used: 30 };
 
 // Every code and style file under `dir`; a folder or file it cannot read goes to `skipped`.
 function* walk(dir, skipped) {
@@ -151,6 +151,40 @@ export function kindOf(name, value) {
   return null;
 }
 
+// Where each part of the kit is used: the files that name a value (`var(--name)`), that render a
+// component (`<Button`), that ask for one of its variants (`<Button variant="ghost"`; no prop: its
+// default) or that carry a class of a family (`btn-ghost`). A component's own file is no use of it. Each
+// list is `used_in`, at most LIMIT.used files, sorted. A value Tailwind turns into classes
+// (`bg-primary` from `--color-primary`) is not followed: only `var()` is.
+const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export function usage(root, files, byKind, components) {
+  const tokenUse = new Map(), add = (m, k, f) => { if (!m.has(k)) m.set(k, new Set()); m.get(k).add(f); };
+  const names = new Set(components.filter((c) => c.how !== "class").map((c) => c.name));
+  const classes = components.filter((c) => c.how === "class").flatMap((c) => c.options.map((o) => o.class));
+  const classRe = classes.length ? new RegExp(`(?<![\\w-])(${classes.map(esc).join("|")})(?![\\w-])`, "g") : null;
+  const tagUse = new Map(), optUse = new Map(), classUse = new Map();
+  for (const rel of files) {
+    let text; try { text = readFileSync(join(root, rel), "utf8"); } catch { continue; }
+    for (const m of text.matchAll(/var\(\s*(--[\w-]+)/g)) add(tokenUse, m[1], rel);
+    if (CODE.test(rel)) {
+      for (const m of text.matchAll(/<([A-Z][\w]*)(?![\w.])([^<>]*?)\/?>/g)) {
+        if (!names.has(m[1])) continue;
+        add(tagUse, m[1], rel);
+        for (const a of m[2].matchAll(/\b([a-z]\w*)=(?:"([\w-]+)"|'([\w-]+)'|\{\s*["']([\w-]+)["']\s*\})/g)) add(optUse, `${m[1]}|${a[1]}|${a[2] ?? a[3] ?? a[4]}`, rel);
+        for (const c of components) if (c.name === m[1] && c.how !== "class" && !new RegExp(`\\b${esc(c.prop)}=`).test(m[2])) add(optUse, `${c.name}|${c.prop}|${c.default}`, rel);
+      }
+    }
+    if (classRe && !STYLE.test(rel)) for (const m of text.matchAll(classRe)) add(classUse, m[1], rel);
+  }
+  const list = (set, not) => set ? [...set].filter((f) => f !== not).sort().slice(0, LIMIT.used) : [];
+  for (const ts of Object.values(byKind)) for (const t of ts) t.used_in = list(tokenUse.get(t.name));
+  for (const c of components) {
+    if (c.how === "class") { for (const o of c.options) o.used_in = list(classUse.get(o.class)); c.used_in = [...new Set(c.options.flatMap((o) => o.used_in))].sort().slice(0, LIMIT.used); continue; }
+    c.used_in = list(tagUse.get(c.name), c.file);
+    for (const o of c.options) o.used_in = list(optUse.get(`${c.name}|${c.prop}|${o.name}`), c.file);
+  }
+}
+
 // The kit of a clone: `{root, ui_dir, tokens: {color: […], …}, components: […], counts, skipped}`.
 // A root or UI folder that is not a readable folder throws: an empty kit would read as a product
 // with no kit. A file or folder under it that cannot be read is named in `skipped`.
@@ -158,12 +192,13 @@ export function readKit(root, { uiDir = "" } = {}) {
   const base = uiDir ? join(root, uiDir) : root;
   let st; try { st = statSync(base); readdirSync(base); } catch (e) { throw new Error(`cannot read ${uiDir ? `the UI folder ${uiDir} in ` : ""}${root}: ${e.code || e.message}`); }
   if (!st.isDirectory()) throw new Error(`${base} is not a folder`);
-  const tokens = [], comps = [], skipped = [];
+  const tokens = [], comps = [], skipped = [], read = [];
   let n = 0;
   for (const p of walk(base, skipped)) {
     if (++n > LIMIT.files) break;
     let text; try { text = readFileSync(p, "utf8"); } catch (e) { skipped.push(`${relative(root, p)}: ${e.code || e.message}`); continue; }
     const rel = relative(root, p);
+    read.push(rel);
     if (STYLE.test(p)) { tokens.push(...cssTokens(text, rel)); comps.push(...classFamilies(text, rel)); continue; }
     if (/<style[\s>]/.test(text)) { for (const s of text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) { tokens.push(...cssTokens(s[1], rel)); comps.push(...classFamilies(s[1], rel)); } }
     const cva = /\b(cva|tv)\s*\(/.test(text) ? cvaVariants(text, rel) : [];
@@ -178,5 +213,6 @@ export function readKit(root, { uiDir = "" } = {}) {
   // One entry per component and prop; a component's own file before a re-export.
   const key = (c) => `${c.name}|${c.prop}|${c.options.map((o) => o.name).join(",")}`;
   const components = [...new Map(comps.map((c) => [key(c), c])).values()].slice(0, LIMIT.components);
+  usage(root, read, byKind, components);
   return { root, ui_dir: uiDir || null, tokens: byKind, components, counts: { files: n, tokens: seen.size, components: components.length }, skipped: skipped.slice(0, 20) };
 }

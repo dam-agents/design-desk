@@ -368,6 +368,10 @@
   .kit-pic .bd { width: 56px; height: 40px; border: 0 solid #2f5bd3; border-radius: 6px; }
   .kit-pic .var { font: 600 13px/1.3 var(--font); padding: 6px 12px; border-radius: 6px; border: 1px dashed var(--line); color: var(--muted); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .kit-tile .kname { font-weight: 600; font-size: var(--fs-ui, 13px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 6px; align-items: center; }
+  .kit-used { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; }
+  .kit-used .anchor { font-size: 12px; }
+  .kit-used details { flex-basis: 100%; } .kit-used details summary { cursor: pointer; }
+  .kit-used details ul { margin: 4px 0 0; padding-left: 16px; } .kit-used details li { overflow-wrap: anywhere; }
   .kit-tile .kval { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
   /* One element of an option: its states and what each covers, in a dialog over the request. */
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
@@ -3099,6 +3103,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       space: `<i class="sp" style="width:${esc(css)}"></i>`, "font-size": `<span class="tx" style="font-size:min(${esc(css)}, 40px)">Aa</span>`, "font-weight": `<span class="tx" style="font-weight:${esc(css)}">Aa</span>`,
       border: `<i class="bd" style="border-width:${esc(css)}"></i>` }[kind] || `<span class="var">${esc(css)}</span>`;
   }
+  // A file of the kit as a link to it on GitHub, at the commit read; no repository or commit: its path.
+  function kitSrc(k, file) {
+    if (!file) return "";
+    if (!/^[\w.-]+\/[\w.-]+$/.test(k?.repo || "") || !/^[0-9a-f]{7,40}$/i.test(k?.commit || "")) return esc(file);
+    const url = `https://github.com/${k.repo}/blob/${k.commit}/${String(file).split("/").map(encodeURIComponent).join("/")}`;
+    return `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(file)}&nbsp;↗</a>`;
+  }
+  // Where a value or a variant is used: the Elements drawn from those files first, then the other files.
+  // A kit read before `used_in` existed says nothing.
+  function kitUsed(k, files) {
+    if (!Array.isArray(files)) return "";
+    if (!files.length) return `<div class="kit-used">Not used in the code it read</div>`;
+    const els = S.cards.filter((c) => c.kind === "element" && c.source?.file && files.includes(c.source.file));
+    const rest = files.filter((f) => !els.some((c) => c.source.file === f));
+    const more = rest.length ? `${rest.length} ${rest.length === 1 ? "file" : "files"}${files.length >= 30 ? " (the first 30)" : ""}` : "";
+    const folded = more ? `<details><summary>${els.length ? `and ${more}` : `Used in ${more}`}</summary><ul>${rest.map((f) => `<li>${kitSrc(k, f)}</li>`).join("")}</ul></details>` : "";
+    return `<div class="kit-used">${els.length ? `<span class="k">used in:</span>${els.map((c) => `<button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>`).join("")}` : ""}${folded}</div>`;
+  }
   function renderKit() {
     const k = S.kit, p = kitParts(k).find((x) => x.id === S.kitPart);
     const read = k ? `<div class="sub"><span>Read from ${esc(k.repo || "the product's code")}${k.commit ? ` at ${esc(k.commit.slice(0, 7))}` : ""}</span>${k.at ? `<span>${esc(day(k.at))}</span>` : ""}</div>` : "";
@@ -3107,12 +3129,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const ts = k.tokens[p.kind];
       return `${backBar()}<h2>${esc(p.title)}</h2>${read}
         <p class="hint">${p.n} ${p.what} the product defines. Design Desk offers them first when someone changes a part's look.</p>
-        <ol class="kit-grid">${ts.map((t) => `<li class="kit-tile"><div class="kit-pic">${kitPic(p.kind, kitValue(k, t.value))}</div><div class="kname" title="${esc(t.name)}">${esc(t.name)}</div><div class="kval">${esc(t.value)}</div>${t.file ? `<div class="hint">${esc(t.file)}</div>` : ""}</li>`).join("")}</ol>`;
+        <ol class="kit-grid">${ts.map((t) => `<li class="kit-tile"><div class="kit-pic">${kitPic(p.kind, kitValue(k, t.value))}</div><div class="kname" title="${esc(t.name)}">${esc(t.name)}</div><div class="kval">${esc(t.value)}</div>${t.file ? `<div class="hint">${kitSrc(k, t.file)}</div>` : ""}${kitUsed(k, t.used_in)}</li>`).join("")}</ol>`;
     }
     const c = p.comp;
     return `${backBar()}<h2>${esc(p.title)}</h2>${read}
-      <p class="hint">${esc(c.name)} has ${c.options.length} variants, from ${esc(KIT_HOW[c.how] || "its code")}${c.file ? ` in ${esc(c.file)}` : ""}. Design Desk offers a part of this kind only these.</p>
-      <ol class="kit-grid">${c.options.map((o) => `<li class="kit-tile"><div class="kit-pic"><span class="var">${esc(o.name)}</span></div><div class="kname">${esc(o.name)}${o.name === c.default ? ` <span class="chip" title="What the component shows when nothing else is asked">default</span>` : ""}</div>${o.classes || o.class ? `<div class="kval">${esc(o.classes || `.${o.class}`)}</div>` : ""}</li>`).join("")}</ol>`;
+      <p class="hint">${esc(c.name)} has ${c.options.length} variants, from ${esc(KIT_HOW[c.how] || "its code")}${c.file ? ` in ${kitSrc(k, c.file)}` : ""}. Design Desk offers a part of this kind only these.</p>
+      ${Array.isArray(c.used_in) ? `<p class="hint">${c.used_in.length ? `${c.how === "class" ? "Its classes are" : "It is"} used in ${c.used_in.length}${c.used_in.length >= 30 ? " or more" : ""} ${c.used_in.length === 1 ? "file" : "files"}; each variant says where.` : "It is not used in the code it read."}</p>` : ""}
+      <ol class="kit-grid">${c.options.map((o) => `<li class="kit-tile"><div class="kit-pic"><span class="var">${esc(o.name)}</span></div><div class="kname">${esc(o.name)}${o.name === c.default ? ` <span class="chip" title="What the component shows when nothing else is asked">default</span>` : ""}</div>${o.classes || o.class ? `<div class="kval">${esc(o.classes || `.${o.class}`)}</div>` : ""}${kitUsed(k, o.used_in)}</li>`).join("")}</ol>`;
   }
   function renderDecisionList(filters) {
     const list = $("#list");

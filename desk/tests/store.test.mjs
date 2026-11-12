@@ -861,9 +861,9 @@ test("the kit: one per Desk, replaced whole, kept to the names and sizes the pag
   const s = fresh();
   assert.equal(s.getKit().kit, null, "none until the agent sends one");
   assert.throws(() => s.setKit([]), /object/);
-  const { kit } = s.setKit({ repo: "acme/widgets", commit: "abc", root: "/home/agent/checkouts/x", tokens: { color: [{ name: "--primary", value: "#fff", file: "a.css" }, { name: "primary", value: "#000" }], "Bad Kind": [{ name: "--x", value: "1" }], shadow: [] },
+  const { kit } = s.setKit({ repo: "acme/widgets", commit: "abc", root: "/home/agent/checkouts/x", tokens: { color: [{ name: "--primary", value: "#fff", file: "a.css", used_in: ["p.tsx", "p.tsx", ""] }, { name: "primary", value: "#000" }], "Bad Kind": [{ name: "--x", value: "1" }], shadow: [] },
     components: [{ name: "Button", file: "b.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary", extra: 1 }] }, { name: "Empty", options: [] }] });
-  assert.deepEqual(kit.tokens, { color: [{ name: "--primary", value: "#fff", file: "a.css" }] }, "a name that is no custom property, a kind with a bad name, an empty kind: left out");
+  assert.deepEqual(kit.tokens, { color: [{ name: "--primary", value: "#fff", file: "a.css", used_in: ["p.tsx"] }] }, "where it is used, once each; a name that is no custom property, a kind with a bad name, an empty kind: left out");
   assert.deepEqual(kit.components, [{ name: "Button", file: "b.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary" }] }]);
   assert.equal(kit.root, undefined, "the agent's own paths stay off the Desk");
   assert.equal(s.setKit({ tokens: {}, components: [] }).kit.repo, null, "the next one replaces it whole");
