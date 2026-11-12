@@ -383,6 +383,12 @@
   .kit-used .anchor { font-size: 12px; }
   .kit-used details { flex-basis: 100%; } .kit-used details summary { cursor: pointer; }
   .kit-used details ul { margin: 4px 0 0; padding-left: 16px; } .kit-used details li { overflow-wrap: anywhere; }
+  .kit-pic .kit-look { display: grid; justify-items: center; gap: 6px; flex: 1; min-width: 0; }
+  .kit-pic:has(.kit-look) { display: flex; align-items: center; justify-content: space-around; padding: 0 8px; height: 104px; }
+  .kit-pic .kit-el { max-width: 100%; overflow: hidden; box-sizing: border-box; }
+  .kit-pic .kit-look small { font: 11px/1 var(--font); color: #6f6f6c; }
+  .kit-tile .ksaid { font-size: 13px; line-height: 1.4; }
+  .kit-tile .kcls summary { font-size: 12px; color: var(--muted); cursor: pointer; }
   .kit-tile .kval { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
   /* One element of an option: its states and what each covers, in a dialog over the request. */
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
@@ -3169,7 +3175,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const LOOK_ROLES = ["admin", "designer", "lead-developer"];
   const kitOn = () => LOOK_ROLES.includes(S.me?.role);
   const KIT_KINDS = { color: "Colors", shadow: "Shadows", radius: "Corners", space: "Spacing", "font-size": "Text sizes", "font-weight": "Text weights", border: "Borders" };
-  const KIT_HOW = { cva: "variants in its code (cva)", prop: "a prop it takes", class: "a family of CSS classes" };
   // A read that failed is not "no kit": it keeps its reason, and the list says so.
   async function loadKit() { try { S.kit = (await api("GET", "/api/kit")).kit || null; S.kitError = null; } catch (e) { S.kit = null; S.kitError = e?.message || "the Desk did not answer"; } }
   const kitParts = (k) => [
@@ -3193,10 +3198,87 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // A named value as CSS the Desk can draw: another one it names resolved, an HSL triple wrapped; else nothing.
   function kitValue(k, v) {
     const all = Object.values(k?.tokens || {}).flat();
-    for (let i = 0; i < 5; i++) { const m = String(v).match(/^var\((--[\w-]+)\)$/); if (!m) break; const t = all.find((x) => x.name === m[1]); if (!t) return ""; v = t.value; }
-    v = String(v).trim();
+    v = String(v ?? "");
+    for (let i = 0; i < 5 && /var\(/.test(v); i++) {
+      let gone = false;
+      v = v.replace(/var\((--[\w-]+)\)/g, (_, n) => { const t = all.find((x) => x.name === n); if (!t) gone = true; return t ? (/^[\d.]+\s+[\d.]+%\s+[\d.]+%$/.test(t.value.trim()) ? `hsl(${t.value.trim()})` : t.value) : ""; });
+      if (gone) return "";
+    }
+    v = v.trim();
     if (/^[\d.]+\s+[\d.]+%\s+[\d.]+%$/.test(v)) v = `hsl(${v})`;
     return /^[#\w\s().,%/+*-]{1,160}$/.test(v) && !/var\(|url\(|expression/i.test(v) ? v : "";
+  }
+  // A variant's look, from its Tailwind classes and the product's named values: CSS to draw it with
+  // (`css`, and `hover` for what changes under the pointer) and the same in words (`said`).
+  // Only plain and hover: classes are read. A value is the kit's named one or the class's own literal
+  // (`text-[10px]`); a class for another state, or a value the kit does not name, is left out, and no
+  // property is set that no class sets: a fallback style never passes for the product's.
+  const KIT_LAYOUT = { flex: ["display", "flex"], "inline-flex": ["display", "inline-flex"], block: ["display", "block"], "inline-block": ["display", "inline-block"],
+    "items-center": ["align-items", "center"], "justify-center": ["justify-content", "center"], "whitespace-nowrap": ["white-space", "nowrap"] };
+  function kitLook(k, classes) {
+    const css = {}, hover = {}, said = { plain: [], hover: [] };
+    const unit = kitValue(k, "var(--spacing)");
+    const size = (n) => /^\[(.+)\]$/.test(n) ? n.slice(1, -1) : /^[\d.]+$/.test(n) ? (unit ? `calc(${unit} * ${n})` : "") : n === "auto" ? "auto" : n === "px" ? "1px" : "";
+    // A spacing step in words as pixels: a rem counts 16px.
+    const px = (v) => { const m = /^calc\(([\d.]+)(px|rem) \* ([\d.]+)\)$/.exec(v.replace(/\s+/g, " ")); return m ? `${+(+m[1] * (m[2] === "rem" ? 16 : 1) * +m[3]).toFixed(2)}px` : v; };
+    const color = (n) => {
+      const [name, alpha] = n.split("/");
+      if (name === "transparent") return { css: "transparent", word: "transparent" };
+      const v = kitValue(k, `var(--color-${name})`) || kitValue(k, `var(--${name})`);
+      if (!v) return null;
+      return { css: alpha ? `color-mix(in srgb, ${v} ${+alpha}%, transparent)` : v, word: alpha ? `${name} at ${+alpha}%` : name };
+    };
+    for (const cls of String(classes || "").split(/\s+/).filter(Boolean)) {
+      const parts = cls.split(":"), c = parts.pop(), state = parts.join(":");
+      if (state && state !== "hover") continue;
+      const to = state ? hover : css, say = state ? said.hover : said.plain;
+      let m;
+      if ((m = /^bg-(.+)$/.exec(c)) && !/^gradient/.test(m[1])) { const v = color(m[1]); if (v) { to.background = v.css; say.push(`fill ${v.word}`); } }
+      else if ((m = /^text-(.+)$/.exec(c))) {
+        const name = m[1].replace(/^\[(.+)\]$/, "$1");
+        const fs = /^\d/.test(name) ? name : kitValue(k, `var(--text-${name})`);
+        if (fs) { to["font-size"] = fs; say.push(`text ${fs}`); }
+        else { const v = color(m[1]); if (v) { to.color = v.css; say.push(`text ${v.word}`); } }
+      }
+      else if (c === "border") { const v = to["border-color"] || kitValue(k, "var(--color-border)") || kitValue(k, "var(--border)"); to["border-width"] = "1px"; to["border-style"] = to["border-style"] || "solid"; if (v) to["border-color"] = v; say.push("a border"); }
+      else if (c === "border-dashed") { to["border-style"] = "dashed"; say.push("dashed border"); }
+      else if ((m = /^border-(.+)$/.exec(c)) && !/^[trblxy](-|$)|^\d/.test(m[1])) { const v = color(m[1]); if (v) { to["border-color"] = v.css; say.push(v.css === "transparent" ? "no border line" : `border ${v.word}`); } }
+      else if (c === "underline") { to["text-decoration"] = "underline"; say.push("underlined"); }
+      else if ((m = /^underline-offset-(\d+)$/.exec(c))) to["text-underline-offset"] = `${m[1]}px`;
+      else if ((m = /^(h|w|size)-(.+)$/.exec(c)) && size(m[2])) { const v = size(m[2]); if (m[1] !== "w") to.height = v; if (m[1] !== "h") to.width = v; say.push(`${m[1] === "h" ? "height" : m[1] === "w" ? "width" : "size"} ${px(v)}`); }
+      else if ((m = /^p([xylr]?)-(.+)$/.exec(c)) && size(m[2])) {
+        const v = size(m[2]), sides = { "": ["top", "right", "bottom", "left"], x: ["left", "right"], y: ["top", "bottom"], l: ["left"], r: ["right"] }[m[1]];
+        for (const side of sides) to[`padding-${side}`] = v;
+        say.push(`${{ "": "padding", x: "side padding", y: "top and bottom padding", l: "left padding", r: "right padding" }[m[1]]} ${px(v)}`);
+      }
+      else if ((m = /^rounded(?:-(.+))?$/.exec(c))) { const v = m[1] === "full" ? "9999px" : m[1] === "none" ? "0" : kitValue(k, `var(--radius${m[1] ? `-${m[1]}` : ""})`); if (v) { to["border-radius"] = v; say.push(m[1] === "full" ? "round ends" : m[1] === "none" ? "square corners" : `corners ${m[1] || "radius"}`); } }
+      else if ((m = /^font-(\w+)$/.exec(c)) && !["sans", "serif", "mono"].includes(m[1])) { const v = kitValue(k, `var(--font-weight-${m[1]})`) || kitValue(k, `var(--weight-${m[1]})`); if (v) { to["font-weight"] = v; say.push(m[1]); } }
+      else if (KIT_LAYOUT[c]) to[KIT_LAYOUT[c][0]] = KIT_LAYOUT[c][1];
+      else if ((m = /^gap-(.+)$/.exec(c)) && size(m[2])) to.gap = size(m[2]);
+    }
+    const style = (o) => Object.entries(o).map(([p, v]) => `${p}:${v}`).join(";");
+    const safe = (o) => /^[#\w\s().,%/+*:;-]*$/.test(style(o)) && !/url\(|expression/i.test(style(o));
+    return { css: safe(css) ? css : {}, hover: safe(hover) ? hover : {}, said, style };
+  }
+  // A component's variant drawn as the product draws it: the classes every variant shares, the
+  // default of each other prop of the same component, then the variant's own. Under the pointer:
+  // the same with its hover classes. None of those classes: nothing to draw.
+  function kitDraw(k, c, o) {
+    if (!o.classes) return "";
+    const others = (k.components || []).filter((x) => x.name === c.name && x.file === c.file && x.prop !== c.prop && x.how === "cva");
+    const all = [c.base || "", ...others.map((x) => x.options.find((y) => y.name === x.default)?.classes || ""), o.classes].join(" ");
+    const look = kitLook(k, all);
+    const word = /^icon/i.test(o.name) ? "+" : /input|select|textarea|field/i.test(c.name) ? "Text" : c.name;
+    const one = (extra, label) => `<span class="kit-look"><span class="kit-el" style="${esc(`${look.style(look.css)};${look.style(extra)}`)}">${esc(word)}</span>${label ? `<small>${label}</small>` : ""}</span>`;
+    const hov = Object.keys(look.hover).length;
+    return hov ? `${one({}, "normal")}${one(look.hover, "on hover")}` : one({}, "");
+  }
+  // A variant's own look in words: what it changes, then what changes on hover.
+  function kitSaid(k, o) {
+    if (!o.classes) return "";
+    const { said } = kitLook(k, o.classes);
+    const up = (a) => a.length ? a.join(", ").replace(/^\w/, (x) => x.toUpperCase()) : "";
+    return [up(said.plain), said.hover.length ? `On hover: ${said.hover.join(", ")}` : ""].filter(Boolean).map((x) => `<div class="ksaid">${esc(x)}.</div>`).join("");
   }
   function kitPic(kind, css) {
     if (!css) return `<span class="var">no preview</span>`;
@@ -3213,14 +3295,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // Where a value or a variant is used: the Elements drawn from those files first, then the other files.
   // A kit read before `used_in` existed says nothing.
-  function kitUsed(k, files) {
+  // How many files use a part: `uses` counts them all; a kit read before it existed has only the
+  // list, which stops at 30.
+  const kitUses = (x) => !Array.isArray(x?.used_in) ? null : Number.isInteger(x.uses) ? x.uses : x.used_in.length;
+  const kitFiles = (x) => { const n = kitUses(x); return `${n}${!Number.isInteger(x.uses) && n >= 30 ? "+" : ""} ${n === 1 ? "file" : "files"}`; };
+  function kitUsed(k, x) {
+    const files = x?.used_in;
     if (!Array.isArray(files)) return "";
     if (!files.length) return `<div class="kit-used">Not used in the code it read</div>`;
     const els = S.cards.filter((c) => c.kind === "element" && c.source?.file && files.includes(c.source.file));
     const rest = files.filter((f) => !els.some((c) => c.source.file === f));
-    const more = rest.length ? `${rest.length} ${rest.length === 1 ? "file" : "files"}${files.length >= 30 ? " (it lists at most 30)" : ""}` : "";
-    const folded = more ? `<details><summary>${els.length ? `and ${more}` : `Used in ${more}`}</summary><ul>${rest.map((f) => `<li>${kitSrc(k, f)}</li>`).join("")}</ul></details>` : "";
-    return `<div class="kit-used">${els.length ? `<span class="k">used in:</span>${els.map((c) => `<button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>`).join("")}` : ""}${folded}</div>`;
+    const unlisted = Math.max(0, kitUses(x) - files.length);
+    const folded = rest.length ? `<details><summary>${els.length ? "Files" : `Used in ${kitFiles(x)}`}</summary><ul>${rest.map((f) => `<li>${kitSrc(k, f)}</li>`).join("")}${unlisted ? `<li>and ${unlisted} more</li>` : ""}</ul></details>` : "";
+    return `<div class="kit-used">${els.length ? `<span class="k">used in ${kitFiles(x)}, as:</span>${els.map((c) => `<button class="anchor" data-card="${esc(c.id)}">${esc(c.title)}</button>`).join("")}` : ""}${folded}</div>`;
   }
   function renderKit() {
     const k = S.kit, p = kitParts(k).find((x) => x.id === S.kitPart);
@@ -3230,13 +3317,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const ts = k.tokens[p.kind];
       return `${backBar()}<h2>${esc(p.title)}</h2>${read}
         <p class="hint">${p.n} ${p.what} the product defines. Design Desk offers them first when someone changes a part's look.</p>
-        <ol class="kit-grid">${ts.map((t) => `<li class="kit-tile"><div class="kit-pic">${kitPic(p.kind, kitValue(k, t.value))}</div><div class="kname" title="${esc(t.name)}">${esc(t.name)}</div><div class="kval">${esc(t.value)}</div>${t.file ? `<div class="hint">${kitSrc(k, t.file)}</div>` : ""}${kitUsed(k, t.used_in)}</li>`).join("")}</ol>`;
+        <ol class="kit-grid">${ts.map((t) => `<li class="kit-tile"><div class="kit-pic">${kitPic(p.kind, kitValue(k, t.value))}</div><div class="kname" title="${esc(t.name)}">${esc(t.name)}</div><div class="kval">${esc(t.value)}</div>${t.file ? `<div class="hint">${kitSrc(k, t.file)}</div>` : ""}${kitUsed(k, t)}</li>`).join("")}</ol>`;
     }
     const c = p.comp;
+    // The most used first; a kit read before `used_in` existed keeps the code's order.
+    const opts = c.options.map((o, i) => [o, i]).sort((a, b) => (kitUses(b[0]) ?? 0) - (kitUses(a[0]) ?? 0) || a[1] - b[1]).map(([o]) => o);
+    const drawn = opts.some((o) => o.classes);
+    const bg = kitValue(k, "var(--color-background)") || kitValue(k, "var(--background)"), fg = kitValue(k, "var(--color-foreground)") || kitValue(k, "var(--foreground)");
+    const pic = `${bg ? `background:${bg};` : ""}${fg ? `color:${fg};` : ""}`;
+    const prop = c.prop && c.prop !== "class" ? ` ${esc(c.prop)}` : "";
     return `${backBar()}<h2>${esc(p.title)}</h2>${read}
-      <p class="hint">${esc(c.name)} has ${c.options.length} variants, from ${esc(KIT_HOW[c.how] || "its code")}${c.file ? ` in ${kitSrc(k, c.file)}` : ""}. Design Desk offers a part of this kind only these.</p>
-      ${Array.isArray(c.used_in) ? `<p class="hint">${c.used_in.length ? `${c.how === "class" ? "Its classes are" : "It is"} used in ${c.used_in.length} ${c.used_in.length === 1 ? "file" : "files"}${c.used_in.length >= 30 ? " (it lists at most 30)" : ""}; each variant says where.` : "It is not used in the code it read."}</p>` : ""}
-      <ol class="kit-grid">${c.options.map((o) => `<li class="kit-tile"><div class="kit-pic"><span class="var">${esc(o.name)}</span></div><div class="kname">${esc(o.name)}${o.name === c.default ? ` <span class="chip" title="What the component shows when nothing else is asked">default</span>` : ""}</div>${o.classes || o.class ? `<div class="kval">${esc(o.classes || `.${o.class}`)}</div>` : ""}${kitUsed(k, o.used_in)}</li>`).join("")}</ol>`;
+      <p class="hint">${esc(c.name)} comes in ${c.options.length}${prop || " kinds"}${prop ? (c.options.length === 1 ? "" : "s") : ""}${Array.isArray(c.used_in) ? `, the most used first` : ""}. When someone changes how a ${esc(c.name)} looks, Design Desk offers only these.${drawn ? "" : ` Its look is set inside the component, not in classes Design Desk reads, so there is no picture.`}</p>
+      <p class="hint">${c.file ? `Made in ${kitSrc(k, c.file)}` : ""}${Array.isArray(c.used_in) ? `${c.file ? " · " : ""}${c.used_in.length ? `used in ${kitFiles(c)}` : "not used in the code it read"}` : ""}</p>
+      <ol class="kit-grid">${opts.map((o) => `<li class="kit-tile">${drawn ? `<div class="kit-pic" style="${esc(pic)}">${kitDraw(k, c, o) || `<span class="var">no picture</span>`}</div>` : ""}<div class="kname">${esc(o.name)}${o.name === c.default ? ` <span class="chip" title="What the component shows when nothing else is asked">default</span>` : ""}</div>${kitSaid(k, o)}${o.classes || o.class ? `<details class="kcls"><summary>Classes</summary><div class="kval">${esc(o.classes || `.${o.class}`)}</div></details>` : ""}${kitUsed(k, o)}</li>`).join("")}</ol>`;
   }
   function renderDecisionList(filters) {
     const list = $("#list");

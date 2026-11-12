@@ -211,11 +211,20 @@ shown only to an admin, a designer or a lead developer (`GET /api/kit` refuses a
 kind of named value (Colors, Shadows, Corners, Spacing, Text sizes…) and one per component's
 variants (`Button · variant`), each with its count and the files it comes from. A row opens its
 tiles, drawn as the elements' are: a color's swatch, a shadow on a card, a corner, a spacing bar,
-`Aa` at a text size; a variant by its name, its classes and **default**. Above them: the
-repository and commit it was read at, and when. A value the Desk cannot draw says *no preview*.
-A file opens on GitHub at that commit. Under each tile, **used in:** the Elements drawn from a
-file that uses it (a click opens the element), then the other files, folded; a value or variant no
-file uses says so. A kit read before `used_in` existed shows no uses.
+`Aa` at a text size. A variant is drawn as the product draws it, on the product's background: the
+classes all variants share, the default of the component's other props, then its own, each
+Tailwind class read through the kit's named values or its own literal (`text-[10px]`). A value the
+kit does not name, or a class for another state, is left out, and the element gets no property no
+class sets: a fallback style never passes for the product's. Beside it, *on hover*, when the
+joined classes change under the pointer. Under it, its name, **default**,
+what it sets in words (*Fill primary, height 40px*), its classes folded. Variants run the most
+used first; a component whose look is not in classes says it has no picture. Above them: the
+repository and commit it was read at, and when; one line on what Design Desk offers; the file it
+is made in and how many files use it. A value the Desk cannot draw says *no preview*.
+A file opens on GitHub at that commit. Under each tile, how many files use it (`uses`, every file,
+though at most 30 are listed), the Elements drawn from one of them (a click opens the element),
+then the files, folded; a value or variant no file uses says so. A kit read before `used_in`
+existed shows no uses; one read before `uses` counts the files listed, *30+* at the cap.
 Before the first `design desk kit` the list says *No kit yet*; a read that failed says the kit
 could not be read, and why.
 

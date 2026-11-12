@@ -3288,15 +3288,15 @@ test("the research summary splits into its parts; no options asked for keeps the
 
 const KIT = { repo: "acme/widgets", commit: "3f9c2ab71d", at: "2026-11-11T10:00:00Z",
   tokens: { color: [{ name: "--primary", value: "#3b5bdb", file: "web/src/app.css", used_in: ["web/src/components/agent-row.tsx", "web/src/pages/settings.tsx"] }, { name: "--ring", value: "var(--primary)", file: "web/src/app.css" }, { name: "--odd", value: "url(x)", file: "web/src/app.css" }],
-    shadow: [{ name: "--shadow-sm", value: "0 1px 2px rgba(0,0,0,.08)", file: "web/src/app.css" }] },
-  components: [{ name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default", used_in: ["web/src/pages/settings.tsx"], options: [{ name: "default", classes: "bg-primary", used_in: ["web/src/pages/settings.tsx"] }, { name: "ghost", classes: "hover:bg-muted", used_in: [] }] }] };
+    shadow: [{ name: "--shadow-sm", value: "0 1px 2px rgba(0,0,0,.08)", file: "web/src/app.css" }], space: [{ name: "--spacing", value: "4px", file: "web/src/app.css" }] },
+  components: [{ name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default", base: "inline-flex rounded-md", used_in: ["web/src/pages/settings.tsx"], options: [{ name: "ghost", classes: "hover:underline", used_in: [] }, { name: "default", classes: "bg-primary h-10 px-4", used_in: ["web/src/pages/settings.tsx"], uses: 41 }] }] };
 const withKit = (me) => DESK(me, [{ id: "e1", kind: "element", title: "Agent row", status: "current", source: { file: "web/src/components/agent-row.tsx", export: "AgentRow" } }]).replace('path === "/api/agenda"', `path === "/api/kit" ? { kit: ${JSON.stringify(KIT)} } : path === "/api/agenda"`);
 
 test("Product → Kit is an admin's: its named values and its components' variants, a tile each, drawn only when safe", (t) => open(t, withKit({ ...DESIGNER, role: "admin" }), async (desk) => {
   await desk.click('[data-tab="product"]');
   await desk.click('[data-filter="productFilter:kit"]');
   await desk.waitForSelector('[data-kit="t:color"]');
-  assert.deepEqual(await desk.$$eval("#list .row .t", (r) => r.map((x) => x.textContent)), ["Colors", "Shadows", "Button · variant"]);
+  assert.deepEqual(await desk.$$eval("#list .row .t", (r) => r.map((x) => x.textContent)), ["Colors", "Shadows", "Spacing", "Button · variant"]);
   assert.match(await desk.textContent("#list .row"), /3 named values\s*from: web\/src\/app\.css/);
   await desk.click('[data-kit="t:color"]');
   await desk.waitForSelector("#detail .kit-grid");
@@ -3305,15 +3305,27 @@ test("Product → Kit is an admin's: its named values and its components' varian
     ["rgb(59, 91, 219)", "rgb(59, 91, 219)", "no preview"], "a value naming another is drawn as that one; one the Desk cannot draw says so");
   assert.equal(await desk.getAttribute("#detail .kit-tile .hint a", "href"), "https://github.com/acme/widgets/blob/3f9c2ab71d/web/src/app.css", "its file opens on GitHub at the commit read");
   assert.equal(await desk.textContent('#detail .kit-tile .kit-used [data-card="e1"]'), "Agent row", "an element drawn from a file that uses it is named first");
-  assert.match(await desk.textContent("#detail .kit-tile .kit-used details summary"), /and 1 file/);
+  assert.match(await desk.textContent("#detail .kit-tile .kit-used"), /used in 2 files, as:/);
+  assert.match(await desk.textContent("#detail .kit-tile .kit-used details summary"), /Files/);
   assert.equal(await desk.getAttribute("#detail .kit-tile .kit-used details a", "href"), "https://github.com/acme/widgets/blob/3f9c2ab71d/web/src/pages/settings.tsx");
   assert.equal(await desk.locator("#detail .kit-tile").nth(1).locator(".kit-used").count(), 0, "a kit read without uses says nothing of them");
   // A wide Desk keeps the list beside the tiles: the next row opens from there, no Back needed.
   await desk.click('[data-kit="c:0"]');
-  await desk.waitForFunction(() => /Button has 2 variants, from variants in its code \(cva\) in web\/src\/components\/ui\/button\.tsx/.test(document.querySelector("#detail")?.textContent || ""));
-  assert.match(await desk.textContent("#detail .kit-tile"), /default\s*default\s*bg-primary/);
-  assert.match(await desk.textContent("#detail"), /It is used in 1 file; each variant says where/);
-  assert.match(await desk.locator("#detail .kit-tile").nth(1).textContent(), /Not used in the code it read/);
+  await desk.waitForFunction(() => /Button comes in 2 variants, the most used first\. When someone changes how a Button looks, Design Desk offers only these\./.test(document.querySelector("#detail")?.textContent || ""));
+  assert.match(await desk.textContent("#detail"), /Made in web\/src\/components\/ui\/button\.tsx\s↗ · used in 1 file/);
+  // Each variant drawn in the product's colors, said in words, its classes folded; the most used first.
+  const first = desk.locator("#detail .kit-tile").nth(0);
+  assert.match(await first.textContent(), /default\s*default\s*Fill primary, height 40px, side padding 16px\./);
+  assert.equal(await first.locator(".kit-el").evaluate((e) => getComputedStyle(e).backgroundColor), "rgb(59, 91, 219)", "a variant is drawn in the product's own color");
+  assert.equal(await first.locator(".kit-el").evaluate((e) => getComputedStyle(e).height), "40px");
+  assert.equal(await first.locator("details.kcls[open]").count(), 0, "its classes are folded");
+  assert.match(await first.locator(".kit-used").textContent(), /Used in 41 files/, "the count is every file, not the 30 it lists");
+  const ghost = desk.locator("#detail .kit-tile").nth(1);
+  assert.match(await ghost.textContent(), /On hover: underlined\./);
+  assert.deepEqual(await ghost.locator(".kit-look small").allTextContents(), ["normal", "on hover"], "what changes on hover is drawn beside it");
+  assert.equal(await ghost.locator(".kit-el").nth(1).evaluate((e) => getComputedStyle(e).textDecorationLine), "underline");
+  assert.equal(await first.locator(".kit-el").first().evaluate((e) => getComputedStyle(e).borderTopLeftRadius), "0px", "a corner the kit does not name is left out, not guessed");
+  assert.match(await ghost.textContent(), /Not used in the code it read/);
   await desk.hover('[data-filter="productFilter:kit"]');
   await desk.waitForSelector("#tip");
   assert.match(await desk.textContent("#tip"), /read from its code/, "the Kit tab says on hover what it is");

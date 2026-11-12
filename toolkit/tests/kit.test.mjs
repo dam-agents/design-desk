@@ -44,8 +44,8 @@ test("a kit: the light theme's named values by kind, and every component's varia
   assert.deepEqual(Object.keys(kit.tokens).sort(), ["color", "font-size", "radius", "shadow", "space"], "a line height is no kind the palette offers");
   assert.equal(kit.tokens.shadow[0].file, "web/src/app.css");
   const by = (name, prop) => kit.components.find((c) => c.name === name && c.prop === prop);
-  const bare = ({ used_in, ...c }) => ({ ...c, options: c.options.map(({ used_in: _, ...o }) => o) });
-  assert.deepEqual(bare(by("Button", "variant")), { name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default",
+  const bare = ({ used_in, uses, ...c }) => ({ ...c, options: c.options.map(({ used_in: _, uses: __, ...o }) => o) });
+  assert.deepEqual(bare(by("Button", "variant")), { name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default", base: "inline-flex items-center",
     options: [{ name: "default", classes: "bg-primary text-white" }, { name: "secondary", classes: "bg-muted text-fg" }, { name: "ghost", classes: "hover:bg-muted" }] });
   assert.equal(by("Button", "size").default, "sm");
   assert.deepEqual(by("Badge", "tone").options.map((o) => o.name), ["neutral", "success", "danger"]);
@@ -60,11 +60,14 @@ test("a kit says where each value and variant is used: the files that name it, r
   const button = kit.components.find((c) => c.name === "Button" && c.prop === "variant");
   assert.deepEqual(button.used_in, ["web/src/pages/home.tsx", "web/src/pages/settings.tsx"], "its own file is no use of it");
   assert.deepEqual(button.options.map((o) => [o.name, o.used_in]), [["default", ["web/src/pages/settings.tsx"]], ["secondary", ["web/src/pages/home.tsx", "web/src/pages/settings.tsx"]], ["ghost", []]], "no prop asks for its default");
+  assert.deepEqual([button.uses, ...button.options.map((o) => o.uses)], [2, 1, 2, 0], "each counts every file that uses it");
   assert.deepEqual(kit.components.find((c) => c.name === "Btn").options.map((o) => [o.name, o.used_in]), [["primary", []], ["secondary", []], ["ghost", ["web/src/pages/settings.tsx"]]], "a class in a style file is its definition, not a use");
 });
 
 test("the readers each find their own shape, and leave what is not one", () => {
   assert.deepEqual(cvaVariants(`const x = cva("a", { variants: { tone: { only: "b" } } })`, "f.ts"), [], "one option is no choice");
+  assert.equal(cvaVariants(`const x = cva(["a", cn("b", { c: 1 })], { variants: { tone: { p: "x", q: "y" } } })`, "f.ts")[0].base, "a b", "the shared classes are the first argument's");
+  assert.equal(cvaVariants(`const x = cva({ variants: { tone: { p: "x", q: "y" } } })`, "f.ts")[0].base, undefined, "no shared classes: none");
   assert.deepEqual(unionVariants(`id?: "a" | "b"`, "f.tsx"), [], "a prop that is no look");
   assert.deepEqual(classFamilies(`.card-primary {}`, "f.css"), [], "one class is no family");
   assert.deepEqual(cssTokens(`.x { --brand: #fff; }`, "f.css"), [], "a value on another rule is not the product's");

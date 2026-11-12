@@ -866,6 +866,8 @@ test("the kit: one per Desk, replaced whole, kept to the names and sizes the pag
   assert.deepEqual(kit.tokens, { color: [{ name: "--primary", value: "#fff", file: "a.css", used_in: ["p.tsx"] }] }, "where it is used, once each; a name that is no custom property, a kind with a bad name, an empty kind: left out");
   assert.deepEqual(kit.components, [{ name: "Button", file: "b.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary" }] }]);
   assert.equal(kit.root, undefined, "the agent's own paths stay off the Desk");
+  const { kit: counted } = s.setKit({ tokens: {}, components: [{ name: "Button", how: "cva", base: "inline-flex", used_in: ["p.tsx"], uses: 41, options: [{ name: "a", used_in: [], uses: "many" }, { name: "b", used_in: [], uses: 0 }] }] });
+  assert.deepEqual([counted.components[0].base, counted.components[0].uses, ...counted.components[0].options.map((o) => o.uses)], ["inline-flex", 41, undefined, 0], "the shared classes, and every file counted; a count that is no whole number: left out");
   assert.equal(s.setKit({ tokens: {}, components: [] }).kit.repo, null, "the next one replaces it whole");
 });
 
