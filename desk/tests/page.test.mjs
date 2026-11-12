@@ -936,7 +936,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     await desk.click('.vtabs [data-act="workspace"]');
     await desk.click('[data-ws-menu="states"]');
     await desk.click('[data-ws-state="error"]');
-    assert.match(await desk.textContent("#ws-sub"), /State[\s\S]*Send button ·[\s\S]*Failed[\s\S]*1 of 1/);
+    assert.match(await desk.textContent("#ws-sub"), /State[\s\S]*1 of 1[\s\S]*Send button ·[\s\S]*Failed/, "the arrows and the count stand before the state's name");
     assert.match(await desk.textContent("#ws-context"), /Failed[\s\S]*The message did not go\./, "the state's use stands above the design");
     await desk.click('[data-ws-step="1"]');
     await desk.waitForFunction(() => /As drawn/.test(document.querySelector("#ws-sub")?.textContent || "")).catch(() => {});
