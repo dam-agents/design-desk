@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.83.0 — 2026-11-12
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): the design workspace gets a look palette (an
+   admin's for now), an option's elements may carry smart controls, and a note keeps what was
+   picked in `anchor.style` and `anchor.controls`. An admin also gets Product → Kit; it fills the next
+   time a drawing run sends `design desk kit`, with where each value and variant is used. The store gains an optional `kit` (no migration);
+   `design kit` needs no install.
+
 ## 1.82.2 — 2026-11-12
 
 **Upgrade:**

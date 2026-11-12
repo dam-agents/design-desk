@@ -219,7 +219,10 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   - **Notes on elements** from the design workspace: threads of kind `change`, each anchored
     to one option (`anchor.variant`) and, usually, one element (`anchor.selector`, its text and
     a plain `label`; `anchor.view`/`view_name` the view it is on; `anchor.edit` is a text the
-    person typed in place: `{from, to}`). A comment a designer, PM or developer pressed **Work it in** on is one
+    person typed in place: `{from, to}`; `anchor.style` the look changes picked in the palette:
+    `[{prop, from, to}]`, CSS values, `var(--name)` for a product color; `anchor.controls` the smart
+    controls picked: `[{control, label, from, to, source}]`, applied by the kit's own way, such as the
+    component's prop or the token, in the option's source). A comment a designer, PM or developer pressed **Work it in** on is one
     too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its
@@ -308,7 +311,8 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   part in the product's words; `change` `new` or `changed`; `how` one sentence on what is new or
   different; `selector` its CSS path in the option's page, or `shot` a picture of it alone
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
-  (`E-<n>`, [catalog.md](catalog.md)), when the catalog has one. The page shows them above the
+  (`E-<n>`, [catalog.md](catalog.md)), when the catalog has one; `controls` its smart controls
+  ([Smart controls](#smart-controls)). The page shows them above the
   option's design as **All elements**; one opens in a dialog with its states. A part picked in the design workspace
   that is (or sits inside) an element with states drawn offers **See every state**: the same
   dialog, only to look through them, with no button that draws or adds. A state belongs to the
@@ -326,6 +330,39 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   is split or its images shrunk.
 - A variant shows no real person, no real customer data, and no invented number presented
   as fact.
+
+## Smart controls
+
+The design workspace's look palette offers an admin, for an element, the choices the product
+already has for it, on a **Suggested** tab ([desk-page.md](desk-page.md) → The look palette).
+Only in repo mode, where the option is drawn from the product's own code (the `variants` skill
+→ Repo mode only: the profile). In brand or Carbon mode there is no product code to read:
+run no `design kit`, send no kit, and give no `controls`. Drawing or revising an option in repo
+mode:
+
+1. `design kit --root <clone>` prints the product's kit: its named values (`tokens`: color,
+   shadow, radius, space, font-size…, each with its file) and its components' variants
+   (`components`: cva variants, a prop typed as a union of words, a CSS class family; each with
+   its file, prop, options and default). Each value, component and variant also has `used_in`:
+   the files that name the value (`var(--name)`), render the component, ask for the variant (no
+   prop: its default) or carry the class — not its own file, at most 30. It reads files only, and fails on a root, UI folder or
+   profile it cannot read (a file it cannot read is named on stderr); run it once per drawing run, with
+   `--repo <owner/name>`, and send what it printed: `design desk kit <kit.json>` replaces the
+   kit Product → Kit shows ([desk-page.md](desk-page.md) → Product → Kit).
+2. For each element in `elements` that people would restyle (a button, a badge, a card), give
+   `controls` (at most 8): `[{id, label, kind, current, source, options: [{id, label, token,
+   apply}]}]`. Only what the kit has for that element: its component's variants (the three
+   kinds of button the product has), then the tokens that fit it (its shadows, its radii). No
+   kit entry fits → no control. `label` and option labels in the product's words; `source` the
+   kit file; `current` the option the page shows; `kind: scale` for an ordered set (sizes,
+   shadows), else `choice`.
+3. `apply` says how the workspace previews the option in the option's page: `{class: {add,
+   remove}}` for classes the page's CSS has; `{style: {prop: value}}` for a token
+   (`var(--shadow-sm)`); `{template: "<id>"}` for another variant drawn in full: render it
+   (`<ui-component … props='{"variant":"ghost"}'/>`) inside `<template data-desk-option="<id>">`
+   at the end of the page's body, its root carrying the element's `id`, so its CSS is built in.
+4. The element needs its `selector`. The Desk refuses a control without one, an option without
+   exactly one `apply`, or a `current` that is not an option.
 
 ## Every state of a part (`variants_due`: `states`)
 

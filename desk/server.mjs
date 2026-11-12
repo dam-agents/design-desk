@@ -205,6 +205,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "private") return send(res, 200, { asks: store.privateAsks(actor) });
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
+  // The product's kit: an admin's page for now (docs/desk-page.md → Product → Kit).
+  if (m === "GET" && p[1] === "kit") { if (who.deskRole !== "admin") throw new DeskError(403, `Only an admin sees the kit for now. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
   if (m === "GET" && p[1] === "decisions" && !p[2]) {
     // Not approved: the ones in force that wait for a designer's approval.
     const q = decisionQuery(url), pending = url.searchParams.get("state") === "unapproved";
@@ -394,6 +396,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && ["cards", "assets", "threads"].includes(p[1])) store.renewClaims({ card: p[1] === "cards" ? p[2] || b.id : p[1] === "assets" ? b.card : null, thread: p[1] === "threads" ? p[2] : null });
   if (m === "POST" && p[1] === "cards" && !p[2]) return send(res, 200, store.upsertCard(b));
   if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
+  // The product's kit as `design kit` read it (docs/requests.md → Smart controls).
+  if (m === "POST" && p[1] === "kit") return send(res, 200, store.setKit(b));
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));

@@ -1933,6 +1933,126 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
   }
 });
 
+const LOOK_DESIGN = `<!doctype html><html><head><style>:root { --brand: #3b5bdb; --danger: #d6336c; }
+  body { margin: 0; font: 15px system-ui; } .row { display: flex; gap: 8px; padding: 16px; }
+  button { font-size: 14px; padding: 8px 16px; border-radius: 6px; } .primary { background: var(--brand); color: #fff; }</style></head>
+  <body><div class="row"><button class="primary">Save</button><button>Cancel</button><a id="more" class="link">More</a></div>
+  <template data-desk-option="more-button"><button id="more" class="primary">More ✓</button></template></body></html>`;
+const BRIDGE_LOOK = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const request = { id: "r7", kind: "request", title: "Save bar", status: "variants", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Bold", asset: "A-7", fidelity: "wireframe", elements: [{ id: "more", name: "More link", change: "new", selector: "#more", controls: [
+    { id: "kind", label: "Type", kind: "choice", current: "link", source: "web/src/ui/button.tsx", options: [
+      { id: "link", label: "Link", apply: { class: { add: "link", remove: "" } } }, { id: "button", label: "Button", apply: { template: "more-button" } }] },
+    { id: "shape", label: "Corners", kind: "scale", current: "none", source: "web/src/app.css", options: [
+      { id: "none", label: "None", apply: { style: { "border-radius": "0" } } }, { id: "round", label: "Round", token: "--radius", apply: { style: { "border-radius": "12px" } } }] }] }] }], threads: [] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: window.ROLE || "admin", email: "alice@example.com", can: { comment: true, change: true, revise: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r7" ? { card: request }
+    : path === "/api/assets/A-7" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(LOOK_DESIGN).replace(/</g, "\\u003c")} } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("the look palette: in the side panel under the part picked, a preview only, the product's colors first, sent as one change note", async (t) => {
+  const run = await launch(t, BRIDGE_LOOK);
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector("button.primary");
+    assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette in Click through");
+    await desk.click('[data-ws-mode="select"]');
+    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+    await frame.click("button.primary");
+    await desk.waitForSelector("#ws-palette:not([hidden]) [data-pl-tab]");
+    assert.deepEqual(await desk.$$eval("#ws-palette [data-pl-tab]", (b) => b.map((x) => x.textContent)), ["Text", "Fill", "Spacing", "Size"], "a button that is no flex box has no Layout");
+    const style = (p) => frame.evaluate((k) => getComputedStyle(document.querySelector("button.primary"))[k], p);
+
+    // A step shows at once in the design; ↺ puts it back.
+    await desk.click('#ws-palette [data-pl-step="font-size|1"]');
+    await frame.waitForFunction(() => getComputedStyle(document.querySelector("button.primary")).fontSize !== "14px");
+    await desk.waitForSelector('#ws-palette [data-pl-reset="font-size"]');
+    await desk.click('#ws-palette [data-pl-reset="font-size"]');
+    await frame.waitForFunction(() => getComputedStyle(document.querySelector("button.primary")).fontSize === "14px");
+
+    // The design's named colors come first; one picked is kept by its name.
+    await desk.click('#ws-palette [data-pl-tab="fill"]');
+    await desk.click('#ws-palette [data-pl-colors="background-color"]');
+    await desk.waitForSelector('#ws-palette [data-pl-set="background-color|var(--danger)"]');
+    assert.match(await desk.textContent("#ws-palette .pl-swatches"), /The product's colors/);
+    await desk.click('#ws-palette [data-pl-set="background-color|var(--danger)"]');
+    await frame.waitForFunction(() => getComputedStyle(document.querySelector("button.primary")).backgroundColor === "rgb(214, 51, 108)");
+    assert.equal((await posts("/api/cards/r7/threads")).length, 0, "nothing is sent before Send");
+
+    await desk.waitForSelector("#ws-palette .pl-sum");
+    assert.equal(await desk.$eval("#ws-palette", (p) => Boolean(p.closest("#ws-side") && p.previousElementSibling?.matches(".sel"))), true, "the palette is in the side panel, under the part selected and its note");
+    assert.match(await desk.textContent("#ws-palette .pl-sum"), /background --brand \(#3b5bdb\) → --danger \(#d6336c\)/, "the palette says what changed");
+    assert.equal(await desk.locator(".ws-looks").count(), 0, "the part selected is not listed again under the palette");
+
+    await desk.click("#ws-palette [data-pl-send]");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
+    const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
+    assert.equal(body.kind, "change");
+    assert.deepEqual(body.anchor.style, [{ prop: "background-color", from: "rgb(59, 91, 219)", to: "var(--danger)" }]);
+    assert.match(body.text, /^Change the look of Button “Save”: background --brand \(#3b5bdb\) → --danger \(#d6336c\)\.$/);
+    assert.equal(await style("backgroundColor"), "rgb(214, 51, 108)", "the design keeps showing it until the new version");
+    assert.equal(await desk.locator(".ws-looks").count(), 0, "nothing left to send");
+
+    // A flex box has Layout.
+    await frame.click(".row", { position: { x: 300, y: 10 } });
+    await desk.waitForFunction(() => [...document.querySelectorAll("#ws-palette [data-pl-tab]")].some((b) => b.textContent === "Layout"));
+
+    // An element with smart controls opens on Suggested: the product's choices, a variant drawn in full swapped in.
+    await frame.click("#more");
+    await desk.waitForSelector('#ws-palette [data-pl-tab="smart"][aria-selected="true"]');
+    assert.match(await desk.textContent("#ws-palette .pl-body"), /More link: only what the product already has, from web\/src\/ui\/button\.tsx, web\/src\/app\.css/);
+    await desk.click('#ws-palette [data-pl-pick="kind|button"]');
+    await frame.waitForFunction(() => document.querySelector("#more")?.tagName === "BUTTON" && document.querySelector("#more").textContent === "More ✓");
+    await desk.click('#ws-palette [data-pl-pick="shape|round"]');
+    await frame.waitForFunction(() => getComputedStyle(document.querySelector("#more")).borderTopLeftRadius === "12px");
+    await desk.click('#ws-palette [data-pl-pick="kind|link"]');
+    await frame.waitForFunction(() => document.querySelector("#more")?.tagName === "A" && getComputedStyle(document.querySelector("#more")).borderTopLeftRadius === "12px");
+    assert.equal(await desk.locator('#ws-palette .pl-reset[data-pl-pick="kind|link"]').count(), 0, "back to the option drawn: nothing to undo there");
+    await desk.click('#ws-palette [data-pl-pick="kind|button"]');
+    await desk.click("#ws-palette [data-pl-send]");
+    await desk.waitForFunction(() => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r7/threads").length === 2);
+    const smart = JSON.parse((await posts("/api/cards/r7/threads"))[1].body);
+    assert.deepEqual(smart.anchor.controls, [{ control: "shape", label: "Corners", from: "None", to: "Round", source: "web/src/app.css" }, { control: "kind", label: "Type", from: "Link", to: "Button", source: "web/src/ui/button.tsx" }]);
+    assert.equal(smart.anchor.selector, "#more");
+    assert.match(smart.text, /^Change the look of More link: Corners None → Round \(from web\/src\/app\.css\); Type Link → Button \(from web\/src\/ui\/button\.tsx\)\.$/);
+  } finally {
+    await run.close();
+  }
+});
+
+test("the look palette is an admin's for now: a designer selects a part and gets none", async (t) => {
+  const run = await launch(t, `<script>window.ROLE = "designer";</script>` + BRIDGE_LOOK);
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector("button.primary");
+    await desk.click('[data-ws-mode="select"]');
+    await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
+    await frame.click("button.primary");
+    await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
+    assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette for a designer");
+  } finally {
+    await run.close();
+  }
+});
+
 test("a decision: what goes against it warns with a link to it; a designer revokes it with a reason", async (t) => {
   const decision = `const decision = { id: "D-1", concepts: ["header"], text: "The header stays one line", why: "", author: { name: "Dana", login: "dana" }, origin: { kind: "pr", label: "PR #40", url: "https://github.com/acme/widgets/pull/40" }, at: "2026-10-01T00:00:00Z", status: "active", side: "developer" };`;
   const bridge = BRIDGE.replace("const digest =", `${decision}\nchange.conflicts = [{ decision: "D-1", why: "It wraps the header to two lines.", text: decision.text, status: "active" }];\nchange.against = ["D-1"]; earlier.against = ["D-10", "D-11", "D-12", "D-13"];\nchange.decisions = ["D-2"]; change.cited = { "D-2": { text: "Headers use the brand colour", status: "revoked" } };\nchange.impact = { concept: "the header", places: [], decisions: [{ id: "D-2", when: "2026-09-01" }] };\nconst digest =`)
@@ -3164,4 +3284,50 @@ test("the research summary splits into its parts; no options asked for keeps the
   assert.deepEqual(ps, ["Nothing in the way.", "Where it lives: the Agents list.", "Already asked for: none found.", "History: spaced out in May."]);
   assert.deepEqual(await desk.$$eval("#detail .made-sec .md p b", (els) => els.map((e) => e.textContent)), ["Where it lives:", "Already asked for:", "History:"]);
   assert.match(await desk.textContent("#detail .vpanel .frame.vempty"), /No options were asked for/);
+}));
+
+const KIT = { repo: "acme/widgets", commit: "3f9c2ab71d", at: "2026-11-11T10:00:00Z",
+  tokens: { color: [{ name: "--primary", value: "#3b5bdb", file: "web/src/app.css", used_in: ["web/src/components/agent-row.tsx", "web/src/pages/settings.tsx"] }, { name: "--ring", value: "var(--primary)", file: "web/src/app.css" }, { name: "--odd", value: "url(x)", file: "web/src/app.css" }],
+    shadow: [{ name: "--shadow-sm", value: "0 1px 2px rgba(0,0,0,.08)", file: "web/src/app.css" }] },
+  components: [{ name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default", used_in: ["web/src/pages/settings.tsx"], options: [{ name: "default", classes: "bg-primary", used_in: ["web/src/pages/settings.tsx"] }, { name: "ghost", classes: "hover:bg-muted", used_in: [] }] }] };
+const withKit = (me) => DESK(me, [{ id: "e1", kind: "element", title: "Agent row", status: "current", source: { file: "web/src/components/agent-row.tsx", export: "AgentRow" } }]).replace('path === "/api/agenda"', `path === "/api/kit" ? { kit: ${JSON.stringify(KIT)} } : path === "/api/agenda"`);
+
+test("Product → Kit is an admin's: its named values and its components' variants, a tile each, drawn only when safe", (t) => open(t, withKit({ ...DESIGNER, role: "admin" }), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.click('[data-filter="productFilter:kit"]');
+  await desk.waitForSelector('[data-kit="t:color"]');
+  assert.deepEqual(await desk.$$eval("#list .row .t", (r) => r.map((x) => x.textContent)), ["Colors", "Shadows", "Button · variant"]);
+  assert.match(await desk.textContent("#list .row"), /3 named values\s*from: web\/src\/app\.css/);
+  await desk.click('[data-kit="t:color"]');
+  await desk.waitForSelector("#detail .kit-grid");
+  assert.match(await desk.textContent("#detail .sub"), /Read from acme\/widgets at 3f9c2ab/);
+  assert.deepEqual(await desk.$$eval("#detail .kit-tile", (ts) => ts.map((x) => x.querySelector(".kit-pic i")?.style.backgroundColor || x.querySelector(".kit-pic").textContent)),
+    ["rgb(59, 91, 219)", "rgb(59, 91, 219)", "no preview"], "a value naming another is drawn as that one; one the Desk cannot draw says so");
+  assert.equal(await desk.getAttribute("#detail .kit-tile .hint a", "href"), "https://github.com/acme/widgets/blob/3f9c2ab71d/web/src/app.css", "its file opens on GitHub at the commit read");
+  assert.equal(await desk.textContent('#detail .kit-tile .kit-used [data-card="e1"]'), "Agent row", "an element drawn from a file that uses it is named first");
+  assert.match(await desk.textContent("#detail .kit-tile .kit-used details summary"), /and 1 file/);
+  assert.equal(await desk.getAttribute("#detail .kit-tile .kit-used details a", "href"), "https://github.com/acme/widgets/blob/3f9c2ab71d/web/src/pages/settings.tsx");
+  assert.equal(await desk.locator("#detail .kit-tile").nth(1).locator(".kit-used").count(), 0, "a kit read without uses says nothing of them");
+  // A wide Desk keeps the list beside the tiles: the next row opens from there, no Back needed.
+  await desk.click('[data-kit="c:0"]');
+  await desk.waitForFunction(() => /Button has 2 variants, from variants in its code \(cva\) in web\/src\/components\/ui\/button\.tsx/.test(document.querySelector("#detail")?.textContent || ""));
+  assert.match(await desk.textContent("#detail .kit-tile"), /default\s*default\s*bg-primary/);
+  assert.match(await desk.textContent("#detail"), /It is used in 1 file; each variant says where/);
+  assert.match(await desk.locator("#detail .kit-tile").nth(1).textContent(), /Not used in the code it read/);
+  await desk.hover('[data-filter="productFilter:kit"]');
+  await desk.waitForSelector("#tip");
+  assert.match(await desk.textContent("#tip"), /read from its code/, "the Kit tab says on hover what it is");
+}));
+
+test("Product → Kit that could not be read says so, not that there is no kit", (t) => open(t, DESK({ ...DESIGNER, role: "admin" }, []).replace('path === "/api/agenda"', `path === "/api/kit" ? (() => { throw new Error("HTTP 500"); })() : path === "/api/agenda"`), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.click('[data-filter="productFilter:kit"]');
+  await desk.waitForFunction(() => /could not be read/.test(document.querySelector("#list")?.textContent || ""));
+  assert.doesNotMatch(await desk.textContent("#list"), /No kit yet/);
+}));
+
+test("Product → Kit is not on the page for a designer", (t) => open(t, withKit(DESIGNER), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.waitForSelector('[data-filter="productFilter:decisions"]');
+  assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 0);
 }));
