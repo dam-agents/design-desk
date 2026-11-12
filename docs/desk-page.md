@@ -222,7 +222,7 @@ failed or was switched off; a spec draft to send); green sent to developers, sla
 closed. It pulses only while Design Desk works on the request, whatever the step (then blue), and
 stays lit otherwise. A request is never blue with a move of a person's own beside it: once
 Design Desk's work is done, Checking reads **Checked** and Drawing options reads **Options drawn**. Team feedback
-reads **Team feedback (finished)** once a person ended the vote, or its vote in Slack ended and no other runs. Pointing at
+reads **Team feedback (finished)** once a person ended the vote, or its vote in Slack ended and no other runs. On the request's page a vote in Slack is a box under its header, not in an option's tab: while it runs, until when; once closed, each option by its number with its 👍, 👎 and ⚠️, read from the result Design Desk wrote (`Name: 7 👍, 2 👎. …`; a result in other words shows as written). Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
 dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`

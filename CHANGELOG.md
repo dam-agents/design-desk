@@ -15,7 +15,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    with its own **Hide**; a menu in a design shuts on a move to another page, also in designs
    built before; a played story starts from the design as first loaded, its bar's Light / Dark
    kept, and a part it has but does not show is skipped and said; a Desk page move keeps a dialog
-   with something typed in it open; each story's card adds
+   with something typed in it open; a vote in Slack is a box under the request's header, a closed
+   one listing the options by number with their votes; each story's card adds
    one grey line of steps, screens and a score; a notification clicked stays read when a poll
    answers late.
 2. Restart the Desk server (`rc-service --user design-desk-server restart`): a click on a
