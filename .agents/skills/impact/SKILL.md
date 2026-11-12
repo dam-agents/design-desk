@@ -59,7 +59,9 @@ Then read, do not count:
   **Under the hood** below; a new field or endpoint does not.
 
 A decision without a source is not a decision here: write what you found and where, or leave
-it out.
+it out. A decision that waits for a designer's approval (Not approved) is not one either: it
+is not cited as a decision, never a conflict, never a reason (`design desk decision-check`
+lists it apart, under `waiting`).
 
 ## 4. Write it
 
