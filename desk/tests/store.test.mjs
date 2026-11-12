@@ -859,6 +859,40 @@ test("an element's smart controls: options the page can show, one way each; a no
   assert.deepEqual(t.anchor.controls, [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }]);
 });
 
+test("releases: kept by repository and tag, the newest first, with the pull requests they brought", () => {
+  const s = fresh();
+  assert.deepEqual(s.getReleases().releases, [], "none until the watch run sends some");
+  assert.throws(() => s.setReleases({}), /list/);
+  assert.throws(() => s.setReleases([{ repo: "acme/widgets", published_at: "2026-11-05T00:00:00Z", prs: [] }]), /tag/);
+  assert.throws(() => s.setReleases([{ repo: "acme/widgets", tag: "v1", published_at: "soon", prs: [] }]), /published_at/);
+  assert.throws(() => s.setReleases([{ repo: "acme/widgets", tag: "v1", published_at: "2026-11-05T00:00:00Z" }]), /prs/);
+  s.setReleases([
+    { repo: "acme/widgets", tag: "v1", published_at: "2026-11-05T00:00:00Z", prs: [3, 3, "4", -1, 0.5], url: "javascript:alert(1)" },
+    { repo: "acme/widgets", tag: "v2-rc.1", name: "v2 RC 1", published_at: "2026-11-07T00:00:00Z", prerelease: true, previous: "v1", prs: [5], url: "https://github.com/acme/widgets/releases/tag/v2-rc.1" },
+  ]);
+  const [rc, v1] = s.getReleases().releases;
+  assert.equal(rc.tag, "v2-rc.1", "the newest first");
+  assert.equal(rc.prerelease, true);
+  assert.equal(v1.name, "v1", "no name: the tag");
+  assert.deepEqual(v1.prs, [3, 4], "pull request numbers, once each");
+  assert.equal(v1.url, null, "only an https link");
+  s.setReleases([{ repo: "acme/widgets", tag: "v1", published_at: "2026-11-05T00:00:00Z", prs: [3, 4, 6] }]);
+  assert.equal(s.getReleases().releases.length, 2, "the same tag is replaced, not added");
+  assert.deepEqual(JSON.parse(readFileSync(join(s.dir, "releases.json"), "utf8")).keys.sort(), ["acme/widgets#v1", "acme/widgets#v2-rc.1"], "the pre-flight reads what the Desk keeps");
+});
+
+test("a change says where it is in the product and whether it is a fix; History reads both from the list", () => {
+  const s = fresh();
+  const { card } = s.upsertCard({ kind: "change", title: "Clear button", area: "Search", fix: false, source: { repo: "acme/widgets", pr: 8 } });
+  assert.throws(() => s.upsertCard({ id: card.id, fix: "yes" }), /true or false/);
+  s.upsertCard({ id: card.id, fix: true });
+  const row = s.listCards({}).find((c) => c.id === card.id);
+  assert.equal(row.area, "Search");
+  assert.equal(row.fix, true);
+  const r = s.createRequest({ email: "alice@example.com", role: "designer" }, { title: "A request", problem: "x" }).card;
+  assert.throws(() => s.upsertCard({ id: r.id, area: "Search" }), /belongs to a change/);
+});
+
 test("the kit: one per Desk, replaced whole, kept to the names and sizes the page draws", () => {
   const s = fresh();
   assert.equal(s.getKit().kit, null, "none until the agent sends one");

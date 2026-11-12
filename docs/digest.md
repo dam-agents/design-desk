@@ -2,8 +2,8 @@
 
 Once a week the team gets one page of what happened to the product's UX: what shipped,
 what was asked and decided, what waits for a decision, how the votes went, and the themes
-in what people said. It lands in **Product → History** on the Desk, one page a week, never in
-Changes; and in Slack with `digest: slack`.
+in what people said. It lands in **Product → History** on the Desk, on top of its week, and as
+the week's own page, never in Changes; and in Slack with `digest: slack`.
 
 `design-desk-digest-weekly` runs it; its pre-flight (`preflight.sh digest`) reads the Desk's
 own store and stays silent in a quiet week, or once the week's digest exists.

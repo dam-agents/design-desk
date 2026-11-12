@@ -490,6 +490,10 @@ export class Store {
         // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
         origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
         path: c.path || null, period: c.period || null,
+        // Where a change is and whether it is a fix: Product → History groups and filters by them.
+        area: c.area || null, fix: c.fix === true,
+        // Its first before and after pair, or else its first picture as the after: History shows them.
+        shots: c.kind === "change" ? shotPair(c.screens) : null,
         // When a screen or a part was drawn and last looked at again: the list says drawn: (docs/map.md → A screen card).
         drawn: c.drawn || null, checked: c.checked || null,
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
@@ -1980,7 +1984,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2044,6 +2048,16 @@ export class Store {
         if (next.kind !== "change") throw bad("ci belongs to a change card");
         next.ci = fields.ci === null ? null : cleanCi(fields.ci);
         if (next.ci) next.ci.at = this.clock();
+      }
+      // Where a change is in the product and whether it fixes what was there (Product → History).
+      else if (k === "area") {
+        if (next.kind !== "change") throw bad("area belongs to a change card");
+        next.area = fields.area === null ? null : clean(String(fields.area), 60, "area");
+      }
+      else if (k === "fix") {
+        if (next.kind !== "change") throw bad("fix belongs to a change card");
+        if (typeof fields.fix !== "boolean") throw bad("fix is true or false");
+        next.fix = fields.fix;
       }
       else if (k === "dev_summary") {
         if (next.kind !== "request") throw bad("dev_summary belongs to a request");
@@ -2566,6 +2580,42 @@ export class Store {
   }
   getKit() { return { kit: this.db.kit || null }; }
 
+  // The product's releases on GitHub (docs/watch.md → Releases): each published release of a
+  // watched repository, with the pull requests it brought since the release before it. The
+  // agent adds them as the watch pre-flight finds them; a release already kept is replaced
+  // whole. Product → History groups the changes by them.
+  setReleases(list) {
+    if (!Array.isArray(list)) throw bad("releases is a list: [{repo, tag, name, url, published_at, prerelease, previous, prs}]");
+    const str = (v, n) => String(v ?? "").slice(0, n);
+    const all = { ...(this.db.releases || {}) };
+    for (const r of list.slice(0, 100)) {
+      if (!r || typeof r !== "object" || Array.isArray(r)) throw bad("a release is an object");
+      const repo = str(r.repo, 120).trim(), tag = str(r.tag, 80).trim();
+      if (!repo || !tag) throw bad("a release needs its repo and its tag");
+      const at = Date.parse(r.published_at);
+      if (!Number.isFinite(at)) throw bad(`${tag}: published_at must be a time`);
+      if (!Array.isArray(r.prs)) throw bad(`${tag}: prs must be a list of pull request numbers`);
+      all[`${repo}#${tag}`] = {
+        repo, tag, name: str(r.name, 120).trim() || tag, url: /^https:\/\//.test(String(r.url || "")) ? str(r.url, 300) : null,
+        published_at: new Date(at).toISOString(), prerelease: r.prerelease === true, previous: r.previous ? str(r.previous, 80) : null,
+        prs: [...new Set(r.prs.map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 2000), at: this.clock(),
+      };
+    }
+    // The newest 200 are kept.
+    this.db.releases = Object.fromEntries(Object.entries(all).sort((a, b) => b[1].published_at.localeCompare(a[1].published_at)).slice(0, 200));
+    this.save();
+    this.writeReleases();
+    return { releases: Object.keys(this.db.releases).length };
+  }
+  getReleases() { return { releases: Object.values(this.db.releases || {}).sort((a, b) => b.published_at.localeCompare(a.published_at)) }; }
+  // releases.json is what the watch pre-flight reads: the releases the Desk keeps already, so a
+  // pass asks GitHub only for the pull requests of a new one. A local file, like github-refs.json.
+  writeReleases() {
+    const p = join(this.dir, "releases.json"), tmp = `${p}.tmp-${process.pid}`;
+    writeFileSync(tmp, JSON.stringify({ updated: this.clock(), keys: Object.keys(this.db.releases || {}) }));
+    renameSync(tmp, p);
+  }
+
   listDecisions({ concept = "", q = "", state = "" } = {}) {
     const c = String(concept || "").toLowerCase(), w = String(q || "").toLowerCase().trim();
     return Object.values(this.db.decisions)
@@ -2741,6 +2791,18 @@ function cleanAnchor(a) {
 
 // A change card's section names where it comes from ("the issue #12", "not documented —
 // ask the author"), so a reader sees the source of every paragraph.
+// A change's pictures as Product → History shows them: the first pair with both a before and an
+// after, its name as the caption; with none, the first picture alone, as the after.
+function shotPair(screens = []) {
+  const list = (screens || []).filter((x) => x?.asset);
+  for (const b of list.filter((x) => x.stage === "before")) {
+    const a = list.find((x) => x.stage === "after" && x.pair === b.pair);
+    if (a) return { before: b.asset, after: a.asset, pair: b.pair || "", caption: a.caption || "", source: a.source || b.source || null };
+  }
+  const one = list.find((x) => x.stage !== "before") || null;
+  return one ? { before: null, after: one.asset, pair: "", caption: one.caption || "", source: one.source || null } : null;
+}
+
 function cleanSections(list, brief = null, cards = {}) {
   if (!Array.isArray(list)) throw bad("sections must be a list");
   if (brief && list.length > brief.sections) throw bad(`a change card has at most ${brief.sections} sections`);

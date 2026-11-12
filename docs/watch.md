@@ -96,6 +96,11 @@ steps say; the decision notes of step 4 are always yours to read.
      the PR records ("per week because the limit resets weekly") becomes a decision with the
      PR as its origin; the card is checked against the decisions in force
      ([desk.md](desk.md) → Decisions → The check).
+   - `area` — where in the product it is, in the product's words: the name of the screen on
+     Product → Screens when it has one, else the part of the product ("Checkout", "Chat and
+     sessions"); at most 60 characters. Product → History groups and filters the changes by it.
+   - `fix` — `true` when it fixes or polishes what was already there (a bug, an alignment, a
+     wrong word), `false` when it brings something new. History counts the fixes apart.
    - `attention` — who should look at it, and why ([desk.md](desk.md) →
      Needs a designer): `designer`, `developer` (For Developers) or `fyi` (auto handled).
 8. **Publish.** Upload each screen: `design desk asset <file> --kind screen --name <name>`
@@ -192,6 +197,22 @@ Merged and closed pull requests are never touched: their checks no longer matter
   is written as `{state: "skipped", tries: 3}` and reported in the chat UI, and the card is
   never due again. An `Q-<n>` item whose write failed is done with that outcome: the `G-`
   entry retries it.
+
+## Releases
+
+Every watch pass also reads the watched repositories' releases on GitHub. Its `releases_due`
+lists each release published since `watch_since` that the Desk does not keep yet: `{repo, tag,
+name, url, published_at, prerelease, previous, prs}`, where `prs` are the pull requests between
+the release published before it (`previous`) and this one, read from the merge and squash
+messages of the commits between the two tags. When GitHub does not return a repository's releases
+or a release's commits, that release is not listed and the pass logs it; the next pass tries again.
+While the Desk's `releases.json` cannot be read, no release is due. A release candidate is a release like any other:
+what is published is what people run. Keep them as they are, in one call:
+`design desk releases <file>` with the list written to a file. Nothing else is due for them: no
+card, no message. Product → History puts each shipped change in the first release that has its
+pull request, and the changes in none yet under **Not released yet**
+([desk-page.md](desk-page.md) → Product → History). A repository without releases has none, and
+History offers only days and weeks.
 
 ## Comments on GitHub
 
