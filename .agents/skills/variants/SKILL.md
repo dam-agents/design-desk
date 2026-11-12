@@ -227,7 +227,10 @@ Self-check:
   decisions in force it follows and the elements each one shaped (`reasons`, same section),
   so people see why a part is there and looks as it does; the same `id` rule holds. And it
   lists the parts it changes or adds (`elements`, docs/requests.md → The option's elements),
-  each with an `id` in the page so its picture is cut by a short path.
+  each with an `id` in the page so its picture is cut by a short path. In repo mode, the parts people
+  would restyle also carry smart controls from `design kit` (docs/requests.md → Smart
+  controls): only the variants and tokens the product has, a variant drawn in full as a
+  `<template data-desk-option>`.
 - **Every state of a part** (the `states` action) — docs/requests.md → Every state of a part:
   one built page per state of the part, each the whole option with only that part changed,
   uploaded with `--kind variant` but sent as the option's `states` (`{id, version, name, how,

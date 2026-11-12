@@ -822,6 +822,53 @@ test("no option is the winner; votes only suggest one, and the presentation show
   assert.equal(s.queueForCall(card.id, alice, "", "v2").card.agenda.variant, "v2");
 });
 
+test("a change note keeps the look changes picked in the palette, as CSS values", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Big", asset: a }] });
+  const look = s.openThread(card.id, alice, { kind: "change", text: "Red", anchor: { variant: "v1", selector: "button", label: "Upload", style: [{ prop: "background-color", from: "rgb(0, 0, 0)", to: "var(--danger)" }, { nope: 1 }] } }).thread;
+  assert.deepEqual(look.anchor.style, [{ prop: "background-color", from: "rgb(0, 0, 0)", to: "var(--danger)" }]);
+  assert.equal(s.openThread(card.id, alice, { kind: "change", text: "Plain", anchor: { variant: "v1", label: "Upload" } }).thread.anchor.style, null);
+});
+
+test("an element's smart controls: options the page can show, one way each; a note keeps what was picked", () => {
+  const s = fresh();
+  const { card } = s.createRequest(alice, { problem: "People miss the save button." });
+  const asset = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<button id=save>Save</button>", encoding: "utf8" }).asset.id;
+  const kind = { id: "kind", label: "Button type", current: "primary", source: "web/src/components/ui/button.tsx", options: [
+    { id: "primary", label: "Primary", apply: { class: { add: "primary", remove: "ghost" } } },
+    { id: "ghost", label: "Ghost", apply: { template: "save-ghost" } },
+    { id: "pill", label: "Pill", token: "--radius-full", apply: { style: { "border-radius": "var(--radius-full)" } } }] };
+  const el = (x) => ({ id: "save", name: "Save button", change: "changed", selector: "#save", ...x });
+  const up = (x) => s.upsertCard({ id: card.id, status: "feedback", triage: { verdict: "design", reasons: [] }, variants: [{ id: "v1", name: "Bold", asset, elements: [el(x)] }] });
+  up({ controls: [kind] });
+  assert.deepEqual(s.card(card.id).variants[0].elements[0].controls, [{ ...kind, kind: "choice", options: kind.options }]);
+  for (const [why, x, msg] of [
+    ["no selector", { selector: null, shot: null, controls: [kind] }, /selector|picture/],
+    ["two ways", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { class: { add: "a" }, style: { color: "red" } } }, kind.options[1]] }] }, /apply is one of/],
+    ["a current that is no option", { controls: [{ ...kind, current: "big" }] }, /current/],
+    ["markup in a class", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { class: { add: "<b>" } } }, kind.options[1]] }] }, /class lists/],
+    ["one option", { controls: [{ ...kind, options: [kind.options[0]] }] }, /options/],
+    ["a style that loads a picture", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { style: { background: "URL(https://x.example/p.png)" } } }, kind.options[1]] }] }, /style is up to 8/],
+    ["a style that loads a picture set", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { style: { "background-image": "-webkit-image-set(a.png 1x)" } } }, kind.options[1]] }] }, /style is up to 8/],
+  ]) assert.throws(() => up(x), msg, why);
+  const t = s.openThread(card.id, alice, { kind: "change", text: "Ghost", anchor: { variant: "v1", selector: "#save", label: "Save button", controls: [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }] } }).thread;
+  assert.deepEqual(t.anchor.controls, [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }]);
+});
+
+test("the kit: one per Desk, replaced whole, kept to the names and sizes the page draws", () => {
+  const s = fresh();
+  assert.equal(s.getKit().kit, null, "none until the agent sends one");
+  assert.throws(() => s.setKit([]), /object/);
+  const { kit } = s.setKit({ repo: "acme/widgets", commit: "abc", root: "/home/agent/checkouts/x", tokens: { color: [{ name: "--primary", value: "#fff", file: "a.css", used_in: ["p.tsx", "p.tsx", ""] }, { name: "primary", value: "#000" }], "Bad Kind": [{ name: "--x", value: "1" }], shadow: [] },
+    components: [{ name: "Button", file: "b.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary", extra: 1 }] }, { name: "Empty", options: [] }] });
+  assert.deepEqual(kit.tokens, { color: [{ name: "--primary", value: "#fff", file: "a.css", used_in: ["p.tsx"] }] }, "where it is used, once each; a name that is no custom property, a kind with a bad name, an empty kind: left out");
+  assert.deepEqual(kit.components, [{ name: "Button", file: "b.tsx", prop: "variant", how: "cva", default: "default", options: [{ name: "default", classes: "bg-primary" }] }]);
+  assert.equal(kit.root, undefined, "the agent's own paths stay off the Desk");
+  assert.equal(s.setKit({ tokens: {}, components: [] }).kit.repo, null, "the next one replaces it whole");
+});
+
 test("a reply, an answer, a reopen and Mark done take the ability of what they start", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "People miss the upload button." });
@@ -2590,4 +2637,21 @@ test("every kind numbers its own series under its letter; items from before keep
   assert.equal(checked.figma_check.id, "F-2");
   assert.equal(s.upsertCard({ id: screen.id, figma_check: { verdict: "matches", frame, differences: [] } }).card.figma_check.id, "F-2", "compared again, it keeps its number");
   assert.equal(s.listCards({ kind: "screen" }).find((c) => c.id === screen.id).figma.id, "F-2");
+});
+
+test("a change card's environment: https only, keeps when it was deployed, cleared by null", () => {
+  let now = "2026-11-02T08:00:00Z";
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => now });
+  const env = { url: "https://app-pr-7.env.example.com", label: "demo", login: { hint: "your platform account" }, steps: ["Open the agents list"], missing: "No processes there." };
+  const c = s.upsertCard({ kind: "change", title: "Filter agents by owner", source: { repo: "acme/widgets", pr: 7 }, environment: env }).card;
+  assert.deepEqual(c.environment, { ...env, since: "2026-11-02T08:00:00Z", expires: null, login: { user: "", password: "", hint: "your platform account" } });
+  // The same address keeps its first date; a new one starts again; the agent's own date wins.
+  now = "2026-11-05T08:00:00Z";
+  assert.equal(s.upsertCard({ id: c.id, environment: env }).card.environment.since, "2026-11-02T08:00:00Z");
+  assert.equal(s.upsertCard({ id: c.id, environment: { ...env, url: "https://app-pr-7b.env.example.com" } }).card.environment.since, "2026-11-05T08:00:00Z");
+  assert.equal(s.upsertCard({ id: c.id, environment: { ...env, since: "2026-11-01T10:00:00.000Z" } }).card.environment.since, "2026-11-01T10:00:00Z");
+  assert.throws(() => s.upsertCard({ id: c.id, environment: { url: "http://app.example.com" } }), /https/);
+  assert.throws(() => s.upsertCard({ id: c.id, environment: { ...env, since: "soon" } }), /date/);
+  assert.equal(s.upsertCard({ id: c.id, environment: { ...env, expires: "2026-11-19T08:00:00.000Z" } }).card.environment.expires, "2026-11-19T08:00:00Z");
+  assert.equal(s.upsertCard({ id: c.id, environment: null }).card.environment, null);
 });

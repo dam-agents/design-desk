@@ -33,6 +33,16 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   after a final check opens in Select). A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
   (another page, a closed menu); a note's part the design has not opened yet stays selected.
+  **The look palette:** in Select, an admin (for now; whoever may change the design later) gets **Change the look** in the
+  side panel, under the part selected and its note: tabs Text, Fill, Spacing, Layout (a flex or grid
+  part only) and Size, with steppers, segmented choices, colors, and a resize handle on the part's
+  corner in the design. An element with smart controls opens on **Suggested** first: only the
+  choices the product has for it, each named with its source ([requests.md](requests.md) → Smart
+  controls); a variant drawn in full replaces the element in the preview. A change shows at once in the design only, a preview nothing saves. Steps
+  follow the design's own text sizes, a spacing and a corner scale; colors offer the design's named
+  colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
+  Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
+  **Send** makes one `change` note per part with `anchor.style` ([requests.md](requests.md) → revise).
   What is about the request, not its step (the presentation, For Developers or For Designers, Redraw
   the options, New request from this, Delete), is under **⋯** at the right end of the box's top
   row, after Approve and Close; that row ends where Open in the design workspace ends.
@@ -53,7 +63,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
   Developers** and **For presentation** on Requests; **For Designers** and **For Developers** on
   PR Changes and Issues, each opened on the viewer's own as Requests ([desk.md](desk.md) → For
-  Developers or For Designers); **Screens**, **Elements**, **Decisions**,
+  Developers or For Designers); **Screens**, **Elements**, **Decisions**, **Kit** (an admin's, for
+  now: [Product → Kit](#product--kit)),
   **Differences** (with Figma on, [desk.md](desk.md#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
   handled, the default), **Handled**, **Auto handled** (Design Desk found nothing to look at, `attention` `fyi`, or it shipped more than `change_auto_handled_days`, 14,
   ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default for anyone who may vote, **Open** for the rest: the next move is the viewer's own, by what they may do —
@@ -183,6 +194,21 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   kind, who started it and their first words, then *done*; a click opens it with the option it is
   on, its jump to the part and Reopen. The order
   stays newest first.
+
+## Product → Kit
+
+The product's kit as `design kit` last read it ([requests.md](requests.md) → Smart controls),
+shown only to an admin for now (`GET /api/kit` refuses anyone else). The list has one row per
+kind of named value (Colors, Shadows, Corners, Spacing, Text sizes…) and one per component's
+variants (`Button · variant`), each with its count and the files it comes from. A row opens its
+tiles, drawn as the elements' are: a color's swatch, a shadow on a card, a corner, a spacing bar,
+`Aa` at a text size; a variant by its name, its classes and **default**. Above them: the
+repository and commit it was read at, and when. A value the Desk cannot draw says *no preview*.
+A file opens on GitHub at that commit. Under each tile, **used in:** the Elements drawn from a
+file that uses it (a click opens the element), then the other files, folded; a value or variant no
+file uses says so. A kit read before `used_in` existed shows no uses.
+Before the first `design desk kit` the list says *No kit yet*; a read that failed says the kit
+could not be read, and why.
 
 ## A request's state in the list
 

@@ -14,6 +14,8 @@ export const LIMITS = {
   optionStates: 24,
   // The parts one option changes or adds, each a tile under it (docs/requests.md → The option's elements).
   optionElements: 24,
+  // An element's smart controls, and the options of one (docs/requests.md → Smart controls).
+  controls: 8, controlOptions: 12,
   // What a shipped change does otherwise than the approved design it builds (docs/watch.md → Approved design).
   designDifferences: 12,
   // The ways of one part a person picks from (docs/requests.md → Alternatives of a part).
@@ -1946,7 +1948,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -1990,6 +1992,13 @@ export class Store {
       }
       else if (k === "impact") { next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions); this.linkPlaces(next.impact, fields.impact.places); }
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
+      else if (k === "environment") {
+        // When it was deployed: the agent's date when the pull request says it, else when the
+        // Desk first saw this address; the same address keeps its date across rewrites.
+        const e = fields.environment === null ? null : cleanEnvironment(fields.environment), was = c?.environment;
+        if (e && !e.since) e.since = was?.url === e.url && was.since ? was.since : this.clock();
+        next.environment = e;
+      }
       else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
       else if (k === "path") next.path = clean(String(fields.path), 300, "path");
       else if (k === "how") next.how = clean(fields.how, 600, "how");
@@ -2494,6 +2503,28 @@ export class Store {
     return { inbox: item };
   }
 
+  // The product's kit, as `design kit` read it (docs/requests.md → Smart controls): one per Desk,
+  // replaced whole by the agent; Product → Kit shows it to an admin.
+  setKit(k) {
+    if (!k || typeof k !== "object" || Array.isArray(k)) throw bad("the kit is an object: {repo, commit, tokens, components}");
+    const str = (v, n) => String(v ?? "").slice(0, n);
+    // Where a part is used (docs/requests.md → Smart controls): repository paths, at most 30.
+    const used = (v) => Array.isArray(v) ? { used_in: [...new Set(v.map((f) => str(f, 200)).filter(Boolean))].slice(0, 30) } : {};
+    const tokens = {};
+    for (const [kind, list] of Object.entries(k.tokens && typeof k.tokens === "object" ? k.tokens : {}).slice(0, 12)) {
+      if (!/^[a-z][a-z-]{0,19}$/.test(kind) || !Array.isArray(list)) continue;
+      const ts = list.slice(0, 200).filter((t) => t && /^--[\w-]{1,80}$/.test(String(t.name))).map((t) => ({ name: String(t.name), value: str(t.value, 160), file: str(t.file, 200), ...used(t.used_in) }));
+      if (ts.length) tokens[kind] = ts;
+    }
+    const components = (Array.isArray(k.components) ? k.components : []).slice(0, 80).filter((c) => c && Array.isArray(c.options) && c.options.length).map((c) => ({
+      name: str(c.name, 80) || "Component", file: str(c.file, 200), prop: str(c.prop, 40), how: ["cva", "prop", "class"].includes(c.how) ? c.how : "prop", default: c.default == null ? null : str(c.default, 40), ...used(c.used_in),
+      options: c.options.slice(0, 16).map((o) => ({ name: str(o?.name, 40), ...(o?.classes ? { classes: str(o.classes, 500) } : {}), ...(o?.class ? { class: str(o.class, 80) } : {}), ...used(o?.used_in) })) }));
+    this.db.kit = { repo: str(k.repo, 120) || null, commit: str(k.commit, 40) || null, ui_dir: k.ui_dir ? str(k.ui_dir, 120) : null, at: this.clock(), tokens, components };
+    this.save();
+    return { kit: this.db.kit };
+  }
+  getKit() { return { kit: this.db.kit || null }; }
+
   listDecisions({ concept = "", q = "", state = "" } = {}) {
     const c = String(concept || "").toLowerCase(), w = String(q || "").toLowerCase().trim();
     return Object.values(this.db.decisions)
@@ -2660,6 +2691,10 @@ function cleanAnchor(a) {
     view: typeof a.view === "string" ? a.view.slice(0, 40) : null,
     view_name: typeof a.view_name === "string" ? a.view_name.slice(0, 120) : null,
     edit: a.edit && typeof a.edit === "object" ? { from: String(a.edit.from || "").slice(0, 300), to: String(a.edit.to || "").slice(0, 300) } : null,
+    // Look changes made in the workspace's palette: a CSS property, the value before and the one picked.
+    // Smart controls picked: which control, from which option to which, and the kit's source of it.
+    controls: Array.isArray(a.controls) && a.controls.length ? a.controls.slice(0, 12).filter((x) => x && typeof x.control === "string").map((x) => ({ control: x.control.slice(0, 40), label: String(x.label ?? "").slice(0, 40), from: String(x.from ?? "").slice(0, 40), to: String(x.to ?? "").slice(0, 40), source: String(x.source ?? "").slice(0, 200) })) : null,
+    style: Array.isArray(a.style) && a.style.length ? a.style.slice(0, 20).filter((x) => x && typeof x.prop === "string").map((x) => ({ prop: x.prop.slice(0, 40), from: String(x.from ?? "").slice(0, 80), to: String(x.to ?? "").slice(0, 80) })) : null,
   };
 }
 
@@ -3048,6 +3083,21 @@ function cleanImpact(o, cards, decisions = {}) {
   };
 }
 
+// The running deployment a pull request names in its own body (docs/watch.md step 7): the
+// developers' copy of the change, for people to try before it ships.
+function cleanEnvironment(o) {
+  if (typeof o !== "object" || !o) throw bad("environment must be an object");
+  if (!/^https:\/\//.test(String(o.url || ""))) throw bad("environment.url must be an https address");
+  const date = (k) => { const v = o[k] == null || o[k] === "" ? null : String(o[k]); if (v && Number.isNaN(Date.parse(v))) throw bad(`environment.${k} must be a date`); return v ? new Date(v).toISOString().replace(/\.\d{3}Z$/, "Z") : null; };
+  const since = date("since"), expires = date("expires");
+  // How to sign in and what to try, as the pull request says it: a demo account, never a person's.
+  const login = o.login && typeof o.login === "object" ? { user: optText(o.login.user, 120, "user"), password: optText(o.login.password, 200, "password"), hint: optText(o.login.hint, 160, "sign-in hint") } : null;
+  if (o.steps !== undefined && o.steps !== null && !Array.isArray(o.steps)) throw bad("environment.steps must be a list");
+  const steps = (o.steps || []).slice(0, 5).map((x) => clean(x, 160, "step"));
+  return { url: String(o.url).slice(0, 500), label: optText(o.label, 60, "environment label"), since, expires,
+    login: login && (login.user || login.hint) ? login : null, steps, missing: optText(o.missing, 200, "what the environment lacks") };
+}
+
 // The agent's own install of the product a card's screens came from, for people to open.
 function cleanInstance(o) {
   if (typeof o !== "object" || !o) throw bad("instance must be an object");
@@ -3134,7 +3184,54 @@ function cleanOptionElements(list, assets, cards, n) {
     const of = x.element == null || x.element === "" ? null : String(x.element);
     if (of && (own(cards, of)?.kind !== "element" || own(cards, of).design)) throw bad(`variant ${n}, element ${i + 1}: ${of} is not an element of the product`);
     return { id, name: clean(x.name, 80, "element name"), change: x.change, how: optText(x.how, 300, "how"), selector, shot: x.shot ?? null,
-      ...(x.view ? { view: String(x.view).slice(0, 40), view_name: optText(x.view_name, 120, "view name") } : {}), element: of };
+      ...(x.view ? { view: String(x.view).slice(0, 40), view_name: optText(x.view_name, 120, "view name") } : {}), element: of,
+      ...(x.controls == null ? {} : { controls: cleanControls(x.controls, selector, `variant ${n}, element ${i + 1}`) }) };
+  });
+}
+
+// An element's smart controls (docs/requests.md → Smart controls): the choices its product
+// already has for it (another kind of button, a shadow, a corner), each from the kit, each with
+// how the workspace previews it in the option's page: a class swap, a style, or a drawing of
+// that variant kept in the page as <template data-desk-option="id">. A style value loads nothing:
+// no url(), image-set() or other function that fetches, and no comment that could hide one; the
+// page's frame script refuses the same (desk/page.html → applyControls).
+const CSS_PROP = /^[a-z][a-z-]{0,39}$/, CSS_VALUE = /^(?![\s\S]*(?:\b(?:url|image|image-set|cross-fade|element|src|expression)\s*\(|\/\*))[^<>{};"\\]{1,200}$/i, CLASSES = /^[^<>"'`{};\\]{0,500}$/;
+function cleanControls(list, selector, where) {
+  if (!Array.isArray(list) || list.length > LIMITS.controls) throw bad(`${where}: controls is a list of at most ${LIMITS.controls}`);
+  if (list.length && !selector) throw bad(`${where}: controls need the element's selector in the option's page`);
+  const ids = new Set();
+  return list.map((c, k) => {
+    const at = `${where}, control ${k + 1}`;
+    const id = String(c?.id || "");
+    if (!STATE_ID.test(id) || ids.has(id)) throw bad(`${at}: its id must be short and its own`);
+    ids.add(id);
+    const opts = Array.isArray(c.options) ? c.options : [];
+    if (opts.length < 2 || opts.length > LIMITS.controlOptions) throw bad(`${at}: options is a list of 2 to ${LIMITS.controlOptions}`);
+    const oids = new Set();
+    const options = opts.map((o, j) => {
+      const oid = String(o?.id || "");
+      if (!STATE_ID.test(oid) || oids.has(oid)) throw bad(`${at}, option ${j + 1}: its id must be short and its own`);
+      oids.add(oid);
+      const a = o.apply || {}, kinds = ["class", "style", "template"].filter((x) => a[x] != null);
+      if (kinds.length !== 1) throw bad(`${at}, option ${j + 1}: apply is one of class, style or template`);
+      let apply;
+      if (a.class) {
+        const add = String(a.class.add || ""), remove = String(a.class.remove || "");
+        if (!CLASSES.test(add) || !CLASSES.test(remove)) throw bad(`${at}, option ${j + 1}: class.add and class.remove are class lists`);
+        apply = { class: { add, remove } };
+      } else if (a.style) {
+        const e = Object.entries(a.style);
+        if (!e.length || e.length > 8 || e.some(([p, v]) => !CSS_PROP.test(p) || !CSS_VALUE.test(String(v)))) throw bad(`${at}, option ${j + 1}: style is up to 8 CSS properties and values`);
+        apply = { style: Object.fromEntries(e.map(([p, v]) => [p, String(v)])) };
+      } else {
+        if (!STATE_ID.test(String(a.template))) throw bad(`${at}, option ${j + 1}: template is the id of a <template data-desk-option> in the page`);
+        apply = { template: String(a.template) };
+      }
+      return { id: oid, label: clean(o.label, 40, "option label"), apply, ...(o.token ? { token: String(o.token).slice(0, 80) } : {}) };
+    });
+    const current = String(c.current || "");
+    if (!oids.has(current)) throw bad(`${at}: current is the id of the option the page shows`);
+    return { id, label: clean(c.label, 40, "control label"), kind: c.kind === "scale" ? "scale" : "choice", current, source: optText(c.source, 200, "source"), options };
   });
 }
 
