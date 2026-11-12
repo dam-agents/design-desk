@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { abilities } from "../store.mjs";
-import { CARDS, ASSETS } from "./mock-data.mjs";
+import { CARDS, ASSETS, NOTES } from "./mock-data.mjs";
 
 const [port = "5610"] = process.argv.slice(2);
 const page = join(dirname(fileURLToPath(import.meta.url)), "..", "page.html");
@@ -23,7 +23,7 @@ function shim() {
   const q = new URLSearchParams(location.search);
   const role = q.get("role") || "designer";
   const me = { role, email: "alice@example.com", name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
-  const cards = structuredClone(CARDS);
+  const cards = structuredClone(CARDS), notes = structuredClone(NOTES);
   const now = () => new Date().toISOString();
   const card = (id) => cards.find((c) => c.id === id);
   const thread = (id) => cards.flatMap((c) => c.threads.map((t) => [c, t])).find(([, t]) => t.id === id) || [];
@@ -47,7 +47,9 @@ function shim() {
     if (p === "/api/cards" && method === "GET") return { cards: list() };
     if (p.startsWith("/api/assets/")) return ASSETS[decodeURIComponent(p.slice(12))] || {};
     if (p === "/api/agenda") return { agenda: [] };
-    if (p === "/api/notifications") return { items: [], unread: 0 };
+    if (p === "/api/notifications") return { seen: null, items: notes, unread: notes.filter((x) => x.for_you && !x.read).length };
+    if (p === "/api/notifications/seen") return {};
+    if (p === "/api/notifications/read") { const x = notes.find((y) => y.id === new URLSearchParams(path.split("?")[1]).get("id")); if (x) x.read = true; return {}; }
     if (p.startsWith("/api/decisions/")) { const id = decodeURIComponent(p.slice(15)); const d = cards[0].cited[id]; return d ? { decision: { id, ...d, side: "design", at: now(), concepts: [] } } : {}; }
     if (p.startsWith("/api/decisions")) return { decisions: Object.entries(cards[0].cited).map(([id, d]) => ({ id, ...d, side: "design", at: now(), concepts: [] })) };
     let x;
@@ -82,7 +84,7 @@ function shim() {
   if (q.get("ws")) { const t = setInterval(() => { const b = document.querySelector('[data-act="workspace"]'); if (b) { clearInterval(t); b.click(); } }, 150); }
 }
 
-const SHIM = `<script>const CAN = ${JSON.stringify(CAN)}, CARDS = ${JSON.stringify(CARDS)}, ASSETS = ${JSON.stringify(ASSETS).replace(/</g, "\\u003c")};
+const SHIM = `<script>const CAN = ${JSON.stringify(CAN)}, CARDS = ${JSON.stringify(CARDS)}, NOTES = ${JSON.stringify(NOTES)}, ASSETS = ${JSON.stringify(ASSETS).replace(/</g, "\\u003c")};
 (${shim.toString()})();</script>`;
 
 createServer((req, res) => {

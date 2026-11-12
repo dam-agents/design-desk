@@ -6268,7 +6268,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if ($("#ws-frame") !== frame) return;
       frame.srcdoc = withScript(decode(a)).replace(/(<\/body>)(?![\s\S]*<\/body>)|$/, (m) => `${WS_BAR_HIDDEN}${m}`);
       frame.onload = () => {
-        if (S.ws.pop?.anchored) frame.contentWindow?.postMessage({ type: "desk-track", selector: S.ws.selected?.selector || "" }, "*");
         const old = assetId !== latest;
         frame.contentWindow?.postMessage({ type: "desk-mode", mode: old || S.ws.check ? "off" : S.ws.mode }, "*");
         frame.contentWindow?.postMessage({ type: "desk-view", ...(S.ws.view || {}) }, "*");
@@ -6280,6 +6279,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         S.ws.handles = null; S.ws.lookAsked = null;
         if (S.ws.selected?.selector) { frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*"); renderPalette(); }
         else { const r = (v.reasons || []).find((x) => x.decision === S.ws.reason); if (r?.parts[0]) frame.contentWindow?.postMessage({ type: "desk-show", selector: r.parts[0].selector }, "*"); }
+        // A comment open in place: the design shows its page and the part, and says where the part is.
+        const popOn = S.ws.pop?.kind === "thread" ? notesOf(S.card).find((x) => x.id === S.ws.pop.id)?.anchor?.selector : S.ws.target?.selector;
+        if (S.ws.pop?.anchored && popOn) { if (S.ws.pop.kind === "thread") frame.contentWindow?.postMessage({ type: "desk-show", selector: popOn }, "*"); frame.contentWindow?.postMessage({ type: "desk-track", selector: popOn }, "*"); }
       };
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
   }
@@ -8117,6 +8119,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, edit: null, alt: null, note: th.id, state: an.state || null, selected: null, target: null,
         filter: th.state === "resolved" ? "all" : S.ws.filter || "open", panel: "comments", pop: { kind: "thread", id: th.id, anchored: Boolean(an.selector) }, anchor: null };
       renderDetail(); renderWorkspace();
+      if (an.selector) frameSay({ type: "desk-show", selector: an.selector });
       frameSay({ type: "desk-track", selector: an.selector || "" });
       const li = document.querySelector(`[data-ws-note="${CSS.escape(th.id)}"]`), ms = [...document.querySelectorAll("#ws-pop .m")];
       for (const [tid, m] of (x.marks || []).slice(1)) if (tid === th.id && ms[m]) spot(ms[m], "nearest");

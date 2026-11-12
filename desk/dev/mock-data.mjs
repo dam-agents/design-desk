@@ -225,5 +225,16 @@ const r3 = {
   waiting: [], prototype: { state: "none" },
 };
 
+// The bell: notes on comments in the design workspace, each opening its comment in place.
+const note = (id, min, event, thread, msg, by, detail, extra = {}) => ({ id, at: ago(min), event, item: "R-1", kind: "request", title: r1.title, status: r1.status,
+  by, detail, thread, msg, for_you: true, count: 1, people: by.email ? [{ email: by.email }] : [], marks: [[thread, msg]], ...extra });
+export const NOTES = [
+  note("n1", 2, "comment", "T-6", 0, DEV, "General saves on change in the product; is this button needed?"),
+  note("n2", 5, "answer", "T-2", 1, AGENT, "To the limit set here, as the product does today."),
+  note("n3", 9, "reply", "T-1", 2, AGENT, "It follows D-12: one primary button per screen.", { count: 2, marks: [["T-1", 2], ["T-1", 1]] }),
+  note("n4", 30, "comment", "T-5", 0, PAT, "Can the error keep the amount I typed?", { for_you: false }),
+  note("n5", 60, "resolved", "T-3", 1, AGENT, "Done in version 2: 26 px.", { for_you: false }),
+];
+
 export const CARDS = [r1, r2, r3];
 export const ASSETS = A;
