@@ -50,6 +50,8 @@ export const LIMITS = {
 export const ROLES = ["admin", "designer", "pm", "lead-developer", "developer", "guest"];
 // The roles that approve a request For Developers, when they did not file it (docs/desk.md → For Developers or For Designers).
 export const DEVELOPERS = ["lead-developer", "developer"];
+// Who sees Product → Kit and gets the look palette (docs/desk-page.md → The look palette).
+export const LOOK_ROLES = ["admin", "designer", "lead-developer"];
 // The two tabs of Requests: whose call a request is (docs/desk.md → For Developers or For Designers).
 export const AUDIENCES = ["developers", "designers"];
 const BUSY = "Design Desk is already working on this. The result appears here.";
