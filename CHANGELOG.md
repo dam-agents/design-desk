@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.84.3 — 2026-11-12
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): the design workspace's top
+   bar drops its Why it looks like this button and its hint, and the side panel's section hides
+   with its own **Hide**; a menu in a design shuts on a move to another page, also in designs
+   built before; a played story starts from the design as first loaded; each story's card adds
+   one grey line of steps, screens and a score. No server restart, no data change.
+2. Nothing for designs already built: designs built from now on carry the review bar that shuts
+   its menus itself.
+
 ## 1.84.2 — 2026-11-12
 
 **Upgrade:**

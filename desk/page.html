@@ -531,6 +531,9 @@
   .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--bad); }
   .stories .how { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.45; }
   .stories .how.partly { color: var(--warn); } .stories .how.no { color: var(--bad); }
+  /* How much a story asks of a person: one grey line, its score coloured. */
+  .stories .effort { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .stories .effort b { font-weight: 600; } .stories .effort .easy { color: var(--ok); } .stories .effort .medium { color: var(--warn); } .stories .effort .hard { color: var(--bad); }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -1759,7 +1762,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     variant: "Shows this design option",
     wsVariant: "Shows this design option",
     story: "Shows how each option meets this user story",
-    wsWhy: (v, el) => el.classList.contains("on") ? "Hides the decision tags on the design" : "Tags each part of the design with the decisions that shaped it",
+    wsWhy: () => S.ws.why ? "Hides the decision tags on the design" : "Tags each part of the design with the decisions that shaped it",
     reason: "Highlights the parts this decision shaped",
     reasonPart: "Shows this part in the design",
     look: (v, el) => v === "now" ? "Goes back to how it looks today" : /Older/.test(textOf(el)) ? "Shows the version before this one" : /Newer/.test(textOf(el)) ? "Shows the version after this one" : "Shows how it looked then",
@@ -1941,6 +1944,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!d.contains(e.target) || e.target.closest(".menu button:not([data-keep])")) d.open = false;
   }, true);
   const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
+  // A move to another page closes what floated over the one left: a More, an open dialog.
+  const leaveClose = () => { moreClose(); for (const d of document.querySelectorAll("dialog[open]")) d.close(); };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") moreClose(); });
   // A click into a design's frame never reaches this page; the page loses focus instead.
   addEventListener("blur", () => { moreClose(); tipHide(); });
@@ -4914,9 +4919,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // amber when it meets part of it, red when it does not; nothing when it meets it.
     const how = (k) => !k ? `<span class="how">Design Desk has not said yet how ${esc(v.name)} meets this story.</span>`
       : k.met === "yes" ? "" : `<span class="how ${k.met === "no" ? "no" : "partly"}">${txt(k.how)}</span>`;
+    // How much the story asks of a person in this option, in one grey line: the steps (the parts
+    // the story goes through, each one pointed at and clicked when it can be), the screens they
+    // are on, and a rough score from the two. Counted from the option's own coverage, never guessed.
+    const effort = (k) => {
+      const ps = k?.parts || [];
+      if (!ps.length || k.met === "no") return "";
+      const n = ps.length, screens = new Set(ps.map((p) => p.view ?? "")).size;
+      const [score, word] = n <= 2 && screens <= 1 ? ["easy", "Easy"] : n <= 4 && screens <= 2 ? ["medium", "Medium"] : ["hard", "Hard"];
+      return `<span class="effort" title="Counted from the parts the story goes through in ${esc(v.name)}: easy is up to 2 steps on one screen, medium up to 4 steps on two screens, hard anything more">${plural(n, "step", "steps")} · ${plural(screens, "screen", "screens")} · <b class="${score}">${word}</b></span>`;
+    };
     const item = (x) => {
       const k = cov(x.id), on = x.id === st.id, plays = (k?.parts || []).length > 0;
-      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}${how(k)}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;
+      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}${how(k)}${effort(k)}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;
     };
     // The stories are cards side by side, each saying how the option meets it.
     // The section folds like the sections below it: folded at first, then as the person left it.
@@ -4997,7 +5012,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The bar shows at the press, before the design finds its first part.
     storyPlayer({ state: "playing" });
     const go = () => vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
-    if (vf.dataset.ready) go(); else vf.addEventListener("load", () => setTimeout(go, 50), { once: true });
+    // Every play starts from the design as a person first sees it: a design clicked through
+    // before (a dialog opened or shut, another page) is loaded afresh first.
+    if (vf.dataset.ready && !vf.srcdoc) { go(); return; }
+    vf.addEventListener("load", () => setTimeout(go, 50), { once: true });
+    if (vf.dataset.ready) { delete vf.dataset.ready; vf.srcdoc = vf.srcdoc; }
   }
   // One state of an element, as the design catalog shows it: a picture of the part alone, what
   // it is, when it happens and the use case of the brief it serves (docs/requests.md → Every
@@ -5140,6 +5159,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A part picked that showed and no longer does (another page, a closed menu) is let go, and the Desk hears of it.
     // One that never showed (a note's part the design has not opened) stays picked.
     let selectedPath = "", selectedShown = false;
+    // A menu belongs to the page it opened on, also in a design drawn before its review bar knew:
+    // a move to another page (a menu item that leads on, the page switcher, Back) shuts it.
+    addEventListener("click", (e) => {
+      if (!e.target.closest?.("[data-goto-view],#review [data-review-view],#review [data-review-back]")) return;
+      setTimeout(() => document.querySelectorAll("[data-menu-open]").forEach((m) => { m.hidden = true; m.removeAttribute("data-menu-open"); }));
+    }, true);
     const pick = (el, path) => { selected = el; selectedPath = path; selectedShown = false; };
     // Shown means the person can see it: in the page, laid out, not hidden, not fully transparent (it or a box round it).
     // Not contentVisibilityAuto: a part only scrolled out of view is still on the page.
@@ -5224,9 +5249,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       for (let i = 0; i < steps.length; i++) {
         const st = steps[i], el = find(st.selector);
         if (!el) continue;
-        found++;
         tell("playing", i + 1, steps.length);
         reveal(el); await wait(300, id); if (id !== playing) return;
+        // A part the design does not show at this point of the story is passed over: the pointer
+        // never jumps to the corner for a part with no place on the screen.
+        if (!showing(el)) continue;
+        found++;
         const b = el.getBoundingClientRect(); scrollTo({ top: b.top + scrollY - innerHeight / 3, behavior: "smooth" }); await wait(550, id); if (id !== playing) return;
         const r = el.getBoundingClientRect(), x = r.left + Math.min(r.width / 2, 48), y = r.top + Math.min(r.height / 2, 24);
         caption.textContent = (i + 1) + ". " + (st.label || "");
@@ -5378,6 +5406,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     html #review [data-hot], html #review [data-hot][hidden] + [data-notes] { margin-left: auto; }
     /* The design's title (number and name) repeats its option tab on the Desk. */
     html #review #review-title { display: none; }
+    /* A menu the review bar moved to <body> stays shut while hidden, whatever display its own classes give it. */
+    html body > [hidden] { display: none !important; }
     /* The design's pages are named as such: "Pages:" in grey before their switcher. */
     html #review:has(#review-views:not(:empty))::before { content: "Pages:"; flex: none; order: -1; color: #6b6b66; font-size: 13px; font-weight: 500; }
   </style>`;
@@ -5455,9 +5485,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
-      ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
-      ${pinned(c, v).length ? `<label class="switch ws-switch" title="Shows or hides the comments' numbers on the design; the list beside keeps them"><input type="checkbox" role="switch" data-ws-notes ${S.ws.notes ? "checked" : ""} /><span>Comments</span></label>` : ""}
-      <span class="hint">${S.ws.mode === "select" ? (shaper && lookAdmin() ? "Click any part of the design; change its look on the right." : "Click any part of the design to select it.") : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
+      ${pinned(c, v).length ? `<label class="switch ws-switch" title="Shows or hides the comments' numbers on the design; the list beside keeps them"><input type="checkbox" role="switch" data-ws-notes ${S.ws.notes ? "checked" : ""} /><span>Comments</span></label>` : ""}`;
     $("#ws-states").innerHTML = wsAlts(c, v) + wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
     sendPins(c, v);
@@ -5583,7 +5611,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!rs.length) return "";
     if (!S.ws.why) return `<p class="hint">◆ ${plural(rs.length, "decision", "decisions")} shaped this option. <button class="link" data-ws-why>Show why it looks like this</button></p>`;
     const off = rs.filter((r) => gone(c, r.decision)).length;
-    return `<section class="why"><div class="head"><h3>Why it looks like this</h3><span class="hint">${plural(rs.length, "decision", "decisions")}</span></div>
+    return `<section class="why"><div class="head"><h3>Why it looks like this</h3><span class="hint">${plural(rs.length, "decision", "decisions")}</span><button class="link" data-ws-why style="margin-left:auto">Hide</button></div>
       ${off ? `<p><span class="chip bad" title="A decision this option follows no longer holds">⚠ ${plural(off, "decision", "decisions")} no longer in force</span></p>` : ""}
       <ol class="reasons">${rs.map((r) => {
         const d = c.cited?.[r.decision] || {}, x = gone(c, r.decision);
@@ -6065,6 +6093,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   async function showTab(tab) {
+    leaveClose();
     S.justRead.clear();
     S.tab = tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
     if (tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); }
@@ -6092,6 +6121,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it, with a filter that shows it. The list is read again for a card newer than it.
   const HOME = { change: "new", digest: "product", request: "requests", issue: "issues", screen: "product", element: "product" };
   async function goTo(to) {
+    leaveClose();
     $("#present")?.remove();
     if (to.decision) return openDecision(to.decision);
     if (!to.id) { if (to.tab === "presentation") { S.reqFilter = "presentation"; await showTab("requests"); } else await showTab(to.tab); return true; }

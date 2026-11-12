@@ -292,6 +292,9 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   is a button, a link to its own page or a box to tick. A bar at the bottom of the window, there from the press, pauses, resumes or
   stops it; when none of the parts is in the option's design, the bar says it can't play it. An entry without `stories` keeps the option's coverage
   from before; a revised option whose parts moved sends its new `stories`.
+  Each story's card ends with one grey line the page counts from `parts`: the steps, the
+  screens (distinct `view`s) and a score — **Easy** up to 2 steps on one screen, **Medium** up to
+  4 on two, **Hard** beyond; none for a story the option does not meet.
 - **Why it looks like this**: each option names the decisions on the Desk it follows and the
   parts each one shaped: `reasons: [{decision, how, parts}]` — `decision` a `D-<n>` in force
   that the design actually rests on (read them with `design desk decisions --concept <c>
