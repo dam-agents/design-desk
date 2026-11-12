@@ -7328,10 +7328,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const noteShown = (x) => !(simple() && NOTE_HIDDEN.includes(x.kind));
   const noteUnread = () => simple() ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
   // For you leads: the bell counts only what is for you (docs/desk-page.md → Notifications).
-  S.notes = { items: [], seen: null, unread: 0, only: true };
+  // `clicked`: the rows this person clicked here, read at once, whatever a poll sent before the
+  // server had their click.
+  S.notes = { items: [], seen: null, unread: 0, only: true, clicked: new Set() };
   async function loadNotes() {
     const r = await api("GET", "/api/notifications"), was = JSON.stringify(S.notes.items);
-    Object.assign(S.notes, { items: r.items || [], seen: r.seen, unread: r.unread || 0 });
+    const items = r.items || [];
+    let unread = r.unread || 0;
+    for (const x of items) if (!x.read && S.notes.clicked.has(x.id)) { x.read = true; if (x.for_you) unread = Math.max(0, unread - 1); }
+    Object.assign(S.notes, { items, seen: r.seen, unread });
     renderBell(JSON.stringify(S.notes.items) !== was);
   }
   // An open panel draws again only when the list changed, so a poll keeps the reader's place.
@@ -7376,7 +7381,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       $("#bell").open = false;
       const x = list[Number(b.dataset.note)];
       // Read once clicked: for this person alone, before it opens.
-      if (!x.read) { x.read = true; S.notes.unread = Math.max(0, S.notes.unread - (x.for_you ? 1 : 0)); renderBell(); api("POST", `/api/notifications/read?id=${encodeURIComponent(x.id)}`).catch(() => {}); }
+      if (!x.read) { x.read = true; S.notes.clicked.add(x.id); S.notes.unread = Math.max(0, S.notes.unread - (x.for_you ? 1 : 0)); renderBell(); api("POST", `/api/notifications/read?id=${encodeURIComponent(x.id)}`).catch(() => {}); }
       await openNote(x);
     })));
   }

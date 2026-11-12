@@ -14,8 +14,12 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    bar drops its Why it looks like this button and its hint, and the side panel's section hides
    with its own **Hide**; a menu in a design shuts on a move to another page, also in designs
    built before; a played story starts from the design as first loaded; each story's card adds
-   one grey line of steps, screens and a score. No server restart, no data change.
-2. Nothing for designs already built: designs built from now on carry the review bar that shuts
+   one grey line of steps, screens and a score; a notification clicked stays read when a poll
+   answers late.
+2. Restart the Desk server (`rc-service --user design-desk-server restart`): a click on a
+   notification that folded a newer message since the bell drew it reads the row it grew into.
+   No data change.
+3. Nothing for designs already built: designs built from now on carry the review bar that shuts
    its menus itself.
 
 ## 1.84.2 — 2026-11-12

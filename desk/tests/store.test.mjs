@@ -2185,6 +2185,13 @@ test("notifications: a click reads one row; a repeat click writes nothing, noted
   assert.equal(saves, 1);
   assert.equal(s.markNoteRead(alice, first).read, true);
   assert.equal(saves, 1, "a repeat click writes nothing");
+  // A click on a row the page drew before a newer message folded into it reads the row it grew into.
+  const noted = structuredClone(s.db.noted);
+  tick(); s.openThread(r.id, pat, { kind: "comment", text: "Meanwhile" });
+  const grown = row().id;
+  assert.equal(s.markNoteRead(alice, first).read, true, "the old id reads the row it grew into");
+  assert.ok(s.db.noted[alice.email].includes(grown));
+  s.db.noted = noted; saves = 1;
   assert.deepEqual(s.db.noted[alice.email], [first], "one id, never twice");
   // A new message on the item is a new row; reading it drops the id that left the bell.
   tick(); s.openThread(r.id, pat, { kind: "comment", text: "Second" });

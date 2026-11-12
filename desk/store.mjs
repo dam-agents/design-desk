@@ -968,7 +968,11 @@ export class Store {
     const key = viewerKey(who);
     if (!key) return { read: false };
     const { items } = this.notifications(who, { limit: 500 });
-    const row = items.find((x) => x.id === String(id || ""));
+    // A row that folded a newer message or vote after the page drew it has a new id: the
+    // click reads the row it grew into (the same item and kind of event, that day, no older).
+    const [event, item, at] = String(id || "").split("|"), fam = (e) => NOTE_FAMILY[e] || e;
+    const row = items.find((x) => x.id === String(id || ""))
+      || (item && at ? items.find((x) => x.item === item && fam(x.event) === fam(event) && x.at.slice(0, 10) === at.slice(0, 10) && x.at >= at) : null);
     if (!row) throw bad("That notification is not in the bell.");
     if (row.read) return { read: true };
     const seen = own(this.db.seen, key) || null;
