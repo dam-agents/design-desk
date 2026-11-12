@@ -2985,7 +2985,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const pages = (key, opts, on, extra = "") => `<nav class="subtabs" aria-label="Pages">${opts.map(([k, l, n]) => `<button class="${on(k) ? "on" : ""}" data-filter="${key}:${k}" aria-current="${on(k) ? "page" : "false"}">${counted(l, n)}</button>`).join("")}${extra}</nav>`;
     const reqList = S.reqFilter !== "presentation";
     const add = S.tab !== "product" ? "" : ["screens", "elements"].includes(S.productFilter) && can("add") ? `<button class="btn small primary" data-add-product>+ Add</button>`
-      : S.productFilter === "decisions" && can("decide") ? `<button class="btn small primary" data-add-decision title="Record a decision the team made, in your name">+ Add</button>` : "";
+      : "";
     // Requests: For Designers and For Developers, each with its open count, and the presentation.
     const forTab = (k, l) => [`${k}`, l, requestCards("open", k).length];
     const chgTab = (k, l) => [`${k}`, l, newCards("open", k).length];
@@ -3208,7 +3208,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   function renderDecisionList(filters) {
     const list = $("#list");
-    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["unapproved", "Not approved"], ["revoked", "Revoked"], ["", "All"]], "dstate")}</div></div>`;
+    const bar = `<div class="listhead">${filters}<div class="filterbar">${seg("decisionState", [["active", "In force"], ["unapproved", "Not approved"], ["revoked", "Revoked"], ["", "All"]], "dstate")}${can("decide") ? `<button class="btn small primary" data-add-decision title="Record a decision the team made, in your name" style="margin-left:auto;align-self:center">+ Add</button>` : ""}</div></div>`;
     // As every list on the Desk: its words, its number and a dot for where it stands; a red ! under the
     // dot when it goes against a decision in force; then when it was decided, where, and by whom.
     const row = (d) => {

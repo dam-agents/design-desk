@@ -12,7 +12,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): in the design workspace each
    decision is one line until picked, a decision the selected part already names is not listed again,
-   and two hint lines are gone. No server restart, no data change.
+   and two hint lines are gone. Product → Decisions shows + Add at the right end of its filter row.
+   No server restart, no data change.
 
 ## 1.84.1 — 2026-11-12
 
