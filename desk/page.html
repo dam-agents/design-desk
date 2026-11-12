@@ -1101,6 +1101,29 @@
   .status .next .actions { margin: 0; justify-content: flex-end; }
   .status .next details.more .menu { left: auto; right: 0; }
   .status .next details.more > summary.btn { min-width: 40px; }
+  /* Outside a request: the state's line takes nearly all the row's spare room, so buttons that fit
+     beside it sit at the right, and buttons that wrap get a row of their own and sit from its left. */
+  .status:not(.req) > .s-line { flex: 9999 1 auto; }
+  .status:not(.req) > .next { flex: 1 1 auto; margin-left: 0; }
+  .status:not(.req) .next .actions { justify-content: flex-start; }
+  /* When the box is wide enough, the buttons never leave the state's row: the facts beside the
+     state take what the row has left and wrap there, a fact at a time, at most two lines cut
+     short with … (all of them on hover), all of it centred on the row. The facts keep at least
+     140 px: when the state's word and pill leave less, the buttons take a row of their own. A
+     box too narrow for that wraps as above. */
+  .status:not(.req):has(> .s-line > .s-meta) { container-type: inline-size; }
+  @container (min-width: 720px) {
+    .status:not(.req) > .s-line { flex: 9999 1 0; flex-wrap: nowrap; gap: 10px 12px; }
+    .s-line > .s-word, .s-line > .s-pill { flex: none; }
+    .s-line > .s-word { white-space: nowrap; } .s-line > .s-word .tip { white-space: normal; }
+    .s-line > .s-meta { flex: 1 1 0; contain: inline-size; min-width: 140px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin-right: -8px; }
+    .s-line > .s-meta > span { display: inline-block; max-width: calc(100% - 8px); vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+  }
+  /* A phone's box: tighter buttons, so three of them still share one row; narrower still, they wrap. */
+  @container (max-width: 400px) {
+    .status:not(.req) .next .actions { gap: 6px; }
+    .status:not(.req) .next .actions > .btn { padding-left: 9px; padding-right: 9px; }
+  }
   /* Approve takes what the row has left over, so the row ends where the workspace button ends. */
   .status.req .next .actions > .btn:first-child { flex: 1 0 auto; }
   .status.req .moves .ws { box-sizing: border-box; }
@@ -3846,7 +3869,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const info = tip ? `<span class="info" tabindex="0" role="note" aria-label="${esc(tip)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="tip" aria-hidden="true">${esc(tip)}</span></span>` : "";
     const menu = more ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${more}</div></details>` : "";
     return `<div class="status" data-o="${o}">
-      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(word)}${info}</div>${pill}${inline && meta ? `<span class="hint s-meta">${meta}</span>` : ""}</div>
+      <div class="s-line"><div class="s-word"><span class="s-mark"></span>${esc(word)}${info}</div>${pill}${inline && meta ? `<span class="hint s-meta" title="${meta.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()}">${meta}</span>` : ""}</div>
       ${buttons || menu ? `<div class="next"><div class="actions">${buttons}${menu}</div></div>` : ""}
       ${!inline && meta ? `<p class="hint s-meta">${meta}</p>` : ""}
     </div>`;
