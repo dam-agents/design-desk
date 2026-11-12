@@ -2665,6 +2665,9 @@ test("a request keeps how its screen looks today, and Draw how it looks today qu
   const res = s.act(card.id, alice, "draw-now");
   assert.deepEqual([res.inbox.kind, res.inbox.scope], ["explore", "now"]);
   assert.equal(res.card.status, "variants", "the status stays as it is");
+  assert.throws(() => s.act(card.id, alice, "draw-now"), /already|busy|working|wait/i, "a second ask for it waits");
+  assert.equal(s.openFeedback(card.id, alice).card.status, "feedback", "the team is asked while it draws");
+  assert.equal(s.act(card.id, alice, "add-option", "A darker one").inbox.scope, "add", "the options' own work goes on");
   assert.throws(() => s.upsertCard({ id: card.id, now: { asset: "A-999" } }), /no asset/);
   s.upsertCard({ id: card.id, now: { asset, name: "Orders" } });
   assert.deepEqual([s.card(card.id).now.asset, s.card(card.id).now.name], [asset, "Orders"]);

@@ -1316,7 +1316,8 @@ export class Store {
     if (c.approved?.variant === v.id) throw bad(`${v.name} is the approved option. Reopen the request first.`);
     // A presented one too: the record says which design the meeting saw, and Undo queues it again.
     if (c.agenda?.status !== "removed" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation${c.agenda.status === "presented" ? " the team saw" : ""}. Take it off the presentation first.`);
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind))) throw bad(BUSY);
+    // How the screen looks today is no option: drawing it leaves the options free.
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind) && i.scope !== "now")) throw bad(BUSY);
     c.variants = c.variants.filter((x) => x.id !== v.id);
     if (c.live_pick?.variant === v.id) delete c.live_pick;
     c.dropped_options = [...(c.dropped_options || []), { id: v.id, name: v.name, version: v.version || 1, by: person(who), at: this.clock() }].slice(-20);
@@ -1572,7 +1573,8 @@ export class Store {
     // Going against a decision in force stays a designer's call, For Developers included.
     if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even For Developers.`);
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
+    // How the screen looks today blocks only another ask for it; the options' own work goes on.
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action] && (action === "draw-now" || i.scope !== "now"))) throw bad(BUSY);
     // A closed request has nothing going live.
     if (action === "close") {
       c.status = "declined"; delete c.live_pick;
@@ -1683,7 +1685,7 @@ export class Store {
   openFeedback(cardId, who) {
     const c = this.card(cardId);
     if (c.kind !== "request" || c.status !== "variants" || !(c.variants || []).length) throw bad("There are no drawn options to show the team yet.");
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind)))
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind) && i.scope !== "now"))
       throw bad("Design Desk is still drawing the options. Ask the team once they are here.");
     if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, PMs, developers, admins or the person who filed it ask the team for feedback.");
     c.status = "feedback";

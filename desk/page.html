@@ -6049,7 +6049,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
     if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; sayReviewNotes(vf); }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
-    for (const pf of document.querySelectorAll("iframe[data-pane-asset]")) { try { pf.srcdoc = decode(await asset(pf.dataset.paneAsset)); } catch {} }
+    for (const pf of document.querySelectorAll("iframe[data-pane-asset]")) { try { pf.onload = () => sayReviewNotes(pf); pf.srcdoc = withScript(decode(await asset(pf.dataset.paneAsset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
