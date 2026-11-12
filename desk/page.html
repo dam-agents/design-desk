@@ -1033,17 +1033,21 @@
   .status:not(.req) .next .actions { justify-content: flex-start; }
   /* When the box is wide enough, the buttons never leave the state's row: the facts beside the
      state take what the row has left and wrap there, a fact at a time, at most two lines cut
-     short with … (all of them on hover), all of it centred on the row. A box too narrow for that
-     wraps as above, the three buttons kept together on their row. */
+     short with … (all of them on hover), all of it centred on the row. The facts keep at least
+     140 px: when the state's word and pill leave less, the buttons take a row of their own. A
+     box too narrow for that wraps as above. */
   .status:not(.req):has(> .s-line > .s-meta) { container-type: inline-size; }
   @container (min-width: 720px) {
-    .status:not(.req) > .s-line { flex: 9999 1 0; min-width: 0; flex-wrap: nowrap; gap: 10px 12px; }
+    .status:not(.req) > .s-line { flex: 9999 1 0; flex-wrap: nowrap; gap: 10px 12px; }
     .s-line > .s-word, .s-line > .s-pill { flex: none; }
-    .s-line > .s-meta { flex: 1 1 0; min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin-right: -8px; }
+    .s-line > .s-word { white-space: nowrap; } .s-line > .s-word .tip { white-space: normal; }
+    .s-line > .s-meta { flex: 1 1 0; contain: inline-size; min-width: 140px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin-right: -8px; }
     .s-line > .s-meta > span { display: inline-block; max-width: calc(100% - 8px); vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
   }
-  @container (max-width: 719.98px) {
-    .status:not(.req) .next .actions { flex-wrap: nowrap; }
+  /* A phone's box: tighter buttons, so three of them still share one row; narrower still, they wrap. */
+  @container (max-width: 400px) {
+    .status:not(.req) .next .actions { gap: 6px; }
+    .status:not(.req) .next .actions > .btn { padding-left: 9px; padding-right: 9px; }
   }
   /* Approve takes what the row has left over, so the row ends where the workspace button ends. */
   .status.req .next .actions > .btn:first-child { flex: 1 0 auto; }
