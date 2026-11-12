@@ -305,7 +305,7 @@ nothing: a row is read, for that person alone, once they click it (`POST
 unread), and **Mark as read** in the bell's header, shown while a row is unread, reads every one
 (`POST /api/notifications/seen`; the store keeps `seen: {<person>: at}`, the newest event's
 time). Both are outside the write budget like reading an item, and a read row writes nothing. A
-newer message on a folded row makes it a new, unread row. A click on a row that folded a newer message since the bell drew it reads the row it grew into (the same item and kind of event, that day), and a poll that left before the click never shows the clicked row unread again. Everything on an item that is the person's,
+newer message on a folded row makes it a new, unread row. A click on a row that folded a newer message since the bell drew it reads the row its lead message or vote folded into, by the bell's own grouping (item, kind, day, For you, private, Designs), and a poll that left before the click never shows the clicked row unread again. Everything on an item that is the person's,
 its messages included, is For you.
 
 ## Designs

@@ -873,7 +873,7 @@ export class Store {
   // never sees their own doings, nor another person's private ask. A row is read once its
   // person clicked it (`noted`, its id) or marked all as read (`seen`, the newest row then);
   // the unread rows For you are the bell's count.
-  notifications(who, { limit = 50, days = 30 } = {}) {
+  notifications(who, { limit = 50, days = 30, landed = null } = {}) {
     const key = viewerKey(who);
     const mine = new Set([who?.email, ...(who?.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
     const isMine = (by) => Boolean(by?.email) && mine.has(String(by.email).toLowerCase());
@@ -944,6 +944,8 @@ export class Store {
       const fam = NOTE_FAMILY[x.event];
       const k = fam && x.item ? [x.item, fam, x.at.slice(0, 10), x.for_you, Boolean(x.private), Boolean(x.designs)].join("|") : null;
       const row = k && open.get(k);
+      // `landed` (markNoteRead's): which row each event folded into, by the event's own id.
+      if (row) landed?.set([x.event, x.item || "", x.at, x.thread || "", x.msg ?? ""].join("|"), row);
       if (row) {
         row.count += 1;
         if (x.thread && row.marks.length < 20) row.marks.push([x.thread, x.msg]);
@@ -953,6 +955,7 @@ export class Store {
       }
       // `marks`: every message the row folds, for the page to light them all.
       const lead = { ...x, count: 1, people: x.by ? [x.by] : [], ...(x.thread ? { marks: [[x.thread, x.msg]] } : {}) };
+      landed?.set([x.event, x.item || "", x.at, x.thread || "", x.msg ?? ""].join("|"), lead);
       if (k) open.set(k, lead);
       rows.push(lead);
     }
@@ -969,12 +972,12 @@ export class Store {
   markNoteRead(who, id) {
     const key = viewerKey(who);
     if (!key) return { read: false };
-    const { items } = this.notifications(who, { limit: 500 });
-    // A row that folded a newer message or vote after the page drew it has a new id: the
-    // click reads the row it grew into (the same item and kind of event, that day, no older).
-    const [event, item, at] = String(id || "").split("|"), fam = (e) => NOTE_FAMILY[e] || e;
-    const row = items.find((x) => x.id === String(id || ""))
-      || (item && at ? items.find((x) => x.item === item && fam(x.event) === fam(event) && x.at.slice(0, 10) === at.slice(0, 10) && x.at >= at) : null);
+    // A row that folded a newer message or vote after the page drew it has a new id: the click
+    // reads the row its lead event folded into, so the bell's own grouping (item, kind, day, For you,
+    // private, Designs) decides, never a look-alike row beside it.
+    const landed = new Map();
+    const { items } = this.notifications(who, { limit: 500, landed });
+    const row = items.find((x) => x.id === String(id || "")) || landed.get(String(id || "").split("|").slice(0, 5).join("|")) || null;
     if (!row) throw bad("That notification is not in the bell.");
     if (row.read) return { read: true };
     const seen = own(this.db.seen, key) || null;
