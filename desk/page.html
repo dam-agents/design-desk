@@ -478,6 +478,14 @@
   .against p { margin: 2px 0; }
   .sent { padding: 10px 14px; border-radius: var(--radius); background: var(--ok-soft); max-width: var(--measure); margin: 10px 0; }
   .sent b { color: var(--ok); } .sent p { margin: 2px 0; }
+  /* A vote in Slack: a box under the request's header, a closed one listing the options by number. */
+  .poll-box { padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); max-width: var(--measure); margin: 10px 0; font-size: var(--fs-ui); }
+  .poll-box .poll-h { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; } .poll-box p { margin: 4px 0 0; }
+  .poll-res { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; }
+  .poll-res li { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 13px; line-height: 1.35; }
+  .poll-res .ono { all: unset; box-sizing: border-box; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 5px; background: var(--bg); border: 1px solid var(--line); font-weight: 600; font-size: 11px; text-align: center; line-height: 16px; }
+  .poll-res button.ono { cursor: pointer; } .poll-res button.ono:hover { border-color: var(--accent); }
+  .poll-res .ct { display: flex; gap: 10px; white-space: nowrap; font-variant-numeric: tabular-nums; } .poll-res .ct span { min-width: 32px; text-align: right; } .poll-res .ct .zero { color: var(--muted); opacity: .7; }
   .revoked-text { text-decoration: line-through; color: var(--muted); }
   .asks { padding: 12px 14px; border-radius: var(--radius); background: var(--warn-soft); }
   /* Design Desk's questions stand under the state's box, which says to answer them below. */
@@ -537,6 +545,9 @@
   .stories .met { flex: none; width: 18px; text-align: center; } .stories .met.yes { color: var(--ok); } .stories .met.partly { color: var(--warn); } .stories .met.no { color: var(--bad); }
   .stories .how { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.45; }
   .stories .how.partly { color: var(--warn); } .stories .how.no { color: var(--bad); }
+  /* How much a story asks of a person: one grey line, its score coloured. */
+  .stories .effort { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .stories .effort b { font-weight: 600; } .stories .effort .easy { color: var(--ok); } .stories .effort .medium { color: var(--warn); } .stories .effort .hard { color: var(--bad); }
   label.check { display: flex; gap: 8px; align-items: baseline; margin-top: 10px; } label.check input { width: auto; }
   details.more { position: relative; display: inline-block; }
   details.more > summary { list-style: none; cursor: pointer; } details.more > summary::-webkit-details-marker { display: none; }
@@ -563,6 +574,21 @@
   .vpanel .vbar:first-child { margin-top: 0; }
   .frame.vempty { display: grid; place-items: center; height: 40vh; background: var(--panel); color: var(--muted); font-size: var(--fs-meta); text-align: center; padding: 16px; }
   .frame.vempty p { margin: 0; max-width: var(--measure); }
+  /* Two designs side by side: an option's tab dragged onto its design marks the half it lands on;
+     the other half waits for another tab, or for how the screen looks today. */
+  .vtabs button[draggable="true"] { cursor: grab; }
+  .dropbox { position: relative; }
+  .droplayer { display: none; position: absolute; inset: 0; z-index: 5; grid-template-columns: 1fr 1fr; gap: 10px; }
+  body.dragging-option .droplayer { display: grid; }
+  .droplayer > div { border: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent); border-radius: var(--radius); transition: background .1s, border-color .1s; }
+  .droplayer > div.over { border-color: var(--accent, var(--ink)); background: color-mix(in srgb, var(--accent, var(--ink)) 14%, transparent); }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .split .pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .pane-head { display: flex; align-items: center; gap: 6px; min-height: 26px; font-size: var(--fs-meta); }
+  .pane-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pane-empty { height: 66vh; border: 2px dashed var(--line); border-radius: var(--radius); display: grid; place-content: center; justify-items: center; gap: 10px; padding: 16px; text-align: center; color: var(--muted); font-size: var(--fs-meta); }
+  .pane-empty p { margin: 0; max-width: 32ch; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
   .vbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
   .looks { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; }
   .looks button { flex: none; width: 128px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 0; cursor: pointer; text-align: left; overflow: hidden; color: inherit; font: inherit; }
@@ -1556,7 +1582,7 @@
   };
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   // What Design Desk does, in a few words, after the step's Wait.
-  const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options",
+  const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options", now: "Drawing how it looks today",
     decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
@@ -1566,6 +1592,7 @@
     request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     "follow-up": "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     explore: "Drawing the design options.",
+    now: "Drawing the screen as it looks in the product today, to set beside an option.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
     ci: "Setting Design Desk's check on the pull request to follow the handled mark.",
@@ -1765,7 +1792,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     variant: "Shows this design option",
     wsVariant: "Shows this design option",
     story: "Shows how each option meets this user story",
-    wsWhy: (v, el) => el.classList.contains("on") ? "Hides the decision tags on the design" : "Tags each part of the design with the decisions that shaped it",
+    wsWhy: () => S.ws.why ? "Hides the decision tags on the design" : "Tags each part of the design with the decisions that shaped it",
     reason: "Highlights the parts this decision shaped",
     reasonPart: "Shows this part in the design",
     look: (v, el) => v === "now" ? "Goes back to how it looks today" : /Older/.test(textOf(el)) ? "Shows the version before this one" : /Newer/.test(textOf(el)) ? "Shows the version after this one" : "Shows how it looked then",
@@ -1947,6 +1974,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!d.contains(e.target) || e.target.closest(".menu button:not([data-keep])")) d.open = false;
   }, true);
   const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
+  // A move to another page closes what floated over the one left: a More, an open dialog. A dialog
+  // with something typed, picked or added in it stays open, so nothing written is lost (formState below).
+  const leaveClose = () => { moreClose(); for (const d of document.querySelectorAll("dialog[open]")) if (d._clean === undefined || formState(d) === d._clean) d.close("cancel"); };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") moreClose(); });
   // A click into a design's frame never reaches this page; the page loses focus instead.
   addEventListener("blur", () => { moreClose(); tipHide(); });
@@ -2216,7 +2246,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
-  const workKind = (w) => (w.scope === "history" ? "catalog-history" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind);
+  const workKind = (w) => (w.scope === "history" ? "catalog-history" : w.kind === "explore" && w.scope === "now" ? "now" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind);
   // A request's own item checks it, then draws its options: once an option was drawn after the
   // item was filed, that item's work is done for the person, and its line leaves. An item filed
   // after the newest option (a reopened request, checked again) keeps saying it checks.
@@ -4753,6 +4783,38 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The option's design, named for what it is.
   const DRAWN = { wireframe: "Wireframe", mockup: "Mockup", figma: "From Figma", picture: "Pictures" };
 
+  // The option's design, or two designs side by side (S.split: two halves, each an option's
+  // id, "now" for how the screen looks today, or null while it waits for a tab).
+  const splitOf = (c) => S.split?.card === c.id ? S.split : null;
+  function designBox(c, v) {
+    const sp = splitOf(c), frame = (x) => x.id === v.id ? `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(x.name)}"></iframe>`
+      : `<iframe class="frame" data-pane-asset="${esc(x.asset)}" sandbox="allow-scripts" title="${esc(x.name)}"></iframe>`;
+    const layer = `<div class="droplayer" aria-hidden="true"><div data-drop-side="0"></div><div data-drop-side="1"></div></div>`;
+    if (!sp?.on) return `<div class="dropbox">${frame(v)}${layer}</div>`;
+    const vs = c.variants || [];
+    const pane = (k, i) => {
+      const x = vs.find((y) => y.id === k), today = k === "now" && c.now?.asset;
+      if (x || today) {
+        const name = x ? x.name : c.now.name || "How it looks today";
+        const head = `<div class="pane-head">${x ? `<span class="ono">${vs.indexOf(x) + 1}</span>` : `<span class="chip" title="The screen as it is in the product now, drawn by Design Desk ${esc(when(c.now.at))}">Today</span>`}<b>${esc(name)}</b><span class="grow"></span><button class="btn small" data-split-clear="${i}" aria-label="Take ${esc(name)} out of this half" title="Empties this half">✕</button></div>`;
+        return `<div class="pane">${head}${x ? frame(x) : `<iframe class="frame" data-pane-asset="${esc(c.now.asset)}" sandbox="allow-scripts" title="${esc(name)}"></iframe>`}</div>`;
+      }
+      const drawing = working(c).includes("now");
+      const todayBtn = c.now?.asset ? `<button class="btn" data-split-now="${i}" title="Shows the screen as it is in the product now, drawn by Design Desk, in this half">Show how it looks today</button>`
+        : drawing ? `<span class="hint"><span class="spin"></span> Design Desk is drawing how it looks today; it appears here by itself.</span>`
+        : c.triage && can("explore") && !closed(c) ? `<button class="btn" data-act="draw-now" title="Design Desk draws the screen as it is in the product now, in the product's own style, to set beside an option">Draw how it looks today</button>` : "";
+      return `<div class="pane"><div class="pane-head"><span class="hint">Empty</span><span class="grow"></span></div><div class="pane-empty"><p>Drag another option's tab here.</p>${todayBtn}</div></div>`;
+    };
+    return `<div class="dropbox"><div class="split">${pane(sp.panes[0], 0)}${pane(sp.panes[1], 1)}</div>${layer}</div>`;
+  }
+  // Side by side is a tab of its own, the first: named for its two halves, closed with its ✕.
+  function splitTab(c) {
+    const sp = splitOf(c);
+    if (!sp) return "";
+    const vs = c.variants || [], name = (k) => k === "now" ? "Today" : vs.find((x) => x.id === k) ? String(vs.findIndex((x) => x.id === k) + 1) : "…";
+    return `<button data-split-tab aria-pressed="${sp.on}" title="The two designs side by side"><span class="ono">⇆</span>${esc(name(sp.panes[0]))} | ${esc(name(sp.panes[1]))}<span class="vclose" role="button" tabindex="0" data-split-end aria-label="Close side by side" title="Close side by side">✕</span></button>`;
+  }
+
   function renderOptions(c) {
     const vs = c.variants || [];
     // A request that asked for no options: once checked, its first one is added by hand.
@@ -4762,8 +4824,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
-      <div class="vpanel">
+      <div class="tabs vtabs" role="group" aria-label="Design options">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
+      ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
         <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
@@ -4771,25 +4833,46 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         ${c.status === "feedback" && slackModes(c).length ? `<button class="btn small" data-act="slack">Send to Slack…</button>` : ""}
         ${voteButtons(c, v.id, mine)}
       </div>
-      ${renderPolls(c)}${renderCouncils(c)}
+      ${renderCouncils(c)}
       ${simple() ? "" : whySection(c, v)}
       ${renderOptionElements(c, v)}
-      ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`)}
+      ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", designBox(c, v))}
       ${againstBox(c, v.id)}${c.figma_check?.variant === v.id ? figmaBox(c) : ""}
-      ${renderStories(c, v)}</div>`;
+      ${renderStories(c, v)}</div>`}`;
   }
 
-  // Votes in Slack: open until their date, then the result.
+  // Votes in Slack: open until their date, then the result. The vote is about the whole request,
+  // not one option, so it is a box under the request's header; a closed vote lists the options by
+  // their number, each with its votes, from the result Design Desk wrote ("Name: 7 👍, 2 👎. …").
+  function pollResult(c, text) {
+    const vs = c.variants || [];
+    const rows = String(text || "").split(/\.\s+(?=\S)/).map((seg) => {
+      const m = /^(.+?):\s*(.+?)\.?$/.exec(seg.trim());
+      if (!m) return null;
+      const counts = [...m[2].matchAll(/(\d+)\s*(👍|👎|⚠️?)/gu)].map((x) => [x[2].startsWith("⚠") ? "⚠️" : x[2], Number(x[1])]);
+      if (!counts.length) return null;
+      const name = m[1].trim(), i = vs.findIndex((v) => v.name.trim().toLowerCase() === name.toLowerCase());
+      return { n: i >= 0 ? i + 1 : null, id: vs[i]?.id, name, counts };
+    });
+    if (!rows.length || rows.some((x) => !x)) return `<p>${esc(text)}</p>`;
+    rows.sort((a, b) => (a.n ?? 99) - (b.n ?? 99));
+    // The same columns on every row, so the counts line up: a kind one row lacks is a grey 0.
+    const kinds = ["👍", "👎", "⚠️"].filter((k) => rows.some((x) => x.counts.some(([q]) => q === k)));
+    return `<ol class="poll-res">${rows.map((x) => `<li>${x.n ? `<button class="ono" data-variant="${esc(x.id)}" title="Shows this option">${x.n}</button>` : `<span class="ono">–</span>`}<span class="nm">${esc(x.name)}</span>
+      <span class="ct">${kinds.map((k) => { const n = x.counts.find(([q]) => q === k)?.[1] || 0; return `<span class="${n ? "" : "zero"}">${k} ${n}</span>`; }).join("")}</span></li>`).join("")}</ol>`;
+  }
   function renderPolls(c) {
     const polls = c.polls || [];
     if (!polls.length) return "";
     const slackVotes = Object.values(c.votes || {}).reduce((n, box) => n + Object.values(box).filter((x) => x.via === "slack").length, 0);
+    const open = (p) => p.url ? `<a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : "";
+    const head = (words, p) => `<div class="poll-h"><b>💬 ${words}</b>${open(p)}</div>`;
     // A vote a person ended is over at once; closing it in Slack is Design Desk's next look.
-    return polls.slice(-2).map((p) => p.state === "open" && c.vote_ended
-      ? `<p class="hint">💬 The vote in Slack ended${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack` : ""}. Design Desk closes it there and posts its result.${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
+    return polls.slice(-2).map((p) => `<div class="poll-box">${p.state === "open" && c.vote_ended
+      ? `${head("The vote in Slack ended", p)}<p>${slackVotes ? `${plural(slackVotes, "vote", "votes")} from Slack. ` : ""}Design Desk closes it there and posts its result.</p>`
       : p.state === "open"
-      ? `<p class="hint">💬 Voting in Slack until ${esc(when(p.closes))}${slackVotes ? ` · ${plural(slackVotes, "vote", "votes")} from Slack so far` : ""}. Reactions there come to this page, and replies that tag Design Desk (any reply, where it reads the whole channel).${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`
-      : `<p class="hint">💬 Slack vote closed ${esc(day(p.closed))}${p.result ? `: ${esc(p.result)}` : ""}${p.url ? ` <a href="${safeUrl(p.url)}" target="_blank" rel="noopener noreferrer">Open in Slack ↗</a>` : ""}</p>`).join("");
+      ? `${head(`Voting in Slack until ${esc(when(p.closes))}`, p)}<p>${slackVotes ? `${plural(slackVotes, "vote", "votes")} from Slack so far. ` : ""}Reactions there come to this page, and replies that tag Design Desk (any reply, where it reads the whole channel).</p>`
+      : `${head(`Slack vote closed ${esc(day(p.closed))}`, p)}${p.result ? pollResult(c, p.result) : ""}`}</div>`).join("");
   }
 
   // A Slack thread that asks for changes: each ask there comes back here as a new version.
@@ -4844,6 +4927,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
       ${renderStatus(c)}${shippedLine(c)}
+      ${renderPolls(c)}
       ${c.status === "spec" && c.spec?.review === "draft" && c.spec?.asset ? specPanel(c) : ""}
       ${cannotFold(c)}
       ${live(c) ? renderPrototype(c) : ""}
@@ -5009,9 +5093,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // amber when it meets part of it, red when it does not; nothing when it meets it.
     const how = (k) => !k ? `<span class="how">Design Desk has not said yet how ${esc(v.name)} meets this story.</span>`
       : k.met === "yes" ? "" : `<span class="how ${k.met === "no" ? "no" : "partly"}">${txt(k.how)}</span>`;
+    // How much the story asks of a person in this option, in one grey line: the steps (the parts
+    // the story goes through, each one pointed at and clicked when it can be), the screens they
+    // are on, and a rough score from the two. Counted from the option's own coverage, never guessed.
+    const effort = (k) => {
+      const ps = k?.parts || [];
+      if (!ps.length || k.met === "no") return "";
+      const n = ps.length, screens = new Set(ps.map((p) => p.view ?? "")).size;
+      const [score, word] = n <= 2 && screens <= 1 ? ["easy", "Easy"] : n <= 4 && screens <= 2 ? ["medium", "Medium"] : ["hard", "Hard"];
+      return `<span class="effort" title="Counted from the parts the story goes through in ${esc(v.name)}: easy is up to 2 steps on one screen, medium up to 4 steps on two screens, hard anything more">${plural(n, "step", "steps")} · ${plural(screens, "screen", "screens")} · <b class="${score}">${word}</b></span>`;
+    };
     const item = (x) => {
       const k = cov(x.id), on = x.id === st.id, plays = (k?.parts || []).length > 0;
-      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}${how(k)}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;
+      return `<li><button data-story="${esc(x.id)}" aria-pressed="${on}" title="${plays ? `Plays it in ${esc(v.name)} above: the pointer goes to each part that does it and clicks it` : "Shows how this option meets it"}">${mark(x)}<span class="txt">${txt(x.text)}${x.derived ? ` <span class="chip" title="The issue does not write it as a story; Design Desk did, from its text">from the issue's text</span>` : ""}${how(k)}${effort(k)}</span>${plays ? `<span class="play" aria-hidden="true">▶</span>` : ""}</button></li>`;
     };
     // The stories are cards side by side, each saying how the option meets it.
     // The section folds like the sections below it: folded at first, then as the person left it.
@@ -5023,33 +5117,87 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     let bar = $("#story-player");
     if (!d || ["done", "stopped"].includes(d.state)) { bar?.remove(); return; }
     if (!bar) { bar = document.createElement("div"); bar.id = "story-player"; bar.setAttribute("role", "status"); document.body.append(bar); }
-    if (d.state === "missing") {
-      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">This version of the design does not have this story's parts.</span><button class="btn small" data-play-ctl="stop">✕ Close</button>`;
+    if (d.state === "missing" || d.state === "unseen") {
+      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">${d.state === "missing" ? "This version of the design does not have this story's parts." : "The design has this story's parts, but none of them is on the screen on the way through it."}</span><button class="btn small" data-play-ctl="stop">✕ Close</button>`;
       return;
     }
     if (d.step) S.playStep = { step: d.step, of: d.of };
     const at = S.playStep ? `step ${S.playStep.step} of ${S.playStep.of}` : "";
     const st = (S.card?.issue_brief?.stories || []).find((x) => x.id === S.story);
-    bar.innerHTML = `<span class="pl-k">${d.state === "paused" ? "❚❚ Paused" : "▶ Playing"}${at ? ` · ${esc(at)}` : ""}</span><span class="pl-t">${esc(st?.text || "")}</span>
+    // A step whose part the design has but does not show at that point is skipped, and said.
+    const said = d.state === "hidden" ? `Skipped: ${d.label ? `${d.label} is` : "this part is"} in the design but not on the screen at this point.` : st?.text || "";
+    bar.innerHTML = `<span class="pl-k">${d.state === "paused" ? "❚❚ Paused" : "▶ Playing"}${at ? ` · ${esc(at)}` : ""}</span><span class="pl-t">${esc(said)}</span>
       ${d.state === "paused" ? `<button class="btn small" data-play-ctl="resume">▶ Resume</button>` : `<button class="btn small" data-play-ctl="pause">❚❚ Pause</button>`}<button class="btn small" data-play-ctl="stop">■ Stop</button>`;
   }
   addEventListener("message", (e) => { const vf = $("#variant-frame"); if (vf && e.source === vf.contentWindow && e.data?.type === "desk-play-state") storyPlayer(e.data); });
+  // The design's own bar (Light / Dark, the empty state, Show hotspots) as the person left it:
+  // the frame says when it changes, and a replay's fresh load gets it back.
+  addEventListener("message", (e) => { const vf = $("#variant-frame"); if (vf && e.source === vf.contentWindow && e.data?.type === "desk-bar") vf._bar = { dark: Boolean(e.data.dark), empty: Boolean(e.data.empty), hot: Boolean(e.data.hot) }; });
   // The design's Show notes switch is kept across options and tabs: the frame says when the
   // person flips it, and every design frame that loads gets the same state.
   const REVIEW_NOTES = "desk-review-notes";
   addEventListener("message", (e) => {
     if (e.data?.type !== REVIEW_NOTES) return;
-    if (![$("#variant-frame"), $("#ws-frame")].some((f) => f && e.source === f.contentWindow)) return;
+    // The halves side by side are design frames too; a flip in one, the other half follows.
+    const frames = [$("#variant-frame"), $("#ws-frame"), ...document.querySelectorAll("iframe[data-pane-asset]")].filter(Boolean);
+    if (!frames.some((f) => e.source === f.contentWindow)) return;
     store.set(REVIEW_NOTES, e.data.on ? "on" : "off");
+    for (const f of document.querySelectorAll(".split iframe")) if (e.source !== f.contentWindow) sayReviewNotes(f);
   });
   const sayReviewNotes = (frame) => frame?.contentWindow?.postMessage({ type: REVIEW_NOTES, on: store.get(REVIEW_NOTES) === "on" }, "*");
   // The list folds away with the arrow on its edge; each viewer's browser remembers it.
-  function foldList(on) {
+  function foldList(on, remember = true) {
     $("#main").classList.toggle("folded", on);
     const b = $("#list-fold"); b.setAttribute("aria-expanded", String(!on)); b.title = on ? "Show the list" : "Hide the list";
-    try { localStorage.setItem("desk-list-folded", on ? "1" : ""); } catch {}
+    if (remember) try { localStorage.setItem("desk-list-folded", on ? "1" : ""); } catch {}
   }
-  $("#list-fold").addEventListener("click", () => foldList(!$("#main").classList.contains("folded")));
+  // A person's own fold or unfold is theirs: two designs side by side no longer give the list back.
+  $("#list-fold").addEventListener("click", () => { if (S.split) S.split.folded = false; foldList(!$("#main").classList.contains("folded")); });
+  // Two designs side by side take the list's room while their tab is shown; another tab gives it
+  // back, only when it was the split that folded it (the viewer's own choice is kept).
+  function showSplit(on, render = true) {
+    const sp = S.split;
+    if (!sp) return;
+    if (on && !sp.on) { sp.folded = !$("#main").classList.contains("folded"); if (sp.folded) foldList(true, false); }
+    if (!on && sp.on && sp.folded && $("#main").classList.contains("folded")) foldList(false, false);
+    sp.on = on;
+    if (render) renderDetail();
+  }
+  function startSplit(c, side, id) {
+    const sp = splitOf(c);
+    if (sp) { sp.panes[side] = id; if (sp.panes[1 - side] === id) sp.panes[1 - side] = null; }
+    else S.split = { card: c.id, panes: side ? [null, id] : [id, null], on: false, folded: false };
+    showSplit(true);
+  }
+  function endSplit(render = true) {
+    if (!S.split) return;
+    showSplit(false, false);
+    S.split = null;
+    if (render) renderDetail();
+  }
+  // An option's tab dragged onto its design: the half under the pointer lights up, the drop fills it.
+  document.addEventListener("dragstart", (e) => {
+    const t = e.target.closest?.(".vtabs button[data-variant][draggable]");
+    if (!t?.dataset.variant) return;
+    e.dataTransfer.setData("text/x-desk-option", t.dataset.variant);
+    e.dataTransfer.effectAllowed = "copy";
+    document.body.classList.add("dragging-option");
+  });
+  document.addEventListener("dragend", () => { document.body.classList.remove("dragging-option"); for (const h of document.querySelectorAll(".droplayer .over")) h.classList.remove("over"); });
+  document.addEventListener("dragover", (e) => {
+    const h = e.target.closest?.("[data-drop-side]");
+    for (const x of document.querySelectorAll(".droplayer .over")) if (x !== h) x.classList.remove("over");
+    if (!h || !e.dataTransfer.types.includes("text/x-desk-option")) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy"; h.classList.add("over");
+  });
+  document.addEventListener("drop", (e) => {
+    const h = e.target.closest?.("[data-drop-side]"), id = e.dataTransfer.getData("text/x-desk-option");
+    document.body.classList.remove("dragging-option");
+    if (!h || !id || !S.card) return;
+    e.preventDefault();
+    // An open design section shows the halves; a folded one opens.
+    startSplit(S.card, Number(h.dataset.dropSide), id);
+  });
   try { if (localStorage.getItem("desk-list-folded")) foldList(true); } catch {}
   // The list's edge drags it smoothly, at most 30 px wider or narrower than the window size gives
   // it; each viewer's browser remembers how much (desk-list-dx). The arrow keys move it 10 px at a
@@ -5092,7 +5240,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The bar shows at the press, before the design finds its first part.
     storyPlayer({ state: "playing" });
     const go = () => vf.contentWindow?.postMessage({ type: "desk-play", steps: pins.map((p) => ({ selector: p.selector, label: p.label })) }, "*");
-    if (vf.dataset.ready) go(); else vf.addEventListener("load", () => setTimeout(go, 50), { once: true });
+    // Every play starts from the design as a person first sees it: a design clicked through
+    // before (a dialog opened or shut, another page) is loaded afresh first.
+    if (vf.dataset.ready && !vf.srcdoc) { go(); return; }
+    vf.addEventListener("load", () => setTimeout(go, 50), { once: true });
+    if (vf.dataset.ready) { delete vf.dataset.ready; vf.srcdoc = vf.srcdoc; }
   }
   // One state of an element, as the design catalog shows it: a picture of the part alone, what
   // it is, when it happens and the use case of the brief it serves (docs/requests.md → Every
@@ -5235,6 +5387,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A part picked that showed and no longer does (another page, a closed menu) is let go, and the Desk hears of it.
     // One that never showed (a note's part the design has not opened) stays picked.
     let selectedPath = "", selectedShown = false;
+    // A menu belongs to the page it opened on, also in a design drawn before its review bar knew:
+    // a move to another page (a menu item that leads on, the page switcher, Back) shuts it.
+    addEventListener("click", (e) => {
+      if (!e.target.closest?.("[data-goto-view],#review [data-review-view],#review [data-review-back]")) return;
+      setTimeout(() => document.querySelectorAll("[data-menu-open]").forEach((m) => { m.hidden = true; m.removeAttribute("data-menu-open"); }));
+    }, true);
     const pick = (el, path) => { selected = el; selectedPath = path; selectedShown = false; };
     // Shown means the person can see it: in the page, laid out, not hidden, not fully transparent (it or a box round it).
     // Not contentVisibilityAuto: a part only scrolled out of view is still on the page.
@@ -5296,6 +5454,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(find(d.selector), d.selector || ""); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    // The bar's own state, said to the Desk on every change and set again after a replay's fresh load.
+    const de = document.documentElement, hotSwitch = () => document.querySelector("#review [data-hot]");
+    const barState = () => ({ type: "desk-bar", dark: de.classList.contains("dark"), empty: de.classList.contains("review-empty"), hot: hotSwitch()?.getAttribute("aria-checked") === "true" });
+    addEventListener("click", (e) => { if (e.target.closest?.("#review")) setTimeout(() => say(barState()), 0); });
+    addEventListener("message", (e) => {
+      const d = e.data || {};
+      if (d.type !== "desk-bar-set") return;
+      document.querySelector(`#review [data-theme="${d.dark ? "dark" : "light"}"]`)?.click();
+      document.querySelector(`#review [data-empty="${d.empty ? "1" : "0"}"]`)?.click();
+      const h = hotSwitch(); if (h && !h.hidden && (h.getAttribute("aria-checked") === "true") !== Boolean(d.hot)) h.click();
+    });
     // A user story played: a pointer goes to each part that does it, in order, outlines it and
     // clicks it when it is something to press; a new story stops the one playing. The Desk can
     // pause, resume and stop it, and hears each step; only the design scrolls, never the Desk.
@@ -5308,20 +5477,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // A wait that stands still while paused and ends early once the story is stopped.
     const wait = async (ms, id) => { for (let t = 0; t < ms && id === playing; ) { await sleep(50); if (!paused) t += 50; } };
-    const tell = (state, step, of) => say({ type: "desk-play-state", state, step, of });
+    const tell = (state, step, of, label) => say({ type: "desk-play-state", state, step, of, ...(label ? { label } : {}) });
     const stopStory = () => { playing++; paused = false; pins = []; draw(); caption.textContent = ""; pointer.style.opacity = "0"; tell("stopped"); };
     const ripple = (x, y) => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:" + (x - 14) + "px;top:" + (y - 14) + "px;width:28px;height:28px;border-radius:50%;border:2px solid #2f5bd3;z-index:2147483646;pointer-events:none;transition:transform .5s,opacity .5s"; document.documentElement.appendChild(d); requestAnimationFrame(() => { d.style.transform = "scale(1.9)"; d.style.opacity = "0"; }); setTimeout(() => d.remove(), 650); };
     const pressable = (el) => el.closest('button, [role="button"], summary, label, input[type="checkbox"], input[type="radio"], a:not([href]), a[href^="#"]');
     async function playStory(steps) {
       const id = ++playing; paused = false; pins = []; draw();
       caption.textContent = ""; pointer.style.opacity = "1";
-      let found = 0;
+      let found = 0, shown = 0;
       for (let i = 0; i < steps.length; i++) {
         const st = steps[i], el = find(st.selector);
         if (!el) continue;
         found++;
         tell("playing", i + 1, steps.length);
         reveal(el); await wait(300, id); if (id !== playing) return;
+        // A part the design has but does not show at this point of the story is passed over, and
+        // the Desk says so: the pointer never jumps to the corner for a part with no place on the screen.
+        if (!showing(el)) { tell("hidden", i + 1, steps.length, st.label || ""); await wait(1200, id); if (id !== playing) return; continue; }
+        shown++;
         const b = el.getBoundingClientRect(); scrollTo({ top: b.top + scrollY - innerHeight / 3, behavior: "smooth" }); await wait(550, id); if (id !== playing) return;
         const r = el.getBoundingClientRect(), x = r.left + Math.min(r.width / 2, 48), y = r.top + Math.min(r.height / 2, 24);
         caption.textContent = (i + 1) + ". " + (st.label || "");
@@ -5334,6 +5507,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       }
       // None of the story's parts is in this design: the Desk says so instead of playing nothing.
       if (!found) { pointer.style.opacity = "0"; tell("missing"); return; }
+      // It has them, but none shows on the way: the Desk says that, not that they are missing.
+      if (!shown) { pointer.style.opacity = "0"; tell("unseen"); return; }
       caption.textContent = ""; await wait(500, id); if (id === playing) { pointer.style.opacity = "0"; tell("done"); }
     }
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-play") playStory(d.steps || []);
@@ -5473,6 +5648,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     html #review [data-hot], html #review [data-hot][hidden] + [data-notes] { margin-left: auto; }
     /* The design's title (number and name) repeats its option tab on the Desk. */
     html #review #review-title { display: none; }
+    /* A menu the review bar moved to <body> stays shut while hidden, whatever display its own classes give it. */
+    html body > [hidden] { display: none !important; }
     /* The design's pages are named as such: "Pages:" in grey before their switcher. */
     html #review:has(#review-views:not(:empty))::before { content: "Pages:"; flex: none; order: -1; color: #6b6b66; font-size: 13px; font-weight: 500; }
   </style>`;
@@ -5550,9 +5727,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <button class="btn small ${S.ws.mode === "select" ? "on" : ""}" data-ws-mode="select" title="Click a part of the design to select it">◎ Select</button>
       ${shaper ? `<button class="btn small ${S.ws.mode === "edit" ? "on" : ""}" data-ws-mode="edit" title="Click a text and type the new words">✎ Edit text</button>` : ""}
       <button class="btn small ${S.ws.mode === "off" ? "on" : ""}" data-ws-mode="off" title="Use the design as it is: switch views, open menus">☞ Click through</button>
-      ${(v.reasons || []).length ? `<button class="btn small ${S.ws.why ? "on" : ""}" data-ws-why aria-pressed="${S.ws.why}">◆ Why it looks like this</button>` : ""}
-      ${pinned(c, v).length ? `<label class="switch ws-switch" title="Shows or hides the comments' numbers on the design; the list beside keeps them"><input type="checkbox" role="switch" data-ws-notes ${S.ws.notes ? "checked" : ""} /><span>Comments</span></label>` : ""}
-      <span class="hint">${S.ws.mode === "select" ? (shaper && lookAdmin() ? "Click any part of the design; change its look on the right." : "Click any part of the design to select it.") : S.ws.mode === "edit" ? "Click a text, type the new words, press Enter." : "Use the design as it is; the notes stay pinned."}</span>`;
+      ${pinned(c, v).length ? `<label class="switch ws-switch" title="Shows or hides the comments' numbers on the design; the list beside keeps them"><input type="checkbox" role="switch" data-ws-notes ${S.ws.notes ? "checked" : ""} /><span>Comments</span></label>` : ""}`;
     $("#ws-states").innerHTML = wsAlts(c, v) + wsStates(c, v);
     if (S.ws.check) renderCheckSide(c, v); else renderWsSide(c, v, old);
     sendPins(c, v);
@@ -5678,7 +5853,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!rs.length) return "";
     if (!S.ws.why) return `<p class="hint">◆ ${plural(rs.length, "decision", "decisions")} shaped this option. <button class="link" data-ws-why>Show why it looks like this</button></p>`;
     const off = rs.filter((r) => gone(c, r.decision)).length;
-    return `<section class="why"><div class="head"><h3>Why it looks like this</h3><span class="hint">${plural(rs.length, "decision", "decisions")}</span></div>
+    return `<section class="why"><div class="head"><h3>Why it looks like this</h3><span class="hint">${plural(rs.length, "decision", "decisions")}</span><button class="link" data-ws-why style="margin-left:auto">Hide</button></div>
       ${off ? `<p><span class="chip bad" title="A decision this option follows no longer holds">⚠ ${plural(off, "decision", "decisions")} no longer in force</span></p>` : ""}
       <ol class="reasons">${rs.map((r) => {
         const d = c.cited?.[r.decision] || {}, x = gone(c, r.decision);
@@ -6049,7 +6224,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (specText && S.card?.spec?.asset && !specText.value) { try { specText.value = S.specDraft?.card === S.card.id ? S.specDraft.text : decode(await asset(S.card.spec.asset)); await specPreview(); } catch {} }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
-    if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; sayReviewNotes(vf); }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
+    if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; sayReviewNotes(vf); if (vf._bar) vf.contentWindow?.postMessage({ type: "desk-bar-set", ...vf._bar }, "*"); }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
+    for (const pf of document.querySelectorAll("iframe[data-pane-asset]")) { try { pf.onload = () => sayReviewNotes(pf); pf.srcdoc = withScript(decode(await asset(pf.dataset.paneAsset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
@@ -6140,7 +6316,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       card = { ...card, id, base: card.id, send: past.k, status: "handed-off", approved: s.approved, spec: s.spec, dev_summary: s.dev_summary, built: s.built, closed: s.closed, threads: (card.threads || []).filter((th) => s.threads.includes(th.id)) };
     }
     const before = S.card;
-    if (before?.id !== card.id) { S.folds.card = null; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
+    if (before?.id !== card.id) { endSplit(false); S.folds.card = null; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -6160,6 +6336,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   async function showTab(tab) {
+    leaveClose();
     S.justRead.clear();
     S.tab = tab; S.card = null; S.ws.open = false; renderWorkspace(); renderNav(); renderBanners(); renderList(); renderDetail();
     if (tab === "people") { await loadPeople(); if (S.tab === "people") renderDetail(); }
@@ -6187,6 +6364,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An item opens in its own tab, on the presentation for #presentation/C-12 while it is on it, with a filter that shows it. The list is read again for a card newer than it.
   const HOME = { change: "new", digest: "product", request: "requests", issue: "issues", screen: "product", element: "product" };
   async function goTo(to) {
+    leaveClose();
     $("#present")?.remove();
     if (to.decision) return openDecision(to.decision);
     if (!to.id) { if (to.tab === "presentation") { S.reqFilter = "presentation"; await showTab("requests"); } else await showTab(to.tab); return true; }
@@ -6530,7 +6708,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     renderList();
   });
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
+    const el = e.target.closest("[data-drop-option], [data-split-end], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
       || e.target.closest(".row.item > .meta")?.parentElement.querySelector(":scope > .open");
     if (!el) return;
     const ds = el.dataset;
@@ -6760,7 +6938,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!r) return;
       await refreshList(); await openCard(S.card.id); return;
     }
-    if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
+    if (ds.variant) { S.variant = ds.variant; showSplit(false, false); renderDetail(); return; }
+    if ("splitTab" in ds) { showSplit(true); return; }
+    if (ds.splitNow !== undefined) { startSplit(S.card, Number(ds.splitNow), "now"); return; }
+    if (ds.splitClear !== undefined) { const sp = splitOf(S.card); if (!sp) return; sp.panes[Number(ds.splitClear)] = null; if (!sp.panes.some(Boolean)) endSplit(); else renderDetail(); return; }
+    if ("splitEnd" in ds) { endSplit(); return; }
     // An element of the option: its dialog, its states drawn, the product's element it changes.
     if (ds.el) { openElement(S.variant, ds.el); return; }
     if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true }); return; }
@@ -7393,10 +7575,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const noteShown = (x) => !(simple() && NOTE_HIDDEN.includes(x.kind));
   const noteUnread = () => simple() ? S.notes.items.filter((x) => noteShown(x) && x.for_you && !x.read).length : S.notes.unread;
   // For you leads: the bell counts only what is for you (docs/desk-page.md → Notifications).
-  S.notes = { items: [], seen: null, unread: 0, only: true };
+  // `clicked`: the rows this person clicked here, read at once, whatever a poll sent before the
+  // server had their click.
+  S.notes = { items: [], seen: null, unread: 0, only: true, clicked: new Set() };
   async function loadNotes() {
     const r = await api("GET", "/api/notifications"), was = JSON.stringify(S.notes.items);
-    Object.assign(S.notes, { items: r.items || [], seen: r.seen, unread: r.unread || 0 });
+    const items = r.items || [];
+    let unread = r.unread || 0;
+    for (const x of items) if (!x.read && S.notes.clicked.has(x.id)) { x.read = true; if (x.for_you) unread = Math.max(0, unread - 1); }
+    Object.assign(S.notes, { items, seen: r.seen, unread });
     renderBell(JSON.stringify(S.notes.items) !== was);
   }
   // An open panel draws again only when the list changed, so a poll keeps the reader's place.
@@ -7441,7 +7628,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       $("#bell").open = false;
       const x = list[Number(b.dataset.note)];
       // Read once clicked: for this person alone, before it opens.
-      if (!x.read) { x.read = true; S.notes.unread = Math.max(0, S.notes.unread - (x.for_you ? 1 : 0)); renderBell(); api("POST", `/api/notifications/read?id=${encodeURIComponent(x.id)}`).catch(() => {}); }
+      if (!x.read) { x.read = true; S.notes.clicked.add(x.id); S.notes.unread = Math.max(0, S.notes.unread - (x.for_you ? 1 : 0)); renderBell(); api("POST", `/api/notifications/read?id=${encodeURIComponent(x.id)}`).catch(() => {}); }
       await openNote(x);
     })));
   }

@@ -873,7 +873,7 @@ export class Store {
   // never sees their own doings, nor another person's private ask. A row is read once its
   // person clicked it (`noted`, its id) or marked all as read (`seen`, the newest row then);
   // the unread rows For you are the bell's count.
-  notifications(who, { limit = 50, days = 30 } = {}) {
+  notifications(who, { limit = 50, days = 30, landed = null } = {}) {
     const key = viewerKey(who);
     const mine = new Set([who?.email, ...(who?.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
     const isMine = (by) => Boolean(by?.email) && mine.has(String(by.email).toLowerCase());
@@ -944,6 +944,8 @@ export class Store {
       const fam = NOTE_FAMILY[x.event];
       const k = fam && x.item ? [x.item, fam, x.at.slice(0, 10), x.for_you, Boolean(x.private), Boolean(x.designs)].join("|") : null;
       const row = k && open.get(k);
+      // `landed` (markNoteRead's): which row each event folded into, by the event's own id.
+      if (row) landed?.set([x.event, x.item || "", x.at, x.thread || "", x.msg ?? ""].join("|"), row);
       if (row) {
         row.count += 1;
         if (x.thread && row.marks.length < 20) row.marks.push([x.thread, x.msg]);
@@ -953,6 +955,7 @@ export class Store {
       }
       // `marks`: every message the row folds, for the page to light them all.
       const lead = { ...x, count: 1, people: x.by ? [x.by] : [], ...(x.thread ? { marks: [[x.thread, x.msg]] } : {}) };
+      landed?.set([x.event, x.item || "", x.at, x.thread || "", x.msg ?? ""].join("|"), lead);
       if (k) open.set(k, lead);
       rows.push(lead);
     }
@@ -969,8 +972,12 @@ export class Store {
   markNoteRead(who, id) {
     const key = viewerKey(who);
     if (!key) return { read: false };
-    const { items } = this.notifications(who, { limit: 500 });
-    const row = items.find((x) => x.id === String(id || ""));
+    // A row that folded a newer message or vote after the page drew it has a new id: the click
+    // reads the row its lead event folded into, so the bell's own grouping (item, kind, day, For you,
+    // private, Designs) decides, never a look-alike row beside it.
+    const landed = new Map();
+    const { items } = this.notifications(who, { limit: 500, landed });
+    const row = items.find((x) => x.id === String(id || "")) || landed.get(String(id || "").split("|").slice(0, 5).join("|")) || null;
     if (!row) throw bad("That notification is not in the bell.");
     if (row.read) return { read: true };
     const seen = own(this.db.seen, key) || null;
@@ -1318,7 +1325,8 @@ export class Store {
     if (c.approved?.variant === v.id) throw bad(`${v.name} is the approved option. Reopen the request first.`);
     // A presented one too: the record says which design the meeting saw, and Undo queues it again.
     if (c.agenda?.status !== "removed" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation${c.agenda.status === "presented" ? " the team saw" : ""}. Take it off the presentation first.`);
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind))) throw bad(BUSY);
+    // How the screen looks today is no option: drawing it leaves the options free.
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind) && i.scope !== "now")) throw bad(BUSY);
     c.variants = c.variants.filter((x) => x.id !== v.id);
     if (c.live_pick?.variant === v.id) delete c.live_pick;
     c.dropped_options = [...(c.dropped_options || []), { id: v.id, name: v.name, version: v.version || 1, by: person(who), at: this.clock() }].slice(-20);
@@ -1465,6 +1473,8 @@ export class Store {
     }
     if (c.kind !== "request") throw bad("only a design request takes actions");
     const closed = c.status === "declined" || c.status === "handed-off";
+    // How the screen looks today, to set beside an option: once the request is checked.
+    if (action === "draw-now" && !c.triage) throw bad("Design Desk is still checking this request. Ask for how it looks today once it is checked.");
     if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import"].includes(action)) throw bad(LOCKED);
     // Only an admin reopens a request sent to developers; what went to GitHub stays there (docs/desk.md → Approved designs no longer change).
     if (action === "reopen" && designLocked(c) && !who?.agent && who?.role !== "admin") throw forbidden("Only an admin reopens a request sent to developers.");
@@ -1474,7 +1484,7 @@ export class Store {
     // A person picks one of the ways a part could look: it becomes the option's next version.
     if (action === "pick-alternative") return this.pickAlternative(c, who, variant, note);
     if (action === "drop-option") return this.dropOption(c, who, variant);
-    const kinds = { explore: "explore", "add-option": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "switch-off": "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
+    const kinds = { explore: "explore", "add-option": "explore", "draw-now": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "switch-off": "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
     // A person switches off a live prototype before its expiry; the request stays where it is (docs/prototype.md → Teardown).
     // Only while the request is still being designed, so Build it again can follow.
@@ -1555,7 +1565,7 @@ export class Store {
     const direct = who?.agent || can(who?.role, "skip");
     if (action === "approve") mustBeChecked(c, "Approve");
     // Before options are on the card, an approval does not race the drawing of them.
-    if (action === "approve" && ["triage", "variants"].includes(c.status) && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise"].includes(i.kind)))
+    if (action === "approve" && ["triage", "variants"].includes(c.status) && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise"].includes(i.kind) && i.scope !== "now"))
       throw bad("Design Desk is still drawing the options. Approve once they are here.");
     if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
@@ -1572,7 +1582,8 @@ export class Store {
     // Going against a decision in force stays a designer's call, For Developers included.
     if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even For Developers.`);
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
+    // How the screen looks today blocks only another ask for it; the options' own work goes on.
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action] && (action === "draw-now" || i.scope !== "now"))) throw bad(BUSY);
     // A closed request has nothing going live.
     if (action === "close") {
       c.status = "declined"; delete c.live_pick;
@@ -1597,6 +1608,7 @@ export class Store {
     if (action === "approve" && autoSend && c.origin?.channel !== "slack" && !this.fromPr(c)) c.approved.auto_send = true;
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
+    if (action === "draw-now") item.scope = "now";
     if (action === "add-option") {
       item.scope = "add";
       if (base) item.variant = base.id;
@@ -1682,7 +1694,7 @@ export class Store {
   openFeedback(cardId, who) {
     const c = this.card(cardId);
     if (c.kind !== "request" || c.status !== "variants" || !(c.variants || []).length) throw bad("There are no drawn options to show the team yet.");
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind)))
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind) && i.scope !== "now"))
       throw bad("Design Desk is still drawing the options. Ask the team once they are here.");
     if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, PMs, developers, admins or the person who filed it ask the team for feedback.");
     c.status = "feedback";
@@ -1950,7 +1962,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2059,6 +2071,12 @@ export class Store {
       else if (k === "attention") {
         if (next.kind !== "change" && next.kind !== "issue") throw bad("attention is judged on change and issue cards; a request's comes from where it stands");
         next.attention = fields.attention === null ? null : cleanAttention(fields.attention);
+      }
+      // The screen as it is in the product today, drawn like an option, to set beside one (docs/requests.md → How it looks today).
+      else if (k === "now") {
+        if (next.kind !== "request") throw bad("now belongs to a request");
+        if (fields.now !== null && !own(this.db.assets, fields.now?.asset)) throw bad(`now: no asset ${fields.now?.asset}`);
+        next.now = fields.now === null ? null : { asset: fields.now.asset, name: optText(fields.now.name, 80, "now name") || null, at: this.clock() };
       }
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
