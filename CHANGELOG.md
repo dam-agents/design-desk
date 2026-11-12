@@ -12,8 +12,9 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): the design workspace's
    tool bar stands under the design and the canvas no longer scrolls; each tool has one tooltip;
-   the state's pick keeps one width. Design workspace is one button at the end of a request's
-   option tabs, and Send to Slack… is under ⋯ and in the workspace's top bar
+   the state's arrows stand before its pick, so they never move. Design workspace is one button at
+   the end of a request's option tabs (in the state row while a live prototype folds the options
+   away), and Send to Slack… is under ⋯ and in the workspace's top bar
    ([desk-page.md](docs/desk-page.md)). No data migration.
 
 ## 1.90.0 — 2026-11-12

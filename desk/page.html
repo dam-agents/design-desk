@@ -1222,6 +1222,7 @@
   .mv-or { color: var(--muted); font-size: var(--fs-meta); }
   .way.still { font-size: var(--fs-ui); } .way.hint { margin: 0; }
   .way.lnk { border: 0; background: none; padding: 2px 4px; position: relative; top: 1px; border-radius: var(--r-sm); cursor: pointer; font: inherit; font-size: var(--fs-ui); color: var(--ink); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ink) 30%, transparent); text-underline-offset: 3px; white-space: nowrap; }
+  .moves .ws { margin-left: auto; }
   .way.lnk:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); text-decoration-color: currentColor; }
   a.way { text-decoration: none; }
   .line5 { list-style: none; margin: 8px -16px -12px; padding: 12px 16px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; border-top: 1px solid var(--line); font-size: var(--fs-ui); }
@@ -5028,8 +5029,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : ["feedback", "testing"].includes(c.status) && !protoDown(c) ? [still(c.vote_ended ? "The vote ended." : can("vote") ? "Vote and comment on the options." : "Comment on the options.")]
       : t && t.k !== "you" ? [still(`Waits on ${t.who}.`)] : [];
     const who = !busy.length && nx.who ? `<span class="way still hint">${esc(nx.who)}</span>` : "";
-    // The design workspace is never a way on: its one button sits by the options' tabs.
-    const moves = row.length || who ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}</div>` : "";
+    // The design workspace is never a way on: its button sits by the options' tabs. With a live
+    // prototype the options fold away, so the button stands at the row's right end instead.
+    const ws = live(c) && (c.variants || []).length ? `<button class="btn small ws" data-act="workspace">${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+    const moves = row.length || who || ws ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}${ws}</div>` : "";
     // The state's help hangs under its word: what is happening now and every way on from here.
     const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status];
     const help = nextHelp(c, own, c.status === "declined" ? "" : nx.text);

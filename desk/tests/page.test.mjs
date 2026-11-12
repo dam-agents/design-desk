@@ -1437,6 +1437,18 @@ const LEAD = {
   "The prototype failed, someone who may not build": A_DESIGNER, "Spec draft, someone who may not send it": A_DESIGNER,
 };
 const leadText = (desk) => desk.evaluate(() => document.querySelector("#detail .moves .way")?.textContent.trim() ?? null);
+// With a live prototype the options fold away, so the design workspace's button stands in the state row;
+// without one it sits only by the options' tabs.
+for (const [name, patch, inRow] of [["a live prototype", { status: "testing", triage: DESIGN, prototype: { state: "live", url: "https://example.com/p", expires: LATER } }, true], ["no prototype", { status: "feedback", triage: DESIGN, team_feedback: { state: "open" } }, false]]) {
+  test(`the design workspace is reachable with ${name}`, (t) => open(t, BRIDGE_HEADER(patch, ME(ALL)), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector("#detail .status");
+    const shown = (sel) => desk.evaluate((q) => [...document.querySelectorAll(q)].filter((el) => el.checkVisibility()).length, sel);
+    assert.equal(await shown('#detail .moves [data-act="workspace"]'), inRow ? 1 : 0, inRow ? "the state row holds it" : "the state row does not");
+    assert.equal(await shown('#detail [data-act="workspace"]'), 1, "one workspace button shows");
+  }));
+}
 for (const [name, patch, me, word, ink, , , busy] of HEADERS) {
   const [stage, pageWord] = STAGE[patch.status] || [null, word];
   test(`header: ${name} → ${word}, ${ink}, ${LEAD[name]}`, (t) => open(t, BRIDGE_HEADER(patch, me), async (desk) => {
