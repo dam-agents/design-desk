@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.89.0 — 2026-11-12
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): the design workspace is laid
+   out as a design tool — the options in the top bar, the design's pages, states, alternatives and
+   version in one bar under it, one floating tool bar (Click through, Select, Comment, Edit text, with
+   their keys), comments written and read in place on the design, and the side panel's Comments and
+   Properties. A send to Figma now names its option, so the workspace shows Design Desk at work on it.
+   No data migration.
+
 ## 1.88.1 — 2026-11-12
 
 **Upgrade:**
