@@ -33,7 +33,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   after a final check opens in Select). A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
   (another page, a closed menu); a note's part the design has not opened yet stays selected.
-  **The look palette:** in Select, an admin (for now; whoever may change the design later) gets **Change the look** in the
+  **The look palette:** in Select, an admin, a designer or a lead developer gets **Change the look** in the
   side panel, under the part selected and its note: tabs Text, Fill, Spacing, Layout (a flex or grid
   part only) and Size, with steppers, segmented choices, colors, and a resize handle on the part's
   corner in the design. An element with smart controls opens on **Suggested** first: only the
@@ -72,8 +72,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 - **Pages and filters.** A tab's pages are tabs at the top of its list: **For Designers**, **For
   Developers** and **For presentation** on Requests; **For Designers** and **For Developers** on
   PR Changes and Issues, each opened on the viewer's own as Requests ([desk.md](desk.md) → For
-  Developers or For Designers); **Screens**, **Elements**, **Decisions**, **Kit** (an admin's, for
-  now: [Product → Kit](#product--kit)),
+  Developers or For Designers); **Screens**, **Elements**, **Decisions**, **Kit** (an admin's, a designer's and a lead
+  developer's: [Product → Kit](#product--kit)),
   **Differences** (with Figma on, [desk.md](desk.md#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
   handled, the default), **Handled**, **Auto handled** (Design Desk found nothing to look at, `attention` `fyi`, or it shipped more than `change_auto_handled_days`, 14,
   ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default for anyone who may vote, **Open** for the rest: the next move is the viewer's own, by what they may do —
@@ -207,7 +207,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
 ## Product → Kit
 
 The product's kit as `design kit` last read it ([requests.md](requests.md) → Smart controls),
-shown only to an admin for now (`GET /api/kit` refuses anyone else). The list has one row per
+shown only to an admin, a designer or a lead developer (`GET /api/kit` refuses anyone else). The list has one row per
 kind of named value (Colors, Shadows, Corners, Spacing, Text sizes…) and one per component's
 variants (`Button · variant`), each with its count and the files it comes from. A row opens its
 tiles, drawn as the elements' are: a color's swatch, a shadow on a card, a corner, a spacing bar,

@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
-import { Store, DeskError, forgetIdle, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf } from "./store.mjs";
+import { Store, DeskError, forgetIdle, can, ROLES, ADDABLE_ROLES, abilities, rosterOf, readRole, personOf, namesOf, LOOK_ROLES } from "./store.mjs";
 import { cfg, cfgTable, WORK } from "../toolkit/lib/core.mjs";
 import { requestSkills } from "../toolkit/lib/actions.mjs";
 
@@ -207,8 +207,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "private") return send(res, 200, { asks: store.privateAsks(actor) });
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
-  // The product's kit: an admin's page for now (docs/desk-page.md → Product → Kit).
-  if (m === "GET" && p[1] === "kit") { if (who.deskRole !== "admin") throw new DeskError(403, `Only an admin sees the kit for now. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
+  // The product's kit: an admin's, a designer's and a lead developer's page (docs/desk-page.md → Product → Kit).
+  if (m === "GET" && p[1] === "kit") { if (!LOOK_ROLES.includes(who.deskRole)) throw new DeskError(403, `Only admins, designers and lead developers see the kit. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
   if (m === "GET" && p[1] === "decisions" && !p[2]) {
     // Not approved: the ones in force that wait for a designer's approval.
     const q = decisionQuery(url), pending = url.searchParams.get("state") === "unapproved";

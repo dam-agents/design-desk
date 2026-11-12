@@ -347,7 +347,7 @@ Compare with the product); a note from **Work into the design** is a `revise` li
 
 ## Smart controls
 
-The design workspace's look palette offers an admin, for an element, the choices the product
+The design workspace's look palette offers an admin, a designer or a lead developer, for an element, the choices the product
 already has for it, on a **Suggested** tab ([desk-page.md](desk-page.md) → The look palette).
 Only in repo mode, where the option is drawn from the product's own code (the `variants` skill
 → Repo mode only: the profile). In brand or Carbon mode there is no product code to read:
