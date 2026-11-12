@@ -27,7 +27,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   comments. A spec draft: Send to developers…. Sent: Show the design. Closed: Reopen. Contact a
   developer joins them wherever a part needs one, until it was opened. Approve is never in the row.
   With no way of the viewer's own, the row says what they wait for; with a question open, to answer
-  it below: Design Desk's open questions stand right under the box, never inside it. **Open in the design workspace** sits at the row's right end, never among the ways on.
+  it below: Design Desk's open questions stand right under the box, never inside it. **Design workspace** is not in the box: its one button sits at the right end of the options' tabs, beside the design it opens.
   **The design workspace** is laid out as a design tool. Its top bar holds the request, the options
   (number and name, one click each; a DD spinner while Design Desk works on one, faint while it waits
   in the queue; a count of its open comments), **+** for one more option, a pill saying what Design
@@ -35,8 +35,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   design's pages (its own review bar is hidden in the workspace and driven from here), its states
   (one menu by part, ‹ ›), its alternatives and its version. The design sits on a canvas, glowing
   while Design Desk changes it; a strip above it names an alternative (**Use this one**), an older
-  version (**Show the latest**) or the state's use. One floating tool bar, icons only, each with its
-  key: **Click through** (P), **Select** (V), **Comment** (C), **Edit text** (T, whoever may change
+  version (**Show the latest**) or the state's use. One tool bar under the design, icons only, each with its
+  key in its one tooltip (name and key on top, what it does under them): **Click through** (P), **Select** (V), **Comment** (C), **Edit text** (T, whoever may change
   the design), then the comment pins (⇧C), the decisions (D), and the design's hotspots (H), notes
   (N), empty state (E) and dark theme (L) where it has them; the active tool is in the Desk's brown
   and sets the pointer. Esc steps back: a menu, the comment open, the selection, the workspace.
@@ -50,7 +50,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   click on it in **Comments**, the panel's other tab: every comment on the option by state, a box
   for one on the whole option or state, Open / Done / All and Work in all. Pins are in the Desk's brown,
   small and green once done, with a spinner while Design Desk works on them. The design fills the
-  canvas under the tool bar; the canvas scrolls a bar's height further to bring the design's bottom up. A part selected is let go
+  canvas a little in from its edges and the tool bar stands under it, so the canvas never scrolls. A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
   (another page, a closed menu); a note's part the design has not opened yet stays selected.
   **The look palette:** in Select, an admin, a designer or a lead developer gets **Change the look** in
@@ -72,9 +72,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   brings it back. Each half empties with its ✕; the tab's ✕ closes it. While its tab is shown
   the list folds away, and it comes back on another tab, unless the viewer folded or unfolded
   it meanwhile. Nothing of it is saved: it lasts while the request is open.
-  What is about the request, not its step (the presentation, For Developers or For Designers, Redraw
-  the options, New request from this, Delete), is under **⋯** at the right end of the box's top
-  row, after Approve and Close; that row ends where Open in the design workspace ends.
+  What is about the request, not its step (Send to Slack… at Team feedback, the presentation, For
+  Developers or For Designers, Redraw the options, New request from this, Delete), is under **⋯** at
+  the right end of the box's top row, after Approve and Close. Send to Slack… is also in the design
+  workspace's top bar, before Close; the options' bar holds only the votes and Open in Figma.
   The five stages are a row of their names along the box's bottom edge, joined by short lines:
   the passed ones in ink with a ✓, the current one bold and underlined in the state's colour, the
   ones to come grey. Each name's tooltip says what the stage holds (the verdict, who approved).
@@ -125,7 +126,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   request's own text and What's already known show whole the first time a person opens the
   request in that browser, and folded on every later visit (`desk-seen-requests`). Folded, each
   keeps two whole lines of its text and half of the third; a heading above them shows whole and
-  is not counted. A box with under three lines of text, no picture and nothing folded inside has
+  is not counted. Beside the folded request, What's already known keeps as much of its text as
+  brings its Show link level with the request's, never less than two whole lines. A box with under three lines of text, no picture and nothing folded inside has
   nothing to hide: it shows whole, with no Show or Hide link. Folding and unfolding glide in a
   fifth of a second, so what stands under the box moves rather than jumps; folded from below,
   the page brings the box's top back into view.
@@ -419,7 +421,7 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
 - **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
   ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
 - **Buttons:** `.btn` 32px high, `.btn.small` 26px; one `.primary` (ink) per view, the next step.
-  Approve keeps its green, Open in the design workspace its accent (the team's decisions).
+  Approve keeps its green (the team's decision).
 - **Colours:** only the tokens on `:root`, each in light and dark; never a near copy of one. An
   ink means a state (who has the move, approved, live, closed): never decoration. A step's
   number takes its box's colour in the flow above it. Text on a coloured fill is `--bg` or

@@ -178,6 +178,9 @@
   #tip { position: fixed; z-index: 90; max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); background: var(--ink); color: var(--bg); font-size: var(--fs-meta); line-height: 1.4; font-weight: 400; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow); pointer-events: none; }
   /* "[Opens a dialog]" in a tooltip: the other theme's green (blue reads as a link), as the box is the page's ink. */
   #tip .opens { color: var(--tip-opens); font-weight: 600; }
+  /* A tool's tip: its name and key on top, what it does under them. */
+  #tip .tk { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 2px; }
+  #tip .tk kbd { padding: 0 4px; border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); border-bottom-width: 1px; color: inherit; font-size: var(--fs-micro); line-height: 16px; }
   .btn { border: 1px solid var(--line); background: var(--panel); padding: 4px 12px; border-radius: var(--r-md); cursor: pointer; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 8px; }
   .btn:hover { background: var(--soft); }
   .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
@@ -822,6 +825,9 @@
   .tabs.vtabs .vclose:hover { background: var(--soft); color: var(--ink); }
   .tabs.vtabs button.vadd { border-style: dashed; color: var(--accent, var(--ink)); }
   .tabs.vtabs button.vadd[disabled] { opacity: .7; cursor: default; }
+  .tabs.vtabs button.vws { margin: 0 0 4px auto; align-self: center; display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: var(--r-md); background: none; box-shadow: none; padding: 4px 8px; color: var(--ink); font-weight: 600; white-space: nowrap; }
+  .tabs.vtabs button.vws:hover { background: var(--soft); }
+  .tabs.vtabs button.vws .ico { width: 16px; height: 16px; }
   .ws-alts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .ws-alts .k { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-right: 2px; }
   .ws-states .step-by { display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
@@ -1188,9 +1194,6 @@
     .status:not(.req) .next .actions { gap: 8px; }
     .status:not(.req) .next .actions > .btn { padding-left: 12px; padding-right: 12px; }
   }
-  /* Approve takes what the row has left over, so the row ends where the workspace button ends. */
-  .status.req .next .actions > .btn:first-child { flex: 1 0 auto; }
-  .status.req .moves .ws { box-sizing: border-box; }
   /* Sent: when and where on one row with the ways on, so the box keeps two rows above its stages. */
   .status.req > .s-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
   .status.req .s-row > .sent { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; padding: 0; background: none; max-width: none; }
@@ -1218,10 +1221,9 @@
   .mv-k { font-size: var(--fs-meta); color: var(--muted); }
   .mv-or { color: var(--muted); font-size: var(--fs-meta); }
   .way.still { font-size: var(--fs-ui); } .way.hint { margin: 0; }
-  .way.lnk { border: 0; background: none; padding: 2px 4px; border-radius: var(--r-sm); cursor: pointer; font: inherit; font-size: var(--fs-ui); color: var(--ink); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ink) 30%, transparent); text-underline-offset: 3px; white-space: nowrap; }
+  .way.lnk { border: 0; background: none; padding: 3px 4px 1px; border-radius: var(--r-sm); cursor: pointer; font: inherit; font-size: var(--fs-ui); color: var(--ink); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ink) 30%, transparent); text-underline-offset: 3px; white-space: nowrap; }
   .way.lnk:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); text-decoration-color: currentColor; }
   a.way { text-decoration: none; }
-  .moves .ws { margin-left: auto; }
   .line5 { list-style: none; margin: 8px -16px -12px; padding: 12px 16px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; border-top: 1px solid var(--line); font-size: var(--fs-ui); }
   .line5 li { display: inline-flex; align-items: center; color: var(--muted); white-space: nowrap; }
   .line5 .l { display: inline-flex; align-items: center; gap: 8px; padding: 2px 0 4px; border-bottom: 2px solid transparent; }
@@ -1248,9 +1250,6 @@
   .brief-toggle[hidden] { display: none; }
   /* The votes: two pills with their icon and count, at the right of the option's bar. */
   /* The request's main action under its options: larger, in the accent, before every other button. */
-  .vbar .btn.ws-open { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; min-height: 38px; padding: 8px 16px; font-size: var(--fs-ui); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
-  .vbar .btn.ws-open:hover { opacity: 1; filter: brightness(1.08); }
-  .vbar .btn.ws-open > .ico { width: 16px; height: 16px; }
   .vbar .votes { display: inline-flex; gap: 8px; align-items: center; margin-left: auto; }
   .btn.vote { gap: 8px; padding: 1px 12px; min-height: 26px; }
   .btn.vote .vi { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -1330,6 +1329,7 @@
   #workspace .sel .k, #workspace .ws-states .k, #workspace .ws-alts .k { text-transform: none; letter-spacing: 0; font-size: var(--fs-meta); font-weight: 600; }
   #workspace .ws-side h3 { font-size: var(--fs-ui); text-transform: none; letter-spacing: 0; color: var(--ink); }
   /* One clear way out, at the top right: Close, its key, a cross. */
+  .ws-top .ws-slack { font-size: var(--fs-meta); min-height: 32px; padding: 4px 12px; }
   .ws-top .ws-close { order: 0; gap: 12px; padding: 8px 12px 8px 16px; font-weight: 600; border-radius: var(--r-md); }
   .ws-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   kbd { font: var(--fs-meta) var(--font); padding: 0 8px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-xs); color: var(--muted); font-weight: 400; }
@@ -1361,7 +1361,11 @@
   .ws-ibtn .ico, .ws-back .ico, .ws-pick .ico, .ws-ver .ico { width: 16px; height: 16px; }
   .ico { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   .ws-pick { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: var(--r-md); padding: 4px 8px 4px 8px; font: inherit; font-size: var(--fs-meta); font-weight: 600; cursor: pointer; }
-  .ws-pick .hint { display: inline; font-weight: 400; }
+  .ws-pick .hint { display: inline; font-weight: 400; margin: 0; }
+  /* The state's pick keeps one width whatever it names, so the arrows
+     after it never move; a long name ends in an ellipsis. */
+  .ws-sub .ws-pick { box-sizing: border-box; width: min(260px, 30vw); }
+  .ws-pick .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
   .ws-pick[aria-expanded="true"] { border-color: var(--accent); }
   .ws-menuwrap { position: relative; display: inline-flex; }
   .ws-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 220px; display: grid; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); }
@@ -1401,7 +1405,6 @@
   .ws-toolbar .tog .ico { width: 18px; height: 18px; }
   .ws-toolbar .tog[aria-pressed="true"] { color: #fff; background: rgba(255,255,255,.14); }
   .ws-toolbar .tsep { width: 1px; height: 22px; margin: 0 8px; background: rgba(255,255,255,.18); }
-  .ws-toolbar .tool:hover::after, .ws-toolbar .tool:focus-visible::after { content: attr(data-label) "   " attr(data-key); white-space: pre; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); padding: 4px 8px; border-radius: 6px; background: #1e1e1e; color: #fff; font-size: 12px; font-weight: 500; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
   .ws-toolbar .tool[title]:hover { cursor: pointer; }
   /* A comment in place, beside its part. */
   .ws-pop { position: absolute; z-index: 6; width: 400px; max-height: calc(100% - 100px); overflow: auto; display: grid; gap: 8px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 14px 40px rgba(0,0,0,.24); font-size: var(--fs-ui); }
@@ -1437,13 +1440,12 @@
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 
-  /* The design fills the canvas down to its bottom edge, the tool bar over it; the canvas scrolls a bar's
-     height further, so the bottom of the design comes up above the tool bar. */
-  .ws-stage { position: relative; }
-  .ws-canvas { padding: 12px 12px 0; overflow-y: auto; gap: 8px; }
-  .ws-canvas::after { content: ""; flex: 0 0 64px; }
-  .ws-artboard { flex: 0 0 auto; height: calc(100% - 12px); }
-  .ws-toolbar { bottom: 12px; }
+  /* The design fills the canvas, a little in from its edges; the tool bar stands under it, never over it,
+     so the canvas never scrolls. The design's own scrollbar always shows (in the frame), so nothing jumps. */
+  .ws-stage { position: relative; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
+  .ws-canvas { padding: 20px 32px 12px; overflow: hidden; gap: 8px; }
+  .ws-artboard { flex: 1 1 auto; min-height: 0; }
+  .ws-toolbar { position: relative; bottom: auto; left: auto; transform: none; flex: none; align-self: center; margin: 0 0 12px; }
   .ws-wholebox { display: grid; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); }
   #workspace .ws-wholebox textarea { min-height: 56px; resize: vertical; border: 0; padding: 2px; background: none; box-shadow: none; outline: none; font: inherit; }
   .ws-wholebox:focus-within { border-color: var(--ink); }
@@ -1497,7 +1499,7 @@
   @keyframes dd-spin-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
   @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before, .dd-spin::after { animation-duration: 10s; } }
   .ws-sub { min-height: 40px; padding: 4px 16px; }
-  .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 3ch; text-align: center; }
+  .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 8ch; text-align: center; font-variant-numeric: tabular-nums; }
   .ws-canvas { flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
   .ws-artboard { display: flex; }
   .ws-context { position: static; transform: none; width: auto; max-width: none; justify-items: center; }
@@ -2154,6 +2156,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (box.parentElement !== host) host.append(box);
     box.textContent = t;
     if (t.startsWith(OPENS)) { box.textContent = t.slice(OPENS.length); box.insertAdjacentHTML("afterbegin", `<span class="opens">${esc(OPENS.trim())}</span> `); }
+    // A tool on the design workspace's bar names itself and its key above what it does: one tip, not two.
+    if (el.matches(".ws-toolbar .tool") && el.dataset.label) box.insertAdjacentHTML("afterbegin", `<div class="tk">${esc(el.dataset.label)}${el.dataset.key ? `<kbd>${esc(el.dataset.key)}</kbd>` : ""}</div>`);
     const r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
     const below = (under && r.bottom + 6 + h <= innerHeight) || r.top - 6 - h < 0;
     box.style.left = `${Math.max(8, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 8))}px`;
@@ -2895,7 +2899,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         { tone: "checking", text: "Design Desk checks what can be done as a design and what needs a developer, then draws the options.",
           acts: [["<b>Draw design options</b>", "explore"], ["<b>+ New option</b>", "explore"]] },
         { tone: "checking", text: "The request's people fine-tune the options, then ask the team.",
-          acts: [["<b>Open in the design workspace</b>: click a part, say what to change", "revise"], ["<b>Try 3 ways</b> on one part", "revise"], ["<b>Ask for feedback</b>", "request"]] },
+          acts: [["<b>Design workspace</b>: click a part, say what to change", "revise"], ["<b>Try 3 ways</b> on one part", "revise"], ["<b>Ask for feedback</b>", "request"]] },
         { tone: "waiting", text: "The team votes and comments.", acts: [["<b>👍</b> <b>👎</b> <b>⚠</b> on each option", "vote"], ["<b>Work it in</b>: a comment changes the design", "change"]] },
         { tone: "live", text: "Optional: try it in a live prototype.", acts: [["<b>Build a live prototype</b>", "build"]] },
         { tone: "approved", text: "A designer, PM or lead developer approves one option, or closes the request.",
@@ -2917,7 +2921,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Not a tab: how a design changes, in How it works.
     workspace: { about: "how a design changes",
       steps: [
-        { tone: "", text: "Someone opens a request's design workspace.", acts: [["<b>Open in the design workspace</b>", "revise"]] },
+        { tone: "", text: "Someone opens a request's design workspace.", acts: [["<b>Design workspace</b>", "revise"]] },
         { tone: "", text: "They click a part of an option and say what should change, or type the new words in it.", acts: [["<b>Edit text</b>", "revise"]] },
         { tone: "checking", text: "Design Desk draws the next version in a few minutes; the earlier ones stay." },
         { tone: "", text: "Unsure how a part should look? Three ways to pick from, or every state it can be in.", acts: [["<b>Try 3 ways</b>", "revise"], ["<b>Draw every state</b>", "revise"]] },
@@ -2983,7 +2987,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     clampBriefs();
     const to = body.getBoundingClientRect().height, calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
     // A tab in the background holds animations: the glide ends by the clock all the same.
-    if (!calm && Math.abs(to - from) > 2) { const a = body.animate([{ height: `${from}px`, overflow: "hidden" }, { height: `${to}px`, overflow: "hidden" }], { duration: 220, easing: "ease-out" }); setTimeout(() => a.cancel(), 300); }
+    if (!calm && Math.abs(to - from) > 2) { const a = body.animate([{ height: `${from}px`, maxHeight: `${from}px`, overflow: "hidden" }, { height: `${to}px`, maxHeight: `${to}px`, overflow: "hidden" }], { duration: 220, easing: "ease-out" }); setTimeout(() => a.cancel(), 300); }
     const pane = $("#detail");
     if (folded && pane && b.getBoundingClientRect().top < pane.getBoundingClientRect().top) b.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
   }, true);
@@ -3010,6 +3014,23 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       body.style.setProperty("--fade", `${Math.round(third.top - top)}px`);
       body.style.setProperty("--clip", `${Math.round(third.top + (third.bottom - third.top) * 0.75 - top)}px`);
     }
+    // Folded beside the request, what Design Desk found ends where the request ends: its text runs on,
+    // fading out, so its Show link stands level with the request's.
+    for (const made of document.querySelectorAll(".top2 > .brief.made-col.clamped")) {
+      const left = made.parentElement.querySelector(":scope > .brief:not(.made-col)"), body = made.querySelector(":scope > .brief-body");
+      // Only beside a folded request.
+      if (!left || !body || !left.classList.contains("clamped")) continue;
+      const lr = left.getBoundingClientRect(), mr = made.getBoundingClientRect();
+      if (Math.abs(lr.top - mr.top) > 24) continue;
+      // The two Show links stand on one line.
+      const lt = left.querySelector(":scope > .brief-toggle")?.getBoundingClientRect(), mt = made.querySelector(":scope > .brief-toggle")?.getBoundingClientRect();
+      if (!lt || !mt) continue;
+      const own = body.getBoundingClientRect().height, line = parseFloat(getComputedStyle(body).lineHeight) || 22;
+      // It may give up at most half of its third line, so two whole lines always show.
+      const clip = Math.min(body.scrollHeight, Math.max(own - line / 2, own + lt.bottom - mt.bottom));
+      body.style.setProperty("--clip", `${Math.round(clip)}px`);
+      body.style.setProperty("--fade", `${Math.round(Math.max(0, clip - line))}px`);
+    }
   }
   // The first three lines of a brief's own text, headings not counted, top to bottom.
   function briefLines(body) {
@@ -3021,24 +3042,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     return lines.sort((a, b) => a.top - b.top);
   }
-  addEventListener("resize", () => { clampBriefs(); alignRight(); });
-  // The state's buttons on the right (Approve, Close, ⋯) span as far as the design workspace's
-  // button under them, whichever is longer setting the length.
-  function alignRight() {
-    for (const box of document.querySelectorAll("#detail .status.req")) {
-      const row = box.querySelector(".next .actions"), ws = box.querySelector(".moves .ws");
-      if (!row || !ws) continue;
-      // Measured at their own lengths, nothing wrapped.
-      row.style.width = "max-content"; ws.style.minWidth = "";
-      const a = row.offsetWidth, b = ws.offsetWidth;
-      row.style.width = "";
-      // Only with room for the longer of the two at the right end.
-      const w = Math.max(a, b);
-      if (!w || w > box.clientWidth / 2) continue;
-      row.style.width = w + "px"; ws.style.minWidth = w + "px";
-    }
-  }
-  document.fonts?.ready.then(alignRight);
+  addEventListener("resize", clampBriefs);
 
   // What waits for a designer, and why (docs/desk.md → Needs a designer): a change until you
   // saw it or a designer marked it handled, and a request until it is closed.
@@ -4972,7 +4976,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const reopenSent = c.status === "handed-off" && S.me?.role === "admin" ? `<button class="btn" data-act="reopen" title="Opens it again before the team's vote, with its options; its Designs record closes, and what went to GitHub stays there">Reopen…</button>` : "";
     // Where the live prototype does not run, drawing again is a way on in the state's row, not here.
     const redraw = closed(c) || locked(c) || protoDown(c) || !can("revise") || !(c.variants || []).length ? "" : `<button class="btn" data-act="revise">Redraw the options with all comments</button>`;
-    const items = call + size + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
+    // Sending to Slack happens once in a request's life: it waits here, and in the design workspace's bar.
+    const slack = c.status === "feedback" && slackModes(c).length ? `<button class="btn" data-act="slack">Send to Slack…</button>` : "";
+    const items = slack + call + size + reopenSent + del + redraw + (locked(c) && can("request") ? `<button class="btn" data-adjust>New request from this…</button>` : "");
     return items ? `<details class="more"><summary class="btn" aria-label="More">⋯</summary><div class="menu">${items}</div></details>` : "";
   }
   // Whose turn it is, said the same way in every state: Design Desk while it works or is about to,
@@ -5023,9 +5029,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : ["feedback", "testing"].includes(c.status) && !protoDown(c) ? [still(c.vote_ended ? "The vote ended." : can("vote") ? "Vote and comment on the options." : "Comment on the options.")]
       : t && t.k !== "you" ? [still(`Waits on ${t.who}.`)] : [];
     const who = !busy.length && nx.who ? `<span class="way still hint">${esc(nx.who)}</span>` : "";
-    // The design workspace is never a way on: it has its place at the row's right end.
-    const ws = (c.variants || []).length ? `<button class="btn small ws" data-act="workspace">${can("revise") && !locked(c) ? "Open in the design workspace" : "Comment on the design"}</button>` : "";
-    const moves = row.length || who || ws ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}${ws}</div>` : "";
+    // The design workspace is never a way on: its one button sits by the options' tabs.
+    const moves = row.length || who ? `<div class="moves">${row.length ? `<span class="mv-k">${busy.length && !asks.length ? "Now:" : "Next:"}</span>${row.join(`<span class="mv-or">or</span>`)}` : ""}${who}</div>` : "";
     // The state's help hangs under its word: what is happening now and every way on from here.
     const own = STATUS_TIP[tone(c) === "decided" ? "decided" : held(c) ? "held" : checked(c) ? "checked" : emptied(c) ? "emptied" : protoDown(c) ? "down" : asking(c) ? "asking" : c.status === "spec" && S.me?.spec_review && !c.approved?.auto_send ? "spec-review" : c.status];
     const help = nextHelp(c, own, c.status === "declined" ? "" : nx.text);
@@ -5132,6 +5137,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
 
   // The last tab adds one more option from what a person writes (docs/requests.md → One more option).
+  // The one way into the design workspace: at the right end of the options' tabs, beside the design it opens.
+  const wsTab0 = (c) => (c.variants || []).length ? `<button class="vws" data-act="workspace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
   function addOptionTab(c) {
     if (closed(c) || locked(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
@@ -5201,13 +5208,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
+      <div class="tabs vtabs" role="group" aria-label="Design options">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
-        <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
-        ${c.status === "feedback" && slackModes(c).length ? `<button class="btn small" data-act="slack">Send to Slack…</button>` : ""}
         ${voteButtons(c, v.id, mine)}
       </div>
       ${renderCouncils(c)}
@@ -6195,7 +6200,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
       : `<span class="title" title="${esc(c.title)}">${esc(c.title)}</span><span class="vsep" aria-hidden="true"></span>`;
     const opts = S.ws.check ? "" : `<div class="ws-opts" role="tablist" aria-label="Design options"><span class="k">Option</span><span class="ws-seg">${(c.variants || []).map((x, i) => wsTab(c, x, i, x.id === v.id)).join("")}</span>${wsAddOption(c)}</div>`;
-    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
   }
 
   // An option's tab: its number and name, a spinner while Design Desk changes it (a clock while it waits to), its open comments.
@@ -6238,7 +6243,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const badge = (id) => { const n = open(id); return n ? `<span class="ws-count" title="${plural(n, "open comment", "open comments")}">${n}</span>` : ""; };
     const i = sts.findIndex((x) => x.id === S.ws.state), cur = sts[i], menu = S.ws.menu === "states";
     const item = (x) => `<button role="menuitemradio" aria-checked="${(S.ws.state || null) === (x?.id || null)}" data-ws-state="${esc(x?.id || "")}" title="${esc(x?.how || "The option as it was drawn")}"><span>${esc(x ? x.name : "As drawn")}</span>${x && (x.version || 1) > 1 ? `<span class="chip" title="This state's version ${x.version}">v${x.version}</span>` : ""}${badge(x?.id || null)}</button>`;
-    return `<div class="ws-pages"><span class="k">State</span><span class="ws-menuwrap"><button class="ws-pick" data-ws-menu="states" aria-expanded="${menu}" title="${plural(sts.length, "state", "states")} drawn">${cur ? `<span class="hint">${esc(cur.part)} ·</span> ${esc(cur.name)}` : "As drawn"}${wsIcon("chev")}</button>
+    return `<div class="ws-pages"><span class="k">State</span><span class="ws-menuwrap"><button class="ws-pick" data-ws-menu="states" aria-expanded="${menu}" title="${plural(sts.length, "state", "states")} drawn"><span class="lbl">${cur ? `<span class="hint">${esc(cur.part)} ·</span> ${esc(cur.name)}` : "As drawn"}</span>${wsIcon("chev")}</button>
       ${menu ? `<div class="ws-menu" role="menu">${item(null)}${[...new Set(sts.map((x) => x.part))].map((p) => `<div class="ws-mgroup">${esc(p)}</div>${sts.filter((x) => x.part === p).map(item).join("")}`).join("")}</div>` : ""}</span>
       <span class="step-by"><button class="ws-ibtn" data-ws-step="-1" title="Previous state">${wsIcon("prev")}</button><span class="hint">${cur ? `${i + 1} of ${sts.length}` : `${sts.length}`}</span><button class="ws-ibtn" data-ws-step="1" title="Next state">${wsIcon("next")}</button></span></div>`;
   }
@@ -6874,7 +6879,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
     loadImages();
     clampBriefs();
-    alignRight(); requestAnimationFrame(alignRight);
     if (S.card.kind === "screen") loadTimeline(S.card);
   }
 

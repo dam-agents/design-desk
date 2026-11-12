@@ -932,8 +932,8 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
     assert.equal(await desk.getAttribute('#element-dialog .catalog [data-zoom] img', "data-asset"), "A-1");
     await desk.click("#element-dialog [data-el-close]");
-    await desk.waitForSelector('.vbar [data-act="workspace"]');
-    await desk.click('.vbar [data-act="workspace"]');
+    await desk.waitForSelector('.vtabs [data-act="workspace"]');
+    await desk.click('.vtabs [data-act="workspace"]');
     await desk.click('[data-ws-menu="states"]');
     await desk.click('[data-ws-state="error"]');
     assert.match(await desk.textContent("#ws-sub"), /State[\s\S]*Send button ·[\s\S]*Failed[\s\S]*1 of 1/);
@@ -1051,7 +1051,7 @@ test("numbers, notes and pins preview what they name; the search lists every num
   assert.equal(doc.match(/<\/script>/g).length, 1, "a note's text cannot end the preview's script");
   await desk.mouse.move(0, 0);
 
-  await desk.click('.vbar [data-act="workspace"]');
+  await desk.click('.vtabs [data-act="workspace"]');
   await desk.waitForSelector("#ws-frame");
   const pin = (data) => desk.evaluate((d) => { const f = document.querySelector("#ws-frame"); dispatchEvent(new MessageEvent("message", { data: d, source: f.contentWindow })); }, data);
   await pin({ type: "desk-pin-tip", note: "t1", rect: { left: 40, top: 60, bottom: 72, width: 0 } });
@@ -1309,7 +1309,7 @@ for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
 
 // At Team feedback the state row leads with a way on when the viewer has one: a live prototype for
 // Design only, a developer for parts design cannot do. Approve is never in the row (it is on the
-// right) and Send to Slack… sits by the options.
+// right) and Send to Slack… sits under ⋯.
 const BRIDGE_PILL = (triage, me) => BRIDGE_STORIES
   .replace('triage: { verdict: "design", reasons: [] }', `triage: ${JSON.stringify(triage)}`)
   .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me));

@@ -165,7 +165,8 @@ const changeControls = [
 const r1 = {
   id: "R-1", kind: "request", title: "Make the daily limit easier to read", status: "variants", created: ago(60 * 26), updated: ago(3),
   by: ALICE, triage: { verdict: "design", reasons: ["Only the look of the Providers page changes."] }, team_feedback: { state: "waiting", since: ago(60 * 20) },
-  request: { type: "adjustment", problem: "People miss that another counter stops the agent first: the daily limit card shows the bar, but “stops first” is small grey text at the bottom." },
+  request: { type: "adjustment", problem: "People miss that another counter stops the agent first: the daily limit card shows the bar, but “stops first” is small grey text at the bottom. Two owners asked support last week why their agent stopped at 40% of its limit; both had a workspace limit lower than the agent's own. The card should say plainly which limit is hit first, and how far that one is." },
+  research: { summary: "Someone is already changing this card: PR #6467, which adds a second counter to the daily limit card, is still open, so its author can take the wording in before it ships.\n\n**Already asked for:** no issue is about which limit stops first. Issue #4311 asks for one place that lists every limit of an agent, and the Usage page already shows the workspace limit beside the agent's own.\n\n**Made of:** the card is the shared Limit card; the bar and its label come from the Progress element, so a change to the label shows on every page that uses it.", links: [{ url: "https://github.com/example/app/pull/6467", label: "PR #6467" }, { url: "https://github.com/example/app/issues/4311", label: "Issue #4311" }] },
   cited: { "D-12": { text: "One primary button per screen", status: "active" }, "D-7": { text: "Limits show money, not tokens", status: "revoked" } },
   variants: [
     { id: "v1", name: "Calm", asset: "A-calm-3", version: 3, drawn: ago(60 * 5), fidelity: "mockup",
