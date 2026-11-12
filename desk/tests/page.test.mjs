@@ -27,6 +27,28 @@ test("nothing on the page submits a form", () => {
   assert.doesNotMatch(page, /addEventListener\("submit",\s*guard\(/);
 });
 
+// The Desk's look (docs/desk-page.md → The look): text sizes, corners, weights and spacing come
+// from the scale. A glyph (::before, ::after, a ✕ or ‹ › button), a kit picture, an SVG label, a
+// stat's numeral and the presentation's slide keep their own size.
+test("the page's styles keep to the Desk's scale", () => {
+  const css = page.slice(page.indexOf("<style>"), page.indexOf("</style>")).replace(/\/\*[\s\S]*?\*\//g, "");
+  const own = /::(before|after)|\.kit-pic|\.ft-x \.btn|\.zoom \.gal|\.flow \.f-k|\.pact-stat \.n|#present \.(pnote|pthumb)|\.pl-step button/;
+  const off = [];
+  for (const block of css.split("}")) {
+    const i = block.lastIndexOf("{");
+    if (i < 0) continue;
+    const sel = block.slice(0, i).split("{").pop().trim(), body = block.slice(i + 1);
+    for (const [, p, v] of body.matchAll(/(font-size|font-weight|border-radius|padding[a-z-]*|margin[a-z-]*|(?:row-|column-)?gap)\s*:\s*([^;]+)/g)) {
+      const bad = p === "font-size" ? /\d(px|rem)\b/.test(v) && !own.test(sel) || /var\(--fs-(?!(title|head|ui|meta|micro)\))/.test(v)
+        : p === "font-weight" ? !/^(400|500|600|inherit|normal)(\s*!important)?$/.test(v.trim())
+        : p === "border-radius" ? !own.test(sel) && v.trim().split(/\s+/).some((x) => !/^(0|50%|999px|inherit|var\(--(r-(xs|sm|md|lg)|radius)\))$/.test(x))
+        : !/\.kit-pic/.test(sel) && v.split(/\s+/).some((x) => /^-?\d+px$/.test(x) && Math.abs(parseInt(x)) > 2 && parseInt(x) % 4);
+      if (bad) off.push(`${sel} { ${p}: ${v.trim()} }`);
+    }
+  }
+  assert.deepEqual(off, [], "a size, corner, weight or space off the scale");
+});
+
 // md()'s inline rules (docs/desk.md → Writing on the Desk), run on their own: a construct
 // never lands inside another's attribute, so no person's text becomes markup.
 test("markdown text never becomes an attribute or a handler", () => {
@@ -306,14 +328,14 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // People: the roster with its roles, and what each role adds to the one below it.
     await desk.click('[data-tab="people"]');
     await desk.waitForSelector("table.people");
-    assert.deepEqual((await desk.locator("table.people tbody tr").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead@example.com you admin", "pat@example.com PM"]);
+    assert.deepEqual((await desk.locator("table.people tbody tr").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead@example.com you Admin", "pat@example.com PM"]);
     // A row folds open to what that person did; a server that sends no activity shows that it can't, never zeros.
     await desk.click('[data-person-open="pat@example.com"]');
     assert.match(await desk.locator("tr.pact").innerText(), /can't be shown right now/);
     assert.equal(await desk.locator("tr.pact .pact-stat").count(), 0, "no counts without a record");
     await desk.click('[data-person-open="pat@example.com"]');
     assert.equal(await desk.locator("tr.pact").count(), 0, "a second click folds it");
-    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["admin your role", "designer", "PM", "lead developer", "developer", "viewer"]);
+    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["Admin your role", "Designer", "PM", "Lead developer", "Developer", "Viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
     assert.match(await panel(0), /Everything a designer and a lead developer can, and:\s+See Designs[^\n]*\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
     assert.doesNotMatch(await panel(1), /See Designs/, "a designer has no Designs in the menu");
@@ -903,7 +925,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
     assert.match(await desk.textContent("#detail .elements"), /All elements[\s\S]*Send button[\s\S]*1 state/);
     // A tile keeps white space around its picture, inside the same 192 px.
-    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["10px", "10px", 192], "a tile pads its picture");
+    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["12px", "12px", 192], "a tile pads its picture");
     await desk.click('#detail [data-el="part-send-button"]');
     await desk.waitForSelector("#element-dialog[open] .catalog");
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
@@ -2197,7 +2219,7 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   assert.equal(await count("details.fold[open] #spec-body"), 1, "the spec it will send is open to read");
 
   // docs/issues.md → On the Desk: the sent issue is linked both ways and leaves the open lists.
-  assert.match(await card("dana", "C-7"), /Sent to developers[\s\S]*Issue #31 ↗[\s\S]*see it in Issues\s*C-8/);
+  assert.match(await card("dana", "C-7"), /With developers[\s\S]*Sent [\s\S]*Issue #31 ↗[\s\S]*see it in Issues\s*C-8/);
   assert.equal(await count('.follow-prs [data-card="C-8"]'), 1, "the issue's row links its card on Issues");
   assert.match(await card("dana", "C-8"), /Already through Design Desk[\s\S]*Sent/);
   assert.equal(await count('[data-act="draw"]'), 0, "a designed issue is not drawn");

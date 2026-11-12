@@ -116,9 +116,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   matched to the card it is or came from; and a Desk link. Hits show as you type; Enter or a
   click opens one; ↑ ↓ pick, Escape closes. A GitHub number with no card offers its page on
   GitHub, in the profile's repository (`repos`); a Desk number with no item says so.
-- **The menu.** **Requests** leads it, larger, its count blue (amber while one waits for an
-  answer); **PR Changes** (the product's shipped changes, key `new`) and **Issues** follow smaller
-  with grey counts, then **Product** and **People**; **+ New request** follows behind one more
+- **The menu.** **Requests** leads it (its count amber while one waits for an
+  answer); **PR Changes** (the product's shipped changes, key `new`) and **Issues** follow, every
+  tab alike, only the open one marked, every count grey, then **Product** and **People**; **+ New request** follows behind one more
   separator. The bell at the far right, after the person's name, opens
   [Notifications](#notifications). **How it works** opens from the question
   mark next to the day and night switch, with a picture each of how a request, an issue and a
@@ -169,7 +169,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   there — never one their role may not. A short tip ends it. It fills the pane beside the list
   while nothing is open there; People shows its roster and roles, which say the same. It folds;
   folding one folds every tab's, and the browser keeps the choice (`desk-intro` in its local
-  storage). A change that adds, renames or removes a tab's action updates its intro too.
+  storage). Its header row links **How Design Desk works**, beside Hide; a tab without an intro
+  keeps the link above the pane. A change that adds, renames or removes a tab's action updates its intro too.
 - **How it works** is built the same way: each process (a request, changing a design, a change
   that ships, planned work, and Designs for the roles that see it) with its steps from the same
   `INTRO`, and its flow and colour key where it has one; then what only a developer can do and
@@ -349,3 +350,36 @@ it is between people. Each closed record of a request reopened after it was sent
 stays under **Done** as its own row (its own `G-<n>`, **· earlier send**; `#R-<n>~<k>` still opens it), read-only: **Closed**,
 who reopened it and when, its issue, its summary and its questions, with no box to ask and no
 Mark as done.
+
+## The look
+
+Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on a value off it.
+
+- **Text:** only the `--fs-*` tokens: `title` 26 (an item's or a page's name), `head` 17 (a
+  section, a dialog's name), `ui` 14 (text to read, controls, lists), `meta` 12.5
+  (dates, who, counts), `micro` 11 (badges, tiny labels). Weights 400, 500 (a control's label), 600
+  (names, emphasis); nothing bolder. One family: `--font`, `--mono` for code.
+- **Corners:** `--r-xs` 4 (tags), `--r-sm` 6 (pictures, items inside a control), `--r-md` 8
+  (buttons, fields, menus), `--radius` 10 (cards, panels), `--r-lg` 12 (dialogs, floats); `999px`
+  a pill, `50%` a dot or avatar.
+- **Space:** multiples of 4 (4, 8, 12, 16, 24, 32); 1 or 2px only as a hairline or a nudge.
+- **Labels:** a label before its value (*Next:*, *Turn:*, *Created:*, *By:*) is sentence case and
+  grey; capitals with spacing only head a group (*Step by step*). A role alone as a label is
+  capitalised (*Designer*), inside a sentence as written. Design Desk's mark is the spark of its
+  actions, never letters.
+- **A request's box** keeps two rows above its stages: the state and Turn with Approve, Close and
+  ⋯; then the ways on (sent: when and where on the left, the ways on at the right).
+- **Buttons:** `.btn` 32px high, `.btn.small` 26px; one `.primary` (ink) per view, the next step.
+  Approve keeps its green, Open in the design workspace its accent (the team's decisions).
+- **Colours:** only the tokens on `:root`, each in light and dark; never a near copy of one. An
+  ink means a state (who has the move, approved, live, closed): never decoration. A step's
+  number takes its box's colour in the flow above it. Text on a coloured fill is `--bg` or
+  `--accent-ink`, never `#fff`, so it reads in both modes. A fixed hex is only for what shows the
+  product (a screenshot's white ground, a kit picture, the review bar inside a design).
+- **Exempt from the scale:** glyphs (`::before`, `::after`, ✕ and ‹ › buttons), kit pictures, the
+  flow's SVG labels, a stat's numeral and the presentation's slide.
+- **One line:** the header holds one row down to about 1024px: under 1280px the name folds to its
+  initial and the menu says who. A list's page tabs never wrap: they scroll, faded at the cut, and
+  Product's **+ Add** is a **+** at their right end.
+- **Ask privately** stays at the bottom right; every scrolling view leaves room under its end
+  (`.detail`'s bottom padding) so it covers nothing at the end of a page.

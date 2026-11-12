@@ -25,6 +25,15 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    decision that counts), never on its own opinion, and a pull request named in Slack gets the
    card's classification once ([requests.md](docs/requests.md) → A pull request named in Slack).
 
+## 1.87.1 — 2026-11-12
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): text, corners, buttons and
+   spacing keep to one scale ([desk-page.md](docs/desk-page.md) → The look), a badge reads in dark
+   mode, the header and a list's page tabs keep one line, How Design Desk works sits in each tab
+   intro's header, every menu count is grey, labels read in one case, a sent request's box keeps
+   two rows and Design Desk's mark is a spark. No data migration.
+
 ## 1.87.0 — 2026-11-12
 
 **Upgrade:**
