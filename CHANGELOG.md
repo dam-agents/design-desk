@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.86.0 — 2026-11-12
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): Product → Kit draws each variant as the product
+   draws it, says its look in words and counts every file that uses it. The kit gains `uses` and
+   a cva component's `base`; the next drawing run's `design kit` sends them. Until then the page
+   counts the files listed (*30+* at the cap). No data migration.
+
 ## 1.85.0 — 2026-11-12
 
 **Upgrade:**

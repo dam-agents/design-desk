@@ -74,6 +74,19 @@ export function entries(obj) {
 const words = (raw) => [...raw.matchAll(/"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|`([^`$]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3]).join(" ").replace(/\s+/g, " ").trim();
 const nameOf = (file) => basename(file, extname(file)).replace(/[-_.]+(\w)/g, (_, c) => c.toUpperCase()).replace(/^\w/, (c) => c.toUpperCase());
 
+// A call's first argument, from its `(…)` text: up to the first comma outside strings and brackets.
+export function firstArg(call) {
+  let depth = 0;
+  for (let i = 1; i < call.length - 1; i++) {
+    const c = call[i];
+    if (c === '"' || c === "'" || c === "`") { for (i++; i < call.length && call[i] !== c; i++) if (call[i] === "\\") i++; continue; }
+    if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) depth--;
+    else if (c === "," && depth === 0) return call.slice(1, i);
+  }
+  return call.slice(1, -1);
+}
+
 // cva("base", { variants: { variant: { default: "…", secondary: "…" } }, defaultVariants: {…} })
 export function cvaVariants(text, file) {
   const out = [];
@@ -86,11 +99,13 @@ export function cvaVariants(text, file) {
     const vars = balanced(call, call.indexOf("{", at));
     const defs = (() => { const d = call.search(/\bdefaultVariants\s*:\s*\{/); const b = d < 0 ? null : balanced(call, call.indexOf("{", d)); return b ? Object.fromEntries(entries(b).map(([k, v]) => [k, words(v)])) : {}; })();
     const base = m[1].replace(/(Variants?|Styles?|Classes)$/i, "");
+    // The classes every variant shares: the call's first argument, before its options.
+    const fa = firstArg(call).trim(), shared = fa.startsWith("{") ? "" : words(fa);
     for (const [prop, raw] of entries(vars || "{}")) {
       if (!raw.startsWith("{")) continue;
       const options = entries(raw).map(([name, v]) => ({ name, classes: words(v) })).slice(0, LIMIT.options);
       if (options.length < 2) continue;
-      out.push({ name: base.replace(/^\w/, (c) => c.toUpperCase()), file, prop, how: "cva", default: defs[prop] || options[0].name, options });
+      out.push({ name: base.replace(/^\w/, (c) => c.toUpperCase()), file, prop, how: "cva", default: defs[prop] || options[0].name, ...(shared ? { base: shared } : {}), options });
     }
   }
   return out;
@@ -160,8 +175,8 @@ export function kindOf(name, value) {
 // Where each part of the kit is used: the files that name a value (`var(--name)`), that render a
 // component (`<Button`), that ask for one of its variants (`<Button variant="ghost"`; no prop: its
 // default) or that carry a class of a family (`btn-ghost`). The file that defines a value or a
-// component is no use of it. Each
-// list is `used_in`, at most LIMIT.used files, sorted. A value Tailwind turns into classes
+// component is no use of it. Each list is `used_in`, at most LIMIT.used files, sorted, and `uses`
+// counts them all. A value Tailwind turns into classes
 // (`bg-primary` from `--color-primary`) is not followed: only `var()` is.
 const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function usage(root, files, byKind, components) {
@@ -183,12 +198,14 @@ export function usage(root, files, byKind, components) {
     }
     if (classRe && !STYLE.test(rel)) for (const m of text.matchAll(classRe)) add(classUse, m[1], rel);
   }
-  const list = (set, not) => set ? [...set].filter((f) => f !== not).sort().slice(0, LIMIT.used) : [];
-  for (const ts of Object.values(byKind)) for (const t of ts) t.used_in = list(tokenUse.get(t.name), t.file);
+  // `uses`: how many files in all; `used_in` names at most LIMIT.used of them.
+  const all = (set, not) => set ? [...set].filter((f) => f !== not).sort() : [];
+  const put = (x, files) => { x.used_in = files.slice(0, LIMIT.used); x.uses = files.length; };
+  for (const ts of Object.values(byKind)) for (const t of ts) put(t, all(tokenUse.get(t.name), t.file));
   for (const c of components) {
-    if (c.how === "class") { for (const o of c.options) o.used_in = list(classUse.get(o.class)); c.used_in = [...new Set(c.options.flatMap((o) => o.used_in))].sort().slice(0, LIMIT.used); continue; }
-    c.used_in = list(tagUse.get(c.name), c.file);
-    for (const o of c.options) o.used_in = list(optUse.get(`${c.name}|${c.prop}|${o.name}`), c.file);
+    if (c.how === "class") { const each = c.options.map((o) => all(classUse.get(o.class))); c.options.forEach((o, i) => put(o, each[i])); put(c, [...new Set(each.flat())].sort()); continue; }
+    put(c, all(tagUse.get(c.name), c.file));
+    for (const o of c.options) put(o, all(optUse.get(`${c.name}|${c.prop}|${o.name}`), c.file));
   }
 }
 
