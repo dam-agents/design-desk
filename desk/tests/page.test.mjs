@@ -3326,6 +3326,12 @@ test("Product → Kit that could not be read says so, not that there is no kit",
   assert.doesNotMatch(await desk.textContent("#list"), /No kit yet/);
 }));
 
+for (const role of ["designer", "lead-developer"]) test(`Product → Kit is on the page for a ${role}`, (t) => open(t, withKit({ ...DESIGNER, role }), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.waitForSelector('[data-filter="productFilter:decisions"]');
+  assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 1);
+}));
+
 test("Product → Kit is not on the page for a PM", (t) => open(t, withKit({ ...DESIGNER, role: "pm" }), async (desk) => {
   await desk.click('[data-tab="product"]');
   await desk.waitForSelector('[data-filter="productFilter:decisions"]');
