@@ -1817,8 +1817,10 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
     assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
 
-    // One Slack button; without the Slack app for votes, its dialog only sends the designs.
-    await desk.click('[data-act="slack"]');
+    // One Slack button, under the request's ⋯; without the Slack app for votes, its dialog only sends the designs.
+    assert.equal(await desk.locator('#detail [data-act="slack"]').count(), 1, "Send to Slack is in one place on the request");
+    await desk.evaluate(() => { document.querySelector("#detail details.more").open = true; });
+    await desk.click('#detail details.more [data-act="slack"]');
     assert.match(await desk.textContent("#sl-send-hint"), /Slack thread this request came from/);
     assert.equal(await desk.locator("#sl-mode").isHidden(), true, "a vote is not offered without the Slack app");
     await desk.locator("#slack-dialog .actions button", { hasText: "Send" }).click();
