@@ -2033,8 +2033,8 @@ test("the look palette: in the side panel under the part picked, a preview only,
   }
 });
 
-test("the look palette is an admin's for now: a designer selects a part and gets none", async (t) => {
-  const run = await launch(t, `<script>window.ROLE = "designer";</script>` + BRIDGE_LOOK);
+test("the look palette is for admins, designers and lead developers: a PM selects a part and gets none", async (t) => {
+  const run = await launch(t, `<script>window.ROLE = "pm";</script>` + BRIDGE_LOOK);
   if (!run) return;
   const { desk } = run;
   try {
@@ -2047,7 +2047,7 @@ test("the look palette is an admin's for now: a designer selects a part and gets
     await frame.waitForFunction(() => document.documentElement.style.cursor === "crosshair");
     await frame.click("button.primary");
     await desk.waitForFunction(() => /Save/.test(document.querySelector("#ws-side .sel b")?.textContent || ""));
-    assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette for a designer");
+    assert.equal(await desk.locator("#ws-palette:not([hidden])").count(), 0, "no palette for a PM");
   } finally {
     await run.close();
   }
@@ -3326,7 +3326,13 @@ test("Product → Kit that could not be read says so, not that there is no kit",
   assert.doesNotMatch(await desk.textContent("#list"), /No kit yet/);
 }));
 
-test("Product → Kit is not on the page for a designer", (t) => open(t, withKit(DESIGNER), async (desk) => {
+for (const role of ["designer", "lead-developer"]) test(`Product → Kit is on the page for a ${role}`, (t) => open(t, withKit({ ...DESIGNER, role }), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.waitForSelector('[data-filter="productFilter:decisions"]');
+  assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 1);
+}));
+
+test("Product → Kit is not on the page for a PM", (t) => open(t, withKit({ ...DESIGNER, role: "pm" }), async (desk) => {
   await desk.click('[data-tab="product"]');
   await desk.waitForSelector('[data-filter="productFilter:decisions"]');
   assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 0);

@@ -2975,7 +2975,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
     if (S.productFilter === "differences" && !figmaOn()) S.productFilter = "screens";
-    // Kit kept from an earlier visit leaves for someone who is not an admin.
+    // Kit kept from an earlier visit leaves for someone who may not see it.
     if (S.productFilter === "kit" && !kitOn()) S.productFilter = "screens";
     // Closed is drawn only while one is closed: reopening the last one goes back to Differs.
     if (S.figFilter === "closed" && !figmaCards("closed").length) S.figFilter = "differs";
@@ -3134,8 +3134,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;
   // ---------- Product → Kit ----------
   // What the product's UI is made of, as `design kit` read it from its code (docs/desk-page.md →
-  // Product → Kit): its named values by kind and its components' variants. An admin's page for now.
-  const kitOn = () => S.me?.role === "admin";
+  // Product → Kit): its named values by kind and its components' variants. An admin's, a designer's
+  // and a lead developer's page, as the look palette is.
+  const LOOK_ROLES = ["admin", "designer", "lead-developer"];
+  const kitOn = () => LOOK_ROLES.includes(S.me?.role);
   const KIT_KINDS = { color: "Colors", shadow: "Shadows", radius: "Corners", space: "Spacing", "font-size": "Text sizes", "font-weight": "Text weights", border: "Borders" };
   const KIT_HOW = { cva: "variants in its code (cva)", prop: "a prop it takes", class: "a family of CSS classes" };
   // A read that failed is not "no kit": it keeps its reason, and the list says so.
@@ -5664,8 +5666,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const SPACE = [0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80], RADIUS = [0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 999];
   const FONTS = [11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 40, 48];
   const looksNow = () => (S.ws.looks[S.ws.shown] ||= {});
-  // For now only an admin gets the palette (docs/desk-page.md → The look palette).
-  const lookAdmin = () => S.me?.role === "admin" && can("change");
+  // Admins, designers and lead developers get the palette (docs/desk-page.md → The look palette).
+  const lookAdmin = () => LOOK_ROLES.includes(S.me?.role) && can("change");
   const lookable = () => Boolean(S.ws.open && S.card && lookAdmin() && !locked(S.card) && !S.ws.check && !S.ws.old && !S.ws.alt && S.ws.mode === "select" && S.ws.selected?.selector);
   const lookChanges = (e) => Object.entries(e?.set || {}).map(([prop, to]) => ({ prop, from: String(e.base[prop] ?? ""), to: String(to) }));
   // Smart controls picked (docs/requests.md → Smart controls): which, from which option to which, and the kit's source.
