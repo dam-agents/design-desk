@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.84.0 — 2026-11-12
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a change card of an open PR whose body links its
+   own running deployment shows it as **Try the pull request** (`environment`,
+   [watch.md](docs/watch.md) step 7), greyed out as no longer running after the Environment's own
+   expiry (`list_environments`), or `pr_environment_days` (`7`) days after it was deployed. Cards
+   already on the Desk get it the next time their PR is carded; no data change.
+2. The new key `pr_environment_days` is never asked: without it the Desk uses `7`
+   ([config.md](docs/config.md)); nothing to add to `work/CONFIG.md`.
+
 ## 1.83.0 — 2026-11-12
 
 **Upgrade:**

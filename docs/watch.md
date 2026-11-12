@@ -68,6 +68,16 @@ steps say; the decision notes of step 4 are always yours to read.
      the design system, a missing state, copy that breaks the product's words);
    - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: the due entry's, true for a
      draft pull request; the Desk shows it as the row's Draft dot).
+   - `environment` — only on an open PR whose body links its own running deployment (a line
+     such as "Environment: https://…", a preview or demo link the author wrote for this PR),
+     each value as the body gives it, never guessed and never from someone else's comment:
+     `url` the https address; `label` the body's word for it ("demo"); `since` when it was
+     deployed if the PR says so, else left out (the store keeps when it first saw that address);
+     `login` `{user, password, hint}` — a demo account the body gives, or a `hint` alone ("your
+     platform account"), never a person's own password; `steps` — up to five short steps to
+     try the change there, in the product's words; `missing` — one sentence on what that
+     install cannot show. The card shows it as **Try the pull request** until the PR merges,
+     greyed out as no longer running `pr_environment_days` (`7`) after `since`.
    A reason you cannot find is written as not documented, with the PR author as the person
    to ask. Two open questions at most, the ones a designer should decide.
    - `impact` — where else the same thing shows up and what the change touches, from earlier
@@ -83,7 +93,7 @@ steps say; the decision notes of step 4 are always yours to read.
    existing card of the same PR and updates it, so a retry never makes a second card.
 9. **Record.** An open PR: `bash "$HOME/scripts/ledger.sh" open <repo> <pr> <card id>` (it is
    due again when it merges: then update the same card — the store finds it by the PR — say
-   it shipped, and `ledger.sh done`). A merged PR: `ledger.sh done <repo> <pr> <card id>`.
+   it shipped, set `environment: null`, and `ledger.sh done`). A merged PR: `ledger.sh done <repo> <pr> <card id>`.
    A merged or closed PR with a `pr<n>` screens instance: delete it ([screens.md](screens.md)
    → Clean up). With the product map, update the screens the change touched
    ([map.md](map.md) → Keep it current).
