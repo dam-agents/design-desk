@@ -7,6 +7,24 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.88.0 — 2026-11-12
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a decision that waits for a designer's approval
+   (Not approved) now counts for nothing. No card is checked against it, none shows or keeps a
+   conflict because of it, none waits for a designer or enters the CI gate's pre-flight because of
+   it, and `design desk upsert`
+   refuses a new conflict against one. Conflicts already on cards stay in the data, stop warning,
+   and warn again once a designer approves the decision, which also queues a check on the cards
+   about the same thing. `design desk decision-check` lists such decisions apart, under `waiting`
+   (at most 20, with `waiting_total` and `waiting_truncated`).
+   No data migration.
+2. Nothing to run for the rest: Design Desk classifies a change, it does not review it. A card's
+   findings and open questions rest on a source (the approved design, a Figma frame, the catalog, a
+   decision that counts), never on its own opinion, and a pull request named in Slack gets the
+   card's classification once ([requests.md](docs/requests.md) → A pull request named in Slack).
+
 ## 1.87.1 — 2026-11-12
 
 **Upgrade:**

@@ -1806,7 +1806,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:kit": "What the product's UI is made of, read from its code: its named values and its components' variants", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
       "productFilter:differences": "Where the product differs from its design in Figma: screens, elements, changes, requests and decisions",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
-    dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions in force that someone other than a designer made, waiting for a designer to approve them", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
+    dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions someone other than a designer made, waiting for a designer to approve them; nothing is checked against them yet", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
     card: (v) => `Opens ${S.cards.find((x) => x.id === v)?.title || v}`,
     decision: (v) => `Opens decision ${v}`,
     ref: (v) => `Opens ${v}`,
@@ -2405,7 +2405,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   function peekDecision(d) {
     return `<div class="t"><b class="${d.status === "revoked" ? "revoked-text" : ""}">${txt(d.text || d.id)}</b>${num(d)}</div>
-        <div class="sub">${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : `<span class="chip ok">In force</span>`}${d.unapproved ? `<span class="chip warn" title="${esc(NOT_APPROVED_TIP)}">Not approved</span>` : ""}${d.author ? `<span>by ${authorIcon(d)}${named(d.author)}</span>` : ""}</div>
+        <div class="sub">${d.at ? `<span>${esc(day(d.at))}</span>` : ""}${d.status === "revoked" ? `<span class="chip bad">Revoked</span>` : d.unapproved ? "" : `<span class="chip ok">In force</span>`}${d.unapproved ? `<span class="chip warn" title="${esc(NOT_APPROVED_TIP)}">Not approved</span>` : ""}${d.author ? `<span>by ${authorIcon(d)}${named(d.author)}</span>` : ""}</div>
         ${(d.concepts || []).length ? `<p class="hint">About: ${esc(d.concepts.join(", "))}</p>` : ""}`;
   }
   function peekIssue(c) {
@@ -3192,7 +3192,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const named = (a) => a ? esc(a.name || a.login || (a.email ? nameOf(a.email) : "someone")) : "";
   // Who a decision came from, as the server reads it (docs/desk.md → Decisions → Who decided).
   // Where a decision stands: revoked, in force, or in force but not yet approved by a designer.
-  const NOT_APPROVED_TIP = "It holds, but someone other than a designer made it; a designer approves it";
+  const NOT_APPROVED_TIP = "Someone other than a designer made it. It counts for nothing until a designer approves it: no card is checked against it and none warns";
   const decState = (d) => d.status === "revoked" ? ["revoked", "Revoked", "It no longer holds; it stays here crossed out, with the reason"]
     : d.unapproved ? ["unapproved", "Not approved", `${NOT_APPROVED_TIP}.`] : ["in-force", "In force", "This decision holds today; anything against it warns"];
   const decRef = (id, text = "", gone = false) => `<a href="#${esc(id)}" data-ref="${esc(id)}">${esc(id)}</a>${text ? ` <span class="${gone ? "revoked-text" : ""}">${txt(text)}</span>` : ""}`;

@@ -221,7 +221,9 @@ refuse and explain instead:
   loosened to let a change through. A change to the guard that lets more through needs a
   test that shows the new case is presentation only.
 - Triage before work: a request's verdict is on its card before any variant.
-- No reason without a source on the Desk or in an answer.
+- No reason without a source on the Desk or in an answer. Design Desk classifies a change
+  against the design, never reviews it: no opinion, no guess, and a decision that waits for a
+  designer's approval is no source (`Store.holds` in `desk/store.mjs` keeps it out of every check).
 - Pushes only to `design-desk/` branches, never a merge, never a non-draft pull request;
   pushing and filing stay behind `prototype_remote` and `handoff`.
 - The Desk stays restricted: the page is interactive (never public) and only the owner

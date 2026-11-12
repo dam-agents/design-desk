@@ -21,7 +21,8 @@ const DIR = process.env.DESK_DIR || join(WORK, "desk");
 const MAX_BODY = 1024 * 1024;
 
 mkdirSync(DIR, { recursive: true });
-const store = new Store(DIR);
+// A decision in force that waits for a designer's approval counts for nothing yet (docs/desk.md → Decisions); `withSide` is below.
+const store = new Store(DIR, { needsApproval: (d) => withSide(d).unapproved });
 const tokenPath = join(DIR, ".agent-token");
 if (!existsSync(tokenPath)) { writeFileSync(tokenPath, randomBytes(24).toString("hex"), { mode: 0o600 }); chmodSync(tokenPath, 0o600); }
 // Read on every agent call: a restore or a rotation takes effect without a restart.

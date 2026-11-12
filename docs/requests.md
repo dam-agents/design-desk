@@ -530,6 +530,7 @@ Designer kit made. Pick the skill, build, look, deliver:
 | A chart, dashboard or stat tiles | the harness's `dataviz` skill, in the style's colors |
 | "Why does X work like this?" | the `explain` skill, sources as in [desk.md](desk.md) → Questions |
 | "This is broken / looks wrong" | [UI bugs](#ui-bugs) → From a channel |
+| A pull request link, "design review", "look at this PR" | [A pull request named in Slack](#a-pull-request-named-in-slack) |
 | "Make it…", "how would it look if…" in a request's thread (`slack_council: enabled`) | `slack-council` |
 
 - **Slack serves the roster only**: [Who Slack serves](#who-slack-serves). A Figma link in a
@@ -552,6 +553,26 @@ Designer kit made. Pick the skill, build, look, deliver:
   it on the Desk as a request: `design desk request` with the operator's words as `problem`
   and `origin: {channel: "chat", reporter: <the operator's name>}` ([desk.md](desk.md) → Where a card came from).
 - Keep sources and builds under `work/output/<YYYY-MM-DD>-<slug>/`.
+
+### A pull request named in Slack
+
+Nobody asks Design Desk to review a pull request: it classifies the change against the design
+(Design Desk's card, [watch.md](watch.md) step 7). A developer or an agent who names one in
+Slack — "design review please" included — gets that, once, in the thread:
+
+1. Find the card (`ledger.sh show <repo> <pr>`, else the card whose `source.pr` it is). None
+   yet: write it as a watch run would ([watch.md](watch.md) steps 1–11), after
+   `list_sessions` shows no session already on it.
+2. Reply with the card's link, its `attention` level and its reasons, each with its source (the
+   approved design, the Figma frame, the catalog element, a decision that counts), and the
+   `design_check` verdict when there is one. Nothing differs → "Nothing differs from the design,
+   the catalog or the decisions that count: auto handled." Under 120 words.
+3. **No review.** No opinion, no taste, no "I'd suggest", no praise, no list of nits, no
+   verdict on whether to merge, no picture of how it could look; a point nothing in a source
+   backs is left out, and the thread is never asked for one. A decision that waits for a
+   designer's approval is not cited. Nothing is posted on the pull request.
+4. A question about the card's contents is answered as any question
+   ([desk.md](desk.md) → Questions), from the card's sources.
 
 ### Who Slack serves
 
