@@ -64,8 +64,10 @@ steps say; the decision notes of step 4 are always yours to read.
      `what` (What changed) · `why` (Why it is like this; the page lets it fold, with `limits`
      and `good-to-know`; they show open) · `limits` (What cannot change, and why) ·
      `good-to-know` (states and edge cases that matter: empty, error, permissions, long text,
-     small screens) · `questions` (open design questions you noticed: an inconsistency with
-     the design system, a missing state, copy that breaks the product's words);
+     small screens) · `questions` (open design questions, **only** one a source raises: the PR or
+     the issue asks it, the approved design, its Figma frame or a catalog element shows something the
+     change lacks or does differently, or a decision that counts is gone against. Never a question you
+     thought of yourself; none is a valid card);
    - `source` — `{repo, pr, url, merged_at, author, draft}` (`draft`: the due entry's, true for a
      draft pull request; the Desk shows it as the row's Draft dot).
    - `environment` — only on an open PR whose body links its own running deployment (a line
@@ -84,6 +86,11 @@ steps say; the decision notes of step 4 are always yours to read.
      after `since`.
    A reason you cannot find is written as not documented, with the PR author as the person
    to ask. Two open questions at most, the ones a designer should decide.
+   **Classify, never review.** A change card says what changed and where the change differs from
+   a source ([desk.md](desk.md) → Needs a designer); it passes no judgement on the work. A
+   pull request that nothing differs on is `fyi`, however you would have drawn it. Nobody asked
+   Design Desk to review, and nothing it writes blocks a pull request (the CI gate stays what
+   `ci_gate` says). A decision that waits for a designer's approval is no source.
    - `impact` — where else the same thing shows up and what the change touches, from earlier
      decisions: the `impact` action's skill (`design skill impact --repo <repo>`). A reason
      the PR records ("per week because the limit resets weekly") becomes a decision with the
@@ -172,7 +179,8 @@ Merged and closed pull requests are never touched: their checks no longer matter
   head as above and upsert the new `sha`. A card a person marked handled stays handled.
 - **Cards already on the Desk.** The gate's first step runs when a card is written, so the
   inbox pre-flight also lists, while `ci_gate` is `enabled`, every judged change card of an
-  open PR (its `attention`, a `design_check`, a decision in force it goes against) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
+  open PR (its `attention`, a `design_check`, a decision that counts it goes against: in force and
+  approved, [desk.md](desk.md) → Decisions → Approved by a designer) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
   true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
   item to claim: set the check as in **Set it** and upsert `ci`. A card with `ci` is never due this way
   again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`

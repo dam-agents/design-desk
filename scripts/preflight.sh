@@ -407,6 +407,26 @@ def scrub($nre): gsub("<@[^>]*>"; "[person]") | gsub("<[#!][^>]*>"; "[mention]")
 def leaks: test(dec_slack) or test(dec_link; "i") or test(dec_email) or test(dec_keys) or test(dec_handle);
 JQ
 )"
+# Who a decision came from and whether it counts, as the Desk server reads it (desk/server.mjs →
+# sideOf, withSide; docs/desk.md → Decisions → Approved by a designer): `$roster` maps an e-mail
+# to its role (roster_roles). A decision counts when it is in force and is a design-side
+# person's own, or a designer approved it; one that waits for approval counts for nothing.
+DEC_SIDE_JQ="$(cat <<'JQ'
+def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
+def side: role as $r | (.origin.kind // "") as $k
+  | if (["admin", "designer", "pm"] | index($r)) != null then "design"
+    elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
+def unapproved: (.origin.kind // "") as $k | side != "design" or (["pr", "issue", "commit", "doc"] | index($k)) != null;
+def decision_counts: type == "object" and (.status // "active") == "active" and (.approved != null or (unapproved | not));
+JQ
+)"
+# The roster's roles by e-mail, for DEC_SIDE_JQ's `$roster`. A row's email cell may list
+# several addresses, each of them that person's (docs/config.md).
+roster_roles() {
+  cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
+    | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
+        | .[0] | split(",")[] | gsub("^\\s+|\\s+$"; "") | ascii_downcase | select(length > 0) | {key: ., value: $r}' | jq -sc 'reverse | from_entries'
+}
 decisions_page() {
   DEC_DUE='[]' DEC_BLOCKED=''
   local CONF="$1" DB="$DESK_DIR/db.json" PAGE="$WORK/decisions-page.md" REC="$WORK/decisions-page.json" roster rnames sha old
@@ -428,26 +448,17 @@ decisions_page() {
       | map(select(length >= 3)) | unique | sort_by(-length) | map(esc) | join("|")
       | if . == "" then "" else "(?<p>^|[^\\p{L}\\p{N}_])(?:" + . + ")(?![\\p{L}\\p{N}_])" end' "$DB" > "$PAGE.names" 2>/dev/null \
   || { rm -f "$PAGE.names"; DEC_BLOCKED="cannot read the names to mask from the roster or the Desk store at $DB"; log "decisions page: $DEC_BLOCKED — not published"; return; }
-  # The roster's roles by e-mail, as the Desk server reads them (desk/server.mjs → sideOf); a
-  # decision not approved there (withSide) is not published.
-  # A row's email cell may list several addresses, each of them that person's (docs/config.md).
-  roster="$(cfg_table 'Desk people' | awk -F'|' '{print $2 "\t" $3}' \
-    | jq -R 'split("\t") | (.[1] // "" | gsub("^\\s+|\\s+$"; "") | ascii_downcase | gsub("\\s+"; "-")) as $r
-        | .[0] | split(",")[] | gsub("^\\s+|\\s+$"; "") | ascii_downcase | select(length > 0) | {key: ., value: $r}' | jq -sc 'reverse | from_entries')"
-  jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" --slurpfile nre "$PAGE.names" "$DEC_JQ"'
+  # A decision not approved by the roster (decision_counts) is not published.
+  roster="$(roster_roles)"
+  jq -r --arg name "$(jq -r .display_name <<<"$CONF")" --argjson roster "${roster:-{\}}" --slurpfile nre "$PAGE.names" "$DEC_JQ$DEC_SIDE_JQ"'
     def line: tostring | gsub("\\s*\\n\\s*"; " ") | gsub("^\\s+|\\s+$"; "") | scrub($nre[0]);
     def num: .id | ltrimstr("D-") | tonumber? // 0;
     def day: tostring | .[0:10];
-    def role: (((.origin.kind // "") as $k | if (["desk", "approval", "chat", "call"] | index($k)) != null then .author.role else null end) // $roster[(.author.email // "") | ascii_downcase] // "" | ascii_downcase | gsub("\\s+"; "-") | if . == "lead" then "admin" else . end);
     def who: {admin: "an admin", designer: "a designer", pm: "a product manager", "lead-developer": "the lead developer", developer: "a developer"}[role];
-    def side: role as $r | (.origin.kind // "") as $k
-      | if (["admin", "designer", "pm"] | index($r)) != null then "design"
-        elif (["lead-developer", "developer"] | index($r)) != null or (["pr", "commit", "doc"] | index($k)) != null then "developer" else null end;
-    def unapproved: (.origin.kind // "") as $k | side != "design" or (["pr", "issue", "commit", "doc"] | index($k)) != null;
     def from: {pr: "a pull request", issue: "an issue", commit: "a commit", doc: "a document", slack: "Slack", desk: "the Desk",
       call: "the design meeting", approval: "an approved design", chat: "a talk with Design Desk"}[.origin.kind // ""];
     [ (.decisions // {})[] | select(type == "object" and (.id | type) == "string") ] as $all
-    | ($all | map(select((.status // "active") == "active" and (.approved != null or (unapproved | not)))) | sort_by(num)) as $on
+    | ($all | map(select(decision_counts)) | sort_by(num)) as $on
     | ($all | map(select(.status == "revoked")) | sort_by(num)) as $off
     | ([ $all[] | .recorded, .at, .revoked.at?, (.history // [])[]?.at, .approved.at? ] | map(select(type == "string")) | max // "") as $last
     | "# Design decisions: \($name | line)",
@@ -706,18 +717,19 @@ inbox_mode() {
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   # With ci_gate on, an open pull request's change card is due as `G-<card>` when it is judged
-  # (its attention, a design check, a decision in force it goes against) and its check was never set (no `ci`, or the `skipped` that before 1.76.0
+  # (its attention, a design check, a decision that counts it goes against: DEC_SIDE_JQ → decision_counts) and its check was never set (no `ci`, or the `skipped` that before 1.76.0
   # meant a PR not held): the agent passes or holds it
   # (docs/watch.md → CI gate). The cards already on the Desk when the key was turned on, and any a run missed.
   # A card whose last status write failed (`ci.state: error`) is due again until its 3rd try
   # (docs/watch.md → CI gate). A read that fails is an error line, never an empty list.
   local gate="[]" gate_err=""
   if [ -f "$DB" ] && [ "$(jq -r .ci_gate <<<"$CONF")" = enabled ]; then
-    if ! gate="$(jq -c '(.decisions // {}) as $d
+    local roster; roster="$(roster_roles)"
+    if ! gate="$(jq -c --argjson roster "${roster:-{\}}" "$DEC_SIDE_JQ"'(.decisions // {}) as $d
         | [ (.cards // {})[] | select(.kind == "change" and (.source | type) == "object" and .source.pr != null
               and (.source.merged_at // null) == null and .status != "archived")
           | (((.attention | type) == "object") or ((.design_check | type) == "object")
-             or ([(.conflicts // [])[] | objects | ($d[.decision | tostring] | if type == "object" then .status else null end)] | index("active")) != null) as $wait
+             or any((.conflicts // [])[] | objects; $d[.decision | tostring] | decision_counts)) as $wait
           | (.ci | if type == "object" then . else null end) as $ci
           | select((($ci == null or ($ci.state == "skipped" and $ci.tries == null)) and $wait) or ($ci.state == "error" and ($ci.tries // 0) < 3))
           | {id: ("G-" + .id), card: .id, gate: true, retry: ($ci.state == "error")} ]' "$DB" 2>&1)"; then

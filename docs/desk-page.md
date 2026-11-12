@@ -28,13 +28,33 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   developer joins them wherever a part needs one, until it was opened. Approve is never in the row.
   With no way of the viewer's own, the row says what they wait for; with a question open, to answer
   it below: Design Desk's open questions stand right under the box, never inside it. **Open in the design workspace** sits at the row's right end, never among the ways on.
-  The workspace opens in **Click through**, the design used as it is; **Select** is one click away, and
-  **Edit text** for whoever may change the design; an older version shows neither (**Make more changes**
-  after a final check opens in Select). A part selected is let go
+  **The design workspace** is laid out as a design tool. Its top bar holds the request, the options
+  (number and name, one click each; a DD spinner while Design Desk works on one, faint while it waits
+  in the queue; a count of its open comments), **+** for one more option, a pill saying what Design
+  Desk does, Figma in one menu, and Close. The bar under it holds only what is looked at: the
+  design's pages (its own review bar is hidden in the workspace and driven from here), its states
+  (one menu by part, ‹ ›), its alternatives and its version. The design sits on a canvas, glowing
+  while Design Desk changes it; a strip above it names an alternative (**Use this one**), an older
+  version (**Show the latest**) or the state's use. One floating tool bar, icons only, each with its
+  key: **Click through** (P), **Select** (V), **Comment** (C), **Edit text** (T, whoever may change
+  the design), then the comment pins (⇧C), the decisions (D), and the design's hotspots (H), notes
+  (N), empty state (E) and dark theme (L) where it has them; the active tool is in the Desk's brown
+  and sets the pointer. Esc steps back: a menu, the comment open, the selection, the workspace.
+  It opens in Click through; an older version and the final check offer only Click through
+  (**Make more changes** after a final check opens in Select).
+  Each tool does one thing. **Comment:** a click on a part opens a comment beside it (Send to
+  Design Desk, Just comment); the side panel is left as it is. **Edit text:** the text typed in
+  place opens that comment with the change written in. **Select:** the part shows in the side panel's
+  **Properties**: why it is like this, **What should change?**, Every state, Try 3 ways, and Change
+  the look. A comment's number on the design opens it in place (Reply, Work it in, Mark done), as a
+  click on it in **Comments**, the panel's other tab: every comment on the option by state, a box
+  for one on the whole option or state, Open / Done / All and Work in all. Pins are in the Desk's brown,
+  small and green once done, with a spinner while Design Desk works on them. The design fills the
+  canvas under the tool bar; the canvas scrolls a bar's height further to bring the design's bottom up. A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
   (another page, a closed menu); a note's part the design has not opened yet stays selected.
-  **The look palette:** in Select, an admin, a designer or a lead developer gets **Change the look** in the
-  side panel, under the part selected and its note: tabs Text, Fill, Spacing, Layout (a flex or grid
+  **The look palette:** in Select, an admin, a designer or a lead developer gets **Change the look** in
+  Properties, under the part selected: tabs Text, Fill, Spacing, Layout (a flex or grid
   part only) and Size, with steppers, segmented choices, colors, and a resize handle on the part's
   corner in the design. An element with smart controls opens on **Suggested** first: only the
   choices the product has for it, each named with its source ([requests.md](requests.md) → Smart
