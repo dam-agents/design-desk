@@ -568,6 +568,21 @@
   .vpanel .vbar:first-child { margin-top: 0; }
   .frame.vempty { display: grid; place-items: center; height: 40vh; background: var(--panel); color: var(--muted); font-size: var(--fs-meta); text-align: center; padding: 16px; }
   .frame.vempty p { margin: 0; max-width: var(--measure); }
+  /* Two designs side by side: an option's tab dragged onto its design marks the half it lands on;
+     the other half waits for another tab, or for how the screen looks today. */
+  .vtabs button[draggable="true"] { cursor: grab; }
+  .dropbox { position: relative; }
+  .droplayer { display: none; position: absolute; inset: 0; z-index: 5; grid-template-columns: 1fr 1fr; gap: 10px; }
+  body.dragging-option .droplayer { display: grid; }
+  .droplayer > div { border: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent); border-radius: var(--radius); transition: background .1s, border-color .1s; }
+  .droplayer > div.over { border-color: var(--accent, var(--ink)); background: color-mix(in srgb, var(--accent, var(--ink)) 14%, transparent); }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .split .pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .pane-head { display: flex; align-items: center; gap: 6px; min-height: 26px; font-size: var(--fs-meta); }
+  .pane-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pane-empty { height: 66vh; border: 2px dashed var(--line); border-radius: var(--radius); display: grid; place-content: center; justify-items: center; gap: 10px; padding: 16px; text-align: center; color: var(--muted); font-size: var(--fs-meta); }
+  .pane-empty p { margin: 0; max-width: 32ch; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
   .vbar { display: flex; gap: 8px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
   .looks { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; }
   .looks button { flex: none; width: 128px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 0; cursor: pointer; text-align: left; overflow: hidden; color: inherit; font: inherit; }
@@ -1561,7 +1576,7 @@
   };
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   // What Design Desk does, in a few words, after the step's Wait.
-  const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options",
+  const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options", now: "Drawing how it looks today",
     decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
@@ -1571,6 +1586,7 @@
     request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     "follow-up": "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     explore: "Drawing the design options.",
+    now: "Drawing the screen as it looks in the product today, to set beside an option.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
     ci: "Setting Design Desk's check on the pull request to follow the handled mark.",
@@ -2224,7 +2240,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
-  const workKind = (w) => (w.scope === "history" ? "catalog-history" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind);
+  const workKind = (w) => (w.scope === "history" ? "catalog-history" : w.kind === "explore" && w.scope === "now" ? "now" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind);
   // A request's own item checks it, then draws its options: once an option was drawn after the
   // item was filed, that item's work is done for the person, and its line leaves. An item filed
   // after the newest option (a reopened request, checked again) keeps saying it checks.
@@ -4674,6 +4690,38 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The option's design, named for what it is.
   const DRAWN = { wireframe: "Wireframe", mockup: "Mockup", figma: "From Figma", picture: "Pictures" };
 
+  // The option's design, or two designs side by side (S.split: two halves, each an option's
+  // id, "now" for how the screen looks today, or null while it waits for a tab).
+  const splitOf = (c) => S.split?.card === c.id ? S.split : null;
+  function designBox(c, v) {
+    const sp = splitOf(c), frame = (x) => x.id === v.id ? `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(x.name)}"></iframe>`
+      : `<iframe class="frame" data-pane-asset="${esc(x.asset)}" sandbox="allow-scripts" title="${esc(x.name)}"></iframe>`;
+    const layer = `<div class="droplayer" aria-hidden="true"><div data-drop-side="0"></div><div data-drop-side="1"></div></div>`;
+    if (!sp?.on) return `<div class="dropbox">${frame(v)}${layer}</div>`;
+    const vs = c.variants || [];
+    const pane = (k, i) => {
+      const x = vs.find((y) => y.id === k), today = k === "now" && c.now?.asset;
+      if (x || today) {
+        const name = x ? x.name : c.now.name || "How it looks today";
+        const head = `<div class="pane-head">${x ? `<span class="ono">${vs.indexOf(x) + 1}</span>` : `<span class="chip" title="The screen as it is in the product now, drawn by Design Desk ${esc(when(c.now.at))}">Today</span>`}<b>${esc(name)}</b><span class="grow"></span><button class="btn small" data-split-clear="${i}" aria-label="Take ${esc(name)} out of this half" title="Empties this half">✕</button></div>`;
+        return `<div class="pane">${head}${x ? frame(x) : `<iframe class="frame" data-pane-asset="${esc(c.now.asset)}" sandbox="allow-scripts" title="${esc(name)}"></iframe>`}</div>`;
+      }
+      const drawing = working(c).includes("now");
+      const todayBtn = c.now?.asset ? `<button class="btn" data-split-now="${i}" title="Shows the screen as it is in the product now, drawn by Design Desk, in this half">Show how it looks today</button>`
+        : drawing ? `<span class="hint"><span class="spin"></span> Design Desk is drawing how it looks today; it appears here by itself.</span>`
+        : c.triage && can("explore") && !closed(c) ? `<button class="btn" data-act="draw-now" title="Design Desk draws the screen as it is in the product now, in the product's own style, to set beside an option">Draw how it looks today</button>` : "";
+      return `<div class="pane"><div class="pane-head"><span class="hint">Empty</span><span class="grow"></span></div><div class="pane-empty"><p>Drag another option's tab here.</p>${todayBtn}</div></div>`;
+    };
+    return `<div class="dropbox"><div class="split">${pane(sp.panes[0], 0)}${pane(sp.panes[1], 1)}</div>${layer}</div>`;
+  }
+  // Side by side is a tab of its own, the first: named for its two halves, closed with its ✕.
+  function splitTab(c) {
+    const sp = splitOf(c);
+    if (!sp) return "";
+    const vs = c.variants || [], name = (k) => k === "now" ? "Today" : vs.find((x) => x.id === k) ? String(vs.findIndex((x) => x.id === k) + 1) : "…";
+    return `<button data-split-tab aria-pressed="${sp.on}" title="The two designs side by side"><span class="ono">⇆</span>${esc(name(sp.panes[0]))} | ${esc(name(sp.panes[1]))}<span class="vclose" role="button" tabindex="0" data-split-end aria-label="Close side by side" title="Close side by side">✕</span></button>`;
+  }
+
   function renderOptions(c) {
     const vs = c.variants || [];
     // A request that asked for no options: once checked, its first one is added by hand.
@@ -4683,8 +4731,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const v = vs.find((x) => x.id === S.variant);
     const mine = c.votes?.[v.id]?.[myKey()]?.vote;
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${x.id === v.id}"><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
-      <div class="vpanel">
+      <div class="tabs vtabs" role="group" aria-label="Design options">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>
+      ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
         <button class="btn primary ws-open" data-act="workspace">${can("revise") ? "Open in the design workspace" : "Comment on the design"}</button>
@@ -4695,9 +4743,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderCouncils(c)}
       ${simple() ? "" : whySection(c, v)}
       ${renderOptionElements(c, v)}
-      ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(v.name)}"></iframe>`)}
+      ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", designBox(c, v))}
       ${againstBox(c, v.id)}${c.figma_check?.variant === v.id ? figmaBox(c) : ""}
-      ${renderStories(c, v)}</div>`;
+      ${renderStories(c, v)}</div>`}`;
   }
 
   // Votes in Slack: open until their date, then the result. The vote is about the whole request,
@@ -4997,17 +5045,66 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const REVIEW_NOTES = "desk-review-notes";
   addEventListener("message", (e) => {
     if (e.data?.type !== REVIEW_NOTES) return;
-    if (![$("#variant-frame"), $("#ws-frame")].some((f) => f && e.source === f.contentWindow)) return;
+    // The halves side by side are design frames too; a flip in one, the other half follows.
+    const frames = [$("#variant-frame"), $("#ws-frame"), ...document.querySelectorAll("iframe[data-pane-asset]")].filter(Boolean);
+    if (!frames.some((f) => e.source === f.contentWindow)) return;
     store.set(REVIEW_NOTES, e.data.on ? "on" : "off");
+    for (const f of document.querySelectorAll(".split iframe")) if (e.source !== f.contentWindow) sayReviewNotes(f);
   });
   const sayReviewNotes = (frame) => frame?.contentWindow?.postMessage({ type: REVIEW_NOTES, on: store.get(REVIEW_NOTES) === "on" }, "*");
   // The list folds away with the arrow on its edge; each viewer's browser remembers it.
-  function foldList(on) {
+  function foldList(on, remember = true) {
     $("#main").classList.toggle("folded", on);
     const b = $("#list-fold"); b.setAttribute("aria-expanded", String(!on)); b.title = on ? "Show the list" : "Hide the list";
-    try { localStorage.setItem("desk-list-folded", on ? "1" : ""); } catch {}
+    if (remember) try { localStorage.setItem("desk-list-folded", on ? "1" : ""); } catch {}
   }
-  $("#list-fold").addEventListener("click", () => foldList(!$("#main").classList.contains("folded")));
+  // A person's own fold or unfold is theirs: two designs side by side no longer give the list back.
+  $("#list-fold").addEventListener("click", () => { if (S.split) S.split.folded = false; foldList(!$("#main").classList.contains("folded")); });
+  // Two designs side by side take the list's room while their tab is shown; another tab gives it
+  // back, only when it was the split that folded it (the viewer's own choice is kept).
+  function showSplit(on, render = true) {
+    const sp = S.split;
+    if (!sp) return;
+    if (on && !sp.on) { sp.folded = !$("#main").classList.contains("folded"); if (sp.folded) foldList(true, false); }
+    if (!on && sp.on && sp.folded && $("#main").classList.contains("folded")) foldList(false, false);
+    sp.on = on;
+    if (render) renderDetail();
+  }
+  function startSplit(c, side, id) {
+    const sp = splitOf(c);
+    if (sp) { sp.panes[side] = id; if (sp.panes[1 - side] === id) sp.panes[1 - side] = null; }
+    else S.split = { card: c.id, panes: side ? [null, id] : [id, null], on: false, folded: false };
+    showSplit(true);
+  }
+  function endSplit(render = true) {
+    if (!S.split) return;
+    showSplit(false, false);
+    S.split = null;
+    if (render) renderDetail();
+  }
+  // An option's tab dragged onto its design: the half under the pointer lights up, the drop fills it.
+  document.addEventListener("dragstart", (e) => {
+    const t = e.target.closest?.(".vtabs button[data-variant][draggable]");
+    if (!t?.dataset.variant) return;
+    e.dataTransfer.setData("text/x-desk-option", t.dataset.variant);
+    e.dataTransfer.effectAllowed = "copy";
+    document.body.classList.add("dragging-option");
+  });
+  document.addEventListener("dragend", () => { document.body.classList.remove("dragging-option"); for (const h of document.querySelectorAll(".droplayer .over")) h.classList.remove("over"); });
+  document.addEventListener("dragover", (e) => {
+    const h = e.target.closest?.("[data-drop-side]");
+    for (const x of document.querySelectorAll(".droplayer .over")) if (x !== h) x.classList.remove("over");
+    if (!h || !e.dataTransfer.types.includes("text/x-desk-option")) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy"; h.classList.add("over");
+  });
+  document.addEventListener("drop", (e) => {
+    const h = e.target.closest?.("[data-drop-side]"), id = e.dataTransfer.getData("text/x-desk-option");
+    document.body.classList.remove("dragging-option");
+    if (!h || !id || !S.card) return;
+    e.preventDefault();
+    // An open design section shows the halves; a folded one opens.
+    startSplit(S.card, Number(h.dataset.dropSide), id);
+  });
   try { if (localStorage.getItem("desk-list-folded")) foldList(true); } catch {}
   // The list's edge drags it smoothly, at most 30 px wider or narrower than the window size gives
   // it; each viewer's browser remembers how much (desk-list-dx). The arrow keys move it 10 px at a
@@ -6035,6 +6132,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
     if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; sayReviewNotes(vf); if (vf._bar) vf.contentWindow?.postMessage({ type: "desk-bar-set", ...vf._bar }, "*"); }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
+    for (const pf of document.querySelectorAll("iframe[data-pane-asset]")) { try { pf.onload = () => sayReviewNotes(pf); pf.srcdoc = withScript(decode(await asset(pf.dataset.paneAsset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
@@ -6125,7 +6223,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       card = { ...card, id, base: card.id, send: past.k, status: "handed-off", approved: s.approved, spec: s.spec, dev_summary: s.dev_summary, built: s.built, closed: s.closed, threads: (card.threads || []).filter((th) => s.threads.includes(th.id)) };
     }
     const before = S.card;
-    if (before?.id !== card.id) { S.folds.card = null; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
+    if (before?.id !== card.id) { endSplit(false); S.folds.card = null; S.variant = null; S.story = null; S.look = "now"; S.lookSide = false; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; S.ws = { ...S.ws, open: false, selected: null, edit: null, version: null, note: null, view: null, state: null, alt: null, check: false, reason: null }; }
     const changed = !before || before.id !== card.id || JSON.stringify(before) !== JSON.stringify(card);
     const wsChanged = S.ws.open && (!before || wsFingerprint(before) !== wsFingerprint(card));
     // A redraw arrived: say so and show the latest version.
@@ -6517,7 +6615,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     renderList();
   });
   document.addEventListener("click", guard(async (e) => {
-    const el = e.target.closest("[data-drop-option], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
+    const el = e.target.closest("[data-drop-option], [data-split-end], button, a[data-tab], a[data-ref], [data-zoom], [data-zoom-snip], [data-ws-note], [data-reason]")
       || e.target.closest(".row.item > .meta")?.parentElement.querySelector(":scope > .open");
     if (!el) return;
     const ds = el.dataset;
@@ -6747,7 +6845,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!r) return;
       await refreshList(); await openCard(S.card.id); return;
     }
-    if (ds.variant) { S.variant = ds.variant; renderDetail(); return; }
+    if (ds.variant) { S.variant = ds.variant; showSplit(false, false); renderDetail(); return; }
+    if ("splitTab" in ds) { showSplit(true); return; }
+    if (ds.splitNow !== undefined) { startSplit(S.card, Number(ds.splitNow), "now"); return; }
+    if (ds.splitClear !== undefined) { const sp = splitOf(S.card); if (!sp) return; sp.panes[Number(ds.splitClear)] = null; if (!sp.panes.some(Boolean)) endSplit(); else renderDetail(); return; }
+    if ("splitEnd" in ds) { endSplit(); return; }
     // An element of the option: its dialog, its states drawn, the product's element it changes.
     if (ds.el) { openElement(S.variant, ds.el); return; }
     if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true }); return; }

@@ -211,6 +211,19 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   what makes it different. A wish the boundary does not allow is drawn as far as it goes and
   said in its `rationale`. At most 6 options: the store refuses more. A request that asked for
   no options (`request.options` 0) shows **+ New option** alone once it is triaged.
+- **How it looks today** (`now`): with a request's first options (`explore`), and alone when a
+  person pressed **Draw how it looks today** (`explore` with `scope: "now"`), draw the screen the
+  request changes **as it is in the product now**, without the change: one self-contained HTML
+  file built the same way as an option (the product's own styles, sample data, its views wired),
+  stored with `design desk asset <file> --kind variant --card R-<n>`, then `design desk upsert`
+  with `now: {asset, name}` (`name`: the screen in a few plain words; `null` clears it). It is
+  not an option: no vote, no notes, no version; the Desk sets it beside an option for people
+  to compare. A `scope: "now"` item draws only this, changes nothing else on the card and
+  leaves the status as it is; it blocks no person's work on the options (asking the team, adding
+  or removing an option, approving). It is whitelisted Desk work (CLAUDE.md → Instruction
+  sources & trust boundary), drawn without the decisions check: it is the product as it is, not
+  a design ([desk.md](desk.md) → Decisions → The check). Redraw it when an explore or a revise
+  finds the product's screen changed since it was drawn.
 - **A person's own option** (`fidelity: picture`): **+ New option** → *Use my own pictures*
   puts their pictures on the card as an option as they are, with `by`; no item is queued and
   nothing is drawn. Keep it as it is (send it back with its `version`); change it only when a

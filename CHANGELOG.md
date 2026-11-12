@@ -7,7 +7,7 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
-## 1.85.1 — 2026-11-12
+## 1.86.1 — 2026-11-12
 
 **Upgrade:**
 1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): the design workspace's top
@@ -24,6 +24,16 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    No data change.
 3. Nothing for designs already built: designs built from now on carry the review bar that shuts
    its menus itself.
+
+## 1.86.0 — 2026-11-12
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): an option's tab dragged onto its design sets two
+   designs side by side, and a request keeps the screen as it looks today (`now`), drawn with its
+   first options or on **Draw how it looks today** (`draw-now`, an `explore` item with
+   `scope: "now"`; [requests.md](docs/requests.md) → How it looks today). Existing requests have
+   no `now` until someone asks for it; no data change.
 
 ## 1.85.0 — 2026-11-12
 
