@@ -27,6 +27,28 @@ test("nothing on the page submits a form", () => {
   assert.doesNotMatch(page, /addEventListener\("submit",\s*guard\(/);
 });
 
+// The Desk's look (docs/desk-page.md → The look): text sizes, corners, weights and spacing come
+// from the scale. A glyph (::before, ::after, a ✕ or ‹ › button), a kit picture, an SVG label, a
+// stat's numeral and the presentation's slide keep their own size.
+test("the page's styles keep to the Desk's scale", () => {
+  const css = page.slice(page.indexOf("<style>"), page.indexOf("</style>")).replace(/\/\*[\s\S]*?\*\//g, "");
+  const own = /::(before|after)|\.kit-pic|\.ft-x \.btn|\.zoom \.gal|\.flow \.f-k|\.pact-stat \.n|#present \.(pnote|pthumb)|\.pl-step button/;
+  const off = [];
+  for (const block of css.split("}")) {
+    const i = block.lastIndexOf("{");
+    if (i < 0) continue;
+    const sel = block.slice(0, i).split("{").pop().trim(), body = block.slice(i + 1);
+    for (const [, p, v] of body.matchAll(/(font-size|font-weight|border-radius|padding[a-z-]*|margin[a-z-]*|(?:row-|column-)?gap)\s*:\s*([^;]+)/g)) {
+      const bad = p === "font-size" ? /\d(px|rem)\b/.test(v) && !own.test(sel) || /var\(--fs-(?!(title|head|ui|meta|micro)\))/.test(v)
+        : p === "font-weight" ? !/^(400|500|600|inherit|normal)(\s*!important)?$/.test(v.trim())
+        : p === "border-radius" ? !own.test(sel) && v.trim().split(/\s+/).some((x) => !/^(0|50%|999px|inherit|var\(--(r-(xs|sm|md|lg)|radius)\))$/.test(x))
+        : !/\.kit-pic/.test(sel) && v.split(/\s+/).some((x) => /^-?\d+px$/.test(x) && Math.abs(parseInt(x)) > 2 && parseInt(x) % 4);
+      if (bad) off.push(`${sel} { ${p}: ${v.trim()} }`);
+    }
+  }
+  assert.deepEqual(off, [], "a size, corner, weight or space off the scale");
+});
+
 // md()'s inline rules (docs/desk.md → Writing on the Desk), run on their own: a construct
 // never lands inside another's attribute, so no person's text becomes markup.
 test("markdown text never becomes an attribute or a handler", () => {
@@ -2197,7 +2219,7 @@ test("For Developers: the lead developer moves it there, a developer but its aut
   assert.equal(await count("details.fold[open] #spec-body"), 1, "the spec it will send is open to read");
 
   // docs/issues.md → On the Desk: the sent issue is linked both ways and leaves the open lists.
-  assert.match(await card("dana", "C-7"), /Sent to developers[\s\S]*Issue #31 ↗[\s\S]*see it in Issues\s*C-8/);
+  assert.match(await card("dana", "C-7"), /With developers[\s\S]*Sent [\s\S]*Issue #31 ↗[\s\S]*see it in Issues\s*C-8/);
   assert.equal(await count('.follow-prs [data-card="C-8"]'), 1, "the issue's row links its card on Issues");
   assert.match(await card("dana", "C-8"), /Already through Design Desk[\s\S]*Sent/);
   assert.equal(await count('[data-act="draw"]'), 0, "a designed issue is not drawn");
