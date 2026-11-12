@@ -3288,7 +3288,7 @@ test("the research summary splits into its parts; no options asked for keeps the
 
 const KIT = { repo: "acme/widgets", commit: "3f9c2ab71d", at: "2026-11-11T10:00:00Z",
   tokens: { color: [{ name: "--primary", value: "#3b5bdb", file: "web/src/app.css", used_in: ["web/src/components/agent-row.tsx", "web/src/pages/settings.tsx"] }, { name: "--ring", value: "var(--primary)", file: "web/src/app.css" }, { name: "--odd", value: "url(x)", file: "web/src/app.css" }],
-    shadow: [{ name: "--shadow-sm", value: "0 1px 2px rgba(0,0,0,.08)", file: "web/src/app.css" }] },
+    shadow: [{ name: "--shadow-sm", value: "0 1px 2px rgba(0,0,0,.08)", file: "web/src/app.css" }], space: [{ name: "--spacing", value: "4px", file: "web/src/app.css" }] },
   components: [{ name: "Button", file: "web/src/components/ui/button.tsx", prop: "variant", how: "cva", default: "default", base: "inline-flex rounded-md", used_in: ["web/src/pages/settings.tsx"], options: [{ name: "ghost", classes: "hover:underline", used_in: [] }, { name: "default", classes: "bg-primary h-10 px-4", used_in: ["web/src/pages/settings.tsx"], uses: 41 }] }] };
 const withKit = (me) => DESK(me, [{ id: "e1", kind: "element", title: "Agent row", status: "current", source: { file: "web/src/components/agent-row.tsx", export: "AgentRow" } }]).replace('path === "/api/agenda"', `path === "/api/kit" ? { kit: ${JSON.stringify(KIT)} } : path === "/api/agenda"`);
 
@@ -3296,7 +3296,7 @@ test("Product → Kit is an admin's: its named values and its components' varian
   await desk.click('[data-tab="product"]');
   await desk.click('[data-filter="productFilter:kit"]');
   await desk.waitForSelector('[data-kit="t:color"]');
-  assert.deepEqual(await desk.$$eval("#list .row .t", (r) => r.map((x) => x.textContent)), ["Colors", "Shadows", "Button · variant"]);
+  assert.deepEqual(await desk.$$eval("#list .row .t", (r) => r.map((x) => x.textContent)), ["Colors", "Shadows", "Spacing", "Button · variant"]);
   assert.match(await desk.textContent("#list .row"), /3 named values\s*from: web\/src\/app\.css/);
   await desk.click('[data-kit="t:color"]');
   await desk.waitForSelector("#detail .kit-grid");
@@ -3324,6 +3324,7 @@ test("Product → Kit is an admin's: its named values and its components' varian
   assert.match(await ghost.textContent(), /On hover: underlined\./);
   assert.deepEqual(await ghost.locator(".kit-look small").allTextContents(), ["normal", "on hover"], "what changes on hover is drawn beside it");
   assert.equal(await ghost.locator(".kit-el").nth(1).evaluate((e) => getComputedStyle(e).textDecorationLine), "underline");
+  assert.equal(await first.locator(".kit-el").first().evaluate((e) => getComputedStyle(e).borderTopLeftRadius), "0px", "a corner the kit does not name is left out, not guessed");
   assert.match(await ghost.textContent(), /Not used in the code it read/);
   await desk.hover('[data-filter="productFilter:kit"]');
   await desk.waitForSelector("#tip");

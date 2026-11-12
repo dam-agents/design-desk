@@ -213,8 +213,10 @@ variants (`Button · variant`), each with its count and the files it comes from.
 tiles, drawn as the elements' are: a color's swatch, a shadow on a card, a corner, a spacing bar,
 `Aa` at a text size. A variant is drawn as the product draws it, on the product's background: the
 classes all variants share, the default of the component's other props, then its own, each
-Tailwind class read through the kit's named values (an unnamed color or another state is left
-out); beside it, *on hover*, when it changes under the pointer. Under it, its name, **default**,
+Tailwind class read through the kit's named values or its own literal (`text-[10px]`). A value the
+kit does not name, or a class for another state, is left out, and the element gets no property no
+class sets: a fallback style never passes for the product's. Beside it, *on hover*, when the
+joined classes change under the pointer. Under it, its name, **default**,
 what it sets in words (*Fill primary, height 40px*), its classes folded. Variants run the most
 used first; a component whose look is not in classes says it has no picture. Above them: the
 repository and commit it was read at, and when; one line on what Design Desk offers; the file it
