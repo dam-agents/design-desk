@@ -3083,7 +3083,7 @@ function cleanImpact(o, cards, decisions = {}) {
   };
 }
 
-// The running deployment a pull request names in its own body (docs/watch.md step 4): the
+// The running deployment a pull request names in its own body (docs/watch.md step 7): the
 // developers' copy of the change, for people to try before it ships.
 function cleanEnvironment(o) {
   if (typeof o !== "object" || !o) throw bad("environment must be an object");
