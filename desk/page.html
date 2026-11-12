@@ -3186,9 +3186,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const TW_WEIGHT = { normal: 400, medium: 500, semibold: 600, bold: 700 };
   function kitLook(k, classes) {
     const css = {}, hover = {}, said = { plain: [], hover: [] };
-    const unit = kitValue(k, "var(--spacing)") || "0.25rem";
+    const unit = kitValue(k, "var(--spacing)") || "4px";
     const size = (n) => /^\[(.+)\]$/.test(n) ? n.slice(1, -1) : /^[\d.]+$/.test(n) ? `calc(${unit} * ${n})` : n === "auto" ? "auto" : n === "px" ? "1px" : "";
-    const px = (v) => { const m = /^calc\(([\d.]+)px \* ([\d.]+)\)$/.exec(v.replace(/\s+/g, " ")); return m ? `${+m[1] * +m[2]}px` : v; };
+    // A spacing step in words as pixels: a rem counts 16px.
+    const px = (v) => { const m = /^calc\(([\d.]+)(px|rem) \* ([\d.]+)\)$/.exec(v.replace(/\s+/g, " ")); return m ? `${+(+m[1] * (m[2] === "rem" ? 16 : 1) * +m[3]).toFixed(2)}px` : v; };
     const color = (n) => {
       const [name, alpha] = n.split("/");
       if (name === "transparent") return { css: "transparent", word: "transparent" };

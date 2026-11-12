@@ -3312,7 +3312,7 @@ test("Product → Kit is an admin's: its named values and its components' varian
   // A wide Desk keeps the list beside the tiles: the next row opens from there, no Back needed.
   await desk.click('[data-kit="c:0"]');
   await desk.waitForFunction(() => /Button comes in 2 variants, the most used first\. When someone changes how a Button looks, Design Desk offers only these\./.test(document.querySelector("#detail")?.textContent || ""));
-  assert.match(await desk.textContent("#detail"), /Made in web\/src\/components\/ui\/button\.tsx · used in 1 file/);
+  assert.match(await desk.textContent("#detail"), /Made in web\/src\/components\/ui\/button\.tsx\s↗ · used in 1 file/);
   // Each variant drawn in the product's colors, said in words, its classes folded; the most used first.
   const first = desk.locator("#detail .kit-tile").nth(0);
   assert.match(await first.textContent(), /default\s*default\s*Fill primary, height 40px, side padding 16px\./);
