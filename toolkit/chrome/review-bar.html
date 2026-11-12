@@ -26,6 +26,8 @@
   #review .seg button[aria-pressed="true"]{background:#161616;color:#fff;opacity:1;}
   .dark #review .seg button[aria-pressed="true"]{background:#f4f4f4;color:#161616;}
   [data-view]:not(.review-shown){display:none !important;}
+  /* A menu portalled to <body> stays shut while hidden, whatever display its own classes give it. */
+  [data-review-menu][hidden]{display:none !important;}
   html.review-empty [data-populated]{display:none !important;}
   html:not(.review-empty) [data-empty-view]{display:none !important;}
   #review .seg[hidden]{display:none;}
@@ -79,7 +81,8 @@
       document.querySelectorAll("[data-view]").forEach((v) => v.classList.toggle("review-shown", v.dataset.view === n));
       document.querySelectorAll("#review [data-review-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.reviewView === n));
       const back = document.getElementById("review-back"); if (back) back.hidden = !trail.length;
-      syncEmpty(); openNote = null; drawNotes();
+      // A menu belongs to the screen it opened on: another screen shows without it.
+      closeMenus(); syncEmpty(); openNote = null; drawNotes();
     };
     // A control wired to another view walks the flow; Back retraces it.
     const go = (n) => { const from = shown(); if (n === "back") { if (trail.length) show(trail.pop()); } else if (n !== from) { if (from) trail.push(from); show(n); } scrollTo(0, 0); };
@@ -152,7 +155,7 @@
       document.querySelectorAll("[data-menu-trigger]").forEach((t) => {
         const m = document.getElementById(t.dataset.menuTrigger);
         if (!m) return;
-        m.hidden = true; document.body.appendChild(m);
+        m.hidden = true; m.setAttribute("data-review-menu", ""); document.body.appendChild(m);
         Object.assign(m.style, { position: "fixed", zIndex: 60 });
         t.addEventListener("click", (e) => {
           e.stopPropagation(); const open = !m.hidden; closeMenus(); if (open) return;

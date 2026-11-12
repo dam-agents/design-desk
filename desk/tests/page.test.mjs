@@ -1634,7 +1634,7 @@ test("an option says why it looks as it does: its decisions on the request and i
   assert.match(await desk.textContent('.reason[data-reason="D-4"]'), /no longer holds/);
   await desk.click('.reason[data-reason="D-3"]');
   assert.equal(await desk.getAttribute('.reason[data-reason="D-3"]', "aria-current"), "false", "a second click lets it go");
-  await desk.click("[data-ws-why]");
+  await desk.click("#ws-side .why [data-ws-why]");
   assert.match(await desk.textContent("#ws-side"), /2 decisions shaped this option/, "hidden, the panel keeps one line to bring it back");
   await desk.click("#ws-side [data-ws-why]");
   assert.equal(await desk.locator("#ws-side .why").count(), 1);

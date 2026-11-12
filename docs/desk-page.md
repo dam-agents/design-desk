@@ -130,8 +130,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   words, in the accent when on), only hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
-  option shows no **Why it looks like this** section (the design workspace keeps its
-  button). An option's design (the mockup) and All elements start open, as in full mode. A
+  option shows no **Why it looks like this** section (the design workspace keeps it
+  in its side panel). An option's design (the mockup) and All elements start open, as in full mode. A
   list's filters stay as they are drawn and filter as in full mode, **Needs a designer** among them.
   A row's source line (`created:`, `from:`, `by:`, `based on:`) is only words: none of it filters,
   opens or links; a click on it opens the row.
@@ -231,7 +231,7 @@ failed or was switched off; a spec draft to send); green sent to developers, sla
 closed. It pulses only while Design Desk works on the request, whatever the step (then blue), and
 stays lit otherwise. A request is never blue with a move of a person's own beside it: once
 Design Desk's work is done, Checking reads **Checked** and Drawing options reads **Options drawn**. Team feedback
-reads **Team feedback (finished)** once a person ended the vote, or its vote in Slack ended and no other runs. Pointing at
+reads **Team feedback (finished)** once a person ended the vote, or its vote in Slack ended and no other runs. On the request's page a vote in Slack is a box under its header, not in an option's tab: while it runs, until when; once closed, each option by its number with its 👍, 👎 and ⚠️, read from the result Design Desk wrote (`Name: 7 👍, 2 👎. …`; a result in other words shows as written). Pointing at
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
 dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`
@@ -314,7 +314,7 @@ nothing: a row is read, for that person alone, once they click it (`POST
 unread), and **Mark as read** in the bell's header, shown while a row is unread, reads every one
 (`POST /api/notifications/seen`; the store keeps `seen: {<person>: at}`, the newest event's
 time). Both are outside the write budget like reading an item, and a read row writes nothing. A
-newer message on a folded row makes it a new, unread row. Everything on an item that is the person's,
+newer message on a folded row makes it a new, unread row. A click on a row that folded a newer message since the bell drew it reads the row its lead message or vote folded into, by the bell's own grouping (item, kind, day, For you, private, Designs), and a poll that left before the click never shows the clicked row unread again. Everything on an item that is the person's,
 its messages included, is For you.
 
 ## Designs

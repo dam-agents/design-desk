@@ -7,6 +7,24 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.86.1 — 2026-11-12
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): the design workspace's top
+   bar drops its Why it looks like this button and its hint, and the side panel's section hides
+   with its own **Hide**; a menu in a design shuts on a move to another page, also in designs
+   built before; a played story starts from the design as first loaded, its bar's Light / Dark
+   kept, and a part it has but does not show is skipped and said; a Desk page move keeps a dialog
+   with something typed in it open; a vote in Slack is a box under the request's header, a closed
+   one listing the options by number with their votes; each story's card adds
+   one grey line of steps, screens and a score; a notification clicked stays read when a poll
+   answers late.
+2. Restart the Desk server (`rc-service --user design-desk-server restart`): a click on a
+   notification that folded a newer message since the bell drew it reads the row it grew into.
+   No data change.
+3. Nothing for designs already built: designs built from now on carry the review bar that shuts
+   its menus itself.
+
 ## 1.86.0 — 2026-11-12
 
 **Upgrade:**

@@ -2185,6 +2185,13 @@ test("notifications: a click reads one row; a repeat click writes nothing, noted
   assert.equal(saves, 1);
   assert.equal(s.markNoteRead(alice, first).read, true);
   assert.equal(saves, 1, "a repeat click writes nothing");
+  // A click on a row the page drew before a newer message folded into it reads the row it grew into.
+  const noted = structuredClone(s.db.noted);
+  tick(); s.openThread(r.id, pat, { kind: "comment", text: "Meanwhile" });
+  const grown = row().id;
+  assert.equal(s.markNoteRead(alice, first).read, true, "the old id reads the row it grew into");
+  assert.ok(s.db.noted[alice.email].includes(grown));
+  s.db.noted = noted; saves = 1;
   assert.deepEqual(s.db.noted[alice.email], [first], "one id, never twice");
   // A new message on the item is a new row; reading it drops the id that left the bell.
   tick(); s.openThread(r.id, pat, { kind: "comment", text: "Second" });
@@ -2197,6 +2204,26 @@ test("notifications: a click reads one row; a repeat click writes nothing, noted
   s.markSeen(alice);
   assert.equal(s.db.noted[alice.email], undefined, "Mark as read empties noted");
   assert.equal(s.notifications(alice).unread, 0);
+});
+
+test("notifications: a stale click reads the row its lead folded into, never a look-alike row of the same item and day", () => {
+  let now = Date.UTC(2026, 9, 1, 8);
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const tick = () => { now += 600e3; };
+  const pat = { email: "pat@example.com", role: "pm" };
+  const { card } = s.createRequest(alice, { title: "Calm", problem: "x" });
+  const page = s.addAsset({ kind: "variant", name: "v.html", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "handed-off", variants: [{ id: "v1", name: "Quiet", asset: page }], spec: { issue_url: "https://github.com/acme/widgets/issues/142" }, dev_summary: "x" });
+  Object.assign(s.card(card.id), { approved: { by: alice, at: "2026-10-01T07:00:00Z", variant: "v1" } });
+  tick(); s.openThread(card.id, bob, { text: "Sticky?", dev: true });
+  const row = (dev) => s.notifications(alice).items.find((x) => x.item === card.id && x.event === (dev ? "dev-question" : "comment"));
+  const stale = row(true).id;
+  // The developer's row grows; a newer comment on the same item and day is a row of its own.
+  tick(); s.openThread(card.id, bob, { text: "Mobile?", dev: true });
+  tick(); s.openThread(card.id, pat, { text: "Nice" });
+  assert.notEqual(row(true).id, stale);
+  assert.equal(s.markNoteRead(alice, stale).read, true);
+  assert.deepEqual([row(true).read, row(false).read], [true, false], "the developer's row is read; the comment beside it stays unread");
 });
 
 test("notifications: what others did lately, grouped per item, private answers for their owner, For you, seen", () => {
