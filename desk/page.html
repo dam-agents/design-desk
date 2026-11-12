@@ -3579,6 +3579,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // The pull request's own running copy, as its description names it (docs/watch.md step 7):
   // the developers' deployment, open only while the pull request is, so it shows until it ships.
+  const copyable = (v, what) => `<code>${esc(v)}</code> <button class="btn small" data-copy-text="${esc(v)}" data-copy-what="${esc(what)}">Copy</button>`;
   function renderEnvironment(c) {
     const e = c.environment;
     if (!e?.url || c.source?.merged_at) return "";
@@ -3593,7 +3594,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const open = gone ? `<span class="btn small" aria-disabled="true" title="It ran until ${until}; ask the pull request's author to deploy it again">Open the environment ↗</span>`
       : `<a class="btn small primary" href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer" title="The developers' running copy of this pull request, from its description">Open the environment ↗</a>`;
     const l = e.login;
-    const body = gone ? "" : `${l ? `<dl class="kv"><dt>Sign in</dt><dd>${l.user ? `<code>${esc(l.user)}</code>${l.password ? ` / <code>${esc(l.password)}</code>` : ""}${l.hint ? " " : ""}` : ""}${l.hint ? esc(l.hint) : ""}</dd></dl>` : ""}
+    const body = gone ? "" : `${l ? `<dl class="kv">${l.user ? `<dt>User</dt><dd>${copyable(l.user, "the user name")}</dd>` : ""}${l.password ? `<dt>Password</dt><dd>${copyable(l.password, "the password")}</dd>` : ""}${l.hint ? `<dt>Sign in</dt><dd>${esc(l.hint)}</dd>` : ""}</dl>` : ""}
       ${(e.steps || []).length ? `<ol class="md env-steps">${e.steps.map((x) => `<li>${txt(x)}</li>`).join("")}</ol>` : ""}
       ${e.missing ? `<p class="hint">Not there: ${txt(e.missing)}</p>` : ""}`;
     const head = `<b>Try the pull request</b>${meta}<span class="env-act">${open}</span>`;
@@ -6418,6 +6419,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.showDesign) { await goTo({ id: ds.showDesign, tab: "designs" }); return; }
     if (ds.showRequest) { await goTo({ id: ds.showRequest, tab: "requests" }); return; }
     if (ds.copyEmail) { await copyText(ds.copyEmail, "the email"); return; }
+    // The environment's demo sign-in, to paste on its own page.
+    if (ds.copyText) { await copyText(ds.copyText, ds.copyWhat || "it"); return; }
     if (ds.personOpen) { S.personOpen = S.personOpen === ds.personOpen ? null : ds.personOpen; renderDetail(); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.presented) { await markPresented(ds.presented); return; }

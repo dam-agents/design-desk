@@ -76,7 +76,8 @@ steps say; the decision notes of step 4 are always yours to read.
      `expires` the platform's own: the Environment `list_environments` lists with that address
      (one shared with the owner counts), its `expires`, read again each time the card is written;
      `login` `{user, password, hint}` — a demo account the body gives, or a `hint` alone ("your
-     platform account"), never a person's own password; `steps` — up to five short steps to
+     platform account"), never a person's own password; the card shows the user and the password
+     with a Copy button each; `steps` — up to five short steps to
      try the change there, in the product's words; `missing` — one sentence on what that
      install cannot show. The card shows it as **Try the pull request** until the PR merges,
      greyed out as no longer running after `expires`, or, with none, `pr_environment_days` (`7`)
