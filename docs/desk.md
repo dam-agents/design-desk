@@ -341,7 +341,7 @@ Designers; [watch.md](watch.md) step 7, [issues.md](issues.md) → Read an issue
 developer or an admin moves it (**For Developers** / **For Designers** on the card, the same
 `size`, any one not handled). One For Developers is marked handled by a lead developer or a
 designer, one that goes against a decision in force by a designer only; a change For
-Developers is in Needs a designer only for such a decision or the presentation.
+Developers is in Needs a designer only for such a decision.
 
 ### Deciding straight away
 
@@ -559,30 +559,40 @@ page) makes the row say it can't be shown right now, never zeros.
 ## The presentation
 
 The team meets regularly; the Desk keeps the list of what to show at the next design meeting,
-the **Presentation** page of Requests. (The store and the CLI keep its older name, `agenda`.)
+the **Presentation** page of Requests. (The store and the `/api/agenda` route keep its older name, `agenda`.)
 
 The page shows it in the other pages' style: in the list, each item is its title, its number and
 its state dot (and the red **!**) as on every list, and one line of facts (`presenting:`, `added
-by:`; `suggested by:`; `presented:`), with no chips; the page opens
+by:`; `presented:`), with no chips; the page opens
 with a status box (To present · N items, **▶ Present**, **Mark all as presented**), then each item
-with its buttons, its facts and what the meeting decides. A row of what is to present or suggested keeps the page
+with its buttons, its facts and what the meeting decides. A row of what is to present keeps the page
 and jumps to its item, marked a moment; **Open** on the item opens its card, and a presented row
 opens its card.
 
 - Only a designer or an admin puts a card on it (**Add to presentation**), with a note and,
-  for a request with options, its final version. The agent never adds one: it
-  **suggests** its proposals (not the weekly digest's, [digest.md](digest.md)), research verdicts that need a decision, prototypes ready for
-  testing and handed-off work worth showing (`design desk agenda R-<n> --note "<why>"`); the
-  suggestion shows on the card (a request's Add under **More**) and under the presentation until a
-  designer adds it or says **Not now** (by the suggestion; for a request, on the Presentation page); after **Not now** the store keeps the card from being
-  suggested again. Without a version picked (an older page), the option designers' votes clearly
+  for a request with options, its final version. The agent never adds or suggests one.
+  Without a version picked (an older page), the option designers' votes clearly
   prefer is presented, else the first.
 - **The brief** (`agenda_due`): for every card on the presentation, write `brief` on the card —
   three to six lines: what is on the table, what changed since it was last seen, and the
-  decision asked, with the options. `design desk upsert` with `{id, brief}`; done.
+  decision asked, with the options. It names everything the item holds, also what no picture
+  shows (work behind the screens, a part only a developer can build), so nobody meets more
+  later than the meeting saw. `design desk upsert` with `{id, brief}`; done.
 - The **Presentation** page lists what is to present, in order, with the briefs, and what
-  was presented lately; **▶ Present** shows one item at a time, full screen, with the version
-  the designer picked (sheet or screens otherwise); comments go in the card's threads.
+  was presented lately; **▶ Present** shows one item at a time, full screen; comments go in
+  the card's threads.
+- <a id="a-slide"></a>**A slide** is pictures, almost no words: a thin bar (title, number,
+  ⓘ for the brief, Mark as presented, ← →), one picture on the stage, and under it a strip
+  of every picture the item holds, so nothing in it stays off the slide. The arrows walk the
+  strip, then on to the next item. The strip, per kind: a request's options in order, each its
+  design and then every part it changes (the picked one opens, ✓), and the pictures its asker
+  gave; a change's screens (before, after) and the parts it changed; an issue's pictures of now
+  and its sketches; a screen's pictures, an element's sheet. What no picture shows (an issue's
+  `needs`, `triage.cannot`, `impact.behind`) is one last card of short lines.
+- **Comments in the meeting**: beside the stage, the comments on that picture and a box to
+  add one (Enter sends): a `comment` thread anchored to the picture (`anchor: {variant, asset,
+  selector, label}`), shown on the card with the picture's name; the strip counts each
+  picture's open ones.
 - In or after the meeting a designer marks each item **presented** (`POST
   /api/cards/<id>/presented`; `{presented: false}` is its Undo, until the end of that day (UTC, `undo_until` on the card): an item
   of an earlier meeting keeps its date and who presented it, and goes on again with Add to
@@ -612,8 +622,6 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   Design Desk asked a question, it was checked and nobody drew options or closed it, its
   options are drawn and wait to go to the team (Team feedback), its options are ready, or its
   live prototype is ready to approve (not For Developers).
-- **A suggestion for the presentation** puts either kind on it until a designer adds it or says
-  **Not now**, even once the card was seen or the request closed.
 - Every read of a card (the list, the card, `design desk item`) returns the derived
   `attention`; what you write on a change is only your judgement.
 
