@@ -51,7 +51,8 @@
   /* Requests leads the menu; the other tabs are smaller, their counts grey. */
   nav { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
   nav button { border: 0; background: transparent; padding: 5px 10px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 13px; }
-  nav button.main { padding: 6px 12px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  /* Bigger, but grey like the others until it is the open tab: one tab looks current at a time. */
+  nav button.main { padding: 6px 12px; font-size: 14.5px; font-weight: 500; }
   nav button[aria-current="true"] { background: var(--soft); color: var(--ink); font-weight: 600; }
   nav .sep, header > .head-sep { width: 1px; height: 18px; background: var(--line); margin: 0 8px; }
   /* New request sits right after the tabs, behind one more separator. */
@@ -7716,6 +7717,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!$("#bell").open) { renderBell(); return; }
     // Opening it reads nothing: a row is read once clicked, or with Mark as read.
     renderNotes(); renderBell();
+    // On a narrow window the header wraps and the bell sits at the left: the list, aligned
+    // to the bell's right edge, would start off the screen; move it back in.
+    const menu = $("#notes");
+    menu.style.right = "";
+    const left = menu.getBoundingClientRect().left;
+    if (left < 12) menu.style.right = `${left - 12}px`;
   }));
 
   // An update restarts the server and republishes this page: the page open before it may
