@@ -335,7 +335,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     assert.equal(await desk.locator("tr.pact .pact-stat").count(), 0, "no counts without a record");
     await desk.click('[data-person-open="pat@example.com"]');
     assert.equal(await desk.locator("tr.pact").count(), 0, "a second click folds it");
-    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["admin your role", "designer", "PM", "lead developer", "developer", "viewer"]);
+    assert.deepEqual((await desk.locator(".roles h4").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["Admin your role", "Designer", "PM", "Lead developer", "Developer", "Viewer"]);
     const panel = (i) => desk.locator(".roles .panel").nth(i).innerText();
     assert.match(await panel(0), /Everything a designer and a lead developer can, and:\s+See Designs[^\n]*\s+Ask Design Desk to add people to the list/, "only an admin adds people; Designs is a developer's, an admin's too");
     assert.doesNotMatch(await panel(1), /See Designs/, "a designer has no Designs in the menu");
