@@ -7615,7 +7615,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
     if ("wsAsk" in e.target.dataset) { S.ws.askFirst = e.target.checked; return; }
     if ("wsNotes" in e.target.dataset) { S.ws.notes = e.target.checked; store.set("desk-notes", S.ws.notes ? "1" : "0"); renderWorkspace(); return; }
-    if (e.target.id === "ws-version") { const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); }
+    if (e.target.id === "ws-version") { e.target.blur(); const n = Number(e.target.value); S.ws.version = n === (wsDrawing(wsVariant(S.card)).version || 1) ? null : n; S.ws.selected = null; S.ws.edit = null; renderWorkspace(); frameSay({ type: "desk-select", selector: null }); }
   });
 
   document.addEventListener("keydown", (e) => {
@@ -7639,7 +7639,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     if (S.ws.open && e.key === "Enter" && (e.metaKey || e.ctrlKey) && ["ws-whole", "ws-part"].includes(e.target.id)) { const k = e.target.id.slice(3); e.preventDefault(); $(`[data-ws-send-${k}]:not([data-ws-send-${k}=comment])`)?.click(); return; }
     if (S.ws.open && e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.id === "ws-text") { e.preventDefault(); $("#ws-pop [data-ws-send]:not([data-ws-send=comment])")?.click(); return; }
-    if (S.ws.open && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "Escape" || !e.target.closest("input, textarea, select, [contenteditable]")) && wsKey(e.key, e.shiftKey)) { e.preventDefault(); return; }
+    // A field of the workspace takes the keys it is typed into; Escape leaves a side panel's box first.
+    // A field of the Desk page behind the workspace never does: the tools' keys work over it.
+    const field = e.target.closest?.("input, textarea, select, [contenteditable]"), ours = field && e.target.closest("#workspace, #ask, dialog");
+    if (S.ws.open && ours && e.key === "Escape" && field.closest("#ws-side, #ws-sub")) { field.blur(); e.preventDefault(); return; }
+    if (S.ws.open && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "Escape" || !ours) && wsKey(e.key, e.shiftKey)) { e.preventDefault(); if (field && !ours) field.blur(); return; }
     if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && (S.card?.history || []).length && !S.ws.open && !document.querySelector("dialog[open]") && !e.target.closest("input, textarea, select, [contenteditable]")) {
       const looks = looksOf(S.card), k = looks.findIndex((l) => lookKey(l) === S.look) + (e.key === "ArrowLeft" ? 1 : -1);
       if (k >= 0 && k < looks.length) { e.preventDefault(); S.look = lookKey(looks[k]); S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); }
