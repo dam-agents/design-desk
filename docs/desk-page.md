@@ -43,6 +43,15 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
   Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
   **Send** makes one `change` note per part with `anchor.style` ([requests.md](requests.md) → revise).
+  **Side by side:** an option's tab dragged onto its design lights the half it would land on
+  (left or right); the drop splits the design in two, that option in its half, the other half
+  empty until another tab is dragged there. The empty half also offers **Show how it looks
+  today**, the screen as it is in the product (`now`), or **Draw how it looks today**
+  (`draw-now`) while there is none. Side by side is then the first tab, named for its halves
+  (*⇆ 1 | Today*), showing the two designs alone; the option tabs switch as before, and its tab
+  brings it back. Each half empties with its ✕; the tab's ✕ closes it. While its tab is shown
+  the list folds away, and it comes back on another tab, unless the viewer folded or unfolded
+  it meanwhile. Nothing of it is saved: it lasts while the request is open.
   What is about the request, not its step (the presentation, For Developers or For Designers, Redraw
   the options, New request from this, Delete), is under **⋯** at the right end of the box's top
   row, after Approve and Close; that row ends where Open in the design workspace ends.
