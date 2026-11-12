@@ -1152,21 +1152,16 @@ test("a relayed Slack reply names the people it mentions, or leaves a mention ou
   assert.equal(say("<@U1>  see:\n    a  b", "3.4", { U1: { name: "x" } }), "see:\n    a  b", "a name that is not text is left out; the rest keeps its spacing");
 });
 
-test("the next call: the agent suggests, a designer adds it with the option to present", () => {
+test("the next call: only a designer adds it, with the option to present", () => {
   const s = fresh();
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
   const a1 = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
   s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Calm", asset: a1 }, { id: "v2", name: "Loud", asset: a1 }] });
   assert.throws(() => s.queueForCall(card.id, { agent: true }), (e) => e.status === 403);
-  s.suggestForCall(card.id, "Design Desk proposes");
-  assert.equal(s.agenda().length, 0, "a suggestion is not on the call");
-  assert.equal(s.listCards().find((c) => c.id === card.id).suggested.note, "Design Desk proposes");
-  assert.throws(() => s.dismissSuggestion(card.id, bob), (e) => e.status === 403);
   assert.throws(() => s.queueForCall(card.id, alice, "Pick one", "v9"), (e) => e.status === 400, "an unknown option is refused");
   const { inbox: item } = s.queueForCall(card.id, alice, "Pick one", "v2");
   assert.equal(item.kind, "agenda");
   assert.deepEqual(s.agenda().map((a) => [a.option, a.agenda.variant]), [["Loud", "v2"]]);
-  assert.equal(s.getCard(card.id).call_suggestion, undefined, "adding it takes the suggestion away");
   s.unqueue(card.id, alice);
   s.vote(card.id, alice, { variant: "v2", vote: "prefer" });
   s.queueForCall(card.id, alice, "From an older page");
@@ -1205,21 +1200,6 @@ test("the presentation: Undo ends with the day; an earlier meeting's item keeps 
     assert.deepEqual(s.getCard(id).agenda, before, "its date and who presented it stay");
   }
   assert.equal(s.agenda().length, 0);
-});
-
-test("the next call: a designer's Not now holds, a closed request takes no suggestion", () => {
-  const s = fresh();
-  const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
-  s.suggestForCall(card.id, "Design Desk proposes");
-  s.dismissSuggestion(card.id, alice);
-  assert.equal(s.suggestForCall(card.id, "Design Desk proposes again").reason, "a designer said Not now to it");
-  assert.equal(s.getCard(card.id).call_suggestion, undefined, "Not now is not undone by the next suggestion");
-  const { card: other } = s.createRequest(alice, { problem: "The header is too tall." });
-  s.suggestForCall(other.id, "Slack vote: a tie");
-  s.act(other.id, alice, "close");
-  assert.equal(s.getCard(other.id).call_suggestion, undefined, "closing a request drops its suggestion");
-  s.suggestForCall(other.id, "Again");
-  assert.equal(s.getCard(other.id).call_suggestion, undefined, "a closed request takes no suggestion");
 });
 
 test("an element's redraw keeps its earlier look with the change that made the new one", () => {
@@ -1314,20 +1294,14 @@ test("needs a designer: the agent judges a change, a request's comes from where 
   assert.deepEqual(att(req.id).reasons, ["Checked: draw options, decide or close it"]);
   s.act(req.id, alice, "explore");
   assert.equal(att(req.id), null, "while Design Desk draws, it waits for nobody");
-  s.suggestForCall(req.id, "A decision is due");
-  assert.deepEqual(att(req.id).reasons, ["Suggested for the presentation"], "a suggestion waits for a designer even while Design Desk works");
   s.act(req.id, alice, "close");
   assert.equal(att(req.id), null, "a closed request waits for nobody");
 
-  // A suggestion keeps a handed-off request in the filter, and every read agrees.
+  // A handed-off request waits for nobody, and every read agrees.
   const { card: shipped } = s.createRequest(alice, { problem: "The header is too tall." });
   s.upsertCard({ id: shipped.id, status: "handed-off" });
   assert.equal(att(shipped.id), null);
-  s.suggestForCall(shipped.id, "Worth showing");
-  assert.deepEqual(att(shipped.id), { level: "designer", reasons: ["Suggested for the presentation"] });
-  assert.deepEqual(s.getCard(shipped.id).attention, att(shipped.id), "the card read and the list read agree");
-  s.suggestForCall(change.id, "A new pattern");
-  assert.deepEqual(s.getCard(change.id).attention, { level: "designer", reasons: ["Suggested for the presentation"] }, "a suggestion outranks the agent's fyi");
+  assert.equal(s.getCard(shipped.id).attention, att(shipped.id), "the card read and the list read agree");
 });
 
 test("a screen or part a designer adds goes to the agent, and never becomes a second copy", () => {
@@ -2532,9 +2506,6 @@ test("PR Changes and Issues: For Developers, a lead developer marks handled; a d
   assert.throws(() => s.setSize(big.id, lee, false), /already handled/);
   s.setSize(small.id, lee, false);
   assert.deepEqual([row(small.id).for, row(small.id).attention.level], ["designers", "designer"], "moved For Designers, it waits for a designer");
-  s.suggestForCall(small.id, "Worth showing");
-  s.setSize(small.id, lee, true);
-  assert.equal(row(small.id).attention.level, "designer", "the presentation still needs a designer");
 
   // A change nobody needs to look at stays fyi: the page shows it auto handled.
   const { card: plain } = s.upsertCard({ kind: "change", title: "Same list", source: { repo: "acme/widgets", pr: 13 }, attention: { level: "fyi", reasons: ["follows the list pattern"] } });

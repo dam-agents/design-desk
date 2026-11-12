@@ -11,7 +11,8 @@ own store and stays silent in a quiet week, or once the week's digest exists.
 ## The worklist
 
 `period` (`2026-W44`), `dates` (`29 Oct – 4 Nov 2026`: the seven whole UTC days up to
-yesterday), and from those days: `changes` (with a picture each, when it has one), `requests_new`,
+yesterday), and from those days: `changes` (each with its "after" picture, when it has one; its "before"
+picture is on its card), `requests_new`,
 `handed_off`, `waiting` (on the presentation), `polls` (open, or closed this week with their
 result), `decisions` (with author and conflicts) and `revoked`; from the last 30 days: `feedback`, the bugs,
 automated test findings, comments, concerns and questions people left.
@@ -38,7 +39,15 @@ automated test findings, comments, concerns and questions people left.
   revoked this week too, with why), **Waiting for a decision**, **Votes** (each with its result),
   **What people said** (the themes, most pieces first), **Coming up** (prototypes live,
   requests close to a decision);
-- `screens` — up to four pictures of the week's changes, their "after" pictures first.
+- `screens` — up to two before/after pairs, of the week's most visible changes. A pair is two
+  pictures with `stage: "before"` and `stage: "after"` and one `pair` name, in the product's words
+  for the screen; the Desk draws them side by side under that name. Each pair on the card has its
+  own name: the page draws one pair per name, so when two changes show the same screen, add the
+  change's title to each (`<screen> — <change's title>`). Take both from the change's
+  card (`screens`), never one without the other. The two show the same screen at a similar size:
+  a strip next to a whole screen misleads, so a change whose pictures do not match gets none.
+  A caption starts in lower case, because the page puts Before and After in front of it, and says
+  what is different, not what the screen is.
 
 Refer to everything by its title, a card or a decision also by its number, which the Desk links
 ([desk.md](desk.md) → Links to an item); never another id, never a person's name from feedback.

@@ -469,7 +469,7 @@ export class Store {
         automated: Boolean(c.origin?.automated),
         // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
         origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
-        path: c.path || null, period: c.period || null, suggested: c.call_suggestion || null,
+        path: c.path || null, period: c.period || null,
         // When a screen or a part was drawn and last looked at again: the list says drawn: (docs/map.md → A screen card).
         drawn: c.drawn || null, checked: c.checked || null,
         bucket: c.bucket || null, needs: c.needs || [], sketches: (c.sketches || []).length,
@@ -546,8 +546,7 @@ export class Store {
   }
 
   // Whether a card waits for a designer, and why (docs/desk.md → Needs a designer). A
-  // change card carries the agent's judgement; a request's comes from where it stands;
-  // a suggestion for the next call waits for a designer on either, whatever its status.
+  // change card carries the agent's judgement; a request's comes from where it stands.
   // Null: not judged.
   // Whose tab a request, a change or an issue is on: For Developers or For Designers. A change
   // or an issue starts on the agent's judgement (`attention.level` developer → For Developers)
@@ -559,11 +558,9 @@ export class Store {
 
   attentionOf(c) {
     if (!["change", "request", "issue"].includes(c.kind)) return null;
-    const suggested = c.call_suggestion ? ["Suggested for the presentation"] : [];
-    if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined"))
-      return suggested.length ? { level: "designer", reasons: suggested } : null;
+    if (c.kind === "request" && (c.status === "handed-off" || c.status === "declined")) return null;
     // A change or an issue For Developers waits for a lead developer, not a designer: its reasons
-    // stay its own level unless a decision it goes against, or the presentation, needs a designer.
+    // stay its own level unless a decision it goes against needs a designer.
     const judged = c.kind !== "request" && c.attention;
     const dev = c.kind !== "request" && this.forOf(c) === "developers";
     const reasons = !dev && judged && (c.attention.level === "designer" || c.size) ? [...c.attention.reasons] : [];
@@ -582,7 +579,6 @@ export class Store {
       else if (!busy && !c.size?.small && c.status === "feedback") reasons.push("Options are ready: approve one, build it live or ask for changes");
       else if (!busy && !c.size?.small && c.status === "testing") reasons.push("The live prototype is ready to try and approve");
     }
-    reasons.push(...suggested);
     if (reasons.length) return { level: "designer", reasons: [...mine, ...reasons] };
     if (dev) return { level: "developer", reasons: mine };
     return c.attention ? { level: c.attention.level, reasons: c.attention.reasons } : null;
@@ -1575,7 +1571,7 @@ export class Store {
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action])) throw bad(BUSY);
     // A closed request has nothing going live.
     if (action === "close") {
-      c.status = "declined"; delete c.call_suggestion; delete c.live_pick;
+      c.status = "declined"; delete c.live_pick;
       // Nothing is designed on it any more: a check still waiting has nothing to check.
       for (const it of Object.values(this.db.inbox)) if (it.card === cardId && it.kind === "decision-check" && it.state === "open")
         Object.assign(it, { state: "done", done_at: this.clock(), outcome: "not checked: closed" });
@@ -1741,7 +1737,7 @@ export class Store {
     mustBeChecked(c, "Decide");
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "decision" && !i.thread)) throw bad(BUSY);
     const said = clean(text, 600, "decision");
-    c.status = "declined"; delete c.call_suggestion; delete c.live_pick;
+    c.status = "declined"; delete c.live_pick;
     c.decided = { by: person(who), at: this.clock(), text: said };
     c.updated = this.clock();
     const item = this.enqueue("decision", cardId, null, who, said);
@@ -1756,42 +1752,20 @@ export class Store {
 
   // A designer puts a card on the agenda of the team's next call, with the option to
   // present; the agent writes a brief for it (what to decide); after the call an admin
-  // closes the agenda. The agent only suggests a card; a designer adds it or says Not now.
+  // closes the agenda. The agent never puts a card on it.
   queueForCall(cardId, who, note = "", variant = null) {
     const c = this.card(cardId);
-    if (who?.agent) throw forbidden("only a designer puts a card on the presentation; the agent suggests it");
+    if (who?.agent) throw forbidden("only a designer puts a card on the presentation");
     if (c.agenda?.status === "queued") throw bad("It is already on the presentation.");
     const vs = c.variants || [];
     // A page published before the option picker sends none: the favourite, else the first.
     if (vs.length && variant == null) variant = (favouriteOf(c) || vs[0]).id;
     if (vs.length && !vs.some((v) => v.id === variant)) throw bad("Pick the design option to present.");
     c.agenda = { status: "queued", by: person(who), at: this.clock(), note: optText(note, 500, "note"), variant: vs.length ? variant : null, brief: null };
-    delete c.call_suggestion; delete c.call_dismissed;
     c.updated = this.clock();
     const item = this.enqueue("agenda", cardId, null, who, c.agenda.note);
     this.save();
     return { card: c, inbox: item };
-  }
-
-  // A designer's Not now holds: the agent does not suggest that card again until a designer
-  // puts it on a call. A closed request takes no suggestion.
-  suggestForCall(cardId, note = "") {
-    const c = this.card(cardId);
-    const skip = c.agenda?.status === "queued" ? "it is already on the presentation" : c.call_dismissed ? "a designer said Not now to it" : c.status === "declined" ? "the request is closed" : null;
-    if (skip) return { card: c, suggested: false, reason: skip };
-    c.call_suggestion = { note: optText(note, 500, "note"), at: this.clock() };
-    c.updated = this.clock();
-    this.save();
-    return { card: c, suggested: true };
-  }
-
-  dismissSuggestion(cardId, who) {
-    if (!can(who.role, "queue")) throw forbidden("Only a designer decides what goes on the presentation.");
-    const c = this.card(cardId);
-    if (c.call_suggestion) c.call_dismissed = { by: person(who), at: this.clock(), note: c.call_suggestion.note };
-    delete c.call_suggestion;
-    this.save();
-    return { card: c };
   }
 
   unqueue(cardId, who) {
@@ -2007,7 +1981,6 @@ export class Store {
         if (next.kind === "change" && ((fields.status === "handled" && c?.status !== "handled") || (c?.handled && !["handled", "archived"].includes(fields.status))))
           throw new DeskError(409, "only a designer marks a change handled, or not");
         next.status = fields.status;
-        if (next.status === "declined") delete next.call_suggestion;
       } else if (k === "sections") next.sections = cleanSections(fields.sections, next.kind === "change" ? brief : null, this.db.cards);
       else if (k === "screens") next.screens = cleanRefs(fields.screens, this.db.assets, "screens");
       else if (k === "variants") {

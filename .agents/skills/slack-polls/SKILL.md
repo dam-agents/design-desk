@@ -124,8 +124,7 @@ On its date, or when the request moved on (approved, closed):
 3. Edit the opening message to its closed state (**The tally**, below). Then post the result as a
    `reply` under the poll's `chat` and `root_ts` (**Where it posts**), since an edit notifies no one: "🗳️ *<request title>* — the vote is closed. <result>. The team decides
    on the Design Desk (R-<n>): <link>."
-4. `design desk poll-update R-<n> <V-n> --result "<result in one line>"`. Not approved yet:
-   suggest it for the presentation (`design desk agenda R-<n> --note "Slack vote: <result>"`).
+4. `design desk poll-update R-<n> <V-n> --result "<result in one line>"`.
 
 ## The tally
 
