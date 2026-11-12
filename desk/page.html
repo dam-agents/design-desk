@@ -1323,74 +1323,74 @@
      and states of the one shown, the design on a canvas with one floating tool bar, Comments and Properties beside. */
   #workspace { display: flex; flex-direction: column; }
   .ws-body { flex: 1; }
-  .ws-top { flex-wrap: nowrap; gap: 10px; padding: 8px 12px 8px 20px; border-bottom: 0; }
+  .ws-top { flex-wrap: nowrap; gap: 8px; padding: 8px 12px 8px 20px; border-bottom: 0; }
   .ws-top .chip { flex: none; }
   .ws-tabs { background: var(--panel); padding: 0 16px; border-bottom: 1px solid var(--line); min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .ws-tabs .vtabs { margin: 0 0 -1px; flex-wrap: nowrap; }
-  .ws-tabs .vtabs button { background: var(--soft); white-space: nowrap; gap: 6px; }
+  .ws-tabs .vtabs button { background: var(--soft); white-space: nowrap; gap: 8px; }
   .ws-tabs .vtabs button[aria-pressed="true"] { background: var(--bg); border-bottom-color: var(--bg); }
-  .ws-tabs .vtabs button.busy { box-shadow: inset 0 2px 0 #b26b00; }
-  .ws-tbusy { display: inline-grid; place-items: center; width: 16px; height: 16px; color: #b26b00; font-size: 12px; }
-  .ws-tbusy .spin { margin: 0; width: 12px; height: 12px; border-color: #b26b00; border-right-color: transparent; }
-  .ws-count { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; line-height: 17px; text-align: center; box-sizing: border-box; font-variant-numeric: tabular-nums; }
-  .ws-sub { display: flex; align-items: center; gap: 12px; padding: 6px 16px; background: var(--bg); border-bottom: 1px solid var(--line); min-height: 44px; box-sizing: border-box; flex-wrap: wrap; }
+  .ws-tabs .vtabs button.busy { box-shadow: inset 0 2px 0 var(--warn); }
+  .ws-tbusy { display: inline-grid; place-items: center; width: 16px; height: 16px; color: var(--warn); font-size: var(--fs-meta); }
+  .ws-tbusy .spin { margin: 0; width: 12px; height: 12px; border-color: var(--warn); border-right-color: transparent; }
+  .ws-count { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: var(--fs-micro); font-weight: 600; line-height: 17px; text-align: center; box-sizing: border-box; font-variant-numeric: tabular-nums; }
+  .ws-sub { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--bg); border-bottom: 1px solid var(--line); min-height: 44px; box-sizing: border-box; flex-wrap: wrap; }
   .ws-sub[hidden] { display: none; }
   .ws-sub .vsep { align-self: center; height: 20px; margin: 0; }
   .ws-pages { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .ws-pages .k { color: var(--muted); font-size: var(--fs-meta); font-weight: 600; }
-  .ws-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); overflow-x: auto; scrollbar-width: none; max-width: 52vw; }
-  .ws-seg button { border: 0; background: none; border-radius: 7px; padding: 3px 10px; font: inherit; font-size: var(--fs-meta); color: var(--muted); white-space: nowrap; cursor: pointer; }
+  .ws-seg { display: inline-flex; gap: 2px; padding: 4px; border-radius: var(--r-md); background: var(--soft); box-shadow: inset 0 0 0 1px var(--line); overflow-x: auto; scrollbar-width: none; max-width: 52vw; }
+  .ws-seg button { border: 0; background: none; border-radius: var(--r-sm); padding: 4px 8px; font: inherit; font-size: var(--fs-meta); color: var(--muted); white-space: nowrap; cursor: pointer; }
   .ws-seg button:hover { color: var(--ink); }
   .ws-seg button[aria-selected="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.06); }
-  .ws-ibtn, .ws-back { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--muted); border-radius: 7px; padding: 4px; cursor: pointer; }
+  .ws-ibtn, .ws-back { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--muted); border-radius: var(--r-sm); padding: 4px; cursor: pointer; }
   .ws-ibtn:hover, .ws-back:hover, .ws-ibtn[aria-expanded="true"] { background: var(--soft); color: var(--ink); }
   .ws-ibtn .ico, .ws-back .ico, .ws-pick .ico, .ws-ver .ico { width: 16px; height: 16px; }
   .ico { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-  .ws-pick { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 3px 6px 3px 10px; font: inherit; font-size: var(--fs-meta); font-weight: 600; cursor: pointer; }
+  .ws-pick { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: var(--r-md); padding: 4px 8px 4px 8px; font: inherit; font-size: var(--fs-meta); font-weight: 600; cursor: pointer; }
   .ws-pick .hint { display: inline; font-weight: 400; }
   .ws-pick[aria-expanded="true"] { border-color: var(--accent); }
   .ws-menuwrap { position: relative; display: inline-flex; }
-  .ws-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 220px; display: grid; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+  .ws-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 220px; display: grid; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); }
   .ws-top .ws-menu { left: auto; right: 0; }
-  .ws-menu > button, .ws-menu > a { display: flex; align-items: center; gap: 8px; border: 0; background: none; text-align: left; padding: 6px 10px; border-radius: 7px; font: inherit; font-size: var(--fs-ui); color: var(--ink); cursor: pointer; text-decoration: none; }
+  .ws-menu > button, .ws-menu > a { display: flex; align-items: center; gap: 8px; border: 0; background: none; text-align: left; padding: 8px 8px; border-radius: var(--r-sm); font: inherit; font-size: var(--fs-ui); color: var(--ink); cursor: pointer; text-decoration: none; }
   .ws-menu > button span:first-child { flex: 1; }
   .ws-menu > button:hover, .ws-menu > a:hover { background: var(--soft); }
   .ws-menu > button[aria-checked="true"] { background: var(--info-soft); font-weight: 600; }
-  .ws-mgroup { padding: 8px 10px 2px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .ws-mgroup { padding: 8px 8px 2px; font-size: var(--fs-micro); color: var(--muted); font-weight: 600; }
   .ws-ver { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
-  .ws-ver select { width: auto; padding: 3px 6px; font-size: var(--fs-meta); }
-  .ws-agent { display: inline-flex; align-items: center; gap: 8px; max-width: 46ch; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, #b26b00 10%, var(--panel)); color: #8a5300; font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; overflow: hidden; }
+  .ws-ver select { width: auto; padding: 4px 8px; font-size: var(--fs-meta); }
+  .ws-agent { display: inline-flex; align-items: center; gap: 8px; max-width: 46ch; padding: 4px 12px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; overflow: hidden; }
   .ws-agent > span:last-child { overflow: hidden; text-overflow: ellipsis; }
     .ws-body { min-height: 0; }
   .ws-stage { padding: 0; gap: 0; }
   .ws-canvas { position: relative; flex: 1; min-height: 0; display: flex; padding: 16px 16px 76px; background: color-mix(in srgb, var(--ink) 5%, var(--bg)); }
-  .ws-canvas .frame { flex: 1; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 1px var(--line); transition: box-shadow .3s; }
+  .ws-canvas .frame { flex: 1; border-radius: var(--r-sm); box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 1px var(--line); transition: box-shadow .3s; }
   /* Design Desk changing the option shown: its design glows. */
-  .ws-canvas.busy .frame { box-shadow: 0 0 0 2px #e8a33c, 0 0 0 6px color-mix(in srgb, #e8a33c 25%, transparent); animation: ws-glow 1.8s ease-in-out infinite; }
-  @keyframes ws-glow { 50% { box-shadow: 0 0 0 2px #e8a33c, 0 0 0 9px color-mix(in srgb, #e8a33c 12%, transparent); } }
+  .ws-canvas.busy .frame { box-shadow: 0 0 0 2px var(--warn), 0 0 0 6px color-mix(in srgb, var(--warn) 25%, transparent); animation: ws-glow 1.8s ease-in-out infinite; }
+  @keyframes ws-glow { 50% { box-shadow: 0 0 0 2px var(--warn), 0 0 0 9px color-mix(in srgb, var(--warn) 12%, transparent); } }
   @media (prefers-reduced-motion: reduce) { .ws-canvas.busy .frame { animation: none; } }
-  .ws-context { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); z-index: 3; display: grid; gap: 6px; width: max-content; max-width: min(640px, calc(100% - 48px)); pointer-events: none; }
+  .ws-context { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); z-index: 3; display: grid; gap: 8px; width: max-content; max-width: min(640px, calc(100% - 48px)); pointer-events: none; }
   .ws-context:empty { display: none; }
-  .ctx { pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.14); font-size: var(--fs-meta); }
+  .ctx { pointer-events: auto; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: var(--r-lg); background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.14); font-size: var(--fs-meta); }
   .ctx > div { display: grid; gap: 1px; flex: 1; min-width: 0; }
   .ctx b { font-size: var(--fs-ui); }
   .ctx span { color: var(--muted); }
-  .ctx.warn { border-color: color-mix(in srgb, var(--warn, #b26b00) 50%, var(--line)); }
+  .ctx.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
   .ctx.alt { border-color: var(--accent); }
   /* The tool bar: floating at the bottom of the canvas, icons only, the key in each tooltip. */
-  .ws-toolbar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 14px; background: #1e1e1e; box-shadow: 0 8px 30px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06) inset; }
-  .ws-toolbar .tool { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 10px; background: none; color: #e6e6e6; cursor: pointer; }
+  .ws-toolbar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: var(--r-lg); background: #1e1e1e; box-shadow: 0 8px 30px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06) inset; }
+  .ws-toolbar .tool { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: var(--radius); background: none; color: #e6e6e6; cursor: pointer; }
   .ws-toolbar .tool .ico { width: 20px; height: 20px; }
   .ws-toolbar .tool:hover { background: rgba(255,255,255,.1); }
   .ws-toolbar .tool[aria-pressed="true"]:not(.tog) { background: var(--warn); color: var(--bg); }
   .ws-toolbar .tog { width: 34px; height: 34px; color: #8f8f8f; }
   .ws-toolbar .tog .ico { width: 18px; height: 18px; }
   .ws-toolbar .tog[aria-pressed="true"] { color: #fff; background: rgba(255,255,255,.14); }
-  .ws-toolbar .tsep { width: 1px; height: 22px; margin: 0 6px; background: rgba(255,255,255,.18); }
+  .ws-toolbar .tsep { width: 1px; height: 22px; margin: 0 8px; background: rgba(255,255,255,.18); }
   .ws-toolbar .tool:hover::after, .ws-toolbar .tool:focus-visible::after { content: attr(data-label) "   " attr(data-key); white-space: pre; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); padding: 4px 8px; border-radius: 6px; background: #1e1e1e; color: #fff; font-size: 12px; font-weight: 500; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
   .ws-toolbar .tool[title]:hover { cursor: pointer; }
   /* A comment in place, beside its part. */
-  .ws-pop { position: absolute; z-index: 6; width: 400px; max-height: calc(100% - 100px); overflow: auto; display: grid; gap: 10px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.24); font-size: var(--fs-ui); }
+  .ws-pop { position: absolute; z-index: 6; width: 400px; max-height: calc(100% - 100px); overflow: auto; display: grid; gap: 8px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 14px 40px rgba(0,0,0,.24); font-size: var(--fs-ui); }
   .ws-pop[hidden] { display: none; }
   .ws-pop .ph { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .ws-pop .ph b { min-width: 0; overflow-wrap: anywhere; }
@@ -1398,30 +1398,30 @@
   .ws-pop .ph b + .chip { margin-left: auto; }
   .ws-pop .ph .ws-ibtn { margin-left: auto; flex: none; }
   .ws-pop .ph .chip + .ws-ibtn { margin-left: 0; }
-  .ws-pop .pa, .ws-pop .pn { flex: none; width: 26px; height: 26px; border-radius: 50% 50% 50% 3px; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--warn); color: var(--bg); }
+  .ws-pop .pa, .ws-pop .pn { flex: none; width: 26px; height: 26px; border-radius: 50% 50% 50% var(--r-xs); display: grid; place-items: center; font-size: var(--fs-micro); font-weight: 600; background: var(--warn); color: var(--bg); }
   .ws-pop .pa { border-radius: 50%; background: var(--soft); color: var(--ink); }
-  .ws-pop .pn.done { background: var(--ok); color: #fff; }
+  .ws-pop .pn.done { background: var(--ok); color: var(--bg); }
   .ws-pop textarea { min-height: 72px; resize: vertical; }
-  .ws-pop .bar { display: flex; justify-content: flex-end; gap: 6px; }
+  .ws-pop .bar { display: flex; justify-content: flex-end; gap: 8px; }
   .ws-pop .pmsgs { display: grid; gap: 8px; max-height: 300px; overflow: auto; }
-  .ws-pop .m { padding: 8px 10px; border-radius: 10px; background: var(--soft); }
+  .ws-pop .m { padding: 8px 8px; border-radius: var(--radius); background: var(--soft); }
   .ws-pop .m.a { background: var(--info-soft); }
   .ws-pop .m .who { font-size: var(--fs-meta); color: var(--muted); margin-bottom: 2px; }
   #workspace .ws-pop .ws-reply { width: 100%; box-sizing: border-box; margin: 0; min-height: 36px; height: 36px; resize: none; transition: height 80ms ease-out; }
   #workspace .ws-pop .ws-reply:focus, #workspace .ws-pop .ws-reply:not(:placeholder-shown) { height: 76px; }
   .ws-pop .bar { align-items: center; } .ws-pop .bar .grow { flex: 1; } .ws-pop .bar .btn { min-height: 36px; }
-  .ws-pop .ws-done { width: 36px; height: 36px; justify-content: center; border-radius: 9px; } .ws-pop .ws-done .ico { width: 22px; height: 22px; }
+  .ws-pop .ws-done { width: 36px; height: 36px; justify-content: center; border-radius: var(--r-md); } .ws-pop .ws-done .ico { width: 22px; height: 22px; }
   .ws-pop .ws-done:hover { color: var(--ok); background: var(--ok-soft); } .ws-pop .reply:empty { display: none; } .ws-pop .reply input { flex: 1; }
   .ws-pop .bar:empty { display: none; }
   /* The side: Comments and Properties, as a design tool's panel. */
   .ws-side { padding: 0; gap: 0; display: flex; flex-direction: column; }
   .ws-ptabs { display: flex; gap: 4px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
-  .ws-ptabs button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 8px 10px 9px; font: inherit; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+  .ws-ptabs button { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 8px 8px 8px; font: inherit; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
-  .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: 11px; line-height: 17px; text-align: center; box-sizing: border-box; }
-  .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: #0d99ff; }
-  .ws-pbody { padding: 14px 16px 80px; display: grid; gap: 12px; align-content: start; }
-  .sel .ws-wholebox { margin-top: 10px; background: var(--bg); }
+  .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
+  .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
+  .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
 
   /* The design fills the canvas down to its bottom edge, the tool bar over it; the canvas scrolls a bar's
      height further, so the bottom of the design comes up above the tool bar. */
@@ -1430,44 +1430,44 @@
   .ws-canvas::after { content: ""; flex: 0 0 64px; }
   .ws-artboard { flex: 0 0 auto; height: calc(100% - 12px); }
   .ws-toolbar { bottom: 12px; }
-  .ws-wholebox { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .ws-wholebox { display: grid; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); }
   #workspace .ws-wholebox textarea { min-height: 56px; resize: vertical; border: 0; padding: 2px; background: none; box-shadow: none; outline: none; font: inherit; }
   .ws-wholebox:focus-within { border-color: var(--ink); }
-  .ws-wholebox .bar { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; } .ws-wholebox .bar .hint { flex: 1 1 100%; margin: 0; font-size: var(--fs-meta); }
+  .ws-wholebox .bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; } .ws-wholebox .bar .hint { flex: 1 1 100%; margin: 0; font-size: var(--fs-meta); }
   .ws-chead { display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
   .ws-workall { justify-self: start; }
   .ws-ghead { margin: 4px 0 -4px; font-size: var(--fs-meta); color: var(--muted); }
   .ws-ghead .hint { display: inline; font-weight: 400; }
-  .ws-side .note { cursor: pointer; padding: 10px 12px; display: block; }
+  .ws-side .note { cursor: pointer; padding: 8px 12px; display: block; }
   .ws-side .note .h { margin-bottom: 4px; display: flex; align-items: center; gap: 8px; min-width: 0; }
   .ws-side .note .h .chip { flex: none; }
   .ws-side .note .where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; color: var(--muted); }
-  .ws-side .note .n { border-radius: 50% 50% 50% 3px; background: var(--warn); color: var(--bg); }
+  .ws-side .note .n { border-radius: 50% 50% 50% var(--r-xs); background: var(--warn); color: var(--bg); }
   .ws-side .note.working .n { background: var(--warn); color: var(--bg); }
-  .ws-side .note.done .n { background: var(--ok); color: #fff; width: 18px; height: 18px; font-size: 10px; } .ws-side .note.working .n .dd-spin { font-size: 12px; }
+  .ws-side .note.done .n { background: var(--ok); color: var(--bg); width: 18px; height: 18px; font-size: var(--fs-micro); } .ws-side .note.working .n .dd-spin { font-size: var(--fs-meta); }
   .ws-side .note .first { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .ws-side .note .a { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 4px; color: var(--muted); font-size: var(--fs-ui); }
   .ws-empty { margin: 8px 0; }
   .ws-side .sel .actions .btn .ico { width: 14px; height: 14px; }
-  #workspace.checking .ws-side { padding: 18px; gap: 12px; }
+  #workspace.checking .ws-side { padding: 16px; gap: 12px; }
 
   /* Workspace controls on the panel's surface; the design on a grey canvas of its own. */
   .ws-top, .ws-sub { background: var(--panel); }
   .ws-top { border-bottom: 1px solid var(--line); min-height: 52px; box-sizing: border-box; }
   .ws-top .title { font-size: var(--fs-ui); color: var(--muted); font-weight: 600; max-width: 24ch; flex: 0 1 auto; }
   .ws-top .vsep { height: 20px; align-self: center; margin: 0 2px; }
-  .ws-opts { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .ws-opts { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .ws-opts .k { color: var(--muted); font-size: var(--fs-meta); font-weight: 600; }
   .ws-opts .ws-seg { max-width: none; }
-  .ws-opt { display: inline-flex !important; align-items: center; gap: 6px; padding: 3px 8px 3px 4px !important; }
-  .ws-opt .ono { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); font-size: 11px; font-weight: 700; }
+  .ws-opt { display: inline-flex !important; align-items: center; gap: 8px; padding: 4px 8px 4px 4px !important; }
+  .ws-opt .ono { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); font-size: var(--fs-micro); font-weight: 600; }
   .ws-opt[aria-selected="true"] .ono { background: var(--ink); color: var(--bg); }
   .ws-opt .nm { max-width: 11ch; overflow: hidden; text-overflow: ellipsis; }
-  .ws-opt .ws-ncount { display: inline-flex; align-items: center; gap: 1px; color: var(--muted); font-size: 10px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ws-opt .ws-ncount { display: inline-flex; align-items: center; gap: 1px; color: var(--muted); font-size: var(--fs-micro); font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
   .ws-opt .ws-ncount .ico { width: 11px; height: 11px; }
-  .ws-opt .vclose { margin-left: 0; padding: 0 3px; border-radius: 4px; font-size: 10px; color: var(--muted); opacity: 0; }
+  .ws-opt .vclose { margin-left: 0; padding: 0 4px; border-radius: var(--r-xs); font-size: var(--fs-micro); color: var(--muted); opacity: 0; }
   .ws-opt:hover .vclose { opacity: 1; } .ws-opt .vclose:hover { background: var(--soft); color: var(--ink); }
-  .ws-add { width: 28px; height: 28px; justify-content: center; font-size: 18px; border: 1px dashed var(--line) !important; }
+  .ws-add { width: 28px; height: 28px; justify-content: center; font-size: var(--fs-head); border: 1px dashed var(--line) !important; }
   /* Design Desk at work: the DD pair. The Ds flip one at a time and rest in three ways: as DD, with the
      round sides out, with the round sides in; back as DD, the pair turns once round. Its size follows the
      font size, its color the text color. Queued: still and faint. */
@@ -1477,14 +1477,14 @@
   .dd-spin::after { left: 55%; animation-name: dd-spin-right; }
   .dd-spin.queued, .dd-spin.queued::before, .dd-spin.queued::after { animation: none; }
   .dd-spin.queued { opacity: .5; }
-  .dd-spin.light { color: #fff; }
+  .dd-spin.light { color: var(--bg); }
   @keyframes dd-spin-turn { 0%, 72% { transform: rotate(0); } 94%, 100% { transform: rotate(360deg); } }
   @keyframes dd-spin-left { 0%, 12% { transform: scaleX(1); } 20%, 34% { transform: scaleX(-1); } 42%, 100% { transform: scaleX(1); } }
   @keyframes dd-spin-right { 0%, 40% { transform: scaleX(1); } 48%, 58% { transform: scaleX(-1); } 66%, 100% { transform: scaleX(1); } }
   @media (prefers-reduced-motion: reduce) { .dd-spin, .dd-spin::before, .dd-spin::after { animation-duration: 10s; } }
   .ws-sub { min-height: 40px; padding: 4px 16px; }
   .ws-sub .step-by { display: inline-flex; align-items: center; gap: 2px; } .ws-sub .step-by .hint { margin: 0; min-width: 3ch; text-align: center; }
-  .ws-canvas { flex-direction: column; gap: 10px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
+  .ws-canvas { flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
   .ws-artboard { display: flex; }
   .ws-context { position: static; transform: none; width: auto; max-width: none; justify-items: center; }
   .ctx { width: min(640px, 100%); box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
