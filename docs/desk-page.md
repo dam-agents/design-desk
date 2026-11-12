@@ -204,6 +204,8 @@ variants (`Button · variant`), each with its count and the files it comes from.
 tiles, drawn as the elements' are: a color's swatch, a shadow on a card, a corner, a spacing bar,
 `Aa` at a text size; a variant by its name, its classes and **default**. Above them: the
 repository and commit it was read at, and when. A value the Desk cannot draw says *no preview*.
+Before the first `design desk kit` the list says *No kit yet*; a read that failed says the kit
+could not be read, and why.
 
 ## A request's state in the list
 

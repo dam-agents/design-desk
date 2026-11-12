@@ -7,9 +7,16 @@ import { join, resolve } from "node:path";
 import { fail, run } from "../lib/core.mjs";
 import { readKit } from "../lib/kit.mjs";
 
-// The profile's UI folder, when the clone has a design profile.
+// The profile's UI folder, when the clone has a design profile. No `.design-desk` folder: the
+// whole clone. A profile there that cannot be read or parsed fails: its UI folder is unknown.
 function uiDirOf(root) {
-  try { for (const d of readdirSync(join(root, ".design-desk"))) { try { return JSON.parse(readFileSync(join(root, ".design-desk", d, "profile.json"), "utf8")).style?.ui_dir || ""; } catch {} } } catch {}
+  let dirs;
+  try { dirs = readdirSync(join(root, ".design-desk")); } catch (e) { if (e.code === "ENOENT") return ""; fail(`cannot read ${join(root, ".design-desk")}: ${e.code || e.message}`); }
+  for (const d of dirs) {
+    const p = join(root, ".design-desk", d, "profile.json");
+    let text; try { text = readFileSync(p, "utf8"); } catch (e) { if (e.code === "ENOENT" || e.code === "ENOTDIR") continue; fail(`cannot read ${p}: ${e.code || e.message}`); }
+    try { return JSON.parse(text).style?.ui_dir || ""; } catch (e) { fail(`${p} is not JSON: ${e.message}`); }
+  }
   return "";
 }
 
@@ -26,5 +33,7 @@ export async function main(_cmd, argv) {
   // The commit read, so the Desk says what the kit is of; not a git clone: none.
   const head = run("git", ["-C", root, "rev-parse", "HEAD"]);
   const commit = head.status === 0 ? head.stdout.trim() : null;
-  process.stdout.write(JSON.stringify({ repo, commit, ...readKit(root, { uiDir: uiDir ?? uiDirOf(root) }) }, null, 1) + "\n");
+  let kit; try { kit = readKit(root, { uiDir: uiDir ?? uiDirOf(root) }); } catch (e) { fail(e.message); }
+  if (kit.skipped.length) console.error(`design kit: could not read ${kit.skipped.length} path(s): ${kit.skipped.join("; ")}`);
+  process.stdout.write(JSON.stringify({ repo, commit, ...kit }, null, 1) + "\n");
 }

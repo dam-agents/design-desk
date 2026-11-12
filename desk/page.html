@@ -1675,7 +1675,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too, but not the handled ones", "issueFilter:handled": "Issues a designer marked handled: design has nothing to do with them; they leave the other lists",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
-      "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
+      "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:kit": "What the product's UI is made of, read from its code: its named values and its components' variants", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
       "productFilter:differences": "Where the product differs from its design in Figma: screens, elements, changes, requests and decisions",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions in force that someone other than a designer made, waiting for a designer to approve them", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
@@ -3065,7 +3065,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const kitOn = () => S.me?.role === "admin";
   const KIT_KINDS = { color: "Colors", shadow: "Shadows", radius: "Corners", space: "Spacing", "font-size": "Text sizes", "font-weight": "Text weights", border: "Borders" };
   const KIT_HOW = { cva: "variants in its code (cva)", prop: "a prop it takes", class: "a family of CSS classes" };
-  async function loadKit() { try { S.kit = (await api("GET", "/api/kit")).kit || null; } catch { S.kit = null; } }
+  // A read that failed is not "no kit": it keeps its reason, and the list says so.
+  async function loadKit() { try { S.kit = (await api("GET", "/api/kit")).kit || null; S.kitError = null; } catch (e) { S.kit = null; S.kitError = e?.message || "the Desk did not answer"; } }
   const kitParts = (k) => [
     ...Object.entries(k?.tokens || {}).map(([kind, ts]) => ({ id: `t:${kind}`, kind, title: KIT_KINDS[kind] || kind, n: ts.length, what: ts.length === 1 ? "named value" : "named values", files: [...new Set(ts.map((t) => t.file).filter(Boolean))] })),
     ...(k?.components || []).map((c, i) => ({ id: `c:${i}`, comp: c, title: c.prop && c.prop !== "class" ? `${c.name} · ${c.prop}` : c.name, n: c.options.length, what: "variants", files: [c.file].filter(Boolean) })),
@@ -3077,6 +3078,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!S.kitLoading) { S.kitLoading = true; loadKit().then(() => { S.kitLoading = false; if (S.tab === "product" && S.productFilter === "kit") { renderList(); renderDetail(); } }); }
       list.innerHTML = `${top}<div class="empty">Loading the kit…</div>`; return;
     }
+    if (S.kitError) { list.innerHTML = `${top}<div class="empty">The kit could not be read: ${esc(S.kitError)}. Open Kit again to retry.</div>`; return; }
     const parts = kitParts(k);
     if (!parts.length) { list.innerHTML = `${top}<div class="empty">No kit yet. Design Desk reads it from the product's code the next time it draws design options in the product's style.</div>`; return; }
     const from = (p) => p.files.length ? `<span><span class="k">from:</span> ${esc(p.files.slice(0, 2).join(", "))}${p.files.length > 2 ? ` +${p.files.length - 2}` : ""}</span>` : "";
@@ -5110,7 +5112,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         if (!a || typeof a !== "object") continue;
         if (a.template) { const n = document.querySelector('template[data-desk-option="' + CSS.escape(String(a.template)) + '"]')?.content.firstElementChild?.cloneNode(true); if (n) { el.replaceWith(n); el = n; } }
         if (a.class) { for (const c of String(a.class.remove || "").split(/\s+/).filter(Boolean)) el.classList.remove(c); for (const c of String(a.class.add || "").split(/\s+/).filter(Boolean)) el.classList.add(c); }
-        if (a.style) for (const [p, v] of Object.entries(a.style)) if (/^[a-z][a-z-]*$/.test(p) && /^[^<>{};"\\]{1,200}$/.test(String(v))) el.style.setProperty(p, String(v), "important");
+        // A style loads nothing: the store refuses the same (desk/store.mjs → CSS_VALUE).
+        if (a.style) for (const [p, v] of Object.entries(a.style)) if (/^[a-z][a-z-]*$/.test(p) && /^[^<>{};"\\]{1,200}$/.test(String(v)) && !/\b(?:url|image|image-set|cross-fade|element|src|expression)\s*\(|\/\*/i.test(String(v))) el.style.setProperty(p, String(v), "important");
       }
       if (held && !selected.isConnected) selected = (whole ? el : find(selectedPath)) || el;
       if (selected?.isConnected) sayLook(selected, selectedPath);

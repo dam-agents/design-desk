@@ -11,14 +11,15 @@ const SKIP = new Set(["node_modules", ".git", "dist", "build", "coverage", ".nex
 const CODE = /\.(tsx|jsx|ts|js|vue|svelte)$/, STYLE = /\.(css|scss|pcss)$/;
 const LIMIT = { files: 4000, size: 300 * 1024, tokens: 200, components: 80, options: 16 };
 
-function* walk(dir) {
+// Every code and style file under `dir`; a folder or file it cannot read goes to `skipped`.
+function* walk(dir, skipped) {
   let entries = [];
-  try { entries = readdirSync(dir); } catch { return; }
+  try { entries = readdirSync(dir); } catch (e) { skipped.push(`${dir}: ${e.code || e.message}`); return; }
   for (const e of entries) {
     if (SKIP.has(e) || e.startsWith(".")) continue;
     const p = join(dir, e);
-    let st; try { st = statSync(p); } catch { continue; }
-    if (st.isDirectory()) yield* walk(p);
+    let st; try { st = statSync(p); } catch (e) { skipped.push(`${p}: ${e.code || e.message}`); continue; }
+    if (st.isDirectory()) yield* walk(p, skipped);
     else if ((CODE.test(e) || STYLE.test(e)) && st.size < LIMIT.size && !/\.(test|spec|stories)\.[jt]sx?$|\.d\.ts$/.test(e)) yield p;
   }
 }
@@ -121,10 +122,13 @@ export function classFamilies(text, file) {
     default: null, options: [...s].slice(0, LIMIT.options).map((x) => ({ name: x, class: key + x })) }));
 }
 
-// Named values in CSS: custom properties defined on :root, html, @theme or a theme class.
+// Named values in CSS: custom properties defined on :root, html, @theme or a light theme. A rule
+// whose selector names a dark theme (`.dark`, `html.dark`, `[data-theme="dark"]`, a dark media
+// query's own rule) is an override, not the product's value.
 export function cssTokens(text, file) {
   const out = [];
-  for (const m of text.matchAll(/(:root|html|@theme(?:\s+\w+)?|\[data-theme[^\]]*\]|\.light)\b[^{]*\{/g)) {
+  for (const m of text.matchAll(/(:root|html|@theme(?:\s+\w+)?|\[data-theme[^\]]*\]|\.light)(?![\w-])[^{};]*\{/g)) {
+    if (/dark/i.test(m[0]) || /prefers-color-scheme:\s*dark[^{]*\{[^{}]*$/i.test(text.slice(0, m.index))) continue;
     const block = balanced(text, m.index + m[0].length - 1);
     if (!block) continue;
     for (const d of block.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
@@ -147,14 +151,18 @@ export function kindOf(name, value) {
   return null;
 }
 
-// The kit of a clone: `{root, ui_dir, tokens: {color: […], …}, components: […], counts}`.
+// The kit of a clone: `{root, ui_dir, tokens: {color: […], …}, components: […], counts, skipped}`.
+// A root or UI folder that is not a readable folder throws: an empty kit would read as a product
+// with no kit. A file or folder under it that cannot be read is named in `skipped`.
 export function readKit(root, { uiDir = "" } = {}) {
   const base = uiDir ? join(root, uiDir) : root;
-  const tokens = [], comps = [];
+  let st; try { st = statSync(base); readdirSync(base); } catch (e) { throw new Error(`cannot read ${uiDir ? `the UI folder ${uiDir} in ` : ""}${root}: ${e.code || e.message}`); }
+  if (!st.isDirectory()) throw new Error(`${base} is not a folder`);
+  const tokens = [], comps = [], skipped = [];
   let n = 0;
-  for (const p of walk(base)) {
+  for (const p of walk(base, skipped)) {
     if (++n > LIMIT.files) break;
-    let text; try { text = readFileSync(p, "utf8"); } catch { continue; }
+    let text; try { text = readFileSync(p, "utf8"); } catch (e) { skipped.push(`${relative(root, p)}: ${e.code || e.message}`); continue; }
     const rel = relative(root, p);
     if (STYLE.test(p)) { tokens.push(...cssTokens(text, rel)); comps.push(...classFamilies(text, rel)); continue; }
     if (/<style[\s>]/.test(text)) { for (const s of text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) { tokens.push(...cssTokens(s[1], rel)); comps.push(...classFamilies(s[1], rel)); } }
@@ -170,5 +178,5 @@ export function readKit(root, { uiDir = "" } = {}) {
   // One entry per component and prop; a component's own file before a re-export.
   const key = (c) => `${c.name}|${c.prop}|${c.options.map((o) => o.name).join(",")}`;
   const components = [...new Map(comps.map((c) => [key(c), c])).values()].slice(0, LIMIT.components);
-  return { root, ui_dir: uiDir || null, tokens: byKind, components, counts: { files: n, tokens: seen.size, components: components.length } };
+  return { root, ui_dir: uiDir || null, tokens: byKind, components, counts: { files: n, tokens: seen.size, components: components.length }, skipped: skipped.slice(0, 20) };
 }

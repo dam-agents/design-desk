@@ -335,12 +335,16 @@ Compare with the product); a note from **Work into the design** is a `revise` li
 
 The design workspace's look palette offers an admin, for an element, the choices the product
 already has for it, on a **Suggested** tab ([desk-page.md](desk-page.md) → The look palette).
-Drawing or revising an option:
+Only in repo mode, where the option is drawn from the product's own code (the `variants` skill
+→ Repo mode only: the profile). In brand or Carbon mode there is no product code to read:
+run no `design kit`, send no kit, and give no `controls`. Drawing or revising an option in repo
+mode:
 
 1. `design kit --root <clone>` prints the product's kit: its named values (`tokens`: color,
    shadow, radius, space, font-size…, each with its file) and its components' variants
    (`components`: cva variants, a prop typed as a union of words, a CSS class family; each with
-   its file, prop, options and default). It reads files only; run it once per drawing run, with
+   its file, prop, options and default). It reads files only, and fails on a root, UI folder or
+   profile it cannot read (a file it cannot read is named on stderr); run it once per drawing run, with
    `--repo <owner/name>`, and send what it printed: `design desk kit <kit.json>` replaces the
    kit Product → Kit shows ([desk-page.md](desk-page.md) → Product → Kit).
 2. For each element in `elements` that people would restyle (a button, a badge, a card), give

@@ -3195,8 +3195,10 @@ function cleanOptionElements(list, assets, cards, n) {
 // An element's smart controls (docs/requests.md → Smart controls): the choices its product
 // already has for it (another kind of button, a shadow, a corner), each from the kit, each with
 // how the workspace previews it in the option's page: a class swap, a style, or a drawing of
-// that variant kept in the page as <template data-desk-option="id">.
-const CSS_PROP = /^[a-z][a-z-]{0,39}$/, CSS_VALUE = /^[^<>{};"\\]{1,200}$/, CLASSES = /^[^<>"'`{};\\]{0,500}$/;
+// that variant kept in the page as <template data-desk-option="id">. A style value loads nothing:
+// no url(), image-set() or other function that fetches, and no comment that could hide one; the
+// page's frame script refuses the same (desk/page.html → applyControls).
+const CSS_PROP = /^[a-z][a-z-]{0,39}$/, CSS_VALUE = /^(?![\s\S]*(?:\b(?:url|image|image-set|cross-fade|element|src|expression)\s*\(|\/\*))[^<>{};"\\]{1,200}$/i, CLASSES = /^[^<>"'`{};\\]{0,500}$/;
 function cleanControls(list, selector, where) {
   if (!Array.isArray(list) || list.length > LIMITS.controls) throw bad(`${where}: controls is a list of at most ${LIMITS.controls}`);
   if (list.length && !selector) throw bad(`${where}: controls need the element's selector in the option's page`);

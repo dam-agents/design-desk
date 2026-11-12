@@ -850,6 +850,8 @@ test("an element's smart controls: options the page can show, one way each; a no
     ["a current that is no option", { controls: [{ ...kind, current: "big" }] }, /current/],
     ["markup in a class", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { class: { add: "<b>" } } }, kind.options[1]] }] }, /class lists/],
     ["one option", { controls: [{ ...kind, options: [kind.options[0]] }] }, /options/],
+    ["a style that loads a picture", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { style: { background: "URL(https://x.example/p.png)" } } }, kind.options[1]] }] }, /style is up to 8/],
+    ["a style that loads a picture set", { controls: [{ ...kind, options: [{ ...kind.options[0], apply: { style: { "background-image": "-webkit-image-set(a.png 1x)" } } }, kind.options[1]] }] }, /style is up to 8/],
   ]) assert.throws(() => up(x), msg, why);
   const t = s.openThread(card.id, alice, { kind: "change", text: "Ghost", anchor: { variant: "v1", selector: "#save", label: "Save button", controls: [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }] } }).thread;
   assert.deepEqual(t.anchor.controls, [{ control: "kind", label: "Button type", from: "Primary", to: "Ghost", source: "web/src/components/ui/button.tsx" }]);

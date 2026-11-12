@@ -3261,10 +3261,20 @@ test("Product → Kit is an admin's: its named values and its components' varian
   assert.match(await desk.textContent("#detail .sub"), /Read from acme\/widgets at 3f9c2ab/);
   assert.deepEqual(await desk.$$eval("#detail .kit-tile", (ts) => ts.map((x) => x.querySelector(".kit-pic i")?.style.backgroundColor || x.querySelector(".kit-pic").textContent)),
     ["rgb(59, 91, 219)", "rgb(59, 91, 219)", "no preview"], "a value naming another is drawn as that one; one the Desk cannot draw says so");
-  await desk.click('[data-back]');
+  // A wide Desk keeps the list beside the tiles: the next row opens from there, no Back needed.
   await desk.click('[data-kit="c:0"]');
   await desk.waitForFunction(() => /Button has 2 variants, from variants in its code \(cva\) in web\/src\/components\/ui\/button\.tsx/.test(document.querySelector("#detail")?.textContent || ""));
   assert.match(await desk.textContent("#detail .kit-tile"), /default\s*default\s*bg-primary/);
+  await desk.hover('[data-filter="productFilter:kit"]');
+  await desk.waitForSelector("#tip");
+  assert.match(await desk.textContent("#tip"), /read from its code/, "the Kit tab says on hover what it is");
+}));
+
+test("Product → Kit that could not be read says so, not that there is no kit", (t) => open(t, DESK({ ...DESIGNER, role: "admin" }, []).replace('path === "/api/agenda"', `path === "/api/kit" ? (() => { throw new Error("HTTP 500"); })() : path === "/api/agenda"`), async (desk) => {
+  await desk.click('[data-tab="product"]');
+  await desk.click('[data-filter="productFilter:kit"]');
+  await desk.waitForFunction(() => /could not be read/.test(document.querySelector("#list")?.textContent || ""));
+  assert.doesNotMatch(await desk.textContent("#list"), /No kit yet/);
 }));
 
 test("Product → Kit is not on the page for a designer", (t) => open(t, withKit(DESIGNER), async (desk) => {
