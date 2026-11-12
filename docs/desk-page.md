@@ -33,7 +33,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   in the queue; a count of its open comments), **+** for one more option, a pill saying what Design
   Desk does, Figma in one menu, and Close. The bar under it holds only what is looked at: the
   design's pages (its own review bar is hidden in the workspace and driven from here), its states
-  (one menu by part, ‹ ›), its alternatives and its version. The design sits on a canvas, glowing
+  (‹ › before one menu by part, so the arrows never move), its alternatives and its version. The design sits on a canvas, glowing
   while Design Desk changes it; a strip above it names an alternative (**Use this one**), an older
   version (**Show the latest**) or the state's use. One tool bar under the design, icons only, each with its
   key in its one tooltip (name and key on top, what it does under them): **Click through** (P), **Select** (V), **Comment** (C), **Edit text** (T, whoever may change

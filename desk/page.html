@@ -1362,9 +1362,8 @@
   .ico { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   .ws-pick { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: var(--r-md); padding: 4px 8px 4px 8px; font: inherit; font-size: var(--fs-meta); font-weight: 600; cursor: pointer; }
   .ws-pick .hint { display: inline; font-weight: 400; margin: 0; }
-  /* The state's pick keeps one width whatever it names, so the arrows
-     after it never move; a long name ends in an ellipsis. */
-  .ws-sub .ws-pick { box-sizing: border-box; width: min(260px, 30vw); }
+  /* The state's pick is as wide as its name, up to a limit; a longer name ends in an ellipsis. */
+  .ws-sub .ws-pick { box-sizing: border-box; max-width: min(320px, 30vw); }
   .ws-pick .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
   .ws-pick[aria-expanded="true"] { border-color: var(--accent); }
   .ws-menuwrap { position: relative; display: inline-flex; }
@@ -6243,9 +6242,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const badge = (id) => { const n = open(id); return n ? `<span class="ws-count" title="${plural(n, "open comment", "open comments")}">${n}</span>` : ""; };
     const i = sts.findIndex((x) => x.id === S.ws.state), cur = sts[i], menu = S.ws.menu === "states";
     const item = (x) => `<button role="menuitemradio" aria-checked="${(S.ws.state || null) === (x?.id || null)}" data-ws-state="${esc(x?.id || "")}" title="${esc(x?.how || "The option as it was drawn")}"><span>${esc(x ? x.name : "As drawn")}</span>${x && (x.version || 1) > 1 ? `<span class="chip" title="This state's version ${x.version}">v${x.version}</span>` : ""}${badge(x?.id || null)}</button>`;
-    return `<div class="ws-pages"><span class="k">State</span><span class="ws-menuwrap"><button class="ws-pick" data-ws-menu="states" aria-expanded="${menu}" title="${plural(sts.length, "state", "states")} drawn"><span class="lbl">${cur ? `<span class="hint">${esc(cur.part)} ·</span> ${esc(cur.name)}` : "As drawn"}</span>${wsIcon("chev")}</button>
+    // The arrows stand before the pick, so a longer or shorter name never moves them.
+    return `<div class="ws-pages"><span class="k">State</span><span class="step-by"><button class="ws-ibtn" data-ws-step="-1" title="Previous state">${wsIcon("prev")}</button><span class="hint">${cur ? `${i + 1} of ${sts.length}` : `${sts.length}`}</span><button class="ws-ibtn" data-ws-step="1" title="Next state">${wsIcon("next")}</button></span><span class="ws-menuwrap"><button class="ws-pick" data-ws-menu="states" aria-expanded="${menu}" title="${plural(sts.length, "state", "states")} drawn"><span class="lbl">${cur ? `<span class="hint">${esc(cur.part)} ·</span> ${esc(cur.name)}` : "As drawn"}</span>${wsIcon("chev")}</button>
       ${menu ? `<div class="ws-menu" role="menu">${item(null)}${[...new Set(sts.map((x) => x.part))].map((p) => `<div class="ws-mgroup">${esc(p)}</div>${sts.filter((x) => x.part === p).map(item).join("")}`).join("")}</div>` : ""}</span>
-      <span class="step-by"><button class="ws-ibtn" data-ws-step="-1" title="Previous state">${wsIcon("prev")}</button><span class="hint">${cur ? `${i + 1} of ${sts.length}` : `${sts.length}`}</span><button class="ws-ibtn" data-ws-step="1" title="Next state">${wsIcon("next")}</button></span></div>`;
+</div>`;
   }
 
   // Above the design: an alternative or an older version shown, the state's use.
