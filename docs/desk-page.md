@@ -121,7 +121,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   words, in the accent when on), only hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
-  option shows no **Why it looks like this** strip under it (the design workspace keeps its
+  option shows no **Why it looks like this** section (the design workspace keeps its
   button). An option's design (the mockup) and All elements start open, as in full mode. A
   list's filters stay as they are drawn and filter as in full mode, **Needs a designer** among them.
   A row's source line (`created:`, `from:`, `by:`, `based on:`) is only words: none of it filters,

@@ -92,9 +92,8 @@ The person deciding sees it on the card, and every later step builds on it.
    about the design ([desk.md](desk.md) → GitHub on the Desk).
 
    Keep the full notes as an asset (`--kind report`) and set `research.asset`.
-7. A `deliberate`, `duplicate` or `collision` verdict is suggested for the presentation with the
-   question it raises (`design desk agenda` → [desk.md](desk.md) → The presentation), and the
-   triage says what that means for the request.
+7. A `deliberate`, `duplicate` or `collision` verdict: the triage says what that means for the
+   request.
 8. **Impact.** Run the `impact` action's skill (`design skill impact --repo <repo>`): where
    else the same thing shows up, under the hood whether the product would have to work
    differently (its logic, architecture, security; a short plain text, not a list), and the
@@ -299,7 +298,8 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   --state active` for the request's concepts; one the research found and recorded counts too);
   `how` one or two plain sentences on how this option follows it; `parts` the elements it
   shaped (`{selector, label, view}`, at most 6, as for stories). At most 12 per option, each
-  decision once. The page tags those parts in the design workspace, says on a selected part
+  decision once. The page shows them in an option's **Why it looks like this** section, folded
+  at first with the decisions' numbers in its head, each with its `how`; it tags those parts in the design workspace, says on a selected part
   which decisions it rests on, and lists the option on the decision's page. Name only what
   truly shaped a part, never a decision to decorate one; a part with no decision behind it gets
   none. An entry without `reasons` keeps the option's from before; a revised option whose parts

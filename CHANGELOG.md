@@ -17,6 +17,33 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    time a drawing run sends `design desk kit`, with where each value and variant is used. The store gains an optional `kit` (no migration);
    `design kit` needs no install.
 
+## 1.82.2 — 2026-11-12
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): its Slack vote hints say a
+   reply reaches the Desk when it tags the agent, or in a channel the agent reads in full.
+   `slack-polls` and `docs/digest.md` are re-read per run.
+
+## 1.82.1 — 2026-11-12
+
+**Upgrade:**
+Nothing — `docs/digest.md` is re-read per run.
+
+## 1.82.0 — 2026-11-11
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): ▶ Present shows each item as all its pictures
+   and takes comments on each one, and Design Desk no longer suggests cards for the presentation
+   (`design desk agenda` is gone; [desk.md](docs/desk.md) → The presentation). A card's old
+   `call_suggestion` and `call_dismissed` stay in the store, unread; no data change.
+
+## 1.81.1 — 2026-11-11
+
+**Upgrade:**
+1. Republish the Desk page ([desk.md](docs/desk.md) → Publishing the page): an option's Why it
+   looks like this is a folded section under its buttons, naming its decisions. No server restart, no data change.
+
 ## 1.81.0 — 2026-11-11
 
 **Upgrade:**

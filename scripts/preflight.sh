@@ -681,8 +681,7 @@ inbox_mode() {
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
   # With ci_gate on, an open pull request's change card is due as `G-<card>` when it is judged
-  # (its attention, a design check, a decision in force it goes against, a suggestion for the
-  # presentation) and its check was never set (no `ci`, or the `skipped` that before 1.76.0
+  # (its attention, a design check, a decision in force it goes against) and its check was never set (no `ci`, or the `skipped` that before 1.76.0
   # meant a PR not held): the agent passes or holds it
   # (docs/watch.md → CI gate). The cards already on the Desk when the key was turned on, and any a run missed.
   # A card whose last status write failed (`ci.state: error`) is due again until its 3rd try
@@ -693,8 +692,7 @@ inbox_mode() {
         | [ (.cards // {})[] | select(.kind == "change" and (.source | type) == "object" and .source.pr != null
               and (.source.merged_at // null) == null and .status != "archived")
           | (((.attention | type) == "object") or ((.design_check | type) == "object")
-             or ([(.conflicts // [])[] | objects | ($d[.decision | tostring] | if type == "object" then .status else null end)] | index("active")) != null
-             or (.call_suggestion // null) != null) as $wait
+             or ([(.conflicts // [])[] | objects | ($d[.decision | tostring] | if type == "object" then .status else null end)] | index("active")) != null) as $wait
           | (.ci | if type == "object" then . else null end) as $ci
           | select((($ci == null or ($ci.state == "skipped" and $ci.tries == null)) and $wait) or ($ci.state == "error" and ($ci.tries // 0) < 3))
           | {id: ("G-" + .id), card: .id, gate: true, retry: ($ci.state == "error")} ]' "$DB" 2>&1)"; then
