@@ -7,6 +7,11 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.82.1 — 2026-11-12
+
+**Upgrade:**
+Nothing — `docs/digest.md` is re-read per run.
+
 ## 1.82.0 — 2026-11-11
 
 **Upgrade:**
