@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.82.3 — 2026-11-12
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a state box keeps its buttons on
+   the state's row while they fit, its facts beside the state on at most two lines cut short with …;
+   buttons that wrap start from the left. No server restart, no data change.
+
 ## 1.82.2 — 2026-11-12
 
 **Upgrade:**
