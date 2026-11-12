@@ -1948,7 +1948,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -1992,6 +1992,13 @@ export class Store {
       }
       else if (k === "impact") { next.impact = cleanImpact(fields.impact, this.db.cards, this.db.decisions); this.linkPlaces(next.impact, fields.impact.places); }
       else if (k === "instance") next.instance = fields.instance === null ? null : cleanInstance(fields.instance);
+      else if (k === "environment") {
+        // When it was deployed: the agent's date when the pull request says it, else when the
+        // Desk first saw this address; the same address keeps its date across rewrites.
+        const e = fields.environment === null ? null : cleanEnvironment(fields.environment), was = c?.environment;
+        if (e && !e.since) e.since = was?.url === e.url && was.since ? was.since : this.clock();
+        next.environment = e;
+      }
       else if (k === "shotlist") next.shotlist = cleanShotlist(fields.shotlist);
       else if (k === "path") next.path = clean(String(fields.path), 300, "path");
       else if (k === "how") next.how = clean(fields.how, 600, "how");
@@ -3074,6 +3081,21 @@ function cleanImpact(o, cards, decisions = {}) {
       return { ...(x.id != null ? { id: String(x.id) } : {}), text: x.id != null ? optText(x.text, 600, "decision") : clean(x.text, 600, "decision"), when: optText(x.when, 40, "when"), source: x.source ? cleanSource(x.source, cards) : null };
     }),
   };
+}
+
+// The running deployment a pull request names in its own body (docs/watch.md step 7): the
+// developers' copy of the change, for people to try before it ships.
+function cleanEnvironment(o) {
+  if (typeof o !== "object" || !o) throw bad("environment must be an object");
+  if (!/^https:\/\//.test(String(o.url || ""))) throw bad("environment.url must be an https address");
+  const date = (k) => { const v = o[k] == null || o[k] === "" ? null : String(o[k]); if (v && Number.isNaN(Date.parse(v))) throw bad(`environment.${k} must be a date`); return v ? new Date(v).toISOString().replace(/\.\d{3}Z$/, "Z") : null; };
+  const since = date("since"), expires = date("expires");
+  // How to sign in and what to try, as the pull request says it: a demo account, never a person's.
+  const login = o.login && typeof o.login === "object" ? { user: optText(o.login.user, 120, "user"), password: optText(o.login.password, 200, "password"), hint: optText(o.login.hint, 160, "sign-in hint") } : null;
+  if (o.steps !== undefined && o.steps !== null && !Array.isArray(o.steps)) throw bad("environment.steps must be a list");
+  const steps = (o.steps || []).slice(0, 5).map((x) => clean(x, 160, "step"));
+  return { url: String(o.url).slice(0, 500), label: optText(o.label, 60, "environment label"), since, expires,
+    login: login && (login.user || login.hint) ? login : null, steps, missing: optText(o.missing, 200, "what the environment lacks") };
 }
 
 // The agent's own install of the product a card's screens came from, for people to open.

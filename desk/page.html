@@ -174,7 +174,18 @@
   .btn.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); }
   .btn.primary:hover { opacity: .9; }
   .btn.small { padding: 3px 9px; font-size: 12px; }
-  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn[disabled], .btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+  .panel.env { max-width: var(--measure); margin-top: 12px; }
+  .panel.env { padding-top: 10px; padding-bottom: 10px; }
+  .panel.env .env-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+  .panel.env .env-act { margin-left: auto; }
+  details.env > summary { cursor: pointer; list-style: none; } details.env > summary::-webkit-details-marker { display: none; }
+  details.env > summary::after { content: "+"; color: var(--muted); font-size: 16px; line-height: 1; }
+  details.env[open] > summary::after { content: "−"; } details.env[open] > summary { margin-bottom: 4px; }
+  .panel.env .env-head .one-line { display: inline-flex; gap: 12px; font-size: 13px; } .panel.env .k { color: var(--muted); }
+  .panel.env .kv { margin-top: 8px; }
+  .panel.env.gone .env-head > b { color: var(--muted); }
+  .panel.env .env-steps { padding-left: 20px; margin: 8px 0 0; }
   .btn.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   main { display: grid; grid-template-columns: minmax(280px, calc(var(--list-w) + var(--list-dx, 0px))) 0 1fr; min-height: 0; }
   main.wide { grid-template-columns: 1fr; } main.wide .list, main.wide .list-edge { display: none; }
@@ -3566,6 +3577,30 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${list.length ? `<p style="margin:12px 0 4px"><b>What to capture</b></p><ol class="md" style="padding-left:20px;margin:0">${list.map((x) => `<li><b>${esc(x.name)}</b>${x.how ? ` — ${esc(x.how)}` : ""}${x.path && i?.url ? ` <a href="${safeUrl(link(x.path))}" target="_blank" rel="noopener noreferrer">open ↗</a>` : ""}</li>`).join("")}</ol>` : ""}
     </div>`;
   }
+  // The pull request's own running copy, as its description names it (docs/watch.md step 7):
+  // the developers' deployment, open only while the pull request is, so it shows until it ships.
+  const copyable = (v, what) => `<code>${esc(v)}</code> <button class="btn small" data-copy-text="${esc(v)}" data-copy-what="${esc(what)}">Copy</button>`;
+  function renderEnvironment(c) {
+    const e = c.environment;
+    if (!e?.url || c.source?.merged_at) return "";
+    // It runs until the platform's own expiry (docs/watch.md step 7); without one, `pr_environment_days`
+    // after it was deployed (docs/config.md). Past that it shows gone.
+    const days = S.me?.env_days ?? 7, ends = e.expires ? Date.parse(e.expires) : days > 0 && e.since ? Date.parse(e.since) + days * 864e5 : null;
+    const gone = ends !== null && Date.now() > ends, until = ends ? esc(day(new Date(ends).toISOString())) : "";
+    const kv = (k, v, tip = "") => `<span${tip ? ` title="${esc(tip)}"` : ""}><span class="k">${k}:</span> <b>${v}</b></span>`;
+    const meta = `<span class="one-line">${e.label ? kv("as", esc(e.label)) : ""}${gone ? `<span class="chip" title="Its environment ran until ${until}">No longer running</span>`
+      : until ? kv("until", until, e.expires ? "When the platform takes its environment down" : `Its environment runs ${days} days after it was deployed`) : ""}</span>`;
+    // Folded, it is one line with its action; open, how to sign in and what to try.
+    const open = gone ? `<span class="btn small" aria-disabled="true" title="It ran until ${until}; ask the pull request's author to deploy it again">Open the environment ↗</span>`
+      : `<a class="btn small primary" href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer" title="The developers' running copy of this pull request, from its description">Open the environment ↗</a>`;
+    const l = e.login;
+    const body = gone ? "" : `${l ? `<dl class="kv">${l.user ? `<dt>User</dt><dd>${copyable(l.user, "the user name")}</dd>` : ""}${l.password ? `<dt>Password</dt><dd>${copyable(l.password, "the password")}</dd>` : ""}${l.hint ? `<dt>Sign in</dt><dd>${esc(l.hint)}</dd>` : ""}</dl>` : ""}
+      ${(e.steps || []).length ? `<ol class="md env-steps">${e.steps.map((x) => `<li>${txt(x)}</li>`).join("")}</ol>` : ""}
+      ${e.missing ? `<p class="hint">Not there: ${txt(e.missing)}</p>` : ""}`;
+    const head = `<b>Try the pull request</b>${meta}<span class="env-act">${open}</span>`;
+    return body.trim() ? `<details class="panel env"><summary class="env-head">${head}</summary>${body}</details>`
+      : `<div class="panel env${gone ? " gone" : ""}"><div class="env-head">${head}</div></div>`;
+  }
   // Every section says what it is and where it comes from. The ones that explain or give
   // context can fold; they show open, so the card reads whole.
   const FOLDED = new Set(["why", "limits", "good-to-know", "context"]);
@@ -3861,6 +3896,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}</div></div>`).join("")}
       <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : ""}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
+      ${renderEnvironment(c)}
       ${renderInstance(c)}
       ${figmaBox(c)}
       ${(c.elements || []).length ? `<h3>Parts it changed</h3><div class="actions">${c.elements.map((id) => S.cards.find((x) => x.id === id)).filter(Boolean).map((e) => `<button class="anchor" data-card="${esc(e.id)}" data-made-by="${esc(c.id)}" title="How it looked before and after">${esc(e.title)} — before and after</button>`).join("")}</div>` : ""}
@@ -6383,6 +6419,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.showDesign) { await goTo({ id: ds.showDesign, tab: "designs" }); return; }
     if (ds.showRequest) { await goTo({ id: ds.showRequest, tab: "requests" }); return; }
     if (ds.copyEmail) { await copyText(ds.copyEmail, "the email"); return; }
+    // The environment's demo sign-in, to paste on its own page.
+    if (ds.copyText) { await copyText(ds.copyText, ds.copyWhat || "it"); return; }
     if (ds.personOpen) { S.personOpen = S.personOpen === ds.personOpen ? null : ds.personOpen; renderDetail(); return; }
     if ("copyLink" in ds) { await copyLink(S.tab === "product" && S.productFilter === "decisions" && S.decision ? S.decision : S.card); return; }
     if (ds.presented) { await markPresented(ds.presented); return; }

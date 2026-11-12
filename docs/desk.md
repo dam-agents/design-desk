@@ -673,6 +673,10 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   as overdue. Its **What changed and why** folds, open by default. With `ci_gate` its `ci`
   (`{state: failing|passing|skipped|error, sha, tries}`, yours to write) shows as its GitHub check; marking it
   handled, or not, or moving it between the tabs, queues a `ci` item (`ci_due`, [watch.md](watch.md) → CI gate).
+  An open PR's `environment` ([watch.md](watch.md) step 7) shows under its screens as one folded
+  line, **Try the pull request** with its as, until and **Open the environment ↗**; unfolded, its
+  sign-in, steps and what it lacks. Past its end the line greys out as **No longer running** with
+  the button off, and does not unfold; a merged PR shows none.
 - **Comments on options** are pinned to an element and its view; people reply, mark them
   done or reopen them, and a designer, PM or developer presses **Work it in** (one, or every open one) to turn
   comments into change notes for you (`revise`, [requests.md](requests.md)). The workspace's
