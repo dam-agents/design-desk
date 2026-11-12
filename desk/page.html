@@ -4992,8 +4992,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const REVIEW_NOTES = "desk-review-notes";
   addEventListener("message", (e) => {
     if (e.data?.type !== REVIEW_NOTES) return;
-    if (![$("#variant-frame"), $("#ws-frame")].some((f) => f && e.source === f.contentWindow)) return;
+    // The halves side by side are design frames too; a flip in one, the other half follows.
+    const frames = [$("#variant-frame"), $("#ws-frame"), ...document.querySelectorAll("iframe[data-pane-asset]")].filter(Boolean);
+    if (!frames.some((f) => e.source === f.contentWindow)) return;
     store.set(REVIEW_NOTES, e.data.on ? "on" : "off");
+    for (const f of document.querySelectorAll(".split iframe")) if (e.source !== f.contentWindow) sayReviewNotes(f);
   });
   const sayReviewNotes = (frame) => frame?.contentWindow?.postMessage({ type: REVIEW_NOTES, on: store.get(REVIEW_NOTES) === "on" }, "*");
   // The list folds away with the arrow on its edge; each viewer's browser remembers it.
