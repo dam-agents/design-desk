@@ -328,7 +328,7 @@ test("every dialog acts once from a sandboxed frame, and only on its own button"
     // People: the roster with its roles, and what each role adds to the one below it.
     await desk.click('[data-tab="people"]');
     await desk.waitForSelector("table.people");
-    assert.deepEqual((await desk.locator("table.people tbody tr").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead@example.com you admin", "pat@example.com PM"]);
+    assert.deepEqual((await desk.locator("table.people tbody tr").allInnerTexts()).map((t) => t.replace(/\s+/g, " ")), ["lead@example.com you Admin", "pat@example.com PM"]);
     // A row folds open to what that person did; a server that sends no activity shows that it can't, never zeros.
     await desk.click('[data-person-open="pat@example.com"]');
     assert.match(await desk.locator("tr.pact").innerText(), /can't be shown right now/);
@@ -925,7 +925,7 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.equal(await desk.locator('#detail [data-act="states"]').count(), 0, "the card has no Draw every state");
     assert.match(await desk.textContent("#detail .elements"), /All elements[\s\S]*Send button[\s\S]*1 state/);
     // A tile keeps white space around its picture, inside the same 192 px.
-    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["10px", "10px", 192], "a tile pads its picture");
+    assert.deepEqual(await desk.$eval('#detail [data-el="part-send-button"] .elpic', (e) => { const c = getComputedStyle(e); return [c.paddingTop, c.paddingLeft, e.getBoundingClientRect().height]; }), ["12px", "12px", 192], "a tile pads its picture");
     await desk.click('#detail [data-el="part-send-button"]');
     await desk.waitForSelector("#element-dialog[open] .catalog");
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
