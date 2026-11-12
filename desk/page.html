@@ -112,7 +112,7 @@
   /* An item's number (docs/desk.md → Links to an item): grey next to its title, so the title leads. */
   .num { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: .7em; white-space: nowrap; margin-left: .45em; }
   .row .t .num { margin-left: auto; font-size: var(--fs-micro); flex: none; }
-  /* A row with no state (a week of History) keeps its number where every other row has it, left of the dot. */
+  /* A row with no state keeps its number where every other row has it, left of the dot. */
   .row .t .num:last-child { margin-right: 20px; }
   /* Search across the Desk: items, decisions, numbers and GitHub issues and pull requests. */
   header .search { position: relative; }
@@ -323,6 +323,20 @@
   .hint { color: var(--muted); font-size: var(--fs-meta); margin: 4px 0 0; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; align-items: center; }
   .kit-about { max-width: var(--measure); color: var(--muted); }
+  /* Product → History: a period's page (docs/desk-page.md → Product → History). */
+  .hist-filters { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: 20px 0 4px; }
+  .hist-filters .filters { max-width: 100%; overflow-x: auto; }
+  .hist-foldall { display: flex; justify-content: flex-end; margin: 8px 0 -8px; }
+  .hist-pick { display: flex; gap: 8px; flex-wrap: wrap; align-self: stretch; } .hist-pick > * { flex: 1 1 200px; width: auto; min-width: 0; }
+  /* A row as a list's row: title and number, one line of facts; a change's pictures under it. */
+  .hist-item { padding: 12px 0 16px; border-bottom: 1px solid var(--line); }
+  .hist-item:last-child { border-bottom: 0; }
+  .hist-t { display: flex; align-items: baseline; gap: 8px; }
+  .hist-title { flex: 0 1 auto; min-width: 0; text-align: left; font: inherit; font-size: var(--fs-ui); font-weight: 600; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; }
+  .hist-title:hover { text-decoration: underline; }
+  .hist-t .num { flex: none; }
+  .hist-item > .prov { margin-top: 4px; }
+  .hist-shots { margin-top: 12px; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); }
   .section { margin: 0 0 16px; max-width: var(--measure); }
   /* A request's page: everything on it as wide as the pane, no part narrower than the rest. */
@@ -1803,7 +1817,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       "issueFilter:sprint": "Issues in the current sprint, with the issues of its epics", "issueFilter:next": "Issues planned for the next sprint", "issueFilter:assigned": "Issues someone has taken",
       "issueFilter:label": "Issues labelled for design", "issueFilter:all": "Every issue Design Desk follows, the ones already designed here too, but not the handled ones", "issueFilter:handled": "Issues a designer marked handled: design has nothing to do with them; they leave the other lists",
       "productFilter:screens": "The product's screens: how to get to each and why it is like it is", "productFilter:elements": "The product's parts, each in every situation it can be in",
-      "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:kit": "What the product's UI is made of, read from its code: its named values and its components' variants", "productFilter:history": "One page a week: what changed, the decisions taken and the themes in feedback",
+      "productFilter:decisions": "Every decision the team made, the newest first", "productFilter:kit": "What the product's UI is made of, read from its code: its named values and its components' variants", "productFilter:history": "What happened to the product by day, week or release: the changes that shipped, the decisions made and the requests filed",
       "productFilter:differences": "Where the product differs from its design in Figma: screens, elements, changes, requests and decisions",
       "elFilter:all": "Every element: from the product and from approved designs", "elFilter:product": "Only the product's own elements, drawn from its code", "elFilter:design": "Only elements of approved designs, not in the product yet" }[v]),
     dstate: (v) => ({ active: "Decisions that hold today", unapproved: "Decisions in force that someone other than a designer made, waiting for a designer to approve them", revoked: "Decisions no longer in force", "": "Every decision" }[v]),
@@ -2497,6 +2511,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   document.addEventListener("scroll", () => $("#peek")?.remove(), true);
   document.addEventListener("click", peekHide, true);
   document.addEventListener("toggle", (e) => { if (e.target.matches?.("[data-convo]")) S.convoOpen = e.target.open; }, true);
+  // A group folded on a period's page stays folded while the page is drawn again.
+  document.addEventListener("toggle", (e) => { const g = e.target.dataset?.histGroup; if (g && S.histAt) { const k = `${S.histAt}|${g}`; if (e.target.open) S.histShut.delete(k); else S.histShut.add(k); } }, true);
+  document.addEventListener("change", (e) => {
+    if (e.target.matches?.("[data-hist-area]")) { S.histArea = e.target.value; renderDetail(); }
+  });
+  // The search finds as it is typed; the box keeps its place and the caret.
+  document.addEventListener("input", (e) => {
+    if (!e.target.matches?.("[data-hist-q]")) return;
+    S.histQ = e.target.value; const at = e.target.selectionStart;
+    renderDetail();
+    const box = document.querySelector("[data-hist-q]"); if (box) { box.focus({ preventScroll: true }); box.setSelectionRange(at, at); }
+  });
   // A fold opened or shut by hand: an option's section keeps how the person left it (a fold
   // drawn open fires toggle too, so only a click counts), and the fold's height eases between
   // its two sizes (docs/desk-page.md → Motion). Popovers (More, a menu, a request's steps) pop instead.
@@ -2643,6 +2669,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const decisions = S.tab === "product" && S.productFilter === "decisions";
     const it = decisions ? S.decision : S.card, link = it && itemLink(it);
     if (S.tab === "product" && S.productFilter === "kit") return `<div class="crumb"><button class="btn small" data-back>← Kit</button></div>`;
+    if (S.tab === "product" && S.productFilter === "history" && !S.card) return `<div class="crumb"><button class="btn small" data-back>← History</button></div>`;
     return `<div class="crumb"><button class="btn small" data-back>← ${esc(decisions ? "Decisions" : presenting() ? "Presentation" : TABS[S.tab] || "Back")}</button>${link ? `<button class="btn small" data-copy-link title="A link that opens ${esc(it.id)}: paste it in Slack, an issue or a message">🔗 Copy link</button>` : ""}</div>`;
   };
   // Every tab looks alike: only the open one is marked, every count is grey (amber: a request waits).
@@ -2727,7 +2754,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         { tone: "waiting", text: "The team comments on any part; a comment can change the design.", acts: [["<b>Work it in</b>", "change"]] }] },
     product: { about: "the product's screens, parts and decisions, kept up to date",
       steps: [
-        { tone: "", text: `Pick a section: <b>Screens</b>, <b>Elements</b> (every part in each state), <b>Decisions</b>${figmaOn() ? ", <b>Differences</b> (against Figma)" : ""} or <b>History</b> (one page a week).` },
+        { tone: "", text: `Pick a section: <b>Screens</b>, <b>Elements</b> (every part in each state), <b>Decisions</b>${figmaOn() ? ", <b>Differences</b> (against Figma)" : ""} or <b>History</b> (what happened, by day, week or release).` },
         { tone: "", text: "Open one and compare it with how it looked before.", acts: [["<b>Draw how it looked before</b>", "history"]] },
         { tone: "waiting", text: "Ask why it is like this, or fill a gap.", acts: [["<b>Ask</b>", "ask"], ["<b>+ Add</b> a missing screen or part", "add"], ["<b>Revoke</b> or restore a decision", "decide"]] }],
       tip: LINK },
@@ -3034,7 +3061,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     // Another tab, page or filter starts the list again at LIST_PAGE rows; it is
     // set before every early return, so a list that returns early still counts as another view.
-    const view = [S.tab, S.productFilter, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
+    const view = [S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
     if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
@@ -3068,6 +3095,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     requestAnimationFrame(() => markScrolls(list));
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(head); return; }
     if (S.tab === "product" && S.productFilter === "kit") { renderKitList(head); return; }
+    if (S.tab === "product" && S.productFilter === "history") { renderHistoryList(head); return; }
     if (presenting()) { renderAgendaList(filters); return; }
     const waiting = "Nothing waits for a designer right now.";
     const empty = {
@@ -3077,7 +3105,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       designs: S.designFilter === "done" ? "Nothing is marked done yet." : "Nothing to build.",
       requests: S.reqFilter === "unread" ? "You have opened every request here." : S.reqFilter === "turn" ? "Nothing waits for you right now. Open shows every request still being worked on." : S.reqFilter === "open" ? (can("request") ? "No open requests. Press New request to describe what you would change." : "No open requests.") : "No closed requests.",
       product: S.productFilter === "differences" ? (S.figFilter === "closed" ? "Nothing is closed." : S.figFilter === "matches" ? "Nothing matches its Figma frame yet." : S.figFilter === "differs" && figmaCards("all").length ? "Nothing differs from Figma." : "Nothing is compared with Figma yet. Design Desk compares a screen, an element, a change or a request with its frame once it has a Figma link.")
-        : S.productFilter === "history" ? "No weeks yet. Design Desk writes one page a week, on Thursday morning, once the week had something to tell."
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
@@ -3222,6 +3249,157 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const from = (p) => p.files.length ? `<span><span class="k">from:</span> ${esc(p.files.slice(0, 2).join(", "))}${p.files.length > 2 ? ` +${p.files.length - 2}` : ""}</span>` : "";
     list.innerHTML = top + parts.map((p) => `<div class="row item"><button class="open" data-kit="${esc(p.id)}" aria-current="${S.kitPart === p.id}"><div class="t"><span>${esc(p.title)}</span></div></button>
       <div class="prov plain"><span>${p.n} ${p.what}</span>${from(p)}</div></div>`).join("");
+  }
+  // ---------- Product → History (docs/desk-page.md → Product → History) ----------
+  // What happened to the product by day, week or release: one tile a period on the left, and the
+  // period's page put together here from the Desk's own items — the changes that shipped, the
+  // decisions made and the requests filed. A week keeps Design Desk's digest on top.
+  const HIST_BY = [["days", "Days"], ["weeks", "Weeks"], ["releases", "Releases"]];
+  S.histBy = HIST_BY.some(([k]) => k === store.get("desk-histBy")) ? store.get("desk-histBy") : "weeks";
+  S.histAt = null; S.histType = "all"; S.histArea = ""; S.histOrigin = ""; S.histQ = ""; S.histShut = new Set();
+  // A read that failed is not "no releases": the list says so, and History opens again to retry.
+  async function loadHistory() {
+    const [r, d] = await Promise.all([api("GET", "/api/releases").catch((e) => ({ error: e?.message || "the Desk did not answer" })), api("GET", "/api/decisions?state=").catch((e) => ({ error: e?.message || "the Desk did not answer" }))]);
+    S.releases = r.releases || []; S.relError = r.error || null; S.histDecs = d.decisions || []; S.decError = d.error || null;
+  }
+  // Where a shipped change came from, by what the Desk knows of it (docs/watch.md → Approved design).
+  const HIST_ORIGIN = {
+    designed: ["ok", "As designed", "Built from a design approved on the Desk"],
+    differs: ["warn", "Differs from the design", "A design was approved on the Desk; what shipped is not the same"],
+    none: ["info", "No design", "Shipped without a design on the Desk"],
+    fix: ["", "Fix or polish", "Fixes or polishes what was already there"],
+  };
+  const histOrigin = (c) => c.design_check?.verdict === "differs" ? "differs" : c.builds || c.design_check?.verdict === "matches" ? "designed" : c.fix ? "fix" : "none";
+  // Days and weeks are UTC, as the weekly digest's (docs/digest.md): a week is Monday to Sunday, `2026-W46`.
+  const utcDay = (iso) => String(iso).slice(0, 10);
+  const isoWeek = (iso) => {
+    const d = new Date(`${utcDay(iso)}T00:00:00Z`), wd = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - wd);
+    const y = d.getUTCFullYear(), w = Math.ceil(((d - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
+    return `${y}-W${String(w).padStart(2, "0")}`;
+  };
+  const weekStart = (key) => {
+    const [y, w] = key.split("-W").map(Number), jan4 = new Date(Date.UTC(y, 0, 4));
+    return new Date(jan4.getTime() + ((w - 1) * 7 - ((jan4.getUTCDay() || 7) - 1)) * 864e5);
+  };
+  const dm = (d, year = false) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}), timeZone: "UTC" });
+  const weekWords = (key) => { const a = weekStart(key), b = new Date(a.getTime() + 6 * 864e5); return `${dm(a)} – ${dm(b, true)}`; };
+  const dayWords = (key) => new Date(`${key}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  function histItems() {
+    const out = [];
+    for (const c of S.cards) {
+      if (c.kind === "change" && c.source?.merged_at) out.push({ id: c.id, type: "change", at: c.source.merged_at, title: c.title, card: c, area: c.area || "", origin: histOrigin(c) });
+      else if (c.kind === "request" && c.created) out.push({ id: c.id, type: "request", at: c.created, title: c.title, card: c });
+    }
+    for (const d of S.histDecs || []) if (d.at) out.push({ id: d.id, type: "decision", at: d.at, title: d.text, dec: d });
+    return out;
+  }
+  // The periods of the picked kind, the newest first. A change is in the first release that has its
+  // pull request; a decision or a request in the first release published after it. What came after
+  // the newest release is under Not released yet; what came before the oldest one kept is in none.
+  function histPeriods() {
+    const items = histItems(), groups = new Map();
+    const add = (key, it) => { if (!groups.has(key)) groups.set(key, []); if (it) groups.get(key).push(it); };
+    if (S.histBy === "releases") {
+      const rels = [...(S.releases || [])].sort((a, b) => a.published_at.localeCompare(b.published_at));
+      if (!rels.length) return [];
+      const first = new Map();
+      for (const r of rels) for (const n of r.prs) if (!first.has(`${r.repo}#${n}`)) first.set(`${r.repo}#${n}`, r);
+      const oldest = rels[0].published_at, many = new Set(rels.map((r) => r.repo)).size > 1;
+      for (const it of items) {
+        const s = it.card?.source;
+        const r = it.type === "change" ? first.get(`${s.repo}#${s.pr}`) : it.at < oldest ? null : rels.find((x) => x.published_at >= it.at);
+        if (!r && it.at < oldest) continue;
+        add(r ? `${r.repo}#${r.tag}` : "next", it);
+      }
+      for (const r of rels) add(`${r.repo}#${r.tag}`);
+      const newest = rels[rels.length - 1].published_at;
+      const out = [...rels].reverse().map((r) => ({ key: `${r.repo}#${r.tag}`, rel: r, title: `${r.name}${many ? ` · ${r.repo.split("/").pop()}` : ""}`, when: day(r.published_at), items: groups.get(`${r.repo}#${r.tag}`) || [] }));
+      return groups.has("next") ? [{ key: "next", title: "Not released yet", next: true, when: `since ${day(newest)}`, items: groups.get("next") }, ...out] : out;
+    }
+    for (const it of items) add(S.histBy === "days" ? utcDay(it.at) : isoWeek(it.at), it);
+    // A week with Design Desk's page is a week of History even when nothing else is on the Desk for it.
+    const digests = new Map(S.cards.filter((c) => c.kind === "digest" && c.period).map((c) => [c.period, c]));
+    if (S.histBy === "weeks") for (const k of digests.keys()) add(k);
+    return [...groups.keys()].sort().reverse().map((key) => ({ key, title: S.histBy === "days" ? dayWords(key) : weekWords(key), when: S.histBy === "weeks" ? key.replace("-W", ", week ") : "", digest: S.histBy === "weeks" ? digests.get(key) || null : null, items: groups.get(key) }));
+  }
+  const histCount = (items) => {
+    const n = (t) => items.filter((x) => x.type === t).length, w = (k, one, many) => (k ? `${k} ${k === 1 ? one : many}` : "");
+    return [w(n("change"), "change", "changes"), w(n("decision"), "decision", "decisions"), w(n("request"), "request", "requests")].filter(Boolean).join(" · ");
+  };
+  function renderHistoryList(head) {
+    const list = $("#list");
+    const top = `<div class="listhead">${head}<div class="filterbar">${seg("histBy", HIST_BY, "hist-by")}</div></div>`;
+    if (S.releases === undefined) {
+      if (!S.histLoading) { S.histLoading = true; loadHistory().then(() => { S.histLoading = false; if (S.tab === "product" && S.productFilter === "history") { renderList(); renderDetail(); } }); }
+      list.innerHTML = `${top}<div class="empty">Loading the history…</div>`; return;
+    }
+    if (S.histBy === "releases" && S.relError) { list.innerHTML = `${top}<div class="empty">The releases could not be read: ${esc(S.relError)}. Open History again to retry.</div>`; return; }
+    const ps = histPeriods();
+    if (!ps.length) {
+      list.innerHTML = `${top}<div class="empty">${S.histBy === "releases" ? "No releases yet. Design Desk reads the product's releases on GitHub every hour; a product that publishes none has only days and weeks." : "Nothing has happened yet. A change appears here once it ships, a decision once it is made, a request once it is filed."}</div>`; return;
+    }
+    const at = ps.findIndex((p) => p.key === S.histAt);
+    if (at >= S.listLimit) S.listLimit = Math.ceil((at + 1) / LIST_PAGE) * LIST_PAGE;
+    const drawn = ps.slice(0, S.listLimit);
+    list.innerHTML = top + drawn.map((p) => `<div class="row item"><button class="open" data-hist="${esc(p.key)}" aria-current="${S.histAt === p.key}"><div class="t"><span>${esc(p.title)}</span></div></button>
+      <div class="prov plain">${p.when ? `<span>${esc(p.when)}</span>` : ""}${p.rel?.prerelease ? `<span>pre-release</span>` : ""}<span>${esc(histCount(p.items) || (p.digest ? "the week's summary" : "nothing on the Desk"))}</span></div></div>`).join("")
+      + (drawn.length < ps.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
+    listMore.disconnect();
+    const more = list.querySelector("[data-list-more]");
+    if (more) listMore.observe(more);
+  }
+  // One row of a period's page, as a row of a list: its title (it opens the item), its number, one
+  // line of facts in the list's words — and for a change, its pictures before and after, the point
+  // of the page. The texts stay on the change's own page.
+  const histFact = (k, v) => `<span><span class="k">${k}:</span> <b>${v}</b></span>`;
+  function histRow(it) {
+    const head = (id, title, gone = false) => `<div class="hist-t"><button class="hist-title${gone ? " revoked-text" : ""}" data-ref="${esc(id)}">${esc(title)}</button><span class="num">${esc(id)}</span></div>`;
+    if (it.type === "decision") {
+      const d = it.dec, [, word] = decState(d);
+      return `<div class="hist-item">${head(d.id, d.text, d.status === "revoked")}<div class="prov">${histFact("decided", esc(day(d.at)))}${d.author ? histFact("by", named(d.author)) : ""}${histFact("state", esc(word))}</div></div>`;
+    }
+    const c = it.card;
+    if (it.type === "request") return `<div class="hist-item">${head(c.id, c.title)}${origin(c)}</div>`;
+    const s = c.source || {}, p = c.shots;
+    const pr = s.pr ? `<span><span class="k">from:</span> ${s.url ? `<a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">PR #${esc(s.pr)} ↗</a>` : `PR #${esc(s.pr)}`}</span>` : "";
+    const pics = !p ? `<p class="hint">No pictures of this change yet.</p>`
+      : `<div class="hist-shots">${shots(p.before ? [{ asset: p.before, stage: "before", pair: p.pair, caption: "", source: p.source }, { asset: p.after, stage: "after", pair: p.pair, caption: p.caption, source: p.source }] : [{ asset: p.after, caption: p.caption, source: p.source }])}</div>`;
+    return `<div class="hist-item">${head(c.id, c.title)}<div class="prov">${histFact("shipped", esc(day(s.merged_at)))}${pr}${histFact("origin", esc(HIST_ORIGIN[it.origin][1]))}</div>${pics}</div>`;
+  }
+  function renderHistory() {
+    const ps = histPeriods(), p = ps.find((x) => x.key === S.histAt);
+    if (!p) return `<p class="pick">${ps.length ? "Pick one on the left." : ""}</p><div class="panel kit-about">What happened to the product, by day, week or release: each change that shipped with its pictures before and after, the decisions the team made and the requests people filed.</div>`;
+    const changes = p.items.filter((x) => x.type === "change");
+    const areas = [...new Set(changes.map((x) => x.area).filter(Boolean))].sort();
+    if (S.histArea && !areas.includes(S.histArea)) S.histArea = "";
+    const q = S.histQ.trim().toLowerCase();
+    const shown = p.items.filter((x) => (S.histType === "all" || x.type === S.histType) && (!S.histArea || x.area === S.histArea) && (!S.histOrigin || x.origin === S.histOrigin) && (!q || x.title.toLowerCase().includes(q)))
+      .sort((a, b) => b.at.localeCompare(a.at));
+    const r = p.rel, word = S.histBy === "days" ? "day" : S.histBy === "weeks" ? "week" : "release";
+    // A release says where it stands in the box every item has (as a change's Merged).
+    const head = r ? ghStatus(r.prerelease ? "waiting" : "approved", r.prerelease ? "Pre-release" : "Released", r.prerelease ? "Published on GitHub as a pre-release: a candidate people can try" : "Published on GitHub: what people run",
+        `${histFact("published", esc(day(r.published_at)))}${r.previous ? histFact("after", esc(r.previous)) : ""}`, "", "", { pill: r.url ? `<a class="s-pill" href="${safeUrl(r.url)}" target="_blank" rel="noopener noreferrer" title="Open the release on GitHub">${esc(r.tag)} ↗</a>` : `<span class="s-pill">${esc(r.tag)}</span>`, inline: true })
+      : p.next ? ghStatus("waiting", "Not released yet", "Shipped to the main branch, in no release yet", histFact("since", esc(day(S.releases.reduce((m, x) => (x.published_at > m ? x.published_at : m), "")))), "", "", { inline: true }) : "";
+    const dg = p.digest?.summary ? `<p class="lead">${txt(p.digest.summary)} <button class="anchor" data-ref="${esc(p.digest.id)}">The week's page</button></p>` : "";
+    const type = (t) => p.items.filter((x) => x.type === t).length, from = (k) => changes.filter((x) => x.origin === k).length;
+    const filters = `<div class="hist-filters">${seg("histType", [["all", "All", p.items.length], ["change", "Changes", type("change")], ["decision", "Decisions", type("decision")], ["request", "Requests", type("request")]].filter(([k, , n]) => k === "all" || n), "hist-type")}
+      ${changes.length > 1 && Object.keys(HIST_ORIGIN).filter(from).length > 1 ? seg("histOrigin", [["any", "Any origin"], ...Object.entries(HIST_ORIGIN).filter(([k]) => from(k)).map(([k, [, w]]) => [k, w, from(k)])], "hist-origin", S.histOrigin || "any") : ""}
+      <div class="hist-pick">${areas.length > 1 ? `<select data-hist-area aria-label="Where in the product"><option value="">Everywhere in the product</option>${areas.map((a) => `<option value="${esc(a)}"${S.histArea === a ? " selected" : ""}>${esc(a)}</option>`).join("")}</select>` : ""}
+      <input type="search" data-hist-q placeholder="Find in this ${word}" value="${esc(S.histQ)}" aria-label="Find in this ${word}"></div></div>`;
+    // Changes by where they are in the product, then the decisions, then the requests.
+    const groups = [];
+    for (const a of [...new Set(shown.filter((x) => x.type === "change").map((x) => x.area))].sort((x, y) => (!x) - (!y) || x.localeCompare(y)))
+      groups.push([`a:${a}`, a || (areas.length ? "Elsewhere" : "Changes"), shown.filter((x) => x.type === "change" && x.area === a)]);
+    for (const [t, w] of [["decision", "Decisions"], ["request", "Requests"]]) { const l = shown.filter((x) => x.type === t); if (l.length) groups.push([t, w, l]); }
+    // Fold all, or open all again: one button over the groups, its word by whether all are folded.
+    S.histGroups = groups.map(([k]) => `${p.key}|${k}`);
+    const allShut = groups.length > 0 && S.histGroups.every((k) => S.histShut.has(k));
+    const foldAll = groups.length > 1 ? `<div class="hist-foldall"><button class="btn small" data-hist-fold="${allShut ? "open" : "shut"}">${allShut ? "Open all" : "Fold all"}</button></div>` : "";
+    const list = groups.map(([k, w, l]) => `<details class="fold big sect hist-group" data-hist-group="${esc(k)}"${S.histShut.has(`${p.key}|${k}`) ? "" : " open"}><summary><h3>${esc(w)}<span class="n">${l.length}</span></h3></summary>${l.map(histRow).join("")}</details>`).join("");
+    const decErr = S.decError ? `<p class="hint">The decisions could not be read: ${esc(S.decError)}. Open History again to retry.</p>` : "";
+    return `${backBar()}<h2>${esc(p.title)}</h2>${head}${dg}${decErr}
+      ${p.items.length ? filters + foldAll + (list || `<p class="hint">Nothing here matches. <button class="anchor" data-hist-clear>Show everything</button></p>`) : `<p class="hint">Nothing on the Desk for this ${word}.</p>`}`;
   }
   // A named value as CSS the Desk can draw: another one it names resolved, an HSL triple wrapped; else nothing.
   function kitValue(k, v) {
@@ -6292,8 +6470,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function renderDetailBody() {
     const d = $("#detail");
     // Every open item, decision and People fill the pane: each part is as wide as the page (`.fill`).
-    d.classList.toggle("fill", Boolean(S.card || S.decision || (S.productFilter === "kit" && S.kitPart)) || S.tab === "people");
-    const now = [S.tab, S.card?.id || "", S.decision?.id || "", S.kitPart || "", presenting() ? "p" : ""].join("|");
+    d.classList.toggle("fill", Boolean(S.card || S.decision || (S.productFilter === "kit" && S.kitPart) || (S.productFilter === "history" && S.histAt)) || S.tab === "people");
+    const now = [S.tab, S.card?.id || "", S.decision?.id || "", S.kitPart || "", S.productFilter === "history" ? `${S.histBy}:${S.histAt || ""}` : "", presenting() ? "p" : ""].join("|");
     if (now !== shown) { shown = now; d.scrollTop = 0; scrollTo(0, 0); d.classList.remove("enter"); void d.offsetWidth; d.classList.add("enter"); clearTimeout(entered); entered = setTimeout(() => d.classList.remove("enter"), 400); }
     $("#main").classList.toggle("has-detail", Boolean(S.card) || S.tab === "guide" || presenting() || S.tab === "people");
     if (S.tab === "guide") { d.innerHTML = `<div class="guide">${GUIDE()}</div>`; return; }
@@ -6302,6 +6480,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (S.tab === "product" && S.productFilter === "kit") {
       d.innerHTML = renderKit();
       $("#main").classList.toggle("has-detail", Boolean(S.kitPart));
+      return;
+    }
+    if (S.tab === "product" && S.productFilter === "history" && !S.card) {
+      d.innerHTML = renderHistory();
+      $("#main").classList.toggle("has-detail", Boolean(S.histAt));
+      loadImages();
       return;
     }
     if (S.tab === "product" && S.productFilter === "decisions") {
@@ -6771,7 +6955,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const [k, v] = ds.filter === "reqFor:presentation" ? ["reqFilter", "presentation"] : ds.filter.split(":");
       if (k === "reqFor" && S.reqFilter === "presentation") S.reqFilter = "open";
       S.justRead.clear();
-      S[k] = v; if (FILTERS[k] && KEPT(k)) store.set(`desk-${k}`, v); S.card = null; S.decision = null; S.kitPart = null; if (v === "decisions") await loadDecisions(); if (v === "kit") await loadKit(); renderList(); renderDetail(); return; }
+      S[k] = v; if (FILTERS[k] && KEPT(k)) store.set(`desk-${k}`, v); S.card = null; S.decision = null; S.kitPart = null; S.histAt = null; if (v === "decisions") await loadDecisions(); if (v === "kit") await loadKit(); if (v === "history") await loadHistory(); renderList(); renderDetail(); return; }
+    // Product → History: days, weeks or releases; a period; its filters (docs/desk-page.md → Product → History).
+    if (ds.histBy) { S.histBy = ds.histBy; store.set("desk-histBy", ds.histBy); S.histAt = null; renderList(); renderDetail(); return; }
+    if (ds.hist) { S.histAt = ds.hist; S.histType = "all"; S.histArea = ""; S.histOrigin = ""; S.histQ = ""; renderList(); renderDetail(); return; }
+    if (ds.histType) { S.histType = ds.histType; renderDetail(); return; }
+    if (ds.histOrigin) { S.histOrigin = ds.histOrigin === "any" ? "" : ds.histOrigin; renderDetail(); return; }
+    if (ds.histFold) { for (const k of S.histGroups || []) ds.histFold === "shut" ? S.histShut.add(k) : S.histShut.delete(k); renderDetail(); return; }
+    if ("histClear" in ds) { S.histType = "all"; S.histArea = ""; S.histOrigin = ""; S.histQ = ""; renderDetail(); return; }
     if (ds.kit) { S.kitPart = ds.kit; renderList(); renderDetail(); return; }
     if (ds.decision) { await openDecision(ds.decision); return; }
     if ("addDecision" in ds) { openDecisionDialog(); return; }
@@ -6848,7 +7039,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("lookSide" in ds) { S.lookSide = !S.lookSide; S.lookWith = "now"; S.lookGone = false; S.lookMiss = null; renderDetail(); return; }
     if ("addProduct" in ds) { openProductDialog(); return; }
     if ("addPerson" in ds) { openPersonDialog(); return; }
-    if ("back" in ds) { S.card = null; S.decision = null; S.kitPart = null; renderList(); renderDetail(); return; }
+    if ("back" in ds) { if (!S.card && S.tab === "product" && S.productFilter === "history") S.histAt = null; S.card = null; S.decision = null; S.kitPart = null; renderList(); renderDetail(); return; }
     if (ds.zoomSnip) { await zoomSnip(el); return; }
     if (ds.zoom) {
       const list = [];

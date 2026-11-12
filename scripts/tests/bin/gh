@@ -14,6 +14,11 @@ case "$args" in
   *"api user"*) echo '{"login":"design-bot"}' | { if [[ "$args" == *"--jq"* ]]; then echo design-bot; else cat; fi; };;
   *"--jq .private"*) cat "$STUB_DIR/private.txt" 2>/dev/null || { echo "stub: no such repository" >&2; exit 1; };;
   *milestones*) cat "$STUB_DIR/milestones.json" 2>/dev/null || echo '[]';;
+  *repos/*/releases*) cat "$STUB_DIR/releases.json" 2>/dev/null || echo '[]';;
+  # The first line of each commit's message between two tags, as the pre-flight's --jq asks.
+  *repos/*/compare/*)
+    t="$(printf '%s' "$args" | sed -E 's#.*compare/([^ ?]+).*#\1#; s#[^A-Za-z0-9.-]#_#g')"
+    cat "$STUB_DIR/compare-$t.txt" 2>/dev/null || { echo "stub: no compare $t" >&2; exit 1; };;
   *repos/*/issues/*)
     n="$(printf '%s' "$args" | sed -E 's#.*issues/([0-9]+).*#\1#')"
     cat "$STUB_DIR/issue-$n.state" 2>/dev/null || echo open;;

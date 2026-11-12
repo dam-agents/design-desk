@@ -232,7 +232,9 @@ watch_mode() {
     [ -n "$open_min" ] && [[ "${open_min%%T*}" < "$merged_from" ]] && merged_from="${open_min%%T*}"
     [[ "$merged_from" < "$since_day" ]] && merged_from="$since_day"
   fi
-  local DUE ISSUES; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"; ISSUES="$(mktemp "${TMPDIR:-/tmp}/design-desk-issues.XXXXXX")"
+  local DUE ISSUES RELS; DUE="$(mktemp "${TMPDIR:-/tmp}/design-desk-due.XXXXXX")"; ISSUES="$(mktemp "${TMPDIR:-/tmp}/design-desk-issues.XXXXXX")"; RELS="$(mktemp "${TMPDIR:-/tmp}/design-desk-releases.XXXXXX")"
+  local nrel=0 KNOWN_RELS='[]'
+  [ -f "$DESK_DIR/releases.json" ] && KNOWN_RELS="$(jq -c '.keys // []' "$DESK_DIR/releases.json" 2>/dev/null || echo '[]')"
   local ndue=0 nissues=0 deferred=0 skipped=0 seen=0 lookups=0 unread=0
   # One files call per new candidate; a backlog is spread over passes so a pass stays
   # well inside the Precheck's budget (about 2 s a call through the gateway).
@@ -319,6 +321,29 @@ watch_mode() {
         log "$repo#$num: issue labelled $LABEL — due ($kind)"
       done < <(jq -r '.items[] | [.number, (.title | gsub("[\t\n]"; " ")), .html_url, .user.login] | @tsv' <<<"$found")
     fi
+    # Releases (docs/watch.md → Releases): each release published since watch_since that the
+    # Desk does not keep yet, with the pull requests in it since the release published before it,
+    # read from the merge and squash messages ("(#12)", "Merge pull request #12") of the commits
+    # between the two tags. At most 5 new releases a pass; a repository with no releases has none.
+    local rels rtag rname rurl rpub rpre prev prs
+    if rels="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/releases?per_page=30" 2>/dev/null)"; then
+      prev=""
+      while IFS=$'\t' read -r rtag rname rurl rpub rpre; do
+        [ -n "$rtag" ] || continue
+        if [[ "$rpub" < "$SINCE_Z" ]] || jq -e --arg k "$repo#$rtag" 'index($k) != null' <<<"$KNOWN_RELS" >/dev/null || [ "$nrel" -ge 5 ]; then prev="$rtag"; continue; fi
+        if [ -z "$prev" ]; then log "$repo $rtag: no earlier release to compare it with — kept without its pull requests"; prs='[]'
+        elif ! prs="$(gh api ${hostargs[@]+"${hostargs[@]}"} "repos/$slug/compare/$prev...$rtag?per_page=100" --paginate --jq '.commits[].commit.message | split("\n")[0]' 2>/dev/null \
+            | grep -oE '\(#[0-9]+\)|Merge pull request #[0-9]+' | grep -oE '[0-9]+' | sort -un | jq -Rcs 'split("\n") | map(select(length > 0) | tonumber)')"; then
+          log "$repo $rtag: could not compare it with $prev — next run"; prev="$rtag"; continue
+        fi
+        jq -cn --arg repo "$repo" --arg tag "$rtag" --arg name "$rname" --arg url "$rurl" --arg pub "$rpub" --argjson pre "$rpre" --arg prev "$prev" --argjson prs "${prs:-[]}" \
+          '{repo:$repo, tag:$tag, name:(if $name == "" then $tag else $name end), url:$url, published_at:$pub, prerelease:$pre, previous:(if $prev == "" then null else $prev end), prs:$prs}' >> "$RELS"
+        nrel=$((nrel + 1)); log "$repo $rtag: released $rpub, $(jq length <<<"${prs:-[]}") pull requests — releases_due"
+        prev="$rtag"
+      done < <(jq -r '[.[] | select((.draft | not) and .published_at != null)] | sort_by(.published_at) | .[] | [.tag_name, ((.name // "") | gsub("[\t\n]"; " ")), .html_url, .published_at, (.prerelease | tostring)] | @tsv' <<<"$rels")
+    else
+      log "$repo: could not list its releases — next run"
+    fi
   done
   # The issues and pull requests the Desk's cards point at whose copy on the Desk is behind
   # GitHub: never read, or changed since (a comment changes it). One search per repository.
@@ -345,12 +370,12 @@ watch_mode() {
   printf '%s changes_due=%s issues_due=%s skipped=%s deferred=%s seen=%s\n' "$NOW_ISO" "$ndue" "$nissues" "$skipped" "$deferred" "$seen" >> "$WORK/WATCH.log"
   if [ "$deferred" -eq 0 ] && [ "$unread" -eq 0 ] && [ ! -e "$WORK/.search-partial" ]; then printf '%s\n%s\n' "$NOW_ISO" "$SINCE" > "$CURSOR"; fi
   rm -f "$WORK/.search-partial"
-  local arr iss; arr="$(jq -s '.' "$DUE")"; iss="$(jq -s '.' "$ISSUES")"; rm -f "$DUE" "$ISSUES"
-  [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || [ "$ngh" -gt 0 ] || quiet_out
-  logev info preflight "watch: $ndue changes, $nissues issues, $ngh GitHub copies due"
-  jq -n --argjson due "$arr" --argjson issues "$iss" --argjson gh "$gh_due" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+  local arr iss rel; arr="$(jq -s '.' "$DUE")"; iss="$(jq -s '.' "$ISSUES")"; rel="$(jq -s '.' "$RELS")"; rm -f "$DUE" "$ISSUES" "$RELS"
+  [ "$ndue" -gt 0 ] || [ "$nissues" -gt 0 ] || [ "$ngh" -gt 0 ] || [ "$nrel" -gt 0 ] || quiet_out
+  logev info preflight "watch: $ndue changes, $nissues issues, $ngh GitHub copies, $nrel releases due"
+  jq -n --argjson due "$arr" --argjson issues "$iss" --argjson gh "$gh_due" --argjson rel "$rel" --argjson config "$CONF" --argjson logs "$(logs_json)" \
     --arg title "$( { jq -r '.[].pr | "#\(.)"' <<<"$arr"; jq -r '.[].issue | "#\(.)"' <<<"$iss"; } | title_for Explain "")" \
-    '{mode:"watch", nothing_to_do:false, title:(if ($due | length) + ($issues | length) == 0 then "Read new GitHub comments" else ($title | sub("Explain  "; "Explain ")) end), github_due:$gh,
+    '{mode:"watch", nothing_to_do:false, title:(if ($due | length) + ($issues | length) > 0 then ($title | sub("Explain  "; "Explain ")) elif ($gh | length) > 0 then "Read new GitHub comments" else "Keep the new releases" end), github_due:$gh, releases_due:$rel,
       read_set: (["docs/watch.md", ".agents/skills/explain/SKILL.md"] + (if ($issues | length) > 0 then ["docs/requests.md"] else [] end)),
       changes_due:$due, issues_due:$issues, config:$config, logs:$logs}'
 }

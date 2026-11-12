@@ -56,6 +56,9 @@ const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n
                                            email}, origin: {kind, label, url, card}, replaced_by}
   decision-figma <D-n> <check.json|->      a Figma frame that goes against a decision, as figma_check (the figma
                                            skill → Compare with the product); null clears it
+  releases <releases.json|->               keep the releases the watch pre-flight found (releases_due),
+                                           as it printed them: [{repo, tag, name, url, published_at,
+                                           prerelease, previous, prs}] (docs/watch.md → Releases)
   kit <kit.json|->                         keep the product's kit on the Desk (Product → Kit), as
                                            design kit printed it (docs/requests.md → Smart controls)
   decisions [--concept <c>] [--q <words>] [--state active|revoked]
@@ -418,6 +421,7 @@ export async function main(_cmd, argv) {
     case "find-council": return out(await call("GET", `/agent/councils?ts=${encodeURIComponent(pos[0] || "")}`));
     case "find-finding": return out(await call("GET", `/agent/findings?ref=${encodeURIComponent(pos[0] || "")}`));
     case "decision-check": return out(await call("GET", decisionCheckPath(pos[0], f)));
+    case "releases": { let rel; try { rel = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); } return out(await call("POST", "/agent/releases", { releases: Array.isArray(rel) ? rel : rel?.releases })); }
     case "kit": { let kit; try { kit = JSON.parse(readArg(pos[0])); } catch (e) { fail(`not JSON: ${e.message}`); } return out(await call("POST", "/agent/kit", kit)); }
     case "decisions": return out(await call("GET", `/agent/decisions?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}&state=${encodeURIComponent(typeof f.state === "string" ? f.state : "")}`));
     case "github-sync": return out(await githubSync(typeof f.card === "string" ? f.card : null));

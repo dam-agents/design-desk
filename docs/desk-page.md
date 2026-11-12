@@ -74,7 +74,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   PR Changes and Issues, each opened on the viewer's own as Requests ([desk.md](desk.md) → For
   Developers or For Designers); **Screens**, **Elements**, **Decisions**, **Kit** (an admin's, a designer's and a lead
   developer's: [Product → Kit](#product--kit)),
-  **Differences** (with Figma on, [desk.md](desk.md#differences-from-figma)) and **History** on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
+  **Differences** (with Figma on, [desk.md](desk.md#differences-from-figma)) and **History** ([Product → History](#product--history)) on Product. What narrows a page's list is one segmented filter under them (Designs: **To build** and **Done**; Changes: **Open** (not
   handled, the default), **Handled**, **Auto handled** (Design Desk found nothing to look at, `attention` `fyi`, or it shipped more than `change_auto_handled_days`, 14,
   ago and nobody marked it handled; it leaves Open and Needs a designer, and is never overdue), Needs a designer; Requests: **Your turn** (the default for anyone who may vote, **Open** for the rest: the next move is the viewer's own, by what they may do —
   answer Design Desk, start the options, ask the team, vote (until they voted, the list's
@@ -92,7 +92,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   screen's or part's summary — and no chips. A value in that line with its word (`created:`,
   `from:`, `by:`, `decided:`, `in:` …) stays in ink and underlines on hover; a click filters the
   list to the rows with the same value, under a **Filtered by** bar whose **×** shows every row
-  again (a link in the value still opens). The filter holds on that tab's page. A row with no state of its own (a week of History)
+  again (a link in the value still opens). The filter holds on that tab's page. A row with no state of its own
   keeps its number where the others have it. Every list on the left shows the newest item first: a change by the day it
   shipped, a decision by the day it was made, any other item by the day it came onto the Desk.
   The Presentation keeps the order a designer set. A list of items (every list but Decisions
@@ -228,6 +228,34 @@ then the files, folded; a value or variant no file uses says so. A kit read befo
 existed shows no uses; one read before `uses` counts the files listed, *30+* at the cap.
 Before the first `design desk kit` the list says *No kit yet*; a read that failed says the kit
 could not be read, and why.
+
+## Product → History
+
+What happened to the product, put together on the page from what the Desk keeps: the changes
+that shipped (by the day they merged), the decisions made, the requests filed. Under the page
+tabs, one segmented filter, kept in the browser: **Days**, **Weeks** (the default) and
+**Releases**. The list has one tile a period, the newest first, with its date and its counts, and no chips.
+Days and weeks are UTC; a week runs Monday to Sunday, so its tile is the weekly digest's week
+([digest.md](digest.md)). **Releases** are the product's releases on GitHub as the watch run keeps
+them ([watch.md](watch.md) → Releases): a change is in the first release that has its pull
+request, a decision or a request in the first release published after it, and what came after
+the newest one is under **Not released yet**, on top. A pre-release says so on its tile. With no
+release kept, Releases says so and how they come.
+
+A tile opens the period's page, drawn as an item's page: for a release, the status box a change
+has (**Released** or **Pre-release**, its tag linking the release on GitHub, when it was published
+and the release before it; **Not released yet** and since when); for a week, Design Desk's summary
+with a link to the week's own page. Then the filters, each a segmented filter with its counts: All,
+Changes, Decisions, Requests; and how the changes came about, **Any origin**, **As designed** (it
+builds a design approved on the Desk), **Differs from the design** (its `design_check` differs),
+**No design** and **Fix or polish** (the card's `fix`), only those it has; then where in the product
+(the cards' `area`) and a search in the period's titles. The changes are grouped by where they are,
+a group folds, and **Fold all** over them folds every group (**Open all** opens them again); then
+the decisions, then the requests. Each row reads as a list's row — its title
+(it opens the item), its number, one line of facts (shipped, from, origin) — and a change shows its
+pictures right under it, before and after side by side as on its own page (the list's `shots`: its
+first pair with both, else its first picture as the after). The texts stay on the change's page.
+**← History** closes the period.
 
 ## A request's state in the list
 

@@ -207,6 +207,8 @@ async function viewerRoute(req, res, url, who) {
   if (m === "GET" && p[1] === "private") return send(res, 200, { asks: store.privateAsks(actor) });
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   if (m === "GET" && p[1] === "agenda") return send(res, 200, { agenda: store.agenda(), presented: store.presented(), calls: (store.db.calls || []).slice(-5) });
+  // The product's releases, for Product → History (docs/watch.md → Releases).
+  if (m === "GET" && p[1] === "releases") return send(res, 200, store.getReleases());
   // The product's kit: an admin's, a designer's and a lead developer's page (docs/desk-page.md → Product → Kit).
   if (m === "GET" && p[1] === "kit") { if (!LOOK_ROLES.includes(who.deskRole)) throw new DeskError(403, `Only admins, designers and lead developers see the kit. Ask ${s.contact} if you need it.`); return send(res, 200, store.getKit()); }
   if (m === "GET" && p[1] === "decisions" && !p[2]) {
@@ -400,6 +402,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "reports") return send(res, 201, store.createRequest({ agent: true }, { ...b, type: "bug" }));
   // The product's kit as `design kit` read it (docs/requests.md → Smart controls).
   if (m === "POST" && p[1] === "kit") return send(res, 200, store.setKit(b));
+  // The releases the watch pre-flight found (docs/watch.md → Releases).
+  if (m === "POST" && p[1] === "releases") return send(res, 200, store.setReleases(b.releases ?? b));
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));

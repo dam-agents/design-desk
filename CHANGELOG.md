@@ -7,6 +7,17 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.88.0 — 2026-11-12
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): Product → History shows what happened by day,
+   week or release ([desk-page.md](docs/desk-page.md) → Product → History). The watch pre-flight
+   now reads the watched repositories' releases on GitHub and lists the new ones as
+   `releases_due`; the run keeps them with `design desk releases` ([watch.md](docs/watch.md) →
+   Releases). A change card gains `area` and `fix`; cards written before keep neither, and History
+   shows them under Elsewhere and No design. No data migration.
+
 ## 1.87.1 — 2026-11-12
 
 **Upgrade:**
