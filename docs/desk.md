@@ -219,24 +219,28 @@ and `D-12` in text link to it as to a card (Links to an item).
   `impact.decisions[].id`, an option's `reasons[].decision` with the parts it shaped
   ([requests.md](requests.md) → Variants), a section, an answer, a spec, a Slack reply, the digest.
 - **The check**: every step that makes or changes a design, or says what one can be, is read
-  against the decisions in force first — triage, impact, a change card, options (a new one, a
-  person's description, a redraw, notes worked in, three ways of a part, every state), an
+  against the decisions that count first (in force and approved: one that waits for a
+  designer's approval counts for nothing, Approved by a designer below) — triage, impact, a
+  change card, options (a new one, a person's description, a redraw, notes worked in, three ways of a part, every state), an
   issue's sketch, a live prototype, a new decision, an answer to a question that asks for a
   change, a design asked for in Slack or chat. How a request's screen looks today (`now`,
   [requests.md](requests.md) → How it looks today) is the product as it is, not a design: it
   is drawn without the check and carries no conflicts.
   1. `design desk decision-check R-<n> [--concept <a,b>] [--q <words>]`: the card's options,
-     the decisions in force about its concepts (or, given, about those concepts and words
+     the decisions that count about its concepts (or, given, about those concepts and words
      instead), its conflicts now and its last check. Name the concepts the design touches; a card about nothing named reads every one.
      `truncated: true` (more than 60 of `total`): narrow with `--concept` or `--q` until it is
-     false, and read each part.
+     false, and read each part. The ones in force that wait for approval come apart, under
+     `waiting` (at most 20 of `waiting_total`; `waiting_truncated: true` past it): read them,
+     never judge against one or write one as a conflict.
   2. Judge each option and the verdict against each decision read. Each one it goes against goes
      in `conflicts: [{decision, why, variant}]` (`variant`: the option it concerns) on the card,
      or on the new decision; one it rests on is a reason or a citation, never a conflict.
   3. Write it in the same `design desk upsert` as the design, with `decision_check: {concepts,
      read: [D-n]}`; the store stamps when and the option versions it saw. A design written
-     without its check, an alternative a person picked, a person's own option, and a decision
-     recorded or restored about a card's concepts queue a `decision-check` item (`checks_due`);
+     without its check, an alternative a person picked, a person's own option, and a decision that
+     counts recorded, restored or approved about a card's concepts queue a `decision-check` item
+     (`checks_due`); one that waits for approval queues none until a designer approves it;
      one a decision queued names it (`decisions`) and closes only with a write whose `read` has it.
   4. Outside a card's fields, name what it goes against: an answer or a worked-in note
      `--warns` (`source.kind: decision`), a GitHub or Slack reply and a chat deliverable the

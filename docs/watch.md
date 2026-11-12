@@ -174,7 +174,8 @@ Merged and closed pull requests are never touched: their checks no longer matter
   head as above and upsert the new `sha`. A card a person marked handled stays handled.
 - **Cards already on the Desk.** The gate's first step runs when a card is written, so the
   inbox pre-flight also lists, while `ci_gate` is `enabled`, every judged change card of an
-  open PR (its `attention`, a `design_check`, a decision in force it goes against) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
+  open PR (its `attention`, a `design_check`, a decision that counts it goes against: in force and
+  approved, [desk.md](desk.md) → Decisions → Approved by a designer) with no `ci` yet, as a `ci_due` entry `G-<card>` (`gate:
   true`): the cards on the Desk before the key was turned on, and any a run missed. It has no
   item to claim: set the check as in **Set it** and upsert `ci`. A card with `ci` is never due this way
   again, save after a failed write (`retry: true`, below) and a `skipped` with no `tries`

@@ -160,11 +160,14 @@ cat > "$WORK_DIR/desk/db.json" <<'JSON'
  "C-6":{"id":"C-6","kind":"change","status":"new","source":{"repo":"a/b","pr":6},"conflicts":[{"decision":"D-1"}]},
  "C-7":{"id":"C-7","kind":"change","status":"new","source":{"repo":"a/b","pr":7},"ci":{"state":"error","tries":2}},
  "C-8":{"id":"C-8","kind":"change","status":"new","source":{"repo":"a/b","pr":8},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"skipped","tries":3}},
- "C-9":{"id":"C-9","kind":"change","status":"new","source":{"repo":"a/b","pr":9},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"skipped"}}},
- "decisions":{"D-1":{"id":"D-1","status":"active"}}}
+ "C-9":{"id":"C-9","kind":"change","status":"new","source":{"repo":"a/b","pr":9},"attention":{"level":"designer","reasons":["r"]},"ci":{"state":"skipped"}},
+ "C-10":{"id":"C-10","kind":"change","status":"new","source":{"repo":"a/b","pr":10},"conflicts":[{"decision":"D-2"}]}},
+ "decisions":{"D-1":{"id":"D-1","status":"active","origin":{"kind":"pr"},"approved":{"by":{"role":"designer"}}},
+  "D-2":{"id":"D-2","status":"active","origin":{"kind":"pr"}}}}
 JSON
 assert "ci_gate off: no card is due for the gate" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 printf -- '- ci_gate: enabled\n' > "$WORK_DIR/CONFIG.md"
+# C-10 goes against only D-2, a decision that waits for a designer's approval: it counts for nothing, so no gate.
 assert "ci_gate on: open judged cards with no check yet, and a failed write under its cap" '[.ci_due[] | [.id, .retry]] == [["G-C-1", false], ["G-C-4", false], ["G-C-5", false], ["G-C-6", false], ["G-C-7", true], ["G-C-9", false]]' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 echo '{"cards":' > "$WORK_DIR/desk/db.json"
 assert "a Desk store the gate cannot read is an error line, and the run stays open" '(.nothing_to_do == false) and (.logs | any(test("could not read the Desk.s cards for the CI gate")))' "$(bash "$ROOT/scripts/preflight.sh" inbox)"

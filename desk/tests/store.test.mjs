@@ -6,7 +6,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store, can, DeskError, ACTIONS, LIMITS, abilities, forgetIdle, rosterOf, readRole, personOf, namesOf, elementsOf } from "../store.mjs";
 
-const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")));
+// Every decision in force counts in these tests, unless one says which wait (the server passes the roster's rule).
+const everyCounts = () => false;
+const fresh = () => new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts });
 const alice = { email: "alice@example.com", role: "designer" };
 const bob = { email: "bob@example.com", role: "developer" };
 const inbox = (s) => JSON.parse(readFileSync(join(s.dir, "inbox.json"), "utf8"));
@@ -39,7 +41,7 @@ test("a roster role written as lead, the admin's name before 1.59.0, reads as ad
   assert.deepEqual(rosterOf([{ email: "lee@example.com", role: "lead" }]), [{ email: "lee@example.com", also: [], role: "admin" }]);
   const dir = mkdtempSync(join(tmpdir(), "desk-lead-"));
   writeFileSync(join(dir, "db.json"), JSON.stringify({ cards: { r1: { id: "r1", votes: { v1: { "lee@example.com": { vote: "prefer", role: "lead" } } } } }, decisions: { "D-1": { id: "D-1", text: "x", author: { email: "lee@example.com", role: "lead" } } } }));
-  const s = new Store(dir);
+  const s = new Store(dir, { needsApproval: everyCounts });
   assert.equal(s.db.cards.r1.votes.v1["lee@example.com"].role, "admin");
   assert.equal(s.db.decisions["D-1"].author.role, "admin");
 });
@@ -200,7 +202,7 @@ test("a change card stays short, and a designer marks it handled", () => {
 
 test("claims: one session per item, a heartbeat renews the lease, takeover only past it", () => {
   let now = "2026-10-30T10:00:00Z";
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => now });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => now });
   const { inbox: item } = s.createRequest(alice, { title: "Calmer empty state", problem: "It shouts." });
   s.claim(item.id, "s1");
   assert.throws(() => s.claim(item.id, "s2"), (e) => e instanceof DeskError && e.status === 409);
@@ -220,7 +222,7 @@ test("claims: one session per item, a heartbeat renews the lease, takeover only 
 test("the inbox file is refreshed when the store starts, so an upgrade writes the current lease", () => {
   const dir = mkdtempSync(join(tmpdir(), "desk-store-"));
   writeFileSync(join(dir, "inbox.json"), JSON.stringify({ claim_ttl_min: 120, open: [], claimed: [] }));
-  const s = new Store(dir);
+  const s = new Store(dir, { needsApproval: everyCounts });
   assert.equal(inbox(s).claim_ttl_min, 15);
 });
 
@@ -1124,7 +1126,7 @@ test("a picture keeps where it came from: an issue's own and an AI sketch too; a
 
 test("a Slack sync is not a new vote: a reaction counted before keeps its time, a changed one is new", () => {
   let now = Date.UTC(2026, 10, 1, 9);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
   const a = s.addAsset({ kind: "variant", name: "v", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
   s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "One button", asset: a }] });
@@ -1235,7 +1237,7 @@ test("the presentation: a designer marks one item presented, and Undo puts it ba
 
 test("the presentation: Undo ends with the day; an earlier meeting's item keeps its record", () => {
   let now = Date.UTC(2026, 10, 3, 17);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const { card } = s.createRequest(alice, { problem: "The empty list shouts." });
   const { card: other } = s.createRequest(alice, { problem: "The header is too tall." });
   s.queueForCall(card.id, alice); s.queueForCall(other.id, alice);
@@ -1253,7 +1255,7 @@ test("the presentation: Undo ends with the day; an earlier meeting's item keeps 
 
 test("an element's redraw keeps its earlier look with the change that made the new one", () => {
   let t = 0;
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(Date.UTC(2026, 9, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 9, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const sheet = (html) => s.addAsset({ kind: "report", name: "sheet", contentType: "text/html", data: html, encoding: "utf8" }).asset.id;
   const source = { file: "src/AgentRow.tsx", export: "AgentRow" };
   const a1 = sheet("<p>one</p>");
@@ -1418,7 +1420,7 @@ test("an issue a request was sent to developers from, or to, is designed; the re
 
 test("a change whose pull request builds a sent request's issue, or got its spec, links the request", () => {
   let t = 0;
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(Date.UTC(2026, 10, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const pr = (n, url = true) => s.upsertCard({ kind: "change", title: `PR ${n}`, source: { repo: "acme/widgets", pr: n, ...(url ? { url: `https://github.com/acme/widgets/pull/${n}` } : {}) } }).card;
   const viaIssue = pr(40), direct = pr(41), noUrl = pr(43, false), other = pr(42);
   const sent = (title, spec) => { const r = s.createRequest(alice, { title, problem: "Why.", type: "feature" }).card; return s.upsertCard({ id: r.id, status: "handed-off", spec }).card; };
@@ -1481,7 +1483,7 @@ test("decisions: a number, who decided and where with a link; a store from befor
   // A record written before decisions named their author and origin.
   s.db.decisions["D-0"] = { id: "D-0", concepts: ["x"], text: "Old", why: "", source: { label: "PR #1", url: "https://x.example/1", card: null }, at: "2026-01-01T00:00:00Z", recorded: "2026-01-01T00:00:00Z" };
   s.save();
-  const again = new Store(s.dir);
+  const again = new Store(s.dir, { needsApproval: everyCounts });
   assert.deepEqual([again.db.decisions["D-0"].status, again.db.decisions["D-0"].origin.kind, again.db.decisions["D-0"].author, again.db.decisions["D-0"].source], ["active", "other", null, undefined]);
   assert.deepEqual(again.listDecisions({ q: "d-1" }).map((x) => x.id), ["D-1"]);
 });
@@ -1511,6 +1513,8 @@ test("decisions: one waiting for a designer's approval is never a conflict, a re
   const check = s.decisionCheck(c.id, { concepts: ["prices"] });
   assert.deepEqual(check.decisions.map((x) => x.id), [], "the check reads only what counts");
   assert.deepEqual(check.waiting.map((x) => x.id), [d.id], "it names what waits, apart");
+  assert.equal(check.waiting_total, 1);
+  assert.equal(check.waiting_truncated, false);
   // A conflict a card already had stays on it but warns nothing, and no one waits for it.
   waiting.delete(d.id);
   s.upsertCard({ id: c.id, conflicts: [{ decision: d.id, why: "It drops the tax." }] });
@@ -1527,6 +1531,14 @@ test("decisions: one waiting for a designer's approval is never a conflict, a re
   waiting.delete(d.id);
   s.checkAgainst(d);
   assert.equal(s.activeConflicts(s.card(c.id)).length, 1, "approved, it warns again");
+  // A long waiting list is cut, and says so.
+  for (let i = 0; i <= LIMITS.checkWaiting; i++) waiting.add(s.addDecision({ concepts: ["prices"], text: `Rule ${i}`, author: { login: "dana" }, origin: { kind: "pr", url: "https://github.com/acme/widgets/pull/4" } }).decision.id);
+  const long = s.decisionCheck(c.id, { concepts: ["prices"] });
+  assert.equal(long.waiting.length, LIMITS.checkWaiting);
+  assert.equal(long.waiting_total, LIMITS.checkWaiting + 1);
+  assert.equal(long.waiting_truncated, true);
+  // A store is never built without the rule: it would guess which decisions count.
+  assert.throws(() => new Store(mkdtempSync(join(tmpdir(), "desk-store-"))), /needsApproval/);
 });
 
 test("decisions: conflicts warn, wait for a designer and gate approval; revoking clears them", () => {
@@ -1582,7 +1594,7 @@ test("a decision written by hand without concepts, text or date still lists and 
   const dir = mkdtempSync(join(tmpdir(), "desk-store-"));
   const db = { decisions: { "D-1": { id: "D-1", concept: "Prices", text: "Prices show tax", status: "active", recorded: "2026-11-01T10:00:00Z" }, "D-2": { id: "D-2", status: "active" } } };
   writeFileSync(join(dir, "db.json"), JSON.stringify(db));
-  const s = new Store(dir);
+  const s = new Store(dir, { needsApproval: everyCounts });
   assert.deepEqual(s.listDecisions().map((d) => [d.id, d.concepts, d.text, d.at]), [["D-1", ["prices"], "Prices show tax", "2026-11-01T10:00:00Z"], ["D-2", [], "", ""]]);
   assert.deepEqual(s.listDecisions({ concept: "prices" }).map((d) => d.id), ["D-1"], "a concept search skips the one without concepts");
   assert.equal(s.getDecision("D-2").decision.id, "D-2");
@@ -2110,7 +2122,7 @@ test("Under the hood: a short plain text with its sources; a plain string is its
 
 test("notifications fold rows: one per item, family and day, at most 20 marks, each person once, votes too; a private answer on an archived card is not news", () => {
   let now = Date.UTC(2026, 9, 1, 8);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const tick = () => { now += 60e3; return s.clock(); };
   const pat = { email: "pat@example.com", role: "designer" }, kim = { email: "kim@example.com", role: "pm" }, lee = { email: "lee@example.com", role: "developer" };
   const { card } = s.createRequest(alice, { title: "Mine", problem: "x", screen: "S" });
@@ -2140,7 +2152,7 @@ test("notifications fold rows: one per item, family and day, at most 20 marks, e
 
 test("notifications: every event kind, the 30-day window, the row cap, newest first, skipped cards, For you from a vote or an approval; seen saves only on news", () => {
   let now = Date.UTC(2026, 9, 1);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const tick = (h = 1) => { now += h * 3600e3; return s.clock(); };
   const pat = { email: "pat@example.com", role: "designer" };
   // Older than the window: never in the bell.
@@ -2202,7 +2214,7 @@ test("notifications: every event kind, the 30-day window, the row cap, newest fi
 
 test("notifications: a click reads one row; a repeat click writes nothing, noted keeps only rows still in the bell, Mark as read empties it", () => {
   let now = Date.UTC(2026, 9, 1);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const tick = (h = 1) => { now += h * 3600e3; return s.clock(); };
   const pat = { email: "pat@example.com", role: "designer" };
   const r = s.createRequest(alice, { title: "Mine", problem: "x", screen: "S" }).card;
@@ -2238,7 +2250,7 @@ test("notifications: a click reads one row; a repeat click writes nothing, noted
 
 test("notifications: a stale click reads the row its lead folded into, never a look-alike row of the same item and day", () => {
   let now = Date.UTC(2026, 9, 1, 8);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const tick = () => { now += 600e3; };
   const pat = { email: "pat@example.com", role: "pm" };
   const { card } = s.createRequest(alice, { title: "Calm", problem: "x" });
@@ -2525,7 +2537,7 @@ test("a merged change that builds a sent design marks it done, unless a person t
 
 test("a write on a card renews the claims on it; a claim on another card keeps its time", () => {
   let now = Date.UTC(2026, 9, 1, 8);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const one = s.createRequest(alice, { problem: "One." }), two = s.createRequest(alice, { problem: "Two." });
   s.claim(one.inbox.id, "run-1"); s.claim(two.inbox.id, "run-2");
   const at = s.item(one.inbox.id).claimed_at;
@@ -2566,18 +2578,18 @@ test("a store from before the sign-in record starts it from who already used the
   s.db.prefs["Dee@Example.com"] = { theme: "dark" };
   s.db.seen["sub-123"] = "2026-10-01T08:00:00Z";
   s.save();
-  const old = new Store(s.dir);
+  const old = new Store(s.dir, { needsApproval: everyCounts });
   const opened = (email) => old.peopleAsks().find((a) => a.email === email).opened;
   assert.equal(opened("dee@example.com"), true, "she set a preference: she loaded the Desk");
   assert.equal(opened("new@example.com"), false, "nothing known of them");
   assert.deepEqual(Object.keys(old.db.opened), ["dee@example.com"], "addresses only, lower-cased; a key that is no address is left out");
   old.markOpened({ email: "new@example.com", role: "designer" });
-  assert.equal(new Store(s.dir).peopleAsks().find((a) => a.email === "new@example.com").opened, true, "a store with the record is read as it is");
+  assert.equal(new Store(s.dir, { needsApproval: everyCounts }).peopleAsks().find((a) => a.email === "new@example.com").opened, true, "a store with the record is read as it is");
 });
 
 test("a claimed item says how long its kind usually takes, once three of them finished", () => {
   let now = Date.UTC(2026, 9, 1, 8);
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z") });
   const work = (minutes) => { const { card, inbox } = s.createRequest(alice, { problem: "x" }); s.claim(inbox.id, "run"); if (minutes != null) { now += minutes * 60e3; s.done(inbox.id, "run", "checked"); } return card; };
   work(4); work(20);
   assert.equal(s.getCard(work(null).id).waiting[0].usual_min, undefined, "two finished: no estimate yet");
@@ -2676,7 +2688,7 @@ test("every kind numbers its own series under its letter; items from before keep
       "C-2": { id: "C-2", kind: "request", title: "Calmer header", status: "handed-off", created: "2026-11-02T00:00:00Z", updated: "2026-11-02T00:00:00Z", threads: [], sends: [{ closed: { at: "2026-11-02T00:00:00Z" }, threads: [] }],
         polls: [{ id: "P-2", state: "closed" }], councils: [{ id: "S-1", state: "closed" }] } },
     threads: {}, assets: {}, inbox: { "I-4": { id: "I-4", kind: "request", card: "C-2", state: "done" } }, decisions: {} }));
-  const s = new Store(dir);
+  const s = new Store(dir, { needsApproval: everyCounts });
   assert.equal(s.card("C-1").figma_check.id, "F-1", "a comparison from before gets its number");
   assert.deepEqual([s.card("C-2").sends[0].design_id, s.card("C-2").design_id], ["G-1", "G-2"], "an earlier send first, then the one now");
   assert.equal(s.card("F-1").id, "C-1", "a comparison's number names its card");
@@ -2698,7 +2710,7 @@ test("every kind numbers its own series under its letter; items from before keep
 
 test("a change card's environment: https only, keeps when it was deployed, cleared by null", () => {
   let now = "2026-11-02T08:00:00Z";
-  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { clock: () => now });
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => now });
   const env = { url: "https://app-pr-7.env.example.com", label: "demo", login: { hint: "your platform account" }, steps: ["Open the agents list"], missing: "No processes there." };
   const c = s.upsertCard({ kind: "change", title: "Filter agents by owner", source: { repo: "acme/widgets", pr: 7 }, environment: env }).card;
   assert.deepEqual(c.environment, { ...env, since: "2026-11-02T08:00:00Z", expires: null, login: { user: "", password: "", hint: "your platform account" } });

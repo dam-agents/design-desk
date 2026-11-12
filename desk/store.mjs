@@ -7,6 +7,8 @@ import { join } from "node:path";
 export const LIMITS = {
   // The decisions one check reads at most; past it the read says it is cut (docs/desk.md → Decisions → The check).
   checkRead: 60,
+  // The decisions in force that wait for approval one check lists at most; past it the read says it is cut.
+  checkWaiting: 20,
   title: 200,
   text: 4000,
   threadsPerCard: 300,
@@ -266,7 +268,9 @@ const NOTE_FAMILY = { comment: "talk", reply: "talk", question: "talk", answer: 
 export class Store {
   // `needsApproval(decision)`: the server says whether a decision in force still waits for a designer
   // (docs/desk.md → Decisions → Approved by a designer); it needs the roster, which the store does not read.
-  constructor(dir, { clock = now, needsApproval = () => false } = {}) {
+  // It has no default: a store that guessed would count every decision, or none.
+  constructor(dir, { clock = now, needsApproval } = {}) {
+    if (typeof needsApproval !== "function") throw new TypeError("Store needs needsApproval(decision): which decisions in force wait for a designer's approval");
     this.dir = dir;
     this.clock = clock;
     this.needsApproval = needsApproval;
@@ -432,17 +436,19 @@ export class Store {
       it.decisions = [...new Set([...(it.decisions || []), d.id])];
     }
   }
-  // What the agent reads for a check: the card's options, the decisions in force it could go
-  // against, what it goes against now and its last check.
+  // What the agent reads for a check: the card's options, the decisions that count it could go
+  // against, those in force that wait for approval, what it goes against now and its last check.
   decisionCheck(id, { concepts = [], q = "" } = {}) {
-    const c = this.card(id), all = this.decisionsFor(c, { concepts, q });
+    const c = this.card(id), all = this.decisionsFor(c, { concepts, q }), waiting = this.decisionsFor(c, { concepts, q }, { waiting: true });
     // A long list is cut, and says so: the agent narrows it with concepts or words until it is whole.
     return { card: c.id, kind: c.kind, title: c.title, concepts: this.conceptsOf(c),
       options: (c.variants || []).map((v) => ({ id: v.id, name: v.name, version: v.version || 1 })),
       decisions: all.slice(0, LIMITS.checkRead).map((d) => ({ id: d.id, text: d.text, why: d.why, concepts: d.concepts, at: d.at, author: d.author })),
       total: all.length, truncated: all.length > LIMITS.checkRead,
       // In force but not approved: read them, never cite one as a reason or write one as a conflict.
-      waiting: this.decisionsFor(c, { concepts, q }, { waiting: true }).slice(0, 20).map((d) => ({ id: d.id, text: d.text, author: d.author })),
+      // Cut like `decisions`, and says so.
+      waiting: waiting.slice(0, LIMITS.checkWaiting).map((d) => ({ id: d.id, text: d.text, author: d.author })),
+      waiting_total: waiting.length, waiting_truncated: waiting.length > LIMITS.checkWaiting,
       conflicts: this.activeConflicts(c), last: c.decision_check || null };
   }
 

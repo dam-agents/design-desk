@@ -62,8 +62,9 @@ const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n
                                            earlier decisions, newest first
   decision-check <card> [--concept <a,b>] [--q <words>]
                                            what a check reads (docs/desk.md → Decisions → The check):
-                                           the card's options, the decisions in force it could go
-                                           against, its conflicts now and its last check
+                                           the card's options, the decisions that count it could go
+                                           against, those that wait for approval (waiting), its
+                                           conflicts now and its last check
   fetch <A-n> <file>                       save an asset (an option's page, a screen) to a file
   bundle <R-n> <dir>                       the handoff bundle of an approved request (docs/handoff.md →
                                            The bundle): spec.md, design.json, mockup.html, states/, shots/,
