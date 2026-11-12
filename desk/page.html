@@ -1944,8 +1944,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!d.contains(e.target) || e.target.closest(".menu button:not([data-keep])")) d.open = false;
   }, true);
   const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
-  // A move to another page closes what floated over the one left: a More, an open dialog.
-  const leaveClose = () => { moreClose(); for (const d of document.querySelectorAll("dialog[open]")) d.close(); };
+  // A move to another page closes what floated over the one left: a More, an open dialog. A dialog
+  // with something typed, picked or added in it stays open, so nothing written is lost (formState below).
+  const leaveClose = () => { moreClose(); for (const d of document.querySelectorAll("dialog[open]")) if (d._clean === undefined || formState(d) === d._clean) d.close("cancel"); };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") moreClose(); });
   // A click into a design's frame never reaches this page; the page loses focus instead.
   addEventListener("blur", () => { moreClose(); tipHide(); });
@@ -4943,17 +4944,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     let bar = $("#story-player");
     if (!d || ["done", "stopped"].includes(d.state)) { bar?.remove(); return; }
     if (!bar) { bar = document.createElement("div"); bar.id = "story-player"; bar.setAttribute("role", "status"); document.body.append(bar); }
-    if (d.state === "missing") {
-      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">This version of the design does not have this story's parts.</span><button class="btn small" data-play-ctl="stop">✕ Close</button>`;
+    if (d.state === "missing" || d.state === "unseen") {
+      bar.innerHTML = `<span class="pl-k">Can't play it</span><span class="pl-t">${d.state === "missing" ? "This version of the design does not have this story's parts." : "The design has this story's parts, but none of them is on the screen on the way through it."}</span><button class="btn small" data-play-ctl="stop">✕ Close</button>`;
       return;
     }
     if (d.step) S.playStep = { step: d.step, of: d.of };
     const at = S.playStep ? `step ${S.playStep.step} of ${S.playStep.of}` : "";
     const st = (S.card?.issue_brief?.stories || []).find((x) => x.id === S.story);
-    bar.innerHTML = `<span class="pl-k">${d.state === "paused" ? "❚❚ Paused" : "▶ Playing"}${at ? ` · ${esc(at)}` : ""}</span><span class="pl-t">${esc(st?.text || "")}</span>
+    // A step whose part the design has but does not show at that point is skipped, and said.
+    const said = d.state === "hidden" ? `Skipped: ${d.label ? `${d.label} is` : "this part is"} in the design but not on the screen at this point.` : st?.text || "";
+    bar.innerHTML = `<span class="pl-k">${d.state === "paused" ? "❚❚ Paused" : "▶ Playing"}${at ? ` · ${esc(at)}` : ""}</span><span class="pl-t">${esc(said)}</span>
       ${d.state === "paused" ? `<button class="btn small" data-play-ctl="resume">▶ Resume</button>` : `<button class="btn small" data-play-ctl="pause">❚❚ Pause</button>`}<button class="btn small" data-play-ctl="stop">■ Stop</button>`;
   }
   addEventListener("message", (e) => { const vf = $("#variant-frame"); if (vf && e.source === vf.contentWindow && e.data?.type === "desk-play-state") storyPlayer(e.data); });
+  // The design's own bar (Light / Dark, the empty state, Show hotspots) as the person left it:
+  // the frame says when it changes, and a replay's fresh load gets it back.
+  addEventListener("message", (e) => { const vf = $("#variant-frame"); if (vf && e.source === vf.contentWindow && e.data?.type === "desk-bar") vf._bar = { dark: Boolean(e.data.dark), empty: Boolean(e.data.empty), hot: Boolean(e.data.hot) }; });
   // The design's Show notes switch is kept across options and tabs: the frame says when the
   // person flips it, and every design frame that loads gets the same state.
   const REVIEW_NOTES = "desk-review-notes";
@@ -5226,6 +5232,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { mode = d.mode; hover = null; document.documentElement.style.cursor = mode === "off" ? "" : mode === "edit" ? "text" : "crosshair"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(find(d.selector), d.selector || ""); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    // The bar's own state, said to the Desk on every change and set again after a replay's fresh load.
+    const de = document.documentElement, hotSwitch = () => document.querySelector("#review [data-hot]");
+    const barState = () => ({ type: "desk-bar", dark: de.classList.contains("dark"), empty: de.classList.contains("review-empty"), hot: hotSwitch()?.getAttribute("aria-checked") === "true" });
+    addEventListener("click", (e) => { if (e.target.closest?.("#review")) setTimeout(() => say(barState()), 0); });
+    addEventListener("message", (e) => {
+      const d = e.data || {};
+      if (d.type !== "desk-bar-set") return;
+      document.querySelector(`#review [data-theme="${d.dark ? "dark" : "light"}"]`)?.click();
+      document.querySelector(`#review [data-empty="${d.empty ? "1" : "0"}"]`)?.click();
+      const h = hotSwitch(); if (h && !h.hidden && (h.getAttribute("aria-checked") === "true") !== Boolean(d.hot)) h.click();
+    });
     // A user story played: a pointer goes to each part that does it, in order, outlines it and
     // clicks it when it is something to press; a new story stops the one playing. The Desk can
     // pause, resume and stop it, and hears each step; only the design scrolls, never the Desk.
@@ -5238,23 +5255,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // A wait that stands still while paused and ends early once the story is stopped.
     const wait = async (ms, id) => { for (let t = 0; t < ms && id === playing; ) { await sleep(50); if (!paused) t += 50; } };
-    const tell = (state, step, of) => say({ type: "desk-play-state", state, step, of });
+    const tell = (state, step, of, label) => say({ type: "desk-play-state", state, step, of, ...(label ? { label } : {}) });
     const stopStory = () => { playing++; paused = false; pins = []; draw(); caption.textContent = ""; pointer.style.opacity = "0"; tell("stopped"); };
     const ripple = (x, y) => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:" + (x - 14) + "px;top:" + (y - 14) + "px;width:28px;height:28px;border-radius:50%;border:2px solid #2f5bd3;z-index:2147483646;pointer-events:none;transition:transform .5s,opacity .5s"; document.documentElement.appendChild(d); requestAnimationFrame(() => { d.style.transform = "scale(1.9)"; d.style.opacity = "0"; }); setTimeout(() => d.remove(), 650); };
     const pressable = (el) => el.closest('button, [role="button"], summary, label, input[type="checkbox"], input[type="radio"], a:not([href]), a[href^="#"]');
     async function playStory(steps) {
       const id = ++playing; paused = false; pins = []; draw();
       caption.textContent = ""; pointer.style.opacity = "1";
-      let found = 0;
+      let found = 0, shown = 0;
       for (let i = 0; i < steps.length; i++) {
         const st = steps[i], el = find(st.selector);
         if (!el) continue;
+        found++;
         tell("playing", i + 1, steps.length);
         reveal(el); await wait(300, id); if (id !== playing) return;
-        // A part the design does not show at this point of the story is passed over: the pointer
-        // never jumps to the corner for a part with no place on the screen.
-        if (!showing(el)) continue;
-        found++;
+        // A part the design has but does not show at this point of the story is passed over, and
+        // the Desk says so: the pointer never jumps to the corner for a part with no place on the screen.
+        if (!showing(el)) { tell("hidden", i + 1, steps.length, st.label || ""); await wait(1200, id); if (id !== playing) return; continue; }
+        shown++;
         const b = el.getBoundingClientRect(); scrollTo({ top: b.top + scrollY - innerHeight / 3, behavior: "smooth" }); await wait(550, id); if (id !== playing) return;
         const r = el.getBoundingClientRect(), x = r.left + Math.min(r.width / 2, 48), y = r.top + Math.min(r.height / 2, 24);
         caption.textContent = (i + 1) + ". " + (st.label || "");
@@ -5267,6 +5285,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       }
       // None of the story's parts is in this design: the Desk says so instead of playing nothing.
       if (!found) { pointer.style.opacity = "0"; tell("missing"); return; }
+      // It has them, but none shows on the way: the Desk says that, not that they are missing.
+      if (!shown) { pointer.style.opacity = "0"; tell("unseen"); return; }
       caption.textContent = ""; await wait(500, id); if (id === playing) { pointer.style.opacity = "0"; tell("done"); }
     }
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-play") playStory(d.steps || []);
@@ -5982,7 +6002,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (specText && S.card?.spec?.asset && !specText.value) { try { specText.value = S.specDraft?.card === S.card.id ? S.specDraft.text : decode(await asset(S.card.spec.asset)); await specPreview(); } catch {} }
     const vf = $("#variant-frame"), v = (S.card?.variants || []).find((x) => x.id === S.variant);
     // The option's design carries the frame's script: a user story plays in it (renderStories).
-    if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; sayReviewNotes(vf); }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
+    if (vf && v) { storyPlayer(null); vf.onload = () => { vf.dataset.ready = "1"; sayReviewNotes(vf); if (vf._bar) vf.contentWindow?.postMessage({ type: "desk-bar-set", ...vf._bar }, "*"); }; try { vf.srcdoc = withScript(decode(await asset(v.asset))); } catch {} }
     for (const sf of document.querySelectorAll("iframe[data-sheet]")) { try { sf.srcdoc = decode(await asset(sf.dataset.sheet)); } catch {} }
   }
 
