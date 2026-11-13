@@ -932,11 +932,11 @@ test("a change shows its age and gets handled, pictures step through, the form a
     assert.match(await desk.textContent("#element-dialog"), /Send button[\s\S]*Calm · version 1[\s\S]*Failed[\s\S]*The message did not go\.[\s\S]*Use case it covers[\s\S]*Someone sends a message while offline\./);
     assert.equal(await desk.getAttribute('#element-dialog .catalog [data-zoom] img', "data-asset"), "A-1");
     await desk.click("#element-dialog [data-el-close]");
-    await desk.waitForSelector('.vbar [data-act="workspace"]');
-    await desk.click('.vbar [data-act="workspace"]');
+    await desk.waitForSelector('.vtabs [data-act="workspace"]');
+    await desk.click('.vtabs [data-act="workspace"]');
     await desk.click('[data-ws-menu="states"]');
     await desk.click('[data-ws-state="error"]');
-    assert.match(await desk.textContent("#ws-sub"), /State[\s\S]*Send button ·[\s\S]*Failed[\s\S]*1 of 1/);
+    assert.match(await desk.textContent("#ws-sub"), /State[\s\S]*1 of 1[\s\S]*Send button ·[\s\S]*Failed/, "the arrows and the count stand before the state's name");
     assert.match(await desk.textContent("#ws-context"), /Failed[\s\S]*The message did not go\./, "the state's use stands above the design");
     await desk.click('[data-ws-step="1"]');
     await desk.waitForFunction(() => /As drawn/.test(document.querySelector("#ws-sub")?.textContent || "")).catch(() => {});
@@ -1042,6 +1042,21 @@ test("numbers, notes and pins preview what they name; the search lists every num
   await desk.waitForFunction(() => document.querySelectorAll(".top2 > .brief").length === 2 && document.querySelectorAll(".top2 > .brief.clamped").length === 2);
   await desk.click(".top2 > .brief:not(.made-col) [data-brief-toggle]");
   await desk.waitForSelector(".top2 > .brief:not(.made-col):not(.clamped)");
+  // Two quick folds, the second while the first still glides: side by side, the Show links end level all the same.
+  const narrow = desk.viewportSize();
+  await desk.setViewportSize({ width: 1600, height: 1000 });
+  await desk.click('[data-brief-toggle="made"]');
+  await desk.waitForSelector(".top2 > .made-col:not(.clamped)");
+  await desk.waitForTimeout(400);
+  await desk.evaluate(() => { document.querySelector(".top2 > .brief:not(.made-col) [data-brief-toggle]").click(); document.querySelector('[data-brief-toggle="made"]').click(); });
+  await desk.waitForTimeout(400);
+  const tops = await desk.$$eval(".top2 > .brief", (xs) => xs.map((x) => x.getBoundingClientRect().top));
+  assert.ok(Math.abs(tops[0] - tops[1]) <= 24, `the two briefs stand side by side (${tops})`);
+  const links = await desk.$$eval(".top2 > .brief > .brief-toggle", (xs) => xs.map((x) => x.getBoundingClientRect().bottom));
+  assert.ok(Math.abs(links[0] - links[1]) <= 4, `the two Show links stand level after two quick folds (${links})`);
+  await desk.setViewportSize(narrow);
+  await desk.click(".top2 > .brief:not(.made-col) [data-brief-toggle]");
+  await desk.waitForSelector(".top2 > .brief:not(.made-col):not(.clamped)");
 
   await desk.click("[data-convo] > summary");
   await desk.hover('[data-snip="A-1"]');
@@ -1051,7 +1066,7 @@ test("numbers, notes and pins preview what they name; the search lists every num
   assert.equal(doc.match(/<\/script>/g).length, 1, "a note's text cannot end the preview's script");
   await desk.mouse.move(0, 0);
 
-  await desk.click('.vbar [data-act="workspace"]');
+  await desk.click('.vtabs [data-act="workspace"]');
   await desk.waitForSelector("#ws-frame");
   const pin = (data) => desk.evaluate((d) => { const f = document.querySelector("#ws-frame"); dispatchEvent(new MessageEvent("message", { data: d, source: f.contentWindow })); }, data);
   await pin({ type: "desk-pin-tip", note: "t1", rect: { left: 40, top: 60, bottom: 72, width: 0 } });
@@ -1309,7 +1324,7 @@ for (const [status, buttons] of [["feedback", 0], ["handed-off", 1]]) {
 
 // At Team feedback the state row leads with a way on when the viewer has one: a live prototype for
 // Design only, a developer for parts design cannot do. Approve is never in the row (it is on the
-// right) and Send to Slack… sits by the options.
+// right) and Send to Slack… sits under ⋯.
 const BRIDGE_PILL = (triage, me) => BRIDGE_STORIES
   .replace('triage: { verdict: "design", reasons: [] }', `triage: ${JSON.stringify(triage)}`)
   .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', JSON.stringify(me));
@@ -1437,6 +1452,23 @@ const LEAD = {
   "The prototype failed, someone who may not build": A_DESIGNER, "Spec draft, someone who may not send it": A_DESIGNER,
 };
 const leadText = (desk) => desk.evaluate(() => document.querySelector("#detail .moves .way")?.textContent.trim() ?? null);
+// With a live prototype the options fold away, so the design workspace's button stands in the state row;
+// without one it sits only by the options' tabs.
+for (const [name, patch, inRow] of [["a live prototype", { status: "testing", triage: DESIGN, prototype: { state: "live", url: "https://example.com/p", expires: LATER } }, true], ["no prototype", { status: "feedback", triage: DESIGN, team_feedback: { state: "open" } }, false]]) {
+  test(`the design workspace is reachable with ${name}`, (t) => open(t, BRIDGE_HEADER(patch, ME(ALL)), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector("#detail .status");
+    const shown = (sel) => desk.evaluate((q) => [...document.querySelectorAll(q)].filter((el) => el.checkVisibility()).length, sel);
+    assert.equal(await shown('#detail .moves [data-act="workspace"]'), inRow ? 1 : 0, inRow ? "the state row holds it" : "the state row does not");
+    assert.equal(await shown('#detail [data-act="workspace"]'), 1, "one workspace button shows");
+    if (inRow) {
+      await desk.click("#detail details.fold > summary:has-text('The design options')");
+      await desk.waitForSelector("#detail details.fold[open] .vtabs");
+      assert.equal(await shown('#detail [data-act="workspace"]'), 1, "the open options add no second one");
+    }
+  }));
+}
 for (const [name, patch, me, word, ink, , , busy] of HEADERS) {
   const [stage, pageWord] = STAGE[patch.status] || [null, word];
   test(`header: ${name} → ${word}, ${ink}, ${LEAD[name]}`, (t) => open(t, BRIDGE_HEADER(patch, me), async (desk) => {
@@ -1817,8 +1849,10 @@ test("notes in the workspace: open and done, a whole conversation, worked in tog
     assert.equal(await desk.locator('[data-work-in="t1"]').count(), 1, "a comment on an option can be worked in from the thread");
     assert.match(await desk.textContent('[data-goto="t1"]'), /Billing/, "a note names the view it is on");
 
-    // One Slack button; without the Slack app for votes, its dialog only sends the designs.
-    await desk.click('[data-act="slack"]');
+    // One Slack button, under the request's ⋯; without the Slack app for votes, its dialog only sends the designs.
+    assert.equal(await desk.locator('#detail [data-act="slack"]').count(), 1, "Send to Slack is in one place on the request");
+    await desk.evaluate(() => { document.querySelector("#detail details.more").open = true; });
+    await desk.click('#detail details.more [data-act="slack"]');
     assert.match(await desk.textContent("#sl-send-hint"), /Slack thread this request came from/);
     assert.equal(await desk.locator("#sl-mode").isHidden(), true, "a vote is not offered without the Slack app");
     await desk.locator("#slack-dialog .actions button", { hasText: "Send" }).click();
