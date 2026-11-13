@@ -629,7 +629,9 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   (copy, spacing, a column in an existing table): it goes For Developers; `fyi` when nothing
   differs from the catalog, the approved design and the decisions that count: it is auto handled
   at once. Without a design, a frame or a catalog element to compare with, **a change is `fyi`**
-  and says so; what you would do differently is not a reason. One to five reasons, each a short
+  and says so with the one reason that has no source: "Nothing approved to compare with: no
+  design, Figma frame or catalog element documents this screen; a designer decides"
+  (`designer` under `ci_gate_unsourced`, [watch.md](watch.md) → CI gate). What you would do differently is not a reason. One to five reasons, each a short
   phrase in the product's words that says what to look at, and each names its source (the
   design, the frame, the element, the decision) in the card's section. It leaves the filter once the person saw it, a designer marked it handled, or it is auto handled.
   The store adds "Differs from the approved design R-<n>" itself ([watch.md](watch.md) step 11).

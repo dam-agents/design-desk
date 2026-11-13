@@ -209,9 +209,10 @@ const r1 = {
 };
 
 const r2 = {
-  id: "R-2", kind: "request", title: "Empty provider list for new agents", status: "variants", created: ago(60 * 6), updated: ago(1),
+  id: "R-2", kind: "request", title: "Prázdný seznam providerů u nového agenta", status: "variants", created: ago(60 * 6), updated: ago(1),
   by: PAT, triage: { verdict: "design", reasons: ["A new state of one screen."] }, team_feedback: { state: "waiting", since: ago(60 * 2) },
-  request: { type: "idea", problem: "A new agent shows an empty Providers page and people think it is broken." },
+  request: { type: "idea", problem: "Nový agent ukáže prázdnou stránku Providers a lidé si myslí, že je rozbitá.", vision: "Místo prázdna krátká věta, co sem patří, a tlačítko na přidání prvního providera." },
+  translation: { lang: "cs", title: "Empty provider list for new agents", problem: "A new agent shows an empty Providers page and people think it is broken.", vision: "Instead of nothing, a short line on what belongs here, and a button to add the first provider." },
   variants: [{ id: "w1", name: "Plain", asset: "A-r2-1", version: 1, drawn: ago(60 * 3), fidelity: "mockup" }],
   threads: [], waiting: [{ kind: "explore", state: "claimed", created: ago(2), started: ago(2), usual_min: 9 }], prototype: { state: "none" },
 };

@@ -201,6 +201,22 @@ const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 // "__proto__" or "constructor" never reaches Object.prototype.
 const own = (table, id) => (typeof id === "string" && Object.hasOwn(table, id) ? table[id] : undefined);
 
+// A request's words in English (upsertCard `translation`): the language they were written in
+// (an ISO 639-1 code other than en) and the English of each of the asker's fields that has text.
+function cleanTranslation(t, request, at) {
+  if (!t || typeof t !== "object" || Array.isArray(t)) throw bad("translation is an object: lang, problem, and vision, goal, steps where the request has them");
+  const lang = String(t.lang || "").trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(lang) || lang === "en") throw bad("translation.lang is the two-letter code of the request's language, not en");
+  const out = { lang };
+  for (const k of ["title", "problem", "vision", "goal", "steps"]) {
+    if (t[k] == null || t[k] === "") continue;
+    if (k !== "title" && !request[k]) throw bad(`translation.${k}: the request has no ${k}`);
+    out[k] = clean(t[k], k === "title" ? LIMITS.title : LIMITS.text, `translation.${k}`);
+  }
+  if (!out.problem) throw bad("translation.problem is empty");
+  return { ...out, at };
+}
+
 // A request without a title is named after the first sentence of its problem.
 function titleOf(title, problem) {
   if (typeof title === "string" && title.trim()) return title;
@@ -2051,7 +2067,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix", "reminded"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix", "reminded", "translation"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2133,6 +2149,12 @@ export class Store {
         const when = fields.reminded === null ? null : clean(String(fields.reminded), 40, "reminded");
         if (when !== null && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(when) || Number.isNaN(Date.parse(when)))) throw bad("reminded is the card's updated time, an ISO date");
         next.reminded = when === null ? null : { for: when, at: this.clock() };
+      }
+      // The asker's words in English, for a request written in another language: the page offers
+      // an EN link on the request (docs/requests.md → A request in another language).
+      else if (k === "translation") {
+        if (next.kind !== "request") throw bad("translation belongs to a request");
+        next.translation = fields.translation === null ? null : cleanTranslation(fields.translation, next.request || {}, this.clock());
       }
       else if (k === "dev_summary") {
         if (next.kind !== "request") throw bad("dev_summary belongs to a request");
@@ -2251,7 +2273,7 @@ export class Store {
     // A screen's or an element's pictures sent again, new or the same: Design Desk looked at it again.
     if ((next.kind === "screen" || next.kind === "element") && (fields.screens !== undefined || fields.sheet !== undefined)) next.checked = this.clock();
     // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk-page.md → Designs).
-    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci", "reminded"].includes(k))) next.updated = this.clock();
+    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci", "reminded", "translation"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
     // A design already in the catalog follows every new version of its option and of its states.
     if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {

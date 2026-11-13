@@ -2841,3 +2841,17 @@ test("a Slack request keeps its author's user id, and a reminder never moves its
   assert.throws(() => s.upsertCard({ id: card.id, reminded: "" }), /reminded/);
   assert.throws(() => s.upsertCard({ id: card.id, reminded: "yesterday" }), /ISO date/, "a reminder value that is not a date is refused");
 });
+
+test("a request in another language keeps its English beside the asker's words", () => {
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts });
+  const { card } = s.createRequest({ agent: true }, { title: "Přetéká", problem: "Tabulka přetéká na mobilu." });
+  s.upsertCard({ id: card.id, translation: { lang: "CS", title: "Overflows", problem: "The table overflows on a phone." } });
+  const c = s.card(card.id);
+  assert.deepEqual([c.translation.lang, c.translation.problem, c.translation.title], ["cs", "The table overflows on a phone.", "Overflows"]);
+  assert.equal(c.request.problem, "Tabulka přetéká na mobilu.", "the asker's words stay as written");
+  assert.throws(() => s.upsertCard({ id: card.id, translation: { lang: "en", problem: "X." } }), /not en/);
+  assert.throws(() => s.upsertCard({ id: card.id, translation: { lang: "cs" } }), /problem/);
+  assert.throws(() => s.upsertCard({ id: card.id, translation: { lang: "cs", problem: "X.", vision: "Y." } }), /no vision/, "no English for words the request does not have");
+  s.upsertCard({ id: card.id, translation: null });
+  assert.equal(s.card(card.id).translation, null);
+});

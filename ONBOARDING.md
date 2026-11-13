@@ -156,8 +156,9 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    request, or a new issue? Does it answer to a handle?" (`implementer`, `implementer_mention`.)
    Both post on the product repository as the agent's account; say so.
    "Should Design Desk set a check on every open pull request, failing until a designer (or a
-   lead developer, on a small difference) marks its change handled?" (`ci_gate`, default `disabled`; it writes
-   commit statuses as the agent's account; [docs/watch.md](docs/watch.md) → CI gate.)
+   lead developer, on a small difference) marks its change handled, and say why in one comment on it?" (`ci_gate`, default `disabled`; it writes
+   commit statuses and that comment as the agent's account; [docs/watch.md](docs/watch.md) → CI gate.) Yes →
+   "Should it also hold a UI change it has nothing approved to compare with?" (`ci_gate_unsourced`, default `disabled`.)
    "Should the Desk list the planned issues that change the screens — the current and the
    next sprint, assigned ones and a label's — with what the UI will need and a sketch?"
    (`issue_news`, default `disabled`; [docs/issues.md](docs/issues.md)). Yes → "Is the sprint
@@ -230,6 +231,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - desk_link:
 - qa_bot:
 - ci_gate: disabled
+- ci_gate_unsourced: disabled
 - issue_label: design
 - implementer: pr-comment
 - implementer_mention:
