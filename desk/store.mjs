@@ -2063,7 +2063,9 @@ export class Store {
       // `updated` it was sent for, so the inbox pass asks for it once (docs/requests.md → A request that stands still).
       else if (k === "reminded") {
         if (next.kind !== "request") throw bad("reminded belongs to a request");
-        next.reminded = fields.reminded === null ? null : { for: clean(String(fields.reminded), 40, "reminded"), at: this.clock() };
+        const when = fields.reminded === null ? null : clean(String(fields.reminded), 40, "reminded");
+        if (when !== null && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(when) || Number.isNaN(Date.parse(when)))) throw bad("reminded is the card's updated time, an ISO date");
+        next.reminded = when === null ? null : { for: when, at: this.clock() };
       }
       else if (k === "dev_summary") {
         if (next.kind !== "request") throw bad("dev_summary belongs to a request");

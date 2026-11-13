@@ -2790,4 +2790,5 @@ test("a Slack request keeps its author's user id, and a reminder never moves its
   assert.equal(s.db.cards[card.id].updated, before, "the reminder is no change on the card");
   assert.equal(s.db.cards[card.id].reminded.for, before);
   assert.throws(() => s.upsertCard({ id: card.id, reminded: "" }), /reminded/);
+  assert.throws(() => s.upsertCard({ id: card.id, reminded: "yesterday" }), /ISO date/, "a reminder value that is not a date is refused");
 });

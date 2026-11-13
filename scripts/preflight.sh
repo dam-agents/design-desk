@@ -729,16 +729,20 @@ inbox_mode() {
   # A request someone asked for in Slack that stood still (no change on its card) for
   # slack_stale_days days is due once per standstill: its author is reminded in its thread
   # (docs/requests.md → A request that stands still). `reminded.for` is the `updated` the
-  # reminder went out for; a change on the card starts a new standstill. A time nobody can read
-  # never makes a request stand still.
+  # reminder went out for, compared as a time; a change on the card starts a new standstill. A
+  # time nobody can read never makes a request stand still; a store nobody can read is an error line.
   local stale="[]"
   if [ -f "$DB" ] && [ "$(jq '.slack_stale_days' <<<"$CONF")" -gt 0 ] 2>/dev/null; then
     stale="$(jq -c --argjson now "$NOW_EPOCH" --argjson after "$(jq '.slack_stale_days * 86400 | floor' <<<"$CONF")" "$EPOCH_JQ"'
       [ .cards[] | select(.kind == "request" and .origin.channel == "slack"
           and (.status | IN("triage", "variants", "feedback", "prototype", "testing", "spec")))
-        | select((.reminded.for // null) != .updated)
         | (.updated | epoch) as $at | select($at != null and ($now - $at) >= $after)
-        | {id: ("N-" + .id), card: .id, status: .status, since: .updated} ]' "$DB" 2>/dev/null || echo '[]')"
+        | select((.reminded.for | epoch) != $at)
+        | {id: ("N-" + .id), card: .id, status: .status, since: .updated} ]' "$DB" 2>&1)" || {
+      log "could not read the Desk's cards for Slack reminders: ${stale%%$'\n'*} — no author is reminded this run"
+      logev error preflight "inbox: Slack reminder read failed"
+      stale="[]"
+    }
   fi
   # With ci_gate on, an open pull request's change card is due as `G-<card>` when it is judged
   # (its attention, a design check, a decision that counts it goes against: DEC_SIDE_JQ → decision_counts) and its check was never set (no `ci`, or the `skipped` that before 1.76.0

@@ -182,13 +182,14 @@ cat > "$WORK_DIR/desk/db.json" <<JSON
  "R-3":{"id":"R-3","kind":"request","status":"variants","updated":"$three","origin":{"channel":"slack","reporter":"Cy"},"reminded":{"for":"$three"}},
  "R-4":{"id":"R-4","kind":"request","status":"handed-off","updated":"$three","origin":{"channel":"slack","reporter":"Di"}},
  "R-5":{"id":"R-5","kind":"request","status":"triage","updated":"$three","origin":{"channel":"github","reporter":"eve"}},
- "R-6":{"id":"R-6","kind":"request","status":"testing","updated":"not a date","origin":{"channel":"slack","reporter":"Fay"}}}}
+ "R-6":{"id":"R-6","kind":"request","status":"testing","updated":"not a date","origin":{"channel":"slack","reporter":"Fay"}},
+ "R-7":{"id":"R-7","kind":"request","status":"spec","updated":"$three","origin":{"channel":"slack","reporter":"Gil"},"reminded":{"for":"${three%Z}.000Z"}}}}
 JSON
 printf -- '' > "$WORK_DIR/CONFIG.md"
 assert "reminders are off by default" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 printf -- '- slack_stale_days: 2\n' > "$WORK_DIR/CONFIG.md"
 out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
-assert "an open Slack request that stood still, not yet reminded, is due" '[.stale_due[] | [.id, .status]] == [["N-R-1", "feedback"]]' "$out"
+assert "an open Slack request that stood still, not yet reminded (the same time in another form counts), is due" '[.stale_due[] | [.id, .status]] == [["N-R-1", "feedback"]]' "$out"
 assert "the reminder reads docs/requests.md" '.read_set | index("docs/requests.md")' "$out"
 rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"

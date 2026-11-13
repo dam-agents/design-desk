@@ -499,11 +499,10 @@ card has not changed for that many days is due once as `N-<card>` (`status`, `si
 not an inbox item: nothing to claim. Per entry, read the card (`design desk card R-<n>`); if
 it changed or closed since the pass, skip it. Otherwise:
 
-1. Find the author's Slack user id: `origin.user`, else the id `describe_channel_users` gives
-   for `origin.email`, else the author of the thread's first message (`origin.thread_ts`).
-   No id: name them as `origin.reporter`, untagged.
+1. Find the author's Slack user id: `origin.user`, else the author of the thread's first
+   message (`read_thread` on `origin.thread_ts`). No id: name them as `origin.reporter`, untagged.
 2. Reply in the request's thread ([Answering in the thread](#answering-in-the-thread)):
-   "<@user> “<title>” (R-<n>) has been <the stage, as on the Desk> since <date>. <What would
+   "<@user> “<title>” (R-<n>) is <the stage, as on the Desk> and has not changed since <date>. <What would
    move it on, in one sentence: the step it waits for and who takes it.> <link>". With
    `notify: slack`, send it to the channel as well (the reply's broadcast); otherwise the
    thread only.
