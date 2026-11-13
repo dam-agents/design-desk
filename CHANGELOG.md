@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.95.3 — 2026-11-13
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): "Can't reach Design Desk"
+   has a Reload button, a read with no answer in 15 seconds counts as not reached, and coming back
+   to the tab looks again at once. No data migration.
+
 ## 1.95.2 — 2026-11-13
 
 **Upgrade:**

@@ -210,8 +210,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   answer shows as it lands, every 4 seconds while one is awaited, and the box keeps its text, focus and caret. A request's own work line
   (its Wait and what Design Desk does) leaves once an option was drawn after its item was filed; a request
   reopened and checked again, its item filed after its options, keeps the line.
-- **Not reached.** A poll that gets no answer shows "Can't reach Design Desk right now.
-  Retrying…" and polls every 4 seconds. An update restarts the server and republishes the
+- **Not reached.** A poll that gets no answer, or none within 15 seconds, shows "Can't reach
+  Design Desk right now. Retrying…" with **Reload the page**, and polls every 4 seconds; coming
+  back to the tab polls at once. An update restarts the server and republishes the
   page, and the page open before it may never get an answer again: after 20 seconds without
   one the page loads itself anew, unless a dialog is open or a text field holds text; then
   the banner offers **Reload the page**. A first load that gets no answer tries again by
