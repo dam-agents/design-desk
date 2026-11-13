@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name ci_gate change_auto_handled_days repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters spec_review max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports qa_bot watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest decisions_page log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days pr_environment_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
+KNOWN_KEYS="display_name ci_gate change_auto_handled_days repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters spec_review max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports qa_bot watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest decisions_page log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days pr_environment_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min slack_stale_days issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -162,7 +162,7 @@ else
     (''|none|off|disabled) ;;
     (*) printf '%s' "$wr" | grep -qE '^([a-z0-9.-]+/)?[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' || fail config_work_repo "work_repo is '$wr'" "[host/]owner/name of a private repository, or none";;
   esac
-  for k in max_changes_per_run max_prototypes prototype_expiry_days max_screen_prs council_sync_min max_issue_drawings; do v="$(cfg "$k")"; case "$v" in ''|*[!0-9]*) [ -z "$v" ] || fail "config_$k" "$k is not a whole number" "a number, e.g. 2";; esac; done
+  for k in max_changes_per_run max_prototypes prototype_expiry_days max_screen_prs council_sync_min slack_stale_days max_issue_drawings; do v="$(cfg "$k")"; case "$v" in ''|*[!0-9]*) [ -z "$v" ] || fail "config_$k" "$k is not a whole number" "a number, e.g. 2";; esac; done
   w="$(cfg watch_since)"; [ -z "$w" ] || printf '%s' "$w" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' || fail config_watch_since "watch_since is '$w'" "an ISO UTC time like 2026-11-02T09:00:00Z"
   for r in $(cfg repos | tr ',' ' '); do
     [ "$r" = none ] && continue

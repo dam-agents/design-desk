@@ -79,7 +79,7 @@ config_json() {
     --arg figma "$(cfg figma)" --arg figma_file "$(cfg figma_file)" \
     --arg screens "$(cfg screens)" --arg max_screen_prs "$(cfg max_screen_prs)" \
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
-    --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" \
+    --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" --arg slack_stale_days "$(cfg slack_stale_days)" \
     --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg issue_next_sprint "$(cfg issue_next_sprint)" --arg issue_news_label "$(cfg issue_news_label)" \
     --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" --arg ci_gate "$(cfg ci_gate)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
@@ -122,6 +122,7 @@ config_json() {
       digest: ($digest | if . == "" then "desk" else . end),
       slack_council: ($slack_council | if . == "" then "disabled" else . end),
       council_sync_min: ($council_sync_min | tonumber? // 30),
+      slack_stale_days: ($slack_stale_days | tonumber? // 0 | if . < 0 then 0 else . end),
       issue_news: ($issue_news | if . == "" then "disabled" else . end),
       issue_sprint: ($issue_sprint | if . == "" then "milestone" else . end),
       issue_next_sprint: ($issue_next_sprint | if . == "" then "milestone" else . end),
@@ -725,6 +726,20 @@ inbox_mode() {
         | select($why != null or ((.synced | epoch) as $at | $at == null or ($now - $at) >= $every))
         | {id: .id, card: $c.id, close: ($why != null)} + (if $why then {why: $why} else {} end) ]' "$DB" 2>/dev/null || echo '[]')"
   fi
+  # A request someone asked for in Slack that stood still (no change on its card) for
+  # slack_stale_days days is due once per standstill: its author is reminded in its thread
+  # (docs/requests.md → A request that stands still). `reminded.for` is the `updated` the
+  # reminder went out for; a change on the card starts a new standstill. A time nobody can read
+  # never makes a request stand still.
+  local stale="[]"
+  if [ -f "$DB" ] && [ "$(jq '.slack_stale_days' <<<"$CONF")" -gt 0 ] 2>/dev/null; then
+    stale="$(jq -c --argjson now "$NOW_EPOCH" --argjson after "$(jq '.slack_stale_days * 86400 | floor' <<<"$CONF")" "$EPOCH_JQ"'
+      [ .cards[] | select(.kind == "request" and .origin.channel == "slack"
+          and (.status | IN("triage", "variants", "feedback", "prototype", "testing", "spec")))
+        | select((.reminded.for // null) != .updated)
+        | (.updated | epoch) as $at | select($at != null and ($now - $at) >= $after)
+        | {id: ("N-" + .id), card: .id, status: .status, since: .updated} ]' "$DB" 2>/dev/null || echo '[]')"
+  fi
   # With ci_gate on, an open pull request's change card is due as `G-<card>` when it is judged
   # (its attention, a design check, a decision that counts it goes against: DEC_SIDE_JQ → decision_counts) and its check was never set (no `ci`, or the `skipped` that before 1.76.0
   # meant a PR not held): the agent passes or holds it
@@ -748,18 +763,19 @@ inbox_mode() {
     fi
   fi
   local n; n="$(jq 'length' <<<"$items")"
-  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ] && [ "$(jq 'length' <<<"$gate")" -eq 0 ] && [ -z "$gate_err" ]; then
+  if [ "$n" -eq 0 ] && [ "$(jq 'length' <<<"$expiring")" -eq 0 ] && [ "$(jq 'length' <<<"$polls")" -eq 0 ] && [ "$(jq 'length' <<<"$councils")" -eq 0 ] && [ "$(jq 'length' <<<"$stale")" -eq 0 ] && [ "$(jq 'length' <<<"$gate")" -eq 0 ] && [ -z "$gate_err" ]; then
     log "Desk inbox empty"; printf '%s due=0\n' "$NOW_ISO" >> "$WORK/INBOX.log"; quiet_out
   fi
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.kind)\(if .card then " on \(.card)" else "" end)\(if .takeover then " (claim past its TTL — takeover)" else "" end)"' <<<"$items")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): prototype of \(.card) expires \(.expires) — extend or let it go"' <<<"$expiring")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack vote on \(.card) — \(if .close then "close it" else "sync it" end)"' <<<"$polls")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): Slack thread on \(.card) — \(if .close then "close it (\(.why))" else "read it" end)"' <<<"$councils")
+  while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.card) has stood in \(.status) since \(.since) — remind its author in Slack"' <<<"$stale")
   while IFS= read -r l; do log "$l"; done < <(jq -r '.[] | "\(.id): \(.card) waits for a designer — judge it for the CI gate"' <<<"$gate")
   printf '%s due=%s expiring=%s\n' "$NOW_ISO" "$n" "$(jq 'length' <<<"$expiring")" >> "$WORK/INBOX.log"
   logev info preflight "inbox: $n items due"
-  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson councils "$councils" --argjson gate "$gate" --argjson config "$CONF" --argjson logs "$(logs_json)" \
-    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; elif [ "$(jq 'length' <<<"$polls")" -gt 0 ]; then printf 'Sync Slack votes'; elif [ "$(jq 'length' <<<"$councils")" -gt 0 ]; then printf 'Read Slack threads'; else printf 'Hold pull requests for a designer'; fi; })" '
+  jq -n --argjson items "$items" --argjson expiring "$expiring" --argjson polls "$polls" --argjson councils "$councils" --argjson stale "$stale" --argjson gate "$gate" --argjson config "$CONF" --argjson logs "$(logs_json)" \
+    --arg title "$(jq -r '.[].id' <<<"$items" | { ids="$(cat)"; if [ -n "$ids" ]; then printf '%s\n' "$ids" | title_for Work "Desk items"; elif [ "$(jq 'length' <<<"$expiring")" -gt 0 ]; then printf 'Extend Desk prototypes'; elif [ "$(jq 'length' <<<"$polls")" -gt 0 ]; then printf 'Sync Slack votes'; elif [ "$(jq 'length' <<<"$councils")" -gt 0 ]; then printf 'Read Slack threads'; elif [ "$(jq 'length' <<<"$stale")" -gt 0 ]; then printf 'Remind Slack requesters'; else printf 'Hold pull requests for a designer'; fi; })" '
     def pick(k): [ $items[] | select(.kind as $x | k | index($x)) ];
     { mode:"inbox", nothing_to_do:false, title:$title,
       questions_due: pick(["question"]),
@@ -782,6 +798,7 @@ inbox_mode() {
       polls_due: $polls,
       councils_due: $councils,
       expiring_due: $expiring,
+      stale_due: $stale,
       config:$config, logs:$logs }
     # A pass with only chores (a Slack vote to sync, a GitHub check to set, a prototype about to expire)
     # follows none of the procedures in docs/desk.md: it reads its own doc or skill instead.
@@ -789,6 +806,7 @@ inbox_mode() {
     | .read_set = ((if ([$items[] | select(.kind != "ci")] | length) + (.councils_due | length) > 0 then ["docs/desk.md"] else [] end)
         + [".agents/skills/explain/SKILL.md"]
         + (if (.requests_due + .variants_due | length) > 0 then ["docs/requests.md", "docs/boundary.md"] else [] end)
+        + (if (.stale_due | length) > 0 then ["docs/requests.md"] else [] end)
         + (if (.prototypes_due + .teardowns_due + .expiring_due | length) > 0 then ["docs/prototype.md", "docs/boundary.md"] else [] end)
         + (if (.handoffs_due | length) > 0 then ["docs/handoff.md"] else [] end)
         + (if (.ci_due | length) > 0 then ["docs/watch.md"] else [] end)

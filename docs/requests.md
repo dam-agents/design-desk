@@ -492,6 +492,25 @@ The link is the card's, with its number ([desk.md](desk.md) → Links to an item
 note of [`intake-slack`](../.agents/skills/intake-slack/SKILL.md) (*In that Slack turn*, step 5). A reply the messenger
 refuses is logged, and the card is the record.
 
+## A request that stands still (`stale_due`)
+
+With `slack_stale_days` above 0, a request with a Slack `origin` that is still open and whose
+card has not changed for that many days is due once as `N-<card>` (`status`, `since`). It is
+not an inbox item: nothing to claim. Per entry, read the card (`design desk card R-<n>`); if
+it changed or closed since the pass, skip it. Otherwise:
+
+1. Find the author's Slack user id: `origin.user`, else the id `describe_channel_users` gives
+   for `origin.email`, else the author of the thread's first message (`origin.thread_ts`).
+   No id: name them as `origin.reporter`, untagged.
+2. Reply in the request's thread ([Answering in the thread](#answering-in-the-thread)):
+   "<@user> “<title>” (R-<n>) has been <the stage, as on the Desk> since <date>. <What would
+   move it on, in one sentence: the step it waits for and who takes it.> <link>". With
+   `notify: slack`, send it to the channel as well (the reply's broadcast); otherwise the
+   thread only.
+3. Record it, sent or refused: write `reminded: <since>` on the card
+   (`design desk upsert`; it does not change the card's `updated`), so the next passes stay
+   quiet until the card changes and stands still again.
+
 ## Issues (`issues_due`, flow 1)
 
 A watch worklist's `issues_due` lists open issues labelled `issue_label`. Per issue:
@@ -600,7 +619,8 @@ one per step, with a PNG of the design or screen whenever the step has one:
    polls off, send "Options ready to vote on: <link>", one line per option (its name and when
    it wins), then one reply per option with its PNG still;
 5. live (`testing`): "Live prototype ready to try: <link>";
-6. handed off: "Sent to developers: <link>"; closed: one sentence why.
+6. handed off: "Sent to developers: <link>"; closed: one sentence why;
+7. a request that stood still: the reminder of [A request that stands still](#a-request-that-stands-still-stale_due).
 
 **A sender not on the roster** (no email, or no row with it) hears exactly these replies and
 nothing else:
@@ -609,7 +629,9 @@ nothing else:
   hears only: the one question of `intake-slack` step 2 (only when the report does not say
   which screen or what is wrong); the reply of `intake-slack` step 5; and, when the request
   is handed off or closed, one last reply: "“<title>” (R-<n>) is now with the developers:
-  <link>" or "“<title>” (R-<n>) is closed: <link>". No verdict, no reasons, no picture.
+  <link>" or "“<title>” (R-<n>) is closed: <link>"; while it stands still, the reminder of
+  [A request that stands still](#a-request-that-stands-still-stale_due) without its sentence on what would move it.
+  No verdict, no reasons, no picture.
   A finding of the `qa_bot` (`intake-slack` → Automated test findings) hears its step 4
   reply and that last reply.
 - **Anything else** — a question, a design, a picture, a deliverable, a council ask, a reply

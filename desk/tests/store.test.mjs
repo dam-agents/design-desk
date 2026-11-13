@@ -2777,3 +2777,17 @@ test("a request keeps how its screen looks today, and Draw how it looks today qu
   s.upsertCard({ id: card.id, now: null });
   assert.equal(s.card(card.id).now, null);
 });
+
+test("a Slack request keeps its author's user id, and a reminder never moves its card", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const { card } = s.createRequest({ agent: true }, { title: "Overflow", problem: "Runs over.", origin: { channel: "slack", reporter: "Ann", user: "U0123ABCD" } });
+  assert.equal(s.db.cards[card.id].origin.user, "U0123ABCD");
+  const bad = s.createRequest({ agent: true }, { title: "Other", problem: "P.", origin: { channel: "slack", reporter: "Bo", user: "<!here>" } }).card;
+  assert.equal(s.db.cards[bad.id].origin.user, undefined, "only a Slack user id is kept");
+  const before = s.db.cards[card.id].updated;
+  s.upsertCard({ id: card.id, reminded: before });
+  assert.equal(s.db.cards[card.id].updated, before, "the reminder is no change on the card");
+  assert.equal(s.db.cards[card.id].reminded.for, before);
+  assert.throws(() => s.upsertCard({ id: card.id, reminded: "" }), /reminded/);
+});

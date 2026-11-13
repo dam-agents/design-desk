@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.91.0 — 2026-11-13
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server): a request card takes `reminded` and a
+   Slack `origin.user`. No data migration.
+2. Off by default: with `slack_stale_days: <days>` in `work/CONFIG.md`, a request asked for in Slack
+   whose card has not changed for that many days reminds its author in its thread
+   ([requests.md](docs/requests.md) → A request that stands still). Offer it to the operator; add
+   `- slack_stale_days: 0` when the key is missing, then re-run `scripts/verify-onboarding.sh`.
+
 ## 1.90.1 — 2026-11-12
 
 **Upgrade:**
