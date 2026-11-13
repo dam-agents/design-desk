@@ -81,7 +81,7 @@ config_json() {
     --arg slack_polls "$(cfg slack_polls)" --arg slack_poll_channel "$(cfg slack_poll_channel)" --arg slack_send "$(cfg slack_send)" --arg digest "$(cfg digest)" \
     --arg slack_council "$(cfg slack_council)" --arg council_sync_min "$(cfg council_sync_min)" --arg slack_stale_days "$(cfg slack_stale_days)" \
     --arg issue_news "$(cfg issue_news)" --arg issue_sprint "$(cfg issue_sprint)" --arg issue_next_sprint "$(cfg issue_next_sprint)" --arg issue_news_label "$(cfg issue_news_label)" \
-    --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" --arg ci_gate "$(cfg ci_gate)" \
+    --arg max_issue_drawings "$(cfg max_issue_drawings)" --arg decisions_page "$(cfg decisions_page)" --arg ci_gate "$(cfg ci_gate)" --arg ci_gate_unsourced "$(cfg ci_gate_unsourced)" \
     '{display_name: ($display_name | if . == "" then "Design Desk" else . end),
       repos: ($repos | if . == "" then "none" else . end),
       watch_since: $watch_since,
@@ -129,7 +129,8 @@ config_json() {
       issue_news_label: ($issue_news_label | if . == "" then "none" else . end),
       max_issue_drawings: ($max_issue_drawings | tonumber? // 5),
       decisions_page: ($decisions_page | if . == "dam" or . == "public" then "dam" else "off" end),
-      ci_gate: ($ci_gate | if . == "enabled" then "enabled" else "disabled" end)}'
+      ci_gate: ($ci_gate | if . == "enabled" then "enabled" else "disabled" end),
+      ci_gate_unsourced: ($ci_gate_unsourced | if . == "enabled" then "enabled" else "disabled" end)}'
 }
 
 logs_json() { printf '%s\n' "${LOGS[@]:-}" | jq -R . | jq -s '[.[] | select(length>0)]'; }
