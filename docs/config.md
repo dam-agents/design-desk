@@ -19,12 +19,13 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
   `max_changes_per_run` (`10`); `watch_paths` — UI globs for a repo without a profile;
   `watch_open_prs` (`enabled`) — open PRs get cards too; `ci_gate` (`disabled`) — `enabled`:
   Design Desk's check on GitHub passes an open PR nobody needs to look at and fails one that
-  waits for a designer or a lead developer until it is marked handled. It covers new cards as they
+  waits for a designer or a lead developer until it is marked handled, and keeps one comment on
+  the PR that says why (both as the agent's account). It covers new cards as they
   are written and, through the inbox run, the open cards already on the Desk when it is
   turned on; a merged or closed PR is never touched ([watch.md](watch.md) → CI gate);
   `ci_gate_unsourced` (`disabled`) — `enabled`, with `ci_gate` on: a change with no approved
-  design, Figma frame or catalog element to compare with fails the check too, until it is
-  approved on the Desk; `issue_label` (`design`; `none` off) —
+  design, Figma frame or catalog element to compare with fails the check too, until a designer
+  marks it handled; it covers cards written after it is turned on; `issue_label` (`design`; `none` off) —
   issues with it become `feature` requests; `proposals` (`enabled`), `max_proposals_per_week`
   (`3`) — design proposals for new features.
 - `profile` — `auto` (the one `.design-desk/*/profile.json` of each repo) | `<repo>:<dir>`;

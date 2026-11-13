@@ -168,8 +168,9 @@ Merged and closed pull requests are never touched: their checks no longer matter
   set nothing: the change is not judged yet, so a required check keeps waiting. A PR that builds a Desk design is judged the same way, by the card's own derived
   `attention`: a difference from the design, or a decision it goes against, is one of its reasons.
   With `ci_gate_unsourced: enabled`, a change with no approved design, Figma frame or catalog
-  element to compare with is judged `designer`, not `fyi`, with the reason "No approved design
-  to compare this UI change with": a designer approves it by marking it handled.
+  element to compare with is judged `designer`, not `fyi`, with the no-source reason of
+  [desk.md](desk.md) → Needs a designer: a designer marks it handled. It covers cards written
+  or re-judged (a new commit) after the key is on; a card already `fyi` keeps its pass.
   `gh pr view <pr> -R <repo> --json headRefOid,headRefName,state`, then
   `gh api [--hostname <host>] -X POST repos/<owner>/<name>/statuses/<headRefOid> -f state=failure
   -f context=design-desk -f description="Waiting for a look on the Design Desk"`, with
@@ -178,7 +179,8 @@ Merged and closed pull requests are never touched: their checks no longer matter
   `{id, ci: {state: "failing" | "passing", sha: <headRefOid>}}`.
 - **Comment on the PR**, after each status write: one comment per PR, found by its first line
   `<!-- design-desk ci=<card id> -->` on a comment of the agent's own account (`gh api repos/<owner>/<name>/issues/<pr>/comments
-  --paginate`), edited in place (`PATCH …/issues/comments/<id>`), else created; the body from a
+  --paginate`), edited in place (`PATCH …/issues/comments/<id>`), else created; a failed
+  search (403, rate limit) is logged (`logev warn ci …`) and creates nothing; the body from a
   file (`-F body=@<file>`); an unchanged body is not written again. On **fail**, the body is:
 
   ```markdown
@@ -188,15 +190,17 @@ Merged and closed pull requests are never touched: their checks no longer matter
   The `design-desk` check fails until <a designer | a lead developer> marks the change handled on the Design Desk.
 
   **Why**
-  - <each attention reason, with its source>
+  - <each attention reason, with its source, or the no-source reason as written>
 
   <[Open on the Design Desk](<card link>), when `desk_link` is set>
 
   This is not a code review. It asks for no change to the code or the design.
   ```
 
-  On **pass**, only when the comment exists: its first line, then "**Design Desk:** approved —
-  the `design-desk` check passes." No comment is created for a pass. Facts only: the
+  On **pass**, only when the comment exists: its first line, then "**Design Desk:** the
+  `design-desk` check passes — <cause>", the cause in the Desk's words: "marked handled on the
+  Design Desk", "nothing differs any more" (now `fyi`) or "the check no longer holds pull
+  requests" (`ci_gate` off). No comment is created for a pass. Facts only: the
   reasons as on the card, no opinion, no suggestion. A failed comment write is logged
   (`logev warn ci …`) and never changes `ci`; the next status write tries again.
 - **A new commit** on a PR with `ci`: the Comments on GitHub pass below finds it (a push puts
