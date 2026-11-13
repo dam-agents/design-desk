@@ -61,9 +61,9 @@ function shim() {
     }
     // A vote as the store keeps it: a thumb, and a concern beside it (store.mjs → vote).
     if ((x = m(/^\/api\/cards\/([^/]+)\/votes$/))) {
-      const c = card(x[1]), box = ((c.votes ||= {})[body.variant] ||= {}), mineAt = Object.keys(box).filter((k) => me.emails.includes(k)), was = box[me.email] || box[mineAt[0]] || {};
+      const c = card(x[1]), box = ((c.votes ||= {})[body.variant] ||= {}), mineAt = Object.keys(box).filter((k) => me.emails.includes(k)), olds = mineAt.map((k) => box[k]).sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
       for (const k of mineAt) delete box[k];
-      let thumb = ["prefer", "dislike"].includes(was.vote) ? was.vote : null, worry = Boolean(was.concern);
+      let thumb = olds.map((x) => x.vote).find((t) => ["prefer", "dislike"].includes(t)) || null, worry = olds.some((x) => x.concern || x.vote === "concern");
       if (body.vote === "none") thumb = null; else if (body.vote === "concern") worry = true; else if (body.vote) thumb = body.vote;
       if (body.concern !== undefined) worry = body.concern;
       if (!thumb && !worry) delete box[me.email]; else box[me.email] = { vote: thumb, ...(worry ? { concern: true } : {}), role, at: now() };

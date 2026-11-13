@@ -2245,8 +2245,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // address (or the name a channel gave) as it is.
   const nameOf = (e) => S.me?.names?.[String(e || "").toLowerCase()] || e;
   const personName = (e, fallback = "someone") => isMe(e) ? "you" : e ? nameOf(e) : fallback;
-  // Your vote on an option, under any address you go by (a Slack reaction included).
-  const myVote = (c, v) => { const box = c.votes?.[v] || {}; return box[myKey()] || Object.entries(box).find(([k]) => isMe(k))?.[1]; };
+  // Your vote on an option, under any address you go by (a Slack reaction included), read as the
+  // store reads it: the newest thumb, and a concern under any address (store.mjs → vote).
+  const myVote = (c, v) => {
+    const olds = Object.entries(c.votes?.[v] || {}).filter(([k]) => k === myKey() || isMe(k)).map(([, x]) => x).sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+    if (!olds.length) return undefined;
+    return { vote: olds.map((x) => x.vote).find((t) => ["prefer", "dislike"].includes(t)) || null, ...(olds.some((x) => worried(x)) ? { concern: true } : {}) };
+  };
   // Going against a decision in force stays a designer's call, For Developers included.
   // A designer, a PM or a lead developer approves at any step once it is checked (docs/desk.md → Deciding straight away).
   const canApprove = (c) => can("approve") || (!(c.conflicts || []).some((x) => x.status === "active")

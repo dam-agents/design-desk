@@ -1116,9 +1116,11 @@ export class Store {
     // (the one Slack knows them by, say) is theirs, so it is changed here, never counted twice.
     const theirs = new Set([key, ...(who.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
     const found = Object.keys(box).filter((k) => theirs.has(k.toLowerCase()));
-    const was = box[key] || found.map((k) => box[k]).sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")))[0] || {};
+    // Newest first: the newest thumb is the person's, and a concern under any address stays.
+    const olds = found.map((k) => box[k]).sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+    const was = olds[0] || {};
     for (const k of found) delete box[k];
-    let thumb = ["prefer", "dislike"].includes(was.vote) ? was.vote : null, worry = isConcern(was);
+    let thumb = olds.map((x) => x.vote).find((t) => ["prefer", "dislike"].includes(t)) || null, worry = olds.some(isConcern);
     if (vote === "concern") worry = true;
     else if (vote === "none") thumb = null;
     else if (vote) thumb = vote;
@@ -2442,9 +2444,12 @@ export class Store {
       // click (slack-polls → Share 4), not votes: a bot's reaction never counts.
       if (v.is_bot === true) continue;
       const key = clean(String(v.key || ""), 200, "voter key");
-      // A person who voted on the Desk under another of their addresses keeps that one vote.
-      const aliases = (Array.isArray(v.aliases) ? v.aliases : []).map((e) => String(e).toLowerCase());
-      if (box[key] || Object.keys(box).some((k) => aliases.includes(k.toLowerCase()))) continue;
+      // A person whose thumb is on the Desk, under any of their addresses, keeps that one thumb.
+      // A concern alone is no thumb: their reaction then counts beside it (docs/desk.md → a concern
+      // never takes a thumb away).
+      const theirs = new Set([key, ...(Array.isArray(v.aliases) ? v.aliases : [])].map((e) => String(e).toLowerCase()));
+      if (Object.entries(box).some(([k, x]) => theirs.has(k.toLowerCase()) && ["prefer", "dislike"].includes(x.vote))) continue;
+      if (box[key]) continue;
       box[key] = { vote: v.vote, role: optText(v.role, 20, "role") || "slack", name: optText(v.name, 120, "name") || null, via: "slack", at: was.get(key)?.vote === v.vote ? was.get(key).at : this.clock(), note: "" };
     }
     c.updated = this.clock();
