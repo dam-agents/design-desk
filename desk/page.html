@@ -1396,7 +1396,7 @@
   .ctx.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
   .ctx.alt { border-color: var(--accent); }
   /* The tool bar: under the design, outside its frame, icons only; one tooltip names the tool and its key. */
-  .ws-toolbar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: var(--r-lg); background: #1e1e1e; box-shadow: 0 8px 30px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06) inset; }
+  .ws-toolbar { position: relative; z-index: 4; flex: none; align-self: center; margin: 0 0 12px; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: var(--r-lg); background: #1e1e1e; box-shadow: 0 8px 30px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06) inset; }
   .ws-toolbar .tool { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: var(--radius); background: none; color: #e6e6e6; cursor: pointer; }
   .ws-toolbar .tool .ico { width: 20px; height: 20px; }
   .ws-toolbar .tool:hover { background: rgba(255,255,255,.1); }
@@ -1445,7 +1445,6 @@
   .ws-stage { position: relative; background: color-mix(in srgb, var(--ink) 9%, var(--bg)); }
   .ws-canvas { padding: 20px 32px 12px; overflow: hidden; gap: 8px; }
   .ws-artboard { flex: 1 1 auto; min-height: 0; }
-  .ws-toolbar { position: relative; bottom: auto; left: auto; transform: none; flex: none; align-self: center; margin: 0 0 12px; }
   .ws-wholebox { display: grid; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); }
   #workspace .ws-wholebox textarea { min-height: 56px; resize: vertical; border: 0; padding: 2px; background: none; box-shadow: none; outline: none; font: inherit; }
   .ws-wholebox:focus-within { border-color: var(--ink); }
@@ -3025,13 +3024,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       // The two Show links stand on one line.
       const lt = left.querySelector(":scope > .brief-toggle")?.getBoundingClientRect(), mt = made.querySelector(":scope > .brief-toggle")?.getBoundingClientRect();
       if (!lt || !mt) continue;
-      const own = body.getBoundingClientRect().height, line = parseFloat(getComputedStyle(body).lineHeight) || 22;
+      // A fold still gliding is measured where it will end, so a quick second fold matches the first's end.
+      const lb = left.querySelector(":scope > .brief-body"), glide = (bd) => bd.getBoundingClientRect().height - restHeight(bd);
+      const own = restHeight(body), line = parseFloat(getComputedStyle(body).lineHeight) || 22;
+      const ltb = lt.bottom - (lb ? glide(lb) : 0), mtb = mt.bottom - glide(body);
       // It may give up at most half of its third line, so two whole lines always show.
-      const clip = Math.min(body.scrollHeight, Math.max(own - line / 2, own + lt.bottom - mt.bottom));
+      const clip = Math.min(body.scrollHeight, Math.max(own - line / 2, own + ltb - mtb));
       body.style.setProperty("--clip", `${Math.round(clip)}px`);
       body.style.setProperty("--fade", `${Math.round(Math.max(0, clip - line))}px`);
     }
   }
+  // A folded brief's height once no glide runs: its clip, or its whole text when the clip is none.
+  function restHeight(bd) { const v = parseFloat(bd.style.getPropertyValue("--clip")); return Number.isFinite(v) ? Math.min(bd.scrollHeight, v) : bd.scrollHeight; }
   // The first three lines of a brief's own text, headings not counted, top to bottom.
   function briefLines(body) {
     const lines = [], r = document.createRange();
@@ -5140,7 +5144,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // The last tab adds one more option from what a person writes (docs/requests.md → One more option).
   // The one way into the design workspace: at the right end of the options' tabs, beside the design it opens.
-  const wsTab0 = (c) => (c.variants || []).length ? `<button class="vws" data-act="workspace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
+  // With a live prototype the options fold away and the state row holds the button instead.
+  const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws" data-act="workspace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
   function addOptionTab(c) {
     if (closed(c) || locked(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
@@ -6266,7 +6271,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return out.join("");
   }
 
-  // The tools, as in a design tool: one floating bar, icons with their keys. Then what the design shows.
+  // The tools, as in a design tool: one bar under the design, icons with their keys. Then what the design shows.
   function wsToolbar(c, v, old) {
     const shaper = can("change") && !locked(c), live = !old && !S.ws.check, ch = S.ws.chrome || {};
     const tool = (mode, key, label, ic, tip) => `<button class="tool" data-ws-mode="${mode}" aria-pressed="${S.ws.mode === mode}" data-label="${label}" data-key="${key}" aria-label="${label} (${key})" title="${esc(tip)}">${wsIcon(ic)}</button>`;

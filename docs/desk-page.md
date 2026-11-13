@@ -27,7 +27,7 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   comments. A spec draft: Send to developers…. Sent: Show the design. Closed: Reopen. Contact a
   developer joins them wherever a part needs one, until it was opened. Approve is never in the row.
   With no way of the viewer's own, the row says what they wait for; with a question open, to answer
-  it below: Design Desk's open questions stand right under the box, never inside it. **Design workspace** is not in the box: its button sits at the right end of the options' tabs, beside the design it opens. With a live prototype the options fold away, so the button stands at the row's right end instead.
+  it below: Design Desk's open questions stand right under the box, never inside it. **Design workspace** is not in the box: its button sits at the right end of the options' tabs, beside the design it opens. With a live prototype the options fold away, so the button stands at the row's right end instead, and the options' tabs leave it out when that fold opens: one button per view.
   **The design workspace** is laid out as a design tool. Its top bar holds the request, the options
   (number and name, one click each; a DD spinner while Design Desk works on one, faint while it waits
   in the queue; a count of its open comments), **+** for one more option, a pill saying what Design

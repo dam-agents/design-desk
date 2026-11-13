@@ -1042,6 +1042,21 @@ test("numbers, notes and pins preview what they name; the search lists every num
   await desk.waitForFunction(() => document.querySelectorAll(".top2 > .brief").length === 2 && document.querySelectorAll(".top2 > .brief.clamped").length === 2);
   await desk.click(".top2 > .brief:not(.made-col) [data-brief-toggle]");
   await desk.waitForSelector(".top2 > .brief:not(.made-col):not(.clamped)");
+  // Two quick folds, the second while the first still glides: side by side, the Show links end level all the same.
+  const narrow = desk.viewportSize();
+  await desk.setViewportSize({ width: 1600, height: 1000 });
+  await desk.click('[data-brief-toggle="made"]');
+  await desk.waitForSelector(".top2 > .made-col:not(.clamped)");
+  await desk.waitForTimeout(400);
+  await desk.evaluate(() => { document.querySelector(".top2 > .brief:not(.made-col) [data-brief-toggle]").click(); document.querySelector('[data-brief-toggle="made"]').click(); });
+  await desk.waitForTimeout(400);
+  const tops = await desk.$$eval(".top2 > .brief", (xs) => xs.map((x) => x.getBoundingClientRect().top));
+  assert.ok(Math.abs(tops[0] - tops[1]) <= 24, `the two briefs stand side by side (${tops})`);
+  const links = await desk.$$eval(".top2 > .brief > .brief-toggle", (xs) => xs.map((x) => x.getBoundingClientRect().bottom));
+  assert.ok(Math.abs(links[0] - links[1]) <= 4, `the two Show links stand level after two quick folds (${links})`);
+  await desk.setViewportSize(narrow);
+  await desk.click(".top2 > .brief:not(.made-col) [data-brief-toggle]");
+  await desk.waitForSelector(".top2 > .brief:not(.made-col):not(.clamped)");
 
   await desk.click("[data-convo] > summary");
   await desk.hover('[data-snip="A-1"]');
@@ -1447,6 +1462,11 @@ for (const [name, patch, inRow] of [["a live prototype", { status: "testing", tr
     const shown = (sel) => desk.evaluate((q) => [...document.querySelectorAll(q)].filter((el) => el.checkVisibility()).length, sel);
     assert.equal(await shown('#detail .moves [data-act="workspace"]'), inRow ? 1 : 0, inRow ? "the state row holds it" : "the state row does not");
     assert.equal(await shown('#detail [data-act="workspace"]'), 1, "one workspace button shows");
+    if (inRow) {
+      await desk.click("#detail details.fold > summary:has-text('The design options')");
+      await desk.waitForSelector("#detail details.fold[open] .vtabs");
+      assert.equal(await shown('#detail [data-act="workspace"]'), 1, "the open options add no second one");
+    }
   }));
 }
 for (const [name, patch, me, word, ink, , , busy] of HEADERS) {
