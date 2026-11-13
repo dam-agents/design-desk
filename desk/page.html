@@ -5138,7 +5138,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const can_ = can("vote") && !c.vote_ended;
     // Who voted, by role, in the pill's tooltip (it was a chip beside the pills).
     const roles = (k) => Object.entries(votes.filter((x) => has(x, k)).map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {})).map(([r, m]) => `${m} ${r}`).join(", ");
-    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${has(mine, k) ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
+    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${has(mine, k) || (k === "concern" && S.concern?.card === c.id && S.concern.variant === v) ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
     return `<span class="votes">${pill("prefer")}${pill("dislike")}${pill("concern")}${noteLine}</span>`;
   }
 
@@ -7570,11 +7570,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.vote) {
       const me = S.card.votes?.[S.variant]?.[myKey()];
       // ⚠ only opens the box: the concern counts once its comment is sent, and a thumb stays as it is.
+      // A concern not yet sent is on too: a second press cancels it and keeps what the person typed.
+      const pending = S.concern?.card === S.card.id && S.concern.variant === S.variant;
+      if (ds.vote === "concern" && pending) { S.concern = null; renderDetail(); return; }
       if (ds.vote === "concern" && !worried(me)) {
         const t = $("#composer-text"); if (!t) return;
         const talk = t.closest("details.talk"); S.sect.talk = true; if (talk) talk.open = true;
         S.concern = { card: S.card.id, variant: S.variant };
-        t.value = `My concern about “${optionName(S.card, S.variant)}”: `; t.focus(); $("#composer").scrollIntoView({ block: "center" });
+        renderDetail();
+        const box = $("#composer-text");
+        if (!box.value.trim()) box.value = `My concern about “${optionName(S.card, S.variant)}”: `;
+        box.focus(); $("#composer").scrollIntoView({ block: "center" });
         return;
       }
       const body = ds.vote === "concern" ? { concern: false } : { vote: me?.vote === ds.vote ? "none" : ds.vote };
