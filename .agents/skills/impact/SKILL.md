@@ -88,8 +88,8 @@ field, a parameter, an endpoint, an API: that belongs in the spec. Write it for 
 nothing about how software works, and explain as you would to a friend: an everyday comparison
 helps where the idea is abstract ("the list only shows what the server sends, like a shop
 window shows only what the stockroom has"). No code words here either. When nothing has to
-change behind the screens, say so in one sentence: it is good news for the designer. Name
-where you found it in `sources`.
+change behind the screens, write no `behind`: the Desk then shows no Under the hood (the
+triage verdict already says it). Name where you found it in `sources`.
 
 On a card, one `design desk upsert` with:
 

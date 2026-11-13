@@ -699,8 +699,10 @@ Requests use **Your turn** instead): only the cards that wait for a designer's d
   storage); a pin's click opens its comment, switching Open / Done to the tab it is on. No option is
   **the winner**: Approve, Build a live prototype and Add to presentation each ask the person
   which option; votes, Slack and you only advise. A card's old `chosen` is ignored. People vote
-  👍 (`prefer`), 👎 (`dislike`) or ⚠ (`concern`), and the page offers the vote only while the
-  request is at `feedback` (the Team feedback step).
+  👍 (`prefer`) or 👎 (`dislike`), and beside it may raise ⚠ (`concern: true`): a concern never
+  takes a thumb away, and on the page ⚠ opens the comment box and counts once that comment is
+  sent. An old entry `vote: "concern"` is a concern with no thumb. The page offers the vote only
+  while the request is at `feedback` (the Team feedback step).
 - Status changes you make on a request card, and only these: `triage` → `variants` (you
   started variants) → `feedback` (variants are on the card) → `prototype` (building) →
   `testing` (live) → `spec` (writing the spec) → `handed-off`; or `declined` when a person

@@ -163,6 +163,8 @@ const SCREEN_SOURCES = ["pr", "issue", "instance", "person", "prototype", "rebui
 // the agent asks (`asks`) when a step cannot go on without a person's answer. A private
 // ask (`private`) is a question only its author and the agent see: Design Desk explains,
 // it never changes the design from one (docs/desk.md → Private asks).
+// A person's ⚠ on an option: the flag beside their thumb, or an old entry that was one.
+const isConcern = (v) => Boolean(v?.concern || v?.vote === "concern");
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "private"];
 // The five starters a private ask may begin with; each one's full brief for the agent is in
 // docs/desk.md → Private asks. The page shows a short label, the agent reads the key.
@@ -922,7 +924,7 @@ export class Store {
       for (const [k, vs] of runs) { const [at, how] = k.split("|"); push(at, `options-${how}`, it, { agent: true }, { detail: vs.map((v) => v.name).join(", "), variant: vs[0].id }, yours); }
       for (const [variant, byKey] of Object.entries(c.votes || {})) {
         const name = (c.variants || []).find((v) => v.id === variant)?.name || variant;
-        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${{ prefer: "Prefers", dislike: "Dislikes", concern: "Has a concern about" }[v.vote] || "Voted on"} ${name}`, variant }, yours);
+        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${((t) => t ? `${t}${isConcern(v) ? " and has a concern about" : ""}` : isConcern(v) ? "Has a concern about" : "Voted on")({ prefer: "Prefers", dislike: "Dislikes" }[v.vote])} ${name}`, variant }, yours);
       }
       // Asked for feedback: for every developer, and for whose request it is (docs/desk.md → Team feedback).
       if (c.team_feedback?.state === "open" && c.team_feedback.at) push(c.team_feedback.at, "feedback-asked", it, c.team_feedback.by, {}, yours || DEVELOPERS.includes(who?.role));
@@ -1098,16 +1100,26 @@ export class Store {
     return { threads: ts, inbox: item };
   }
 
-  vote(cardId, who, { variant, vote, note = "" }) {
+  // A thumb and a concern are apart: 👍 or 👎 is the person's one vote (`none` takes it back),
+  // ⚠ a flag beside it (`concern: true|false`), so a concern never takes a thumb away.
+  // `vote: "concern"` raises the flag too; an old entry `vote: "concern"` reads as the flag alone.
+  vote(cardId, who, { variant, vote, concern, note = "" }) {
     const c = this.card(cardId);
     if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no variant ${variant}`);
-    if (!["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
+    if ((vote !== undefined || concern === undefined) && !["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
+    if (concern !== undefined && typeof concern !== "boolean") throw bad("concern must be true or false");
     if (c.vote_ended) throw bad("The vote on these options has ended.");
     c.votes = c.votes || {};
     c.votes[variant] = c.votes[variant] || {};
     const key = who.email || who.sub;
-    if (vote === "none") delete c.votes[variant][key];
-    else c.votes[variant][key] = { vote, role: who.role, note: optText(note, 500, "note"), at: this.clock() };
+    const was = c.votes[variant][key] || {};
+    let thumb = ["prefer", "dislike"].includes(was.vote) ? was.vote : null, worry = isConcern(was);
+    if (vote === "concern") worry = true;
+    else if (vote === "none") thumb = null;
+    else if (vote) thumb = vote;
+    if (concern !== undefined) worry = concern;
+    if (!thumb && !worry) delete c.votes[variant][key];
+    else c.votes[variant][key] = { vote: thumb, ...(worry ? { concern: true } : {}), role: who.role, note: vote === undefined ? (was.note || "") : optText(note, 500, "note"), at: this.clock() };
     c.updated = this.clock();
     this.save();
     return { votes: c.votes };
