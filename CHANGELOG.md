@@ -7,6 +7,18 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.94.0 — 2026-11-13
+
+**Upgrade:**
+1. Nothing to install: docs and the pre-flight are re-read per run. With `ci_gate: enabled`, a
+   failing `design-desk` check now also writes one comment on its pull request: say so to the
+   operator ([watch.md](docs/watch.md) → CI gate).
+2. Offer `ci_gate_unsourced` (off by default) to the operator: with it on, a UI change with
+   nothing approved to compare with fails the check too until it is approved on the Desk.
+   Never enable it unasked.
+3. Rewrite and republish the agent manifest ([manifest.md](docs/manifest.md)): it writes a new
+   PR comment block.
+
 ## 1.93.0 — 2026-11-13
 
 **Upgrade:**
