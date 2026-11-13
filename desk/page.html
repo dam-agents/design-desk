@@ -1335,7 +1335,7 @@
   .ws-close svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   kbd { font: var(--fs-meta) var(--font); padding: 0 8px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-xs); color: var(--muted); font-weight: 400; }
   /* The design workspace, laid out as a design tool: the request on top, the options as tabs, the pages
-     and states of the one shown, the design on a canvas with one floating tool bar, Comments and Properties beside. */
+     and states of the one shown, the design on a canvas with one tool bar under it, Comments and Properties beside. */
   #workspace { display: flex; flex-direction: column; }
   .ws-body { flex: 1; }
   .ws-top { flex-wrap: nowrap; gap: 8px; padding: 8px 12px 8px 20px; border-bottom: 0; }
@@ -1395,7 +1395,7 @@
   .ctx span { color: var(--muted); }
   .ctx.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
   .ctx.alt { border-color: var(--accent); }
-  /* The tool bar: floating at the bottom of the canvas, icons only, the key in each tooltip. */
+  /* The tool bar: under the design, outside its frame, icons only; one tooltip names the tool and its key. */
   .ws-toolbar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: var(--r-lg); background: #1e1e1e; box-shadow: 0 8px 30px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06) inset; }
   .ws-toolbar .tool { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: var(--radius); background: none; color: #e6e6e6; cursor: pointer; }
   .ws-toolbar .tool .ico { width: 20px; height: 20px; }
