@@ -232,7 +232,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec"].includes(p[3]))) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec", "text"].includes(p[3]))) spend(who.email || who.sub, "item");
   }
   // A person's own day or night mode and simple mode, kept for them on every device
   // (docs/desk-page.md → The menu); only the keys sent change.
@@ -339,6 +339,11 @@ async function viewerRoute(req, res, url, who) {
     for (const im of images) if (!/^image\/(png|jpeg|webp)$/.test(im?.contentType || "")) throw new DeskError(400, "only PNG, JPEG or WebP pictures can be added");
     const ids = images.map((im, i) => store.addAsset({ card: p[2], kind: "screen", name: `added-${i + 1}`, contentType: im.contentType, data: String(im.data || "") }).asset.id);
     return send(res, 201, withPing(store.addScreens(p[2], actor, ids), s, who));
+  }
+  // Edit text, confirmed: the words change in the design at once (docs/desk-page.md → design workspace).
+  if (m === "POST" && p[1] === "cards" && p[3] === "text") {
+    need("change");
+    return send(res, 200, withPing(store.editText(p[2], actor, { variant: typeof b.variant === "string" ? b.variant : "", state: typeof b.state === "string" && b.state ? b.state : null, read: Number.isInteger(b.read) ? b.read : null, from: typeof b.from === "string" ? b.from : "", to: typeof b.to === "string" ? b.to : "", nth: Number.isInteger(b.nth) ? b.nth : 0, count: Number.isInteger(b.count) ? b.count : 1 }), s, who));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "title") { need("comment"); return send(res, 200, store.renameRequest(p[2], actor, b.title, { manage: can(who.deskRole, "close", s.prototypeRoles) })); }
   // A person's own option: their pictures on a page the server builds, nothing drawn (docs/requests.md → Variants).

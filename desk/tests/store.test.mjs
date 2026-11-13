@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Store, can, DeskError, ACTIONS, LIMITS, abilities, forgetIdle, rosterOf, readRole, personOf, namesOf, elementsOf } from "../store.mjs";
+import { Store, can, DeskError, ACTIONS, LIMITS, abilities, forgetIdle, rosterOf, readRole, personOf, namesOf, elementsOf, replaceText } from "../store.mjs";
 
 // Every decision in force counts in these tests, unless one says which wait (the server passes the roster's rule).
 const everyCounts = () => false;
@@ -1792,6 +1792,24 @@ test("alternatives and pick-alternative: three ways of a part, the one picked is
   const after = s.getCard(id).variants[0];
   assert.deepEqual([after.version, after.asset, after.history[0].asset, after.alternatives.length], [2, y, v1.asset, 0]);
   assert.equal(Object.values(s.db.inbox).some((i) => i.kind === "states" && i.state !== "done"), false, "an option without states has none to draw again");
+});
+
+test("edit text: the words change in the page at once, as the drawing's next version", () => {
+  const { s, id } = withOptions();
+  const first = s.getCard(id).variants[0].asset;
+  assert.throws(() => s.editText(id, alice, { variant: "v1", read: 1, from: "Nope", to: "B", nth: 0, count: 1 }), /not in one piece/);
+  assert.throws(() => s.editText(id, alice, { variant: "v1", read: 0, from: "A", to: "B", nth: 0, count: 1 }), /changed while you were typing/);
+  const { changed } = s.editText(id, alice, { variant: "v1", read: 1, from: "A", to: "B & <C>", nth: 0, count: 1 });
+  const after = s.getCard(id).variants[0];
+  assert.deepEqual([changed, after.version, after.history[0].asset, after.text_edit.to], [true, 2, first, "B & <C>"]);
+  assert.equal(s.getAsset(after.asset).data, "<p>B &amp; &lt;C&gt;</p>");
+});
+
+test("replaceText: only text between tags counts, and only when the frame counted as many places", () => {
+  const h = "<title>Save</title><style>i{content:'Save'}</style><button>Save</button><!-- Save --><p>Tom &amp; Jerry\n run</p><b>Save</b>";
+  assert.equal(replaceText(h, "Save", "Keep", 2, 3), "<title>Save</title><style>i{content:'Save'}</style><button>Save</button><!-- Save --><p>Tom &amp; Jerry\n run</p><b>Keep</b>");
+  assert.equal(replaceText(h, "Tom & Jerry run", "X", 0, 1), "<title>Save</title><style>i{content:'Save'}</style><button>Save</button><!-- Save --><p>X</p><b>Save</b>");
+  assert.equal(replaceText(h, "Save", "Keep", 0, 2), null);
 });
 
 test("drop-option: a designer closes an option's tab; the last, approved and presented ones stay, a stale run cannot bring it back", () => {
