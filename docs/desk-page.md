@@ -304,7 +304,9 @@ reads **Team feedback (finished)** once a person ended the vote, or its vote in 
 the dot (not the row) unfolds it leftwards, over the title, into the label with its words.
 A card that goes against a decision in force (the list's `against`) shows a red **!** under its
 dot, in every list; pointing at it unfolds it the same way into `Goes against D-<n>`
-(at most three numbers, then `+N`; the hint names them all). Product's
+(at most three numbers, then `+N`; the hint names them all). A change whose pull request Design
+Desk's check holds (`ci: failing`, [watch.md](watch.md) → CI gate) has the same **!**, unfolding into
+`Holds the PR`, until it is marked handled or merges. Product's
 lists are drawn the same way: a screen's and an element's dot says whether its drawing is up to
 date, out of date, being drawn or not drawn, and its line says `drawn: <when> from: Design
 Desk by: live product` (an element: `by: source code`; or the person who added it; an element from an approved design is
