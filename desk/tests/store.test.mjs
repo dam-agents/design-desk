@@ -816,6 +816,14 @@ test("no option is the winner; votes only suggest one, and the presentation show
   assert.equal("choose" in s, false, "nobody picks a winner");
   assert.equal(s.vote(card.id, alice, { variant: "v2", vote: "dislike" }).votes.v2[alice.email].vote, "dislike", "a person may vote against an option");
   assert.throws(() => s.vote(card.id, alice, { variant: "v2", vote: "love" }), /prefer, dislike, concern or none/);
+  // A concern sits beside the thumb: raising or dropping it never takes the 👍 or 👎 away.
+  s.vote(card.id, alice, { variant: "v2", concern: true });
+  assert.deepEqual([s.getCard(card.id).votes.v2[alice.email].vote, s.getCard(card.id).votes.v2[alice.email].concern], ["dislike", true], "a concern keeps the thumb");
+  s.vote(card.id, alice, { variant: "v2", vote: "none" });
+  assert.deepEqual([s.getCard(card.id).votes.v2[alice.email].vote, s.getCard(card.id).votes.v2[alice.email].concern], [null, true], "taking the thumb back keeps the concern");
+  s.vote(card.id, alice, { variant: "v2", concern: false });
+  assert.equal(s.getCard(card.id).votes.v2[alice.email], undefined, "no thumb and no concern is no vote");
+  s.vote(card.id, alice, { variant: "v2", vote: "dislike" });
   assert.match(s.getCard(card.id).attention.reasons.join(), /Options are ready/);
   // The agent's card writes never carry a pick.
   s.upsertCard({ id: card.id, chosen: { variant: "v1" } });
@@ -1189,7 +1197,7 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.openPoll(card.id, { chat: "C0123", root_ts: "2.0", posts: [{ variant: "v1", ts: "2.1" }], closes: "2026-11-06T14:00:00Z" }).poll.head_ts, null, "without one, no tally");
   s.vote(card.id, alice, { variant: "v1", vote: "concern" });
   s.slackVotes(card.id, "v1", [{ key: alice.email, vote: "prefer" }, { key: "slack:U1", vote: "prefer", name: "Jana" }]);
-  assert.equal(s.getCard(card.id).votes.v1[alice.email].vote, "concern");
+  assert.equal(s.getCard(card.id).votes.v1[alice.email].concern, true);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"].via, "slack");
   s.slackVotes(card.id, "v1", []);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"], undefined);
@@ -2794,4 +2802,19 @@ test("a request keeps how its screen looks today, and Draw how it looks today qu
   assert.deepEqual([s.card(card.id).now.asset, s.card(card.id).now.name], [asset, "Orders"]);
   s.upsertCard({ id: card.id, now: null });
   assert.equal(s.card(card.id).now, null);
+});
+
+test("a Slack request keeps its author's user id, and a reminder never moves its card", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 1) + ++t * 3600e3).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const { card } = s.createRequest({ agent: true }, { title: "Overflow", problem: "Runs over.", origin: { channel: "slack", reporter: "Ann", user: "U0123ABCD" } });
+  assert.equal(s.db.cards[card.id].origin.user, "U0123ABCD");
+  const bad = s.createRequest({ agent: true }, { title: "Other", problem: "P.", origin: { channel: "slack", reporter: "Bo", user: "<!here>" } }).card;
+  assert.equal(s.db.cards[bad.id].origin.user, undefined, "only a Slack user id is kept");
+  const before = s.db.cards[card.id].updated;
+  s.upsertCard({ id: card.id, reminded: before });
+  assert.equal(s.db.cards[card.id].updated, before, "the reminder is no change on the card");
+  assert.equal(s.db.cards[card.id].reminded.for, before);
+  assert.throws(() => s.upsertCard({ id: card.id, reminded: "" }), /reminded/);
+  assert.throws(() => s.upsertCard({ id: card.id, reminded: "yesterday" }), /ISO date/, "a reminder value that is not a date is refused");
 });

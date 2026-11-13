@@ -64,6 +64,8 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 - `slack_council` (`disabled`) — `enabled`: anyone on the roster in a request's Slack thread asks for changes
   and gets new options or versions back there (the `slack-council` skill); `council_sync_min`
   (`30`) — how often an open thread is read for asks that do not mention the agent.
+- `slack_stale_days` (`0`, off) — a whole number: a request asked for in Slack whose card has not changed
+  for that many days gets one reminder in its thread, its author tagged ([requests.md](requests.md) → A request that stands still).
 - `figma` (`disabled`) — `enabled` once Figma is connected (the `figma` skill): imports, exports
   and the comparisons with Figma on the Desk (Product → Differences, the box on items;
   [desk.md](desk.md) → Differences from Figma), each person able to hide them with the Figma

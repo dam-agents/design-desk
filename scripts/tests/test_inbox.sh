@@ -171,6 +171,26 @@ printf -- '- ci_gate: enabled\n' > "$WORK_DIR/CONFIG.md"
 assert "ci_gate on: open judged cards with no check yet, and a failed write under its cap" '[.ci_due[] | [.id, .retry]] == [["G-C-1", false], ["G-C-4", false], ["G-C-5", false], ["G-C-6", false], ["G-C-7", true], ["G-C-9", false]]' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
 echo '{"cards":' > "$WORK_DIR/desk/db.json"
 assert "a Desk store the gate cannot read is an error line, and the run stays open" '(.nothing_to_do == false) and (.logs | any(test("could not read the Desk.s cards for the CI gate")))' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+
+# A Slack request whose card stood still for slack_stale_days days is due once per standstill.
+printf '{"updated":"%s","open":[],"claimed":[]}' "$new" > "$WORK_DIR/desk/inbox.json"
+three="$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-3d +%Y-%m-%dT%H:%M:%SZ)"
+cat > "$WORK_DIR/desk/db.json" <<JSON
+{"version":1,"cards":{
+ "R-1":{"id":"R-1","kind":"request","status":"feedback","updated":"$three","origin":{"channel":"slack","reporter":"Ann"}},
+ "R-2":{"id":"R-2","kind":"request","status":"triage","updated":"$old","origin":{"channel":"slack","reporter":"Bob"}},
+ "R-3":{"id":"R-3","kind":"request","status":"variants","updated":"$three","origin":{"channel":"slack","reporter":"Cy"},"reminded":{"for":"$three"}},
+ "R-4":{"id":"R-4","kind":"request","status":"handed-off","updated":"$three","origin":{"channel":"slack","reporter":"Di"}},
+ "R-5":{"id":"R-5","kind":"request","status":"triage","updated":"$three","origin":{"channel":"github","reporter":"eve"}},
+ "R-6":{"id":"R-6","kind":"request","status":"testing","updated":"not a date","origin":{"channel":"slack","reporter":"Fay"}},
+ "R-7":{"id":"R-7","kind":"request","status":"spec","updated":"$three","origin":{"channel":"slack","reporter":"Gil"},"reminded":{"for":"${three%Z}.000Z"}}}}
+JSON
+printf -- '' > "$WORK_DIR/CONFIG.md"
+assert "reminders are off by default" '.nothing_to_do == true' "$(bash "$ROOT/scripts/preflight.sh" inbox)"
+printf -- '- slack_stale_days: 2\n' > "$WORK_DIR/CONFIG.md"
+out="$(bash "$ROOT/scripts/preflight.sh" inbox)"
+assert "an open Slack request that stood still, not yet reminded (the same time in another form counts), is due" '[.stale_due[] | [.id, .status]] == [["N-R-1", "feedback"]]' "$out"
+assert "the reminder reads docs/requests.md" '.read_set | index("docs/requests.md")' "$out"
 rm "$WORK_DIR/desk/db.json"
 echo 'not json' > "$WORK_DIR/desk/inbox.json"
 assert "a broken inbox file is an error" '.error | test("not an inbox")' "$(bash "$ROOT/scripts/preflight.sh" inbox)"

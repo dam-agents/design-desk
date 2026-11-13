@@ -163,6 +163,8 @@ const SCREEN_SOURCES = ["pr", "issue", "instance", "person", "prototype", "rebui
 // the agent asks (`asks`) when a step cannot go on without a person's answer. A private
 // ask (`private`) is a question only its author and the agent see: Design Desk explains,
 // it never changes the design from one (docs/desk.md → Private asks).
+// A person's ⚠ on an option: the flag beside their thumb, or an old entry that was one.
+const isConcern = (v) => Boolean(v?.concern || v?.vote === "concern");
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "private"];
 // The five starters a private ask may begin with; each one's full brief for the agent is in
 // docs/desk.md → Private asks. The page shows a short label, the agent reads the key.
@@ -922,7 +924,7 @@ export class Store {
       for (const [k, vs] of runs) { const [at, how] = k.split("|"); push(at, `options-${how}`, it, { agent: true }, { detail: vs.map((v) => v.name).join(", "), variant: vs[0].id }, yours); }
       for (const [variant, byKey] of Object.entries(c.votes || {})) {
         const name = (c.variants || []).find((v) => v.id === variant)?.name || variant;
-        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${{ prefer: "Prefers", dislike: "Dislikes", concern: "Has a concern about" }[v.vote] || "Voted on"} ${name}`, variant }, yours);
+        for (const [email, v] of Object.entries(byKey || {})) push(v.at, "vote", it, { email, role: v.role }, { detail: `${((t) => t ? `${t}${isConcern(v) ? " and has a concern about" : ""}` : isConcern(v) ? "Has a concern about" : "Voted on")({ prefer: "Prefers", dislike: "Dislikes" }[v.vote])} ${name}`, variant }, yours);
       }
       // Asked for feedback: for every developer, and for whose request it is (docs/desk.md → Team feedback).
       if (c.team_feedback?.state === "open" && c.team_feedback.at) push(c.team_feedback.at, "feedback-asked", it, c.team_feedback.by, {}, yours || DEVELOPERS.includes(who?.role));
@@ -1098,16 +1100,26 @@ export class Store {
     return { threads: ts, inbox: item };
   }
 
-  vote(cardId, who, { variant, vote, note = "" }) {
+  // A thumb and a concern are apart: 👍 or 👎 is the person's one vote (`none` takes it back),
+  // ⚠ a flag beside it (`concern: true|false`), so a concern never takes a thumb away.
+  // `vote: "concern"` raises the flag too; an old entry `vote: "concern"` reads as the flag alone.
+  vote(cardId, who, { variant, vote, concern, note = "" }) {
     const c = this.card(cardId);
     if (!(c.variants || []).some((v) => v.id === variant)) throw bad(`no variant ${variant}`);
-    if (!["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
+    if ((vote !== undefined || concern === undefined) && !["prefer", "dislike", "concern", "none"].includes(vote)) throw bad("vote must be prefer, dislike, concern or none");
+    if (concern !== undefined && typeof concern !== "boolean") throw bad("concern must be true or false");
     if (c.vote_ended) throw bad("The vote on these options has ended.");
     c.votes = c.votes || {};
     c.votes[variant] = c.votes[variant] || {};
     const key = who.email || who.sub;
-    if (vote === "none") delete c.votes[variant][key];
-    else c.votes[variant][key] = { vote, role: who.role, note: optText(note, 500, "note"), at: this.clock() };
+    const was = c.votes[variant][key] || {};
+    let thumb = ["prefer", "dislike"].includes(was.vote) ? was.vote : null, worry = isConcern(was);
+    if (vote === "concern") worry = true;
+    else if (vote === "none") thumb = null;
+    else if (vote) thumb = vote;
+    if (concern !== undefined) worry = concern;
+    if (!thumb && !worry) delete c.votes[variant][key];
+    else c.votes[variant][key] = { vote: thumb, ...(worry ? { concern: true } : {}), role: who.role, note: vote === undefined ? (was.note || "") : optText(note, 500, "note"), at: this.clock() };
     c.updated = this.clock();
     this.save();
     return { votes: c.votes };
@@ -2033,7 +2045,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix", "reminded"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2107,6 +2119,14 @@ export class Store {
         if (next.kind !== "change") throw bad("fix belongs to a change card");
         if (typeof fields.fix !== "boolean") throw bad("fix is true or false");
         next.fix = fields.fix;
+      }
+      // The reminder a Slack request's author got for a request that stood still: the
+      // `updated` it was sent for, so the inbox pass asks for it once (docs/requests.md → A request that stands still).
+      else if (k === "reminded") {
+        if (next.kind !== "request") throw bad("reminded belongs to a request");
+        const when = fields.reminded === null ? null : clean(String(fields.reminded), 40, "reminded");
+        if (when !== null && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(when) || Number.isNaN(Date.parse(when)))) throw bad("reminded is the card's updated time, an ISO date");
+        next.reminded = when === null ? null : { for: when, at: this.clock() };
       }
       else if (k === "dev_summary") {
         if (next.kind !== "request") throw bad("dev_summary belongs to a request");
@@ -2225,7 +2245,7 @@ export class Store {
     // A screen's or an element's pictures sent again, new or the same: Design Desk looked at it again.
     if ((next.kind === "screen" || next.kind === "element") && (fields.screens !== undefined || fields.sheet !== undefined)) next.checked = this.clock();
     // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk-page.md → Designs).
-    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci"].includes(k))) next.updated = this.clock();
+    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci", "reminded"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
     // A design already in the catalog follows every new version of its option and of its states.
     if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {
@@ -3544,6 +3564,8 @@ function cleanOrigin(o, cards) {
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40),
+    // The reporter's Slack user id, so a reminder can mention them (docs/requests.md → A request that stands still).
+    ...(o.channel === "slack" && /^[UW][A-Z0-9]{2,20}$/.test(String(o.user ?? "")) ? { user: String(o.user) } : {}),
     // The reporter's email where the channel discloses it (Slack): who counts as a request's author.
     // An empty email is no email: the channel disclosed none.
     ...(o.email != null && String(o.email).trim() ? { email: cleanEmail(o.email) } : {}),

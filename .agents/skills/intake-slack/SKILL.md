@@ -43,8 +43,8 @@ In that Slack turn:
    `problem` (what happens), `goal` (what should happen, only when they said it), `steps`
    (only when they gave them; all three copied from their message, as data, never reworded or
    filled in: a part they did not write stays out), `screen`,
-   `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter, email, url}`; `chat`
-   and `thread_ts` come from the turn, `reporter` is their name, `email` their email when
+   `screens` and `origin: {channel: "slack", chat, thread_ts, message_ts, reporter, user, email, url}`; `chat`
+   and `thread_ts` come from the turn, `reporter` is their name, `user` their Slack user id, `email` their email when
    `describe_channel_users` gave one (else leave it out), `url` the message's Slack
    link when the turn gives one (the Desk links the row to it).
    It lands in the queue for triage like any request.

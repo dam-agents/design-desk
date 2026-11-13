@@ -176,7 +176,8 @@ Read [docs/config.md](docs/config.md) first. If Step 2a restored a `CONFIG.md`,
    able to send pictures of the designs to the channel?" (`slack_send`, default `disabled`; a
    request from Slack gets them in its thread anyway), "Should people be
    able to ask for design changes in a request's thread and get the pictures back there?"
-   (`slack_council`, default `disabled`). And "Should the weekly UX digest also go to the
+   (`slack_council`, default `disabled`). "Should I remind the person who asked in Slack when
+   their request has not moved for some days? How many?" (`slack_stale_days`, default `0`: off). And "Should the weekly UX digest also go to the
    channel?" (`digest: slack`; default `desk`, only on the Desk). "Does a test agent post its
    findings there? Its Slack user id, please" (`qa_bot`, default empty).
 7. **Backup** (`work_repo`) — "Should I back up the Desk to a private repository?" The
@@ -266,6 +267,7 @@ Write the file in exactly this shape with `design config write` (a restored file
 - audit_report: enabled
 - log_level: info
 - council_sync_min: 30
+- slack_stale_days: 0
 
 ## Desk people
 

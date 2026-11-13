@@ -59,6 +59,15 @@ function shim() {
       c.threads.push(t); if (t.kind === "change") work(c, [t]);
       return { thread: t };
     }
+    // A vote as the store keeps it: a thumb, and a concern beside it (store.mjs → vote).
+    if ((x = m(/^\/api\/cards\/([^/]+)\/votes$/))) {
+      const c = card(x[1]), box = ((c.votes ||= {})[body.variant] ||= {}), was = box[me.email] || {};
+      let thumb = ["prefer", "dislike"].includes(was.vote) ? was.vote : null, worry = Boolean(was.concern);
+      if (body.vote === "none") thumb = null; else if (body.vote === "concern") worry = true; else if (body.vote) thumb = body.vote;
+      if (body.concern !== undefined) worry = body.concern;
+      if (!thumb && !worry) delete box[me.email]; else box[me.email] = { vote: thumb, ...(worry ? { concern: true } : {}), role, at: now() };
+      return { votes: c.votes };
+    }
     if ((x = m(/^\/api\/cards\/([^/]+)\/work-in$/))) { const c = card(x[1]); const ts = c.threads.filter((t) => body.threads.includes(t.id)); for (const t of ts) t.kind = "change"; work(c, ts); return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/messages$/))) { const [, t] = thread(x[1]); t?.messages.push({ by: { name: me.name, email: me.email }, at: now(), text: body.text }); return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/resolve$/))) { const [, t] = thread(x[1]); if (t) t.state = "resolved"; return {}; }
