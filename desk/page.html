@@ -4141,11 +4141,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Every section says what it is and where it comes from. The ones that explain or give
   // context can fold; they show open, so the card reads whole.
   const FOLDED = new Set(["why", "limits", "good-to-know", "context"]);
-  const sections = (c) => (c.sections || []).length ? `<div class="secs">${c.sections.map((s) => {
+  // A section with nothing to tell is not shown (the explain skill → What goes in).
+  const sections = (c) => { const xs = (c.sections || []).filter((s) => String(s.body || "").trim()); return xs.length ? `<div class="secs">${xs.map((s) => {
     const head = `<h4>${esc(s.title)}</h4>${s.source?.label ? `<span class="chip" title="Where this comes from">Source:${s.source.url || s.source.card ? srcLink(s.source) : ` ${esc(s.source.label)}`}</span>` : ""}`;
     return FOLDED.has(s.key) ? `<details class="section sec" open><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
       : `<div class="section"><div class="sec-head">${head}</div>${md(s.body)}</div>`;
-  }).join("")}</div>` : "";
+  }).join("")}</div>` : ""; };
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
 
   // A place that is a screen or a part in Product opens it there: the one the agent named, else,
@@ -4180,7 +4181,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!im) return "";
     const li = (xs, f) => xs?.length ? `<ul>${xs.map(f).join("")}</ul>` : "";
     const fold = (title, body) => `<details class="fold big"><summary><h3>${title}</h3></summary><div class="impact section">${body}</div></details>`;
-    return fold("Where else this shows up", `<p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li>${productLink(p)}${p.how ? ` — ${txt(p.how)}` : ""}</li>`) || "<p class='hint'>Only here.</p>"}`)
+    // A section with nothing to tell is not shown (the explain skill → What goes in).
+    return (im.places?.length ? fold("Where else this shows up", `<p>Everywhere <b>${esc(im.concept)}</b> appears:</p>${li(im.places, (p) => `<li>${productLink(p)}${p.how ? ` — ${txt(p.how)}` : ""}</li>`)}`) : "")
       // Under the hood: a short plain text of what has to happen behind the screens; a card written
       // before it still shows its list of effects (docs/requests.md → Impact).
       + (im.behind?.text ? fold("Under the hood", `${md(im.behind.text)}${(im.behind.sources || []).length ? `<p class="hint">Where this comes from:${im.behind.sources.map(srcLink).join(",")}</p>` : ""}`)

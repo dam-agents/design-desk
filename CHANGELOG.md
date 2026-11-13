@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.91.0 — 2026-11-13
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a section with nothing
+   to tell (no places, no Under the hood, an empty body) shows no heading.
+2. Once: for each open request whose `impact.behind` only says nothing has to change behind the
+   screens, write its `impact` again without `behind` (`design desk upsert`). The write replaces
+   the whole `impact`: carry `concept`, `places`, `affects` and `decisions` over unchanged
+   ([impact skill](.agents/skills/impact/SKILL.md) → Under the hood).
+
 ## 1.90.2 — 2026-11-13
 
 **Upgrade:**
