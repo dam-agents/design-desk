@@ -1125,7 +1125,7 @@
   .brief-k .prov .src:not([data-k="slack"], [data-k="pr"], [data-k="issue"]) > svg { display: none; }
   .brief-k .ask-when { white-space: nowrap; }
   /* A request in another language: EN on the head's right, a plain link; the language's code brings the original back. */
-  .brief-k .lang-link { margin-left: auto; border: 0; background: none; padding: 0; font: inherit; font-size: var(--fs-meta); font-weight: 600; letter-spacing: .04em; color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 3px; }
+  .brief-k .lang-link { margin-left: auto; border: 0; background: none; padding: 0; font: inherit; font-size: var(--fs-meta); font-weight: 600; letter-spacing: .04em; color: var(--ink); cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 28%, transparent); text-underline-offset: 3px; }
   .brief-k .lang-link:hover { text-decoration-color: currentColor; }
   /* Where the request stands comes first, right under its title; what was asked follows. */
   .standing { margin: 12px 0 0; } .standing .steps { margin-top: 4px; }
@@ -3192,13 +3192,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The label names at most three, then +N: it unfolds to a fixed width. The hint names them all.
   // The red ! under a row's state: it goes against a decision in force, or, on Product →
   // Differences, it differs from its frame in Figma; its words open on hover.
+  // A change whose pull request Design Desk's check holds (`ci_gate`, docs/watch.md → CI gate) has
+  // the ! too, until it is marked handled or merges.
   const againstDot = (c) => { const ids = c.against || [];
     // A closed comparison keeps no !: nobody needs to act on it.
     const n = S.tab === "product" && S.productFilter === "differences" && c.figma?.verdict === "differs" && !c.figma.closed ? c.figma.count : 0;
-    if (!ids.length && !n) return "";
+    const held = c.kind === "change" && c.ci?.state === "failing" && !c.source?.merged_at && !handledAt(c);
+    if (!ids.length && !n && !held) return "";
     const shown = ids.length > 3 ? `${ids.slice(0, 3).join(", ")} +${ids.length - 3}` : ids.join(", ");
-    const words = [n && `${plural(n, "difference", "differences")} from Figma`, ids.length && `Goes against ${shown}`].filter(Boolean).join(" · ");
-    const title = [n && `It differs from its frame in Figma in ${plural(n, "place", "places")}`, ids.length && `It goes against ${ids.join(", ")}, in force: a designer approves it only knowingly`].filter(Boolean).join(". ");
+    const words = [held && "Holds the PR", n && `${plural(n, "difference", "differences")} from Figma`, ids.length && `Goes against ${shown}`].filter(Boolean).join(" · ");
+    const title = [held && "Design Desk's check holds its pull request on GitHub until someone marks the change handled", n && `It differs from its frame in Figma in ${plural(n, "place", "places")}`, ids.length && `It goes against ${ids.join(", ")}, in force: a designer approves it only knowingly`].filter(Boolean).join(". ");
     return `<span class="sdot vdot"><span class="chip tag" title="${esc(title)}"><span class="w">${esc(words)}</span></span></span>`; };
   // A row's state dot, whatever the item: a request's state, a PR's or an issue's, a drawing's.
   const rowDot = (c) => c.kind === "change" || c.kind === "issue" ? ghDot(c) : c.kind === "request" ? `<span class="sdot" data-s="${esc(stateKey(c))}">${stateTag(c, true)}</span>` : c.kind === "screen" || c.kind === "element" ? mapDot(c) : "";

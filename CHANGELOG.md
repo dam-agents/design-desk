@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.95.2 — 2026-11-13
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a change whose pull request
+   Design Desk's check holds shows a red ! in its list row, and a request's EN link is in ink.
+   No data migration.
+
 ## 1.95.1 — 2026-11-13
 
 **Upgrade:**
