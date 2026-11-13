@@ -135,6 +135,10 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   nothing to hide: it shows whole, with no Show or Hide link. Folding and unfolding glide in a
   fifth of a second, so what stands under the box moves rather than jumps; folded from below,
   the page brings the box's top back into view.
+- **A request in another language.** One with `translation` shows **EN** on the right of the
+  request's head, a plain link: it shows the asker's words (and the title, unless a person
+  renamed it) in English, and the language's code in its place brings the original back. The
+  choice lasts while the page is open ([requests.md](requests.md) → A request in another language).
 - **Search.** The header's one search finds words in every item's title, summary and source
   and in the decisions (`GET /api/decisions?q=`); an item's number (`R-12`, `r12`, `12`; [desk.md](desk.md#links-to-an-item)), a
   decision's (`D-3`), and while one is typed (`R-`, `R-1`, `D-`) every item or decision whose

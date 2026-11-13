@@ -158,12 +158,27 @@ The person deciding should know it before a single variant exists.
    on in its state row: it opens `cannot`, where **Copy a
    question for a developer** copies a link to the request, its state and these parts. Once a
    person opened it, it leaves their row: the spec carries `cannot` to developers. Keep `status: triage`. Put the request's own words in `summary` only if its title is unclear.
+   A request written in a language other than English gets its English in the same upsert
+   ([A request in another language](#a-request-in-another-language)).
 5. A request someone asked for in Slack (`idea` with a Slack `origin`) whose verdict is not
    `product`: they asked for options, so `design desk enqueue explore R-<n>`, unless
    `design desk inbox` already holds an open `explore` item of the card. So does a request
    with `request.auto` (filed by someone who may start options, with `request.options` above
    0, or options carried over: `request.carry`) whose verdict is not `product`.
 6. `design desk done Q-<n> --outcome triaged`.
+
+### A request in another language
+
+The asker's words stay as they wrote them; the Desk is in English, so a request written in another
+language carries its English too. When the request's problem (or its vision, goal or steps) is
+not in English, write `translation` on the card in the triage upsert: `lang` (the two-letter
+ISO 639-1 code of the language, never `en`), `problem`, and `vision`, `goal`, `steps` where the
+request has them, plus `title` when the title is in that language too. Translate faithfully,
+whole and in plain words: no summary, nothing added. The Desk then shows **EN** on the right of
+the request's head; it shows the words in English, and the language's code brings the original
+back. A request in English has none; a request whose words are mixed is translated when most
+of it is not English. A request triaged before this has none until a run triages it again or the
+operator asks for it in chat (`design desk upsert` with only `id` and `translation`).
 
 A request too vague to triage gets **one question from you** instead, with your best guess
 as the suggested answer: `design desk ask R-<n> <file> --step request`. The Desk shows it at

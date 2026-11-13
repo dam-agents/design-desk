@@ -1124,6 +1124,9 @@
   .brief-k .prov .src { padding: 0; border: 0; background: none; font-weight: 400; gap: 4px; }
   .brief-k .prov .src:not([data-k="slack"], [data-k="pr"], [data-k="issue"]) > svg { display: none; }
   .brief-k .ask-when { white-space: nowrap; }
+  /* A request in another language: EN on the head's right, a plain link; the language's code brings the original back. */
+  .brief-k .lang-link { margin-left: auto; border: 0; background: none; padding: 0; font: inherit; font-size: var(--fs-meta); font-weight: 600; letter-spacing: .04em; color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 3px; }
+  .brief-k .lang-link:hover { text-decoration-color: currentColor; }
   /* Where the request stands comes first, right under its title; what was asked follows. */
   .standing { margin: 12px 0 0; } .standing .steps { margin-top: 4px; }
   /* What a state means, on hover or focus of the ⓘ (a request: of its word), instead of a sentence on every request. */
@@ -5301,7 +5304,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   function renderRequest(c) {
-    const r = c.request || {};
+    const tr = c.translation?.problem ? c.translation : null, en = Boolean(tr && S.en?.[c.id]);
+    // A request written in another language: Design Desk keeps its English, and the EN link in
+    // the request's head shows the asker's words in English; the language's code brings them back.
+    const r = en ? { ...(c.request || {}), ...Object.fromEntries(["problem", "vision", "goal", "steps"].filter((k) => tr[k]).map((k) => [k, tr[k]])) } : c.request || {};
+    const title = en && tr.title && !c.renamed ? tr.title : c.title;
     const bug = r.type === "bug";
     // A bug's expected result and its steps, and any request's steps, open on a click.
     // Only the asker's words: an idea shows its problem and how they picture it; what should
@@ -5314,7 +5321,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
     foldsFor(c);
     return `${backBar()}
-      <h2 class="renamable">${txt(c.title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
+      <h2 class="renamable">${txt(title)}${num(c)}${titleLink(c)}${!simple() && (filedIt(c) || can("close")) ? `<button class="linkbtn rename" data-rename aria-label="Rename this request" title="Give this request a clearer name; Design Desk keeps it">${PEN_ICON}</button>` : ""}</h2>
       <div class="sub">${bug ? `<span class="chip bad" title="Someone reported something broken on a screen">🐛 Bug</span>` : ""}${c.origin?.severity ? `<span class="chip" title="How bad the reporter says it is">${esc(c.origin.severity)} severity</span>` : ""}${simple() ? "" : c.agenda?.status === "queued" ? `<span class="chip info" title="The team looks at it at its next design meeting">▶ On the presentation${c.agenda.variant ? ` · ${esc(optionName(c, c.agenda.variant))}` : ""}</span>` : c.agenda?.status === "presented" ? `<span class="chip ok" title="The meeting it was shown at">✓ Presented ${esc(day(c.agenda.call))}</span>` : ""}${verdictChip(c)}<span>${esc(when(c.created))}</span></div>
       <div class="standing">
       ${c.status === "handed-off" ? "" : sentBox(c)}
@@ -5325,7 +5332,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${live(c) ? renderPrototype(c) : ""}
       </div>
       <div class="top2">
-      <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c)}</div><div class="brief-body">
+      <div class="brief${S.folds.brief ? " clamped" : ""}"><div class="brief-k">${askHead(c)}${tr ? langLink(tr, en) : ""}</div><div class="brief-body">
       ${renderLinked(c)}
       <div class="section">${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>${bug && r.goal ? (r.steps ? "What should happen and the steps" : "What should happen") : "Steps"}</summary><div class="panel">${more}</div></details>` : ""}${skillLine(r.skills)}${r.figma ? `<p class="hint"><a href="${safeUrl(r.figma)}" target="_blank" rel="noopener noreferrer">The Figma design ↗</a></p>` : ""}</div>
       ${shots(given)}</div>${briefToggle(S.folds.brief, bug)}</div>
@@ -5342,6 +5349,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${c.spec?.asset && !(c.status === "spec" && c.spec?.review === "draft") ? specPanel(c) : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
       ${renderThreads(c, { skipAsks: true })}`;
+  }
+
+  // The EN link in a request's head: the asker's words in English, and back to their own language.
+  function langLink(tr, en) {
+    let name = tr.lang.toUpperCase();
+    try { name = new Intl.DisplayNames(["en"], { type: "language" }).of(tr.lang) || name; } catch {}
+    return en
+      ? `<button class="lang-link" data-lang-toggle aria-pressed="true" title="Show the words as ${esc(name === tr.lang.toUpperCase() ? "they were written" : `they were written, in ${name}`)}">${esc(tr.lang.toUpperCase())}</button>`
+      : `<button class="lang-link" data-lang-toggle aria-pressed="false" title="Written in ${esc(name)}: show it in English, as Design Desk translated it">EN</button>`;
   }
 
   // ---------- Designs: an approved design as a developer builds it (docs/desk-page.md → Designs) ----------
@@ -7566,6 +7582,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       toast(r.threads.length > 1 ? `Sent. Design Desk works in ${r.threads.length} comments; the design updates here by itself.` : "Sent. Design Desk works it in; the design updates here by itself.");
       await openCard(S.card.id); return;
     }
+    if ("langToggle" in ds) { S.en ||= {}; S.en[S.card.id] = !S.en[S.card.id]; renderDetail(); return; }
     if ("rename" in ds) {
       const c = S.card;
       const r = await ask({ title: "Rename this request", body: "A short name that says what should change and where. Design Desk keeps it as you write it.", ok: "Rename",
