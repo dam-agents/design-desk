@@ -816,6 +816,14 @@ test("no option is the winner; votes only suggest one, and the presentation show
   assert.equal("choose" in s, false, "nobody picks a winner");
   assert.equal(s.vote(card.id, alice, { variant: "v2", vote: "dislike" }).votes.v2[alice.email].vote, "dislike", "a person may vote against an option");
   assert.throws(() => s.vote(card.id, alice, { variant: "v2", vote: "love" }), /prefer, dislike, concern or none/);
+  // A concern sits beside the thumb: raising or dropping it never takes the 👍 or 👎 away.
+  s.vote(card.id, alice, { variant: "v2", concern: true });
+  assert.deepEqual([s.getCard(card.id).votes.v2[alice.email].vote, s.getCard(card.id).votes.v2[alice.email].concern], ["dislike", true], "a concern keeps the thumb");
+  s.vote(card.id, alice, { variant: "v2", vote: "none" });
+  assert.deepEqual([s.getCard(card.id).votes.v2[alice.email].vote, s.getCard(card.id).votes.v2[alice.email].concern], [null, true], "taking the thumb back keeps the concern");
+  s.vote(card.id, alice, { variant: "v2", concern: false });
+  assert.equal(s.getCard(card.id).votes.v2[alice.email], undefined, "no thumb and no concern is no vote");
+  s.vote(card.id, alice, { variant: "v2", vote: "dislike" });
   assert.match(s.getCard(card.id).attention.reasons.join(), /Options are ready/);
   // The agent's card writes never carry a pick.
   s.upsertCard({ id: card.id, chosen: { variant: "v1" } });
@@ -1189,7 +1197,7 @@ test("Slack reactions become votes, a Desk vote wins, and a Slack reply is relay
   assert.equal(s.openPoll(card.id, { chat: "C0123", root_ts: "2.0", posts: [{ variant: "v1", ts: "2.1" }], closes: "2026-11-06T14:00:00Z" }).poll.head_ts, null, "without one, no tally");
   s.vote(card.id, alice, { variant: "v1", vote: "concern" });
   s.slackVotes(card.id, "v1", [{ key: alice.email, vote: "prefer" }, { key: "slack:U1", vote: "prefer", name: "Jana" }]);
-  assert.equal(s.getCard(card.id).votes.v1[alice.email].vote, "concern");
+  assert.equal(s.getCard(card.id).votes.v1[alice.email].concern, true);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"].via, "slack");
   s.slackVotes(card.id, "v1", []);
   assert.equal(s.getCard(card.id).votes.v1["slack:U1"], undefined);

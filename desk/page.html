@@ -2023,7 +2023,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     sendForm: "Sends your answers; Design Desk goes on with them",
     skipForm: "Design Desk takes its recommended answer for every question",
     size: (v) => v === "small" ? "Any developer but the person who filed it can then approve it, without a designer" : "A designer, a PM or a lead developer approves it",
-    vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : v === "dislike" ? "Your vote against this option; press again to take it back" : "Says this option worries you, and opens a comment to say why; press again to take it back",
+    vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : v === "dislike" ? "Your vote against this option; press again to take it back" : "Opens a comment to say what worries you about this option; it counts once you send it, beside your 👍 or 👎. Press again to take it back",
     goto: "Opens the design workspace at the part this note is about",
     revoke: "Write why it no longer holds: it stays on the Desk, crossed out, and what refers to it stops warning",
     restore: "Puts this decision in force again",
@@ -5126,11 +5126,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // 👍, 👎 and ⚠ as pills with their count: grey until someone votes, then green, red or amber.
   // People vote only while the team gives feedback (the Team feedback step); before and after,
   // the option shows only its open notes.
+  // `mine` is the viewer's own entry: a thumb (`vote`) and, apart from it, a concern.
   function voteButtons(c, v, mine) {
     const notes = (c.threads || []).filter((th) => th.anchor?.variant === v && th.state !== "resolved").length;
     const noteLine = notes ? `<span class="notes">${plural(notes, "note", "notes")}</span>` : "";
     if (c.status !== "feedback") return noteLine ? `<span class="votes">${noteLine}</span>` : "";
-    const votes = Object.values(c.votes?.[v] || {}), n = (k) => votes.filter((x) => x.vote === k).length;
+    const votes = Object.values(c.votes?.[v] || {}), has = (x, k) => k === "concern" ? worried(x) : x?.vote === k, n = (k) => votes.filter((x) => has(x, k)).length;
     const ICO = { prefer: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H4V10h3zm0 0l4-7c1.7 0 2.7 1.3 2.3 3L13 9h6a2 2 0 0 1 2 2.3l-1.3 7.5A2.5 2.5 0 0 1 17.2 21H7"/></svg>`,
       dislike: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V3h3v11h-3zm0 0l-4 7c-1.7 0-2.7-1.3-2.3-3L11 15H5a2 2 0 0 1-2-2.3l1.3-7.5A2.5 2.5 0 0 1 6.8 3H17"/></svg>`,
       concern: `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>` };
@@ -5138,8 +5139,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Once a person ended the vote, the pills only show the count.
     const can_ = can("vote") && !c.vote_ended;
     // Who voted, by role, in the pill's tooltip (it was a chip beside the pills).
-    const roles = (k) => Object.entries(votes.filter((x) => x.vote === k).map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {})).map(([r, m]) => `${m} ${r}`).join(", ");
-    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${mine === k ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
+    const roles = (k) => Object.entries(votes.filter((x) => has(x, k)).map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {})).map(([r, m]) => `${m} ${r}`).join(", ");
+    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${has(mine, k) || (k === "concern" && S.concern?.card === c.id && S.concern.variant === v) ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
     return `<span class="votes">${pill("prefer")}${pill("dislike")}${pill("concern")}${noteLine}</span>`;
   }
 
@@ -5215,7 +5216,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ? `<h3>Design options</h3><div class="tabs vtabs" role="group" aria-label="Design options">${addOptionTab(c)}</div><div class="vpanel"><div class="frame vempty"><p>No options were asked for. Add one: describe it for Design Desk to draw, or use your own pictures.</p></div></div>` : "";
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
-    const mine = c.votes?.[v.id]?.[myKey()]?.vote;
+    const mine = c.votes?.[v.id]?.[myKey()];
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}</div>` : `<div class="vpanel">
@@ -7243,8 +7244,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     });
   }
 
+  // A person's ⚠ on an option sits beside their thumb; an old entry `vote: "concern"` was one.
+  function worried(x) { return Boolean(x?.concern || x?.vote === "concern"); }
+
   function tallyText(c, id) {
-    const votes = Object.values(c.votes?.[id] || {}), n = (k) => votes.filter((x) => x.vote === k).length;
+    const votes = Object.values(c.votes?.[id] || {}), n = (k) => votes.filter((x) => k === "concern" ? worried(x) : x.vote === k).length;
     return [n("prefer") ? `👍 ${n("prefer")}` : "", n("dislike") ? `👎 ${n("dislike")}` : "", n("concern") ? `⚠ ${n("concern")}` : ""].filter(Boolean).join(" · ");
   }
 
@@ -7254,6 +7258,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const dev = kind === "designer";
     const r = await api("POST", `/api/cards/${S.card.id}/threads`, { kind: dev ? "comment" : kind, text, ...(dev ? { dev: true } : {}) });
     if (dev) toast("Sent. The designer answers right here.");
+    // A concern counts once its comment is sent, beside the person's thumb.
+    const worry = !dev && S.concern?.card === S.card.id ? S.concern : null;
+    S.concern = null;
+    if (worry && !S.card.vote_ended) await api("POST", `/api/cards/${S.card.id}/votes`, { variant: worry.variant, concern: true }).catch((e) => toast(`Your comment is sent, but the concern did not count: ${e.message || e}. Press ⚠ again.`));
     $("#composer-text").value = "";
     if (r.inbox) toast("Sent. Design Desk answers right here.");
     await openCard(S.card.id);
@@ -7562,12 +7570,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A story is shown in place, so the design above keeps its frame, and it plays there.
     if (ds.story) { S.story = ds.story; const v = (S.card.variants || []).find((x) => x.id === S.variant), box = $("#stories"); if (box && v) box.outerHTML = renderStories(S.card, v); playStory(); return; }
     if (ds.vote) {
-      const mine = S.card.votes?.[S.variant]?.[myKey()]?.vote;
-      const vote = mine === ds.vote ? "none" : ds.vote;
-      await api("POST", `/api/cards/${S.card.id}/votes`, { variant: S.variant, vote });
-      if (vote === "concern") S.sect.talk = true;
+      const me = S.card.votes?.[S.variant]?.[myKey()];
+      // ⚠ only opens the box: the concern counts once its comment is sent, and a thumb stays as it is.
+      // A concern not yet sent is on too: a second press cancels it and keeps what the person typed.
+      const pending = S.concern?.card === S.card.id && S.concern.variant === S.variant;
+      if (ds.vote === "concern" && pending) { S.concern = null; renderDetail(); return; }
+      if (ds.vote === "concern" && !worried(me)) {
+        const t = $("#composer-text"); if (!t) return;
+        const talk = t.closest("details.talk"); S.sect.talk = true; if (talk) talk.open = true;
+        S.concern = { card: S.card.id, variant: S.variant };
+        renderDetail();
+        const box = $("#composer-text");
+        if (!box.value.trim()) box.value = `My concern about “${optionName(S.card, S.variant)}”: `;
+        box.focus(); $("#composer").scrollIntoView({ block: "center" });
+        return;
+      }
+      const body = ds.vote === "concern" ? { concern: false } : { vote: me?.vote === ds.vote ? "none" : ds.vote };
+      await api("POST", `/api/cards/${S.card.id}/votes`, { variant: S.variant, ...body });
       await openCard(S.card.id);
-      if (vote === "concern") { const t = $("#composer-text"); t.value = `My concern about “${optionName(S.card, S.variant)}”: `; t.focus(); $("#composer").scrollIntoView({ block: "center" }); }
       return;
     }
     if (ds.goto) {
