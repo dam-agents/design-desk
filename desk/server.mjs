@@ -84,6 +84,11 @@ const offerSkills = (figma) => requestSkills(cfg("request_skills", "copy, impact
   { figma, warn: (m) => log("warn", "request_skills", m) });
 
 // The roster role of a person met in Slack, by the email the workspace discloses.
+// Every address on a person's row, so a reaction and their Desk vote count as one.
+function aliasesOf(email) {
+  const row = email ? rowOf(email) : null;
+  return row ? [row.email, ...(row.also || [])].filter(Boolean).map((e) => String(e).toLowerCase()) : [];
+}
 function slackRole(email) {
   if (!email) return "slack";
   const role = rowOf(email)?.role;
@@ -428,7 +433,7 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "cards" && p[3] === "councils" && p[4]) return send(res, 200, store.updateCouncil(p[2], p[4], b));
   // A Slack voter's role is the roster's for their email, never one the agent names.
   if (m === "POST" && p[1] === "cards" && p[3] === "slack-votes") {
-    const voters = (Array.isArray(b.voters) ? b.voters : []).map((v) => ({ ...v, key: v.email ? String(v.email).toLowerCase() : `slack:${v.slack_id || v.key}`, role: slackRole(v.email) }));
+    const voters = (Array.isArray(b.voters) ? b.voters : []).map((v) => ({ ...v, key: v.email ? String(v.email).toLowerCase() : `slack:${v.slack_id || v.key}`, role: slackRole(v.email), aliases: aliasesOf(v.email) }));
     return send(res, 200, store.slackVotes(p[2], String(b.variant || ""), voters));
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "relay") return send(res, 201, store.relayComment(p[2], { ...b, role: slackRole(b.email) }));

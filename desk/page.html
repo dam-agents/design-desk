@@ -2023,7 +2023,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     sendForm: "Sends your answers; Design Desk goes on with them",
     skipForm: "Design Desk takes its recommended answer for every question",
     size: (v) => v === "small" ? "Any developer but the person who filed it can then approve it, without a designer" : "A designer, a PM or a lead developer approves it",
-    vote: (v) => v === "prefer" ? "Your vote for this option; press again to take it back" : v === "dislike" ? "Your vote against this option; press again to take it back" : "Opens a comment to say what worries you about this option; it counts once you send it, beside your 👍 or 👎. Press again to take it back",
+    vote: (v, on) => v === "prefer" ? (on ? "Your vote for this option; press again to take it back" : "Votes for this option") : v === "dislike" ? (on ? "Your vote against this option; press again to take it back" : "Votes against this option") : "Opens a comment to say what worries you about this option; it counts once you send it, beside your 👍 or 👎. Press again to take it back",
     goto: "Opens the design workspace at the part this note is about",
     revoke: "Write why it no longer holds: it stays on the Desk, crossed out, and what refers to it stops warning",
     restore: "Puts this decision in force again",
@@ -2245,6 +2245,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // address (or the name a channel gave) as it is.
   const nameOf = (e) => S.me?.names?.[String(e || "").toLowerCase()] || e;
   const personName = (e, fallback = "someone") => isMe(e) ? "you" : e ? nameOf(e) : fallback;
+  // Your vote on an option, under any address you go by (a Slack reaction included).
+  const myVote = (c, v) => { const box = c.votes?.[v] || {}; return box[myKey()] || Object.entries(box).find(([k]) => isMe(k))?.[1]; };
   // Going against a decision in force stays a designer's call, For Developers included.
   // A designer, a PM or a lead developer approves at any step once it is checked (docs/desk.md → Deciding straight away).
   const canApprove = (c) => can("approve") || (!(c.conflicts || []).some((x) => x.status === "active")
@@ -5138,9 +5140,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const label = { prefer: "I like this one", dislike: "I don't like this one", concern: "I have a concern" };
     // Once a person ended the vote, the pills only show the count.
     const can_ = can("vote") && !c.vote_ended;
-    // Who voted, by role, in the pill's tooltip (it was a chip beside the pills).
-    const roles = (k) => Object.entries(votes.filter((x) => has(x, k)).map((x) => roleName(x.role)).reduce((m, r) => (m[r] = (m[r] || 0) + 1, m), {})).map(([r, m]) => `${m} ${r}`).join(", ");
-    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${has(mine, k) || (k === "concern" && S.concern?.card === c.id && S.concern.variant === v) ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
+    // Who voted, by name and role, in the pill's tooltip (it was a chip beside the pills).
+    const roles = (k) => Object.entries(c.votes?.[v] || {}).filter(([, x]) => has(x, k)).map(([key, x]) => `${isMe(key) || key === myKey() ? "you" : x.name || nameOf(key)} (${roleName(x.role)})`).join(", ");
+    const pill = (k) => `<${can_ ? "button" : "span"} class="btn small vote ${{ prefer: "up", dislike: "down", concern: "concern" }[k]}${n(k) ? " some" : ""}${has(mine, k) || (k === "concern" && S.concern?.card === c.id && S.concern.variant === v) ? " on" : ""}"${can_ ? ` data-vote="${k}"` : ""} title="${esc(label[k])}${n(k) ? ` · ${n(k)}: ${esc(roles(k))}` : ""}${can_ ? `. ${esc(TIP.vote(k, has(mine, k)))}` : ""}" aria-label="${esc(label[k])}, ${n(k)}">${ICO[k]}<span class="n">${n(k)}</span></${can_ ? "button" : "span"}>`;
     return `<span class="votes">${pill("prefer")}${pill("dislike")}${pill("concern")}${noteLine}</span>`;
   }
 
@@ -5216,7 +5218,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ? `<h3>Design options</h3><div class="tabs vtabs" role="group" aria-label="Design options">${addOptionTab(c)}</div><div class="vpanel"><div class="frame vempty"><p>No options were asked for. Add one: describe it for Design Desk to draw, or use your own pictures.</p></div></div>` : "";
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
-    const mine = c.votes?.[v.id]?.[myKey()];
+    const mine = myVote(c, v.id);
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
       <div class="tabs vtabs" role="group" aria-label="Design options">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}</div>` : `<div class="vpanel">
@@ -7605,7 +7607,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // A story is shown in place, so the design above keeps its frame, and it plays there.
     if (ds.story) { S.story = ds.story; const v = (S.card.variants || []).find((x) => x.id === S.variant), box = $("#stories"); if (box && v) box.outerHTML = renderStories(S.card, v); playStory(); return; }
     if (ds.vote) {
-      const me = S.card.votes?.[S.variant]?.[myKey()];
+      const me = myVote(S.card, S.variant);
       // ⚠ only opens the box: the concern counts once its comment is sent, and a thumb stays as it is.
       // A concern not yet sent is on too: a second press cancels it and keeps what the person typed.
       const pending = S.concern?.card === S.card.id && S.concern.variant === S.variant;

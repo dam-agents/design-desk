@@ -1111,15 +1111,19 @@ export class Store {
     if (c.vote_ended) throw bad("The vote on these options has ended.");
     c.votes = c.votes || {};
     c.votes[variant] = c.votes[variant] || {};
-    const key = who.email || who.sub;
-    const was = c.votes[variant][key] || {};
+    const box = c.votes[variant], key = who.email || who.sub;
+    // A person is one vote by any address they go by: a vote under another of their addresses
+    // (the one Slack knows them by, say) is theirs, so it is changed here, never counted twice.
+    const theirs = new Set([key, ...(who.emails || [])].filter(Boolean).map((e) => String(e).toLowerCase()));
+    const found = Object.keys(box).filter((k) => theirs.has(k.toLowerCase()));
+    const was = box[key] || found.map((k) => box[k]).sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")))[0] || {};
+    for (const k of found) delete box[k];
     let thumb = ["prefer", "dislike"].includes(was.vote) ? was.vote : null, worry = isConcern(was);
     if (vote === "concern") worry = true;
     else if (vote === "none") thumb = null;
     else if (vote) thumb = vote;
     if (concern !== undefined) worry = concern;
-    if (!thumb && !worry) delete c.votes[variant][key];
-    else c.votes[variant][key] = { vote: thumb, ...(worry ? { concern: true } : {}), role: who.role, note: vote === undefined ? (was.note || "") : optText(note, 500, "note"), at: this.clock() };
+    if (thumb || worry) box[key] = { vote: thumb, ...(worry ? { concern: true } : {}), role: who.role, note: vote === undefined ? (was.note || "") : optText(note, 500, "note"), at: this.clock() };
     c.updated = this.clock();
     this.save();
     return { votes: c.votes };
@@ -2438,7 +2442,9 @@ export class Store {
       // click (slack-polls → Share 4), not votes: a bot's reaction never counts.
       if (v.is_bot === true) continue;
       const key = clean(String(v.key || ""), 200, "voter key");
-      if (box[key]) continue;
+      // A person who voted on the Desk under another of their addresses keeps that one vote.
+      const aliases = (Array.isArray(v.aliases) ? v.aliases : []).map((e) => String(e).toLowerCase());
+      if (box[key] || Object.keys(box).some((k) => aliases.includes(k.toLowerCase()))) continue;
       box[key] = { vote: v.vote, role: optText(v.role, 20, "role") || "slack", name: optText(v.name, 120, "name") || null, via: "slack", at: was.get(key)?.vote === v.vote ? was.get(key).at : this.clock(), note: "" };
     }
     c.updated = this.clock();

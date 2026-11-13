@@ -224,6 +224,8 @@ const r3 = {
   variants: [{ id: "q1", name: "Quiet", asset: "A-r3-1", version: 1 }],
   threads: [{ id: "T-30", kind: "comment", state: "open", may, anchor: { variant: "q1", selector: "#kit", text: "Kit", label: "Text" }, messages: [{ by: PAT, at: ago(40), text: "Too bright here." }] }],
   waiting: [], prototype: { state: "none" },
+  // Alice's 👎 came from Slack under her other address: it is hers, one vote (store.mjs → vote).
+  votes: { q1: { "alice@slack.example.com": { vote: "dislike", role: "developer", via: "slack", name: "Alice Novak", at: ago(50) }, [PAT.email]: { vote: "prefer", role: "designer", at: ago(45) } } },
 };
 
 // The bell: notes on comments in the design workspace, each opening its comment in place.

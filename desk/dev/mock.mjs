@@ -22,7 +22,7 @@ const CAN = Object.fromEntries(ROLES.map((r) => [r, abilities(r)]));
 function shim() {
   const q = new URLSearchParams(location.search);
   const role = q.get("role") || "designer";
-  const me = { role, email: "alice@example.com", name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
+  const me = { role, email: "alice@example.com", emails: ["alice@example.com", "alice@slack.example.com"], names: { "alice@example.com": "Alice Novak", "alice@slack.example.com": "Alice Novak", "pat@example.com": "Pat Lee" }, name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
   const cards = structuredClone(CARDS), notes = structuredClone(NOTES);
   const now = () => new Date().toISOString();
   const card = (id) => cards.find((c) => c.id === id);
@@ -61,7 +61,8 @@ function shim() {
     }
     // A vote as the store keeps it: a thumb, and a concern beside it (store.mjs → vote).
     if ((x = m(/^\/api\/cards\/([^/]+)\/votes$/))) {
-      const c = card(x[1]), box = ((c.votes ||= {})[body.variant] ||= {}), was = box[me.email] || {};
+      const c = card(x[1]), box = ((c.votes ||= {})[body.variant] ||= {}), mineAt = Object.keys(box).filter((k) => me.emails.includes(k)), was = box[me.email] || box[mineAt[0]] || {};
+      for (const k of mineAt) delete box[k];
       let thumb = ["prefer", "dislike"].includes(was.vote) ? was.vote : null, worry = Boolean(was.concern);
       if (body.vote === "none") thumb = null; else if (body.vote === "concern") worry = true; else if (body.vote) thumb = body.vote;
       if (body.concern !== undefined) worry = body.concern;

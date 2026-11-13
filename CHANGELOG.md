@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.93.1 — 2026-11-13
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a person's vote under another of their addresses
+   (a Slack reaction, say) is theirs, so a Desk press changes it and never counts it twice; a vote
+   pill's tooltip names who voted. No data migration.
+
 ## 1.93.0 — 2026-11-13
 
 **Upgrade:**
