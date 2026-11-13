@@ -10,9 +10,12 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 ## 1.91.0 — 2026-11-13
 
 **Upgrade:**
-Once: for each open request whose `impact.behind` only says nothing has to change behind the
-screens, write its `impact` again without `behind` (`design desk upsert`), so the Desk hides
-its Under the hood ([impact skill](.agents/skills/impact/SKILL.md) → Under the hood).
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a section with nothing
+   to tell (no places, no Under the hood, an empty body) shows no heading.
+2. Once: for each open request whose `impact.behind` only says nothing has to change behind the
+   screens, write its `impact` again without `behind` (`design desk upsert`). The write replaces
+   the whole `impact`: carry `concept`, `places`, `affects` and `decisions` over unchanged
+   ([impact skill](.agents/skills/impact/SKILL.md) → Under the hood).
 
 ## 1.90.1 — 2026-11-12
 

@@ -4141,11 +4141,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Every section says what it is and where it comes from. The ones that explain or give
   // context can fold; they show open, so the card reads whole.
   const FOLDED = new Set(["why", "limits", "good-to-know", "context"]);
-  const sections = (c) => (c.sections || []).length ? `<div class="secs">${c.sections.map((s) => {
+  // A section with nothing to tell is not shown (the explain skill → What goes in).
+  const sections = (c) => { const xs = (c.sections || []).filter((s) => String(s.body || "").trim()); return xs.length ? `<div class="secs">${xs.map((s) => {
     const head = `<h4>${esc(s.title)}</h4>${s.source?.label ? `<span class="chip" title="Where this comes from">Source:${s.source.url || s.source.card ? srcLink(s.source) : ` ${esc(s.source.label)}`}</span>` : ""}`;
     return FOLDED.has(s.key) ? `<details class="section sec" open><summary class="sec-head">${head}</summary>${md(s.body)}</details>`
       : `<div class="section"><div class="sec-head">${head}</div>${md(s.body)}</div>`;
-  }).join("")}</div>` : "";
+  }).join("")}</div>` : ""; };
   const srcLink = (s) => !s ? "" : s.url ? ` <a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.label || "source")} ↗</a>` : s.card ? ` <button class="anchor" data-card="${esc(s.card)}">${esc(s.label || "see it here")}</button>` : s.label ? ` <span class="sub" style="display:inline">(${esc(s.label)})</span>` : "";
 
   // A place that is a screen or a part in Product opens it there: the one the agent named, else,
