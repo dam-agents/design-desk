@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.90.2 — 2026-11-13
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page), in this order: an old server refuses the
+   page's `concern: true`. ⚠ on an option no longer
+   takes the person's 👍 or 👎 away; it opens the comment box and counts once the comment is sent.
+   A vote now keeps a concern as `concern: true` beside the thumb; old `vote: "concern"` entries
+   read as before. No data migration.
+
 ## 1.90.1 — 2026-11-12
 
 **Upgrade:**
