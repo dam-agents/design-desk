@@ -2045,6 +2045,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     kind: (v) => v === "element" ? "A part that shows up on screens, like a button or a row" : "A whole screen of the product",
     close: (v, el) => v === "cancel" ? "Closes this window; nothing is sent" : el.closest("dialog")?.id === "confirm-dialog" ? "Does what this window describes" : "Sends it to Design Desk",
     decide: "Design Desk records it as a numbered decision, with who said it and a link back here",
+    reload: "Loads the Desk anew; what you are writing and have not sent is lost",
   };
   const TIP_ID = { "new-request": "Describe a problem or report something broken; Design Desk checks what can be done and draws options" };
   function tipFor(el) {
@@ -2201,12 +2202,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const bridge = window.platform;
   // A refusal the server explains is shown as it is; anything else gets one plain line.
   class Said extends Error {}
+  const REQUEST_WAIT = 15000;
   async function api(method, path, body) {
     // A decision written, revoked or restored: the Desk's own list is read again when next needed.
     if (method !== "GET" && /decision/.test(path)) allDecs = null;
     if (!bridge) throw new Said("The Desk can't load here. Open it from the link your team shared with you, and bookmark that link.");
     let res;
-    try { res = await bridge.request({ method, path, body: body === undefined ? undefined : JSON.stringify(body), contentType: body === undefined ? undefined : "application/json" }); }
+    // A read that gets no answer in REQUEST_WAIT counts as not reached: after a sleep or a
+    // restart the page may otherwise wait for an answer that never comes.
+    const call = bridge.request({ method, path, body: body === undefined ? undefined : JSON.stringify(body), contentType: body === undefined ? undefined : "application/json" });
+    try { res = method === "GET" ? await Promise.race([call, new Promise((_, no) => setTimeout(() => no(new Error("offline")), REQUEST_WAIT))]) : await call; }
     catch { throw new Error("offline"); }
     let data = {};
     try { data = JSON.parse(res.body || "{}"); } catch { data = {}; }
@@ -2882,7 +2887,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const out = [];
     if (S.offline) out.push(S.stale
       ? `<div class="banner warn">Can't reach Design Desk. If it was just updated, copy what you're writing, then <button class="btn small" data-reload>Reload the page</button></div>`
-      : `<div class="banner warn">Can't reach Design Desk right now. Retrying…</div>`);
+      : `<div class="banner warn">Can't reach Design Desk right now. Retrying… <button class="btn small" data-reload>Reload the page</button></div>`);
     if (S.me?.role === "guest") out.push(`<div class="banner">You can read, ask and comment. To vote or send requests, ask ${esc(contact())} to add ${esc(S.me.email || "you")} as a designer, PM, lead developer or developer.</div>`);
     $("#banners").innerHTML = out.join("");
   }
@@ -8539,6 +8544,13 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     addEventListener("pagehide", () => { try { sessionStorage.setItem("desk-scroll", JSON.stringify({ at: location.hash, top: $("#detail").scrollTop, y: scrollY })); } catch {} });
     window.addEventListener("hashchange", guard(async () => { const next = target(location.hash); if (next) await goTo(next); }));
     setInterval(() => { poll().catch(() => {}); }, 4000);
+    // Back on the tab: look at once, not at the next slow tick.
+    let looking = false;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden || looking) return;
+      looking = true; tick = -1;
+      poll().catch(() => {}).finally(() => { looking = false; });
+    });
   }
   // Not reached (the server restarting, the machine waking): the page tries again by itself.
   start().catch((e) => {
