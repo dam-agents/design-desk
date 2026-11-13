@@ -44,7 +44,11 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   (**Make more changes** after a final check opens in Select).
   Each tool does one thing. **Comment:** a click on a part opens a comment beside it (Send to
   Design Desk, Just comment); the side panel is left as it is. **Edit text:** the text typed in
-  place opens that comment with the change written in. **Select:** the part shows in the side panel's
+  place shows ✓ (Save, Enter) and ✕ (Cancel, Esc; a click elsewhere in the design cancels too).
+  Save changes the words in the page at once, as the drawing's next version (`POST
+  /api/cards/<id>/text`, `text_edit` on the drawing), with nothing for Design Desk to do but the
+  decision check and, for an option with states, drawing them again. Text not whole between two
+  tags, or on an alternative, opens that comment with the change written in instead. **Select:** the part shows in the side panel's
   **Properties**: why it is like this, **What should change?**, Every state, Try 3 ways, and Change
   the look. A comment's number on the design opens it in place (Reply, Work it in, Mark done), as a
   click on it in **Comments**, the panel's other tab: every comment on the option by state, a box

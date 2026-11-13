@@ -1395,6 +1395,55 @@ export class Store {
     return { card: c, ...(item ? { inbox: item } : {}) };
   }
 
+  // Edit text, confirmed: the words are changed in the drawing's page at once, as its next
+  // version, with nothing sent to Design Desk (docs/desk-page.md → design workspace). Only a
+  // text that stands whole between two tags is changed; `nth` is which of its `count` places the
+  // person clicked, as the frame counts them, and the page must have as many. Anything else is refused, and the page offers to
+  // send the change to Design Desk instead.
+  editText(cardId, who, { variant, state = null, read, from, to, nth = 0, count = 1 }) {
+    const c = this.card(cardId);
+    if (c.kind !== "request" || c.request?.type === "bug") throw bad("only a design request has options");
+    if (designLocked(c)) throw bad(LOCKED);
+    if (["declined", "handed-off"].includes(c.status)) throw bad("This request is closed.");
+    const v = (c.variants || []).find((x) => x.id === variant);
+    if (!v) throw bad("Pick the design option.");
+    const st = state ? (v.states || []).find((x) => x.id === state) : null;
+    if (state && !st) throw bad("That state is not drawn for this option.");
+    const d = st || v;
+    if (Number.isInteger(read) && read < (d.version || 1)) throw new DeskError(409, `${st ? st.name : v.name} changed while you were typing. Look at the new version and change the text again.`);
+    if (Object.values(this.db.inbox).some((i) => i.state === "claimed" && i.card === c.id && ["revise", "states", "alternatives"].includes(i.kind))) throw bad(BUSY);
+    const was = String(from ?? "").replace(/\s+/g, " ").trim(), now = String(to ?? "").replace(/\s+/g, " ").trim();
+    if (!was || was.length > 300) throw bad(TEXT_ELSEWHERE);
+    if (!now) throw bad("The new text is empty. To take the text out, send it to Design Desk.");
+    if (now.length > 300) throw bad("The new text is longer than 300 characters. Send it to Design Desk.");
+    if (was === now) return { card: c, changed: false };
+    const html = this.getAsset(d.asset).data;
+    const at = Number.isInteger(nth) && Number.isInteger(count) && nth >= 0 && nth < count ? replaceText(html, was, now, nth, count) : null;
+    if (at == null) throw bad(TEXT_ELSEWHERE);
+    const asset = this.addAsset({ card: c.id, kind: "variant", name: this.db.assets[d.asset]?.name || "design.html", contentType: "text/html", data: at, encoding: "utf8" }).asset.id;
+    const when = this.clock();
+    d.history = [{ asset: d.asset, version: d.version || 1, drawn: d.drawn || null }, ...(d.history || [])].slice(0, 10);
+    d.asset = asset; d.version = (d.version || 1) + 1; d.drawn = when;
+    d.text_edit = { from: was.slice(0, 300), to: now, by: person(who), at: when };
+    // A state's picture of its part shows the old words: the catalog cuts the part from the new page by its selector.
+    if (st?.selector) st.shot = null;
+    let item = null;
+    if (!st) {
+      // The option's next version, as when an alternative is picked: its alternatives were of the
+      // version before, its states are drawn again, and the catalog follows it.
+      v.alternatives = [];
+      if ((v.states || []).length && !Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "states")) {
+        item = this.enqueue("states", c.id, null, who, `Draw every state again for version ${v.version}: its text changed from “${was}” to “${now}”.`);
+        Object.assign(item, { variant: v.id, scope: "redraw" });
+      }
+      if (c.in_catalog?.variant === v.id) this.copyToCatalog(c, v, c.in_catalog.by);
+    }
+    c.updated = when;
+    this.queueCheck(c, who, `${v.name}${st ? `, state ${st.name},` : ""} has a new text, “${now}”: check it against the decisions.`);
+    this.save();
+    return { card: c, changed: true, ...(item ? { inbox: item } : {}) };
+  }
+
   // An admin asks Design Desk to put a person on the Desk's list with a role; the agent
   // writes the row (docs/desk.md → People). `roster` is the list the server reads now.
   askForPerson(who, { email, role }, roster = [], { owner = false } = {}) {
@@ -2764,6 +2813,27 @@ const earlierSend = (c) => {
 };
 const designLocked = (c) => c.kind === "request" && Boolean(c.approved) && ["spec", "handed-off"].includes(c.status);
 const LOCKED = "This design is approved, so it no longer changes. To change it, start a new request from this one.";
+const TEXT_ELSEWHERE = "This text can't be changed here: it is not in one piece of the design's page. Send the change to Design Desk.";
+
+// The page with the `nth` of its `count` places that show `from` changed to `to`, or null when
+// the page has not exactly `count` such places (the frame counted another page: one a script
+// changed). Spaces match any run of spaces; only text between tags counts, never a tag, a
+// comment, a script or a style; `to` goes in escaped, so it stays text.
+export function replaceText(html, from, to, nth = 0, count = 1) {
+  const ENTITY = { "&": "(?:&|&amp;|&#0*38;)", "<": "(?:<|&lt;|&#0*60;)", ">": "(?:>|&gt;|&#0*62;)", '"': '(?:"|&quot;|&#0*34;)', "'": "(?:'|&apos;|&#0*39;)" };
+  const words = from.replace(/\s+/g, " ").trim();
+  if (!words) return null;
+  const pattern = new RegExp([...words].map((ch) => ch === " " ? "(?:\\s|&nbsp;|&#0*160;)+" : ENTITY[ch] || ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(""), "g");
+  const places = [], code = /<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->|<[^>]*>/gi;
+  let last = 0, m;
+  const scan = (a, b) => { const text = html.slice(a, b); pattern.lastIndex = 0; let x; while ((x = pattern.exec(text))) { if (!x[0]) { pattern.lastIndex++; continue; } places.push([a + x.index, a + x.index + x[0].length]); } };
+  while ((m = code.exec(html))) { scan(last, m.index); last = m.index + m[0].length; }
+  scan(last, html.length);
+  const at = places.length === count ? places[nth] : null;
+  if (!at) return null;
+  const safe = to.replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
+  return html.slice(0, at[0]) + safe + html.slice(at[1]);
+}
 const isAuthor = (c, who) => {
   const me = addressesOf(who);
   return me.length > 0 && [c.created_by?.email, c.origin?.email].some((x) => me.includes(String(x || "").toLowerCase()));

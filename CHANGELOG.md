@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.93.0 — 2026-11-13
+
+**Upgrade:**
+1. Restart the Desk server (`rc-service --user design-desk-server restart`) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): Edit text in the design workspace saves the
+   words at once with ✓, as the drawing's next version ([desk-page.md](docs/desk-page.md)). No
+   data migration.
+
 ## 1.92.0 — 2026-11-13
 
 **Upgrade:**

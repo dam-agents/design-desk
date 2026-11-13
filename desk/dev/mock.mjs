@@ -11,7 +11,7 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { abilities } from "../store.mjs";
+import { abilities, replaceText } from "../store.mjs";
 import { CARDS, ASSETS, NOTES } from "./mock-data.mjs";
 
 const [port = "5610"] = process.argv.slice(2);
@@ -72,6 +72,15 @@ function shim() {
     if ((x = m(/^\/api\/threads\/([^/]+)\/messages$/))) { const [, t] = thread(x[1]); t?.messages.push({ by: { name: me.name, email: me.email }, at: now(), text: body.text }); return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/resolve$/))) { const [, t] = thread(x[1]); if (t) t.state = "resolved"; return {}; }
     if ((x = m(/^\/api\/threads\/([^/]+)\/reopen$/))) { const [, t] = thread(x[1]); if (t) t.state = "open"; return {}; }
+    // Edit text, saved: the words change in the page as its next version, as the server does.
+    if ((x = m(/^\/api\/cards\/([^/]+)\/text$/))) {
+      const c = card(x[1]), v = c.variants.find((y) => y.id === body.variant), d = body.state ? v.states.find((y) => y.id === body.state) : v;
+      const html = replaceText(ASSETS[d.asset]?.data || "", body.from, body.to, body.nth, body.count);
+      if (html == null) return { error: "This text can't be changed here: it is not in one piece of the design's page. Send the change to Design Desk." };
+      const id = `${d.asset}-t${++n}`; ASSETS[id] = { ...ASSETS[d.asset], id, data: html };
+      d.history = [{ version: d.version || 1, asset: d.asset, at: now() }, ...(d.history || [])]; d.version = (d.version || 1) + 1; d.asset = id;
+      return { card: c, changed: true };
+    }
     if ((x = m(/^\/api\/cards\/([^/]+)\/actions$/))) {
       const c = card(x[1]);
       if (body.action === "pick-alternative") { const v = c.variants.find((y) => y.id === body.variant), a = v.alternatives.find((y) => y.id === body.note); v.history = [{ version: v.version, asset: v.asset, at: now() }, ...(v.history || [])]; v.version++; v.asset = a.asset; v.alternatives = []; }
@@ -84,6 +93,7 @@ function shim() {
     sendPrompt(p) { console.log("[sendPrompt]", p); },
     async request({ method, path, body }) {
       const a = answer(method, path, body ? JSON.parse(body) : undefined);
+      if (a?.error) return { status: 400, contentType: "application/json", body: JSON.stringify(a) };
       return { status: 200, contentType: "application/json", body: JSON.stringify(a) };
     },
     async whoami() { return { role, email: me.email, sub: "dev-" + me.email }; },
@@ -93,7 +103,8 @@ function shim() {
   if (q.get("ws")) { const t = setInterval(() => { const b = document.querySelector('[data-act="workspace"]'); if (b) { clearInterval(t); b.click(); } }, 150); }
 }
 
-const SHIM = `<script>const CAN = ${JSON.stringify(CAN)}, CARDS = ${JSON.stringify(CARDS)}, NOTES = ${JSON.stringify(NOTES)}, ASSETS = ${JSON.stringify(ASSETS).replace(/</g, "\\u003c")};
+const SHIM = `<script>const replaceText = ${replaceText.toString()};
+const CAN = ${JSON.stringify(CAN)}, CARDS = ${JSON.stringify(CARDS)}, NOTES = ${JSON.stringify(NOTES)}, ASSETS = ${JSON.stringify(ASSETS).replace(/</g, "\\u003c")};
 (${shim.toString()})();</script>`;
 
 createServer((req, res) => {
