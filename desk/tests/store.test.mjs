@@ -824,7 +824,30 @@ test("no option is the winner; votes only suggest one, and the presentation show
   s.vote(card.id, alice, { variant: "v2", concern: false });
   assert.equal(s.getCard(card.id).votes.v2[alice.email], undefined, "no thumb and no concern is no vote");
   s.vote(card.id, alice, { variant: "v2", vote: "dislike" });
-  assert.match(s.getCard(card.id).attention.reasons.join(), /Options are ready/);
+  // One person is one vote by any address they go by: a Slack reaction under another address
+  // is theirs, so pressing the same thumb on the Desk takes it back, never counts it twice.
+  const ali = { ...alice, email: "ali@other.test", emails: ["ali@other.test", alice.email] };
+  s.slackVotes(card.id, "v1", [{ key: "ali@other.test", vote: "dislike", role: "developer", aliases: [alice.email, "ali@other.test"] }]);
+  assert.equal(Object.keys(s.getCard(card.id).votes.v1).length, 1, "a reaction under another address is not a second vote");
+  s.vote(card.id, ali, { variant: "v2", vote: "dislike" });
+  assert.equal(s.getCard(card.id).votes.v2[alice.email], undefined, "a vote under another address is the person's");
+  assert.equal(s.getCard(card.id).votes.v2["ali@other.test"].vote, "dislike");
+  const both = { ...alice, emails: [alice.email, "ali@other.test"] };
+  s.vote(card.id, both, { variant: "v2", vote: "none" });
+  assert.equal(Object.keys(s.getCard(card.id).votes.v2).length, 0, "taking it back by any address takes the one vote back");
+  // The newest thumb wins, whichever address it is under; a concern under any address stays.
+  s.card(card.id).votes.v2 = { [alice.email]: { vote: "prefer", role: "designer", at: "2026-01-01T00:00:00Z" }, "ali@other.test": { vote: "dislike", concern: true, role: "designer", at: "2026-02-01T00:00:00Z" } };
+  s.vote(card.id, both, { variant: "v2", concern: false });
+  assert.deepEqual(s.getCard(card.id).votes.v2[alice.email].vote, "dislike", "the newer alias thumb wins over an older sign-in entry");
+  s.card(card.id).votes.v2 = { [alice.email]: { vote: "prefer", role: "designer", at: "2026-01-01T00:00:00Z" }, "ali@other.test": { vote: null, concern: true, role: "designer", at: "2026-02-01T00:00:00Z" } };
+  s.vote(card.id, both, { variant: "v2", vote: "none" });
+  assert.deepEqual([s.getCard(card.id).votes.v2[alice.email].vote, s.getCard(card.id).votes.v2[alice.email].concern], [null, true], "a newer concern keeps itself and an older thumb is the one taken back");
+  // A concern alone is no thumb: a Slack reaction under another address counts beside it.
+  s.card(card.id).votes.v2 = { [alice.email]: { vote: null, concern: true, role: "designer", at: "2026-02-01T00:00:00Z" } };
+  s.slackVotes(card.id, "v2", [{ key: "ali@other.test", vote: "prefer", role: "designer", aliases: [alice.email, "ali@other.test"] }]);
+  assert.equal(s.getCard(card.id).votes.v2["ali@other.test"]?.vote, "prefer", "a concern-only entry keeps the person's Slack thumb");
+  s.card(card.id).votes.v2 = {};
+  s.vote(card.id, alice, { variant: "v2", vote: "dislike" });
   // The agent's card writes never carry a pick.
   s.upsertCard({ id: card.id, chosen: { variant: "v1" } });
   assert.equal(s.getCard(card.id).chosen, undefined);

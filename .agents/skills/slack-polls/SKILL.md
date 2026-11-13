@@ -99,7 +99,7 @@ Every 30 minutes while a vote is open, in the inbox run:
    the Desk drops them; a bot never votes. The server gives a voter the role the Desk's
    member list gives their email, else "in Slack" (a reaction counts from anyone in the
    channel: it is not a message, and the vote only advises); a person's own vote on the Desk wins
-   over their reaction.
+   over their reaction, under any address on their row of the member list: one person, one vote.
 3. Replies under an option's post (`read_thread` reads only a thread you were shown: the
    request's own Slack thread, one you started with `start_thread`, or one a person tagged you
    in; the thread under a plain `post` is refused. So the way in is every reply that reaches you
