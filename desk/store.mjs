@@ -1996,7 +1996,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix", "reminded"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2070,6 +2070,14 @@ export class Store {
         if (next.kind !== "change") throw bad("fix belongs to a change card");
         if (typeof fields.fix !== "boolean") throw bad("fix is true or false");
         next.fix = fields.fix;
+      }
+      // The reminder a Slack request's author got for a request that stood still: the
+      // `updated` it was sent for, so the inbox pass asks for it once (docs/requests.md → A request that stands still).
+      else if (k === "reminded") {
+        if (next.kind !== "request") throw bad("reminded belongs to a request");
+        const when = fields.reminded === null ? null : clean(String(fields.reminded), 40, "reminded");
+        if (when !== null && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(when) || Number.isNaN(Date.parse(when)))) throw bad("reminded is the card's updated time, an ISO date");
+        next.reminded = when === null ? null : { for: when, at: this.clock() };
       }
       else if (k === "dev_summary") {
         if (next.kind !== "request") throw bad("dev_summary belongs to a request");
@@ -2188,7 +2196,7 @@ export class Store {
     // A screen's or an element's pictures sent again, new or the same: Design Desk looked at it again.
     if ((next.kind === "screen" || next.kind === "element") && (fields.screens !== undefined || fields.sheet !== undefined)) next.checked = this.clock();
     // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk-page.md → Designs).
-    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci"].includes(k))) next.updated = this.clock();
+    if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci", "reminded"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
     // A design already in the catalog follows every new version of its option and of its states.
     if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {
@@ -3486,6 +3494,8 @@ function cleanOrigin(o, cards) {
   return { channel: o.channel, chat: str(o.chat, 64), thread_ts: str(o.thread_ts, 32), message_ts: str(o.message_ts, 32),
     repo: str(o.repo, 200), number: o.number == null ? null : Number(o.number) || null, kind: str(o.kind, 20), url,
     reporter: str(o.reporter, 120), at: str(o.at, 40),
+    // The reporter's Slack user id, so a reminder can mention them (docs/requests.md → A request that stands still).
+    ...(o.channel === "slack" && /^[UW][A-Z0-9]{2,20}$/.test(String(o.user ?? "")) ? { user: String(o.user) } : {}),
     // The reporter's email where the channel discloses it (Slack): who counts as a request's author.
     // An empty email is no email: the channel disclosed none.
     ...(o.email != null && String(o.email).trim() ? { email: cleanEmail(o.email) } : {}),

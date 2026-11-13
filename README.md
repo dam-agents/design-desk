@@ -37,6 +37,7 @@ write what is wrong (a screenshot helps) and the bug joins the Desk's queue; ask
 and it becomes a request there too. The agent answers in your thread with the card, what can
 be done and, for a design, the options. With `slack_council: enabled`, anyone on the Desk's list in
 that thread can then ask for changes and gets each new version back there as a before/after picture.
+With `slack_stale_days` set, a request that has not moved for that many days reminds its author there.
 **Send to Slack…** on a request posts pictures of its options to its own thread, or to
 the channel with `slack_send: enabled`.
 

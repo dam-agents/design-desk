@@ -68,7 +68,8 @@ channels:
       Optional. People ask questions, send design requests and report UI bugs here
       (a screenshot is enough); each bug goes on the Desk's queue and its reporter
       hears back in the thread. With slack_council on, a thread asks for design
-      changes and gets the new versions back as pictures. New Desk items are
+      changes and gets the new versions back as pictures. With slack_stale_days
+      set, a request that stood still reminds its author in its thread. New Desk items are
       announced only when you turn that on.
 
 # The Desk page talks to this server through the platform's Artifact API relay.
