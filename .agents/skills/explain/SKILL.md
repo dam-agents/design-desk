@@ -43,6 +43,7 @@ A text answers the one question its reader has, and stops:
 - **Every sentence earns its place**: it changes what the reader does or knows. A sentence
   that only says nothing was found, nothing changed or that all is as usual is cut; where the
   reader must know that you looked, one sentence says it for all of them.
+- **A section with nothing to tell is not written**, and the Desk shows no heading for it.
 - **A summary never repeats its title.** The title says what a person can now do or see; the
   summary what is different from before, and for whom.
 - **Say what is next** when the reader has something to do or to wait for: the step, and whose

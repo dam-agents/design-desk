@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.91.0 — 2026-11-13
+
+**Upgrade:**
+Once: for each open request whose `impact.behind` only says nothing has to change behind the
+screens, write its `impact` again without `behind` (`design desk upsert`), so the Desk hides
+its Under the hood ([impact skill](.agents/skills/impact/SKILL.md) → Under the hood).
+
 ## 1.90.1 — 2026-11-12
 
 **Upgrade:**
