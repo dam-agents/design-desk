@@ -604,10 +604,16 @@
   .vpanel .vbar:first-child { margin-top: 0; }
   .frame.vempty { display: grid; place-items: center; height: 40vh; background: var(--panel); color: var(--muted); font-size: var(--fs-meta); text-align: center; padding: 16px; }
   .frame.vempty p { margin: 0; max-width: var(--measure); }
-  /* Two designs side by side: an option's tab dragged onto its design marks the half it lands on;
+  /* Two designs side by side: an option's tab dragged onto the panel it opens marks the half it lands on;
      the other half waits for another tab, or for how the screen looks today. */
   .vtabs button[draggable="true"] { cursor: grab; }
-  .dropbox { position: relative; }
+  /* The option tabs stay one row on the panel: more than fit scroll sideways, and the design
+     workspace stays at the row's end, outside the scroll. */
+  .tabs.vtabs.vrow { flex-wrap: nowrap; }
+  .vtabs .vscroll { display: flex; gap: 4px; align-items: flex-end; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; margin-bottom: -1px; }
+  .tabs.vtabs .vscroll button { margin-bottom: 0; flex: none; white-space: nowrap; }
+  .tabs.vtabs.vrow button.vws { flex: none; }
+  .vpanel { position: relative; }
   .droplayer { display: none; position: absolute; inset: 0; z-index: 5; grid-template-columns: 1fr 1fr; gap: 12px; }
   body.dragging-option .droplayer { display: grid; }
   .droplayer > div { border: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent); border-radius: var(--radius); transition: background .1s, border-color .1s; }
@@ -5201,8 +5207,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function designBox(c, v) {
     const sp = splitOf(c), frame = (x) => x.id === v.id ? `<iframe class="frame" id="variant-frame" sandbox="allow-scripts" title="${esc(x.name)}"></iframe>`
       : `<iframe class="frame" data-pane-asset="${esc(x.asset)}" sandbox="allow-scripts" title="${esc(x.name)}"></iframe>`;
-    const layer = `<div class="droplayer" aria-hidden="true"><div data-drop-side="0"></div><div data-drop-side="1"></div></div>`;
-    if (!sp?.on) return `<div class="dropbox">${frame(v)}${layer}</div>`;
+    if (!sp?.on) return frame(v);
     const vs = c.variants || [];
     const pane = (k, i) => {
       const x = vs.find((y) => y.id === k), today = k === "now" && c.now?.asset;
@@ -5217,8 +5222,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : c.triage && can("explore") && !closed(c) ? `<button class="btn" data-act="draw-now" title="Design Desk draws the screen as it is in the product now, in the product's own style, to set beside an option">Draw how it looks today</button>` : "";
       return `<div class="pane"><div class="pane-head"><span class="hint">Empty</span><span class="grow"></span></div><div class="pane-empty"><p>Drag another option's tab here.</p>${todayBtn}</div></div>`;
     };
-    return `<div class="dropbox"><div class="split">${pane(sp.panes[0], 0)}${pane(sp.panes[1], 1)}</div>${layer}</div>`;
+    return `<div class="split">${pane(sp.panes[0], 0)}${pane(sp.panes[1], 1)}</div>`;
   }
+  // While an option's tab is dragged, the whole panel the tabs switch is split in two halves to drop on.
+  const dropLayer = (c) => (c.variants || []).some((x) => x.asset) ? `<div class="droplayer" aria-hidden="true"><div data-drop-side="0"></div><div data-drop-side="1"></div></div>` : "";
   // Side by side is a tab of its own, the first: named for its two halves, closed with its ✕.
   function splitTab(c) {
     const sp = splitOf(c);
@@ -5236,8 +5243,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const v = vs.find((x) => x.id === S.variant);
     const mine = myVote(c, v.id);
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs" role="group" aria-label="Design options">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}${wsTab0(c)}</div>
-      ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}</div>` : `<div class="vpanel">
+      <div class="tabs vtabs vrow" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
+      ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}${dropLayer(c)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
         ${v.figma_url ? `<a class="btn small" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}
@@ -5248,7 +5255,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${renderOptionElements(c, v)}
       ${sect("design", esc(DRAWN[v.fidelity] || "Design"), null, v.fidelity === "picture" ? "As the person added them." : "Click through it as in the product.", designBox(c, v))}
       ${againstBox(c, v.id)}${c.figma_check?.variant === v.id ? figmaBox(c) : ""}
-      ${renderStories(c, v)}</div>`}`;
+      ${renderStories(c, v)}${dropLayer(c)}</div>`}`;
   }
 
   // Votes in Slack: open until their date, then the result. The vote is about the whole request,
@@ -5599,7 +5606,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     S.split = null;
     if (render) renderDetail();
   }
-  // An option's tab dragged onto its design: the half under the pointer lights up, the drop fills it.
+  // An option's tab dragged onto the panel it opens: the half under the pointer lights up, the drop fills it.
   document.addEventListener("dragstart", (e) => {
     const t = e.target.closest?.(".vtabs button[data-variant][draggable]");
     if (!t?.dataset.variant) return;
@@ -6894,7 +6901,17 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
   }
 
-  function renderDetail() { renderDetailBody(); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
+  function renderDetail() { const tabsAt = $("#detail .vtabs .vscroll")?.scrollLeft || 0; renderDetailBody(); keepTabsAt(tabsAt); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
+  // A redraw keeps the option tabs scrolled where they were, and the picked tab in view.
+  function keepTabsAt(x) {
+    const sc = $("#detail .vtabs .vscroll");
+    if (!sc) return;
+    sc.scrollLeft = x;
+    const t = sc.querySelector('button[aria-pressed="true"]');
+    if (!t) return;
+    const l = t.offsetLeft - sc.offsetLeft, r = l + t.offsetWidth;
+    if (l < sc.scrollLeft) sc.scrollLeft = l; else if (r > sc.scrollLeft + sc.clientWidth) sc.scrollLeft = r - sc.clientWidth;
+  }
   // The address names what the page shows, so a reload opens it again: the item (#C-12, a sent
   // design #designs/C-12, the presentation's #presentation/C-12), a decision (#D-4), else the tab.
   let placeKept = false;
