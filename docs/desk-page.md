@@ -30,8 +30,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   it below: Design Desk's open questions stand right under the box, never inside it. **Design workspace** is not in the box: its button sits at the right end of the options' tabs, beside the design it opens. With a live prototype the options fold away, so the button stands at the row's right end instead, and the options' tabs leave it out when that fold opens: one button per view.
   **The design workspace** is laid out as a design tool. Its top bar holds the request, the options
   (number and name, one click each; a DD spinner while Design Desk works on one, faint while it waits
-  in the queue; a count of its open comments), **+** for one more option, a pill saying what is being
-  worked on (no "Design Desk:" before it; it breathes while the work waits in the queue), Figma in one menu, and Close. The bar under it holds only what is looked at: the
+  in the queue; a count of its open comments), **+** for one more option, a pill naming the work and its
+  option (`Working on a comment: “<its first words>” · <option>`; it breathes while the work waits in the queue), Figma in one menu, and Close. The bar under it holds only what is looked at: the
   design's pages (its own review bar is hidden in the workspace and driven from here), its states
   (‹ › before one menu by part, so the arrows never move), its alternatives and its version. The design sits on a canvas, glowing
   while Design Desk changes it; a strip above it names an alternative (**Use this one**), an older

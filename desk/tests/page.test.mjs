@@ -2032,36 +2032,52 @@ try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
 
 test("a change sent from the part selected lets the part go and shows its comment; the pill names the work and breathes while queued", async (t) => {
-  const run = await launch(t, BRIDGE_SEND);
+  // Design Desk already at work on the option, for no comment: the pill names the work and stays still.
+  const run = await launch(t, BRIDGE_SEND.replace("threads: [], waiting: []", 'threads: [], waiting: [{ kind: "revise", variant: "v1", state: "claimed", created: at, started: at }]'));
   if (!run) return;
   const { desk } = run;
+  const pill = async () => (await desk.textContent(".ws-agent")).trim();
   try {
     await desk.click('[data-tab="requests"]');
     await desk.click('[data-card="r8"]');
     await desk.click('[data-act="workspace"]');
     const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
     await frame.waitForSelector('[data-view="1"] button');
+    await desk.waitForSelector(".ws-agent");
+    assert.equal(await pill(), "Working on a change · Tabs", "work for no comment, without Design Desk before it");
+    assert.equal(await desk.$eval(".ws-agent", (p) => p.classList.contains("on")), true);
+    assert.equal(await desk.$eval(".ws-agent", (p) => getComputedStyle(p).animationName), "none", "a pill at work stays still");
+
+    // The comments on Done; a part selected in Properties; a long change sent from it.
+    await desk.click('[data-ws-filter="done"]');
     await desk.click('[data-ws-mode="select"]');
     await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
     await desk.click('[data-ws-panel="props"]');
     await frame.click('[data-view="1"] button');
     await desk.waitForSelector("#ws-part");
-    assert.equal(await desk.locator(".ws-agent").count(), 0, "no pill while nothing is worked on");
-
-    await desk.fill("#ws-part", "Make it a   secondary button");
+    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
+    await desk.fill("#ws-part", long);
     await desk.click("#ws-side [data-ws-send-part]:not([data-ws-send-part=comment])");
     await desk.waitForSelector('#ws-side [data-ws-note="t1"]');
     assert.equal(await desk.getAttribute('[data-ws-panel="comments"]', "aria-selected"), "true", "the side panel turns to Comments");
+    assert.equal(await desk.getAttribute('[data-ws-filter="open"]', "aria-pressed"), "true", "Done turns to Open, which lists the new comment");
     assert.equal(await desk.locator('[data-ws-panel="props"] .dot').count(), 0, "the part is let go");
     await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
     assert.match(await desk.getAttribute('#ws-side [data-ws-note="t1"]', "class"), /\bspot\b/, "the new comment is lit");
 
-    await desk.waitForSelector(".ws-agent");
-    assert.equal((await desk.textContent(".ws-agent")).trim(), "Working on a comment: “Make it a secondary button” · Tabs", "the pill names the work, without Design Desk before it");
-    assert.match(await desk.$eval(".ws-agent", (p) => p.title || p.dataset.tip), /^Tabs: Working on a comment: “Make it a secondary button” \(in the queue/, "nor does its tooltip");
-    assert.equal(await desk.$eval(".ws-agent", (p) => p.classList.contains("on")), false, "the work waits in the queue");
+    // Queued: the pill names the comment by its first words, on one line, and breathes.
+    const words = long.replace(/\s+/g, " ").trim().slice(0, 79).trimEnd();
+    await desk.waitForFunction(() => !document.querySelector(".ws-agent")?.classList.contains("on"));
+    assert.equal(await pill(), `Working on a comment: “${words}…” · Tabs`, "a long comment is cut to its first words");
+    assert.match(await desk.$eval(".ws-agent", (p) => p.title || p.dataset.tip), /^Tabs: Working on a comment: “Make it a secondary button and quieter .*…” \(in the queue/, "nor does its tooltip say Design Desk");
     assert.equal(await desk.$eval(".ws-agent", (p) => getComputedStyle(p).animationName), "ws-wait", "a queued pill breathes");
     assert.equal(await desk.$eval(".ws-agent .dd-spin", (p) => getComputedStyle(p).animationName), "ws-wait-dd");
+
+    // A second change, on the whole option: the pill counts them.
+    await desk.fill("#ws-whole", "A bigger title");
+    await desk.click("#ws-side [data-ws-send-whole]:not([data-ws-send-whole=comment])");
+    await desk.waitForSelector('#ws-side [data-ws-note="t2"]');
+    await desk.waitForFunction(() => /^Working on 2 comments · Tabs$/.test(document.querySelector(".ws-agent")?.textContent.trim() || ""));
   } finally {
     await run.close();
   }
