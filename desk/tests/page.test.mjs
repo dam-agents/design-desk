@@ -2007,6 +2007,66 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
   }
 });
 
+// A change sent from the part selected: the part is let go, the new comment shows under Comments,
+// and the pill above says what is worked on, breathing while it waits in the queue.
+const BRIDGE_SEND = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const request = { id: "r8", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }], threads: [], waiting: [] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  let answer = {};
+  if (method === "POST" && path === "/api/cards/r8/threads") {
+    const b = JSON.parse(body), thread = { id: "t" + (request.threads.length + 1), kind: b.kind, state: "open", anchor: b.anchor, messages: [{ by: { email: "alice@example.com", role: "designer" }, at, text: b.text }] };
+    request.threads.push(thread);
+    if (b.kind === "change") request.waiting = [{ kind: "revise", variant: b.anchor.variant, state: "queued", created: at }];
+    answer = { thread };
+  } else answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r8" ? { card: request }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div></body>' } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a change sent from the part selected lets the part go and shows its comment; the pill names the work and breathes while queued", async (t) => {
+  const run = await launch(t, BRIDGE_SEND);
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r8"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('[data-view="1"] button');
+    await desk.click('[data-ws-mode="select"]');
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
+    await desk.click('[data-ws-panel="props"]');
+    await frame.click('[data-view="1"] button');
+    await desk.waitForSelector("#ws-part");
+    assert.equal(await desk.locator(".ws-agent").count(), 0, "no pill while nothing is worked on");
+
+    await desk.fill("#ws-part", "Make it a   secondary button");
+    await desk.click("#ws-side [data-ws-send-part]:not([data-ws-send-part=comment])");
+    await desk.waitForSelector('#ws-side [data-ws-note="t1"]');
+    assert.equal(await desk.getAttribute('[data-ws-panel="comments"]', "aria-selected"), "true", "the side panel turns to Comments");
+    assert.equal(await desk.locator('[data-ws-panel="props"] .dot').count(), 0, "the part is let go");
+    await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
+    assert.match(await desk.getAttribute('#ws-side [data-ws-note="t1"]', "class"), /\bspot\b/, "the new comment is lit");
+
+    await desk.waitForSelector(".ws-agent");
+    assert.equal((await desk.textContent(".ws-agent")).trim(), "Working on a comment: “Make it a secondary button” · Tabs", "the pill names the work, without Design Desk before it");
+    assert.match(await desk.$eval(".ws-agent", (p) => p.title || p.dataset.tip), /^Tabs: Working on a comment: “Make it a secondary button” \(in the queue/, "nor does its tooltip");
+    assert.equal(await desk.$eval(".ws-agent", (p) => p.classList.contains("on")), false, "the work waits in the queue");
+    assert.equal(await desk.$eval(".ws-agent", (p) => getComputedStyle(p).animationName), "ws-wait", "a queued pill breathes");
+    assert.equal(await desk.$eval(".ws-agent .dd-spin", (p) => getComputedStyle(p).animationName), "ws-wait-dd");
+  } finally {
+    await run.close();
+  }
+});
+
 const LOOK_DESIGN = `<!doctype html><html><head><style>:root { --brand: #3b5bdb; --danger: #d6336c; }
   body { margin: 0; font: 15px system-ui; } .row { display: flex; gap: 8px; padding: 16px; }
   button { font-size: 14px; padding: 8px 16px; border-radius: 6px; } .primary { background: var(--brand); color: #fff; }</style></head>
