@@ -2007,6 +2007,78 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
   }
 });
 
+// Two views of one design with the same markup (#163): a note's place is looked for only inside the
+// view it was written on, however its path was cut, and one that view no longer has never opens another.
+const SAME = (word, a, b) => `<main><section><div><div><div><ul><li>${word} ${a}</li><li>${word} ${b}</li></ul></div></div></div></section></main>`;
+const TWO_VIEWS = `<body>${BAR}<div data-view="1" data-view-name="Home">${SAME("Spent on", "rent", "food")}</div><div data-view="2" data-view-name="Chat">${SAME("File", "a.pdf", "b.pdf")}</div></body>`;
+const BRIDGE_VIEWS = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const by = { email: "pat@example.com", role: "pm" };
+// Paths as a Desk before 1.96.0 stored them: seven steps, short of the view, so each matches in both views.
+const note = (id, n, selector, text) => ({ id, n, kind: "comment", state: "open", anchor: { variant: "v1", selector, label: "List item", view: "2", view_name: "Chat" }, messages: [{ by, at, text }] });
+const request = { id: "r8", kind: "request", title: "Files", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Lists", asset: "A-1", fidelity: "wireframe" }],
+  threads: [note("t1", 1, "main > section > div > div > div > ul > li:nth-of-type(2)", "Show the file's size"), note("t2", 2, "main > section > div > div > div > ol > li", "Group the files")] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r8" ? { card: request }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(TWO_VIEWS).replace(/</g, "\\u003c")} } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a note opens on the view it was written on: two views alike, a path cut short, a place the view no longer has", async (t) => {
+  const run = await launch(t, BRIDGE_VIEWS);
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r8"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('#review [data-review-view="2"]', { state: "attached" });
+    const shown = () => frame.evaluate(() => document.querySelector("[data-view].review-shown")?.dataset.view);
+    await frame.waitForFunction(() => document.querySelector("[data-view].review-shown")?.dataset.view === "1");
+
+    // The note on Chat's second file opens Chat, and its pin is drawn on that file, not on Home's second row.
+    await desk.click('[data-ws-note="t1"]');
+    await frame.waitForFunction(() => document.querySelector("[data-view].review-shown")?.dataset.view === "2");
+    await frame.waitForSelector('[data-note-pin="t1"]');
+    const at = await frame.evaluate(() => { const p = document.querySelector('[data-note-pin="t1"]').getBoundingClientRect(), li = document.querySelector('[data-view="2"] li:nth-of-type(2)').getBoundingClientRect(); return Math.abs(p.bottom - li.top) < 30 && Math.abs(p.left - li.left) < 30; });
+    assert.equal(at, true, "the pin sits on Chat's second file");
+    assert.equal(await desk.locator("#ws-pop .ws-gone").count(), 0, "a place found says nothing more");
+
+    // A place its view no longer has: the note says so, and the design stays on Chat; Home is never opened for it.
+    await desk.click('[data-ws-page="1"]');
+    await frame.waitForFunction(() => document.querySelector("[data-view].review-shown")?.dataset.view === "1");
+    await desk.click('[data-ws-note="t2"]');
+    await desk.waitForSelector("#ws-pop .ws-gone");
+    assert.match(await desk.textContent("#ws-pop"), /This place no longer exists in this version\.[\s\S]*Group the files/, "the note's words, under what happened to its place");
+    await frame.waitForFunction(() => document.querySelector("[data-view].review-shown")?.dataset.view === "2");
+    assert.equal(await shown(), "2", "the note's own view opens");
+    assert.equal(await frame.locator('[data-note-pin="t2"]').count(), 0, "and no pin is drawn for it");
+
+    // A part picked deep in a view: its path reaches the view, however many steps that takes.
+    await desk.click("[data-ws-pop-close]");
+    await desk.click('[data-ws-mode="comment"]');
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
+    await frame.click('[data-view="2"] li:nth-of-type(1)');
+    await desk.waitForSelector("#ws-text");
+    await desk.fill("#ws-text", "Newest first");
+    await desk.click("#ws-pop [data-ws-send]");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r8/threads"));
+    const { anchor } = JSON.parse((await posts("/api/cards/r8/threads"))[0].body);
+    assert.equal(anchor.selector, 'div[data-view="2"] > main > section > div > div > div > ul > li:nth-of-type(1)', "the path climbs past seven steps to its view");
+    assert.deepEqual([anchor.view, anchor.view_name], ["2", "Chat"]);
+  } finally {
+    await run.close();
+  }
+});
+
 const LOOK_DESIGN = `<!doctype html><html><head><style>:root { --brand: #3b5bdb; --danger: #d6336c; }
   body { margin: 0; font: 15px system-ui; } .row { display: flex; gap: 8px; padding: 16px; }
   button { font-size: 14px; padding: 8px 16px; border-radius: 6px; } .primary { background: var(--brand); color: #fff; }</style></head>

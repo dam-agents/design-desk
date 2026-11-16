@@ -1422,6 +1422,7 @@
   .ws-pop[hidden] { display: none; }
   .ws-pop .ph { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .ws-pop .ph b { min-width: 0; overflow-wrap: anywhere; }
+  .ws-pop .ws-gone { margin: 8px 0 0; }
   .ws-pop .ph .hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
   .ws-pop .ph b + .chip { margin-left: auto; }
   .ws-pop .ph .ws-ibtn { margin-left: auto; flex: none; }
@@ -5825,32 +5826,47 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const COMMENT_CURSOR = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27%3E%3Cpath d=%27M3 21V8a5 5 0 0 1 5-5h8a5 5 0 0 1 5 5v5a5 5 0 0 1-5 5H8z%27 fill=%27%23fff%27 stroke=%27%23161616%27 stroke-width=%271.6%27/%3E%3C/svg%3E") 3 21, crosshair';
     // A part picked that showed and no longer does (another page, a closed menu) is let go, and the Desk hears of it.
     // One that never showed (a note's part the design has not opened) stays picked.
-    let selectedPath = "", selectedShown = false;
+    let selectedPath = "", selectedAt = "", selectedShown = false;
     // A menu belongs to the page it opened on, also in a design drawn before its review bar knew:
     // a move to another page (a menu item that leads on, the page switcher, Back) shuts it.
     addEventListener("click", (e) => {
       if (!e.target.closest?.("[data-goto-view],#review [data-review-view],#review [data-review-back]")) return;
       setTimeout(() => document.querySelectorAll("[data-menu-open]").forEach((m) => { m.hidden = true; m.removeAttribute("data-menu-open"); }));
     }, true);
-    const pick = (el, path) => { selected = el; selectedPath = path; selectedShown = false; };
+    const pick = (el, at) => { selected = el; selectedAt = at || ""; selectedPath = selOf(at); selectedShown = false; };
     // Shown means the person can see it: in the page, laid out, not hidden, not fully transparent (it or a box round it).
     // Not contentVisibilityAuto: a part only scrolled out of view is still on the page.
     const showing = (el) => el.isConnected && (el.checkVisibility ? el.checkVisibility({ visibilityProperty: true, opacityProperty: true }) : el.getClientRects().length > 0);
     // A design that draws the part again replaces its node: the part picked is found again by its path.
-    const letGo = () => { if (!selected || editing) return false; if (!selected.isConnected) selected = find(selectedPath) || selected; if (showing(selected)) { selectedShown = true; return false; } if (!selectedShown) return false; const selector = selectedPath; pick(null, ""); parent.postMessage({ type: "desk-unpicked", selector }, "*"); return true; };
+    const letGo = () => { if (!selected || editing) return false; if (!selected.isConnected) selected = find(selectedAt) || selected; if (showing(selected)) { selectedShown = true; return false; } if (!selectedShown) return false; const selector = selOf(selectedPath); pick(null, ""); parent.postMessage({ type: "desk-unpicked", selector }, "*"); return true; };
     const layer = document.createElement("div");
     layer.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483647";
     document.documentElement.appendChild(layer);
     // The scrollbar always shows: a frame round the whole page would otherwise add one and the design would jump.
     document.documentElement.style.overflowY = "scroll";
-    const css = (el) => { const p = []; while (el && el.nodeType === 1 && p.length < 7) { let s = el.tagName.toLowerCase(); if (el.id) { p.unshift(s + "#" + el.id); break; } const dv = el.getAttribute("data-view"); if (dv) { p.unshift(s + '[data-view="' + dv + '"]'); break; } const sib = [...(el.parentElement?.children || [])].filter((x) => x.tagName === el.tagName); if (sib.length > 1) s += ":nth-of-type(" + (sib.indexOf(el) + 1) + ")"; p.unshift(s); el = el.parentElement; } return p.join(" > "); };
+    // A part's path climbs to its view (data-view), an id or the page's root, however deep the part is:
+    // a path cut short names no view and matches the same place in another view (#163). Only a path
+    // longer than the store keeps loses its outer steps, and a note's view still scopes it (find).
+    const css = (el) => { const p = []; while (el && el.nodeType === 1) { let s = el.tagName.toLowerCase(); if (el.id) { p.unshift(s + "#" + el.id); break; } const dv = el.getAttribute("data-view"); if (dv) { p.unshift(s + '[data-view="' + dv + '"]'); break; } const sib = [...(el.parentElement?.children || [])].filter((x) => x.tagName === el.tagName); if (sib.length > 1) s += ":nth-of-type(" + (sib.indexOf(el) + 1) + ")"; p.unshift(s); el = el.parentElement; } while (p.length > 1 && p.join(" > ").length > 480) p.shift(); return p.join(" > "); };
     const kind = (el) => { const t = el.tagName.toLowerCase(), r = el.getAttribute("role"); if (t === "button" || r === "button") return "Button"; if (t === "a") return "Link"; if (/^h[1-6]$/.test(t)) return "Heading"; if (["input", "textarea", "select"].includes(t)) return "Field"; if (["img", "svg", "path"].includes(t)) return "Image"; if (t === "li") return "List item"; if (t === "label") return "Label"; if (["p", "span", "small", "strong", "em", "b"].includes(t)) return "Text"; if (t === "nav") return "Navigation"; if (t === "header") return "Header"; if (["table", "tr", "td"].includes(t)) return "Table"; return "Area"; };
     const textOf = (el) => (el.innerText || el.getAttribute("aria-label") || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ").slice(0, 120);
     const labelOf = (el) => { const t = textOf(el); return kind(el) + (t ? " “" + (t.length > 40 ? t.slice(0, 39) + "…" : t) + "”" : ""); };
-    const find = (sel) => { try { return sel ? document.querySelector(sel) : null; } catch { return null; } };
+    // A place is a selector, or a note's place: {selector, view, view_name}. A note's place is looked
+    // for only inside the view it was written on, found by its name and else by its number, so a
+    // path that matches in two views never opens the other one; a view this version lacks finds nothing.
+    const viewNamed = (v) => v.dataset.viewName || "View " + v.dataset.view;
+    const viewRoot = (x) => { const vs = [...document.querySelectorAll("[data-view]")]; return (x.view_name && vs.find((v) => viewNamed(v) === x.view_name)) || (x.view && vs.find((v) => v.dataset.view === String(x.view))) || null; };
+    // A path written in the view under another number (a version that renumbered its views) is read as the view found.
+    const within = (root, sel) => { if (!sel) return null; try { if (root === document) return document.querySelector(sel); const s = sel.replace(/\[data-view="[^"]*"\]/, '[data-view="' + root.dataset.view.replace(/["\\]/g, "\\$&") + '"]'); return root.matches(s) ? root : root.querySelector(s); } catch { return null; } };
+    const find = (x) => { if (!x) return null; if (typeof x === "string") return within(document, x);
+      const root = x.view || x.view_name ? viewRoot(x) : document; if (!root) return null;
+      return within(root, x.selector); };
+    const selOf = (x) => (typeof x === "string" ? x : x?.selector || "");
     const viewOf = (el) => { const v = el.closest("[data-view]"); return v ? { view: v.dataset.view, view_name: v.dataset.viewName || "View " + v.dataset.view } : {}; };
     // A note on another view of the design opens that view first, through the review bar.
     const reveal = (el) => { const v = el?.closest("[data-view]"); if (v && !v.classList.contains("review-shown")) document.querySelector('#review [data-review-view="' + CSS.escape(v.dataset.view) + '"]')?.click(); };
+    // A note whose part this version no longer has opens on its own view all the same, never on another.
+    const showPlace = (x) => { const el = find(x); if (el) return reveal(el), el; const v = x && typeof x === "object" && (x.view || x.view_name) ? viewRoot(x) : null; if (v) reveal(v); return null; };
     // A note's number can be pointed at (the Desk shows what the note says) and clicked (the Desk opens it).
     const say = (m) => parent.postMessage(m, "*");
     // The pins are drawn afresh every moment, so leaving one is read from the pointer, not the pin.
@@ -5901,8 +5917,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       Object.assign(hoverBox.style, { left: r.left + scrollX - 3 + "px", top: r.top + scrollY - 3 + "px", width: r.width + 6 + "px", height: r.height + 6 + "px", border: "1.5px solid rgba(" + c + ",.75)", backgroundColor: "rgba(" + c + ",.07)", opacity: "1" }); };
     // The part a comment opened in place is about: the Desk hears where it is whenever it moves.
     let track = "", trackAt = "";
-    const anchorSay = () => { if (!track) return; const el = find(track); const r = el && showing(el) ? el.getBoundingClientRect() : null; const k = r ? [r.left, r.top, r.width, r.height].map(Math.round).join() : "";
-      if (k === trackAt) return; trackAt = k; say({ type: "desk-anchor", selector: track, rect: r ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null }); };
+    const anchorSay = () => { if (!track) return; const el = find(track); const r = el && showing(el) ? el.getBoundingClientRect() : null; const k = r ? [r.left, r.top, r.width, r.height].map(Math.round).join() : el ? "" : "missing";
+      if (k === trackAt) return; trackAt = k; say({ type: "desk-anchor", selector: selOf(track), rect: r ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null, ...(el ? {} : { missing: true }) }); };
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-track") { track = d.selector || ""; trackAt = "-"; anchorSay(); } });
     // The design's own bar is hidden in the workspace: the Desk shows its pages and switches, and drives them.
     const chrome = () => { const sw = (q) => { const b = document.querySelector("#review " + q); return b && !b.hidden ? b.getAttribute("aria-checked") === "true" : null; };
@@ -5935,7 +5951,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (document.readyState === "loading") addEventListener("DOMContentLoaded", emptySwitches); else emptySwitches();
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
-    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { if (endEdit) endEdit(false); mode = d.mode; hover = null; toolCursor.textContent = mode === "off" ? "" : "html, html *:not(#review *) { cursor: " + (mode === "edit" ? "text" : mode === "comment" ? COMMENT_CURSOR : SELECT_CURSOR) + " !important; }"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = find(d.selector); reveal(el); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(find(d.selector), d.selector || ""); reveal(selected); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { if (endEdit) endEdit(false); mode = d.mode; hover = null; toolCursor.textContent = mode === "off" ? "" : "html, html *:not(#review *) { cursor: " + (mode === "edit" ? "text" : mode === "comment" ? COMMENT_CURSOR : SELECT_CURSOR) + " !important; }"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = showPlace(d.selector); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(showPlace(d.selector), d.selector || ""); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     // The bar's own state, said to the Desk on every change and set again after a replay's fresh load.
     const de = document.documentElement, hotSwitch = () => document.querySelector("#review [data-hot]");
     const barState = () => ({ type: "desk-bar", dark: de.classList.contains("dark"), empty: de.classList.contains("review-empty"), hot: hotSwitch()?.getAttribute("aria-checked") === "true" });
@@ -6074,7 +6090,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         // A style loads nothing: the store refuses the same (desk/store.mjs → CSS_VALUE).
         if (a.style) for (const [p, v] of Object.entries(a.style)) if (/^[a-z][a-z-]*$/.test(p) && /^[^<>{};"\\]{1,200}$/.test(String(v)) && !/\b(?:url|image|image-set|cross-fade|element|src|expression)\s*\(|\/\*/i.test(String(v))) el.style.setProperty(p, String(v), "important");
       }
-      if (held && !selected.isConnected) selected = (whole ? el : find(selectedPath)) || el;
+      if (held && !selected.isConnected) selected = (whole ? el : find(selectedAt)) || el;
       if (selected?.isConnected) sayLook(selected, selectedPath);
       draw();
     }
@@ -6468,6 +6484,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : `<p class="hint ws-empty">${all.length ? (f === "open" ? "Nothing open. Everything here is done." : "None here.") : talk ? "No comments yet. Press <kbd>C</kbd>, then click a part of the design." : "No comments yet."}</p>`}`;
   }
 
+  // A note's part is not in the version shown: the frame found nothing for it in its view.
+  const placeGone = (c, th) => Boolean(th.anchor?.selector) && S.ws.missing === th.anchor.selector;
   // A comment in place, as in a design tool: a new one beside the part it is about, or an
   // existing one opened from its number on the design or from the list.
   function renderPop(c, v) {
@@ -6487,6 +6505,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const [st, label] = noteState(c, th);
       const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
       pop.innerHTML = `<div class="ph"><span class="pn ${st}">${th.n}</span><b>${esc(where)}</b><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${st === "working" ? `<span class="dd-spin"></span> ` : ""}${esc(label)}</span><button class="ws-ibtn" data-ws-pop-close aria-label="Close" title="Close (Esc)">${wsIcon("close")}</button></div>
+        ${placeGone(c, th) ? `<p class="hint ws-gone">This place no longer exists in this version.</p>` : ""}
         <div class="pmsgs">${th.messages.map(wsMsg).join("")}</div>
         ${th.state !== "resolved" ? `${mayIn(th, "reply") ? `<textarea class="ws-reply" rows="1" placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000"></textarea>` : ""}
           <div class="bar">${mayIn(th, "resolve") ? `<button class="ws-ibtn ws-done" data-resolve="${esc(th.id)}" title="Mark done" aria-label="Mark done">${wsIcon("done")}</button>` : ""}<span class="grow"></span>${mayIn(th, "reply") ? `<button class="btn" data-send-reply="${esc(th.id)}" title="Your reply, for the team (Enter)">Reply</button>` : ""}${workable(c, th) ? `<button class="btn primary" data-work-in="${esc(th.id)}" title="Design Desk changes the design for it">Work it in</button>` : ""}</div>`
@@ -6533,10 +6552,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         for (const [selector, e] of Object.entries(S.ws.looks[key] || {})) if (Object.keys(e.picks || {}).length) sayControls(selector);
         for (const [selector, e] of Object.entries(S.ws.looks[key] || {})) frame.contentWindow?.postMessage({ type: "desk-look-set", selector, look: e.set, quiet: true }, "*");
         S.ws.handles = null; S.ws.lookAsked = null;
-        if (S.ws.selected?.selector) { frame.contentWindow?.postMessage({ type: "desk-select", selector: S.ws.selected.selector }, "*"); renderPalette(); }
+        if (S.ws.selected?.selector) { frame.contentWindow?.postMessage({ type: "desk-select", selector: placeOf(S.ws.selected) }, "*"); renderPalette(); }
         else { const r = (v.reasons || []).find((x) => x.decision === S.ws.reason); if (r?.parts[0]) frame.contentWindow?.postMessage({ type: "desk-show", selector: r.parts[0].selector }, "*"); }
         // A comment open in place: the design shows its page and the part, and says where the part is.
-        const popOn = S.ws.pop?.kind === "thread" ? notesOf(S.card).find((x) => x.id === S.ws.pop.id)?.anchor?.selector : S.ws.target?.selector;
+        const popOn = placeOf(S.ws.pop?.kind === "thread" ? notesOf(S.card).find((x) => x.id === S.ws.pop.id)?.anchor : S.ws.target);
         if (S.ws.pop?.anchored && popOn) { if (S.ws.pop.kind === "thread") frame.contentWindow?.postMessage({ type: "desk-show", selector: popOn }, "*"); frame.contentWindow?.postMessage({ type: "desk-track", selector: popOn }, "*"); }
       };
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
@@ -6544,7 +6563,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // The comments pinned on this option's drawing; the Comments switch hides them from the design only.
   const pinned = (c, v) => notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector);
   function sendPins(c, v) {
-    const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: n.anchor.selector, state: noteState(c, n)[0], focus: S.ws.pop?.kind === "thread" && S.ws.pop.id === n.id }));
+    const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: placeOf(n.anchor), state: noteState(c, n)[0], focus: S.ws.pop?.kind === "thread" && S.ws.pop.id === n.id }));
     if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
     // The option's elements with states drawn: a part picked inside one names it, for See every state.
@@ -6552,6 +6571,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-elements", els }, "*");
   }
   const frameSay = (msg) => $("#ws-frame")?.contentWindow?.postMessage(msg, "*");
+  // Where a note or a part picked is, for the frame: its path and the view it was written on, so the
+  // frame looks for it there and nowhere else (#163). A part with no view is its path alone.
+  const placeOf = (a) => (!a?.selector ? "" : a.view || a.view_name ? { selector: a.selector, view: a.view || "", view_name: a.view_name || "" } : a.selector);
 
   // ---------- the look palette ----------
   // In the side panel under the part selected, for whoever may change the design: its size, colors, spacing and
@@ -6776,7 +6798,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws.chrome = { views: (Array.isArray(d.views) ? d.views : []).slice(0, 30).map((x) => ({ view: String(x?.view || "").slice(0, 40), name: String(x?.name || "").slice(0, 80) })), view: String(d.view || "").slice(0, 40), back: Boolean(d.back), hot: b(d.hot), notes: b(d.notes), empty: b(d.empty), dark: b(d.dark) };
       renderWorkspace(); return;
     }
-    if (d.type === "desk-anchor") { const r = d.rect; S.ws.anchor = r && [r.left, r.top, r.right, r.bottom].every(Number.isFinite) ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null; placePop(); return; }
+    if (d.type === "desk-anchor") { const r = d.rect; S.ws.anchor = r && [r.left, r.top, r.right, r.bottom].every(Number.isFinite) ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom } : null;
+      // The part a note is on, not in this version of the design: the note says so, in place of pointing at it.
+      const gone = d.missing ? String(d.selector || "") : null; if (gone !== (S.ws.missing || null)) { S.ws.missing = gone; renderWorkspace(); } else placePop(); return; }
     if (d.type === "desk-key") { wsKey(String(d.key || "").slice(0, 12), Boolean(d.shift)); return; }
     // A comment's number on the design opens it there, in place: its pin outlines the part; the side panel and the selection stay as they are.
     if (d.type === "desk-pin-open") {
@@ -6786,7 +6810,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws.note = th.id; S.ws.menu = null;
       S.ws.pop = { kind: "thread", id: th.id, anchored: Boolean(th.anchor.selector) }; S.ws.anchor = null;
       renderWorkspace();
-      frameSay({ type: "desk-track", selector: th.anchor.selector || "" });
+      frameSay({ type: "desk-track", selector: placeOf(th.anchor) });
       return;
     }
     if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
@@ -7790,8 +7814,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       S.ws.edit = null; S.ws.pop = { kind: "thread", id: th.id, anchored: Boolean(th.anchor.selector) }; S.ws.anchor = null;
       renderWorkspace();
-      frameSay({ type: "desk-select", selector: th.anchor.selector || null });
-      frameSay({ type: "desk-track", selector: th.anchor.selector || "" });
+      frameSay({ type: "desk-select", selector: placeOf(th.anchor) || null });
+      frameSay({ type: "desk-track", selector: placeOf(th.anchor) });
       return;
     }
   }));
@@ -7803,7 +7827,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (mode === "comment" && !(can("comment") || can("change"))) return;
     S.ws.mode = mode; S.ws.menu = null;
     if (mode === "off") { S.ws.selected = null; S.ws.edit = null; S.ws.pop = null; frameSay({ type: "desk-select", selector: null }); }
-    if (S.ws.pop?.kind === "new") { S.ws.pop = null; S.ws.target = null; S.ws.edit = null; frameSay({ type: "desk-track", selector: "" }); frameSay({ type: "desk-select", selector: mode === "select" ? S.ws.selected?.selector || null : null }); }
+    if (S.ws.pop?.kind === "new") { S.ws.pop = null; S.ws.target = null; S.ws.edit = null; frameSay({ type: "desk-track", selector: "" }); frameSay({ type: "desk-select", selector: mode === "select" ? placeOf(S.ws.selected) || null : null }); }
     renderWorkspace(); frameSay({ type: "desk-mode", mode });
   }
   // A new comment on the part selected, or on the whole option, written in place.
@@ -7811,12 +7835,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     S.ws.note = null; S.ws.menu = null;
     S.ws.pop = { kind: "new", anchored: Boolean(S.ws.target?.selector), focus: true };
     renderWorkspace();
-    frameSay({ type: "desk-track", selector: S.ws.target?.selector || "" });
+    frameSay({ type: "desk-track", selector: placeOf(S.ws.target) });
   }
   function wsPopClose() {
     const was = S.ws.target; S.ws.pop = null; S.ws.note = null; S.ws.edit = null; S.ws.target = null;
     frameSay({ type: "desk-track", selector: "" });
-    if (was && S.ws.mode !== "select") frameSay({ type: "desk-select", selector: S.ws.selected?.selector || null });
+    if (was && S.ws.mode !== "select") frameSay({ type: "desk-select", selector: placeOf(S.ws.selected) || null });
     renderWorkspace();
   }
   // The workspace's keys, from the Desk or from the design: tools, what the design shows, Escape one step back.
@@ -8441,8 +8465,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, edit: null, alt: null, note: th.id, state: an.state || null, selected: null, target: null,
         filter: th.state === "resolved" ? "all" : S.ws.filter || "open", panel: "comments", pop: { kind: "thread", id: th.id, anchored: Boolean(an.selector) }, anchor: null };
       renderDetail(); renderWorkspace();
-      if (an.selector) frameSay({ type: "desk-show", selector: an.selector });
-      frameSay({ type: "desk-track", selector: an.selector || "" });
+      if (an.selector) frameSay({ type: "desk-show", selector: placeOf(an) });
+      frameSay({ type: "desk-track", selector: placeOf(an) });
       const li = document.querySelector(`[data-ws-note="${CSS.escape(th.id)}"]`), ms = [...document.querySelectorAll("#ws-pop .m")];
       for (const [tid, m] of (x.marks || []).slice(1)) if (tid === th.id && ms[m]) spot(ms[m], "nearest");
       spot(ms[x.msg ?? 0] || li, "nearest");

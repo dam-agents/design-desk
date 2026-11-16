@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.97.0 — 2026-11-16
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): a note on a design opens on
+   the view it was written on, its part looked for only there, and one that view no longer has
+   says so instead of opening another view. Notes already stored work again as they are; no data
+   migration.
+
 ## 1.96.0 — 2026-11-16
 
 **Upgrade:**
