@@ -2813,7 +2813,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     $("#cf-body").innerHTML = body ? md(body) : "";
     $("#cf-ok").textContent = ok;
     const ticked = (id) => (multi ? (pick || []).includes(id) : id === pick);
-    $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /><span class="cn">${esc(c.name)}</span>${c.hint ? `<span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
+    $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /><span class="cn">${c.no ? `<span class="ono">${esc(c.no)}</span>` : ""}${esc(c.name)}</span>${c.hint ? `<span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
     const okBtn = $("#cf-ok"), none = () => multi && choices && !f.querySelector("input[name=choice]:checked");
     const noteHidden = () => !note || Boolean(noteFor && f.querySelector("input[name=choice]:checked")?.value !== noteFor);
     okBtn.disabled = none(); $("#cf-choices").onchange = () => { okBtn.disabled = none(); $("#cf-note-wrap").hidden = noteHidden(); };
@@ -7138,14 +7138,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       await refreshList(); await openCard(c.id); return;
     }
     let res = null;
-    const options = (c.variants || []).map((v) => ({ id: v.id, name: v.name, hint: tallyText(c, v.id) }));
+    // Each option keeps its tab's number, so the pick matches the tab.
+    const options = (c.variants || []).map((v, i) => ({ id: v.id, no: i + 1, name: v.name, hint: tallyText(c, v.id) }));
     if (name === "approve") {
       const to = HANDOFF_TO[S.me?.handoff?.[c.request?.type || "idea"]] || HANDOFF_TO.desk;
       const against = [...new Set((c.conflicts || []).filter((x) => x.status === "active").map((x) => x.decision))];
       // A live prototype's option is the one approved; before options, the spec comes from the request.
       // What the live prototype shows: `live_pick`'s option at its version.
-      const built = (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && options.some((o) => o.id === c.live_pick?.variant) ? { id: c.live_pick.variant, name: c.live_pick.name, version: c.live_pick.version } : null;
-      const what = built ? `**${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
+      const built = (["prototype", "testing"].includes(c.status) || c.prototype?.state === "live") && options.some((o) => o.id === c.live_pick?.variant) ? { id: c.live_pick.variant, no: options.find((o) => o.id === c.live_pick.variant).no, name: c.live_pick.name, version: c.live_pick.version } : null;
+      const what = built ? `option ${built.no}, **${built.name}**, version ${built.version}, the option the live prototype shows` : options.length ? "the option you pick" : "this request as Design Desk checked it, without design options";
       // Straight to the coding agent: its issue gets the agent's label, only where the spec reaches GitHub (docs/handoff.md).
       const github = (S.me?.handoff?.[c.request?.type || "idea"] || "desk") !== "desk";
       // Sent before and reopened: what goes to GitHub now may close the earlier issue (docs/handoff.md, step 6).
