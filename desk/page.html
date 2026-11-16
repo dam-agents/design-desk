@@ -612,6 +612,8 @@
   .tabs.vtabs.vrow { flex-wrap: nowrap; }
   .vtabs .vscroll { display: flex; gap: 4px; align-items: flex-end; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; margin-bottom: -1px; }
   .tabs.vtabs .vscroll button { margin-bottom: 0; flex: none; white-space: nowrap; }
+  /* The scroll row clips what is drawn outside a tab, so the focus ring is drawn inside it. */
+  .tabs.vtabs .vscroll button:focus-visible { outline-offset: -2px; }
   .tabs.vtabs.vrow button.vws { flex: none; }
   .vpanel { position: relative; }
   .droplayer { display: none; position: absolute; inset: 0; z-index: 5; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -5243,7 +5245,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const v = vs.find((x) => x.id === S.variant);
     const mine = myVote(c, v.id);
     return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs vrow" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the design to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
+      <div class="tabs vtabs vrow" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}${dropLayer(c)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
@@ -6901,14 +6903,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
   }
 
-  function renderDetail() { const tabsAt = $("#detail .vtabs .vscroll")?.scrollLeft || 0; renderDetailBody(); keepTabsAt(tabsAt); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
-  // A redraw keeps the option tabs scrolled where they were, and the picked tab in view.
-  function keepTabsAt(x) {
+  function renderDetail() { const tabs = tabsNow(); renderDetailBody(); keepTabs(tabs); renderAsk(); if (S.el) renderElementDialog(); keepPlace(); }
+  // The option tabs' row on a redraw: the same item keeps it scrolled where the person left it;
+  // only another tab picked (or side by side) moves the row, just enough to show that tab.
+  // Another item's row starts at its beginning.
+  var tabsCard = null; // var: a render may come before this line runs
+  const tabsNow = () => {
     const sc = $("#detail .vtabs .vscroll");
-    if (!sc) return;
-    sc.scrollLeft = x;
+    return sc && { card: tabsCard, at: sc.scrollLeft, picked: sc.querySelector('button[aria-pressed="true"]')?.dataset.variant ?? "split" };
+  };
+  function keepTabs(was) {
+    const sc = $("#detail .vtabs .vscroll");
+    tabsCard = sc ? S.card?.id : null;
+    if (!sc || !was || was.card !== tabsCard) return;
+    sc.scrollLeft = was.at;
     const t = sc.querySelector('button[aria-pressed="true"]');
-    if (!t) return;
+    if (!t || (t.dataset.variant ?? "split") === was.picked) return;
     const l = t.offsetLeft - sc.offsetLeft, r = l + t.offsetWidth;
     if (l < sc.scrollLeft) sc.scrollLeft = l; else if (r > sc.scrollLeft + sc.clientWidth) sc.scrollLeft = r - sc.clientWidth;
   }
