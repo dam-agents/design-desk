@@ -5849,8 +5849,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // longer than the store keeps loses its outer steps, and a note's view still scopes it (find).
     // A part the design names (data-anchor in its markup) ends the climb, under its view: the path
     // `[data-view="4"] [data-anchor="spender-list"] > li` outlives a rebuild that moves what is round it.
+    // Names the Desk put on parts while the design shows: a note's name not yet in the markup. A path
+    // never stops at one, so a note's path is the markup's alone.
+    const placed = new WeakSet();
     const attrQ = (v) => '"' + String(v).replace(/["\\]/g, "\\$&") + '"';
-    const css = (el) => { const p = []; let lead = ""; while (el && el.nodeType === 1) { let s = el.tagName.toLowerCase(); const an = el.getAttribute("data-anchor"); if (an) { p.unshift("[data-anchor=" + attrQ(an) + "]"); const v = el.parentElement?.closest("[data-view]"); if (v) lead = "[data-view=" + attrQ(v.dataset.view) + "] "; break; } if (el.id) { p.unshift(s + "#" + el.id); break; } const dv = el.getAttribute("data-view"); if (dv) { p.unshift(s + '[data-view="' + dv + '"]'); break; } const sib = [...(el.parentElement?.children || [])].filter((x) => x.tagName === el.tagName); if (sib.length > 1) s += ":nth-of-type(" + (sib.indexOf(el) + 1) + ")"; p.unshift(s); el = el.parentElement; } while (p.length > 1 && p.join(" > ").length > 480) { p.shift(); lead = ""; } return lead + p.join(" > "); };
+    const css = (el) => { const p = []; let lead = ""; while (el && el.nodeType === 1) { let s = el.tagName.toLowerCase(); const an = el.getAttribute("data-anchor"); if (an && !placed.has(el)) { p.unshift("[data-anchor=" + attrQ(an) + "]"); const v = el.parentElement?.closest("[data-view]"); if (v) lead = "[data-view=" + attrQ(v.dataset.view) + "] "; break; } if (el.id) { p.unshift(s + "#" + el.id); break; } const dv = el.getAttribute("data-view"); if (dv) { p.unshift(s + '[data-view="' + dv + '"]'); break; } const sib = [...(el.parentElement?.children || [])].filter((x) => x.tagName === el.tagName); if (sib.length > 1) s += ":nth-of-type(" + (sib.indexOf(el) + 1) + ")"; p.unshift(s); el = el.parentElement; } while (p.length > 1 && p.join(" > ").length > 480) { p.shift(); lead = ""; } return lead + p.join(" > "); };
     const kind = (el) => { const t = el.tagName.toLowerCase(), r = el.getAttribute("role"); if (t === "button" || r === "button") return "Button"; if (t === "a") return "Link"; if (/^h[1-6]$/.test(t)) return "Heading"; if (["input", "textarea", "select"].includes(t)) return "Field"; if (["img", "svg", "path"].includes(t)) return "Image"; if (t === "li") return "List item"; if (t === "label") return "Label"; if (["p", "span", "small", "strong", "em", "b"].includes(t)) return "Text"; if (t === "nav") return "Navigation"; if (t === "header") return "Header"; if (["table", "tr", "td"].includes(t)) return "Table"; return "Area"; };
     const textOf = (el) => (el.innerText || el.getAttribute("aria-label") || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ").slice(0, 120);
     const labelOf = (el) => { const t = textOf(el); return kind(el) + (t ? " “" + (t.length > 40 ? t.slice(0, 39) + "…" : t) + "”" : ""); };
@@ -5861,9 +5864,25 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const viewRoot = (x) => { const vs = [...document.querySelectorAll("[data-view]")]; return (x.view_name && vs.find((v) => viewNamed(v) === x.view_name)) || (x.view && vs.find((v) => v.dataset.view === String(x.view))) || null; };
     // A path written in the view under another number (a version that renumbered its views) is read as the view found.
     const within = (root, sel) => { if (!sel) return null; try { if (root === document) return document.querySelector(sel); const s = sel.replace(/\[data-view="[^"]*"\]/, '[data-view="' + root.dataset.view.replace(/["\\]/g, "\\$&") + '"]'); return root.matches(s) ? root : root.querySelector(s); } catch { return null; } };
+    // A named note's part is found by its name in the view first, then by the path it was written with.
+    const named = (root, name) => { const q = "[data-anchor=" + attrQ(name) + "]"; return root !== document && root.matches(q) ? root : root.querySelector(q); };
     const find = (x) => { if (!x) return null; if (typeof x === "string") return within(document, x);
       const root = x.view || x.view_name ? viewRoot(x) : document; if (!root) return null;
-      return within(root, x.selector); };
+      return (x.name && named(root, x.name)) || within(root, x.selector); };
+    // The names of this drawing's notes (desk-names): each goes back on its part, found by its path,
+    // whenever the design shows, so a second note on the part and a later path see it.
+    let names = [];
+    const placeNames = () => { for (const x of names) { const root = x.view || x.view_name ? viewRoot(x) : document; if (!root || named(root, x.name)) continue; const el = within(root, x.selector); if (el && !el.hasAttribute("data-anchor")) { el.setAttribute("data-anchor", x.name); placed.add(el); } } };
+    // A part picked gets its name at once: the one it has, or one made from what it is and says, unique
+    // in its view; a note written on it keeps it (docs/requests.md → Names notes hang on).
+    const slug = (t) => String(t || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const nameFor = (el) => { const own = el.getAttribute("data-anchor"); if (own) return own;
+      const root = el.closest("[data-view]") || document, mine = (x) => (x.view || x.view_name ? viewRoot(x) : document) === root;
+      const taken = new Set([...root.querySelectorAll("[data-anchor]")].map((x) => x.getAttribute("data-anchor")).concat(names.filter(mine).map((x) => x.name)));
+      const words = slug(el.getAttribute("aria-label") || textOf(el)).split("-").filter(Boolean).slice(0, 3).join("-");
+      const base = (slug(kind(el)) + (words ? "-" + words : "")).slice(0, 36).replace(/-+$/, "");
+      let n = base, i = 1; while (taken.has(n)) n = base + "-" + ++i;
+      el.setAttribute("data-anchor", n); placed.add(el); return n; };
     const selOf = (x) => (typeof x === "string" ? x : x?.selector || "");
     const viewOf = (el) => { const v = el.closest("[data-view]"); return v ? { view: v.dataset.view, view_name: v.dataset.viewName || "View " + v.dataset.view } : {}; };
     // A note on another view of the design opens that view first, through the review bar.
@@ -5906,7 +5925,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const elementOf = (el) => { const hits = els.map((x) => ({ key: x.key, node: find(x.selector) })).filter((x) => x.node && x.node.contains(el)); return (hits.find((x) => !hits.some((y) => y.node !== x.node && x.node.contains(y.node))) || {}).key || null; };
     // A played story's numbered frames show only while the design's Show hotspots switch is on.
     const hot = () => document.querySelector("#review [data-hot]")?.getAttribute("aria-checked") === "true";
-    const draw = () => { letGo(); layer.textContent = ""; pinAt = []; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el && p.note) commentPin(el, p); else if (el) box(el, "#2f5bd3", p.label || "#" + p.n, true); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
+    const draw = () => { placeNames(); letGo(); layer.textContent = ""; pinAt = []; const why = new Map(); const storyShown = hot(); for (const p of pins) { if (p.state === "story" && !storyShown) continue; if (p.why) { const w = why.get(p.selector) || { ids: [], focus: false, gone: true }; if (!w.ids.includes(p.why)) w.ids.push(p.why); w.focus ||= p.focus; w.gone &&= Boolean(p.gone); why.set(p.selector, w); continue; } const el = find(p.selector); if (el && p.note) commentPin(el, p); else if (el) box(el, "#2f5bd3", p.label || "#" + p.n, true); } const picked = pins.some((p) => p.why && p.focus); const tagged = [...why].map(([sel, w]) => [find(sel), w]).filter(([el]) => el);
       // A part inside another part the same decision shaped does not repeat its number.
       const inner = under && under !== selected && tagged.filter(([o]) => o.contains(under)).sort(([a], [b]) => (a.contains(b) ? 1 : -1))[0]?.[0];
       for (const [el, w] of tagged) { const own = w.ids.filter((id) => !tagged.some(([o, x]) => o !== el && o.contains(el) && x.ids.includes(id))); tag(el, (el === inner ? w.ids : own).join(" · "), w.focus, picked && !w.focus && el !== inner, w.gone, w.focus || el === inner); } hoverMove(mode !== "off" && hover !== selected ? hover : null); if (selected) box(selected, mode === "comment" ? "#b26b00" : "#2f5bd3", mode === "edit" ? "Editing" : mode === "comment" ? null : kind(selected), true); lookFrame(); anchorSay(); };
@@ -5954,7 +5973,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (document.readyState === "loading") addEventListener("DOMContentLoaded", emptySwitches); else emptySwitches();
     addEventListener("click", (e) => { if (e.target.closest?.("#review [data-notes]")) setTimeout(() => say({ type: "desk-review-notes", on: notesSwitch()?.getAttribute("aria-checked") === "true" }), 0); });
     addEventListener("message", (e) => { const d = e.data || {}; if (d.type !== "desk-review-notes") return; const b = notesSwitch(); if (b && !b.hidden && (b.getAttribute("aria-checked") === "true") !== Boolean(d.on)) b.click(); });
-    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { if (endEdit) endEdit(false); mode = d.mode; hover = null; toolCursor.textContent = mode === "off" ? "" : "html, html *:not(#review *) { cursor: " + (mode === "edit" ? "text" : mode === "comment" ? COMMENT_CURSOR : SELECT_CURSOR) + " !important; }"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = showPlace(d.selector); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(showPlace(d.selector), d.selector || ""); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
+    addEventListener("message", (e) => { const d = e.data || {}; if (d.type === "desk-mode") { if (endEdit) endEdit(false); mode = d.mode; hover = null; toolCursor.textContent = mode === "off" ? "" : "html, html *:not(#review *) { cursor: " + (mode === "edit" ? "text" : mode === "comment" ? COMMENT_CURSOR : SELECT_CURSOR) + " !important; }"; draw(); } if (d.type === "desk-pins") { pins = d.pins || []; draw(); } if (d.type === "desk-names") { names = (Array.isArray(d.names) ? d.names : []).filter((x) => x && typeof x.name === "string" && x.name); placeNames(); draw(); } if (d.type === "desk-elements") els = Array.isArray(d.els) ? d.els : []; if (d.type === "desk-show") { const el = showPlace(d.selector); if (el) { const r = el.getBoundingClientRect(); scrollTo({ top: r.top + scrollY - innerHeight / 3, left: 0, behavior: "smooth" }); } draw(); } if (d.type === "desk-view") { if (d.view || d.view_name) openView(d); lastView = shownView()?.dataset.view || ""; } if (d.type === "desk-select") { pick(showPlace(d.selector), d.selector || ""); if (selected) selected.scrollIntoView({ block: "center", behavior: "smooth" }); draw(); } });
     // The bar's own state, said to the Desk on every change and set again after a replay's fresh load.
     const de = document.documentElement, hotSwitch = () => document.querySelector("#review [data-hot]");
     const barState = () => ({ type: "desk-bar", dark: de.classList.contains("dark"), empty: de.classList.contains("review-empty"), hot: hotSwitch()?.getAttribute("aria-checked") === "true" });
@@ -6028,7 +6047,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       e.preventDefault(); e.stopPropagation();
       const el = e.target; pick(el, css(el)); hover = null; draw();
       const pr = el.getBoundingClientRect();
-      parent.postMessage({ type: "desk-picked", selector: selectedPath, tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), kind: kind(el), look: lookOf(el), rect: { left: pr.left, top: pr.top, right: pr.right, bottom: pr.bottom }, ...viewOf(el) }, "*");
+      parent.postMessage({ type: "desk-picked", selector: selectedPath, name: nameFor(el), tag: el.tagName.toLowerCase(), text: textOf(el), label: labelOf(el), why: shaped(el), element: elementOf(el), kind: kind(el), look: lookOf(el), rect: { left: pr.left, top: pr.top, right: pr.right, bottom: pr.bottom }, ...viewOf(el) }, "*");
       if (mode === "edit") startEdit(el);
     }, true);
     // The look palette: the Desk changes a part's look here as a preview (an inline style), nothing is
@@ -6569,6 +6588,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: placeOf(n.anchor), state: noteState(c, n)[0], focus: S.ws.pop?.kind === "thread" && S.ws.pop.id === n.id }));
     if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
+    // Every named note of this drawing, pins shown or not: the frame puts each name back on its part.
+    const names = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.name && n.anchor.selector).map((n) => ({ name: n.anchor.name, selector: n.anchor.selector, view: n.anchor.view || "", view_name: n.anchor.view_name || "" }));
+    $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-names", names }, "*");
     // The option's elements with states drawn: a part picked inside one names it, for See every state.
     const els = elementsOf(v).filter((e) => e.states.length || e.controls?.length).flatMap((e) => [...new Set([e.selector, ...e.states.map((x) => x.selector)].filter(Boolean))].map((selector) => ({ key: e.key, selector })));
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-elements", els }, "*");
@@ -6576,7 +6598,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const frameSay = (msg) => $("#ws-frame")?.contentWindow?.postMessage(msg, "*");
   // Where a note or a part picked is, for the frame: its path and the view it was written on, so the
   // frame looks for it there and nowhere else (#163). A part with no view is its path alone.
-  const placeOf = (a) => (!a?.selector ? "" : a.view || a.view_name ? { selector: a.selector, view: a.view || "", view_name: a.view_name || "" } : a.selector);
+  // A named one (anchor.name) is found by its name in that view first.
+  const placeOf = (a) => (!a?.selector ? "" : a.view || a.view_name || a.name ? { selector: a.selector, view: a.view || "", view_name: a.view_name || "", ...(a.name ? { name: a.name } : {}) } : a.selector);
 
   // ---------- the look palette ----------
   // In the side panel under the part selected, for whoever may change the design: its size, colors, spacing and
@@ -6783,7 +6806,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const frame = $("#ws-frame");
     if (!frame || e.source !== frame.contentWindow) return;
     const d = e.data || {};
-    const pickOf = (text) => ({ selector: String(d.selector || "").slice(0, 500), ...(d.element ? { element: String(d.element).slice(0, 80) } : {}), text: String(text || "").slice(0, 120), tag: String(d.tag || "").slice(0, 40), label: String(d.label || "").slice(0, 120), ...(d.view ? { view: String(d.view).slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) } : {}) });
+    const pickOf = (text) => ({ selector: String(d.selector || "").slice(0, 500), ...(typeof d.name === "string" && /^[a-z0-9][a-z0-9-]{0,39}$/.test(d.name) ? { name: d.name } : {}), ...(d.element ? { element: String(d.element).slice(0, 80) } : {}), text: String(text || "").slice(0, 120), tag: String(d.tag || "").slice(0, 40), label: String(d.label || "").slice(0, 120), ...(d.view ? { view: String(d.view).slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) } : {}) });
     // The screen the person moved to; the next option or version opens the same one if it has it.
     // A note's number in the design: what it says on hover, the note itself on a click.
     if (d.type === "desk-pin-tip") {
@@ -7414,7 +7437,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const look = kind === "change" && sel?.selector ? looksNow()[sel.selector] : null, lc = look ? lookChanges(look) : [], pc = look ? pickChanges(look) : [];
     const typed = box?.value.trim() || "";
     const text = [typed, lc.length || pc.length ? lookText(look) : ""].filter(Boolean).join("\n\n"); if (!text || !v) return;
-    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}), ...(lc.length ? { style: lc } : {}), ...(pc.length ? { controls: pc } : {}) };
+    const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, ...(sel.name ? { name: sel.name } : {}), text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}), ...(lc.length ? { style: lc } : {}), ...(pc.length ? { controls: pc } : {}) };
     await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
     if (lc.length || pc.length) lookSent(sel.selector);
     box.value = "";
@@ -7717,7 +7740,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const th = (S.card.threads || []).find((x) => x.id === ds.goto);
       if (!th?.anchor?.variant) return;
       S.variant = th.anchor.variant; S.ws.state = th.anchor.state || null; S.ws.open = true; S.ws.check = false; S.ws.mode = "off"; S.ws.version = null;
-      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
+      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, ...(th.anchor.name ? { name: th.anchor.name } : {}), text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       renderWorkspace(); return;
     }
     if (ds.act) { await act(ds.act); return; }
@@ -7814,7 +7837,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!th?.anchor) return;
       S.ws.note = th.id;
       if ((th.anchor.state || null) !== (S.ws.state || null)) { S.ws.state = th.anchor.state || null; S.ws.version = null; }
-      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
+      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, ...(th.anchor.name ? { name: th.anchor.name } : {}), text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       S.ws.edit = null; S.ws.pop = { kind: "thread", id: th.id, anchored: Boolean(th.anchor.selector) }; S.ws.anchor = null;
       renderWorkspace();
       frameSay({ type: "desk-select", selector: placeOf(th.anchor) || null });

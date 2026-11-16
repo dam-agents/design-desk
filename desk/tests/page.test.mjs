@@ -2109,6 +2109,50 @@ test("a part inside a named one is found by the name, under its view", async (t)
   }
 });
 
+// A part gets a name when it is first picked (#163): made from what it is and says, unique in its
+// view; a name a note already has goes back on its part when the design loads, and the next note
+// on that part keeps it.
+test("a note names its part: a new name unique in its view, a stored one put back and kept", async (t) => {
+  const list = (items) => `<main><section><div><div><div><ul>${items.map((x) => `<li>${x}</li>`).join("")}</ul></div></div></div></section></main>`;
+  const design = `<body>${BAR}<div data-view="1" data-view-name="Home">${list(["File a.pdf", "File c.pdf"])}</div><div data-view="2" data-view-name="Chat">${list(["File a.pdf", "File b.pdf", "File a.pdf"])}</div></body>`;
+  const bridge = bridgeViews(design).replace('note("t1", 1, "main > section > div > div > div > ul > li:nth-of-type(2)", "Show the file\'s size")',
+    'Object.assign(note("t1", 1, \'div[data-view="2"] > main > section > div > div > div > ul > li:nth-of-type(2)\', "Show the file\'s size"), { anchor: { variant: "v1", selector: \'div[data-view="2"] > main > section > div > div > div > ul > li:nth-of-type(2)\', name: "files-row", label: "List item", view: "2", view_name: "Chat" } })');
+  assert.notEqual(bridge, bridgeViews(design), "the stored note is named");
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r8"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('#review [data-review-view="2"]', { state: "attached" });
+    // The stored name is back on its part, though the markup has none.
+    await frame.waitForSelector('[data-view="2"] li:nth-of-type(2)[data-anchor="files-row"]', { state: "attached" });
+    await desk.click('[data-ws-mode="comment"]');
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
+    const say = async (view, n, word) => {
+      await desk.click(`[data-ws-page="${view}"]`);
+      await frame.click(`[data-view="${view}"] li:nth-of-type(${n})`);
+      await desk.waitForSelector("#ws-text");
+      await desk.fill("#ws-text", word);
+      const k = (await posts("/api/cards/r8/threads")).length + 1;
+      await desk.click("#ws-pop [data-ws-send]");
+      await desk.waitForFunction((x) => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r8/threads").length === x, k);
+      return JSON.parse((await posts("/api/cards/r8/threads"))[k - 1].body).anchor;
+    };
+    assert.equal((await say(2, 2, "Bigger")).name, "files-row", "a second note on a named part keeps its name");
+    const a = await say(2, 1, "Icon");
+    assert.equal(a.name, "list-item-file-a-pdf", "a name from what the part is and says");
+    assert.equal(a.selector, 'div[data-view="2"] > main > section > div > div > div > ul > li:nth-of-type(1)', "its path is the markup's, without the name");
+    assert.equal((await say(2, 3, "Same")).name, "list-item-file-a-pdf-2", "the same words twice in a view: two names");
+    assert.equal((await say(2, 1, "Again")).name, "list-item-file-a-pdf", "the part named a moment ago keeps its name");
+    assert.equal((await say(1, 1, "Here too")).name, "list-item-file-a-pdf", "another view has names of its own");
+  } finally {
+    await run.close();
+  }
+});
+
 const LOOK_DESIGN = `<!doctype html><html><head><style>:root { --brand: #3b5bdb; --danger: #d6336c; }
   body { margin: 0; font: 15px system-ui; } .row { display: flex; gap: 8px; padding: 16px; }
   button { font-size: 14px; padding: 8px 16px; border-radius: 6px; } .primary { background: var(--brand); color: #fff; }</style></head>

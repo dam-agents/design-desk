@@ -777,6 +777,16 @@ test("comments on options: replies, done and reopen, and a designer has them wor
   assert.equal(s.reopenThread(two.id, alice).inbox.id, item.id);
 });
 
+test("a note keeps its part's name, and only a name", () => {
+  const s = fresh();
+  const { card } = s.createRequest(bob, { problem: "Spenders are hard to read." });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>1</p>", encoding: "utf8" }).asset.id;
+  s.upsertCard({ id: card.id, status: "feedback", variants: [{ id: "v1", name: "Tabs", asset: a }] });
+  const at = (name) => s.openThread(card.id, alice, { kind: "comment", text: "Hm", anchor: { variant: "v1", selector: "ul > li", name, view: "4", view_name: "Home" } }).thread.anchor.name;
+  assert.equal(at("spender-list"), "spender-list");
+  for (const bad of ["Spender list", "-x", "a".repeat(41), 7, '"]{}']) assert.equal(at(bad), null, String(bad));
+});
+
 test("a worked-in change is answered with the place before and after", () => {
   const s = fresh();
   const { card } = s.createRequest(bob, { problem: "Save is easy to miss." });

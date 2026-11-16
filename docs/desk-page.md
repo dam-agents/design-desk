@@ -62,6 +62,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   else by its number, so two views with the same markup never swap a note. A part that view no
   longer has opens the note on its own view, with no pin and **This place no longer exists in this
   version** above its words; another view is never opened for it.
+  A part picked gets a name (`data-anchor`, [requests.md](requests.md) → Names notes hang on), the
+  note on it keeps it, and the part is found by that name first.
   **The look palette:** in Select, an admin, a designer or a lead developer gets **Change the look** in
   Properties, under the part selected: tabs Text, Fill, Spacing, Layout (a flex or grid
   part only) and Size, with steppers, segmented choices, colors, and a resize handle on the part's

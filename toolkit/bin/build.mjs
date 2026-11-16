@@ -14,6 +14,7 @@ import { toolchain } from "../lib/toolchain.mjs";
 import { resolveStyle, compileCss, fontCss } from "../lib/style.mjs";
 import { renderIcons } from "../lib/icons.mjs";
 import { renderComponents } from "../lib/components.mjs";
+import { ANCHOR_NAME } from "../../desk/store.mjs";
 
 export async function main(_cmd, argv) {
   const pos = [], opt = {};
@@ -90,7 +91,6 @@ export function anchorProblems(html) {
   }
   return [...new Set(problems)];
 }
-export const ANCHOR_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
 export function danglingGotos(html) {
   const views = new Set([...html.matchAll(/\sdata-view="([^"]*)"/g)].map((m) => m[1]));

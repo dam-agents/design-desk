@@ -2897,6 +2897,8 @@ function cleanPart(p) {
   return { selector: a.selector, text: a.text, label: a.label, view: a.view, view_name: a.view_name };
 }
 
+export const ANCHOR_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
 function cleanAnchor(a) {
   if (typeof a !== "object") throw bad("anchor must be an object");
   return {
@@ -2911,6 +2913,9 @@ function cleanAnchor(a) {
     // The view of a multi-view design the element is in (`data-view`, its name).
     view: typeof a.view === "string" ? a.view.slice(0, 40) : null,
     view_name: typeof a.view_name === "string" ? a.view_name.slice(0, 120) : null,
+    // The part's name, unique in its view (data-anchor, docs/requests.md → Names notes hang on): the
+    // frame finds the part by it before its path, and a redraw carries it into the new markup.
+    name: typeof a.name === "string" && ANCHOR_NAME.test(a.name) ? a.name : null,
     edit: a.edit && typeof a.edit === "object" ? { from: String(a.edit.from || "").slice(0, 300), to: String(a.edit.to || "").slice(0, 300) } : null,
     // Look changes made in the workspace's palette: a CSS property, the value before and the one picked.
     // Smart controls picked: which control, from which option to which, and the kit's source of it.

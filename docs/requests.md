@@ -375,6 +375,14 @@ changes the markup round it. A name is the part's in one view: `design build` re
 in a view, and one that is not a name. It is not `data-design-note`, the team's notes written in the
 design itself (the `variants` skill → Notes for the team).
 
+**A part is named when it is first picked**, not before: the workspace's frame gives it a short name
+made from what it is and says (`list-item-file-a-pdf`), unique in its view, or the one it has; a
+note written on it stores it as `anchor.name`, beside the path it was written with (`anchor.selector`,
+the markup's, never through a name the markup lacks), and a second note on the part keeps the same
+name. Until a redraw writes it into the markup, the frame puts each stored name back on its part,
+found by that path in the note's view, whenever the design loads. In the option's page, a note with a
+name is at `[data-view="<view>"] [data-anchor="<name>"]` once the markup carries it, else at its path.
+
 ## Smart controls
 
 The design workspace's look palette offers an admin, a designer or a lead developer, for an element, the choices the product
