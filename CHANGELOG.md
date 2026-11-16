@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.96.1 — 2026-11-16
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): in the design workspace a
+   comment sent lets the part go and shows under Comments, and the busy pill names the work
+   without "Design Desk:" and breathes while it waits in the queue. No data migration.
+
 ## 1.96.0 — 2026-11-16
 
 **Upgrade:**
