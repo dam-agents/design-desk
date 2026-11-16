@@ -365,6 +365,16 @@ Compare with the product); a note from **Work into the design** is a `revise` li
 - A variant shows no real person, no real customer data, and no invented number presented
   as fact.
 
+## Names notes hang on
+
+A note on a design is tied to the part a person clicked. A part can carry a name in its markup,
+`data-anchor="<name>"` (lowercase letters, digits and dashes, at most 40, such as
+`spender-list`): a note's path then stops at the nearest named part, under its view
+(`[data-view="4"] [data-anchor="spender-list"] > li:nth-of-type(2)`), and outlives a rebuild that
+changes the markup round it. A name is the part's in one view: `design build` refuses one name twice
+in a view, and one that is not a name. It is not `data-design-note`, the team's notes written in the
+design itself (the `variants` skill → Notes for the team).
+
 ## Smart controls
 
 The design workspace's look palette offers an admin, a designer or a lead developer, for an element, the choices the product

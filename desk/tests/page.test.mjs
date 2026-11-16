@@ -2011,7 +2011,7 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
 // view it was written on, however its path was cut, and one that view no longer has never opens another.
 const SAME = (word, a, b) => `<main><section><div><div><div><ul><li>${word} ${a}</li><li>${word} ${b}</li></ul></div></div></div></section></main>`;
 const TWO_VIEWS = `<body>${BAR}<div data-view="1" data-view-name="Home">${SAME("Spent on", "rent", "food")}</div><div data-view="2" data-view-name="Chat">${SAME("File", "a.pdf", "b.pdf")}</div></body>`;
-const BRIDGE_VIEWS = `<script>
+const bridgeViews = (design) => `<script>
 window.calls = [];
 const at = new Date().toISOString();
 const by = { email: "pat@example.com", role: "pm" };
@@ -2025,11 +2025,12 @@ window.platform = { async request({ method, path, body }) {
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true } }
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r8" ? { card: request }
-    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(TWO_VIEWS).replace(/</g, "\\u003c")} } : {};
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(design).replace(/</g, "\\u003c")} } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
 </script>`;
+const BRIDGE_VIEWS = bridgeViews(TWO_VIEWS);
 
 test("a note opens on the view it was written on: two views alike, a path cut short, a place the view no longer has", async (t) => {
   const run = await launch(t, BRIDGE_VIEWS);
@@ -2074,6 +2075,35 @@ test("a note opens on the view it was written on: two views alike, a path cut sh
     const { anchor } = JSON.parse((await posts("/api/cards/r8/threads"))[0].body);
     assert.equal(anchor.selector, 'div[data-view="2"] > main > section > div > div > div > ul > li:nth-of-type(1)', "the path climbs past seven steps to its view");
     assert.deepEqual([anchor.view, anchor.view_name], ["2", "Chat"]);
+  } finally {
+    await run.close();
+  }
+});
+
+// A part the design names (data-anchor) ends its path, under its view: the path outlives a
+// rebuild that changes what is round it.
+test("a part inside a named one is found by the name, under its view", async (t) => {
+  const run = await launch(t, bridgeViews(TWO_VIEWS.replace("<ul><li>File", '<ul data-anchor="files"><li>File')));
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r8"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('#review [data-review-view="2"]', { state: "attached" });
+    await desk.click('[data-ws-page="2"]');
+    await desk.click('[data-ws-mode="comment"]');
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
+    for (const [n, word] of [[1, "First"], [2, "Second"]]) {
+      await frame.click(`[data-view="2"] li:nth-of-type(${n})`);
+      await desk.waitForSelector("#ws-text");
+      await desk.fill("#ws-text", word);
+      await desk.click("#ws-pop [data-ws-send]");
+      await desk.waitForFunction((k) => calls.filter((c) => c.method === "POST" && c.path === "/api/cards/r8/threads").length === k, n);
+    }
+    const sent = (await posts("/api/cards/r8/threads")).map((x) => JSON.parse(x.body).anchor.selector);
+    assert.deepEqual(sent, ['[data-view="2"] [data-anchor="files"] > li:nth-of-type(1)', '[data-view="2"] [data-anchor="files"] > li:nth-of-type(2)']);
   } finally {
     await run.close();
   }

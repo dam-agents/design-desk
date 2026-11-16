@@ -6,7 +6,7 @@
 //   every class="" through tailwind-merge when the style uses it, as the app's cn() does
 // Checks, failing the build: inline <script>s parse; no <style> blocks or style="" beyond
 // a component's own size or position; no `&amp;` inside a class; no unhandled <ui-*> tag;
-// every data-goto-view names a view the page has.
+// every data-goto-view names a view the page has; no data-anchor twice in one view.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { TOOLKIT, fail, req, slugOf } from "../lib/core.mjs";
@@ -53,6 +53,8 @@ export async function main(_cmd, argv) {
   if (!html.includes("<!-- design:css -->")) fail("missing <!-- design:css --> in <head>");
   const dangling = danglingGotos(html);
   if (dangling.length) fail(`data-goto-view names no view: ${dangling.slice(0, 3).join(", ")} — give the target a data-view, or use "back"`);
+  const anchors = anchorProblems(html);
+  if (anchors.length) fail(`${anchors.slice(0, 3).join("; ")} — name each part once per view (docs/requests.md → Names notes hang on)`);
   if (!hasReviewBar) fail("missing <!-- design:review-bar --> at the top of <body> — every page the build makes carries the review bar");
 
   const css = compileCss(style, html);
@@ -64,6 +66,32 @@ export async function main(_cmd, argv) {
 }
 
 // The views a click leads to that the page does not have ("back" retraces the flow).
+// The names people's notes hang on (data-anchor, docs/requests.md → Names notes hang on): one name
+// twice in one view, or one that is not a short lowercase name, finds the wrong part or none.
+// The markup is read as tags, outside scripts, styles and comments; a closing tag closes what it
+// names and everything left open inside it, as a browser does.
+export function anchorProblems(html) {
+  const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
+  const stack = [], seen = new Map(), problems = [];
+  const text = html.replace(/<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->|<template\b[^>]*>[\s\S]*?<\/template\s*>/gi, "");
+  for (const m of text.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g)) {
+    const [, close, tag, attrs] = m, name = tag.toLowerCase();
+    if (close) { const i = stack.findLastIndex((x) => x.tag === name); if (i >= 0) stack.length = i; continue; }
+    const view = attrs.match(/\sdata-view=["']([^"']*)["']/)?.[1] ?? null;
+    const at = { tag: name, view: view ?? stack.at(-1)?.view ?? "" };
+    const anchor = attrs.match(/\sdata-anchor=["']([^"']*)["']/)?.[1];
+    if (anchor != null) {
+      const where = at.view ? `view ${at.view}` : "the page";
+      if (!ANCHOR_NAME.test(anchor)) problems.push(`data-anchor="${anchor}" in ${where} is not a name: lowercase letters, digits and dashes, at most 40`);
+      else if (seen.has(`${at.view}\u0000${anchor}`)) problems.push(`data-anchor="${anchor}" twice in ${where}`);
+      seen.set(`${at.view}\u0000${anchor}`, true);
+    }
+    if (!VOID.test(name) && !/\/\s*$/.test(attrs)) stack.push(at);
+  }
+  return [...new Set(problems)];
+}
+export const ANCHOR_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
 export function danglingGotos(html) {
   const views = new Set([...html.matchAll(/\sdata-view="([^"]*)"/g)].map((m) => m[1]));
   return [...new Set([...html.matchAll(/\sdata-goto-view="([^"]*)"/g)].map((m) => m[1]))].filter((v) => v !== "back" && !views.has(v));
