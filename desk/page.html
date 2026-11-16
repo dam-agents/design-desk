@@ -1390,6 +1390,12 @@
   .ws-ver select { width: auto; padding: 4px 8px; font-size: var(--fs-meta); }
   .ws-agent { display: inline-flex; align-items: center; gap: 8px; max-width: 46ch; padding: 4px 12px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; overflow: hidden; }
   .ws-agent > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+  /* Waiting in the queue: the pill breathes, so a request sent shows it was taken; at work it stays still. */
+  .ws-agent:not(.on) { animation: ws-wait 2s ease-in-out infinite; }
+  .ws-agent:not(.on) .dd-spin.queued { animation: ws-wait-dd 2s ease-in-out infinite; }
+  @keyframes ws-wait { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent); } }
+  @keyframes ws-wait-dd { 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .ws-agent:not(.on), .ws-agent:not(.on) .dd-spin.queued { animation: none; } }
     .ws-body { min-height: 0; }
   .ws-stage { padding: 0; gap: 0; }
   .ws-canvas { position: relative; flex: 1; min-height: 0; display: flex; padding: 16px 16px 76px; background: color-mix(in srgb, var(--ink) 5%, var(--bg)); }
@@ -6278,8 +6284,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const changes = notesOf(c).filter((n) => n.anchor.variant === vid && n.kind === "change" && n.state !== "resolved" && !n.messages[n.messages.length - 1]?.by?.agent);
     return (c.waiting || []).filter((w) => !workDone(c, w) && ["revise", "states", "figma"].includes(w.kind) && (w.variant ? w.variant === vid : w.kind === "revise" && w.scope !== "alternatives" && changes.length))
       .map((w) => ({ ...w, what: w.kind === "states" ? `Drawing every state${w.part ? ` of ${w.part}` : ""}` : w.kind === "figma" ? "Sending it to Figma"
-        : w.scope === "alternatives" ? `Drawing other ways${w.part ? ` ${w.part}` : " a part"} could look` : `Changing it${changes.length ? ` for ${plural(changes.length, "comment", "comments")}` : ""}` }));
+        : w.scope === "alternatives" ? `Drawing other ways${w.part ? ` ${w.part}` : " a part"} could look` : changes.length === 1 ? `Working on a comment: “${firstWords(changes[0].messages[0]?.text)}”` : changes.length ? `Working on ${changes.length} comments` : "Working on a change" }));
   }
+  // A comment's first words, on one line, for the pill and its tooltip.
+  const firstWords = (t) => { const s = String(t || "").replace(/\s+/g, " ").trim(); return s.length > 80 ? `${s.slice(0, 79).trimEnd()}…` : s; };
   const busyWhen = (w) => w.state === "claimed" && w.started ? `started ${ago(w.started) === "just now" ? "just now" : `${ago(w.started)} ago`}${w.usual_min ? `, usually about ${w.usual_min} min` : ""}` : "in the queue, starts within 10 minutes";
 
   const ICONS = {
@@ -6304,7 +6312,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function wsTop(c, v) {
     const busy = [v, ...(c.variants || []).filter((x) => x.id !== v.id)].flatMap((x) => busyOn(c, x.id).map((w) => ({ ...w, on: x.name }))).concat(working(c).includes("explore") ? [{ state: "claimed", what: "Drawing a new option" }] : [])
       .concat((c.waiting || []).filter((w) => w.kind === "figma" && !w.variant && !workDone(c, w)).map((w) => ({ ...w, what: "Bringing a frame in from Figma" })));
-    const on = busy.filter((w) => w.state === "claimed"), agent = busy.length ? `<span class="ws-agent ${on.length ? "on" : ""}" title="${esc(busy.map((w) => `${w.on ? `${w.on}: ` : ""}${w.what} (${busyWhen(w)})`).join("\n"))}"><span class="dd-spin ${on.length ? "" : "queued"}"></span><span>Design Desk: ${esc(busy.map((w) => `${w.what}${w.on ? ` · ${w.on}` : ""}`)[0])}${busy.length > 1 ? ` <b>+${busy.length - 1}</b>` : ""}</span></span>` : "";
+    const on = busy.filter((w) => w.state === "claimed"), agent = busy.length ? `<span class="ws-agent ${on.length ? "on" : ""}" title="${esc(busy.map((w) => `${w.on ? `${w.on}: ` : ""}${w.what} (${busyWhen(w)})`).join("\n"))}"><span class="dd-spin ${on.length ? "" : "queued"}"></span><span>${esc(busy.map((w) => `${w.what}${w.on ? ` · ${w.on}` : ""}`)[0])}${busy.length > 1 ? ` <b>+${busy.length - 1}</b>` : ""}</span></span>` : "";
     const fig = S.me?.figma && can("figma") && !S.ws.check, menu = S.ws.menu === "figma";
     const figBtn = fig || v.figma_url ? `<span class="ws-menuwrap"><button class="ws-ibtn" data-ws-menu="figma" aria-expanded="${menu}" title="Figma">${wsIcon("figma")}${wsIcon("chev")}</button>${menu ? `<div class="ws-menu" role="menu">${fig ? `<button role="menuitem" data-act="figma-import">Import from Figma</button><button role="menuitem" data-act="figma-export">Send to Figma</button>` : ""}${v.figma_url ? `<a role="menuitem" href="${safeUrl(v.figma_url)}" target="_blank" rel="noopener noreferrer">Open in Figma ↗</a>` : ""}</div>` : ""}</span>` : "";
     const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
@@ -6317,7 +6325,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function wsTab(c, x, i, on) {
     const b = busyOn(c, x.id), now = b.some((w) => w.state === "claimed");
     const open = notesOf(c).filter((n) => n.anchor.variant === x.id && n.state !== "resolved").length;
-    const tip = [`${i + 1} · ${x.name}`, ...b.map((w) => `Design Desk: ${w.what} (${busyWhen(w)})`), open ? plural(open, "open comment", "open comments") : ""].filter(Boolean).join(". ");
+    const tip = [`${i + 1} · ${x.name}`, ...b.map((w) => `${w.what} (${busyWhen(w)})`), open ? plural(open, "open comment", "open comments") : ""].filter(Boolean).join(". ");
     return `<button role="tab" class="ws-opt${b.length ? " busy" : ""}" data-ws-variant="${esc(x.id)}" aria-pressed="${on}" aria-selected="${on}" title="${esc(tip)}"><span class="ono">${i + 1}</span><span class="nm">${esc(x.name)}</span>${b.length ? `<span class="dd-spin ${now ? "" : "queued"}"></span>` : ""}${open ? `<span class="ws-ncount" aria-label="${plural(open, "open comment", "open comments")}">${wsIcon("comment")}${open}</span>` : ""}${on ? closeTab(c, x) : ""}</button>`;
   }
 
@@ -7447,12 +7455,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const typed = box?.value.trim() || "";
     const text = [typed, lc.length || pc.length ? lookText(look) : ""].filter(Boolean).join("\n\n"); if (!text || !v) return;
     const anchor = { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, ...(sel.name ? { name: sel.name } : {}), text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }), ...(S.ws.edit && !whole ? { edit: S.ws.edit } : {}), ...(lc.length ? { style: lc } : {}), ...(pc.length ? { controls: pc } : {}) };
-    await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
+    const { thread } = await api("POST", `/api/cards/${c.id}/threads`, { kind, text, anchor });
     if (lc.length || pc.length) lookSent(sel.selector);
     box.value = "";
-    if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); if (S.ws.mode !== "select") frameSay({ type: "desk-select", selector: null }); }
+    if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); }
+    // What was sent shows at once: the part is let go, and the new comment comes into view
+    // under Comments, on a filter that lists it, lit a moment.
+    if (sel || S.ws.selected) { S.ws.selected = null; S.ws.edit = null; frameSay({ type: "desk-select", selector: null }); }
+    S.ws.panel = "comments"; if (S.ws.filter === "done") S.ws.filter = "open";
     toast(kind === "change" ? "Sent. Design Desk is changing it; the design updates here by itself." : "Comment added.");
     await openCard(c.id);
+    renderWorkspace();
+    if (thread?.id) spot(document.querySelector(`#ws-side [data-ws-note="${CSS.escape(thread.id)}"]`), "nearest");
   }
 
   // A value in a row's source line: filter the list by it. A link in it still opens.

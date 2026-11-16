@@ -2007,6 +2007,82 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
   }
 });
 
+// A change sent from the part selected: the part is let go, the new comment shows under Comments,
+// and the pill above says what is worked on, breathing while it waits in the queue.
+const BRIDGE_SEND = `<script>
+window.calls = [];
+const at = new Date().toISOString();
+const request = { id: "r8", kind: "request", title: "Plans page", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
+  variants: [{ id: "v1", name: "Tabs", asset: "A-1", fidelity: "wireframe" }], threads: [], waiting: [] };
+window.platform = { async request({ method, path, body }) {
+  calls.push({ method, path, body });
+  let answer = {};
+  if (method === "POST" && path === "/api/cards/r8/threads") {
+    const b = JSON.parse(body), thread = { id: "t" + (request.threads.length + 1), kind: b.kind, state: "open", anchor: b.anchor, messages: [{ by: { email: "alice@example.com", role: "designer" }, at, text: b.text }] };
+    request.threads.push(thread);
+    if (b.kind === "change") request.waiting = [{ kind: "revise", variant: b.anchor.variant, state: "queued", created: at }];
+    answer = { thread };
+  } else answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true, change: true, choose: true } }
+    : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
+    : path === "/api/cards/r8" ? { card: request }
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: '<body><div data-view="1"><button>Next</button></div></body>' } : {};
+  return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("a change sent from the part selected lets the part go and shows its comment; the pill names the work and breathes while queued", async (t) => {
+  // Design Desk already at work on the option, for no comment: the pill names the work and stays still.
+  const run = await launch(t, BRIDGE_SEND.replace("threads: [], waiting: []", 'threads: [], waiting: [{ kind: "revise", variant: "v1", state: "claimed", created: at, started: at }]'));
+  if (!run) return;
+  const { desk } = run;
+  const pill = async () => (await desk.textContent(".ws-agent")).trim();
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r8"]');
+    await desk.click('[data-act="workspace"]');
+    const frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('[data-view="1"] button');
+    await desk.waitForSelector(".ws-agent");
+    assert.equal(await pill(), "Working on a change · Tabs", "work for no comment, without Design Desk before it");
+    assert.equal(await desk.$eval(".ws-agent", (p) => p.classList.contains("on")), true);
+    assert.equal(await desk.$eval(".ws-agent", (p) => getComputedStyle(p).animationName), "none", "a pill at work stays still");
+
+    // The comments on Done; a part selected in Properties; a long change sent from it.
+    await desk.click('[data-ws-filter="done"]');
+    await desk.click('[data-ws-mode="select"]');
+    await frame.waitForFunction(() => [...document.querySelectorAll("style")].some((x) => /cursor:[^}]*!important/.test(x.textContent)));
+    await desk.click('[data-ws-panel="props"]');
+    await frame.click('[data-view="1"] button');
+    await desk.waitForSelector("#ws-part");
+    const long = `Make it a   secondary button ${"and quieter ".repeat(8)}`;
+    await desk.fill("#ws-part", long);
+    await desk.click("#ws-side [data-ws-send-part]:not([data-ws-send-part=comment])");
+    await desk.waitForSelector('#ws-side [data-ws-note="t1"]');
+    assert.equal(await desk.getAttribute('[data-ws-panel="comments"]', "aria-selected"), "true", "the side panel turns to Comments");
+    assert.equal(await desk.getAttribute('[data-ws-filter="open"]', "aria-pressed"), "true", "Done turns to Open, which lists the new comment");
+    assert.equal(await desk.locator('[data-ws-panel="props"] .dot').count(), 0, "the part is let go");
+    await frame.waitForFunction(() => ![...document.querySelectorAll("div")].some((d) => d.style.borderStyle === "solid" && d.textContent === "Button"));
+    assert.match(await desk.getAttribute('#ws-side [data-ws-note="t1"]', "class"), /\bspot\b/, "the new comment is lit");
+
+    // Queued: the pill names the comment by its first words, on one line, and breathes.
+    const words = long.replace(/\s+/g, " ").trim().slice(0, 79).trimEnd();
+    await desk.waitForFunction(() => !document.querySelector(".ws-agent")?.classList.contains("on"));
+    assert.equal(await pill(), `Working on a comment: “${words}…” · Tabs`, "a long comment is cut to its first words");
+    assert.match(await desk.$eval(".ws-agent", (p) => p.title || p.dataset.tip), /^Tabs: Working on a comment: “Make it a secondary button and quieter .*…” \(in the queue/, "nor does its tooltip say Design Desk");
+    assert.equal(await desk.$eval(".ws-agent", (p) => getComputedStyle(p).animationName), "ws-wait", "a queued pill breathes");
+    assert.equal(await desk.$eval(".ws-agent .dd-spin", (p) => getComputedStyle(p).animationName), "ws-wait-dd");
+
+    // A second change, on the whole option: the pill counts them.
+    await desk.fill("#ws-whole", "A bigger title");
+    await desk.click("#ws-side [data-ws-send-whole]:not([data-ws-send-whole=comment])");
+    await desk.waitForSelector('#ws-side [data-ws-note="t2"]');
+    await desk.waitForFunction(() => /^Working on 2 comments · Tabs$/.test(document.querySelector(".ws-agent")?.textContent.trim() || ""));
+  } finally {
+    await run.close();
+  }
+});
+
 // Two views of one design with the same markup (#163): a note's place is looked for only inside the
 // view it was written on, however its path was cut, and one that view no longer has never opens another.
 const SAME = (word, a, b) => `<main><section><div><div><div><ul><li>${word} ${a}</li><li>${word} ${b}</li></ul></div></div></div></section></main>`;

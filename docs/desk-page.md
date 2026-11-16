@@ -30,8 +30,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   it below: Design Desk's open questions stand right under the box, never inside it. **Design workspace** is not in the box: its button sits at the right end of the options' tabs, beside the design it opens. With a live prototype the options fold away, so the button stands at the row's right end instead, and the options' tabs leave it out when that fold opens: one button per view.
   **The design workspace** is laid out as a design tool. Its top bar holds the request, the options
   (number and name, one click each; a DD spinner while Design Desk works on one, faint while it waits
-  in the queue; a count of its open comments), **+** for one more option, a pill saying what Design
-  Desk does, Figma in one menu, and Close. The bar under it holds only what is looked at: the
+  in the queue; a count of its open comments), **+** for one more option, a pill naming the work and its
+  option (`Working on a comment: “<its first words>” · <option>`; it breathes while the work waits in the queue), Figma in one menu, and Close. The bar under it holds only what is looked at: the
   design's pages (its own review bar is hidden in the workspace and driven from here), its states
   (‹ › before one menu by part, so the arrows never move), its alternatives and its version. The design sits on a canvas, glowing
   while Design Desk changes it; a strip above it names an alternative (**Use this one**), an older
@@ -43,7 +43,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   It opens in Click through; an older version and the final check offer only Click through
   (**Make more changes** after a final check opens in Select).
   Each tool does one thing. **Comment:** a click on a part opens a comment beside it (Send to
-  Design Desk, Just comment); the side panel is left as it is. **Edit text:** the text typed in
+  Design Desk, Just comment), and opening it leaves the side panel as it is. Once any comment is
+  sent (in place, or from the side panel), the part is let go and the panel turns to Comments with
+  the new one in view, lit a moment. **Edit text:** the text typed in
   place shows ✓ (Save, Enter) and ✕ (Cancel, Esc; a click elsewhere in the design cancels too).
   Save changes the words in the page at once, as the drawing's next version (`POST
   /api/cards/<id>/text`, `text_edit` on the drawing), with nothing for Design Desk to do but the
