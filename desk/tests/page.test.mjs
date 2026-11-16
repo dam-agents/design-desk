@@ -2015,7 +2015,7 @@ const bridgeViews = (design, old = design) => `<script>
 window.calls = [];
 const at = new Date().toISOString();
 const by = { email: "pat@example.com", role: "pm" };
-// Paths as a Desk before 1.96.0 stored them: seven steps, short of the view, so each matches in both views.
+// Paths as a Desk before 1.97.0 stored them: seven steps, short of the view, so each matches in both views.
 const note = (id, n, selector, text) => ({ id, n, kind: "comment", state: "open", anchor: { variant: "v1", selector, label: "List item", view: "2", view_name: "Chat" }, messages: [{ by, at, text }] });
 const request = { id: "r8", kind: "request", title: "Files", status: "feedback", created: at, triage: { verdict: "design", reasons: [] }, prototype: { state: "none" },
   variants: [{ id: "v1", name: "Lists", asset: "A-1", fidelity: "wireframe" }],
