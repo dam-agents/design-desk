@@ -178,8 +178,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   option shows no **Why it looks like this** section (the design workspace keeps it
   in its side panel). An option's design (the mockup) and All elements start open, as in full mode. A
   list's filters stay as they are drawn and filter as in full mode, **Needs a designer** among them.
-  A row's source line (`created:`, `from:`, `by:`, `based on:`) is only words: none of it filters,
-  opens or links; a click on it opens the row.
+  A row's source line leaves out `from:` (the system it came in through), and the rest
+  (`created:`, `by:`, `based on:`) is only words: none of it filters, opens or links; a click
+  on it opens the row.
   Nothing else names a role a request needs: no **Needs a designer** line or heading. A request offers no rename. Switching the mode
   starts an option's sections again as they first open. The tab
   intros and How it works, its drawings included, leave out what it hides, and so does the bell:
