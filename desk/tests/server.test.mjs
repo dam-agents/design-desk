@@ -3,7 +3,7 @@
 // the Desk's link.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -592,7 +592,14 @@ test("a redraw uploaded with --option carries the notes' names; a note whose par
   const dir = mkdtempSync(join(tmpdir(), "desk-redraw-")), file = join(dir, "v1.html");
   writeFileSync(file, page("<p>Files</p><ul><li>b.pdf</li><li>a.pdf</li></ul>"));
   const design = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "bin", "design.mjs");
-  const run = spawnSync(process.execPath, [design, "desk", "asset", file, "--kind", "variant", "--card", card.id, "--option", "v1"], { env: { ...process.env, ...d.env }, encoding: "utf8" });
+  // Run without blocking: a test process that blocks while the browser starts (tens of seconds on CI)
+  // misses the server closing its idle connection, and its next request fails on that dead socket.
+  const run = await new Promise((done) => {
+    const p = spawn(process.execPath, [design, "desk", "asset", file, "--kind", "variant", "--card", card.id, "--option", "v1"], { env: { ...process.env, ...d.env } });
+    let stdout = "", stderr = "";
+    p.stdout.on("data", (x) => (stdout += x)); p.stderr.on("data", (x) => (stderr += x));
+    p.on("close", (status) => done({ status, stdout, stderr }));
+  });
   assert.equal(run.status, 0, run.stdout + run.stderr);
   const out = JSON.parse(run.stdout);
   assert.deepEqual(out.anchors.carried.map((x) => [x.thread, x.name]).sort(), [[a, "list-item-a-pdf"], [b, "list-item-b-pdf"]].sort());
