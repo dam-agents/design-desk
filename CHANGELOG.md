@@ -7,6 +7,14 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.95.4 — 2026-11-16
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): an option's tab dragged
+   for side by side lights half of the whole option panel, not half of the design; the options'
+   tabs stay one row that scrolls sideways, with Design workspace fixed at its end; Approve a design names each
+   option with its tab's number. No data migration.
+
 ## 1.95.3 — 2026-11-13
 
 **Upgrade:**

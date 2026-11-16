@@ -67,8 +67,12 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   colors (`--*` on `:root`) first, then those it uses, then any color, marked as not the design's.
   Other parts changed and not sent are listed under it, kept per drawing until the Desk is left;
   **Send** makes one `change` note per part with `anchor.style` ([requests.md](requests.md) → revise).
-  **Side by side:** an option's tab dragged onto its design lights the half it would land on
-  (left or right); the drop splits the design in two, that option in its half, the other half
+  The options' tabs stay one row: when they do not fit, the row scrolls sideways and keeps the
+  picked tab in view, and **Design workspace** stays fixed at its right end. A redraw of the same
+  item keeps the row where the person scrolled it; only another tab picked moves it, just enough to
+  show that tab; another item's row starts at its beginning.
+  **Side by side:** an option's tab dragged onto the panel the tabs switch lights the half of
+  that whole panel it would land on (left or right); the drop splits the design in two, that option in its half, the other half
   empty until another tab is dragged there. The empty half also offers **Show how it looks
   today**, the screen as it is in the product (`now`), or **Draw how it looks today**
   (`draw-now`) while there is none. Side by side is then the first tab, named for its halves
