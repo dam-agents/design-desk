@@ -46,6 +46,14 @@ test("a redraw carries each note's name onto its part: moved, renamed round it, 
   assert.equal((r.html.match(/data-anchor="list-item-a-pdf"/g) || []).length, 0, "two parts alike: no name guessed");
   assert.ok(r.html.includes("<script>document.body.dataset.ran = 1</script>") && !r.html.includes("data-ran"), "the page is read, never run");
   assert.ok(r.html.startsWith("<!DOCTYPE html>"));
+  // Its own words changed where it stands: carried by its place. A part taken out, its neighbour moved
+  // into its place: not carried onto the neighbour.
+  const btn = (x) => page("", `<div><button>${x[0]}</button><button>${x[1]}</button><button>${x[2]}</button></div>`);
+  const place = (n, name) => ({ thread: `T-${n}`, ...at("2", "Chat", `div[data-view="2"] > div > button:nth-of-type(${n})`, name) });
+  const reworded = await carryNames(btn(["Save", "Cancel", "Help"]), btn(["Save", "Discard", "Help"]), [place(2, "button-cancel")]);
+  assert.deepEqual(by(reworded.carried), { "T-2": "place" });
+  const shifted = await carryNames(btn(["Save", "Cancel", "Help"]), page("", "<div><button>Save</button><button>Help</button></div>"), [place(2, "button-cancel")]);
+  assert.deepEqual([by(shifted.carried), Object.keys(by(shifted.gone))], [{}, ["T-2"]]);
   // Nothing to carry: the page goes as it is.
   const same = await carryNames(after, after, [{ thread: "T-5", ...at("2", "Chat", "button", "send") }]);
   assert.equal(same.html, after);

@@ -390,14 +390,17 @@ name is at `[data-view="<view>"] [data-anchor="<name>"]` once the markup carries
 revise, an alternative, a carried option, a state redrawn — with `design desk asset <file> --kind
 variant --card R-<n> --option <id>` (and `--state <id>` for one of its states). Before storing it,
 the command finds each note's part in the version on the card (by its name in its view, else its
-path), matches it in the new page — by the name when the page has it, else by the old path, else
-by tag and text, else by tag and class, each only when exactly one part qualifies — writes the
+path), matches it in the new page — by the name when the page has it, else by the old path (the
+same tag, and its words or its class), else by tag and text, else by tag and class, else by the old
+path alone when the part there says nothing another part of the old version said (its own words
+changed in place), each only when exactly one part qualifies — writes the
 name onto that part, into the file too, and gives a name to a note stored before parts had them.
 It prints `anchors: {carried: [{thread, name, how}], gone: [{thread, name, why}]}`. Nothing is
 guessed: a note in `gone` matched no part, or several. Look at each one: where its part is still in
 the design, moved or redrawn, put `data-anchor="<name>"` on it by hand in the option's source,
 rebuild and upload again; where the part is truly gone, leave it. When the upsert stores the new
-version, the Desk marks every named note whose name that version lacks with `anchor.gone`, the
+version, the Desk marks every note whose name that version lacks in the note's view (and every note
+with no name, which nothing carried) with `anchor.gone`, the
 version it went in: the note stays on the card and in the workspace's list, its pin shows on the
 versions before, and on that version and after it says "This place no longer exists in this
 version". A later version with the name again clears it. A page uploaded without `--option` carries

@@ -89,7 +89,9 @@ A skill that replaces a bundled one keeps the action's contract:
     into one file each;
   - every upsert of options sends every option on the card with the `version` it read, and
     each state with its own ([requests.md](requests.md) → Variants);
-  - `revise`: the same option id with its new file (the Desk keeps the earlier version), and
+  - `revise`: the same option id with its new file (the Desk keeps the earlier version), uploaded
+    with `design desk asset … --card R-<n> --option <id>` (`--state <id>` for a state) so its notes
+    keep their parts ([requests.md](requests.md) → Names notes hang on), and
     an answer on every note it applied or could not apply, an applied one with its before and
     after pictures ([requests.md](requests.md) → Variants);
   - `states`: the option's `states`, one self-contained HTML file per state, each with a

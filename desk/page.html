@@ -5879,7 +5879,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const nameFor = (el) => { const own = el.getAttribute("data-anchor"); if (own) return own;
       const root = el.closest("[data-view]") || document, mine = (x) => (x.view || x.view_name ? viewRoot(x) : document) === root;
       const taken = new Set([...root.querySelectorAll("[data-anchor]")].map((x) => x.getAttribute("data-anchor")).concat(names.filter(mine).map((x) => x.name)));
-      const words = slug(el.getAttribute("aria-label") || textOf(el)).split("-").filter(Boolean).slice(0, 3).join("-");
+      // The words as the markup has them (textContent), as toolkit/lib/anchors.mjs reads them when it names a note.
+      const words = slug(el.getAttribute("aria-label") || (el.textContent || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim()).split("-").filter(Boolean).slice(0, 3).join("-");
       const base = (slug(kind(el)) + (words ? "-" + words : "")).slice(0, 36).replace(/-+$/, "");
       let n = base, i = 1; while (taken.has(n)) n = base + "-" + ++i;
       el.setAttribute("data-anchor", n); placed.add(el); return n; };

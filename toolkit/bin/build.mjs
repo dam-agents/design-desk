@@ -14,7 +14,7 @@ import { toolchain } from "../lib/toolchain.mjs";
 import { resolveStyle, compileCss, fontCss } from "../lib/style.mjs";
 import { renderIcons } from "../lib/icons.mjs";
 import { renderComponents } from "../lib/components.mjs";
-import { ANCHOR_NAME } from "../../desk/store.mjs";
+import { ANCHOR_NAME, anchorsIn } from "../../desk/store.mjs";
 
 export async function main(_cmd, argv) {
   const pos = [], opt = {};
@@ -69,25 +69,13 @@ export async function main(_cmd, argv) {
 // The views a click leads to that the page does not have ("back" retraces the flow).
 // The names people's notes hang on (data-anchor, docs/requests.md → Names notes hang on): one name
 // twice in one view, or one that is not a short lowercase name, finds the wrong part or none.
-// The markup is read as tags, outside scripts, styles and comments; a closing tag closes what it
-// names and everything left open inside it, as a browser does.
 export function anchorProblems(html) {
-  const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
-  const stack = [], seen = new Map(), problems = [];
-  const text = html.replace(/<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->|<template\b[^>]*>[\s\S]*?<\/template\s*>/gi, "");
-  for (const m of text.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g)) {
-    const [, close, tag, attrs] = m, name = tag.toLowerCase();
-    if (close) { const i = stack.findLastIndex((x) => x.tag === name); if (i >= 0) stack.length = i; continue; }
-    const view = attrs.match(/\sdata-view=["']([^"']*)["']/)?.[1] ?? null;
-    const at = { tag: name, view: view ?? stack.at(-1)?.view ?? "" };
-    const anchor = attrs.match(/\sdata-anchor=["']([^"']*)["']/)?.[1];
-    if (anchor != null) {
-      const where = at.view ? `view ${at.view}` : "the page";
-      if (!ANCHOR_NAME.test(anchor)) problems.push(`data-anchor="${anchor}" in ${where} is not a name: lowercase letters, digits and dashes, at most 40`);
-      else if (seen.has(`${at.view}\u0000${anchor}`)) problems.push(`data-anchor="${anchor}" twice in ${where}`);
-      seen.set(`${at.view}\u0000${anchor}`, true);
-    }
-    if (!VOID.test(name) && !/\/\s*$/.test(attrs)) stack.push(at);
+  const seen = new Set(), problems = [];
+  for (const { view, name } of anchorsIn(html).anchors) {
+    const where = view ? `view ${view}` : "the page";
+    if (!ANCHOR_NAME.test(name)) problems.push(`data-anchor="${name}" in ${where} is not a name: lowercase letters, digits and dashes, at most 40`);
+    else if (seen.has(`${view}\u0000${name}`)) problems.push(`data-anchor="${name}" twice in ${where}`);
+    seen.add(`${view}\u0000${name}`);
   }
   return [...new Set(problems)];
 }

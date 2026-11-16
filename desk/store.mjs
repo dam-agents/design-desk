@@ -1410,8 +1410,8 @@ export class Store {
   }
 
   // A redraw carries each named note's part into its new markup (design desk asset --option, docs/requests.md →
-  // Names notes hang on). A note whose name a new version of its drawing lacks is gone from that version
-  // on (`anchor.gone`, the version): its pin shows on the versions before, and the note says its place no
+  // Names notes hang on). A note whose name a new version of its drawing lacks in the note's view, or a
+  // note with no name, is gone from that version on (`anchor.gone`, the version): its pin shows on the versions before, and the note says its place no
   // longer exists on that one and after. A version that has the name again clears it.
   markGone(c, before = []) {
     const drawings = [];
@@ -1424,8 +1424,9 @@ export class Store {
       const html = own(this.db.assets, d.asset) ? String(this.getAsset(d.asset).data || "") : "";
       for (const id of c.threads || []) {
         const a = this.db.threads[id]?.anchor;
-        if (!a?.name || a.variant !== variant || (a.state || null) !== state) continue;
-        if (html.includes(`data-anchor="${a.name}"`) || html.includes(`data-anchor='${a.name}'`)) delete a.gone;
+        if (!a?.selector || a.variant !== variant || (a.state || null) !== state) continue;
+        // A note with no name was carried by nothing: where its part is in the new markup is not known.
+        if (a.name && hasAnchor(html, a)) delete a.gone;
         else if (!a.gone) a.gone = d.version || 1;
       }
     }
@@ -2936,6 +2937,33 @@ function cleanPart(p) {
 }
 
 export const ANCHOR_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
+// The views of a page and the names in each (data-anchor), read from its markup as tags, outside
+// scripts, styles, comments and a control's templates; a closing tag closes what it names and
+// everything left open inside it, as a browser does. A name outside every view is the page's (view "").
+export function anchorsIn(html) {
+  const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
+  const stack = [], views = [], anchors = [];
+  const text = String(html).replace(/<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->|<template\b[^>]*>[\s\S]*?<\/template\s*>/gi, "");
+  for (const m of text.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g)) {
+    const [, close, tag, attrs] = m, name = tag.toLowerCase();
+    if (close) { const i = stack.findLastIndex((x) => x.tag === name); if (i >= 0) stack.length = i; continue; }
+    const own = attrs.match(/\sdata-view=["']([^"']*)["']/)?.[1] ?? null;
+    if (own != null) views.push({ view: own, view_name: attrs.match(/\sdata-view-name=["']([^"']*)["']/)?.[1] || `View ${own}` });
+    const at = { tag: name, view: own ?? stack.at(-1)?.view ?? "" };
+    const anchor = attrs.match(/\sdata-anchor=["']([^"']*)["']/)?.[1];
+    if (anchor != null) anchors.push({ view: at.view, name: anchor });
+    if (!VOID.test(name) && !/\/\s*$/.test(attrs)) stack.push(at);
+  }
+  return { views, anchors };
+}
+// Whether a page has a note's name in the note's view: the view found by its name, else its number,
+// as the workspace finds it; a note with no view, anywhere in the page.
+export function hasAnchor(html, a) {
+  const { views, anchors } = anchorsIn(html);
+  if (!a.view && !a.view_name) return anchors.some((x) => x.name === a.name);
+  const v = (a.view_name && views.find((x) => x.view_name === a.view_name)) || (a.view && views.find((x) => x.view === String(a.view)));
+  return Boolean(v) && anchors.some((x) => x.name === a.name && x.view === v.view);
+}
 
 function cleanAnchor(a) {
   if (typeof a !== "object") throw bad("anchor must be an object");

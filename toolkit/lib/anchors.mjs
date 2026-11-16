@@ -1,8 +1,10 @@
 // The names people's notes hang on, carried into a redraw (docs/requests.md → Names notes hang on).
 // Each note's part is found in the drawing as it was (by its name in its view, else its path) and
-// matched in the new markup: by the name when the new markup has it, else by the old path, else by
-// tag and text, else by tag and class, each only when exactly one part qualifies. The name is then
-// written on that part. With no match, or several, nothing is guessed: the note is listed as gone.
+// matched in the new markup: by the name when the new markup has it, else by the old path (the same
+// tag, and its words or its class), else by tag and text, else by tag and class, else by the old path
+// alone when the part there says nothing another part of the old version said (its own words changed
+// in place) — each only when exactly one part qualifies. The name is then written on that part. With
+// no match, or several, nothing is guessed: the note is listed as gone.
 // Both pages are read with scripts off, as markup, never run.
 import { launch } from "./core.mjs";
 
@@ -15,7 +17,7 @@ function inPage({ step, notes, prints }) {
   const all = (root, sel) => { if (!sel) return []; try { const s = root === document ? sel : sel.replace(/\[data-view="[^"]*"\]/, "[data-view=" + q(root.dataset.view) + "]"); return [...(root !== document && root.matches(s) ? [root] : []), ...root.querySelectorAll(s)]; } catch { return []; } };
   const named = (root, name) => all(root, "[data-anchor=" + q(name) + "]")[0] || null;
   const text = (el) => (el.textContent || el.getAttribute("aria-label") || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ");
-  // As the workspace's frame names a part (desk/page.html → nameFor).
+  // As the workspace's frame names a part (desk/page.html → nameFor), from the same words.
   const kind = (el) => { const t = el.tagName.toLowerCase(), r = el.getAttribute("role"); if (t === "button" || r === "button") return "Button"; if (t === "a") return "Link"; if (/^h[1-6]$/.test(t)) return "Heading"; if (["input", "textarea", "select"].includes(t)) return "Field"; if (["img", "svg", "path"].includes(t)) return "Image"; if (t === "li") return "List item"; if (t === "label") return "Label"; if (["p", "span", "small", "strong", "em", "b"].includes(t)) return "Text"; if (t === "nav") return "Navigation"; if (t === "header") return "Header"; if (["table", "tr", "td"].includes(t)) return "Table"; return "Area"; };
   const slug = (t) => String(t || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (step === "old") {
@@ -32,7 +34,10 @@ function inPage({ step, notes, prints }) {
       }
       // A second note on the part finds the name the first one gave it.
       if (!el.hasAttribute("data-anchor")) el.setAttribute("data-anchor", name);
-      out.push({ thread: n.thread, name, fresh: !n.name, tag: el.tagName.toLowerCase(), text: text(el).slice(0, 300), cls: el.getAttribute("class") || "", path: n.selector, view: n.view, view_name: n.view_name });
+      // What the other parts of its kind in the view said: one of them at the part's place in the new
+      // version is that part moved up, not this one with new words.
+      const others = [...new Set(all(root, el.tagName.toLowerCase()).filter((x) => x !== el).map((x) => text(x).slice(0, 300)))].slice(0, 300);
+      out.push({ thread: n.thread, name, fresh: !n.name, tag: el.tagName.toLowerCase(), text: text(el).slice(0, 300), cls: el.getAttribute("class") || "", others, path: n.selector, view: n.view, view_name: n.view_name });
     }
     return out;
   }
@@ -46,11 +51,14 @@ function inPage({ step, notes, prints }) {
     const at = all(root, p.path), byPath = at.length === 1 && at[0].tagName.toLowerCase() === p.tag && (text(at[0]) === p.text || (p.cls && at[0].getAttribute("class") === p.cls)) ? at[0] : null;
     const byText = !byPath && p.text ? one(same.filter((x) => text(x) === p.text)) : null;
     const byClass = !byPath && !byText && p.cls ? one(same.filter((x) => x.getAttribute("class") === p.cls)) : null;
-    const el = byPath || byText || byClass;
+    // Its own words changed where it stands: the one part of its kind at its old place, unless that part
+    // says what another part of the old version said (that one moved into the place this one left).
+    const byPlace = !byPath && !byText && !byClass && at.length === 1 && at[0].tagName.toLowerCase() === p.tag && !p.others.includes(text(at[0]).slice(0, 300)) ? at[0] : null;
+    const el = byPath || byText || byClass || byPlace;
     if (!el) { gone.push({ thread: p.thread, name: p.name, why: "no one part of the new version matches it" }); continue; }
     if (el.hasAttribute("data-anchor")) { gone.push({ thread: p.thread, name: p.name, why: `its part there is named ${el.getAttribute("data-anchor")} already` }); continue; }
     el.setAttribute("data-anchor", p.name);
-    carried.push({ thread: p.thread, name: p.name, how: byPath ? "path" : byText ? "text" : "class" });
+    carried.push({ thread: p.thread, name: p.name, how: byPath ? "path" : byText ? "text" : byClass ? "class" : "place" });
   }
   const changed = carried.some((x) => x.how !== "name");
   return { carried, gone, html: changed ? (document.doctype ? "<!DOCTYPE " + document.doctype.name + ">\n" : "") + document.documentElement.outerHTML : null };

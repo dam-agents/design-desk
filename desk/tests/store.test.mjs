@@ -1850,10 +1850,16 @@ test("a named note is gone from the first version of its drawing without its nam
   s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: v.asset, states: [{ id: "err", version: 1, name: "Error", part: "Filters", asset: html("<p>y</p>"), selector: "p" }] }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
   assert.deepEqual([gone(kept), gone(lost), gone(onState)], [undefined, undefined, 2]);
   s.act(id, alice, "alternatives", "Chips", { variant: "v1", part: { selector: "#f", label: "Filters" } });
-  s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: v.asset, alternatives: [{ id: "a", name: "Chips", part: "Filters", asset: html('<div data-anchor="filters">f</div>') }] }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
+  s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: v.asset, alternatives: [{ id: "a", name: "Chips", part: "Filters", asset: html('<div data-view="1" data-view-name="Home"><div data-anchor="filters">f</div></div>') }] }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
   finish();
   s.act(id, alice, "pick-alternative", "a", { variant: "v1" });
   assert.deepEqual([gone(kept), gone(lost), gone(onState)], [undefined, 2, 2], "the version the alternative made has filters and no chips");
+  // A name counts in the note's own view only; a note with no name was carried by nothing.
+  const inView = s.openThread(id, alice, { kind: "comment", text: "Hm", anchor: { variant: "v1", selector: "b", name: "total", view: "2", view_name: "Chat" } }).thread.id;
+  const bare = s.openThread(id, alice, { kind: "comment", text: "Hm", anchor: { variant: "v1", selector: "b" } }).thread.id;
+  const now = s.getCard(id).variants[0];
+  s.upsertCard({ id, variants: [{ id: "v1", version: now.version, name: "Table", asset: html('<div data-view="1" data-view-name="Home"><b data-anchor="total">1</b><div data-anchor="filters">f</div></div><div data-view="2" data-view-name="Chat"><i>2</i></div>') }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
+  assert.deepEqual([gone(inView), gone(bare), gone(kept)], [3, 3, undefined], "the same name in another view is not its part");
 });
 
 test("edit text: the words change in the page at once, as the drawing's next version", () => {
