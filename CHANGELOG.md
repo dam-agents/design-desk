@@ -7,6 +7,19 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.97.0 — 2026-11-16
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): a note on a design opens on the view it was
+   written on, its part looked for only there, and one that view no longer has says so instead of
+   opening another view; a part is named (`data-anchor`) when first commented on, and a note whose
+   part a redraw left out pins only on the versions before. Notes already stored work again as
+   they are; no data migration.
+2. From now on, upload a new version of an option already on a card with `design desk asset …
+   --card R-<n> --option <id>` ([requests.md](docs/requests.md) → Names notes hang on): it carries
+   the notes' names into the new page. Nothing to run for this step.
+
 ## 1.96.1 — 2026-11-16
 
 **Upgrade:**

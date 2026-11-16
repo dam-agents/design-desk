@@ -184,6 +184,11 @@ Rules — `design build` enforces the mechanical ones:
   `data-design-note="…"` (one or two plain sentences). The review bar's **Show notes** switch
   shows only when a note exists, numbers the notes and shows each on pointing; pictures from
   `design shot` never show them.
+- **Names people's notes hang on:** a part may carry `data-anchor="<name>"` (docs/requests.md →
+  Names notes hang on); keep every one the page has when you change or rebuild it, on the same
+  part wherever it moves, and never give one name to two parts of one view. A new version of an
+  option already on a card is uploaded with `--option <id>`, which carries its notes' names onto
+  it; a note it lists as `gone` whose part is still there gets its name put on by hand.
 - **Light interactions only:** a small inline `<script>` toggling a class or `hidden` is fine.
 - **Empty states:** populated content in `data-populated`, the real empty state in
   `data-empty-view`. The review bar shows the toggle on views that have one.

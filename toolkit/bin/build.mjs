@@ -6,7 +6,7 @@
 //   every class="" through tailwind-merge when the style uses it, as the app's cn() does
 // Checks, failing the build: inline <script>s parse; no <style> blocks or style="" beyond
 // a component's own size or position; no `&amp;` inside a class; no unhandled <ui-*> tag;
-// every data-goto-view names a view the page has.
+// every data-goto-view names a view the page has; no data-anchor twice in one view.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { TOOLKIT, fail, req, slugOf } from "../lib/core.mjs";
@@ -14,6 +14,7 @@ import { toolchain } from "../lib/toolchain.mjs";
 import { resolveStyle, compileCss, fontCss } from "../lib/style.mjs";
 import { renderIcons } from "../lib/icons.mjs";
 import { renderComponents } from "../lib/components.mjs";
+import { ANCHOR_NAME, anchorsIn } from "../../desk/store.mjs";
 
 export async function main(_cmd, argv) {
   const pos = [], opt = {};
@@ -53,6 +54,8 @@ export async function main(_cmd, argv) {
   if (!html.includes("<!-- design:css -->")) fail("missing <!-- design:css --> in <head>");
   const dangling = danglingGotos(html);
   if (dangling.length) fail(`data-goto-view names no view: ${dangling.slice(0, 3).join(", ")} — give the target a data-view, or use "back"`);
+  const anchors = anchorProblems(html);
+  if (anchors.length) fail(`${anchors.slice(0, 3).join("; ")} — name each part once per view (docs/requests.md → Names notes hang on)`);
   if (!hasReviewBar) fail("missing <!-- design:review-bar --> at the top of <body> — every page the build makes carries the review bar");
 
   const css = compileCss(style, html);
@@ -64,6 +67,19 @@ export async function main(_cmd, argv) {
 }
 
 // The views a click leads to that the page does not have ("back" retraces the flow).
+// The names people's notes hang on (data-anchor, docs/requests.md → Names notes hang on): one name
+// twice in one view, or one that is not a short lowercase name, finds the wrong part or none.
+export function anchorProblems(html) {
+  const seen = new Set(), problems = [];
+  for (const { view, name } of anchorsIn(html).anchors) {
+    const where = view ? `view ${view}` : "the page";
+    if (!ANCHOR_NAME.test(name)) problems.push(`data-anchor="${name}" in ${where} is not a name: lowercase letters, digits and dashes, at most 40`);
+    else if (seen.has(`${view}\u0000${name}`)) problems.push(`data-anchor="${name}" twice in ${where}`);
+    seen.add(`${view}\u0000${name}`);
+  }
+  return [...new Set(problems)];
+}
+
 export function danglingGotos(html) {
   const views = new Set([...html.matchAll(/\sdata-view="([^"]*)"/g)].map((m) => m[1]));
   return [...new Set([...html.matchAll(/\sdata-goto-view="([^"]*)"/g)].map((m) => m[1]))].filter((v) => v !== "back" && !views.has(v));

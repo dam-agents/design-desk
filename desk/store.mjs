@@ -1396,6 +1396,42 @@ export class Store {
     return { card: c };
   }
 
+  // A note stored before parts had names gets the one the redraw that carried it gave its part
+  // (design desk asset --option); a note that has a name keeps it.
+  nameNotes(cardId, list) {
+    const c = this.card(cardId), named = [];
+    for (const x of Array.isArray(list) ? list.slice(0, 200) : []) {
+      const t = own(this.db.threads, String(x?.thread || ""));
+      if (!t || !(c.threads || []).includes(t.id) || !t.anchor?.selector || t.anchor.name || typeof x.name !== "string" || !ANCHOR_NAME.test(x.name)) continue;
+      t.anchor.name = x.name; named.push(t.id);
+    }
+    if (named.length) this.save();
+    return { named };
+  }
+
+  // A redraw carries each named note's part into its new markup (design desk asset --option, docs/requests.md →
+  // Names notes hang on). A note whose name a new version of its drawing lacks in the note's view, or a
+  // note with no name, is gone from that version on (`anchor.gone`, the version): its pin shows on the versions before, and the note says its place no
+  // longer exists on that one and after. A version that has the name again clears it.
+  markGone(c, before = []) {
+    const drawings = [];
+    for (const v of c.variants || []) {
+      const was = before.find((x) => x.id === v.id);
+      if (was && was.asset !== v.asset) drawings.push([v.id, null, v]);
+      for (const st of v.states || []) { const o = (was?.states || []).find((x) => x.id === st.id); if (o && o.asset !== st.asset) drawings.push([v.id, st.id, st]); }
+    }
+    for (const [variant, state, d] of drawings) {
+      const html = own(this.db.assets, d.asset) ? String(this.getAsset(d.asset).data || "") : "";
+      for (const id of c.threads || []) {
+        const a = this.db.threads[id]?.anchor;
+        if (!a?.selector || a.variant !== variant || (a.state || null) !== state) continue;
+        // A note with no name was carried by nothing: where its part is in the new markup is not known.
+        if (a.name && hasAnchor(html, a)) delete a.gone;
+        else if (!a.gone) a.gone = d.version || 1;
+      }
+    }
+  }
+
   // The alternative a person picked becomes the option's next version; the earlier one stays
   // in its history and the other alternatives go (docs/requests.md → Alternatives of a part).
   pickAlternative(c, who, variant, altId) {
@@ -1407,8 +1443,10 @@ export class Store {
     if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && i.kind === "revise")) throw bad(BUSY);
     const at = this.clock();
     v.history = [{ asset: v.asset, version: v.version || 1, drawn: v.drawn || null }, ...(v.history || [])].slice(0, 10);
+    const before = structuredClone(c.variants);
     v.asset = alt.asset; v.version = (v.version || 1) + 1; v.drawn = at;
     v.picked = { alternative: alt.name, part: alt.part, by: person(who), at };
+    this.markGone(c, before);
     v.alternatives = [];
     c.updated = at;
     // The new version reaches what was drawn from the option: its states are drawn again, and
@@ -2282,6 +2320,7 @@ export class Store {
     // A summary for Designs alone is not an event: a backfill must not move when a request was sent (docs/desk-page.md → Designs).
     if (!c || Object.keys(fields).some((k) => fields[k] !== undefined && !["id", "dev_summary", "ci", "reminded", "translation"].includes(k))) next.updated = this.clock();
     this.db.cards[next.id] = next;
+    if (next.kind === "request" && fields.variants !== undefined) this.markGone(next, c?.variants || []);
     // A design already in the catalog follows every new version of its option and of its states.
     if (next.kind === "request" && next.in_catalog && fields.variants !== undefined) {
       const v = next.variants.find((x) => x.id === next.in_catalog.variant);
@@ -2897,6 +2936,35 @@ function cleanPart(p) {
   return { selector: a.selector, text: a.text, label: a.label, view: a.view, view_name: a.view_name };
 }
 
+export const ANCHOR_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
+// The views of a page and the names in each (data-anchor), read from its markup as tags, outside
+// scripts, styles, comments and a control's templates; a closing tag closes what it names and
+// everything left open inside it, as a browser does. A name outside every view is the page's (view "").
+export function anchorsIn(html) {
+  const VOID = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
+  const stack = [], views = [], anchors = [];
+  const text = String(html).replace(/<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<!--[\s\S]*?-->|<template\b[^>]*>[\s\S]*?<\/template\s*>/gi, "");
+  for (const m of text.matchAll(/<(\/?)([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g)) {
+    const [, close, tag, attrs] = m, name = tag.toLowerCase();
+    if (close) { const i = stack.findLastIndex((x) => x.tag === name); if (i >= 0) stack.length = i; continue; }
+    const own = attrs.match(/\sdata-view=["']([^"']*)["']/)?.[1] ?? null;
+    if (own != null) views.push({ view: own, view_name: attrs.match(/\sdata-view-name=["']([^"']*)["']/)?.[1] || `View ${own}` });
+    const at = { tag: name, view: own ?? stack.at(-1)?.view ?? "" };
+    const anchor = attrs.match(/\sdata-anchor=["']([^"']*)["']/)?.[1];
+    if (anchor != null) anchors.push({ view: at.view, name: anchor });
+    if (!VOID.test(name) && !/\/\s*$/.test(attrs)) stack.push(at);
+  }
+  return { views, anchors };
+}
+// Whether a page has a note's name in the note's view: the view found by its name, else its number,
+// as the workspace finds it; a note with no view, anywhere in the page.
+export function hasAnchor(html, a) {
+  const { views, anchors } = anchorsIn(html);
+  if (!a.view && !a.view_name) return anchors.some((x) => x.name === a.name);
+  const v = (a.view_name && views.find((x) => x.view_name === a.view_name)) || (a.view && views.find((x) => x.view === String(a.view)));
+  return Boolean(v) && anchors.some((x) => x.name === a.name && x.view === v.view);
+}
+
 function cleanAnchor(a) {
   if (typeof a !== "object") throw bad("anchor must be an object");
   return {
@@ -2911,6 +2979,9 @@ function cleanAnchor(a) {
     // The view of a multi-view design the element is in (`data-view`, its name).
     view: typeof a.view === "string" ? a.view.slice(0, 40) : null,
     view_name: typeof a.view_name === "string" ? a.view_name.slice(0, 120) : null,
+    // The part's name, unique in its view (data-anchor, docs/requests.md → Names notes hang on): the
+    // frame finds the part by it before its path, and a redraw carries it into the new markup.
+    name: typeof a.name === "string" && ANCHOR_NAME.test(a.name) ? a.name : null,
     edit: a.edit && typeof a.edit === "object" ? { from: String(a.edit.from || "").slice(0, 300), to: String(a.edit.to || "").slice(0, 300) } : null,
     // Look changes made in the workspace's palette: a CSS property, the value before and the one picked.
     // Smart controls picked: which control, from which option to which, and the kit's source of it.

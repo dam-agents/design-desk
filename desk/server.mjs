@@ -419,6 +419,8 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "requests") return send(res, 201, store.createRequest({ agent: true }, b));
   // An earlier look of an element drawn from the code's history (docs/catalog.md → History).
   if (m === "POST" && p[1] === "cards" && p[3] === "looks") return send(res, 201, store.addLook(p[2], b));
+  // Names a redraw gave notes stored before parts had them (design desk asset --option).
+  if (m === "POST" && p[1] === "cards" && p[3] === "anchors") return send(res, 200, store.nameNotes(p[2], b.names));
   if (m === "POST" && p[1] === "assets") return send(res, 201, store.addAsset(b));
   if (m === "POST" && p[1] === "threads" && p[3] === "answer") return send(res, 200, store.answer(p[2], b.text, { resolve: Boolean(b.resolve), shots: b.shots ?? null, warns: b.warns ?? null }));
   if (m === "POST" && p[1] === "cards" && p[3] === "comment") return send(res, 201, store.openThread(p[2], { agent: true }, { kind: "comment", text: b.text, shots: b.shots ?? null }));

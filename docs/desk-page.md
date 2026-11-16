@@ -59,6 +59,15 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   canvas a little in from its edges and the tool bar stands under it, so the canvas never scrolls. A part selected is let go
   by Click through, by another option, state or version, and once it no longer shows in the design
   (another page, a closed menu); a note's part the design has not opened yet stays selected.
+  **Where a note is:** its part's path climbs to its view (`data-view`), an id or the page's root,
+  and the part is looked for only inside the view the note was written on, found by its name and
+  else by its number, so two views with the same markup never swap a note. A part that view no
+  longer has opens the note on its own view, with no pin and **This place no longer exists in this
+  version** above its words; another view is never opened for it.
+  A part picked gets a name (`data-anchor`, [requests.md](requests.md) → Names notes hang on), the
+  note on it keeps it, and the part is found by that name first. A note whose part a redraw left
+  out (`anchor.gone`) pins only on the versions before; on that version and after it stays in
+  Comments with **· not in this version**, and opens as one whose place is gone.
   **The look palette:** in Select, an admin, a designer or a lead developer gets **Change the look** in
   Properties, under the part selected: tabs Text, Fill, Spacing, Layout (a flex or grid
   part only) and Size, with steppers, segmented choices, colors, and a resize handle on the part's

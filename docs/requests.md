@@ -254,7 +254,7 @@ Compare with the product); a note from **Work into the design** is a `revise` li
     too (`was` keeps its first kind, `work_in` who asked); read its replies, the last word wins. Apply
     every open `change` thread of the card to the option's own source (kept under
     `work/output/`), rebuild, look, and upload the result as the **same option id** with its
-    new asset: the Desk numbers the version and keeps the earlier one. An option with `states` gets
+    new asset, uploaded with `--option` ([Names notes hang on](#names-notes-hang-on)): the Desk numbers the version and keeps the earlier one. An option with `states` gets
     every state redrawn in the same upsert (Every state of a part, step 5). Then answer each note
     (`design desk answer T-<n> <file> --resolve`) in one line: what changed, or why it
     could not ("that would change what the product does; the spec lists it").
@@ -283,7 +283,8 @@ Compare with the product); a note from **Work into the design** is a `revise` li
     `version` the option as they saw it. Draw **three** genuinely different ways the part could
     look that follow the note, each a self-contained copy of the whole option with only that
     part changed (built like the option, in its style). Look at each (`design shot`), upload
-    each (`--kind variant`), and send the option unchanged (its `version`, same asset) with
+    each (`--kind variant --card R-<n> --option <id>`: the one picked becomes the option's next
+    version, its notes' names on it), and send the option unchanged (its `version`, same asset) with
     `alternatives: [{id, name, how, part, asset, shot, selector, ask}]`: `id` short (`a`, `b`,
     `c`), `name` what makes it different in a few words, `how` one sentence, `part` the part in
     the product's words, `ask` the person's note. The workspace shows them above the design;
@@ -353,7 +354,9 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   element its `element` names, else to the one named as its `part`. An entry without `elements`
   keeps the option's; a revise that adds, removes or moves a part sends them anew. The tiles
   are cut from the option's latest version, so they follow every change of it.
-- Upload each variant: `design desk asset <file.html> --kind variant --name <name>`; set
+- Upload each variant: `design desk asset <file.html> --kind variant --name <name>`, and a new
+  version of one already on the card with `--card R-<n> --option <id>` ([Names notes hang
+  on](#names-notes-hang-on)); set
   `variants: [{id, version, name, rationale, fidelity, asset, stories, reasons, elements, states}]` (rationale: one
   line on when this one wins) and `status: feedback` in one `design desk upsert` (a Desk-filed request may stay at `variants`: [desk.md](desk.md) → Team feedback). The list is
   every option on the card: one already there goes with the `version` (and each of its states
@@ -364,6 +367,44 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   is split or its images shrunk.
 - A variant shows no real person, no real customer data, and no invented number presented
   as fact.
+
+## Names notes hang on
+
+A note on a design is tied to the part a person clicked. A part can carry a name in its markup,
+`data-anchor="<name>"` (lowercase letters, digits and dashes, at most 40, such as
+`spender-list`): a note's path then stops at the nearest named part, under its view
+(`[data-view="4"] [data-anchor="spender-list"] > li:nth-of-type(2)`), and outlives a rebuild that
+changes the markup round it. A name is the part's in one view: `design build` refuses one name twice
+in a view, and one that is not a name. It is not `data-design-note`, the team's notes written in the
+design itself (the `variants` skill → Notes for the team).
+
+**A part is named when it is first picked**, not before: the workspace's frame gives it a short name
+made from what it is and says (`list-item-file-a-pdf`), unique in its view, or the one it has; a
+note written on it stores it as `anchor.name`, beside the path it was written with (`anchor.selector`,
+the markup's, never through a name the markup lacks), and a second note on the part keeps the same
+name. Until a redraw writes it into the markup, the frame puts each stored name back on its part,
+found by that path in the note's view, whenever the design loads. In the option's page, a note with a
+name is at `[data-view="<view>"] [data-anchor="<name>"]` once the markup carries it, else at its path.
+
+**Every redraw carries the names.** Upload a new version of an option already on the card — a
+revise, an alternative, a carried option, a state redrawn — with `design desk asset <file> --kind
+variant --card R-<n> --option <id>` (and `--state <id>` for one of its states). Before storing it,
+the command finds each note's part in the version on the card (by its name in its view, else its
+path), matches it in the new page — by the name when the page has it, else by the old path (the
+same tag, and its words or its class), else by tag and text, else by tag and class, else by the old
+path alone when the part there says nothing another part of the old version said (its own words
+changed in place), each only when exactly one part qualifies — writes the
+name onto that part, into the file too, and gives a name to a note stored before parts had them.
+It prints `anchors: {carried: [{thread, name, how}], gone: [{thread, name, why}]}`. Nothing is
+guessed: a note in `gone` matched no part, or several. Look at each one: where its part is still in
+the design, moved or redrawn, put `data-anchor="<name>"` on it by hand in the option's source,
+rebuild and upload again; where the part is truly gone, leave it. When the upsert stores the new
+version, the Desk marks every note whose name that version lacks in the note's view (and every note
+with no name, which nothing carried) with `anchor.gone`, the
+version it went in: the note stays on the card and in the workspace's list, its pin shows on the
+versions before, and on that version and after it says "This place no longer exists in this
+version". A later version with the name again clears it. A page uploaded without `--option` carries
+nothing, so its notes are gone from it.
 
 ## Smart controls
 
@@ -424,7 +465,9 @@ sent to developers too: the states document the approved design and change nothi
    the part in that state, built like the option (`design build`, the same style), so a person
    compares states one by one. A state that needs a developer (a new rule or action: [boundary.md](boundary.md) → What needs a developer) is drawn
    and labelled "needs a developer", as in the options.
-4. Look at every state's shot (`design shot`), upload each (`--kind variant`). **The design
+4. Look at every state's shot (`design shot`), upload each (`--kind variant`; a state redrawn
+   under its id with `--card R-<n> --option <id> --state <state id>`, [Names notes hang
+   on](#names-notes-hang-on)). **The design
    catalog:** shoot the part alone in each state (`design shot <state.html> <dir> --element
    <selector>`, the part's CSS path in that page; the light picture, `<state>-element-light.png`,
    named after the state's page so the states share one directory — the picture is shot at three
