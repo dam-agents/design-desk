@@ -34,6 +34,10 @@ const USAGE = `usage: design desk <command>   (<card> is any card's number, <R-n
                                            thread_ts, message_ts, reporter, email, url}}
   asset <file> --kind <k> [--card <card>] [--name <n>] [--type <media/type>]
                                            store a file; kinds: screen variant spec patch image report
+        [--option <id> [--state <id>]]     a new version of that option (or state) of --card: carry
+                                           its notes' names onto their parts first, written into the
+                                           file; prints anchors: {carried, gone} (docs/requests.md →
+                                           Names notes hang on)
   answer <T-n> <text-file|-> [--resolve] [--shots <shots.json>] [--warns <warns.json>]
                                            answer a thread; --shots: what a worked-in change did,
                                            as design compare prints it with assets: [{asset, caption,
@@ -129,6 +133,17 @@ function flags(argv) {
 }
 
 // What a check reads (docs/desk.md → Decisions → The check): the card, its concepts and words.
+// A redraw of a drawing carries its notes' names (lib/anchors.mjs): the notes still in place on it, read
+// against its version on the card.
+async function carryInto(card, v, state, was, html) {
+  const notes = (card.threads || []).filter((t) => t.anchor?.variant === v.id && (t.anchor.state || null) === state && t.anchor.selector && !t.anchor.gone)
+    .map((t) => ({ thread: t.id, selector: t.anchor.selector, name: t.anchor.name || null, view: t.anchor.view || "", view_name: t.anchor.view_name || "" }));
+  if (!notes.length) return { html, carried: [], gone: [], named: [] };
+  const old = await call("GET", `/agent/assets/${was}`);
+  const { carryNames } = await import("../lib/anchors.mjs");
+  return carryNames(old.data, html, notes);
+}
+
 export const decisionCheckPath = (card, f = {}) => `/agent/cards/${encodeURIComponent(card || "")}/decision-check?concept=${encodeURIComponent(typeof f.concept === "string" ? f.concept : "")}&q=${encodeURIComponent(typeof f.q === "string" ? f.q : "")}`;
 
 export async function call(method, path, body) {
@@ -361,14 +376,26 @@ export async function main(_cmd, argv) {
     }
     case "asset": {
       const file = pos[0];
-      if (!file || !f.kind) fail("usage: design desk asset <file> --kind <kind> [--card <card>] [--name <name>]");
+      if (!file || !f.kind) fail("usage: design desk asset <file> --kind <kind> [--card <card>] [--name <name>] [--option <id> [--state <id>]]");
       const type = f.type || TYPES[extname(file).toLowerCase()] || "application/octet-stream";
       const text = /^text\/|json|svg/.test(type);
       const buf = readFileSync(file);
-      return out(await call("POST", "/agent/assets", {
+      let data = text ? buf.toString("utf8") : buf.toString("base64"), anchors = null;
+      if (f.option) {
+        if (!f.card || !/html/.test(type)) fail("--option needs --card and an HTML page");
+        const { card } = await call("GET", `/agent/cards/${f.card}`);
+        const v = (card.variants || []).find((x) => x.id === f.option);
+        const d = v && (f.state ? (v.states || []).find((x) => x.id === f.state) : v);
+        if (!d) fail(`${f.card} has no ${f.state ? `state ${f.state} of option ${f.option}` : `option ${f.option}`}`);
+        anchors = await carryInto(card, v, f.state || null, d.asset, data);
+        if (anchors.html !== data) { data = anchors.html; writeFileSync(file, data); }
+      }
+      const stored = await call("POST", "/agent/assets", {
         card: f.card || null, kind: f.kind, name: f.name || basename(file), contentType: type,
-        encoding: text ? "utf8" : "base64", data: text ? buf.toString("utf8") : buf.toString("base64"),
-      }));
+        encoding: text ? "utf8" : "base64", data,
+      });
+      if (anchors?.named.length) await call("POST", `/agent/cards/${f.card}/anchors`, { names: anchors.named });
+      return out(anchors ? { ...stored, anchors: { carried: anchors.carried, gone: anchors.gone } } : stored);
     }
     case "answer": return out(await call("POST", `/agent/threads/${pos[0]}/answer`, { text: readArg(pos[1]), resolve: Boolean(f.resolve), shots: await shotsArg(f.shots), warns: typeof f.warns === "string" ? JSON.parse(readArg(f.warns)) : null }));
     case "comment": return out(await call("POST", `/agent/cards/${pos[0]}/comment`, { text: readArg(pos[1]), shots: await shotsArg(f.shots) }));

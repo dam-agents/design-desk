@@ -1837,6 +1837,25 @@ test("alternatives and pick-alternative: three ways of a part, the one picked is
   assert.equal(Object.values(s.db.inbox).some((i) => i.kind === "states" && i.state !== "done"), false, "an option without states has none to draw again");
 });
 
+test("a named note is gone from the first version of its drawing without its name: an alternative picked, a state redrawn", () => {
+  const { s, id, finish } = withOptions();
+  const html = (t) => s.addAsset({ kind: "variant", name: t, contentType: "text/html", data: t, encoding: "utf8" }).asset.id;
+  const v = s.getCard(id).variants[0];
+  s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: v.asset, states: [{ id: "err", name: "Error", part: "Filters", asset: html('<p data-anchor="msg">x</p>'), selector: "p" }] }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
+  finish();
+  const note = (name, state) => s.openThread(id, alice, { kind: "comment", text: "Hm", anchor: { variant: "v1", ...(state ? { state } : {}), selector: "p", name, view: "1", view_name: "Home" } }).thread.id;
+  const [kept, lost, onState] = [note("filters"), note("chips"), note("msg", "err")];
+  const gone = (t) => s.thread(t).anchor.gone;
+  // A state redrawn without its note's name: only that state's notes are looked at.
+  s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: v.asset, states: [{ id: "err", version: 1, name: "Error", part: "Filters", asset: html("<p>y</p>"), selector: "p" }] }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
+  assert.deepEqual([gone(kept), gone(lost), gone(onState)], [undefined, undefined, 2]);
+  s.act(id, alice, "alternatives", "Chips", { variant: "v1", part: { selector: "#f", label: "Filters" } });
+  s.upsertCard({ id, variants: [{ id: "v1", version: 1, name: "Table", asset: v.asset, alternatives: [{ id: "a", name: "Chips", part: "Filters", asset: html('<div data-anchor="filters">f</div>') }] }, { id: "v2", version: 1, name: "Cards", asset: s.getCard(id).variants[1].asset }] });
+  finish();
+  s.act(id, alice, "pick-alternative", "a", { variant: "v1" });
+  assert.deepEqual([gone(kept), gone(lost), gone(onState)], [undefined, 2, 2], "the version the alternative made has filters and no chips");
+});
+
 test("edit text: the words change in the page at once, as the drawing's next version", () => {
   const { s, id } = withOptions();
   const first = s.getCard(id).variants[0].asset;

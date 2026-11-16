@@ -2011,7 +2011,7 @@ test("in Select mode the review bar acts: a hover or a click on it picks nothing
 // view it was written on, however its path was cut, and one that view no longer has never opens another.
 const SAME = (word, a, b) => `<main><section><div><div><div><ul><li>${word} ${a}</li><li>${word} ${b}</li></ul></div></div></div></section></main>`;
 const TWO_VIEWS = `<body>${BAR}<div data-view="1" data-view-name="Home">${SAME("Spent on", "rent", "food")}</div><div data-view="2" data-view-name="Chat">${SAME("File", "a.pdf", "b.pdf")}</div></body>`;
-const bridgeViews = (design) => `<script>
+const bridgeViews = (design, old = design) => `<script>
 window.calls = [];
 const at = new Date().toISOString();
 const by = { email: "pat@example.com", role: "pm" };
@@ -2025,7 +2025,8 @@ window.platform = { async request({ method, path, body }) {
   const answer = path === "/api/me" ? { role: "designer", email: "alice@example.com", can: { comment: true } }
     : path === "/api/cards" ? { cards: [{ ...request, variants: 1, threads: undefined }] } : path === "/api/agenda" ? { agenda: [] }
     : path === "/api/cards/r8" ? { card: request }
-    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(design).replace(/</g, "\\u003c")} } : {};
+    : path === "/api/assets/A-1" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(design).replace(/</g, "\\u003c")} }
+    : path === "/api/assets/A-0" ? { contentType: "text/html", encoding: "utf8", data: ${JSON.stringify(old).replace(/</g, "\\u003c")} } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
@@ -2148,6 +2149,45 @@ test("a note names its part: a new name unique in its view, a stored one put bac
     assert.equal((await say(2, 3, "Same")).name, "list-item-file-a-pdf-2", "the same words twice in a view: two names");
     assert.equal((await say(2, 1, "Again")).name, "list-item-file-a-pdf", "the part named a moment ago keeps its name");
     assert.equal((await say(1, 1, "Here too")).name, "list-item-file-a-pdf", "another view has names of its own");
+  } finally {
+    await run.close();
+  }
+});
+
+// A redraw that has no place for a note's part (#163): the note is in the list on every version, its
+// pin only on the versions that still have the part.
+test("a note whose part a redraw left out pins only on the versions before, and says so on the others", async (t) => {
+  const was = TWO_VIEWS.replace("<li>File b.pdf</li>", '<li data-anchor="files-b">File b.pdf</li>');
+  // Another file where it was: its old path would land on that one.
+  const now = TWO_VIEWS.replace("<li>File b.pdf</li>", "<li>File z.pdf</li>");
+  const bridge = bridgeViews(now, was).replace('variants: [{ id: "v1", name: "Lists", asset: "A-1", fidelity: "wireframe" }]', 'variants: [{ id: "v1", name: "Lists", asset: "A-1", fidelity: "wireframe", version: 2, history: [{ version: 1, asset: "A-0" }] }]')
+    .replace('threads: [note("t1", 1, "main > section > div > div > div > ul > li:nth-of-type(2)", "Show the file\'s size"),',
+      'threads: [Object.assign(note("t1", 1, "x", "Show the file\'s size"), { anchor: { variant: "v1", selector: \'div[data-view="2"] > main > section > div > div > div > ul > li:nth-of-type(2)\', name: "files-b", gone: 2, label: "List item", view: "2", view_name: "Chat" } }),');
+  assert.match(bridge, /gone: 2/);
+  const run = await launch(t, bridge);
+  if (!run) return;
+  const { desk } = run;
+  try {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r8"]');
+    await desk.click('[data-act="workspace"]');
+    let frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await frame.waitForSelector('#review [data-review-view="2"]', { state: "attached" });
+    await desk.waitForSelector('[data-ws-note="t1"]');
+    assert.match(await desk.textContent('[data-ws-note="t1"]'), /not in this version/, "listed, and saying where it is not");
+    await desk.click('[data-ws-note="t1"]');
+    await desk.waitForSelector("#ws-pop .ws-gone");
+    await frame.waitForFunction(() => document.querySelector("[data-view].review-shown")?.dataset.view === "2");
+    await desk.waitForTimeout(800);
+    assert.equal(await frame.locator('[data-note-pin="t1"]').count(), 0, "no pin where the part is gone");
+    assert.equal(await frame.locator('[data-anchor="files-b"]').count(), 0, "and its name is put on nothing");
+    // The version before still has the part: the pin is there, on it.
+    await desk.click("[data-ws-pop-close]");
+    await desk.selectOption("#ws-version", "1");
+    frame = await (await desk.waitForSelector("#ws-frame")).contentFrame();
+    await desk.click('[data-ws-page="2"]');
+    await frame.waitForSelector('[data-note-pin="t1"]');
+    assert.doesNotMatch(await desk.textContent('[data-ws-note="t1"]'), /not in this version/);
   } finally {
     await run.close();
   }

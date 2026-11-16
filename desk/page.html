@@ -6494,7 +6494,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const [st, label] = noteState(c, th), last = th.messages[th.messages.length - 1];
       const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
       return `<li class="note ${st === "done" ? "done" : ""} ${st}" data-ws-note="${esc(th.id)}" aria-current="${th.id === S.ws.note}" tabindex="0">
-        <div class="h"><span class="n" title="Comment #${th.n}">${st === "working" ? `<span class="dd-spin light"></span>` : th.n}</span><span class="where">${esc(where)}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${esc(label)}</span></div>
+        <div class="h"><span class="n" title="Comment #${th.n}">${st === "working" ? `<span class="dd-spin light"></span>` : th.n}</span><span class="where">${esc(where)}${goneHere(v, th) ? ` <span class="hint" title="This place no longer exists in this version">· not in this version</span>` : ""}</span><span class="chip ${st === "done" ? "ok" : st === "working" ? "warn" : ""}">${esc(label)}</span></div>
         <div class="first">${esc(th.messages[0].text)}</div>${th.messages.length > 1 ? `<div class="a">${last?.by?.agent ? "<b>Design Desk:</b> " : `${who(last.by)}: `}${esc(last.text)}</div>` : ""}${th.messages.length > 2 ? `<div class="hint">${th.messages.length - 1} replies</div>` : ""}</li>`;
     };
     const groups = drawings.map((id) => [id, notes.filter((n) => (n.anchor.state || null) === id)]).filter(([, ns]) => ns.length);
@@ -6507,7 +6507,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   // A note's part is not in the version shown: the frame found nothing for it in its view.
-  const placeGone = (c, th) => Boolean(th.anchor?.selector) && S.ws.missing === th.anchor.selector;
+  const placeGone = (c, th) => Boolean(th.anchor?.selector) && (S.ws.missing === th.anchor.selector || goneHere(wsVariant(c), th));
   // A comment in place, as in a design tool: a new one beside the part it is about, or an
   // existing one opened from its number on the design or from the list.
   function renderPop(c, v) {
@@ -6577,19 +6577,27 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         if (S.ws.selected?.selector) { frame.contentWindow?.postMessage({ type: "desk-select", selector: placeOf(S.ws.selected) }, "*"); renderPalette(); }
         else { const r = (v.reasons || []).find((x) => x.decision === S.ws.reason); if (r?.parts[0]) frame.contentWindow?.postMessage({ type: "desk-show", selector: r.parts[0].selector }, "*"); }
         // A comment open in place: the design shows its page and the part, and says where the part is.
-        const popOn = placeOf(S.ws.pop?.kind === "thread" ? notesOf(S.card).find((x) => x.id === S.ws.pop.id)?.anchor : S.ws.target);
+        const popTh = S.ws.pop?.kind === "thread" ? notesOf(S.card).find((x) => x.id === S.ws.pop.id) : null, popOn = popTh ? notePlace(v, popTh) : placeOf(S.ws.target);
         if (S.ws.pop?.anchored && popOn) { if (S.ws.pop.kind === "thread") frame.contentWindow?.postMessage({ type: "desk-show", selector: popOn }, "*"); frame.contentWindow?.postMessage({ type: "desk-track", selector: popOn }, "*"); }
       };
     } catch (e) { frame.replaceWith(Object.assign(document.createElement("div"), { className: "panel", textContent: e instanceof Said ? e.message : "This option could not be loaded." })); }
   }
   // The comments pinned on this option's drawing; the Comments switch hides them from the design only.
-  const pinned = (c, v) => notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector);
+  const pinned = (c, v) => notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.selector && !goneHere(v, n));
+  // A note whose part a redraw no longer has (anchor.gone, the first version without it): no pin on that
+  // version and after, and the note says so; the versions before still show it (docs/requests.md →
+  // Names notes hang on).
+  const goneHere = (v, n) => Boolean(n.anchor.gone) && inDrawing(n) && (S.ws.version || wsDrawing(v).version || 1) >= n.anchor.gone;
+  // A note's place for the frame: on a version its part is gone from, only its view, so its old path
+  // never lands on another part.
+  const notePlace = (v, n) => (goneHere(v, n) ? { selector: "", view: n.anchor.view || "", view_name: n.anchor.view_name || "" } : placeOf(n.anchor));
   function sendPins(c, v) {
-    const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: placeOf(n.anchor), state: noteState(c, n)[0], focus: S.ws.pop?.kind === "thread" && S.ws.pop.id === n.id }));
+    const pins = (S.ws.notes ? pinned(c, v) : []).map((n) => ({ n: n.n, note: n.id, selector: notePlace(v, n), state: noteState(c, n)[0], focus: S.ws.pop?.kind === "thread" && S.ws.pop.id === n.id }));
     if (S.ws.why && !S.ws.check) for (const r of v.reasons || []) for (const p of r.parts) pins.push({ why: r.decision, selector: p.selector, focus: S.ws.reason === r.decision, gone: gone(c, r.decision) });
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-pins", pins }, "*");
     // Every named note of this drawing, pins shown or not: the frame puts each name back on its part.
-    const names = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.name && n.anchor.selector).map((n) => ({ name: n.anchor.name, selector: n.anchor.selector, view: n.anchor.view || "", view_name: n.anchor.view_name || "" }));
+    // One whose part is gone from the version shown only keeps its name taken.
+    const names = notesOf(c).filter((n) => n.anchor.variant === v.id && inDrawing(n) && n.anchor.name && n.anchor.selector).map((n) => ({ name: n.anchor.name, selector: goneHere(v, n) ? "" : n.anchor.selector, view: n.anchor.view || "", view_name: n.anchor.view_name || "" }));
     $("#ws-frame")?.contentWindow?.postMessage({ type: "desk-names", names }, "*");
     // The option's elements with states drawn: a part picked inside one names it, for See every state.
     const els = elementsOf(v).filter((e) => e.states.length || e.controls?.length).flatMap((e) => [...new Set([e.selector, ...e.states.map((x) => x.selector)].filter(Boolean))].map((selector) => ({ key: e.key, selector })));
@@ -6836,7 +6844,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws.note = th.id; S.ws.menu = null;
       S.ws.pop = { kind: "thread", id: th.id, anchored: Boolean(th.anchor.selector) }; S.ws.anchor = null;
       renderWorkspace();
-      frameSay({ type: "desk-track", selector: placeOf(th.anchor) });
+      frameSay({ type: "desk-track", selector: notePlace(wsVariant(S.card), th) });
       return;
     }
     if (d.type === "desk-view") { S.ws.view = { view: String(d.view || "").slice(0, 40), view_name: String(d.view_name || "").slice(0, 120) }; return; }
@@ -7740,7 +7748,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const th = (S.card.threads || []).find((x) => x.id === ds.goto);
       if (!th?.anchor?.variant) return;
       S.variant = th.anchor.variant; S.ws.state = th.anchor.state || null; S.ws.open = true; S.ws.check = false; S.ws.mode = "off"; S.ws.version = null;
-      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, ...(th.anchor.name ? { name: th.anchor.name } : {}), text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
+      S.ws.selected = th.anchor.selector && !goneHere(wsVariant(S.card), th) ? { selector: th.anchor.selector, ...(th.anchor.name ? { name: th.anchor.name } : {}), text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || th.anchor.text || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       renderWorkspace(); return;
     }
     if (ds.act) { await act(ds.act); return; }
@@ -7837,11 +7845,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!th?.anchor) return;
       S.ws.note = th.id;
       if ((th.anchor.state || null) !== (S.ws.state || null)) { S.ws.state = th.anchor.state || null; S.ws.version = null; }
-      S.ws.selected = th.anchor.selector ? { selector: th.anchor.selector, ...(th.anchor.name ? { name: th.anchor.name } : {}), text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
+      S.ws.selected = th.anchor.selector && !goneHere(wsVariant(S.card), th) ? { selector: th.anchor.selector, ...(th.anchor.name ? { name: th.anchor.name } : {}), text: th.anchor.text || "", tag: th.anchor.tag || "", label: th.anchor.label || "an element", view: th.anchor.view, view_name: th.anchor.view_name } : null;
       S.ws.edit = null; S.ws.pop = { kind: "thread", id: th.id, anchored: Boolean(th.anchor.selector) }; S.ws.anchor = null;
       renderWorkspace();
-      frameSay({ type: "desk-select", selector: placeOf(th.anchor) || null });
-      frameSay({ type: "desk-track", selector: placeOf(th.anchor) });
+      frameSay({ type: "desk-select", selector: notePlace(wsVariant(S.card), th) || null });
+      frameSay({ type: "desk-track", selector: notePlace(wsVariant(S.card), th) });
       return;
     }
   }));
@@ -8491,8 +8499,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       S.ws = { ...S.ws, open: true, check: false, mode: "off", version: null, edit: null, alt: null, note: th.id, state: an.state || null, selected: null, target: null,
         filter: th.state === "resolved" ? "all" : S.ws.filter || "open", panel: "comments", pop: { kind: "thread", id: th.id, anchored: Boolean(an.selector) }, anchor: null };
       renderDetail(); renderWorkspace();
-      if (an.selector) frameSay({ type: "desk-show", selector: placeOf(an) });
-      frameSay({ type: "desk-track", selector: placeOf(an) });
+      if (an.selector) frameSay({ type: "desk-show", selector: notePlace(wsVariant(c), th) });
+      frameSay({ type: "desk-track", selector: notePlace(wsVariant(c), th) });
       const li = document.querySelector(`[data-ws-note="${CSS.escape(th.id)}"]`), ms = [...document.querySelectorAll("#ws-pop .m")];
       for (const [tid, m] of (x.marks || []).slice(1)) if (tid === th.id && ms[m]) spot(ms[m], "nearest");
       spot(ms[x.msg ?? 0] || li, "nearest");

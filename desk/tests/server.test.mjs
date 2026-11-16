@@ -3,7 +3,7 @@
 // the Desk's link.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -33,7 +33,7 @@ async function desk(t, config = "", roster = ROSTER) {
   return {
     viewer: (email, path, body, role) => send(path, as(email, role), body),
     agent: (path, body) => send(path, { "x-desk-agent-token": token }, body),
-    dir: join(work, "desk"), pid: proc.pid,
+    dir: join(work, "desk"), pid: proc.pid, env: { WORK_DIR: work, DESK_DIR: join(work, "desk"), DESK_PORT: String(port) },
   };
 }
 
@@ -570,4 +570,44 @@ test("a ping names its conversation: a thread, else the card, so each runs in a 
   const other = await d.viewer("alice@example.com", "/api/private", { text: "And the header?" });
   assert.notEqual(other.body.ping_conversation, asked.body.ping_conversation, "two asks by one person are two conversations");
   assert.match(asked.body.ping, /^Design Desk: a teammate is waiting on the Desk \(ref Q-\d+\)/);
+});
+
+// A redraw carries each note's name onto its part (#163, docs/requests.md → Names notes hang on):
+// `design desk asset --option` writes the names into the new page and names the notes stored
+// before names; the upsert marks a note whose name the new version lacks as gone from it.
+test("a redraw uploaded with --option carries the notes' names; a note whose part is gone is marked so", async (t) => {
+  const core = await import("../../toolkit/lib/core.mjs");
+  if (!core.chromium()) return t.skip("no browser here");
+  try { core.req("playwright-core"); } catch (e) { if (e.code === "MODULE_NOT_FOUND") return t.skip("toolkit dependencies are not installed"); throw e; }
+  const d = await desk(t);
+  const page = (chat) => `<!doctype html><html><body><div data-view="1" data-view-name="Home"><ul><li>Rent</li></ul></div><div data-view="2" data-view-name="Chat">${chat}</div></body></html>`;
+  const asset = async (html) => (await d.agent("/agent/assets", { kind: "variant", name: "v1.html", contentType: "text/html", encoding: "utf8", data: html })).body.asset.id;
+  const { card } = (await d.viewer("alice@example.com", "/api/requests", { problem: "Files are hard to find." })).body;
+  const v1 = await asset(page("<ul><li>a.pdf</li><li>b.pdf</li><li>c.pdf</li></ul>"));
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", variants: [{ id: "v1", name: "Lists", asset: v1 }] })).status, 200);
+  const note = async (n, name) => (await d.viewer("alice@example.com", `/api/cards/${card.id}/threads`, { kind: "comment", text: `On ${n}`,
+    anchor: { variant: "v1", selector: `div[data-view="2"] > ul > li:nth-of-type(${n})`, ...(name ? { name } : {}), label: "List item", view: "2", view_name: "Chat" } })).body.thread?.id ?? assert.fail("no thread");
+  const [b, c, a] = [await note(2, "list-item-b-pdf"), await note(3, "list-item-c-pdf"), await note(1)];
+
+  const dir = mkdtempSync(join(tmpdir(), "desk-redraw-")), file = join(dir, "v1.html");
+  writeFileSync(file, page("<p>Files</p><ul><li>b.pdf</li><li>a.pdf</li></ul>"));
+  const design = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "toolkit", "bin", "design.mjs");
+  const run = spawnSync(process.execPath, [design, "desk", "asset", file, "--kind", "variant", "--card", card.id, "--option", "v1"], { env: { ...process.env, ...d.env }, encoding: "utf8" });
+  assert.equal(run.status, 0, run.stdout + run.stderr);
+  const out = JSON.parse(run.stdout);
+  assert.deepEqual(out.anchors.carried.map((x) => [x.thread, x.name]).sort(), [[a, "list-item-a-pdf"], [b, "list-item-b-pdf"]].sort());
+  assert.deepEqual(out.anchors.gone.map((x) => x.thread), [c]);
+  assert.match(readFileSync(file, "utf8"), /<li data-anchor="list-item-b-pdf">b\.pdf<\/li><li data-anchor="list-item-a-pdf">a\.pdf<\/li>/, "the names are written into the file");
+
+  const up = await d.agent("/agent/cards", { id: card.id, variants: [{ id: "v1", name: "Lists", asset: out.asset.id, version: 1 }] });
+  assert.equal(up.status, 200, JSON.stringify(up.body));
+  const threads = (await d.agent(`/agent/cards/${card.id}`)).body.card.threads;
+  const anchor = (id) => threads.find((x) => x.id === id).anchor;
+  assert.deepEqual([anchor(a).name, anchor(a).gone], ["list-item-a-pdf", undefined], "a note stored before names has one now, and is in place");
+  assert.equal(anchor(b).gone, undefined);
+  assert.equal(anchor(c).gone, 2, "gone from version 2 on");
+  // Placed by hand in a later version, it is back.
+  const v3 = await asset(page('<ul><li data-anchor="list-item-b-pdf">b.pdf</li><li data-anchor="list-item-a-pdf">a.pdf</li><li data-anchor="list-item-c-pdf">c.pdf</li></ul>'));
+  await d.agent("/agent/cards", { id: card.id, variants: [{ id: "v1", name: "Lists", asset: v3, version: 2 }] });
+  assert.equal((await d.agent(`/agent/cards/${card.id}`)).body.card.threads.find((x) => x.id === c).anchor.gone, undefined, "a name the new version has again clears it");
 });
