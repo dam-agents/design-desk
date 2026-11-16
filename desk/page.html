@@ -6286,7 +6286,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function wsTab(c, x, i, on) {
     const b = busyOn(c, x.id), now = b.some((w) => w.state === "claimed");
     const open = notesOf(c).filter((n) => n.anchor.variant === x.id && n.state !== "resolved").length;
-    const tip = [`${i + 1} · ${x.name}`, ...b.map((w) => `Design Desk: ${w.what} (${busyWhen(w)})`), open ? plural(open, "open comment", "open comments") : ""].filter(Boolean).join(". ");
+    const tip = [`${i + 1} · ${x.name}`, ...b.map((w) => `${w.what} (${busyWhen(w)})`), open ? plural(open, "open comment", "open comments") : ""].filter(Boolean).join(". ");
     return `<button role="tab" class="ws-opt${b.length ? " busy" : ""}" data-ws-variant="${esc(x.id)}" aria-pressed="${on}" aria-selected="${on}" title="${esc(tip)}"><span class="ono">${i + 1}</span><span class="nm">${esc(x.name)}</span>${b.length ? `<span class="dd-spin ${now ? "" : "queued"}"></span>` : ""}${open ? `<span class="ws-ncount" aria-label="${plural(open, "open comment", "open comments")}">${wsIcon("comment")}${open}</span>` : ""}${on ? closeTab(c, x) : ""}</button>`;
   }
 
@@ -7402,7 +7402,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); }
     // What was sent shows at once: the part is let go, and the new comment comes into view
     // under Comments, on a filter that lists it, lit a moment.
-    if (sel) { S.ws.selected = null; S.ws.edit = null; frameSay({ type: "desk-select", selector: null }); }
+    if (sel || S.ws.selected) { S.ws.selected = null; S.ws.edit = null; frameSay({ type: "desk-select", selector: null }); }
     S.ws.panel = "comments"; if (S.ws.filter === "done") S.ws.filter = "open";
     toast(kind === "change" ? "Sent. Design Desk is changing it; the design updates here by itself." : "Comment added.");
     await openCard(c.id);

@@ -43,8 +43,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   It opens in Click through; an older version and the final check offer only Click through
   (**Make more changes** after a final check opens in Select).
   Each tool does one thing. **Comment:** a click on a part opens a comment beside it (Send to
-  Design Desk, Just comment); the side panel is left as it is. Whatever sends a comment (in place,
-  or from the side panel) lets the part go and shows the new comment, lit a moment, under Comments. **Edit text:** the text typed in
+  Design Desk, Just comment), and opening it leaves the side panel as it is. Once any comment is
+  sent (in place, or from the side panel), the part is let go and the panel turns to Comments with
+  the new one in view, lit a moment. **Edit text:** the text typed in
   place shows ✓ (Save, Enter) and ✕ (Cancel, Esc; a click elsewhere in the design cancels too).
   Save changes the words in the page at once, as the drawing's next version (`POST
   /api/cards/<id>/text`, `text_edit` on the drawing), with nothing for Design Desk to do but the
