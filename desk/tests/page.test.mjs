@@ -1306,6 +1306,18 @@ test("a request from an issue names it, folds what the issue says, and shows how
   assert.match(await desk.textContent(".stories"), /has not said yet how Badge meets this story/);
 }));
 
+// An option's ✕: a designer's on any request, else only its author's, whatever their role.
+const BRIDGE_DROP = (role, can, by) => BRIDGE_STORIES
+  .replace('{ role: "designer", email: "alice@example.com", can: { vote: true, comment: true } }', `{ role: "${role}", email: "gita@example.com", can: ${JSON.stringify(can)} }`)
+  .replace('title: "Spend in the list", status: "feedback",', `title: "Spend in the list", status: "feedback", created_by: { email: "${by}" },`);
+for (const [who, role, can, by, n] of [["a designer", "designer", { choose: true }, "bob@example.com", 2], ["its author, a guest,", "guest", {}, "Gita@Example.com", 2], ["a guest who did not file it", "guest", {}, "bob@example.com", 0], ["a PM who did not file it", "pm", { explore: true, revise: true, close: true }, "bob@example.com", 0]])
+  test(`${who} ${n ? "sees" : "does not see"} the ✕ that removes an option`, (t) => open(t, BRIDGE_DROP(role, can, by), async (desk) => {
+    await desk.click('[data-tab="requests"]');
+    await desk.click('[data-card="r7"]');
+    await desk.waitForSelector('.vtabs [data-variant="v2"]');
+    assert.equal(await desk.locator(".vtabs [data-drop-option]").count(), n);
+  }));
+
 // An issue with a request: while the request is open the issue offers only its link; one sent
 // to developers (or closed) brings Design this back.
 const BRIDGE_ISSUE_REQUEST = (status) => BRIDGE_STORIES

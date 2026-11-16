@@ -95,6 +95,34 @@ test("drawing every state of a part is a designer's, a PM's or a developer's, no
   assert.equal(again.status, 400, "one states item at a time per request");
 });
 
+test("a request's author removes an option whatever their role; anyone else needs a designer's or an admin's", async (t) => {
+  const d = await desk(t);
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" });
+  const three = [{ id: "v1", name: "Big", asset: asset.id }, { id: "v2", name: "Small", asset: asset.id }, { id: "v3", name: "Wide", asset: asset.id }];
+  const drop = (email, id, variant) => d.viewer(email, `/api/cards/${id}/actions`, { action: "drop-option", variant });
+
+  const id = (await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 })).body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id, status: "feedback", variants: three })).status, 200);
+  const other = await drop("dana@example.com", id, "v1");
+  assert.equal(other.status, 403, "another developer may not");
+  assert.match(other.body.error, /Only designers can remove a design option from a request you did not file/);
+  assert.equal((await drop("guest@example.com", id, "v1")).status, 403, "nor a guest who did not file it");
+  const author = await drop("bob@example.com", id, "v1");
+  assert.equal(author.status, 200, "its author, a developer, may");
+  assert.deepEqual(author.body.card.variants.map((v) => v.id), ["v2", "v3"]);
+  assert.equal(author.body.card.dropped_options[0].by.email, "bob@example.com");
+  assert.equal((await drop("alice@example.com", id, "v2")).status, 200, "a designer still may on any request");
+  assert.match((await drop("bob@example.com", id, "v3")).body.error, /only option/, "the author keeps the rules: never the last one");
+
+  // Filed in Slack by someone off the roster: a guest on the Desk, still its author.
+  const slack = (await d.agent("/agent/cards", { kind: "request", title: "Softer colours", origin: { channel: "slack", reporter: "Gita", email: "gita@example.com" } })).body.card.id;
+  assert.equal((await d.agent("/agent/cards", { id: slack, status: "feedback", variants: three })).status, 200);
+  assert.equal((await drop("guest@example.com", slack, "v1")).status, 403);
+  const guest = await drop("Gita@Example.com", slack, "v1");
+  assert.equal(guest.status, 200, "its author, a guest, may");
+  assert.deepEqual(guest.body.card.variants.map((v) => v.id), ["v2", "v3"]);
+});
+
 test("For Developers: only a lead developer moves it there, any developer but its author approves it", async (t) => {
   const d = await desk(t);
   const filed = await d.viewer("bob@example.com", "/api/requests", { problem: "Rows are too airy.", options: 0 });

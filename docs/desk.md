@@ -294,12 +294,13 @@ with spaces as hyphens (`Lead developer` → `lead-developer`).
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | draw an issue: how it looks now and a sketch ([issues.md](issues.md)) |
 | `pm`, `developer`, `lead-developer`, `designer`, `admin` | also start, revise and redraw variants, add one more option, try three ways of a part and pick one, draw every state of a part, draw how a request's screen looks today, draw how a screen or part looked before, note changes on an element, add a screen or part to Product, use Figma, share in Slack |
 | a request's author; `pm`, `developer`, `lead-developer`, `designer`, `admin` on any | ask the team for feedback on a Desk request's drawn options, and end its vote (Team feedback, below) |
+| a request's author, whatever their role; `designer`, `admin` on any | remove a design option (the ✕ on its tab; [requests.md](requests.md) → Variants) |
 | a request's author; `pm`, `designer`, `admin` on any | rename a request (a small ✎ right after its title, on hover): the name stays theirs, and `design desk upsert` no longer changes it |
 | `developer`, `lead-developer` | approve a request For Developers they did not file ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | `lead-developer`, `admin` | move a request, a change or an issue between For Developers and For Designers, and pick one when filing a request |
 | `lead-developer`, `pm`, `designer`, `admin` | approve or decide a request straight away ([Deciding straight away](#deciding-straight-away)) |
 | `pm`, `designer`, `admin` | close and reopen a request, delete a closed one |
-| `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option, record or approve a decision |
+| `designer`, `admin` | also decide: approve (a design against a decision too), choose what the presentation shows and mark it presented, mark a change handled, remove an option from any request, record or approve a decision |
 | `lead-developer` | mark a change or an issue For Developers handled ([For Developers or For Designers](#for-developers-or-for-designers)) |
 | roles in `prototype_requesters` (default `designer`, `pm`, `admin`) | start a live prototype |
 | `admin` | also ask you to add a person to the list ([People](#people)) |
