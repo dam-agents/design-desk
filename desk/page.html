@@ -5182,8 +5182,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return `<button class="vadd" data-act="add-option" title="Add one more option: describe it for Design Desk to draw, or use your own pictures">+ New option</button>`;
   }
 
-  // A tab's ✕ takes the option off, as a browser tab closes; a designer's, never the last one.
-  const closeTab = (c, x) => !closed(c) && can("choose") && (c.variants || []).length > 1
+  // A tab's ✕ takes the option off, as a browser tab closes; a designer's or the request's
+  // author's, whatever their role; never the last one.
+  const closeTab = (c, x) => !closed(c) && (can("choose") || filedIt(c)) && (c.variants || []).length > 1
     ? `<span class="vclose" role="button" tabindex="0" data-drop-option="${esc(x.id)}" aria-label="Remove ${esc(x.name)}" title="Remove ${esc(x.name)}">✕</span>` : "";
 
   // Slack: the designs as pictures, or a vote on them; one button, both in its dialog.

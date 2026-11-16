@@ -1747,6 +1747,8 @@ test("a request's author, or one who may close it, renames it; a run's upsert ke
   assert.equal(s.upsertCard({ id: card.id, title: "Agent's name", summary: "s" }).card.title, "A calmer header", "a run's upsert leaves it");
   const { card: ch } = s.upsertCard({ kind: "change", title: "A change", source: { repo: "acme/widgets", pr: 9 } });
   assert.throws(() => s.renameRequest(ch.id, bob, "x", { manage: true }), /only a request/);
+  // The same author removes its options too, whatever their role (the server reads filedBy).
+  assert.deepEqual([s.filedBy(card.id, bob), s.filedBy(card.id, alice), s.filedBy(card.id, { email: "BOB@example.com" }), s.filedBy(ch.id, bob)], [true, false, true, false]);
 });
 
 test("a person's own option: their pictures as an option once the request is checked, nothing queued, its author kept through a run's upsert", () => {

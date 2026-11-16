@@ -1209,13 +1209,20 @@ export class Store {
     return { card: c, inbox: item };
   }
 
+  // Whether `who` filed this request, on the Desk or through a channel, under any of their
+  // Desk addresses: its author renames it and removes its options whatever their role
+  // (docs/desk.md → Roles).
+  filedBy(cardId, who) {
+    const c = this.card(cardId);
+    return c.kind === "request" && [c.created_by?.email, c.origin?.email].some((x) => x && addressesOf(who).includes(String(x).toLowerCase()));
+  }
+
   // A request's title, in a person's words: its author's, or anyone's who may close it
   // (`manage`). It stays theirs: a run's upsert no longer changes it (docs/desk.md → Roles).
   renameRequest(cardId, who, title, { manage = false } = {}) {
     const c = this.card(cardId);
     if (c.kind !== "request") throw bad("only a request is renamed here");
-    const mine = [c.created_by?.email, c.origin?.email].some((x) => x && addressesOf(who).includes(String(x).toLowerCase()));
-    if (!mine && !manage) throw forbidden("Only the person who filed it, a designer or an admin can rename this request.");
+    if (!this.filedBy(cardId, who) && !manage) throw forbidden("Only the person who filed it, a designer or an admin can rename this request.");
     c.title = clean(title, LIMITS.title, "title");
     c.renamed = { by: person(who), at: this.clock() };
     c.updated = c.renamed.at;

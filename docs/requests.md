@@ -298,8 +298,8 @@ Compare with the product); a note from **Work into the design** is a `revise` li
     option's whole view before and after (`design compare` without a selector, `design desk
     comment … --shots`). Never drop
     or merge an option on votes: no option is the winner (Approve, Build and the presentation
-    each ask the person which option), and only a designer removes one: the ✕ on its tab takes it
-    off the card (no run; the card's `dropped_options` says who and when). The last option, the
+    each ask the person which option), and only a designer, an admin or the request's author
+    (whatever their role) removes one: the ✕ on its tab takes it off the card (no run; the card's `dropped_options` says who and when). The last option, the
     one a live prototype is built from, the approved one and one on the presentation (queued or presented) stay. The
     store refuses (409) an upsert that sends a removed option's id again: leave it out, or
     draw a new option under a new id.

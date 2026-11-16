@@ -137,7 +137,7 @@ function settings() {
 // The words a person reads when their role lacks an action.
 const VERBS = { ack: "mark changes as seen", handle: "mark changes and issues as handled", "handle-small": "mark changes and issues For Developers as handled", ask: "ask questions", comment: "comment", vote: "vote", request: "send requests", "follow-up": "adjust a change",
   screens: "add screenshots", explore: "start design options", revise: "redraw options", build: "build live prototypes", approve: "approve designs", close: "close requests",
-  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "remove a design option", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
+  reopen: "reopen requests", refresh: "update drawings", share: "share options in Slack", choose: "remove a design option from a request you did not file", queue: "add to the presentation", change: "note changes on an element", figma: "use Figma here", add: "add screens and parts to Product",
   draw: "draw issues", decide: "record and revoke decisions", size: "move a request between For Developers and For Designers", skip: "decide without a vote or a live prototype", people: "add people to the Desk", resolve: "mark someone else's conversation done", designs: "see Designs", built: "mark designs done" };
 
 const canAll = (role, s) => abilities(role, s.prototypeRoles);
@@ -361,7 +361,8 @@ async function viewerRoute(req, res, url, who) {
     // A request For Developers is approved by a developer too, and a lead developer approves any request;
     // the store checks who (docs/desk.md → For Developers or For Designers, Deciding straight away).
     // Drawing every state of a part is changing the option: a designer's, a PM's or a developer's.
-    if (action !== "approve" || !(store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : ["add-option", "draw-now"].includes(action) ? "explore" : action === "switch-off" ? "build" : action);
+    // A request's author removes its options whatever their role (docs/desk.md → Roles).
+    if (!(action === "approve" && (store.card(p[2]).size?.small || can(who.deskRole, "skip", s.prototypeRoles))) && !(action === "drop-option" && store.filedBy(p[2], actor))) need(action.startsWith("figma-") ? "figma" : action.startsWith("slack-") ? "share" : ["states", "alternatives", "pick-alternative"].includes(action) ? "revise" : action === "drop-option" ? "choose" : ["add-option", "draw-now"].includes(action) ? "explore" : action === "switch-off" ? "build" : action);
     if (action.startsWith("figma-") && !s.figma) throw new DeskError(400, "Figma is not connected to this Desk yet.");
     if (action === "slack-share" && !s.slack) throw new DeskError(400, "Slack voting is not turned on for this Desk yet.");
     // Straight to implementation labels an issue: only where the approved spec reaches GitHub (docs/handoff.md, step 5).
