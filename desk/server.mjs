@@ -261,7 +261,7 @@ async function viewerRoute(req, res, url, who) {
     const { kind, text, anchor } = b;
     // A question for the designer, from Designs (docs/desk-page.md → Designs).
     const dev = b.dev === true && can(who.deskRole, "designs", s.prototypeRoles);
-    return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor, dev }), s, who));
+    return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor, dev, review: b.review, in_review: b.in_review, review_ok: b.review_ok }), s, who));
   }
   if (m === "POST" && p[1] === "private") { need("ask"); return send(res, 201, withPing(store.openPrivate(actor, { text: b.text, starter: typeof b.starter === "string" ? b.starter : null, context: b.context }), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need(store.threadNeed(p[2], actor)); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }

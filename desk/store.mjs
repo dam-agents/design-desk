@@ -502,6 +502,9 @@ export class Store {
         voted_mine: c.kind === "request" && Object.values(c.votes || {}).some((x) => Object.keys(x || {}).some((e) => me.includes(e.toLowerCase()))),
         group: c.group || null, thumb: c.screens?.[0]?.asset || c.design_part?.shot || null, state_count: (c.states || []).length, looks: (c.history || []).length,
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
+        // Simple mode's Waiting: the last review asked for changes and no new version came since; Design Desk redraws.
+        review_wait: (() => { const rv = (c.threads || []).map((id) => this.db.threads[id]).filter((x) => x?.review && x.review !== "comment" && x.state !== "resolved").pop(); return Boolean(rv && rv.review === "changes" && !(String(c.source?.pushed_at || "") > String(rv.created || ""))); })(),
+        desk_works: (c.threads || []).some((id) => this.db.threads[id]?.kind === "change" && this.db.threads[id]?.needs_agent),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
         automated: Boolean(c.origin?.automated),
@@ -706,7 +709,7 @@ export class Store {
     return { card: c };
   }
 
-  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null, shots = null, dev = false } = {}) {
+  openThread(cardId, who, { kind = "comment", text, anchor = null, step = null, questions = null, shots = null, dev = false, review = null, in_review = null, review_ok = null } = {}) {
     const c = this.card(cardId);
     // A developer's question to the designer of an approved design (docs/desk-page.md → Designs).
     if (dev && (kind !== "comment" || c.kind !== "request" || c.status !== "handed-off")) throw bad("A question for the designer belongs to a design sent to developers.");
@@ -724,6 +727,10 @@ export class Store {
       id, card: cardId, kind, state: "open", anchor: anchor && kind !== "private" ? cleanAnchor(anchor) : null,
       needs_agent: kind === "question" || kind === "change" || kind === "private", created: this.clock(),
       ...(kind === "private" ? { owner: viewerKey(who) } : {}), ...(dev ? { dev: true } : {}),
+      // A review's summary, from simple mode: what its author asked for.
+      ...(["changes", "approve", "comment"].includes(review) && kind === "comment" ? { review, review_ok: (Array.isArray(review_ok) ? review_ok : []).slice(0, 50).map((x) => String(x).slice(0, 120)) } : {}),
+      // A comment sent with a review belongs to it: the page groups them under it.
+      ...(typeof in_review === "string" && this.db.threads[in_review]?.card === cardId && this.db.threads[in_review].review ? { in_review } : {}),
       messages: [{ by: who?.agent ? this.agentFor(cardId) : person(who), at: this.clock(), text: body, ...pictures }],
       // The agent's questions can come as a form; the answer resumes the step with its note.
       ...(kind === "asks" ? { step, resume_note: lastNote(this.db.inbox, cardId, step), ...resumeOf(this.db.inbox, cardId, step), ...(questions ? { questions: cleanQuestions(questions) } : {}) } : {}),

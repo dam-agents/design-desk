@@ -139,6 +139,7 @@
   #simple[aria-pressed="true"] .sw, #figma[aria-pressed="true"] .sw { background: var(--accent); }
   #simple[aria-pressed="true"] .sw::after, #figma[aria-pressed="true"] .sw::after { transform: translateX(12px); }
   .banner { padding: 8px 20px; font-size: var(--fs-meta); border-bottom: 1px solid var(--line); background: var(--info-soft); }
+  .cf-warn { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin: 0 0 12px; border-radius: 8px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); } .cf-warn svg { flex: none; width: 16px; height: 16px; margin-top: 2px; fill: none; stroke: var(--warn); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .cf-warn p { margin: 0; }
   .banner.warn { background: var(--warn-soft); }
   /* A tab's intro: what it shows, what you can do, the steps; in the empty pane beside the list, folded per browser. */
   .intro { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); font-size: var(--fs-meta); padding: 16px 20px; max-width: 900px; margin: 0 auto; }
@@ -199,7 +200,7 @@
   .panel.env.gone .env-head > b { color: var(--muted); }
   .panel.env .env-steps { padding-left: 20px; margin: 8px 0 0; }
   .btn.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-  main { display: grid; grid-template-columns: minmax(280px, calc(var(--list-w) + var(--list-dx, 0px))) 0 1fr; min-height: 0; }
+  main { display: grid; grid-template-columns: minmax(180px, calc(var(--list-w) + var(--list-dx, 0px))) 0 1fr; min-height: 0; }
   main.wide { grid-template-columns: 1fr; } main.wide .list, main.wide .list-edge { display: none; }
   /* The list folds away with the arrow on its edge, halfway down, as side bars do; the arrow stays to bring it back. */
   main.folded:not(.wide) { grid-template-columns: 0 1fr; } main.folded:not(.wide) .list { display: none; }
@@ -235,6 +236,96 @@
   .row.item > .open { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
+  /* Simple mode's row: what it is (icon), its title, when it last changed (muted), Open or Closed. */
+  .row.srow > .open { display: flex; align-items: flex-start; gap: 10px; }
+  .srow .kind-ic { flex: none; width: 16px; height: 1lh; display: inline-flex; align-items: center; color: var(--muted); }
+  .kind-ic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+  .srow .st { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .srow .tt { font-weight: 400; } .srow.unread .tt { font-weight: 600; }
+  .srow .sd { color: var(--faint, var(--muted)); font-size: var(--fs-meta); }
+  .row.srow { container-type: inline-size; }
+  @container (max-width: 270px) { .row.srow > .open { flex-wrap: wrap; row-gap: 6px; } .srow .st { flex-basis: calc(100% - 26px); } .srow .spill { margin-left: 26px; } }
+  .spill { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px 0 8px; border-radius: 999px; font-size: var(--fs-meta); font-weight: 600; line-height: 1; color: var(--sp); background: color-mix(in srgb, var(--sp) 12%, var(--panel)); white-space: nowrap; }
+  .spill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .spill[data-s="waiting"] { --sp: var(--warn); } .spill[data-s="waiting"]::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
+  .spill[data-s="open"] { --sp: var(--accent); } .spill[data-s="approved"] { --sp: var(--approved); }
+  .spill[data-s="closed"] { --sp: var(--muted); } .spill[data-s="closed"]::before { background: none; box-shadow: inset 0 0 0 1.5px currentColor; }
+  .spill[data-s="approved"]::before { content: "✓"; width: auto; height: auto; background: none; font-size: 11px; }
+  /* Simple mode's detail: one header and one set of actions for a request and a pull request. */
+  .s-h { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 12px; } .s-h .kind-ic { flex: none; height: 1lh; display: inline-flex; align-items: center; color: var(--muted); } .s-h .kind-ic svg { width: 20px; height: 20px; }
+  .s-bar { position: sticky; top: -24px; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px var(--pad-x); margin: 0 calc(-1 * var(--pad-x)) 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .s-lead .s-sub { margin: 14px 0 2px; font-size: var(--fs-meta); font-weight: 500; color: var(--muted); }
+  .s-bar .s-meta { color: var(--muted); font-size: var(--fs-meta); } .s-bar .grow { flex: 1; }
+  .s-bar .s-acts { display: flex; gap: 8px; align-items: center; } .s-bar details.more .menu { left: auto; right: 0; } .s-bar details.more > summary.btn { min-width: 36px; justify-content: center; }
+  .btn.s-approve { background: var(--approved); border-color: var(--approved); color: var(--panel); } .btn.s-approve:hover { opacity: .88; background: var(--approved); }
+  .gpill { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px 0 8px; border-radius: 999px; background: var(--g); color: #fff; font-size: var(--fs-meta); font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .gpill svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; } a.gpill:hover { opacity: .88; }
+  .gpill[data-g="open"] { --g: #1a7f37; } .gpill[data-g="merged"] { --g: #8250df; } .gpill[data-g="draft"] { --g: #59636e; }
+  .s-note { display: flex; align-items: center; gap: 8px; flex-basis: 100%; font-size: var(--fs-meta); color: var(--muted); } .s-note b { color: var(--ink); font-weight: 600; }
+  .s-lead { max-width: var(--measure); margin-bottom: 8px; } .s-lead .md > p:first-child { font-size: var(--fs-lead, 1.06em); }
+  .s-impact { max-width: var(--measure); margin: 28px 0 0; border-bottom: 1px solid var(--line); } .s-impact details.fold.big { margin: 0; } .s-impact details.fold.big > summary { padding: 10px 0; } .s-impact details.fold.big > summary h3 { font-size: calc(var(--fs-head) * .94); font-weight: 600; }
+  .s-found { max-width: var(--measure); display: grid; gap: 12px; }
+  /* Comments: one card per conversation, replies one level in. Only a designer's words are tinted. */
+  .s-talk { max-width: var(--measure); display: grid; gap: 12px; }
+  .s-thread { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 12px 14px; display: grid; gap: 10px; }
+  .s-msg { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+  .s-av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; }
+  .s-av svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .s-who { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: var(--fs-meta); color: var(--muted); margin-bottom: 2px; } .s-who b { color: var(--ink); font-size: var(--fs-ui); }
+  .s-mb { min-width: 0; } .s-mb .md > :last-child { margin-bottom: 0; } .s-mb .md > :first-child { margin-top: 0; }
+  .s-msg[data-role="designer"] .s-av { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); color: var(--accent); }
+  .s-msg[data-role="designer"] .s-mb { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); border-radius: 8px; padding: 8px 10px; margin: -4px 0 0 -2px; }
+  .s-msg[data-role="designer"] .s-role { color: var(--accent); font-weight: 600; }
+  .s-replies { margin-left: 13px; padding-left: 23px; border-left: 2px solid var(--line); display: grid; gap: 10px; }
+  .s-thread .anchor { justify-self: start; margin-left: 38px; }
+  .s-thread .reply { border: 0; padding: 0; margin-left: 38px; } .s-thread .reply input { flex: 1; min-width: 0; }
+  .s-ev { font-size: var(--fs-meta); font-weight: 600; margin-left: 38px; display: flex; gap: 8px; align-items: center; } .s-ev[data-v="changes"] { color: var(--warn); } .s-ev[data-v="approve"] { color: var(--approved); }
+  details.s-thread.mini { padding: 8px 14px; } details.s-thread.mini > summary { cursor: pointer; color: var(--muted); font-size: var(--fs-meta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } details.s-thread.mini[open] > summary { margin-bottom: 10px; }
+  .rv-msgs { display: grid; gap: 6px; justify-items: start; max-height: 38vh; overflow-y: auto; margin-bottom: 14px; }
+  .rv-b { max-width: 92%; padding: 7px 12px; border-radius: 14px 14px 14px 4px; background: var(--soft); font-size: var(--fs-ui); line-height: 1.4; }
+  .rv-msgs[data-role="designer"] .rv-b { background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+  .rv-b p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; } .rv-at { display: block; font-size: var(--fs-micro); color: var(--muted); margin-bottom: 1px; }
+  .rv-ok { margin: 2px 0 0; display: flex; align-items: center; gap: 6px; font-size: var(--fs-ui); color: var(--approved); } .rv-ok svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .s-review { border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 8px; background: color-mix(in srgb, var(--accent) 3%, var(--panel)); }
+  .s-review .rh { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; } .s-review .rh .hint { margin: 0; }
+  .s-review ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; } .s-review li { display: flex; gap: 8px; align-items: baseline; } .s-review li .tx { flex: 1; min-width: 0; }
+  .s-review li .chip { flex: none; } .s-review .x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px; font: inherit; } .s-review .x:hover { color: var(--ink); }
+  .s-review .bar { display: flex; justify-content: flex-end; }
+  .s-talk .composer { margin: 0; }
+  .s-talk { padding-bottom: 72px; } #detail h3, .s-thread { scroll-margin-top: 110px; }
+  .s-thread .reply { gap: 4px; } .s-thread .reply input { min-height: 32px; } .s-thread .reply:not(.on) input, .s-thread .reply:not(.on) [data-send-reply], .s-thread .reply.on [data-s-reply] { display: none; }
+  .s-thread .reply .quiet { border: 0; background: none; color: var(--muted); padding-left: 0; } .s-thread .reply .quiet:hover { color: var(--ink); }
+  .s-thread .reply [data-resolve], .s-thread .reply [data-reopen] { border: 0; background: none; color: var(--muted); } .s-thread .reply [data-resolve]:hover { color: var(--ink); }
+  details.s-thread.mini { display: block; } details.s-thread.mini[open] { display: grid; }
+  .ws-review { font-weight: 600; }
+  .s-rev { border-left: 3px solid var(--line); } .s-rev[data-v="changes"] { border-left-color: var(--warn); } .s-rev[data-v="approve"] { border-left-color: var(--approved); }
+  .s-verdict { color: var(--ink); font-size: var(--fs-ui); } .s-rev[data-v="changes"] .s-verdict { color: var(--warn); font-weight: 600; } .s-rev[data-v="approve"] .s-verdict { color: var(--approved); font-weight: 600; }
+  .s-oks { color: var(--approved); font-size: var(--fs-meta); margin: 4px 0 0; }
+  .s-subs { display: grid; } .s-sub { display: grid; gap: 8px; padding: 12px 0 0; margin-top: 12px; border-top: 1px solid var(--line); } .s-subs .s-sub:first-child { margin-top: 2px; }
+  .s-sub .anchor, .s-sub .reply { margin-left: 38px; } details.s-sub.mini > summary { cursor: pointer; color: var(--muted); font-size: var(--fs-meta); }
+  .s-sub .s-replies { margin-left: 13px; }
+  /* A pull request's changes: one at a time, before beside after. */
+  .cv { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; margin-bottom: 8px; }
+  .cv-h { display: flex; align-items: baseline; gap: 8px; max-width: var(--measure); } .cv-prog { margin-left: auto; font-size: var(--fs-meta); font-weight: 400; color: var(--muted); } .cv-prog[data-done="true"] { color: var(--approved); }
+  .cv-steps { display: flex; gap: 20px; padding: 0 14px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .cv-steps button { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 11px 0 10px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; font: inherit; font-size: var(--fs-meta); color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .cv-steps button:hover { color: var(--ink); } .cv-steps button[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+  .cv-steps button { gap: 8px; } .cv-steps .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--muted); font-size: var(--fs-micro); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cv-steps button[data-m="ok"] .n { background: var(--approved); color: var(--panel); } .cv-steps button[data-m="changes"] .n { background: var(--warn); color: var(--panel); }
+  .cv-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; } .cv-head .grow { flex: 1; } .cv-head .hint { margin: 0; }
+  .cv-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 14px 14px; } .cv-pair[data-cols="1"] { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+  .cv-lab { font-size: var(--fs-micro); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .cv-pair .shot { margin: 0; cursor: zoom-in; } .cv-pair .shot img { max-height: none; min-height: 0; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; }
+  .cv-note { margin: 0; padding: 0 14px 14px; color: var(--muted); font-size: var(--fs-meta); max-width: var(--measure); }
+  .cv-foot { border-top: 1px solid var(--line); padding: 14px; display: grid; gap: 10px; background: var(--soft); border-radius: 0 0 var(--radius) var(--radius); } .cv-foot textarea { width: 100%; box-sizing: border-box; resize: vertical; background: var(--panel); } .cv-foot .link { justify-self: start; }
+  .cv-foot[data-v="ok"] { background: color-mix(in srgb, var(--approved) 9%, var(--panel)); } .cv-foot[data-v="changes"] { background: color-mix(in srgb, var(--warn) 9%, var(--panel)); }
+  .cv-foot .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .cv-foot .bar .grow { flex: 1; } .cv-foot .bar .btn { height: 36px; padding: 0 14px; font-weight: 600; gap: 8px; } .cv-foot .bar svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .s-nd { margin-left: 8px; min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--warn); color: var(--panel); font-size: var(--fs-meta); font-weight: 600; line-height: 18px; text-align: center; }
+  .btn.cv-ok { background: var(--approved); border-color: var(--approved); color: var(--panel); } .btn.cv-ok:hover { background: var(--approved); opacity: .88; }
+  .btn.cv-chg { background: var(--panel); border-color: var(--warn); color: var(--warn); } .btn.cv-chg:hover { background: color-mix(in srgb, var(--warn) 10%, var(--panel)); }
+  .cv-said { display: inline-flex; align-items: center; gap: 8px; color: var(--approved); font-weight: 600; } .cv-said .link { font-weight: 400; color: var(--muted); margin-left: 4px; }
+  .cv-mine { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; } .cv-mine li { display: flex; gap: 8px; align-items: baseline; } .cv-mine .tx { flex: 1; min-width: 0; } .cv-mine .chip { flex: none; }
+  .cv-mine .x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px; font: inherit; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--fs-meta); color: var(--muted); }
   .prov .when { color: var(--ink); font-weight: 500; }
   .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta); }
@@ -393,7 +484,7 @@
   .eltile .elopen { display: grid; grid-template-rows: auto auto 1fr; gap: 8px; text-align: left; padding: 8px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; min-width: 0; }
   .eltile .elcat { padding: 0 8px 8px; } .eltile .elcat .anchor { font-size: var(--fs-meta); }
   .eltile .elpic { display: block; height: 192px; padding: 12px; box-sizing: border-box; overflow: hidden; border-radius: var(--r-sm); background: #fff; border: 1px solid var(--line); }
-  .eltile .elpic img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .eltile .elpic img { width: 100%; height: 100%; object-fit: scale-down; display: block; }
   .eltile .elpic iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .eltile .elname { font-weight: 600; font-size: var(--fs-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .eltile .elmeta { display: flex; flex-wrap: wrap; gap: 4px; align-self: end; }
@@ -424,6 +515,21 @@
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
   dialog.eldlg > div { padding: 20px 20px 20px; }
   .elbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .el-acts { display: flex; gap: 8px; flex: none; } .el-acts .btn { display: inline-flex; align-items: center; gap: 8px; } .el-acts .ico { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .el-how { margin: 0; color: var(--muted); max-width: var(--measure); } .el-pair { padding: 8px 0 0; } .el-pair .el-pic { margin: 0; cursor: zoom-in; } .el-pair .nopic-box { min-height: 160px; display: grid; place-items: center; }
+  .el-lab { display: flex; align-items: center; gap: 8px; min-height: 28px; } .el-lab > span:first-child { margin-right: auto; }
+  .el-sw { display: inline-flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0; font-weight: 400; } .el-sw select { font: inherit; font-size: var(--fs-ui); height: 28px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--panel); color: var(--ink); max-width: 200px; }
+  .el-lab .btn.small { text-transform: none; letter-spacing: 0; font-weight: 500; } .el-busy { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .el-note { padding: 0; margin: 8px 0 0; } .el-foot { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .el-all { margin-top: 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); } .el-all + .el-foot { margin-top: 16px; }
+  .el-all > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 8px; padding: 12px 0; } .el-all > summary::-webkit-details-marker { display: none; } .el-all > summary .hint { margin: 0; }
+  .el-all > summary::after { content: "+"; margin-left: auto; color: var(--muted); font-size: var(--fs-head); line-height: 1; } .el-all[open] > summary::after { content: "−"; }
+  .el-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 0 0 14px; }
+  .el-tile { all: unset; cursor: pointer; display: grid; gap: 6px; } .el-tile .p { display: block; height: 130px; padding: 8px; box-sizing: border-box; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
+  .el-tile .p img { width: 100%; height: 100%; object-fit: scale-down; display: block; } .el-tile .p iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
+  .el-tile .n { font-size: var(--fs-ui); color: var(--muted); } .el-tile:hover .p { border-color: var(--muted); } .el-tile:focus-visible .p { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .el-tile[aria-pressed="true"] .p { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); } .el-tile[aria-pressed="true"] .n { color: var(--ink); font-weight: 600; }
+  .el-said { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: var(--fs-ui); } .el-said li { display: flex; gap: 8px; align-items: baseline; } .el-said .tx { flex: 1; min-width: 0; } .el-said .hint { margin: 0; flex: none; }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
   /* What comes from an approved design, not from the product: a dashed edge and its own ink. */
   .row.item.fromdesign { border-left: 3px dashed var(--waiting); }
@@ -432,6 +538,23 @@
   /* Where the product differs from its Figma frame: the warning's ink, one line per difference. */
   .figbox { padding: 12px 16px; border-radius: var(--radius); background: var(--warn-soft); max-width: var(--measure); margin: 12px 0; }
   .figbox p { margin: 2px 0; }
+  .s-found .figbox[open] { background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+  .cv-steps + .cv-pair { padding-top: 14px; }
+  /* Tabs: the things you review one by one (a request's designs, a pull request's changes) and a panel's sections.
+     An underline marks the one shown; the number chip says how far your review of it got. */
+  .cv-steps button, .tabs.vtabs.utabs button, .ws-ptabs button { font-size: var(--fs-ui); font-weight: 500; color: var(--muted); }
+  .cv-steps button[aria-selected="true"], .tabs.vtabs.utabs button[aria-pressed="true"], .ws-ptabs button[aria-selected="true"] { color: var(--ink); font-weight: 600; }
+  .cv-steps .n, .tabs.vtabs.utabs .ono { width: 20px; min-width: 20px; height: 20px; padding: 0; margin: 0; border-radius: var(--r-xs); display: inline-grid; place-items: center; background: var(--soft); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); font-size: var(--fs-micro); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cv-steps button[aria-selected="true"] .n, .tabs.vtabs.utabs button[aria-pressed="true"] .ono { background: var(--ink); color: var(--panel); box-shadow: none; }
+  .cv-steps button[data-m="ok"] .n, .tabs.vtabs.utabs button[data-m="ok"] .ono { background: var(--approved); color: var(--panel); box-shadow: none; }
+  .cv-steps button[data-m="changes"] .n { background: var(--warn); color: var(--panel); box-shadow: none; }
+  .tabs.vtabs.utabs { border-bottom: 1px solid var(--line); margin-bottom: 14px; align-items: center; }
+  .tabs.vtabs.utabs .vscroll { gap: 22px; align-items: stretch; margin-bottom: -1px; }
+  .tabs.vtabs.utabs .vscroll button { display: inline-flex; align-items: center; gap: 8px; padding: 11px 0 10px; margin: 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; box-shadow: none; }
+  .tabs.vtabs.utabs .vscroll button:hover { color: var(--ink); }
+  .tabs.vtabs.utabs .vscroll button[aria-pressed="true"] { border-bottom-color: var(--ink); background: none; }
+  .tabs.vtabs.utabs .tv { font-size: var(--fs-meta); font-weight: 400; color: var(--muted); }
+  .tabs.vtabs.utabs + .vpanel { border-radius: var(--radius); }
   .figbox > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .figbox > summary::-webkit-details-marker { display: none; }
   .figbox > summary::after { content: "+"; margin-left: auto; color: var(--muted); font-size: var(--fs-head); line-height: 1; }
@@ -1454,6 +1577,10 @@
   .ws-ptabs button { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 8px 8px 8px; font: inherit; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
   .ws-ptabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
   .ws-ptabs .n { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--soft); color: var(--ink); font-size: var(--fs-micro); line-height: 17px; text-align: center; box-sizing: border-box; }
+  .ws-drafts { list-style: none; margin: 0; padding: 4px 14px; } .ws-drafts li { padding: 12px 0; border-bottom: 1px solid var(--line); } .ws-drafts p { margin: 6px 0 0; }
+  .ws-drafts .wd-h { display: flex; align-items: center; gap: 8px; min-width: 0; } .ws-drafts .wd-h .chip { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ws-drafts .wd-h .hint { margin: 0; flex: none; }
+  .ws-drafts .x { margin-left: auto; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 4px; font: inherit; } .ws-drafts .x:hover { color: var(--ink); }
+  .ws-drafts-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; } .ws-drafts-bar .hint { margin: 0; }
   .ws-ptabs .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
   .ws-pbody { padding: 12px 16px 80px; display: grid; gap: 12px; align-content: start; }
   .sel .ws-wholebox { margin-top: 8px; background: var(--bg); }
@@ -2245,7 +2372,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // ---------- state ----------
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
-  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "turn", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", simFilter: "open", newFilter: "open", reqFilter: "turn", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "off", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null,
       // The look palette: changes not sent yet per drawing (S.ws.shown) and part, the look of the part selected, what the design is made of.
       looks: {}, look: null, pal: null, plTab: null, plColor: null } };
@@ -2283,6 +2410,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const when = (iso) => { if (!iso) return ""; const d = new Date(iso); return d.toLocaleString("en", { dateStyle: "medium", timeStyle: "short" }); };
   const day = (iso) => (iso ? new Date(iso).toLocaleDateString("en", { dateStyle: "medium" }) : "");
   // A day said as people say it: Today, Yesterday, else its date.
+  const sWhen = (iso) => { if (!iso) return ""; const d = new Date(iso), w = dayWord(iso), t = d.toLocaleTimeString("en", { hour: "numeric", minute: "2-digit" });
+    return `${/day$/.test(w) ? w : d.toLocaleDateString("en", { month: "short", day: "numeric", ...(d.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) })}, ${t}`; };
   const dayWord = (iso) => { const d = new Date(iso), t = new Date(), y = new Date(t); y.setDate(t.getDate() - 1); const same = (a, b) => a.toDateString() === b.toDateString(); return same(d, t) ? "Today" : same(d, y) ? "Yesterday" : day(iso); };
   const toast = (msg) => { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; (document.querySelector("dialog[open]") || document.body).append(el); setTimeout(() => el.remove(), 4800); };
   const fail = (e) => { if (!(e instanceof Said)) console.error(e); toast(e instanceof Said ? e.message : `Something went wrong. Try again; if it keeps happening, tell ${contact()}.`); };
@@ -2312,7 +2441,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const simple = () => {
     const me = myKey();
     if (me && store.get(`desk-simple-unsaved:${me}`)) return store.get(`desk-simple:${me}`) === "on";
-    return typeof S.me?.simple === "boolean" ? S.me.simple : S.me?.role === "guest";
+    return typeof S.me?.simple === "boolean" ? S.me.simple : ["guest", "designer", "pm"].includes(S.me?.role);
   };
   // Nor does it offer to build a live prototype; one already up still shows.
   // Nor a way to Designs: a link to a design still opens it.
@@ -2815,11 +2944,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // `choices` the ids ticked; OK waits until one is.
   // `url` is a one-line field's label (a link, or a name with `value` filled in and `max` its length).
   // noteFor: the note shows only while that choice is picked.
-  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, noteFor = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, check3 = null, send }) {
+  function ask({ title, body, html = "", warn = "", ok, choices = null, pick = null, multi = false, note = null, noteFor = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, check3 = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
-    $("#cf-body").innerHTML = body ? md(body) : "";
+    $("#cf-body").innerHTML = (warn ? `<div class="cf-warn" role="status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg><div>${md(warn)}</div></div>` : "") + html + (body ? md(body) : "");
     $("#cf-ok").textContent = ok;
     const ticked = (id) => (multi ? (pick || []).includes(id) : id === pick);
     $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /><span class="cn">${c.no ? `<span class="ono">${esc(c.no)}</span>` : ""}${esc(c.name)}</span>${c.hint ? `<span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
@@ -2888,7 +3017,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sep = `<span class="sep" aria-hidden="true"></span>`;
     // Designs only for developers and admins; a designer reaches one from a notification (docs/desk-page.md → Designs).
     const designs = can("designs") ? [[["designs", designCards("todo").length]]] : [];
-    const html = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
+    const html = simple() ? `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs</button>` : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.filter(([k]) => !(simple() && SIMPLE_HIDES.includes(k)))).filter((group) => group.length)
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
@@ -3157,7 +3286,27 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     ...(filter === "done" ? (c.sends || []).map((s, k) => ({ ...c, id: `${c.id}~${k + 1}`, base: c.id, send: k + 1, status: "handed-off", built: s.closed?.at || null })).reverse() : [])]);
   // An earlier record of a reopened request: the request as it is, with what that send had.
   const sendOf = (id) => { const m = /^([A-Z]-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
+  // Simple mode: requests and PR changes are one list, newest change first, with one filter:
+  // Open, Closed, All. A request is closed once approved or closed; a PR change once handled.
+  const simpleList = () => simple() && (S.tab === "requests" || S.tab === "new") && !presenting();
+  // Waiting: a review asked for changes, and the next move is not the reviewer's: the developer's
+  // (a new version of the pull request) or Design Desk's (a new version of the design).
+  const sWait = (c) => { if (c.kind !== "change") return false; if (!(c.threads || []).some((th) => th && typeof th === "object")) return Boolean(c.review_wait); const rv = lastReview(c); return Boolean(rv && rv.review === "changes" && !(String(c.source?.pushed_at || "") > String(rv.created || ""))); };
+  const sState = (c) => c.kind === "change" ? (c.handled ? "approved" : autoHandled(c) ? "closed" : sWait(c) ? "waiting" : "open")
+    : c.status === "declined" ? "closed" : c.approved || ["spec", "handed-off"].includes(c.status) ? "approved" : sWait(c) ? "waiting" : "open";
+  const isOpen = (c) => sState(c) === "open";
+  const simpleCards = (filter = S.simFilter) => S.cards.filter((c) => (c.kind === "request" || c.kind === "change") && (filter === "all" || (filter === "closed" ? ["approved", "closed"].includes(sState(c)) : sState(c) === filter)))
+    .sort((a, b) => String(b.updated || dateOf(b)).localeCompare(String(a.updated || dateOf(a))));
+  // One pill for every item's state, in GitHub's colours: Open green, Closed violet.
+  const S_WORD = { open: "Open", waiting: "In progress", approved: "Approved", closed: "Closed" };
+  const waitsFor = (c) => (c.kind === "change" ? "developer" : "Design Desk");
+  const openPill = (c, long = false) => `<span class="spill" data-s="${sState(c)}"${sState(c) === "waiting" ? ` title="${c.kind === "change" ? "The developer is making the next version" : "Design Desk is drawing the next version"}"` : ""}>${S_WORD[sState(c)]}${long && sState(c) === "waiting" ? ` · ${waitsFor(c)}` : ""}</span>`;
+  // What kind of item a row is, at a glance: a request (a speech bubble) or a pull request.
+  const KIND_ICON = { request: ['<path d="M2.5 3.5h11v7.2H8.2l-3 2.6v-2.6H2.5z"/>', "Design request"],
+    change: ['<circle cx="4" cy="3.8" r="1.6"/><circle cx="4" cy="12.2" r="1.6"/><circle cx="12" cy="12.2" r="1.6"/><path d="M4 5.4v5.2M12 10.6V6.8a2 2 0 0 0-2-2H7.6M9.2 3.2 7.6 4.8l1.6 1.6"/>', "Pull request"] };
+  const kindIcon = (c) => { const [d, tip] = KIND_ICON[c.kind] || KIND_ICON.request; return `<span class="kind-ic" data-k="${esc(c.kind)}" title="${tip}"><svg viewBox="0 0 16 16" aria-hidden="true">${d}</svg></span>`; };
   function visibleCards() {
+    if (simpleList()) return simpleCards();
     if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "designs") return designCards(S.designFilter);
     // History: the weekly digests, the newest week first (docs/digest.md).
@@ -3272,7 +3421,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     // Another tab, page or filter starts the list again at LIST_PAGE rows; it is
     // set before every early return, so a list that returns early still counts as another view.
-    const view = [S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
+    const view = [simpleList() && S.simFilter, S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
     if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
@@ -3302,7 +3451,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET, handled: "Handled" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "differences" ? seg("figFilter", [["differs", "Differs from Figma", figmaCards("differs").length], ["matches", "Matches", figmaCards("matches").length], ...(figmaCards("closed").length ? [["closed", "Closed", figmaCards("closed").length]] : []), ["all", "All", figmaCards("all").length]])
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
-    const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
+    const simpleFilter = seg("simFilter", [["open", "Open", simpleCards("open").length], ["waiting", "In progress", simpleCards("waiting").length], ["closed", "Closed"], ["all", "All"]]);
+    const filters = simpleList() ? `<div class="listhead"><div class="filterbar">${simpleFilter}</div></div>` : `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(head); return; }
     if (S.tab === "product" && S.productFilter === "kit") { renderKitList(head); return; }
@@ -3319,7 +3469,12 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
-    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
+    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(simpleList() ? (S.simFilter === "closed" ? "Nothing is closed yet." : S.simFilter === "waiting" ? "Nothing waits for a new version." : "Nothing is open. You are done.") : empty)}</div>`; return; }
+    if (simpleList()) {
+      list.innerHTML = filters + cards.map((c) => `<div class="row item srow${c.read === false ? " unread" : ""}">
+        <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">${kindIcon(c)}<span class="st"><span class="tt">${esc(c.title)}</span><span class="sd">${esc(sWhen(c.updated || dateOf(c)))}</span></span>${openPill(c)}</button></div>`).join("");
+      return;
+    }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";
     // The list draws LIST_PAGE rows and LIST_PAGE more each time its end scrolls into view
@@ -4326,7 +4481,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     askShown = { open: S.ask.open, ctx: ctxKey, said };
     askDrawn = JSON.stringify(S.ask.asks);
     if (!S.ask.open) {
-      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Ask privately about this ${askWhat(ctx)}${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
+      root.innerHTML = `<button class="ask-fab" data-ask-open title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>${simple() ? "" : `Ask privately about this ${askWhat(ctx)}`}${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
       if (was.open) root.querySelector(".ask-fab")?.classList.add("enter");
       return;
     }
@@ -4441,7 +4596,174 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return parts.length ? `<span class="one-line">${parts.join(" ")}</span>` : "";
   }
   const mapStatus = (c, buttons, more = "") => { const [w, tip] = MAP_STATE[c.status] || MAP_STATE.current; return ghStatus(MAP_TONE[c.status] || "approved", w, tip, c.status === "building" || c.status === "dropped" ? "" : mapMeta(c), buttons, more, { inline: true }); };
+  // ---------- simple mode: the detail (a request and a pull request read the same) ----------
+  // A review's comments wait in this browser until it is sent: only their author sees them.
+  const draftKey = (c) => `desk-review:${myKey()}:${c.base || c.id}`;
+  const drafts = (c) => { try { return JSON.parse(store.get(draftKey(c)) || "[]") || []; } catch { return []; } };
+  const setDrafts = (c, xs) => (xs.length ? store.set(draftKey(c), JSON.stringify(xs)) : store.del(draftKey(c)));
+  const addDraft = (c, d) => { const xs = [...drafts(c), d]; setDrafts(c, xs); return xs.length; };
+  const sBusy = (c) => working(c).length > 0 || (c.threads || []).some((th) => th.kind === "change" && th.needs_agent);
+  const lastReview = (c) => [...(c.threads || [])].reverse().find((th) => th.review && th.review !== "comment" && th.state !== "resolved") || null;
+  function sHead(c) {
+    const src = c.source || {}, pr = c.kind === "change", st = sState(c), rv = lastReview(c);
+    const [g, gw] = src.merged_at ? ["merged", "Merged"] : src.draft ? ["draft", "Draft"] : ["open", "Open"];
+    const gInner = `<svg viewBox="0 0 16 16" aria-hidden="true">${KIND_ICON.change[0]}</svg>#${esc(src.pr)}${g === "open" ? "" : ` ${gw}`}`;
+    const gh = pr && src.pr ? (src.url ? `<a class="gpill" data-g="${g}" href="${safeUrl(src.url)}" target="_blank" rel="noopener noreferrer" title="The pull request on GitHub">${gInner} ↗</a>` : `<span class="gpill" data-g="${g}">${gInner}</span>`) : "";
+    const p = origin(c, { parts: true }), name = p.author ? (p.author === "you" ? "You" : p.author) : "";
+    const meta = [name, dayWord(c.updated || dateOf(c))].filter(Boolean).map(esc).join(" · ");
+    const hasDesign = (c.variants || []).some((v) => v.asset);
+    const live_ = st === "open" || st === "waiting", nd = drafts(c).filter((d) => d.text).length;
+    const mayReview = live_ && can("comment") && (pr || hasDesign);
+    const approve = !live_ || sBusy(c) ? "" : pr ? (mayHandle(c) ? `<button class="btn s-approve" data-s-review="approve" title="Design is fine with this change${c.ci?.state === "failing" ? "; Design Desk then passes its check on the pull request" : ""}">Approve</button>` : "")
+      : hasDesign && canApprove(c) && !locked(c) ? `<button class="btn" data-act="approve" title="Approve a design; Design Desk writes its spec for developers">Approve</button>` : "";
+    const menu = [!pr && !closed(c) && (can("close") || can("skip")) ? `<button class="btn" data-act="close">Close</button>` : "",
+      pr && handledAt(c) && mayHandle(c) ? `<button class="btn" data-handle="0">Undo approval</button>` : "",
+      pr && !hasRequest(c) && can("follow-up") ? `<button class="btn" data-adjust>Start a design request from it</button>` : "",
+      itemLink(c) ? `<button class="btn" data-copy-link>Copy link</button>` : ""].join("");
+    const rvBy = rv ? capName(noteBy(rv.messages?.[0]?.by) || "someone") : "";
+    const note = sBusy(c) ? `<div class="s-note"><span class="spin"></span><span><b title="You can keep sending changes meanwhile">Design Desk is drawing the new version</b></span></div>`
+      : st === "waiting" ? `<div class="s-note"><span><b>${esc(rvBy)} requested changes</b> ${esc(dayWord(rv.created))} · back in Open with the next version</span></div>`
+      : rv?.review === "changes" && st === "open" ? `<div class="s-note"><span><b>New version is ready.</b> ${pr ? "The developer pushed changes after the last review." : "Design Desk changed the design after the last review."}</span></div>` : "";
+    return `<h2 class="s-h">${kindIcon(c)}<span>${txt(c.title)}</span></h2>
+      <div class="s-bar">${openPill(c, true)}${gh}<span class="s-meta">${meta}</span><span class="grow"></span>
+        <div class="s-acts">${mayReview ? `<button class="btn${nd ? " primary" : ""}" data-s-review="changes" title="${nd ? `${plural(nd, "comment", "comments")} not sent yet. ` : ""}${pr ? "Your comments go to the pull request as one review" : "Your comments go to Design Desk together; it changes the design"}">Request changes${nd ? ` · ${nd}` : ""}</button>` : ""}${approve}${menu ? `<details class="more"><summary class="btn" aria-label="More actions" title="More">⋯</summary><div class="menu">${menu}</div></details>` : ""}</div>${note}</div>`;
+  }
+  const sImpact = (c) => { const h = renderImpact(c.impact); return h ? `<div class="s-impact">${h}</div>` : ""; };
+  const sFound = (parts) => { const xs = parts.map((x) => String(x || "").trim()).filter(Boolean); return xs.length ? `<h3>What Design Desk found</h3><div class="s-found">${xs.join("")}</div>` : ""; };
+  function simpleRequest(c) {
+    const r = c.request || {}, bug = r.type === "bug";
+    const theirs = (x) => !x.source || x.source === "person";
+    const given = (c.screens || []).filter(theirs), found = (c.screens || []).filter((x) => !theirs(x));
+    const more = [bug && r.goal ? `<h4>What should happen</h4>${md(r.goal)}` : "", bug && r.steps ? `<h4>Steps</h4>${md(r.steps)}` : ""].join("");
+    return `${backBar()}${sHead(c)}
+      <div class="s-lead">${md(r.problem)}${r.vision ? `<h4 class="s-sub">How it could look</h4>${md(r.vision)}` : ""}${more ? `<details class="fold"><summary>More from the request</summary><div class="panel">${more}</div></details>` : ""}${shots(given)}</div>
+      ${renderOptions(c)}${live(c) ? renderPrototype(c) : ""}
+      ${sFound([againstBox(c), renderResearch(c.research), cannotFold(c), renderIssueBrief(c), renderGrill(c), shots(found), followsLine(c)])}
+      ${sImpact(c)}
+      ${simpleThreads(c)}`;
+  }
+  // Each change of a pull request: its picture before (when the screen existed) and after.
+  function changesOf(c) {
+    const list = c.screens || [], pairs = [...new Set(list.filter((x) => x.stage).map((x) => x.pair))];
+    const of = (pair, stage) => list.find((x) => x.pair === pair && x.stage === stage) || null;
+    return [...pairs.map((pair) => ({ name: pair, before: of(pair, "before"), after: of(pair, "after"), note: of(pair, "after")?.caption || of(pair, "before")?.caption || "" })),
+      ...list.filter((x) => !x.stage).map((x) => ({ name: x.caption || "Screen", before: null, after: x, note: "" }))]
+      .map((x) => ({ ...x, key: (x.after || x.before).asset }));
+  }
+  const cvAt = (c) => { const xs = changesOf(c); if (S.chgAt?.card !== c.id) S.chgAt = { card: c.id, i: 0 }; S.chgAt.i = Math.max(0, Math.min(S.chgAt.i, xs.length - 1)); return xs[S.chgAt.i] || null; };
+  const cvAnchor = (c) => { const x = cvAt(c); return x ? { asset: x.key, label: x.name } : null; };
+  // What the last sent review said of a change: fine, or commented.
+  const reviewedOk = (c) => new Set((c.threads || []).filter((th) => th.review).flatMap((th) => th.review_ok || []));
+  // The changes not looked at in this review yet: neither marked fine nor commented on.
+  const cvLeft = (c) => { const ds = drafts(c), okd = reviewedOk(c); return changesOf(c).filter((y) => !ds.some((d) => d.anchor?.asset === y.key) && !okd.has(y.name)); };
+  function changeViewer(c) {
+    const xs = changesOf(c);
+    if (!xs.length) return `<h3>Changes</h3><p class="hint" style="max-width:var(--measure)">No screenshots of this pull request yet. Design Desk takes them, before and after, once its preview is up.</p>`;
+    const x = cvAt(c), i = S.chgAt.i, ds = drafts(c), okd = reviewedOk(c), live_ = ["open", "waiting"].includes(sState(c)) && can("comment");
+    const posted = (y) => (c.threads || []).filter((th) => th.anchor?.asset === y.key && th.state !== "resolved").length;
+    const mark = (y) => ds.some((d) => d.text && d.anchor?.asset === y.key) ? "changes" : ds.some((d) => d.ok && d.anchor?.asset === y.key) || okd.has(y.name) ? "ok" : "";
+    const nDr = (y) => ds.filter((d) => d.text && d.anchor?.asset === y.key).length;
+    const TIP = { ok: "Looks good", changes: "You ask for changes here; not sent yet", "": "Not reviewed yet" };
+    const steps = xs.length > 1 ? `<div class="cv-steps" role="tablist" aria-label="Changes">${xs.map((y, k) => `<button role="tab" data-chg="${k}" aria-selected="${k === i}" data-m="${mark(y)}" title="${TIP[mark(y)]}"><span class="n">${k + 1}</span>${esc(y.name)}</button>`).join("")}</div>` : "";
+    const fig = (sh, label) => `<div class="cv-col"><div class="cv-lab">${label}</div><figure class="shot" data-zoom="${esc(sh.asset)}" title="Click to enlarge"><img alt="${esc(x.name)}, ${label.toLowerCase()}" data-asset="${esc(sh.asset)}" /></figure></div>`;
+    const mine = ds.map((d, k) => [d, k]).filter(([d]) => d.text && d.anchor?.asset === x.key);
+    const isOk = ds.some((d) => d.ok && d.anchor?.asset === x.key), np = posted(x);
+    const left = cvLeft(c).length, prog = !live_ || xs.length < 2 ? "" : `${left ? "" : `<span class="cv-prog" data-done="true">✓ All reviewed</span>`}`;
+    return `<h3 id="s-changes" class="cv-h">Changes <span class="hint">${xs.length}</span>${prog}</h3>
+      <div class="cv" id="cv">${steps}
+        ${xs.length > 1 ? "" : `<div class="cv-head"><b>${esc(x.name)}</b></div>`}
+        <div class="cv-pair" data-cols="${x.before && x.after ? 2 : 1}">${x.before ? fig(x.before, "Before") : ""}${x.after ? fig(x.after, x.before ? "After" : "New screen") : ""}</div>
+        ${x.note ? `<p class="cv-note">${txt(x.note)}</p>` : ""}
+        ${live_ ? `<div class="cv-foot" data-v="${mine.length ? "changes" : isOk ? "ok" : ""}">
+          ${np ? `<button class="link" data-chg-talk="${esc(x.key)}">${plural(np, "comment", "comments")} on this change ↓</button>` : ""}
+          ${mine.length ? `<ul class="cv-mine">${mine.map(([d, k]) => `<li><span class="chip">Not sent yet</span><span class="tx">${esc(d.text)}</span><button class="x" data-s-undraft="${k}" aria-label="Remove this comment" title="Remove">✕</button></li>`).join("")}</ul>` : ""}
+          <textarea id="cv-text" rows="2" maxlength="4000" placeholder="What should change here?"></textarea>
+          <div class="bar">${isOk && !mine.length ? `<span class="cv-said"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>You marked this change as good<button class="link" data-s-undraft="${ds.findIndex((d) => d.ok && d.anchor?.asset === x.key)}">Undo</button></span>` : ""}<span class="grow"></span><button class="btn" data-cv-draft title="Adds your comment to the review; nothing is sent until you finish it">Comment</button>${isOk || mine.length ? "" : `<button class="btn cv-ok" data-cv-next title="${i < xs.length - 1 ? "This change is fine; on to the next one" : "This change is fine; then finish your review"}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Looks good</button>`}</div></div>` : ""}
+      </div>`;
+  }
+  function simpleChange(c) {
+    return `${backBar()}${sHead(c)}
+      ${c.summary ? `<div class="s-lead"><div class="md"><p>${txt(c.summary)}</p></div></div>` : ""}
+      ${changeViewer(c)}
+      ${sFound([attentionLine(c), againstBox(c), designCheckBox(c), figmaBox(c), followsLine(c)])}
+      <div class="s-impact">${(c.sections || []).some((x) => String(x.body || "").trim()) ? `<details class="fold big"><summary><h3>What changed and why</h3></summary>${sections(c)}</details>` : ""}${renderImpact(c.impact)}</div>
+      ${simpleThreads(c)}`;
+  }
+  const SPARK = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON_PATH.spark}</svg>`;
+  const capName = (n) => (n.includes("@") ? n : n.replace(/^./, (x) => x.toUpperCase()));
+  const sMsg = (m) => `<div class="s-msg" data-role="${esc(m.by?.agent ? "agent" : m.by?.role || "")}"><span class="s-av" aria-hidden="true">${m.by?.agent ? SPARK : esc((String(m.by?.name || nameOf(m.by?.email) || "?").replace(/^[^A-Za-z0-9]+/, "")[0] || "?").toUpperCase())}</span>
+      <div class="s-mb"><div class="s-who"><b>${esc(capName(noteBy(m.by) || "someone"))}</b>${m.by?.agent ? "" : `<span class="s-role">${esc(roleLabel(m.by?.role))}</span>`}<span title="${esc(when(m.at))}">${esc(sWhen(m.at))}</span></div>${md(m.text)}${warnsOf(m)}${changed(m)}</div></div>`;
+  const RV_WORD = { changes: "Requested changes", approve: "Approved", comment: "Reviewed" };
+  function simpleThreads(c) {
+    const byTime = (a, b) => String(a.created || a.messages?.[0]?.at || "").localeCompare(String(b.created || b.messages?.[0]?.at || ""));
+    const all = [...(c.threads || [])].sort(byTime), ids = new Set(all.map((th) => th.id));
+    const kids = (id) => all.filter((th) => th.in_review === id);
+    const anchorOf = (th) => {
+      const an = th.anchor, av = an?.variant && (c.variants || []).find((x) => x.id === an.variant);
+      const snip = an?.asset || (av && ((an.state && (av.states || []).find((x) => x.id === an.state)?.asset) || av.asset)) || "";
+      const whole = !an?.selector && !an?.text;
+      return av && !(whole && th.review) ? `<button class="anchor" data-goto="${esc(th.id)}" data-snip="${esc(snip)}" data-snip-sel="${esc(an.selector || "")}" data-snip-text="${esc(an.text || "")}" title="Opens the design at this part">◎ ${esc(whole ? av.name : an.label || an.text)}${whole ? "" : ` · ${esc(av.name)}`}</button>`
+        : an?.asset && c.kind === "change" && changesOf(c).some((x) => x.key === an.asset) ? `<button class="anchor" data-chg-key="${esc(an.asset)}" title="Shows this change, before and after">◎ ${esc(an.label || "A change")}</button>`
+        : an?.label && !av ? `<span class="anchor">◎ ${esc(an.label)}</span>` : "";
+    };
+    const replies = (th, rest) => rest.length || th.needs_agent ? `<div class="s-replies">${rest.map(sMsg).join("")}${th.needs_agent ? `<div class="s-msg" data-role="agent"><span class="s-av">${SPARK}</span><div class="s-mb"><span class="pending">Design Desk is on it…</span></div></div>` : ""}</div>` : "";
+    const foot = (th) => `<div class="reply">${mayIn(th, "reply") ? `<button class="btn small quiet" data-s-reply>Reply</button><input placeholder="Reply…" data-reply="${esc(th.id)}" maxlength="4000" /><button class="btn small" data-send-reply="${esc(th.id)}">Send</button>` : ""}${mayIn(th, "resolve") ? `<button class="btn small" data-resolve="${esc(th.id)}" title="Folds this conversation away">Resolve</button>` : ""}</div>`;
+    const mini = (th, cls) => `<details class="${cls} mini" id="th-${esc(th.id)}"><summary>✓ Resolved · <b>${esc(capName(noteBy(th.messages?.[0]?.by) || "someone"))}</b> — ${esc(String(th.messages?.[0]?.text || "").replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim())}</summary>${anchorOf(th)}${(th.messages || []).map(sMsg).join("")}${mayIn(th, "reply") ? `<div class="reply"><button class="btn small" data-reopen="${esc(th.id)}">Reopen</button></div>` : ""}</details>`;
+    const plain = (th, cls) => { const [first, ...rest] = th.messages || []; return th.state === "resolved" ? mini(th, cls) : `<article class="${cls}" id="th-${esc(th.id)}">${anchorOf(th)}${first ? sMsg(first) : ""}${replies(th, rest)}${foot(th)}</article>`; };
+    // A review: who, the verdict, their message, then each of its comments with its own replies.
+    const review = (th) => {
+      const [first, ...rest] = th.messages || [], by = first?.by, said = String(first?.text || "").trim(), own = kids(th.id);
+      return `<article class="s-thread s-rev" data-v="${esc(th.review)}" id="th-${esc(th.id)}">
+        <div class="s-msg" data-role="${esc(by?.role || "")}"><span class="s-av" aria-hidden="true">${esc((String(by?.name || nameOf(by?.email) || "?").replace(/^[^A-Za-z0-9]+/, "")[0] || "?").toUpperCase())}</span>
+          <div class="s-mb"><div class="s-who"><b>${esc(capName(noteBy(by) || "someone"))}</b><span class="s-verdict">${esc(RV_WORD[th.review].toLowerCase())}</span><span class="s-role">${esc(roleLabel(by?.role))}</span><span title="${esc(when(first?.at))}">${esc(sWhen(first?.at))}</span></div>${Object.values(RV_WORD).includes(said) ? "" : md(said)}
+          ${(th.review_ok || []).length ? `<p class="s-oks">✓ Looks good: ${th.review_ok.map(esc).join(", ")}</p>` : ""}</div></div>
+        ${replies({ ...th, needs_agent: th.needs_agent && !own.some((k) => k.needs_agent) }, rest)}${th.state === "resolved" || own.length ? "" : foot(th)}${own.length ? `<div class="s-subs">${own.map((k) => plain(k, "s-sub")).join("")}</div>` : ""}</article>`;
+    };
+    const rows = all.filter((th) => !(th.in_review && ids.has(th.in_review))).map((th) => (th.review ? review(th) : plain(th, "s-thread"))).join("");
+    const ds = drafts(c), pr = c.kind === "change", canReview = ["open", "waiting"].includes(sState(c)) && (pr || (c.variants || []).some((v) => v.asset));
+    const pending = ds.length ? `<div class="s-review"><div class="rh"><b>Your review</b><span class="hint">Not sent yet. Only you see it.</span></div>
+      <ul>${ds.map((d, i) => `<li>${d.anchor?.label && (d.anchor.selector || d.anchor.text || d.anchor.asset) ? `<span class="chip">◎ ${esc(d.anchor.label)}</span>` : ""}<span class="tx">${d.ok ? "✓ Looks good" : esc(d.text)}</span><button class="x" data-s-undraft="${i}" aria-label="Remove" title="Remove">✕</button></li>`).join("")}</ul></div>` : "";
+    const n = all.filter((th) => th.state !== "resolved").length;
+    return `<h3 id="s-comments">Comments${n ? ` <span class="hint">${n}</span>` : ""}</h3><div class="s-talk">${rows}${pending}
+      ${can("comment") ? `<div class="composer" id="composer"><textarea id="composer-text" maxlength="4000" placeholder="Write a comment…"></textarea>
+        <div class="bar"><button class="btn primary" data-post="comment">Comment</button>${canReview ? `<button class="btn" data-s-draft title="Keeps it with your other review comments; they go together when you finish the review">Add to review</button>` : ""}</div></div>` : ""}</div>`;
+  }
+  // Finish a review: what it holds, a note over it, and its verdict. On a request the changes go to
+  // Design Desk, which redraws; on a pull request the review goes to the pull request.
+  async function finishReview(want = "") {
+    const c = S.card, pr = c.kind === "change";
+    for (const [sel, mk] of [["#composer-text", (t) => ({ text: t })], ["#cv-text", (t) => ({ text: t, anchor: cvAnchor(c) })]]) { const b = $(sel), t = b?.value.trim(); if (t) { addDraft(c, mk(t)); b.value = ""; } }
+    renderDetail();
+    const all = drafts(c), ds = all.filter((d) => d.text), oks = all.filter((d) => d.ok), prName = c.source?.pr ? `PR #${c.source.pr}` : "the pull request";
+    const choices = [{ id: "changes", name: "Request changes", hint: pr ? `Goes on ${prName}. Waits for the developer’s next version` : "Design Desk starts on a new version right away" },
+      pr && mayHandle(c) && { id: "approve", name: "Approve", hint: "Design is fine with this pull request" },
+      { id: "comment", name: "Comment only", hint: "No verdict, stays Open" }].filter(Boolean);
+    const skipped = pr ? cvLeft(c) : [];
+    const guess = want || (ds.length ? "changes" : pr && oks.length && oks.length >= changesOf(c).length ? "approve" : "changes");
+    const line = (d) => `- ${d.anchor?.label && (d.anchor.asset || d.anchor.selector) ? `**${d.anchor.label}:** ` : ""}${String(d.text).replace(/\s+/g, " ").slice(0, 140)}`;
+    const verdict = await ask({ title: "Finish your review", ok: "Send review", choices, pick: choices.some((x) => x.id === guess) ? guess : "changes", note: "A note for the whole review (optional)",
+      warn: skipped.length ? `**${skipped.length === 1 ? "1 change" : `${skipped.length} changes`} not reviewed yet:** ${skipped.map((y) => y.name).join(", ")}. You can still send; Cancel takes you back.` : "",
+      html: ds.length || oks.length ? `<div class="rv-msgs" data-role="${esc(S.me?.role || "")}">${ds.map((d) => `<div class="rv-b">${d.anchor?.label && (d.anchor.asset || d.anchor.selector || d.anchor.text) ? `<span class="rv-at">◎ ${esc(d.anchor.label)}</span>` : ""}<p>${esc(d.text)}</p></div>`).join("")}${oks.length ? `<p class="rv-ok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>${oks.map((d) => esc(d.anchor?.label)).join(", ")}</p>` : ""}</div>` : "",
+      send: async (a) => {
+        const v = a.choice || "changes";
+        if (v !== "approve" && !ds.length && !a.note) throw new Said(v === "changes" ? "Write what should change: a comment on a change, or a note here." : "There is nothing to send yet.");
+        const whole = !pr && (c.variants || []).some((x) => x.id === S.variant) ? { variant: S.variant, label: "the whole option" } : null;
+        const { thread } = await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text: a.note || RV_WORD[v], anchor: whole, review: v, review_ok: oks.map((d) => d.anchor?.label).filter(Boolean) });
+        const ids = a.note && thread?.id ? [thread.id] : [];
+        for (const d of ds) { const r = await api("POST", `/api/cards/${c.id}/threads`, { kind: "comment", text: d.text, anchor: d.anchor || whole, in_review: thread?.id }); if (r.thread?.id) ids.push(r.thread.id); }
+        setDrafts(c, []);
+        if (!pr && v === "changes" && ids.length) await api("POST", `/api/cards/${c.id}/work-in`, { threads: ids });
+        if (pr && v === "approve") await api("POST", `/api/cards/${c.id}/handled`, { handled: true });
+        return v;
+      } });
+    if (!verdict) { if (skipped.length) { S.chgAt = { card: c.id, i: Math.max(0, changesOf(c).findIndex((y) => y.key === skipped[0].key)) }; renderDetail(); $("#s-changes")?.scrollIntoView({ block: "start", behavior: "smooth" }); } return; }
+    if (S.ws.open) { S.ws.open = false; renderWorkspace(); }
+    toast(verdict === "approve" ? "Approved." : verdict === "comment" ? "Review sent." : pr ? `Changes requested. It waits for the developer now. (Prototype: nothing is posted on ${prName} yet.)` : "Sent. Design Desk is drawing the new version.");
+    await refreshList(); await openCard(c.id);
+  }
+
   function renderChange(c) {
+    if (simple()) return simpleChange(c);
     const src = c.source || {};
     return `${backBar()}
       <h2>${txt(c.title)}${num(c)}${titleLink(c)}</h2>
@@ -5161,6 +5483,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // the option shows only its open notes.
   // `mine` is the viewer's own entry: a thumb (`vote`) and, apart from it, a concern.
   function voteButtons(c, v, mine) {
+    if (simple()) return "";
     const notes = (c.threads || []).filter((th) => th.anchor?.variant === v && th.state !== "resolved").length;
     const noteLine = notes ? `<span class="notes">${plural(notes, "note", "notes")}</span>` : "";
     if (c.status !== "feedback") return noteLine ? `<span class="votes">${noteLine}</span>` : "";
@@ -5183,7 +5506,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // With a live prototype the options fold away and the state row holds the button instead.
   const wsTab0 = (c) => (c.variants || []).length && !live(c) ? `<button class="vws" data-act="workspace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>${can("revise") && !locked(c) ? "Design workspace" : "Comment on the design"}</button>` : "";
   function addOptionTab(c) {
-    if (closed(c) || locked(c) || !can("explore")) return "";
+    if (simple() || closed(c) || locked(c) || !can("explore")) return "";
     if (working(c).includes("explore")) return `<button class="vadd" disabled title="Design Desk is drawing; the new tab appears by itself"><span class="spin"></span> Drawing…</button>`;
     if ((c.variants || []).length >= 6) return "";
     return `<button class="vadd" data-act="add-option" title="Add one more option: describe it for Design Desk to draw, or use your own pictures">+ New option</button>`;
@@ -5191,7 +5514,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   // A tab's ✕ takes the option off, as a browser tab closes; a designer's or the request's
   // author's, whatever their role; never the last one.
-  const closeTab = (c, x) => !closed(c) && (can("choose") || filedIt(c)) && (c.variants || []).length > 1
+  const closeTab = (c, x) => !simple() && !closed(c) && (can("choose") || filedIt(c)) && (c.variants || []).length > 1
     ? `<span class="vclose" role="button" tabindex="0" data-drop-option="${esc(x.id)}" aria-label="Remove ${esc(x.name)}" title="Remove ${esc(x.name)}">✕</span>` : "";
 
   // Slack: the designs as pictures, or a vote on them; one button, both in its dialog.
@@ -5252,8 +5575,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (!S.variant || !vs.some((v) => v.id === S.variant)) S.variant = (favourite(c) || vs[0]).id;
     const v = vs.find((x) => x.id === S.variant);
     const mine = myVote(c, v.id);
-    return `<h3>Design options${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
-      <div class="tabs vtabs vrow" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>` : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
+    return `<h3>${simple() ? "Designs" : "Design options"}${locked(c) ? ` <span class="hint locked-note">🔒 Approved: this design no longer changes. To change it, ${can("request") ? `<button class="anchor-text" data-adjust>start a new request from this one</button>` : "start a new request from this one"}.</span>` : ""}</h3>
+      <div class="tabs vtabs vrow${simple() ? " utabs" : ""}" role="group" aria-label="Design options"><div class="vscroll">${splitTab(c)}${vs.map((x) => `<button data-variant="${esc(x.id)}" aria-pressed="${!splitOf(c)?.on && x.id === v.id}"${approvedOption(c)?.id === x.id ? ` data-m="ok"` : ""}${x.asset ? ` draggable="true" title="Shows this design option; drag it onto the panel below to set it beside another"` : ""}><span class="ono">${vs.indexOf(x) + 1}</span>${esc(x.name)}${(x.version || 1) > 1 ? (simple() ? ` <span class="tv" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">v${x.version}</span>` : ` <span class="chip" title="Design Desk changed this option ${x.version - 1} ${x.version === 2 ? "time" : "times"}; this is its latest version">version ${x.version}</span>`) : ""}${c.live_pick?.variant === x.id && (["building", "live"].includes(c.prototype?.state) || working(c).includes("build")) ? ` <span class="chip info" title="The option the live prototype is built from">▶ Goes live</span>` : ""}${closeTab(c, x)}</button>`).join("")}${addOptionTab(c)}</div>${wsTab0(c)}</div>
       ${splitOf(c)?.on ? `<div class="vpanel">${designBox(c, v)}${dropLayer(c)}</div>` : `<div class="vpanel">
       ${v.fidelity === "picture" ? `<p class="hint">Pictures added by ${v.by ? who(v.by) : "a person"}; Design Desk drew nothing.</p>` : ""}
       <div class="vbar">
@@ -5342,6 +5665,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const r = en ? { ...(c.request || {}), ...Object.fromEntries(["problem", "vision", "goal", "steps"].filter((k) => tr[k]).map((k) => [k, tr[k]])) } : c.request || {};
     const title = en && tr.title && !c.renamed ? tr.title : c.title;
     const bug = r.type === "bug";
+    if (simple()) return simpleRequest(c);
     // A bug's expected result and its steps, and any request's steps, open on a click.
     // Only the asker's words: an idea shows its problem and how they picture it; what should
     // happen and the steps are a bug report's (a goal or steps an idea got before are not its words).
@@ -5645,9 +5969,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // time; a double click, or Home, puts it back.
   const LIST_RANGE = 30, LIST_KEY = 10;
   function sizeList(dx, keep = true) {
-    dx = Math.round(Math.max(-LIST_RANGE, Math.min(LIST_RANGE, dx)));
+    const LIST_MIN = Math.round((parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--list-w")) || 380) / 2);
+    dx = Math.round(Math.max(-LIST_MIN, Math.min(LIST_RANGE, dx)));
     $("#main").style.setProperty("--list-dx", `${dx}px`);
-    const g = $("#list-grip"); g.setAttribute("aria-valuemin", String(-LIST_RANGE)); g.setAttribute("aria-valuemax", String(LIST_RANGE)); g.setAttribute("aria-valuenow", String(dx)); g.setAttribute("aria-valuetext", dx ? `${Math.abs(dx)} px ${dx > 0 ? "wider" : "narrower"}` : "usual width");
+    const g = $("#list-grip"); g.setAttribute("aria-valuemin", String(-LIST_MIN)); g.setAttribute("aria-valuemax", String(LIST_RANGE)); g.setAttribute("aria-valuenow", String(dx)); g.setAttribute("aria-valuetext", dx ? `${Math.abs(dx)} px ${dx > 0 ? "wider" : "narrower"}` : "usual width");
     if (keep) try { localStorage.setItem("desk-list-dx", dx ? String(dx) : ""); } catch {}
     return dx;
   }
@@ -5760,15 +6085,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const tile = (e) => {
       const busy = drawingStates(c, v, e), ch = CHANGE[e.change];
       const cat = catalogButton(c, v, e);
-      return `<div class="eltile"><button class="elopen" data-el="${esc(e.key)}" title="Open ${esc(e.name)}: every state of it and the use case each covers"><span class="elpic">${elementPic(v, e)}</span><span class="elname">${esc(e.name)}</span>
-        <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : statesComplete(v, e) ? `<span class="chip ok" title="Every state of it is drawn for the option's latest version; nothing is left to draw">✓ All ${plural(e.states.length, "state", "states")}</span>` : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
+      return `<div class="eltile"><button class="elopen" data-el="${esc(e.key)}" title="${simple() ? `Open ${esc(e.name)}: before and after` : `Open ${esc(e.name)}: every state of it and the use case each covers`}"><span class="elpic">${elementPic(v, e)}</span><span class="elname">${esc(e.name)}</span>
+        <span class="elmeta">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}${busy ? `<span class="chip info" title="Design Desk is drawing its states">● Drawing states</span>` : statesComplete(v, e) ? `<span class="chip ok" title="Every state of it is drawn for the option's latest version; nothing is left to draw">✓ All ${plural(e.states.length, "state", "states")}</span>` : simple() && !e.states.length ? "" : `<span class="chip" title="${e.states.length ? "States drawn of it" : "Open it to have its states drawn"}">${e.states.length ? plural(e.states.length, "state", "states") : "No states yet"}</span>`}</span></button>${cat ? `<div class="elcat">${cat}</div>` : ""}</div>`;
     };
-    return sect("elements", "All elements", els.length, "The parts this option changes or adds, each on its own. Open one to see it in every state.", `<div class="elgrid">${els.map(tile).join("")}</div>`);
+    return sect("elements", "All elements", els.length, simple() ? "" : "The parts this option changes or adds, each on its own. Open one to see it in every state.", `<div class="elgrid">${els.map(tile).join("")}</div>`);
   }
 
   // The element dialog: which design it is of, what it is, and every state drawn of it; without
   // states, the button that has them drawn. It follows the card as it refreshes.
   $("#element-dialog").addEventListener("close", () => { S.el = null; });
+  $("#element-dialog").addEventListener("toggle", (e) => { if (S.el && e.target.matches?.("[data-el-all]")) S.el.all = e.target.open; }, true);
   // Escape over an enlarged picture closes the picture, not the dialog.
   $("#element-dialog").addEventListener("cancel", (e) => { const z = $("#element-dialog .zoom"); if (z) { e.preventDefault(); z.remove(); } });
   // Escape closes it like every other dialog, also when the focus left it (a redrawn body, a
@@ -5801,6 +6127,37 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const more = S.el.look ? "" : busy ? `<li class="addstate"><div class="working"><span class="spin"></span><div>${esc(WORK.states)}</div></div></li>`
       : statesComplete(v, e) ? `<li class="addstate done"><div><b>✓ Every state is drawn</b><p class="hint">${plural(e.states.length, "state", "states")} of ${esc(e.name)} for version ${esc(v.version || 1)}: there is nothing more to draw. To change one, comment on it in the design workspace.</p></div></li>`
       : may ? `<li class="addstate"><button data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">+ ${e.states.length ? "Draw the states again" : "Draw every state"}<span class="hint">${e.states.length ? "for the option's latest version" : "hovered, disabled, loading, empty, an error, a long text…"}</span></button></li>` : "";
+    if (simple()) {
+      // The picture after: the element as the design draws it, or the state picked in the switcher.
+      const sts = e.states, si = sts.findIndex((x) => x.id === S.el.st), st = sts[si] || null;
+      const shown = st ? { shot: st.shot, asset: st.shot ? null : st.asset, selector: st.selector || e.selector } : look;
+      const pic = shown.shot ? `<figure class="shot"><img alt="${esc(e.name)}" data-asset="${esc(shown.shot)}" /></figure>`
+        : `<div class="snipbox"><iframe sandbox="allow-scripts" tabindex="-1" title="${esc(e.name)}" data-snip-asset="${esc(shown.asset)}" data-snip-sel="${esc(shown.selector || "")}" data-snip-base="${esc(shown.selector ? "" : v.asset || "")}"></iframe></div>`;
+      const step = (d, label) => `<button class="btn small" data-el-step="${d}" aria-label="${label}" title="${label}">${d < 0 ? "←" : "→"}</button>`;
+      const pickState = sts.length ? `<span class="el-sw">${step(-1, "Previous state")}<select id="el-state" aria-label="State of ${esc(e.name)}"><option value="">As designed</option>${sts.map((x) => `<option value="${esc(x.id)}"${x.id === st?.id ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>${step(1, "Next state")}</span>` : "";
+      const draw = busy ? `<span class="el-busy"><span class="spin"></span>Drawing its states…</span>`
+        : may && !statesComplete(v, e) ? `<button class="btn small" data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">${sts.length ? "Redraw states" : "Draw all states"}</button>` : "";
+      const after = `<div class="cv-col"><div class="cv-lab el-lab"><span>${e.change === "new" ? "New" : "After"}</span>${pickState}${draw}</div><div${zoomAttrs(shown, v.asset, `${e.name}: ${st ? st.name : "in the design"}`)} class="el-pic">${pic}</div>${st?.how ? `<p class="cv-note el-note">${txt(st.how)}</p>` : ""}</div>`;
+      const before = e.change === "new" ? "" : `<div class="cv-col"><div class="cv-lab el-lab"><span>Before</span></div>${e.before ? `<figure class="shot el-pic" data-zoom="${esc(e.before)}" title="Click to enlarge"><img alt="${esc(e.name)}, before" data-asset="${esc(e.before)}" /></figure>` : `<div class="el-pic nopic-f"><div class="nopic-box">No picture of it before</div></div>`}</div>`;
+      // Every state at once, folded: a tile shows it in the picture above, as the switcher does.
+      const tilePic = (x) => x.shot ? `<img alt="" data-asset="${esc(x.shot)}" />` : `<iframe sandbox="allow-scripts" tabindex="-1" aria-hidden="true" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : v.asset || "")}"></iframe>`;
+      const allStates = sts.length ? `<details class="el-all" data-el-all${S.el.all ? " open" : ""}><summary><b>All states</b><span class="hint">${sts.length}</span></summary>
+          <div class="el-grid">${[{ id: "", name: "As designed", ...look }, ...sts.map((x) => ({ id: x.id, name: x.name, how: x.how, shot: x.shot, asset: x.shot ? null : x.asset, selector: x.selector || e.selector }))].map((x) => `<button class="el-tile" data-el-pick="${esc(x.id)}" aria-pressed="${(st?.id || "") === x.id}" title="${esc(x.how || "Show it above")}"><span class="p">${tilePic(x)}</span><span class="n">${esc(x.name)}</span></button>`).join("")}</div></details>` : "";
+      // Comments on this element, as on a change of a pull request: sent ones, then the ones waiting in the review.
+      const on = (an) => an?.variant === v.id && (e.selector ? an.selector === e.selector : String(an.label || "").split(" · ")[0] === e.name);
+      const posted = (c.threads || []).filter((th) => th.state !== "resolved" && on(th.anchor));
+      const mine = drafts(c).map((d, k) => [d, k]).filter(([d]) => d.text && on(d.anchor));
+      const talk = ["open", "waiting"].includes(sState(c)) && can("comment") ? `<div class="cv-foot el-foot">
+          ${posted.length ? `<ul class="el-said">${posted.map((th) => { const m = th.messages?.[0]; return `<li><b>${esc(capName(noteBy(m?.by) || "someone"))}</b><span class="tx">${esc(String(m?.text || "").replace(/\s+/g, " "))}</span>${th.messages.length > 1 ? `<span class="hint">${plural(th.messages.length - 1, "reply", "replies")}</span>` : ""}</li>`; }).join("")}</ul>` : ""}
+          ${mine.length ? `<ul class="cv-mine">${mine.map(([d, k]) => `<li><span class="chip">Not sent yet</span>${d.anchor?.state ? `<span class="chip">${esc(sts.find((x) => x.id === d.anchor.state)?.name || "A state")}</span>` : ""}<span class="tx">${esc(d.text)}</span><button class="x" data-s-undraft="${k}" aria-label="Remove this comment" title="Remove">✕</button></li>`).join("")}</ul>` : ""}
+          <textarea id="el-text" rows="2" maxlength="4000" placeholder="What should change here?"></textarea>
+          <div class="bar"><span class="grow"></span><button class="btn" data-el-draft title="Adds your comment to the review; nothing is sent until you finish it">Comment</button></div></div>` : "";
+      $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>${e.how ? `<p class="el-how">${txt(e.how)}</p>` : ""}</div>
+          <div class="el-acts"><button class="btn primary" data-el-ws title="Opens the design at this part, to comment on it or ask for a change"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>Open in design workspace</button><button class="btn" data-el-close aria-label="Close">✕</button></div></div>
+        <div class="cv-pair el-pair" data-cols="${before ? 2 : 1}">${before}${after}</div>${allStates}${talk}`.replaceAll(' loading="lazy"', "");
+      loadPictures(dlg).catch(() => {});
+      return;
+    }
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
         <button class="btn small" data-el-close aria-label="Close">✕ Close</button></div>
@@ -6196,6 +6553,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     html #review [data-hot], html #review [data-hot][hidden] + [data-notes] { margin-left: auto; }
     /* The design's title (number and name) repeats its option tab on the Desk. */
     html #review #review-title { display: none; }
+  </style><script data-desk-look>addEventListener("load", () => { for (const b of document.querySelectorAll("#review-views button")) b.textContent = b.textContent.replace(/^ *[0-9]+ *· */, ""); });<\/script><style data-desk-look>
     /* A menu the review bar moved to <body> stays shut while hidden, whatever display its own classes give it. */
     html body > [hidden] { display: none !important; }
     /* The design's pages are named as such: "Pages:" in grey before their switcher. */
@@ -6318,7 +6676,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const title = S.ws.check ? `<span class="title">Final check: ${esc(v.name)} goes live</span><span class="chip" title="The version that goes live">version ${esc(v.version || 1)}</span>`
       : `<span class="title" title="${esc(c.title)}">${esc(c.title)}</span><span class="vsep" aria-hidden="true"></span>`;
     const opts = S.ws.check ? "" : `<div class="ws-opts" role="tablist" aria-label="Design options"><span class="k">Option</span><span class="ws-seg">${(c.variants || []).map((x, i) => wsTab(c, x, i, x.id === v.id)).join("")}</span>${wsAddOption(c)}</div>`;
-    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+    return `${title}${opts}<span class="grow"></span>${agent}${figBtn}${simple() && drafts(c).length ? `<button class="btn primary ws-review" data-s-review title="Sends your review's comments to Design Desk together">Finish review · ${drafts(c).length}</button>` : ""}${!S.ws.check && c.status === "feedback" && slackModes(c).length ? `<button class="btn ws-slack" data-act="slack">Send to Slack…</button>` : ""}<button class="btn ws-close" data-ws-close title="Back to the request" aria-label="Close the design workspace">Close <kbd>Esc</kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
   }
 
   // An option's tab: its number and name, a spinner while Design Desk changes it (a clock while it waits to), its open comments.
@@ -6438,10 +6796,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const panel = S.ws.panel || "comments";
     const kept = ["#ws-whole", "#ws-part"].map((q) => { const b = $(q); return { q, focus: document.activeElement === b, value: b?.value || "", caret: b ? [b.selectionStart, b.selectionEnd] : null }; });
     const open = notesOf(c).filter((n) => n.anchor.variant === v.id && n.state !== "resolved").length;
-    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button></div>
-      <div class="ws-pbody">${panel === "comments" ? renderWsNotes(c, v, old) : wsProps(c, v, old)}</div>`;
+    side.innerHTML = `<div class="ws-ptabs" role="tablist"><button role="tab" data-ws-panel="comments" aria-selected="${panel === "comments"}">Comments${open ? `<span class="n">${open}</span>` : ""}</button><button role="tab" data-ws-panel="props" aria-selected="${panel === "props"}">Properties${S.ws.selected ? `<span class="dot" title="A part is selected"></span>` : ""}</button>${simple() ? `<button role="tab" data-ws-panel="review" aria-selected="${panel === "review"}" title="Comments you drafted; not sent yet">My review${drafts(c).length ? `<span class="n">${drafts(c).length}</span>` : ""}</button>` : ""}</div>
+      <div class="ws-pbody">${panel === "review" && simple() ? wsReview(c) : panel === "comments" ? renderWsNotes(c, v, old) : wsProps(c, v, old)}</div>`;
     for (const k of kept) { const b = $(k.q); if (!b) continue; b.value = k.value; if (k.focus) { b.focus(); b.setSelectionRange(k.caret[0], k.caret[1]); } }
     loadPictures(side);
+  }
+
+  // My review: every comment drafted on this request, across its options, until the review is sent.
+  function wsReview(c) {
+    const ds = drafts(c), opt = (d) => (c.variants || []).find((x) => x.id === d.anchor?.variant)?.name || "";
+    if (!ds.length) return `<p class="hint" style="padding:16px 14px;margin:0">Nothing drafted yet. Comments you add to your review collect here until you send them.</p>`;
+    return `<ul class="ws-drafts">${ds.map((d, i) => `<li><div class="wd-h"><span class="chip">◎ ${esc(d.anchor?.selector || d.anchor?.text ? d.anchor.label || d.anchor.text : opt(d) || d.anchor?.label || "The request")}</span>${opt(d) && (d.anchor?.selector || d.anchor?.text) ? `<span class="hint">${esc(opt(d))}</span>` : ""}<button class="x" data-s-undraft="${i}" aria-label="Remove" title="Remove this draft">✕</button></div><p>${d.ok ? "✓ Looks good" : esc(d.text)}</p></li>`).join("")}</ul>
+      <div class="ws-drafts-bar"><span class="hint">Not sent yet. Only you see it.</span><button class="btn primary" data-s-review>Finish review · ${ds.length}</button></div>`;
   }
 
   function wsProps(c, v, old) {
@@ -6531,7 +6897,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       pop.innerHTML = `<div class="ph"><span class="pa">${esc(initials(S.me))}</span><b>New comment</b><span class="hint">on ${esc(on)}</span><button class="ws-ibtn" data-ws-pop-close aria-label="Close" title="Close (Esc)">${wsIcon("close")}</button></div>
         ${S.ws.edit ? `<div class="edit">Text: “${esc(S.ws.edit.from)}” → “<b>${esc(S.ws.edit.to)}</b>”</div>` : ""}
         <textarea id="ws-text" maxlength="4000" rows="3" placeholder="${shaper ? (sel ? "What should change here? e.g. make it a secondary button" : "What should change?") : "Your comment…"}"></textarea>
-        <div class="bar">${shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send title="⌘↵">Comment</button>`}</div>`;
+        <div class="bar">${simple() ? `<button class="btn" data-ws-send="comment" title="Everyone sees it now">Comment</button><button class="btn primary" data-ws-send="review" title="Keeps it with your other review comments (⌘↵)">Add to review</button>` : shaper ? `<button class="btn" data-ws-send="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send title="⌘↵">Comment</button>`}</div>`;
     } else {
       const [st, label] = noteState(c, th);
       const where = (th.anchor.label || th.anchor.text || "the whole option") + (th.anchor.view_name ? ` · ${th.anchor.view_name}` : "");
@@ -6551,7 +6917,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // A box to write a comment in the side panel, and its buttons: Send to Design Desk (a change) and Just comment.
   const wsBox = (where, placeholder, shaper, hint) => `<div class="ws-wholebox"><textarea id="ws-${where}" rows="2" maxlength="4000" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}"></textarea>
-      <div class="bar">${hint ? `<span class="hint">${hint}</span>` : ""}${shaper ? `<button class="btn" data-ws-send-${where}="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send-${where} title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send-${where} title="⌘↵">Comment</button>`}</div></div>`;
+      <div class="bar">${hint ? `<span class="hint">${hint}</span>` : ""}${simple() ? `<button class="btn" data-ws-send-${where}="comment" title="Everyone sees it now">Comment</button><button class="btn primary" data-ws-send-${where}="review" title="Keeps it with your other review comments (⌘↵)">Add to review</button>` : shaper ? `<button class="btn" data-ws-send-${where}="comment" title="A comment for the team; Design Desk works it in only when someone asks">Just comment</button><button class="btn primary" data-ws-send-${where} title="Design Desk changes the design (⌘↵)">Send to Design Desk</button>` : `<button class="btn primary" data-ws-send-${where} title="⌘↵">Comment</button>`}</div></div>`;
   const initials = (me) => String(me?.my_name || me?.name || me?.email || "?").split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
   // Beside the part, right of it when there is room, else left; a comment on the whole option at the top.
   function placePop() {
@@ -7038,17 +7404,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const n = visibleCards().length;
       // Nothing open: the tab's intro fills the pane (docs/desk-page.md → Tab intros).
       // How Design Desk works sits in the intro's own header; without an intro it stays here.
+      if (simple()) { d.innerHTML = `<p class="pick">${n ? "Pick something on the left." : ""}</p>`; return; }
       const intro = renderIntro(), say = n ? "Pick something on the left." : S.cards.length ? "" : "The Desk is empty for now.";
       d.innerHTML = `${say || !intro ? `<p class="pick">${say}${intro ? "" : `${say ? " " : ""}<a href="#" data-tab="guide">How Design Desk works</a>`}</p>` : ""}${intro}`;
       return;
     }
-    const keep = $("#composer-text")?.value || "";
+    const keep = $("#composer-text")?.value || "", keepCv = $("#cv-text")?.value || "";
     // On Product → Differences an item opens as its comparison with Figma.
     const figPage = S.tab === "product" && S.productFilter === "differences" && S.card.figma_check && figmaOn();
     d.innerHTML = figPage ? renderFigmaPage(S.card) : S.tab === "designs" && S.card.kind === "request" ? renderDesign(S.card) : { change: renderChange, element: renderElement, screen: renderScreen, digest: renderDigest, issue: renderIssue }[S.card.kind]?.(S.card) ?? renderRequest(S.card);
     // Screens, elements and digests have no place of their own for the decisions they follow.
     if (!figPage && ["screen", "element", "digest"].includes(S.card.kind)) d.insertAdjacentHTML("beforeend", followsLine(S.card));
     if (keep && $("#composer-text")) $("#composer-text").value = keep;
+    if (keepCv && $("#cv-text")) $("#cv-text").value = keepCv;
     loadImages();
     clampBriefs();
     if (S.card.kind === "screen") loadTimeline(S.card);
@@ -7450,6 +7818,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const whole = from === "whole", c = S.card, v = wsVariant(c), box = $({ pop: "#ws-text", whole: "#ws-whole", part: "#ws-part" }[from]);
     const sel = from === "pop" ? S.ws.target : from === "part" ? S.ws.selected : null;
     const kind = can("change") && only !== "comment" ? "change" : "comment";
+    if (only === "review") {
+      const t = box?.value.trim(); if (!t || !v) return;
+      const n = addDraft(c, { text: t, anchor: { variant: v.id, ...(S.ws.state ? { state: S.ws.state } : {}), ...(sel ? { selector: sel.selector, ...(sel.name ? { name: sel.name } : {}), text: sel.text, tag: sel.tag, label: sel.label, view: sel.view || null, view_name: sel.view_name || null } : { label: S.ws.state ? `the whole state “${wsDrawing(v).name}”` : "the whole option" }) } });
+      box.value = "";
+      if (from === "pop") { S.ws.edit = null; S.ws.pop = null; S.ws.target = null; frameSay({ type: "desk-track", selector: "" }); }
+      if (sel || S.ws.selected) { S.ws.selected = null; S.ws.edit = null; frameSay({ type: "desk-select", selector: null }); }
+      S.ws.panel = "review";
+      renderDetail(); renderWorkspace(); return;
+    }
     // A change to the part selected takes its look changes not sent yet with it.
     const look = kind === "change" && sel?.selector ? looksNow()[sel.selector] : null, lc = look ? lookChanges(look) : [], pc = look ? pickChanges(look) : [];
     const typed = box?.value.trim() || "";
@@ -7613,6 +7990,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("handle" in ds) { await api("POST", `/api/cards/${S.card.id}/handled`, { handled: ds.handle === "1" }); await refreshList(); await openCard(S.card.id); return; }
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
+    if ("sReply" in ds) { const r = el.closest(".reply"); r.classList.add("on"); r.querySelector("input")?.focus(); return; }
+    if ("sDraft" in ds) { const t = $("#composer-text"), text = t?.value.trim(); if (!text) { t?.focus(); return; } addDraft(S.card, { text }); t.value = ""; renderDetail(); return; }
+    if (ds.sUndraft) { setDrafts(S.card, drafts(S.card).filter((_, i) => i !== Number(ds.sUndraft))); renderDetail(); if ($("#ws-side")) renderWorkspace(); return; }
+    if ("sReview" in ds) { await finishReview(ds.sReview || ""); return; }
+    if (ds.chg || ds.chgStep) { S.chgAt.i = ds.chg ? Number(ds.chg) : S.chgAt.i + Number(ds.chgStep); renderDetail(); return; }
+    if (ds.chgKey) { const k = changesOf(S.card).findIndex((x) => x.key === ds.chgKey); if (k >= 0) { S.chgAt = { card: S.card.id, i: k }; renderDetail(); $("#s-changes")?.scrollIntoView({ block: "start", behavior: "smooth" }); } return; }
+    if (ds.chgTalk) { const th = (S.card.threads || []).find((x) => x.anchor?.asset === ds.chgTalk && x.state !== "resolved"); $(`#th-${CSS.escape(th?.id || "")}`)?.scrollIntoView({ block: "center", behavior: "smooth" }); return; }
+    if ("cvDraft" in ds) { const t = $("#cv-text"), text = t?.value.trim(); if (!text) { t?.focus(); toast("Write what should change here first."); return; } { const c = S.card, x = cvAt(c); setDrafts(c, drafts(c).filter((d) => !(d.ok && d.anchor?.asset === x.key))); } addDraft(S.card, { text, anchor: cvAnchor(S.card) }); t.value = ""; renderDetail(); return; }
+    if ("cvNext" in ds) { const c = S.card, x = cvAt(c), t = $("#cv-text"), text = t?.value.trim(), all = changesOf(c);
+      if (text) { setDrafts(c, drafts(c).filter((d) => !(d.ok && d.anchor?.asset === x.key))); addDraft(c, { text, anchor: cvAnchor(c) }); t.value = ""; }
+      else if (!drafts(c).some((d) => d.anchor?.asset === x.key)) addDraft(c, { ok: true, anchor: { asset: x.key, label: x.name } });
+      if (S.chgAt.i < all.length - 1) { S.chgAt.i += 1; renderDetail(); return; }
+      await finishReview(""); return; }
     if (ds.post) { S.convoOpen = true; S.sect.talk = true; await post(ds.post); return; }
     if ("built" in ds) { await api("POST", `/api/cards/${S.card.id}/built`, { built: ds.built === "1" }); await refreshList(); await openCard(S.card.id); return; }
     if ("devAsk" in ds) { if (!devAsked(S.card)) { store.set(`desk-dev-asked:${S.card.id}`, "1"); renderDetail(); } const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
@@ -7724,6 +8114,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // An element of the option: its dialog, its states drawn, the product's element it changes.
     if (ds.el) { openElement(S.variant, ds.el); return; }
     if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true }); return; }
+    if (ds.elPick !== undefined && S.el) { S.el.st = ds.elPick || null; renderElementDialog(); $("#el-body .el-pair")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); return; }
+    if (ds.elStep && S.el) { const c = S.card, v = (c.variants || []).find((x) => x.id === S.el.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key); if (!e) return;
+      const ids = ["", ...e.states.map((x) => x.id)], k = Math.max(0, ids.indexOf(S.el.st || "")); S.el.st = ids[(k + Number(ds.elStep) + ids.length) % ids.length] || null; renderElementDialog(); return; }
+    if ("elDraft" in ds && S.el) { const c = S.card, v = (c.variants || []).find((x) => x.id === S.el.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key), t = $("#el-text"), text = t?.value.trim(); if (!e) return;
+      if (!text) { t?.focus(); toast("Write what should change here first."); return; }
+      const st = e.states.find((x) => x.id === S.el.st);
+      addDraft(c, { text, anchor: { variant: v.id, ...(st ? { state: st.id } : {}), ...(e.selector ? { selector: e.selector, text: "", tag: "", view: e.view || null, view_name: e.view_name || null } : {}), label: st ? `${e.name} · ${st.name}` : e.name } });
+      renderDetail(); return; }
+    if ("elWs" in ds) { const c = S.card, v = (c.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key); if (!e) return;
+      $("#element-dialog").close(); S.variant = v.id; S.ws.state = null; S.ws.alt = null; S.ws.version = null; S.ws.open = true; S.ws.check = false; S.ws.mode = "off";
+      S.ws.selected = e.selector ? { selector: e.selector, text: "", tag: "", label: e.name, view: e.view, view_name: e.view_name } : null; S.ws.edit = null;
+      renderWorkspace(); return; }
     if ("elClose" in ds) { $("#element-dialog").close(); return; }
     if ("elStates" in ds) { await act("states"); return; }
     if (ds.elGoto) { $("#element-dialog").close(); await goTo(target(ds.elGoto)); return; }
@@ -8007,6 +8409,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
 
   document.addEventListener("input", (e) => { if (e.target.dataset?.plColor) lookSet(e.target.dataset.plColor, e.target.value); });
   document.addEventListener("change", (e) => {
+    if (e.target.id === "el-state" && S.el) { S.el.st = e.target.value || null; renderElementDialog(); return; }
     if (e.target.dataset?.plColor) { lookSet(e.target.dataset.plColor, e.target.value); e.target.blur(); renderWorkspace(); return; }
     if ("outline" in e.target.dataset) { showOutline(e.target.checked); return; }
     // The final check keeps "Ask me first" across its redraws (a step to a state, a new version).
