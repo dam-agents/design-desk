@@ -219,8 +219,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   keeps the link above the pane. A change that adds, renames or removes a tab's action updates its intro too.
 - **How it works** is built the same way: each process (a request, changing a design, a change
   that ships, planned work, and Designs for the roles that see it) with its steps from the same
-  `INTRO`, and its flow and colour key where it has one; then what only a developer can do and
-  how long things take.
+  `INTRO`, and its flow and colour key where it has one; then what only a developer can do, your
+  other agents over MCP (what they may do, whether it is on, and for an admin how to set it up,
+  [mcp.md](mcp.md); full mode only), and how long things take.
 - **Redraws keep your place.** The page polls; a menu that did not change is not redrawn, and a
   redrawn menu, list or private ask gives keyboard focus back to the same button. A private ask's
   answer shows as it lands, every 4 seconds while one is awaited, and the box keeps its text, focus and caret. A request's own work line

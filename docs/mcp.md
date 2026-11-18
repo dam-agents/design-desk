@@ -9,6 +9,7 @@ may use it; their tools are then `design_desk__list_items`, `…__read_item` and
 | `desk/mcp.mjs` | The MCP server (stdio, no dependencies): its tools and their descriptions |
 | `desk/satellite.sh` | The Login item `design-desk-satellite`: runs `dam satellite mcp` with `desk/mcp.mjs` |
 | `/peer/` routes of `desk/server.mjs` | What a peer may do; token in `work/desk/.peer-token` (mode 600, never backed up) |
+| How it works on the Desk | Says the same for people, whether it is on (`mcp` in `/api/me`), and the setup steps to an admin |
 | `work/desk/.satellite-key` | The owner's API key with the serve scope only (mode 600, never backed up, never printed) |
 
 ## What a peer may do

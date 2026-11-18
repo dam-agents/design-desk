@@ -11,7 +11,8 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
 **Upgrade:**
 1. Restart the Desk server ([desk.md](docs/desk.md) → Server): it now has the `/peer/` routes and
-   mints `work/desk/.peer-token`.
+   mints `work/desk/.peer-token`. Then republish the page ([desk.md](docs/desk.md) → Publishing the
+   page): How it works explains the MCP server and, to an admin, how to set it up.
 2. Run `bash "$HOME/scripts/desk-service.sh" install`: it adds the `design-desk-satellite` Login
    item, which waits while `mcp_satellite` is `disabled`. An existing `design-desk-server` is kept.
 3. Add `mcp_satellite: disabled`, `mcp_role: developer`, `mcp_server:` and, under **Advanced**,

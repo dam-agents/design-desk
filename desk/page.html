@@ -723,6 +723,7 @@
   #pe-roles label { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
   #pe-roles label .sub { margin: 0; }
   .guide { max-width: var(--measure); } .guide li { margin-bottom: 8px; } .guide ol { padding-left: 20px; }
+  .guide code { font-size: var(--fs-meta); overflow-wrap: anywhere; }
   /* How it works draws how a request, an issue and a shipped change move, in the Desk's own inks:
      blue Design Desk at work, amber waits on the team, violet live, green approved, red closed. */
   .guide figure.flow { margin: 12px 0 20px; }
@@ -1958,11 +1959,30 @@ ${seesDesigns() ? `<h3>Sent to developers</h3>${process("designs")}` : ""}
 <li>Add information the product does not have, or take away something people can do.</li>
 <li>Change anything behind the screens: servers, data, security, settings.</li></ul>
 <p>Design Desk still sketches such ideas; the developer spec names the part a developer builds.</p>
+${full(MCP_GUIDE())}
 <h3>How long things take</h3><ul>
 <li>A question or a small change: a few minutes.</li>
 <li>Design options: well under an hour.</li>
 ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>`)}</ul>
 <p class="tip">The page updates by itself; you can close it and come back. <b>Ask privately</b>, bottom right, asks Design Desk anything about the page you are on.${S.me?.slack ? " In the team's Slack channel, tell Design Desk what looks broken or what you would like designed; it answers in your thread." : ""} Your role is top right${full(`; <a href="#" data-tab="people">People</a> says what each role may do`)}, and ${esc(S.me?.contact || "the Desk's owner")} changes it.</p>`;
+
+  // Other agents on the Desk over MCP (docs/mcp.md): what they may do, whether it is on, and how
+  // an admin turns it on. Setting it up is the owner's, in a terminal and in the app.
+  const MCP_GUIDE = () => {
+    const mode = S.me?.mcp || "disabled";
+    const state = mode === "always" ? "It is on for this Desk, and always reachable."
+      : mode === "when-awake" ? "It is on for this Desk while Design Desk is awake; when it sleeps, an agent hears that it is offline and tries again later."
+      : "It is off for this Desk.";
+    const setup = S.me?.role === "admin" ? `<p>To set it up (the Desk's owner):</p><ol>
+<li>In a terminal of your own, make a key that can only serve the Desk: <code>dam auth token create --name design-desk-satellite --scope satellites:serve</code>. It is shown once.</li>
+<li>Open Design Desk's terminal in the app and save the key there: <code>install -m 600 /dev/stdin ~/work/desk/.satellite-key</code>, paste the key, then press Ctrl-D. Never paste it in a chat or on the Desk.</li>
+<li>Tell Design Desk in its chat to turn on the MCP server, <b>while awake</b> (free) or <b>always</b> (its machine never sleeps, which costs memory all day), and which role the agents get: developer (the default), PM or guest.</li>
+<li>Allow the platform's address when the app asks for it.</li>
+<li>For each agent that may use the Desk: Configure agent → Connections → + New → MCP servers → <b>design-desk</b> → Add to agent. Start a new session of that agent to see the tools.</li></ol>`
+      : `<p>${mode === "disabled" ? "To turn it on, ask" : "To give it to another agent, ask"} ${esc(S.me?.contact || "the Desk's owner")}.</p>`;
+    return `<h3>Your other agents</h3>
+<p>Your other agents on the platform can use the Desk through an MCP server. They read PR changes, requests, issues and decisions, ask Design Desk questions, comment, reply, file requests and report UI bugs. They cannot vote, approve, build a live prototype, close a request or record a decision: people do that here. Design Desk answers them on its next round, in about ten minutes. On the Desk they all show under one name, with one role. ${state}</p>${setup}`;
+  };
 
   // ---------- what a button does, on hover ----------
   // Every button, label and picture says on hover what it does or what it means
