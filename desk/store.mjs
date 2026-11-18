@@ -1195,7 +1195,7 @@ export class Store {
       const picked = [...new Set(carry.map(String))];
       const vs = picked.map((vid) => (source.variants || []).find((v) => v.id === vid) || (() => { throw bad(`${source.id} has no option ${vid}`); })());
       c.variants = vs.map((v) => ({ id: v.id, name: v.name, purpose: v.purpose, rationale: v.rationale, fidelity: v.fidelity, asset: v.asset, figma_url: v.figma_url || null,
-        stories: v.stories || null, reasons: v.reasons || null, states: structuredClone(v.states || []), elements: structuredClone(v.elements || []), version: 1,
+        stories: v.stories || null, reasons: v.reasons || null, states: structuredClone(v.states || []), elements: structuredClone(v.elements || []), left_out: structuredClone(v.left_out || []), version: 1,
         carried: { card: source.id, variant: v.id, version: v.version || 1 } }));
       request.carry = c.variants.map((v) => v.id);
       // Carried options are changed right after triage, as new ones would be drawn.
@@ -3445,7 +3445,9 @@ function cleanVariants(list, assets, decisions = {}, before = [], cards = {}) {
       // Leaving `states` out keeps the option's states from before; [] removes them.
       ...(v.states === undefined ? {} : { states: cleanOptionStates(v.states, assets, i + 1) }),
       // Leaving `elements` out keeps the option's elements from before; [] removes them.
-      ...(v.elements === undefined ? {} : { elements: cleanOptionElements(v.elements, assets, cards, i + 1), left_out: cleanLeftOut(v.left_out, i + 1) }),
+      // Its exceptions (`left_out`) go with it: sent alone they replace the ones from before; elements sent without them clear them.
+      ...(v.elements === undefined ? {} : { elements: cleanOptionElements(v.elements, assets, cards, i + 1) }),
+      ...(v.left_out !== undefined ? { left_out: cleanLeftOut(v.left_out, i + 1) } : v.elements !== undefined ? { left_out: [] } : {}),
       // Leaving `alternatives` out keeps the ones from before while the option is unchanged.
       ...(v.alternatives === undefined ? {} : { alternatives: cleanAlternatives(v.alternatives, assets, i + 1) }),
     };

@@ -1995,6 +1995,12 @@ test("the same elements in every option: the request's list, in its order and na
   // Leaving elements out keeps them and their exceptions, still checked against the list.
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b }] });
   assert.deepEqual(s.getCard(card.id).variants[1].left_out.map((x) => x.id), ["banner"]);
+  // Its exceptions sent alone replace the ones from before; a request started from it carries them over.
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b, left_out: [{ id: "banner", why: "Each row says it." }] }] });
+  assert.equal(s.getCard(card.id).variants[1].left_out[0].why, "Each row says it.");
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b, left_out: [] }] }), /Limit banner\) is not in this option/);
+  const carried = s.createRequest(alice, { title: "Daily limits, again", problem: "Still.", from: card.id, carry: ["v2"], options: 0 }).card;
+  assert.deepEqual(carried.variants[0].left_out, [{ id: "banner", why: "Each row says it." }]);
   assert.throws(() => s.upsertCard({ id: card.id, shared_elements: [...shared, { id: "total", name: "Total" }] }), /Total\) is not in this option/);
   // A person's own picture, and an option that lists no elements, are not held to it.
   s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b }, { id: "v3", name: "Sketch", asset: a, fidelity: "picture", elements: [] }, { id: "v4", name: "Old", asset: b }] });

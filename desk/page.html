@@ -5785,7 +5785,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const els = elementsOf(v), shared = c.shared_elements || [];
     if (!shared.length || v.fidelity === "picture" || (!(v.elements || []).length && !(v.left_out || []).length)) return els;
     const gap = (s) => ({ key: `gap-${s.id}`, gap: true, name: s.name, why: (v.left_out || []).find((x) => x.id === s.id)?.why || "" });
-    return [...shared.map((s) => els.find((e) => !e.derived && e.id === s.id) || gap(s)), ...els.filter((e) => e.derived || !shared.some((s) => s.id === e.id))];
+    // States drawn of a part before the option left it out show no second tile beside its gap.
+    const out = shared.filter((s) => (v.left_out || []).some((x) => x.id === s.id)), outIds = new Set(out.map((s) => s.id)), outNames = new Set(out.map((s) => partKey(s.name)));
+    const leftOver = (e) => e.derived && (e.states.some((x) => outIds.has(x.element)) || outNames.has(e.name_key));
+    return [...shared.map((s) => els.find((e) => !e.derived && e.id === s.id) || gap(s)), ...els.filter((e) => !leftOver(e) && (e.derived || !shared.some((s) => s.id === e.id)))];
   }
   function renderOptionElements(c, v) {
     const els = alignedElements(c, v);
