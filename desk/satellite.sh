@@ -17,6 +17,8 @@ KEY="$WORK/desk/.satellite-key"
 STATE="$HOME_DIR/.local/state/design-desk"
 say() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 wait_a_while() { sleep "${SATELLITE_RETRY_S:-300}"; }
+# Running, and not a child that exited and waits to be reaped (kill -0 succeeds on that one).
+alive() { ps -o stat= -p "$1" 2>/dev/null | grep -qv Z; }
 
 mkdir -p "$STATE"
 # A stop of the service stops the worker too: it drains on the first interrupt.
@@ -33,17 +35,25 @@ while :; do
   DAM_TOKEN="$(tr -d '[:space:]' < "$KEY")"; export DAM_TOKEN DAM_SERVER="$server"
   set -- dam satellite mcp --name "$name" --description "Design Desk: the team's design changes, requests and decisions" -- node "$DESK/mcp.mjs"
   if [ "$mode" = when-awake ]; then
-    say "serving $name at $server while this machine is awake"
-    "$@" & child=$!; wait "$child"; say "worker exited ($?)"; child=""; wait_a_while; continue
+    "$@" & pid=$!
+    say "serving $name at $server while this machine is awake (pid $pid)"
+  else
+    # always: the worker runs detached, so a Keep Mark counts for it.
+    ( setsid "$@" >>"$STATE/satellite.log" 2>&1 < /dev/null & echo $! > "$STATE/satellite.pid" )
+    pid="$(cat "$STATE/satellite.pid")"
+    platform-keep --pid "$pid" >/dev/null 2>&1 || say "platform-keep could not mark $pid: this machine may sleep"
+    say "serving $name at $server, kept awake (pid $pid)"
   fi
-  # always: the worker runs detached, so a Keep Mark counts for it, and this loop watches it.
-  ( setsid "$@" >>"$STATE/satellite.log" 2>&1 < /dev/null & echo $! > "$STATE/satellite.pid" )
-  pid="$(cat "$STATE/satellite.pid")"; child="$pid"
-  platform-keep --pid "$pid" >/dev/null 2>&1 || say "platform-keep could not mark $pid: this machine may sleep"
-  say "serving $name at $server, kept awake (pid $pid)"
-  while kill -0 "$pid" 2>/dev/null; do
+  child="$pid"
+  # Either mode: a changed mcp_satellite stops the worker within a minute; the loop starts the
+  # one the new mode asks for, or waits.
+  changed=0
+  while alive "$pid"; do
     sleep 60
-    [ "$(cfg mcp_satellite)" = always ] || { kill -INT "$pid" 2>/dev/null; break; }
+    [ "$(cfg mcp_satellite)" = "$mode" ] || { changed=1; kill -INT "$pid" 2>/dev/null; break; }
   done
-  say "worker stopped"; child=""; sleep 5
+  [ "$mode" = when-awake ] && wait "$pid" 2>/dev/null
+  child=""
+  # A worker that exited on its own (dam itself retries a lost platform) waits before the next start.
+  if [ "$changed" = 1 ]; then say "mcp_satellite changed: worker stopped"; sleep 5; else say "worker exited"; wait_a_while; fi
 done
