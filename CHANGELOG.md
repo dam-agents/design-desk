@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.97.2 — 2026-11-18
+
+**Upgrade:**
+Nothing — skills are re-read per run. A spec's pictures reach GitHub on the pushed bundle
+(`handoff-github` → The pictures); **operator-only:** without `prototype_remote` they fall back
+to `gh … --attach`, which a DAM sandbox cannot upload, so set `prototype_remote` for them.
+
 ## 1.97.1 — 2026-11-16
 
 **Upgrade:**

@@ -27,7 +27,7 @@ sent; the developer or coding agent gets only answers.
    - **The design** — the prototype link and demo sign-in while it lives, the variant
      names, and the screens as pictures, before and after: upload each (`design desk asset
      <file> --kind image --card R-<n>`) and write it as `![<view>](asset:A-<n>)`, so the
-     Desk shows it to the people who review the spec; the deliver skill attaches them to
+     Desk shows it to the people who review the spec; the deliver skill puts them on
      GitHub ([handoff-github](../.agents/skills/handoff-github/SKILL.md) → The pictures) and
      the bundle saves them under `pictures/`.
    - **Changes by screen** — per screen: layout, components, styles and tokens, icons.
@@ -127,7 +127,7 @@ card the people who may approve it read the spec, and:
    Deliver it with the `deliver` action's skill (`design skill deliver --repo <repo>`,
    [actions.md](actions.md); the bundled one is
    [`handoff-github`](../.agents/skills/handoff-github/SKILL.md)), with the approved option's
-   pictures attached, by the request's type — or, with the item's `comment_on`, as one comment
+   pictures, by the request's type — or, with the item's `comment_on`, as one comment
    on that pull request whatever the type (the skill → Back to its pull request):
    - `feature` (flow 1) — back to the issue it came from (`issue_writeback`), where a developer
      builds from it;
