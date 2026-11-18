@@ -3023,3 +3023,24 @@ test("reviews: drafts go out as one review; each verdict does what the Desk alre
   assert.throws(() => s.sendReview(req.id, alice, { verdict: "request-changes" }), /options are drawn/);
   assert.equal(JSON.stringify(s.db), before);
 });
+
+test("reviews on GitHub: a pull request's review is queued for the agent to post; the Desk keeps its head commit", () => {
+  const s = fresh();
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  assert.equal(s.github(["acme/widgets#7"])[0].head, "a".repeat(40));
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", comments: [] }]);
+  assert.equal(s.github(["acme/widgets#7"])[0].head, "a".repeat(40), "a read without it keeps the one before");
+  s.addDraft(chg.id, alice, { text: "Too loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "comment" });
+  assert.deepEqual([r.inbox.kind, r.inbox.review, r.review.sha], ["review", r.review.id, "a".repeat(40)]);
+  assert.deepEqual(inbox(s).open.filter((i) => i.kind === "review").map((i) => i.review), [r.review.id], "the worklist names the review");
+  // A request's review stays on the Desk.
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  s.addDraft(req.id, alice, { text: "Hm" });
+  assert.equal(s.sendReview(req.id, alice, { verdict: "comment" }).inbox, null);
+  // Posted: where, and the head it was posted on when the Desk had none.
+  assert.throws(() => s.reviewPosted(r.review.id, { url: "https://example.com/x" }), /url/);
+  const posted = s.reviewPosted(r.review.id, { url: "https://github.com/acme/widgets/pull/7#pullrequestreview-1", sha: "b".repeat(40) }).review;
+  assert.deepEqual([posted.posted.url.endsWith("review-1"), posted.sha], [true, "a".repeat(40)]);
+});

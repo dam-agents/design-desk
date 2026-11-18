@@ -11,6 +11,7 @@ const GH = {
   "repos/acme/widgets/issues/3/comments": [[{ user: { login: "lee" }, created_at: "2026-11-02T10:00:00Z", html_url: "https://github.com/acme/widgets/issues/3#c1", body: "Make it red?" }]],
   "repos/acme/widgets/issues/7": [{ title: "Limits", state: "closed", pull_request: { merged_at: "2026-11-01T10:00:00Z" }, html_url: "https://github.com/acme/widgets/pull/7", user: { login: "bob" }, labels: [], body: "", updated_at: "2026-11-01T10:00:00Z" }],
   "repos/acme/widgets/issues/7/comments": [[]],
+  "repos/acme/widgets/pulls/7": [{ head: { sha: "c".repeat(40) } }],
   "repos/acme/widgets/pulls/7/reviews": [[{ user: { login: "dana" }, submitted_at: "2026-11-01T09:00:00Z", html_url: "https://github.com/acme/widgets/pull/7#r1", state: "APPROVED", body: "Fine." }, { user: { login: "x" }, state: "COMMENTED", body: "" }]],
 };
 const gh = (args) => { const path = args[args.length - 1]; return path in GH ? { status: 0, stdout: JSON.stringify(GH[path]) } : { status: 1, stderr: "HTTP 404: Not Found\n" }; };
@@ -31,6 +32,8 @@ test("github-sync reads each ref with its comments and reviews, posts them, merg
   assert.deepEqual([issue.kind, issue.state, issue.labels, issue.comments.map((c) => c.body)], ["issue", "open", ["design"], ["Make it red?"]]);
   assert.deepEqual(issue.linked, [{ title: "Build the red", url: "https://github.com/acme/widgets/pull/8", state: "open", author: "bot" }], "an issue knows the pull requests that build it");
   assert.deepEqual([pr.kind, pr.state, pr.comments.map((c) => c.body)], ["pr", "merged", ["[review: APPROVED] Fine."]], "a pull request's reviews with a body are its comments");
+  assert.equal(pr.head, "c".repeat(40), "a pull request's head commit, for a review waiting on a new version");
+  assert.equal(issue.head, undefined);
   assert.deepEqual([out.synced, out.failed.map((x) => x.key), out.fresh.map((x) => x.key)], [2, ["acme/widgets#9"], ["acme/widgets#3"]]);
   assert.match(out.failed[0].error, /404/);
   assert.deepEqual(failed, [{ keys: ["acme/widgets#9"] }], "the key it cannot read is counted on the Desk");

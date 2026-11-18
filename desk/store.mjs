@@ -158,7 +158,7 @@ export const ISSUE_BUCKETS = ["sprint", "next", "assigned", "label"];
 // writes the deadline, `undo_until`, and the page shows Undo only before it
 // (docs/desk.md → The presentation).
 const endOfDay = (iso) => { const t = Date.parse(iso); return Number.isNaN(t) ? null : new Date(Math.floor(t / 864e5) * 864e5 + 864e5 - 1000).toISOString().replace(/\.\d{3}Z$/, "Z"); };
-const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision", "decision-check", "ci"];
+const INBOX_KINDS = ["question", "request", "explore", "revise", "states", "build", "handoff", "teardown", "follow-up", "catalog", "map", "agenda", "figma", "screens", "slack", "draw", "person", "decision", "decision-check", "ci", "review"];
 // Where a screen on a card came from: the pull request, the agent's screens instance, a
 // person, a live prototype, or a rebuild drawn from the code.
 const SCREEN_SOURCES = ["pr", "issue", "instance", "person", "prototype", "rebuild", "sketch", "test"];
@@ -381,7 +381,7 @@ export class Store {
     const p = join(this.dir, "inbox.json"), tmp = `${p}.tmp-${process.pid}`;
     writeFileSync(tmp, JSON.stringify(doc, null, 1));
     renameSync(tmp, p);
-    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.comment_on ? { comment_on: i.comment_on } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}) }; }
+    function pick(i) { return { id: i.id, kind: i.kind, card: i.card, thread: i.thread || null, created: i.created, ...(priv.has(i.thread) ? { private: true, context: priv.get(i.thread) } : {}), ...(i.person ? { person: i.person } : {}), ...(i.scope ? { scope: i.scope } : {}), ...(i.ask_first ? { ask_first: true } : {}), ...(i.implement ? { implement: true } : {}), ...(i.close_earlier ? { close_earlier: i.close_earlier } : {}), ...(i.comment_on ? { comment_on: i.comment_on } : {}), ...(i.variant ? { variant: i.variant } : {}), ...(i.element ? { element: i.element } : {}), ...(i.part ? { part: i.part } : {}), ...(i.review ? { review: i.review } : {}) }; }
   }
 
   next(kind, prefix) { this.db.seq[kind] += 1; return `${prefix}-${this.db.seq[kind]}`; }
@@ -854,12 +854,26 @@ export class Store {
       const head = !request ? this.headOf(c) : null;
       this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(head ? { sha: head } : {}) };
       c.reviews = [...(c.reviews || []), id];
+      // A pull request's review goes to the pull request too: the agent posts it (docs/watch.md → Reviews on GitHub).
+      if (!request && c.source?.pr && !c.source?.merged_at && c.status !== "archived") { const it = this.enqueue("review", c.id, null, who); it.review = id; item = it; }
       c.updated = this.clock();
       this.setDrafts(key, c.id, []);
     } catch (e) { this.save = save; this.load(); throw e; }
     this.save = save;
     this.save();
     return { review: structuredClone(this.db.reviews[id]), inbox: item };
+  }
+
+  // The agent posted a review on its pull request: where, and on which head commit, the one the
+  // developer's next push moves on from when the Desk had none yet.
+  reviewPosted(id, { url, sha = null } = {}) {
+    const r = own(this.db.reviews, id);
+    if (!r) throw missing(`no review ${id}`);
+    if (!/^https:\/\/github\.com\/[^\s]{1,480}$/.test(String(url || ""))) throw bad("url: the review's address on GitHub");
+    r.posted = { url: String(url), at: this.clock() };
+    if (!r.sha && /^[0-9a-f]{40}$/.test(String(sha || ""))) r.sha = String(sha);
+    this.save();
+    return { review: structuredClone(r) };
   }
 
   // The head commit of a change's pull request, as the GitHub copy last read it.
@@ -929,6 +943,8 @@ export class Store {
         // No list read this time (`linked` left out): the one from before stays.
         linked: !Array.isArray(x.linked) ? (was?.linked || []) : x.linked.slice(0, 10).filter((p) => /^https:\/\/github\.com\//.test(String(p?.url || ""))).map((p) => ({ title: String(p.title || "").slice(0, LIMITS.title), url: String(p.url).slice(0, 500), state: optText(p.state, 30, "state"), author: optText(p.author, 100, "author") })),
         body: String(x.body ?? "").slice(0, GH.body), updated: optText(x.updated, 40, "updated"), comments, fetched: this.clock(),
+        // A pull request's head commit: a review that asked for changes waits for it to move (docs/desk.md → Reviews).
+        ...(x.kind === "pr" && /^[0-9a-f]{40}$/.test(String(x.head || "")) ? { head: String(x.head) } : x.kind === "pr" && was?.head ? { head: was.head } : {}),
       };
       if (own(this.db.gh_failed, key)) delete this.db.gh_failed[key];
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });

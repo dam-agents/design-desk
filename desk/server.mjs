@@ -436,7 +436,7 @@ async function agentRoute(req, res, url) {
   // What a check reads (docs/desk.md → Decisions → The check).
   if (m === "GET" && p[1] === "cards" && p[3] === "decision-check") return send(res, 200, store.decisionCheck(p[2], { concepts: (url.searchParams.get("concept") || "").split(",").filter(Boolean), q: url.searchParams.get("q") || "" }));
   if (m === "GET" && p[1] === "cards" && p[2]) return send(res, 200, { card: store.getCard(p[2]) });
-  if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: it.card ? store.getCard(it.card) : null, thread: it.thread ? store.thread(it.thread) : null }); }
+  if (m === "GET" && p[1] === "items" && p[2]) { const it = store.item(p[2]); return send(res, 200, { item: it, card: it.card ? store.getCard(it.card) : null, thread: it.thread ? store.thread(it.thread) : null, ...(it.review ? { review: store.db.reviews[it.review] || null } : {}) }); }
   if (m === "GET" && p[1] === "stats") return send(res, 200, store.stats());
   // The approved designs a shipped change may build (docs/watch.md → Approved design).
   if (m === "GET" && p[1] === "designs") return send(res, 200, { designs: store.approvedDesigns() });
@@ -484,6 +484,7 @@ async function agentRoute(req, res, url) {
   if (m === "POST" && p[1] === "items" && p[3] === "done") return send(res, 200, store.done(p[2], String(b.session || ""), b.outcome || "done"));
   // An ask to add a person carries its payload; only an admin's ask on the page makes one.
   if (m === "GET" && p[1] === "github") { const card = url.searchParams.get("card"); const keys = url.searchParams.get("keys"); return send(res, 200, keys ? { records: store.github(keys.split(",").filter(Boolean)) } : { refs: store.githubRefs(card || null) }); }
+  if (m === "POST" && p[1] === "reviews" && p[3] === "posted") return send(res, 200, store.reviewPosted(p[2], { url: b.url, sha: b.sha || null }));
   if (m === "POST" && p[1] === "github" && p[2] === "failed") return send(res, 200, store.failGithub(b.keys));
   if (m === "POST" && p[1] === "github" && p[2] === "marks") return send(res, 200, store.markGithub(b.key, { at: b.at, author: b.author, design: b.design !== false }));
   if (m === "POST" && p[1] === "github") return send(res, 200, store.putGithub(b.records));

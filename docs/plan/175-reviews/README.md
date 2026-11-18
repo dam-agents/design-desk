@@ -69,7 +69,7 @@ Taken with the operator before planning:
 |----|-------|-------|------------|------|
 | 01 | Drafts on the server | Store + API: add, list, remove a person's drafts on a card | — | [x] |
 | 02 | Sending a review | Store + API: verdicts, threads tagged with the review, `responsible` | 01 | [x] |
-| 03 | The review on GitHub | `review` inbox item and due key, PR head commit in the GitHub copy, the agent posts it | 02 | [ ] |
+| 03 | The review on GitHub | `review` inbox item and due key, PR head commit in the GitHub copy, the agent posts it | 02 | [x] |
 | 04 | Simple mode: drafts and the review dialog | Comment boxes, Your review, header button, the dialog | 02 | [ ] |
 | 05 | The review in the conversation, the state, the bell | Review block (both modes), In dev line, bell events | 02, 04 | [ ] |
 | 06 | Full mode: drafts and the dialog; release | Full mode's boxes and dialog; VERSION, CHANGELOG, doc read-through | 04, 05 | [ ] |
