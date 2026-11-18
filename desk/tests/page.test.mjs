@@ -3937,6 +3937,7 @@ test("simple mode: a sent review is one block with its comments; a change that w
   await desk.waitForSelector("#detail .rvw");
   assert.match(await desk.textContent("#detail .sh-line .spill"), /In dev/);
   assert.match(await desk.textContent("#detail .sh-line"), /Changes requested · developer/);
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"], "a designer still approves it while it waits");
   assert.equal(await desk.locator("#detail .rvw .sthread").count(), 2, "its two comments inside it");
   assert.match(await desk.textContent("#detail .rvw .rv-h"), /Dana Kim[\s\S]*Changes requested[\s\S]*On GitHub/);
   assert.match(await desk.textContent("#detail .rvw .rv-note"), /Two things\./);

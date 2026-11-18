@@ -243,8 +243,9 @@ request merged or closed → `design desk done` with "PR no longer open". Else:
    address. Their words as written; nothing of yours ([desk.md](desk.md) → Writing on the Desk).
 2. `gh api [--hostname <host>] -X POST repos/<owner>/<name>/pulls/<pr>/reviews -f event=COMMENT
    -F body=@<file>` — always `COMMENT`, never `REQUEST_CHANGES` or `APPROVE`: the account is
-   Design Desk's, not the reviewer's. A review never sets or holds the `design-desk` check.
-3. `design desk review-posted <N-n> --url <its html_url> --sha <its commit_id>`, then `design desk done`.
+   Design Desk's, not the reviewer's. Posting it never sets the `design-desk` check.
+3. `design desk review-posted <N-n> --url <its html_url> --sha <its commit_id>` (the head the
+   developer's next push moves on from), then `design desk done`.
 
 A failed post (a 403, a deleted repository) is logged (`logev warn review …`), done with
 `--outcome "not posted: <cause>"` and reported in the chat UI; the review stays on the Desk.

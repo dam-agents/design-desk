@@ -3039,10 +3039,10 @@ test("reviews on GitHub: a pull request's review is queued for the agent to post
   const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
   s.addDraft(req.id, alice, { text: "Hm" });
   assert.equal(s.sendReview(req.id, alice, { verdict: "comment" }).inbox, null);
-  // Posted: where, and the head it was posted on when the Desk had none.
+  // Posted: where, and the head GitHub posted it on, which wins over the Desk's copy.
   assert.throws(() => s.reviewPosted(r.review.id, { url: "https://example.com/x" }), /url/);
   const posted = s.reviewPosted(r.review.id, { url: "https://github.com/acme/widgets/pull/7#pullrequestreview-1", sha: "b".repeat(40) }).review;
-  assert.deepEqual([posted.posted.url.endsWith("review-1"), posted.sha], [true, "a".repeat(40)]);
+  assert.deepEqual([posted.posted.url.endsWith("review-1"), posted.sha], [true, "b".repeat(40)]);
 });
 
 test("reviews in the bell: a review sent, and a pull request's new commits after one asked for changes", () => {
@@ -3059,4 +3059,37 @@ test("reviews in the bell: a review sent, and a pull request's new commits after
   const next = s.notifications(alice).items.find((x) => x.event === "new-version");
   assert.deepEqual([next.item, next.for_you], [chg.id, true], "the reviewer hears the next version arrived");
   assert.equal(s.getCard(chg.id).responsible, null);
+});
+
+test("reviews hold up: a stale option, a closed item, two reviews in one second, a head read after the review, GitHub's own head", () => {
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => "2026-11-18T10:00:00Z" });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", triage: { verdict: "design", reasons: ["Look."] }, variants: [{ id: "v1", name: "Quiet", asset: a.id }, { id: "v2", name: "Bold", asset: a.id }] });
+  s.addDraft(req.id, alice, { text: "On Bold", anchor: { variant: "v2" } });
+  s.card(req.id).variants = s.card(req.id).variants.filter((v) => v.id !== "v2");
+  const r = s.sendReview(req.id, alice, { verdict: "request-changes" }).review;
+  assert.equal(s.thread(r.threads[0]).anchor.variant, "v1", "a draft about a removed option goes on the one shown");
+  // A change: request changes, then approve, in the same second: approved.
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.addDraft(chg.id, alice, { text: "x" });
+  const rc = s.sendReview(chg.id, alice, { verdict: "request-changes" }).review;
+  assert.equal(rc.sha, undefined, "no head known yet");
+  assert.equal(s.getCard(chg.id).responsible.who, "developer");
+  // The first head read after it is the one it is about; the next one is the new version.
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  assert.equal(s.db.reviews[rc.id].sha, "a".repeat(40));
+  assert.equal(s.getCard(chg.id).responsible.who, "developer");
+  // GitHub's head at posting wins over a copy that was behind.
+  s.reviewPosted(rc.id, { url: "https://github.com/acme/widgets/pull/7#r", sha: "b".repeat(40) });
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "b".repeat(40), comments: [] }]);
+  assert.equal(s.getCard(chg.id).responsible.who, "developer", "the head the review was posted on is no new version");
+  s.addDraft(chg.id, alice, { text: "fine" });
+  s.sendReview(chg.id, alice, { verdict: "approve" });
+  assert.equal(s.getCard(chg.id).responsible, null, "the later review wins, whatever the second");
+  // A merged change takes Comment only.
+  s.card(chg.id).source.merged_at = "2026-11-18T10:00:00Z";
+  s.addDraft(chg.id, alice, { text: "late" });
+  assert.throws(() => s.sendReview(chg.id, alice, { verdict: "request-changes" }), /Comment only/);
+  assert.equal(s.sendReview(chg.id, alice, { verdict: "comment" }).review.verdict, "comment");
 });

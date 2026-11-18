@@ -1890,7 +1890,7 @@
     decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
-    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots", ci: "Updating the check on GitHub" };
+    slack: "Posting to Slack", "slack-send": "Sending to Slack", draw: "Drawing it", screens: "Checking the screenshots", ci: "Updating the check on GitHub", review: "Posting the review on GitHub" };
   // What an open request waits for when nobody needs to press anything.
   const WORK = {
     request: "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
@@ -1900,6 +1900,7 @@
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
     ci: "Setting Design Desk's check on the pull request to follow the handled mark.",
+    review: "Design Desk posts the review on the pull request, as a comment.",
     revise: "Changing the design as you asked.",
     alternatives: "Drawing other ways the part you picked could look, as you described it. They appear above the design; pick the one to keep.",
     states: "Drawing every state of this element. Each state appears here and in the design workspace as it is drawn, with the use case it covers.",
@@ -3320,7 +3321,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const n = draftsOf(c).length, verdicts = verdictsFor(c).map((x) => x.id);
     const changes = verdicts.includes("request-changes") ? btn('data-review="request-changes"', n ? `Request changes · ${n}` : "Request changes", n > 0) : "";
     const approve = (attr) => (n ? btn('data-review="approve"', "Approve") : btn(attr, "Approve", true));
-    const moves = change ? (open && mayHandle(c) ? changes + approve('data-handle="1"') : "")
+    const moves = change ? ((open || c.responsible?.who === "developer") && mayHandle(c) ? changes + (c.handled ? "" : approve('data-handle="1"')) : "")
       : !open ? ""
       : specWaits(c) ? (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "")
       : changes + (canApprove(c) && (c.triage || (c.variants || []).length) ? approve('data-act="approve"') : "");
@@ -3348,7 +3349,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // with its replies, in both modes (docs/desk.md → Reviews). Everything else keeps its own order.
   const REVIEW_SAYS = { "request-changes": "Changes requested", approve: "Approved", comment: "Comments" };
   function withReviews(c, threads, one, order, last, resolvedLast = true) {
-    const reviews = (c.reviews || []).filter((r) => r && r.id), mine = new Map(reviews.map((r) => [r.id, []]));
+    const reviews = c.send ? [] : (c.reviews || []).filter((r) => r && r.id), mine = new Map(reviews.map((r) => [r.id, []]));
     const loose = threads.filter((th) => !(th.review && mine.has(th.review) && mine.get(th.review).push(th)));
     const items = [...loose.map((th) => ({ th, at: last(th), html: () => one(th) })),
       ...reviews.map((r) => { const ts = [...mine.get(r.id)].sort(order); return { review: true, at: Math.max(Date.parse(r.at) || 0, ...ts.map(last)), html: () => reviewBlock(c, r, ts.map(one).join("")) }; })];
@@ -3363,7 +3364,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   // A review in the making (docs/desk.md → Reviews): the viewer's drafts on an item, kept by the
   // Desk server for them alone. `addDraft` is the one way a box adds one, here and in the item's other views.
-  const draftsOf = (c) => (c && S.drafts[c.base || c.id]) || [];
+  const draftsOf = (c) => (c && !c.send && S.drafts[c.id]) || [];
   async function loadDrafts(c, force = false) {
     if (!c || !["request", "change"].includes(c.kind) || c.send || (!force && S.drafts[c.id])) return;
     S.drafts[c.id] = (await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null))?.drafts || [];
@@ -4631,7 +4632,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         <div class="bar"><button class="btn primary" data-post="designer" title="The designer who approved it gets a notification and answers here">Ask the designer</button></div></div>` : ""}${rows ? `<div class="threads design-asks">${rows}</div>` : ""}`;
     const open = threads.filter((th) => th.state !== "resolved").length;
     // The conversation folds under the box, as on the prototype; it stays as the reader left it.
-    const convo = threads.length ? `<details class="convo" data-convo${S.convoOpen ? " open" : ""}><summary>Show the conversation <span class="cnt">${plural(threads.length, "thread", "threads")}${open ? ` · ${open} open` : ""}</span></summary><div class="threads">${rows}</div></details>` : "";
+    const convo = threads.length || (!c.send && (c.reviews || []).length) ? `<details class="convo" data-convo${S.convoOpen ? " open" : ""}><summary>Show the conversation <span class="cnt">${plural(threads.length, "thread", "threads")}${open ? ` · ${open} open` : ""}</span></summary><div class="threads">${rows}</div></details>` : "";
     // The whole part folds with +/−; it starts open for everyone and keeps how the person left it.
     return `<details class="talk" data-sect="talk"${S.sect.talk === false ? "" : " open"}><summary><h3>Questions and comments</h3></summary>
       ${yourReview(c)}

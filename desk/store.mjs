@@ -829,11 +829,16 @@ export class Store {
     const words = optText(note, LIMITS.text, "note");
     if (!drafts.length && !words) throw bad("Write a comment or a note first.");
     const request = c.kind === "request", changes = verdict === "request-changes";
+    if (verdict !== "comment" && (request ? ["declined", "handed-off"].includes(c.status) : Boolean(c.source?.merged_at) || c.status === "archived"))
+      throw bad(request ? "This request is closed or sent to developers: send your comments with Comment only." : "This pull request is merged: send your comments with Comment only.");
     if (request && changes && !(c.variants || []).length) throw bad("Changes are asked of a design once its options are drawn.");
     if (request && verdict === "approve" && !(c.approved && addressesOf(who).includes(String(c.approved.by?.email || "").toLowerCase())))
       throw bad("Approve the request first; the review then goes with your approval.");
     // Every draft is checked before anything is written, so a refused one changes nothing.
     const first = variant && (c.variants || []).some((v) => v.id === variant) ? variant : c.variants?.[0]?.id || null;
+    // A draft about an option no longer on the request is about the whole request now.
+    const has = (id) => (c.variants || []).some((v) => v.id === id);
+    for (const d of drafts) if (d.anchor?.variant && !has(d.anchor.variant)) d.anchor = { ...d.anchor, variant: null, state: null };
     const kindOf = (d) => (request && changes && (d.anchor?.variant || first) ? "change" : "comment");
     const plan = drafts.map((d) => ({ d, kind: kindOf(d), anchor: kindOf(d) === "change" && !d.anchor?.variant ? { ...(d.anchor || {}), variant: first } : d.anchor }));
     for (const x of plan) if (x.anchor?.state && !(c.variants || []).find((v) => v.id === x.anchor.variant)?.states?.some((st) => st.id === x.anchor.state)) throw bad("A draft is about a state that is no longer drawn. Remove it and write it again.");
@@ -866,13 +871,14 @@ export class Store {
   }
 
   // The agent posted a review on its pull request: where, and on which head commit, the one the
-  // developer's next push moves on from when the Desk had none yet.
+  // developer's next push moves on from.
   reviewPosted(id, { url, sha = null } = {}) {
     const r = own(this.db.reviews, id);
     if (!r) throw missing(`no review ${id}`);
     if (!/^https:\/\/github\.com\/[^\s]{1,480}$/.test(String(url || ""))) throw bad("url: the review's address on GitHub");
     r.posted = { url: String(url), at: this.clock() };
-    if (!r.sha && /^[0-9a-f]{40}$/.test(String(sha || ""))) r.sha = String(sha);
+    // GitHub's own head at posting is the one the review is about: the Desk's copy may have been behind.
+    if (/^[0-9a-f]{40}$/.test(String(sha || ""))) r.sha = String(sha);
     this.save();
     return { review: structuredClone(r) };
   }
@@ -888,8 +894,8 @@ export class Store {
   // developer on a change, until its pull request's head moves on from the one the review saw.
   responsibleOf(c) {
     const reviews = (c.reviews || []).map((id) => own(this.db.reviews, id)).filter(Boolean);
-    const last = reviews.filter((r) => r.verdict === "request-changes").at(-1);
-    if (!last || reviews.some((r) => r.verdict === "approve" && r.at >= last.at)) return null;
+    const at = reviews.findLastIndex((r) => r.verdict === "request-changes"), last = reviews[at];
+    if (!last || reviews.slice(at + 1).some((r) => r.verdict === "approve")) return null;
     if (c.kind === "request") {
       if (["declined", "handed-off"].includes(c.status) || c.approved?.at >= last.at) return null;
       if ((c.variants || []).some((v) => v.drawn && v.drawn > last.at)) return null;
@@ -949,8 +955,15 @@ export class Store {
       };
       // New commits on a pull request a review asked changes of: the developer's next version arrived.
       const head = this.db.github[key].head;
-      if (head && was?.head && head !== was.head)
-        for (const r of Object.values(this.db.reviews)) if (r.verdict === "request-changes" && r.sha === was.head && !r.next_at && this.cardsOf(key).includes(r.card)) r.next_at = this.clock();
+      if (head) {
+        const cards = this.cardsOf(key);
+        for (const r of Object.values(this.db.reviews)) {
+          if (r.verdict !== "request-changes" || r.next_at || !cards.includes(r.card)) continue;
+          // One sent before the Desk knew the head is about the first one it reads.
+          if (!r.sha) r.sha = head;
+          else if (head !== r.sha) r.next_at = this.clock();
+        }
+      }
       if (own(this.db.gh_failed, key)) delete this.db.gh_failed[key];
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
     }
