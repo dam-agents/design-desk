@@ -274,6 +274,13 @@
   .sav[data-r="agent"] { background: var(--ink); color: var(--bg); } .sav svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
   .sthread .chip { margin-bottom: 8px; } .sthread .reply { margin-top: 12px; margin-left: 40px; }
   .sh-after { margin-top: 4px; font-size: var(--fs-meta); color: var(--muted); } .sh-after a { color: inherit; }
+  /* A review in the making: the person's drafts, seen by them alone (docs/desk.md → Reviews). */
+  .yreview { max-width: var(--measure); margin: 0 0 16px; padding: 12px 16px; border: 1px solid var(--warn); border-radius: var(--r-md); background: var(--warn-soft); }
+  .yreview .yr-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; } .yreview .yr-h b { font-size: var(--fs-ui); }
+  .dbub { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-md); background: var(--panel); } .dbub + .dbub { margin-top: 8px; }
+  .dbub .db-b { min-width: 0; flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; } .dbub .about { display: block; font-size: var(--fs-micro); color: var(--muted); white-space: normal; }
+  .dbub .x { border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 4px; } .dbub .x:hover { color: var(--ink); }
+  #cf-body .dbub { background: var(--soft); }
   .sthread .chip.sjump { cursor: pointer; border: 0; font: inherit; font-size: var(--fs-micro); } .sthread .chip.sjump:hover { text-decoration: underline; }
   .sboxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 720px; margin: 16px auto 0; }
   .sbox { --p: var(--muted); display: grid; align-content: start; gap: 4px; text-align: left; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); color: inherit; font: inherit; cursor: pointer; }
@@ -2125,6 +2132,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     post: (v) => v === "question" ? "Design Desk answers right here. Everyone on the Desk sees it." : "A comment for the team; Design Desk reads it when it changes the design. Everyone on the Desk sees it.",
     sendReply: (v, el) => /Answer/.test(textOf(el)) ? "Sends your answer; Design Desk goes on with it" : "Adds your reply to this conversation (Enter)",
     resolve: "Marks this note done; you can reopen it",
+    review: (v) => v === "approve" ? "Opens your review with Approve picked; your comments go with it" : v === "request-changes" ? (S.card?.kind === "change" ? "Sends your comments as one review: the developer makes the next version, and it goes to the pull request" : "Sends your comments as one review: Design Desk draws the next version from them") : "Sends your comments as one review, with what you decide",
+    draftAdd: "Keeps this comment for your review: nobody sees it until you send the review",
+    draftNow: "Posts this comment now, here on the Desk; it is not part of your review",
+    draftDel: "Removes this comment from your review",
     reopen: "Opens this note again; Design Desk looks at it again",
     workIn: (v) => v.includes(",") ? "Design Desk changes the design as every open comment asks" : "Design Desk changes the design as this comment asks",
     sendForm: "Sends your answers; Design Desk goes on with them",
@@ -2336,7 +2347,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // ---------- state ----------
   // Items read since this list was shown: Unread keeps them, now not bold, until the filter or the tab changes.
   const JUST_READ = new Set();
-  const S = { justRead: JUST_READ, me: null, sect: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "turn", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
+  const S = { justRead: JUST_READ, me: null, sect: {}, drafts: {}, folds: { card: null, brief: false, made: false }, tab: "requests", newFilter: "open", reqFilter: "turn", issueFilter: "all", productFilter: "screens", elFilter: "all", figFilter: "differs", designFilter: "todo", el: null, decisionState: "active", decisions: [], decision: null, cards: [], card: null, variant: null, look: "now", lookSide: false, lookWith: "now", lookGone: false, lookMiss: null, agenda: [], presented: [], offline: false, assetCache: new Map(),
     ws: { open: false, mode: "off", selected: null, edit: null, version: null, view: null, seen: {}, state: null, alt: null, check: false, looked: new Set(), askFirst: true, why: true, reason: null,
       // The look palette: changes not sent yet per drawing (S.ws.shown) and part, the look of the part selected, what the design is made of.
       looks: {}, look: null, pal: null, plTab: null, plColor: null } };
@@ -2907,11 +2918,11 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // `choices` the ids ticked; OK waits until one is.
   // `url` is a one-line field's label (a link, or a name with `value` filled in and `max` its length).
   // noteFor: the note shows only while that choice is picked.
-  function ask({ title, body, ok, choices = null, pick = null, multi = false, note = null, noteFor = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, check3 = null, send }) {
+  function ask({ title, body, html = null, ok, choices = null, pick = null, multi = false, note = null, noteFor = null, url = null, value = "", max = 500, check = null, checked = false, check2 = null, check3 = null, send }) {
     const dlg = $("#confirm-dialog"), f = $("#confirm-form");
     f.reset();
     $("#cf-title").textContent = title;
-    $("#cf-body").innerHTML = body ? md(body) : "";
+    $("#cf-body").innerHTML = html ?? (body ? md(body) : "");
     $("#cf-ok").textContent = ok;
     const ticked = (id) => (multi ? (pick || []).includes(id) : id === pick);
     $("#cf-choices").innerHTML = choices ? choices.map((c) => `<label><input type="${multi ? "checkbox" : "radio"}" name="choice" value="${esc(c.id)}" ${ticked(c.id) ? "checked" : ""}${multi ? "" : " required"} /><span class="cn">${c.no ? `<span class="ono">${esc(c.no)}</span>` : ""}${esc(c.name)}</span>${c.hint ? `<span class="sub">${esc(c.hint)}</span>` : ""}</label>`).join("") : "";
@@ -3293,11 +3304,15 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // At most two moves, only while it needs a design decision and only the viewer's own.
     const btn = (attr, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" ${attr}>${label}</button>`;
     const open = s.state === "open";
-    const moves = change ? (open && mayHandle(c) ? btn('data-handle="1"', "Approve", true) : "")
+    // With drafts waiting, Request changes counts them and is the next step; either verdict opens
+    // the review dialog with it picked (docs/desk.md → Reviews).
+    const n = draftsOf(c).length, verdicts = verdictsFor(c).map((x) => x.id);
+    const changes = verdicts.includes("request-changes") ? btn('data-review="request-changes"', n ? `Request changes · ${n}` : "Request changes", n > 0) : "";
+    const approve = (attr) => (n ? btn('data-review="approve"', "Approve") : btn(attr, "Approve", true));
+    const moves = change ? (open && mayHandle(c) ? changes + approve('data-handle="1"') : "")
       : !open ? ""
       : specWaits(c) ? (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "")
-      : (can("revise") && (c.variants || []).length && !locked(c) ? btn('data-act="request-changes"', "Request changes") : "")
-        + (canApprove(c) && (c.triage || (c.variants || []).length) ? btn('data-act="approve"', "Approve", true) : "");
+      : changes + (canApprove(c) && (c.triage || (c.variants || []).length) ? approve('data-act="approve"') : "");
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
     const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
         : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen")) ? btn('data-act="reopen"', "Reopen") : "") : (can("close") || can("skip") ? btn('data-act="close"', "Close…") : ""),
@@ -3317,6 +3332,80 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ci = c.kind === "change" && c.ci?.state === "failing" ? `<p>Design Desk's check on GitHub holds the pull request until a designer approves it.</p>` : "";
     const body = [decisions, look, c.kind === "change" ? designCheckBox(c) : "", ci, figmaBox(c)].filter((x) => x && x.trim()).join("");
     return `<section class="sfound"><h3>What Design Desk found</h3>${body || `<p class="hint">Nothing to flag: it goes against no decision in force${c.kind === "change" ? ", and nothing in it waits for a designer" : ""}.</p>`}</section>`;
+  }
+  // A review in the making (docs/desk.md → Reviews): the viewer's drafts on an item, kept by the
+  // Desk server for them alone. `addDraft` is the one way a box adds one, here and in the item's other views.
+  const draftsOf = (c) => (c && S.drafts[c.base || c.id]) || [];
+  async function loadDrafts(c, force = false) {
+    if (!c || !["request", "change"].includes(c.kind) || c.send || (!force && S.drafts[c.id])) return;
+    S.drafts[c.id] = (await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null))?.drafts || [];
+  }
+  async function addDraft(c, { text, anchor = null, change = null }) {
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
+    S.drafts[c.id] = r.drafts; renderDetail();
+    toast(`Added to your review (${plural(r.drafts.length, "comment", "comments")}). Nobody sees it until you send it.`);
+  }
+  async function removeDraft(c, id) { S.drafts[c.id] = (await api("DELETE", `/api/cards/${encodeURIComponent(c.id)}/drafts/${encodeURIComponent(id)}`)).drafts; renderDetail(); }
+  // What a draft or a review's comment is about, in words: its option, state and part, or the change it names.
+  function aboutOf(c, a, change) {
+    const v = a?.variant && (c.variants || []).find((x) => x.id === a.variant);
+    const st = v && a.state && (v.states || []).find((x) => x.id === a.state);
+    return [v ? `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` : "", st ? st.name || st.id : "", a?.label || "", change || ""].filter(Boolean).join(" · ");
+  }
+  const draftBubble = (c, d, remove = true) => `<div class="dbub"><div class="db-b">${aboutOf(c, d.anchor, d.change) ? `<span class="about">${esc(aboutOf(c, d.anchor, d.change))}</span>` : ""}${esc(d.text)}</div>${remove ? `<button class="x" data-draft-del="${esc(d.id)}" aria-label="Remove this comment from your review" title="Remove from your review">✕</button>` : ""}</div>`;
+  // Under the head while drafts wait: each one, and the way to send them.
+  function yourReview(c) {
+    const ds = draftsOf(c);
+    if (!ds.length) return "";
+    return `<section class="yreview" aria-label="Your review"><div class="yr-h"><b>Your review · ${ds.length}</b><button class="btn small" data-review="">Send review…</button></div>
+      ${ds.map((d) => draftBubble(c, d)).join("")}</section>`;
+  }
+  // A box under an option or a change: Add to review keeps it for the review, Comment now posts it
+  // at once, on the Desk only (docs/desk-page.md → Simple mode).
+  function reviewBox(c, { anchor = null, change = null, what = "" } = {}) {
+    if (!can("comment") || c.send || closed(c)) return "";
+    return `<div class="composer rbox" data-rbox data-anchor="${esc(anchor ? JSON.stringify(anchor) : "")}" data-change="${esc(change || "")}">
+      <textarea maxlength="4000" placeholder="${esc(what ? `A comment on ${what}…` : "A comment…")}" aria-label="${esc(what ? `A comment on ${what}` : "A comment")}"></textarea>
+      <div class="bar"><button class="btn small" data-draft-add>Add to review</button><button class="btn small" data-draft-now>Comment now</button></div></div>`;
+  }
+  // The verdicts a viewer may send on an item (docs/desk.md → Reviews).
+  function verdictsFor(c) {
+    const open = simpleState(c, true)?.state === "open" || Boolean(c.responsible);
+    const out = [];
+    if (c.kind === "request") {
+      if (can("change") && (c.variants || []).length && !locked(c) && !closed(c)) out.push({ id: "request-changes", name: "Request changes", hint: "Design Desk draws the next version from your comments." });
+      if (open && !specWaits(c) && canApprove(c) && (c.triage || (c.variants || []).length) && !closed(c)) out.push({ id: "approve", name: "Approve", hint: "You approve the request; your comments go with it." });
+    } else if (mayHandle(c) && !c.source?.merged_at && c.status !== "archived") {
+      out.push({ id: "request-changes", name: "Request changes", hint: "The developer makes the next version; the review goes to the pull request." });
+      if (!c.handled) out.push({ id: "approve", name: "Approve", hint: "Design is done with this change." });
+    }
+    if (can("comment")) out.push({ id: "comment", name: "Comment only", hint: "Your comments, with nothing else changed." });
+    return out;
+  }
+  // One dialog sends the drafts with a verdict and an optional note for the whole review.
+  async function reviewDialog(c, pick = null) {
+    await loadDrafts(c, true);
+    const ds = draftsOf(c), choices = verdictsFor(c);
+    if (!choices.length) return;
+    const pr = c.kind === "change" && c.source?.pr && !c.source?.merged_at;
+    const a = await ask({ title: "Send your review", html: `${ds.length ? ds.map((d) => draftBubble(c, d, false)).join("") : `<p class="hint">No comments yet: write a note for the whole review.</p>`}${pr ? `<p class="hint">It goes to the pull request on GitHub too, as a comment.</p>` : ""}`,
+      ok: "Send review", choices, pick: choices.some((x) => x.id === pick) ? pick : choices[0].id, note: "A note for the whole review (optional)", max: 4000,
+      send: async (x) => {
+        if (!ds.length && !x.note) throw new Said("Write a comment or a note first.");
+        return x;
+      } });
+    if (!a) return;
+    // Approving a request is today's approval, its own questions included; the review goes with it.
+    if (a.choice === "approve" && c.kind === "request") {
+      await act("approve");
+      const { card } = await api("GET", `/api/cards/${encodeURIComponent(c.id)}`);
+      if (!card.approved) return;
+    }
+    const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/reviews`, { verdict: a.choice, note: a.note, ...(S.variant ? { variant: S.variant } : {}) });
+    S.drafts[c.id] = [];
+    toast(a.choice === "request-changes" && c.kind === "request" ? "Review sent. Design Desk draws the next version; this page updates by itself."
+      : r.inbox?.kind === "review" ? "Review sent. It goes to the pull request on GitHub too." : "Review sent.");
+    await refreshList(); await openCard(c.id);
   }
   // Simple mode's comments: each conversation a card, its first message and the replies indented
   // under it, each by its avatar, name, role and a short date; a resolved one folds to one line
@@ -4698,7 +4787,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (simple()) return `${backBar()}${simpleHead(c)}
       ${c.summary ? `<div class="slead">${md(c.summary)}</div>` : ""}
       ${c.builds ? `<p class="hint">It builds the design of <button class="anchor" data-card="${esc(c.builds.card)}">${esc(c.builds.title)}</button>${num({ id: c.builds.card })}.</p>` : ""}${requestsFrom(c)}
+      ${yourReview(c)}
       <h3>The changes</h3>${(c.screens || []).length ? shots(c.screens) : `<p class="hint">No screens yet.</p>`}
+      ${reviewBox(c, { what: "the changes" })}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
       ${renderEnvironment(c)}${renderInstance(c)}
       ${simpleFound(c)}
@@ -5639,9 +5730,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     function simpleBody() {
       const lead = String(r.problem || "").split(/\n\s*\n/)[0];
       const known = [renderResearch(c.research), renderIssueBrief(c), renderGrill(c), followsLine(c), shots(found)].join("").trim();
-      return `<div class="slead">${md(lead)}${tr ? langLink(tr, en) : ""}</div>
+      return `${yourReview(c)}<div class="slead">${md(lead)}${tr ? langLink(tr, en) : ""}</div>
       <details class="fold big sfold"><summary><h3>The request in full</h3></summary><div class="section">${renderLinked(c)}${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more}${shots(given)}</div></details>
       ${live(c) ? `<details class="fold"><summary>The design options</summary>${renderOptions(c)}</details>` : `${renderOptions(c)}${renderPrototype(c)}`}
+      ${(() => { const v = (c.variants || []).find((x) => x.id === S.variant) || (c.variants || [])[0]; return v ? reviewBox(c, { anchor: { variant: v.id }, what: `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` }) : ""; })()}
       ${simpleFound(c)}
       ${known ? `<details class="fold big sfold"><summary><h3>What's already known</h3></summary><div class="section">${known}</div></details>` : ""}
       ${(c.sections || []).length ? `<details class="fold big sfold"><summary><h3>Details</h3></summary>${sections(c)}</details>` : ""}
@@ -7376,6 +7468,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const was = (before.variants || []).find((x) => x.id === S.variant), now = (card.variants || []).find((x) => x.id === S.variant);
       if (was && now && (now.version || 1) > (was.version || 1)) { toast(`${now.name} was updated to version ${now.version}.`); S.ws.version = null; }
     }
+    await loadDrafts(card);
     S.card = card;
     // The first open marks it read for this person: its title stops being bold in their list.
     const listed = S.cards.find((x) => x.id === card.id);
@@ -7543,15 +7636,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     // Build: pick the option, then look at its latest version and states once more in the
     // final check, which builds exactly what it shows (docs/prototype.md → Build).
-    // Request changes: a note to Design Desk, which draws the next version from it (a change note).
-    if (name === "request-changes") {
-      const v = S.variant || options[0]?.id;
-      res = await ask({ title: "Request changes", body: "Say what should change. Design Desk draws a new version from it; this request shows it here when it is ready.", ok: "Send",
-        note: "What should change?", send: (a) => { if (!a.note) throw new Error("Say what should change."); return api("POST", `/api/cards/${c.id}/threads`, { kind: "change", text: a.note, ...(v ? { anchor: { variant: v } } : {}) }); } });
-      if (!res) return;
-      toast("Sent. Design Desk draws a new version; this page updates by itself.");
-      await refreshList(); await openCard(c.id); return;
-    }
     if (name === "build" && options.length) {
       const pick = options.length > 1 ? await ask({ title: "Build a live prototype", body: "Design Desk makes a private copy of the product with the option you pick, with made-up data, that everyone on the list can open. Pick the option; next you see its latest version and every state for a final check before it is built.", ok: "Next: final check", choices: options, pick: S.ws.check ? S.variant : null, send: async (a) => a.choice }) : options[0].id;
       if (!pick) return;
@@ -7937,6 +8021,18 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if ("adjust" in ds) { openRequestDialog(S.card); return; }
     if ("addShots" in ds) { openShotsDialog(); return; }
     if (ds.post) { S.convoOpen = true; S.sect.talk = true; await post(ds.post); return; }
+    // A review (docs/desk.md → Reviews): a draft added, posted at once or removed, and the dialog that sends them.
+    if ("draftAdd" in ds || "draftNow" in ds) {
+      const box = el.closest("[data-rbox]"), ta = box?.querySelector("textarea"), text = ta?.value.trim() || "";
+      if (!text) { ta?.focus(); return; }
+      const anchor = box.dataset.anchor ? JSON.parse(box.dataset.anchor) : null, change = box.dataset.change || null;
+      if ("draftAdd" in ds) { await addDraft(S.card, { text, anchor, change }); return; }
+      const r = await api("POST", `/api/cards/${S.card.id}/threads`, { kind: "comment", text, ...(anchor ? { anchor } : {}) });
+      ta.value = ""; if (r.inbox) toast("Sent. Design Desk answers right here.");
+      await openCard(S.card.id); return;
+    }
+    if (ds.draftDel) { await removeDraft(S.card, ds.draftDel); return; }
+    if ("review" in ds) { await reviewDialog(S.card, ds.review || null); return; }
     if ("built" in ds) { await api("POST", `/api/cards/${S.card.id}/built`, { built: ds.built === "1" }); await refreshList(); await openCard(S.card.id); return; }
     if ("devAsk" in ds) { if (!devAsked(S.card)) { store.set(`desk-dev-asked:${S.card.id}`, "1"); renderDetail(); } const d = $("#dev-parts"); if (d) { d.open = true; d.scrollIntoView({ block: "center", behavior: "smooth" }); d.classList.add("flash"); setTimeout(() => d.classList.remove("flash"), 2000); } return; }
     if ("devCopy" in ds) { await copyText(devQuestion(S.card), "a question for a developer"); return; }

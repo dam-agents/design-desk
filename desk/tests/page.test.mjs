@@ -3831,18 +3831,106 @@ test("simple mode heads a request with its number, link, state, author and two m
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/actions").body)).auto_send, true);
 }));
 
-test("simple mode's Request changes sends a note Design Desk draws a new version from; ⋯ holds Close", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
+test("simple mode's Request changes opens the review: a note alone is sent with the verdict; ⋯ holds Close", (t) => open(t, HEAD_DESK(HEAD_ME, [drawn]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector("#detail .shead");
   await desk.click("#detail details.sh-more > summary");
   assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Close…"]);
   await desk.keyboard.press("Escape");
-  await desk.click('#detail [data-act="request-changes"]');
+  await desk.click('#detail .sh-acts [data-review="request-changes"]');
+  assert.equal(await desk.textContent("#cf-title"), "Send your review");
+  assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "request-changes");
+  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
+  await desk.click("#cf-ok");
+  await desk.waitForSelector("#confirm-dialog[open] .toast");
+  assert.match(await desk.textContent("#confirm-dialog .toast"), /Write a comment or a note first/, "nothing to send: the dialog stays");
   await desk.fill("#confirm-form [name=note]", "Make the bar thicker.");
   await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/reviews"));
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/reviews").body), { verdict: "request-changes", note: "Make the bar thicker.", variant: "v1" }, "the option shown, for a note about no option");
+}));
+
+// A review in the making (docs/desk.md → Reviews): the Desk keeps the drafts; this stand-in does too.
+const REVIEW_DESK = (me, cards) => `<script>
+window.posts = []; window.drafts = {};
+const cards = ${JSON.stringify(cards)};
+window.platform = { async request({ method, path, body }) {
+  const b = JSON.parse(body || "{}"), id = decodeURIComponent(path.split("/")[3] || ""), json = (x, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(x) });
+  if (method !== "GET") posts.push({ method, path, body: b });
+  if (/\\/drafts$/.test(path) && method === "GET") return json({ drafts: drafts[id] || [] });
+  if (/\\/drafts$/.test(path)) { drafts[id] = [...(drafts[id] || []), { id: "d" + posts.length, text: b.text, anchor: b.anchor || null, ...(b.change ? { change: b.change } : {}), at: "2026-11-18T10:00:00Z" }]; return json({ drafts: drafts[id] }, 201); }
+  if (/\\/drafts\\//.test(path)) { drafts[id] = (drafts[id] || []).filter((d) => d.id !== path.split("/")[5]); return json({ drafts: drafts[id] }); }
+  if (/\\/reviews$/.test(path)) { if (!(drafts[id] || []).length && !b.note) return json({ error: "Write a comment or a note first." }, 400); drafts[id] = []; return json({ review: { id: "N-1" }, inbox: cards.find((c) => c.id === id)?.kind === "change" ? { kind: "review" } : { kind: "revise" } }, 201); }
+  if (method !== "GET") return json({ thread: { id: "T-9" } });
+  const answer = path === "/api/me" ? ${JSON.stringify(me)}
+    : path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === id) }
+    : path === "/api/agenda" ? { agenda: [] } : path === "/api/notifications" ? { seen: null, unread: 0, items: [] } : path === "/api/private" ? { asks: [] } : {};
+  return json(answer);
+} };
+try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
+</script>`;
+
+test("simple mode: Add to review keeps a comment for the review, Comment now posts it; Your review lists and removes them; the head counts them", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn, prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .rbox");
+  assert.match(await desk.getAttribute("#detail .rbox textarea", "placeholder"), /Option 1 · Calm/, "the box is about the option shown");
+  await desk.fill("#detail .rbox textarea", "Tighter rows.");
+  await desk.click("#detail .rbox [data-draft-add]");
+  await desk.waitForSelector("#detail .yreview .dbub");
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => /drafts$/.test(p.path)).body), { text: "Tighter rows.", anchor: { variant: "v1" } });
+  assert.match(await desk.textContent("#detail .yreview"), /Your review · 1[\s\S]*Option 1 · Calm[\s\S]*Tighter rows\./);
+  assert.match(await desk.textContent('#detail .sh-acts [data-review="request-changes"]'), /Request changes · 1/);
+  assert.equal(await desk.locator("#detail .sh-acts .btn.primary").count(), 1, "one next step");
+  assert.equal(await desk.getAttribute('#detail .sh-acts [data-review="request-changes"]', "class"), "btn primary", "and it is Request changes");
+  await desk.fill("#detail .rbox textarea", "Second.");
+  await desk.click("#detail .rbox [data-draft-add]");
+  await desk.waitForFunction(() => document.querySelectorAll("#detail .yreview .dbub").length === 2);
+  await desk.click("#detail .yreview .dbub:last-child [data-draft-del]");
+  await desk.waitForFunction(() => document.querySelectorAll("#detail .yreview .dbub").length === 1);
+  assert.ok(await desk.evaluate(() => posts.some((p) => p.method === "DELETE" && /\/drafts\/d/.test(p.path))));
+  // Comment now: a comment on the Desk at once, not in the review.
+  await desk.fill("#detail .rbox textarea", "Looks calm.");
+  await desk.click("#detail .rbox [data-draft-now]");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/threads"));
-  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/threads").body), { kind: "change", text: "Make the bar thicker.", anchor: { variant: "v1" } });
+  assert.deepEqual(await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/threads").body), { kind: "comment", text: "Looks calm.", anchor: { variant: "v1" } });
+  // Send: the drafts in the dialog, one review.
+  await desk.click('#detail .sh-acts [data-review="request-changes"]');
+  assert.match(await desk.textContent("#cf-body"), /Tighter rows\./);
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/reviews"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/reviews").body)).verdict, "request-changes");
+  await desk.waitForFunction(() => !document.querySelector("#detail .yreview"));
+}));
+
+test("simple mode: a change's review offers Request changes and Approve to who may mark it handled, Comment only to everyone; it goes to the pull request", (t) => open(t, REVIEW_DESK(HEAD_ME, [prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-3"]');
+  await desk.click('#list [data-card="P-3"]');
+  await desk.waitForSelector("#detail .rbox");
+  await desk.fill("#detail .rbox textarea", "The toggle is too loud.");
+  await desk.click("#detail .rbox [data-draft-add]");
+  await desk.waitForSelector("#detail .yreview .dbub");
+  await desk.click('#detail .sh-acts [data-review="approve"]');
+  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
+  assert.equal(await desk.$eval("#cf-choices input:checked", (x) => x.value), "approve");
+  assert.match(await desk.textContent("#cf-body"), /pull request on GitHub/);
+  await desk.click('#cf-choices input[value="comment"]');
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/P-3/reviews"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-3/reviews").body)).verdict, "comment");
+}));
+
+test("simple mode: a guest's review is Comment only", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, role: "guest", can: { comment: true } }, [prChange]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="P-3"]');
+  await desk.click('#list [data-card="P-3"]');
+  await desk.waitForSelector("#detail .rbox");
+  assert.equal(await desk.locator("#detail .sh-acts [data-review]").count(), 0, "no verdict in the head");
+  await desk.fill("#detail .rbox textarea", "Hm.");
+  await desk.click("#detail .rbox [data-draft-add]");
+  await desk.waitForSelector('#detail .yreview [data-review=""]');
+  await desk.click('#detail .yreview [data-review=""]');
+  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["comment"]);
 }));
 
 test("simple mode: a spec draft that cannot go by itself is Open with Send to developers", (t) => open(t, HEAD_DESK(HEAD_ME, [slackDraft]), async (desk) => {
@@ -3860,7 +3948,7 @@ test("simple mode heads a change with its pull request, Approve and Turn into a 
   assert.match(await desk.textContent("#detail .sh-pr"), /#812 Draft/);
   assert.equal(await desk.getAttribute("#detail .sh-pr", "href"), "https://github.com/o/r/pull/812");
   assert.match(await desk.textContent("#detail .sh-line"), /dana-dev/);
-  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Approve"], "no Request changes on a change yet");
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Request changes", "Approve"], "a review asks for changes; Approve marks it handled");
   assert.deepEqual(await desk.$$eval("#detail .sh-more .menu > *", (xs) => xs.map((x) => x.textContent.trim())), ["Turn into a design request", "Open on GitHub ↗"]);
   await desk.click('#detail .sh-acts [data-handle="1"]');
   await desk.waitForFunction(() => posts.some((p) => /P-3/.test(p.path)));

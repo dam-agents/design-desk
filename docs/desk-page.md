@@ -192,12 +192,19 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   its severity), who filed it or wrote it and when (a person by their name on the roster, else the
   name the item keeps, else the part of their address before the @), and once approved one muted
   line — who approved it and when, the issue or pull request it was sent to, when it shipped —
-  then at most two buttons and ⋯. While it is Open, a request offers **Request changes** (with options drawn: a note
-  Design Desk draws the next version from, a change note) and **Approve** — which sends the spec
+  then at most two buttons and ⋯. While it is Open, a request offers **Request changes** (with options drawn) and **Approve** — which sends the spec
   as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
   Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
-  Open with **Send to developers** — and a change **Approve** (marks it handled); each only for
-  who may. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
+  Open with **Send to developers** — and a change **Request changes** and **Approve** (marks it handled); each only for
+  who may. **Reviews** ([desk.md](desk.md) → Reviews): under the shown option, and under a change's
+  screens, a box offers **Add to review** — a draft, the viewer's alone — and **Comment now**, a
+  comment on the Desk at once (never on GitHub); the box at the end of the page posts at once. While
+  drafts wait, **Your review · n** under the head lists them, each with what it is about and ✕, and
+  **Send review…**; **Request changes** counts them (`Request changes · 2`) and is the primary
+  button, and **Approve** opens the review too. Both open one dialog: the drafts, the verdicts the
+  viewer may send (**Request changes**, **Approve**, **Comment only**, the one they pressed
+  picked) and a note for the whole review. Approving a request there is the usual approval first,
+  its own questions included, then the review. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move. Under the head the page reads one way for both kinds: a short lead (a request's first
   paragraph, a change's summary), **The request in full** folded, the designs (a request's

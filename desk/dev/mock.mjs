@@ -40,6 +40,7 @@ function shim() {
       c.waiting = c.waiting.filter((x) => x !== w);
       for (const t of threads) { t.state = "resolved"; t.messages.push({ by: { agent: true }, at: now(), text: `Done in version ${(v?.version || 1) + 1}.` }); }
       if (v) { v.history = [{ version: v.version || 1, asset: v.asset, at: now() }, ...(v.history || [])]; v.version = (v.version || 1) + 1; v.drawn = now(); }
+      if (c.responsible?.who === "design-desk") delete c.responsible;
     }, 25000);
   };
   const list = () => cards.map((c) => ({ ...c, variants: c.variants.length, threads: undefined }));
@@ -56,6 +57,26 @@ function shim() {
     if (p.startsWith("/api/decisions")) return { decisions: Object.entries(cards[0].cited).map(([id, d]) => ({ id, ...d, side: "design", at: now(), concepts: [] })) };
     let x;
     if ((x = m(/^\/api\/cards\/([^/]+)$/)) && method === "GET") return { card: structuredClone(card(decodeURIComponent(x[1]))) };
+    // A review (docs/desk.md → Reviews): drafts kept for this person, sent as one review whose comments are threads.
+    if ((x = m(/^\/api\/cards\/([^/]+)\/drafts$/))) {
+      const c = card(decodeURIComponent(x[1]));
+      if (method === "POST") (c.drafts ||= []).push({ id: `d${++n}`, text: body.text, anchor: body.anchor || null, ...(body.change ? { change: body.change } : {}), at: now() });
+      return { drafts: c.drafts || [] };
+    }
+    if ((x = m(/^\/api\/cards\/([^/]+)\/drafts\/([^/]+)$/))) { const c = card(decodeURIComponent(x[1])); c.drafts = (c.drafts || []).filter((d) => d.id !== x[2]); return { drafts: c.drafts }; }
+    if ((x = m(/^\/api\/cards\/([^/]+)\/reviews$/))) {
+      const c = card(decodeURIComponent(x[1])), ds = c.drafts || [], id = `N-${++n}`;
+      if (!ds.length && !body.note) return { error: "Write a comment or a note first." };
+      const request = c.kind === "request", changes = body.verdict === "request-changes", first = body.variant || c.variants[0]?.id;
+      const notes = ds.length ? ds : request && changes ? [{ text: body.note, anchor: null }] : [];
+      const ts = notes.map((d) => ({ id: `T-${++n}`, kind: request && changes ? "change" : "comment", state: "open", review: id, may: { reply: true, resolve: true }, anchor: request && changes && !d.anchor?.variant ? { ...(d.anchor || {}), variant: first } : d.anchor, ...(d.change ? { change: d.change } : {}), messages: [{ by: { name: me.name, email: me.email, role }, at: now(), text: d.text }] }));
+      c.threads.push(...ts); c.drafts = [];
+      (c.reviews ||= []).push({ id, by: { name: me.name, email: me.email, role }, at: now(), verdict: body.verdict, note: body.note || "", threads: ts.map((t) => t.id) });
+      if (request && changes) work(c, ts);
+      if (!request && body.verdict === "approve") c.handled = { by: { email: me.email }, at: now() };
+      if (changes) c.responsible = { who: request ? "design-desk" : "developer", review: id, since: now() };
+      return { review: c.reviews.at(-1), inbox: !request && c.source?.pr ? { kind: "review" } : changes ? { kind: "revise" } : null };
+    }
     if ((x = m(/^\/api\/cards\/([^/]+)\/threads$/))) {
       const c = card(x[1]), t = { id: `T-${++n}`, kind: body.kind, state: "open", may: { reply: true, resolve: true }, anchor: body.anchor, messages: [{ by: { name: me.name, email: me.email }, at: now(), text: body.text }] };
       c.threads.push(t); if (t.kind === "change") work(c, [t]);
