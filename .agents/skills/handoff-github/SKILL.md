@@ -41,26 +41,28 @@ never stands in for them (a developer may not see the Desk):
    pictures as `![<view>](asset:A-<n>)`: fetch each (`design desk fetch A-<n> <file>`) and
    replace the line with the picture's GitHub reference (step 3), so none stays a Desk-only
    reference.
-3. Put them on GitHub, the first way that works:
-   - **The bundle's push**, with `prototype_remote` set: copy every picture into the bundle's
-     `pictures/` before it is committed ([docs/handoff.md](../../../docs/handoff.md) step 5),
-     so the guarded push carries them, and refer to each as
-     `![<view name>](https://<host>/<owner>/<name>/raw/<sha>/handoff/R-<n>/pictures/<file>)`:
-     `prototype_remote`'s repository and the pushed commit, so a later push never changes it.
-     Never a branch of their own: they ride on the bundle's `design-desk/` branch.
-   - **`--attach <file>#<alt>`**, without `prototype_remote` or when the guard refused the
-     push: repeated per picture (`gh issue create`, `gh issue comment`, `gh issue edit`,
-     `gh pr create`, `gh pr comment`, `gh pr edit`), each referred to in the body as
-     `![<view name>](<file>)` so it lands in place. It needs uploads to GitHub the agent's
-     sandbox may not allow (a DAM sandbox sends the upload host no token); a comment edited
-     through `gh api` takes no attachment, so a revision whose pictures changed posts a new
-     comment and edits the old one to a link to it.
+3. Put them on GitHub, one of two ways:
+   - **The pushed bundle**, when [docs/handoff.md](../../../docs/handoff.md) step 5 pushed it
+     and `prototype_remote` is the repository this skill writes to (`-R`), so its reader can
+     open them. Send the bundle's own pictures, the spec's (`design.json` → `pictures`, each
+     `pictures/A-<n>.<ext>`), not step 1's shots: the push is already made. Refer to each as
+     `![<view name>](https://<host>/<owner>/<name>/raw/<sha>/handoff/R-<n>/pictures/A-<n>.<ext>)`,
+     `<sha>` the pushed commit, so a later push never changes it. Never a branch of their own.
+   - **`--attach <file>#<alt>`** otherwise (no push, a refused push, or `prototype_remote`
+     another repository): repeated per picture (`gh issue create`, `gh issue comment`,
+     `gh issue edit`, `gh pr create`, `gh pr comment`, `gh pr edit`), each referred to in the
+     body as `![<view name>](<file>)` so it lands in place. A DAM sandbox cannot upload (it
+     sends the upload host no token); a comment edited through `gh api` takes no attachment,
+     so a revision whose pictures changed posts a new comment and edits the old one to a link
+     to it.
 4. Check what was written: every picture's reference in the posted body is its pushed file's
    URL or an uploaded attachment URL, never a local file name (`gh issue view` / `gh api` the
-   comment), and each pushed one answers (`gh api "repos/<owner>/<name>/contents/handoff/R-<n>/pictures/<file>?ref=<sha>"`).
-   A picture that did not land is put on again; a delivery without its pictures is not done, so it
-   fails with the reason (`ledger.sh fail`; without `prototype_remote`: "set prototype_remote,
-   the sandbox cannot upload attachments") instead of closing as handed off.
+   comment), and each pushed one answers (`gh api [--hostname <host>]
+   "repos/<owner>/<name>/contents/handoff/R-<n>/pictures/A-<n>.<ext>?ref=<sha>"`, the host
+   when `prototype_remote` names one). A picture that did not land is put on again; a delivery
+   without its pictures is not done, so it fails with the reason (`ledger.sh fail`; when
+   `--attach` cannot upload: "set prototype_remote to the delivery repository") instead of
+   closing as handed off.
 
 ## Another skill writes the issue
 

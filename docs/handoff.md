@@ -100,7 +100,8 @@ card the people who may approve it read the spec, and:
    commit the folder as `handoff/R-<n>/` on the request's `design-desk/` branch (the
    prototype's, else `design-desk/r<n>-handoff` from the default branch), run `design guard`
    on that exact diff ([boundary.md](boundary.md)), and push only when it passes; a refusal
-   pushes nothing, and the delivery carries `design.json` in the issue alone.
+   pushes nothing: the delivery carries `design.json` in the issue alone and its pictures by
+   `--attach`, and fails without them ([`handoff-github`](../.agents/skills/handoff-github/SKILL.md) → The pictures).
 6. **A send after a reopen.** A request sent before, reopened by an admin and approved again
    (`sends` not empty; this is send `k` = `sends` + 1) is sent anew: a **new** issue with this
    spec — never an edit of, or a comment on, an earlier send's issue, comment or pull request,
