@@ -3367,7 +3367,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   const draftsOf = (c) => (c && !c.send && S.drafts[c.id]) || [];
   async function loadDrafts(c, force = false) {
     if (!c || !["request", "change"].includes(c.kind) || c.send || (!force && S.drafts[c.id])) return;
-    S.drafts[c.id] = (await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null))?.drafts || [];
+    // A read that failed stays unknown: no review is sent from drafts nobody could see.
+    const r = await api("GET", `/api/cards/${encodeURIComponent(c.id)}/drafts`).catch(() => null);
+    if (Array.isArray(r?.drafts)) S.drafts[c.id] = r.drafts; else delete S.drafts[c.id];
   }
   async function addDraft(c, { text, anchor = null, change = null }) {
     const r = await api("POST", `/api/cards/${encodeURIComponent(c.id)}/drafts`, { text, ...(anchor ? { anchor } : {}), ...(change ? { change } : {}) });
@@ -3415,6 +3417,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // One dialog sends the drafts with a verdict and an optional note for the whole review.
   async function reviewDialog(c, pick = null) {
     await loadDrafts(c, true);
+    if (!S.drafts[c.id]) { toast("Your draft comments could not be read. Try again in a moment; nothing was sent."); return; }
     const ds = draftsOf(c), choices = verdictsFor(c);
     if (!choices.length) return;
     const pr = c.kind === "change" && c.source?.pr && !c.source?.merged_at;

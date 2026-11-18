@@ -3797,7 +3797,7 @@ const cards = ${JSON.stringify(cards)};
 window.platform = { async request({ method, path, body }) {
   if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); return { status: 200, contentType: "application/json", body: JSON.stringify({ thread: { id: "T-9" } }) }; }
   const answer = path === "/api/me" ? ${JSON.stringify(me)}
-    : path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === decodeURIComponent(path.split("/")[3])) }
+    : path === "/api/cards" ? { cards } : path.endsWith("/drafts") ? { drafts: [] } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === decodeURIComponent(path.split("/")[3])) }
     : path === "/api/agenda" ? { agenda: [] } : path === "/api/notifications" ? { seen: null, unread: 0, items: [] } : path === "/api/private" ? { asks: ${JSON.stringify(asks)} } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
@@ -3858,7 +3858,7 @@ const cards = ${JSON.stringify(cards)};
 window.platform = { async request({ method, path, body }) {
   const b = JSON.parse(body || "{}"), id = decodeURIComponent(path.split("/")[3] || ""), json = (x, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(x) });
   if (method !== "GET") posts.push({ method, path, body: b });
-  if (/\\/drafts$/.test(path) && method === "GET") return json({ drafts: drafts[id] || [] });
+  if (/\\/drafts$/.test(path) && method === "GET") return window.failDrafts ? json({ error: "down" }, 503) : json({ drafts: drafts[id] || [] });
   if (/\\/drafts$/.test(path)) { drafts[id] = [...(drafts[id] || []), { id: "d" + posts.length, text: b.text, anchor: b.anchor || null, ...(b.change ? { change: b.change } : {}), at: "2026-11-18T10:00:00Z" }]; return json({ drafts: drafts[id] }, 201); }
   if (/\\/drafts\\//.test(path)) { drafts[id] = (drafts[id] || []).filter((d) => d.id !== path.split("/")[5]); return json({ drafts: drafts[id] }); }
   if (/\\/reviews$/.test(path)) { if (!(drafts[id] || []).length && !b.note) return json({ error: "Write a comment or a note first." }, 400); drafts[id] = []; return json({ review: { id: "N-1" }, inbox: cards.find((c) => c.id === id)?.kind === "change" ? { kind: "review" } : { kind: "revise" } }, 201); }
@@ -3964,6 +3964,17 @@ test("full mode collects drafts under an option and sends them from Your review 
   await desk.click("#cf-ok");
   await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/reviews"));
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/reviews").body)).verdict, "comment");
+}));
+
+test("a review is never sent from drafts the page could not read", (t) => open(t, REVIEW_DESK(HEAD_ME, [drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector("#detail .shead");
+  await desk.evaluate(() => { window.failDrafts = true; });
+  await desk.click('#detail .sh-acts [data-review="request-changes"]');
+  await desk.waitForSelector(".toast");
+  assert.match(await desk.textContent(".toast"), /could not be read/);
+  assert.equal(await desk.locator("#confirm-dialog[open]").count(), 0, "no dialog");
 }));
 
 test("simple mode: a guest's review is Comment only", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, role: "guest", can: { comment: true } }, [prChange]), async (desk) => {

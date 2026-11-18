@@ -233,7 +233,11 @@ Merged and closed pull requests are never touched: their checks no longer matter
 A `reviews_due` item (inbox run) is a person's review of a pull request's change on the Desk
 ([desk.md](desk.md) → Reviews), to post on that pull request. Claim it; `design desk item Q-<n>`
 returns the review (`review`: who, verdict, note, its conversations) with the card. The pull
-request merged or closed → `design desk done` with "PR no longer open". Else:
+request merged or closed → `design desk done` with "PR no longer open". Posted already (an earlier
+run died before `done`): a review of the agent's own account on the pull request (`gh api
+repos/<owner>/<name>/pulls/<pr>/reviews --paginate`) whose body starts with this review's marker
+→ step 3 with its `html_url` and `commit_id`, never a second post; a failed search posts nothing
+and is logged and reported as below. Else:
 
 1. Write the body to a file: first line `<!-- design-desk review=<N-n> -->`, then "**<name>** (<role>)
    reviewed this UI change on the Design Desk: **Changes requested** | **Approved** | **Comments**",
