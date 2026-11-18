@@ -232,7 +232,9 @@ Self-check:
   decisions in force it follows and the elements each one shaped (`reasons`, same section),
   so people see why a part is there and looks as it does; the same `id` rule holds. And it
   lists the parts it changes or adds (`elements`, docs/requests.md → The option's elements),
-  each with an `id` in the page so its picture is cut by a short path. In repo mode, the parts people
+  each with an `id` in the page so its picture is cut by a short path: every option the same
+  parts, the request's `shared_elements`, and one it leaves out or only it has says why (same
+  doc → The same elements in every option). In repo mode, the parts people
   would restyle also carry smart controls from `design kit` (docs/requests.md → Smart
   controls): only the variants and tokens the product has, a variant drawn in full as a
   `<template data-desk-option>`.
