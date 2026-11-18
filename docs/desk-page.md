@@ -188,16 +188,32 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   For Designers / For Developers switch. An opened request or change starts with one head that
   stays in view while the page scrolls: the kind's icon, the title with its number and the link
   icon, its state's pill, Design Desk's work in words beside the spinner, a change's pull request
-  (`#812`, with **Draft** or **Merged**) as a link to GitHub, who filed it or wrote it and when (a
-  person with no name on the roster by the part of their address before the @), then at most two
-  buttons and ⋯. While it is Open, a request offers **Request changes** (with options drawn: a note
+  (`#812`, with **Draft** or **Merged**) as a link to GitHub, a reported bug's **Bug** chip (with
+  its severity), who filed it or wrote it and when (a person by their name on the roster, else the
+  name the item keeps, else the part of their address before the @), and once approved one muted
+  line — who approved it and when, the issue or pull request it was sent to, when it shipped —
+  then at most two buttons and ⋯. While it is Open, a request offers **Request changes** (with options drawn: a note
   Design Desk draws the next version from, a change note) and **Approve** — which sends the spec
   as soon as it is written, with no box to tick, or, for one the Desk may not send by itself (a
   Slack origin, an open pull request; [handoff.md](handoff.md) → Review before it goes), leaves it
   Open with **Send to developers** — and a change **Approve** (marks it handled); each only for
   who may. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
-  change, and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
-  move. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
+  change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
+  move. Under the head the page reads one way for both kinds: a short lead (a request's first
+  paragraph, a change's summary), **The request in full** folded, the designs (a request's
+  options, votes as counts only) or **The changes** (a change's screens), **What Design Desk
+  found** (the decisions in force it goes against, a change's reasons to look at it, how it
+  differs from the approved design, Figma when on, its check holding the pull request; else
+  "Nothing to flag"), the long reads folded alike (**What's already known**, **Details**, a
+  change's **Parts it changed** and **What changed and why**, and the impact's **Where else this shows up**, **Under the hood**, **Earlier
+  decisions about it**), then **Comments**: each conversation a card, its first message with the
+  replies indented under it, each by an avatar, the name, the role and a short date, a note on a
+  design led by its option (and part) as a chip that opens the design workspace there; one marked
+  done folds to one line (who wrote it and how it starts, who resolved it and when) that opens on
+  a click. Reply, Mark done, Work it in and Reopen work as in full mode. With nothing open, the pane shows
+  instead of the Requests intro three boxes, **Open**, **In dev** and **Closed**: how many items of
+  the viewer's side are in each (Open and In dev by kind, Closed as how many shipped in the last
+  7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** section (the design workspace keeps it

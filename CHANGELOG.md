@@ -7,6 +7,15 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.99.0 — 2026-11-18
+
+**Upgrade:**
+1. Republish the page ([desk.md](docs/desk.md) → Publishing the page): simple mode becomes
+   review-first — one list of requests and pull request changes with three states (Open, In dev,
+   Closed) and one filter, a head on every item with at most two moves, and a calmer page with
+   threaded comments. In simple mode Approve sends the spec as soon as it is written. No data
+   migration.
+
 ## 1.98.1 — 2026-11-18
 
 **Upgrade:**
