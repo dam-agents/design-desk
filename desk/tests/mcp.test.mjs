@@ -92,3 +92,19 @@ test("desk/mcp.mjs answers MCP over stdio: tools, a request filed, the list read
   const missing = await call("tools/call", { name: "read_item", arguments: { id: "R-999" } });
   assert.equal(missing.result.isError, true);
 });
+
+test("a long tool result stays valid JSON and names what was shortened", async () => {
+  const { fit } = await import("../mcp.mjs");
+  const list = Array.from({ length: 500 }, (_, i) => ({ id: `R-${i}`, summary: "x".repeat(200) }));
+  const l = fit(list, 5000);
+  assert.ok(JSON.stringify(l).length <= 5000);
+  assert.deepEqual(l.items[0].id, "R-0");
+  assert.match(l._cut, /items left out/);
+  const card = { id: "R-1", title: "Busy list", threads: Array.from({ length: 50 }, (_, i) => ({ id: `t${i}`, text: "y".repeat(400) })), summary: "z".repeat(3000) };
+  const c = fit(card, 6000);
+  assert.ok(JSON.stringify(c).length <= 6000, String(JSON.stringify(c).length));
+  assert.equal(c.id, "R-1");
+  assert.equal(c.threads.at(-1).id, "t49", "a conversation keeps its newest end");
+  assert.match(c._cut, /threads/);
+  assert.equal(fit({ a: 1 }, 6000).a, 1, "a short result is untouched");
+});

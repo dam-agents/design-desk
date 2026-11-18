@@ -108,7 +108,39 @@ function brief(r) {
   return Object.keys(o).length ? o : { ok: true };
 }
 
-const text = (v) => { const s = typeof v === "string" ? v : JSON.stringify(v, null, 1); return s.length > MAX_TEXT ? `${s.slice(0, MAX_TEXT)}\n… cut at ${MAX_TEXT} characters` : s; };
+// A result over MAX_TEXT stays valid JSON: the longest list or text in it is shortened (a list
+// keeps its newest end for a conversation, its start otherwise) until it fits, and `_cut` names
+// what was shortened.
+const size = (v) => JSON.stringify(v).length;
+export function fit(v, max = MAX_TEXT) {
+  if (size(v) <= max) return v;
+  if (Array.isArray(v)) {
+    let k = v.length;
+    while (k > 0 && size({ items: v.slice(0, k), _cut: "" }) > max) k = Math.floor(k / 2);
+    return { items: v.slice(0, k), _cut: `${v.length - k} of ${v.length} items left out; filter the list to see them` };
+  }
+  if (!v || typeof v !== "object") return String(v).slice(0, max);
+  const o = structuredClone(v), cut = [];
+  // Room for `_cut` itself, so the note never pushes the result over again.
+  for (let i = 0; i < 40 && size(o) > max - 300; i++) {
+    let best = null; // [holder, key, path, length] of the longest list or text
+    const walk = (x, path) => {
+      for (const [k, y] of Object.entries(x)) {
+        if (Array.isArray(y) || typeof y === "string") { const n = size(y); if (!best || n > best[3]) best = [x, k, `${path}${k}`, n]; }
+        if (y && typeof y === "object") walk(y, `${path}${k}.`);
+      }
+    };
+    walk(o, "");
+    if (!best || best[3] < 200) break;
+    const [x, k, path] = best, y = x[k];
+    if (typeof y === "string") x[k] = `${y.slice(0, Math.floor(y.length / 2))}…`;
+    else x[k] = /thread|message/.test(k) ? y.slice(Math.ceil(y.length / 2)) : y.slice(0, Math.floor(y.length / 2));
+    if (!cut.includes(path)) cut.push(path);
+  }
+  o._cut = `shortened to fit: ${cut.join(", ")}`;
+  return o;
+}
+const text = (v) => typeof v === "string" ? v.slice(0, MAX_TEXT) : JSON.stringify(fit(v));
 
 export async function handle(msg) {
   const { id, method, params } = msg || {};

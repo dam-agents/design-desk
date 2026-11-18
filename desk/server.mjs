@@ -491,7 +491,7 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname.startsWith("/peer/")) {
       if (!isPeer(req)) throw new DeskError(401, "peer routes need the peer token");
-      if (cfg("mcp_satellite", "disabled") === "disabled") throw new DeskError(403, "The Desk's MCP server is turned off (mcp_satellite).");
+      if (settings().mcp === "disabled") throw new DeskError(403, "The Desk's MCP server is turned off (mcp_satellite).");
       const rest = url.pathname.slice("/peer".length);
       if (!PEER_ROUTES.some(([m, re]) => m === req.method && re.test(rest))) throw new DeskError(404, `no route ${req.method} ${url.pathname}`);
       url.pathname = "/api" + rest;

@@ -149,8 +149,9 @@ else
   enum mcp_satellite disabled when-awake always
   enum mcp_role developer pm guest
   ms="$(cfg mcp_server)"; [ -z "$ms" ] || printf '%s' "$ms" | grep -qE '^https://[^[:space:]/]+/?$' || fail config_mcp_server "mcp_server is '$ms'" "the platform's address, like https://dam.example.com, or empty"
-  if [ "$(cfg mcp_satellite)" = when-awake ] || [ "$(cfg mcp_satellite)" = always ]; then
-    [ -s "$WORK/desk/.satellite-key" ] && ok mcp_key "the Satellite's serve key is on this machine" || fail mcp_key "mcp_satellite is on but work/desk/.satellite-key is missing" "the owner writes it (docs/mcp.md → Turn it on)"
+  # The key is the owner's step, not this file's: a warning, and never in the mid-onboarding --config run.
+  if [ "$STRUCTURE" = 1 ] && { [ "$(cfg mcp_satellite)" = when-awake ] || [ "$(cfg mcp_satellite)" = always ]; }; then
+    [ -s "$WORK/desk/.satellite-key" ] && ok mcp_key "the Satellite's serve key is on this machine" || warn mcp_key "mcp_satellite is on but work/desk/.satellite-key is missing: the owner saves it (docs/mcp.md → Turn it on)"
   fi
   ff="$(cfg figma_file)"; [ -z "$ff" ] || printf '%s' "$ff" | grep -qE '^https://([a-z0-9-]+\.)?figma\.com/' || fail config_figma_file "figma_file is '$ff'" "a link to a Figma file, or empty"
   dl="$(cfg desk_link)"; [ -z "$dl" ] || printf '%s' "$dl" | grep -qE '^https?://[^[:space:]#]+$' || fail config_desk_link "desk_link is '$dl'" "the Desk's share link, without #…, or empty"

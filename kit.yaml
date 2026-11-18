@@ -80,6 +80,7 @@ startupItems:
   - name: design-desk-server
     description: The Desk's store and API on the Artifact API port (loopback only)
     command: ~/desk/serve.sh
+    args: []
   - name: design-desk-satellite
     description: The Desk's MCP server for the owner's other agents (a DAM Satellite); waits while mcp_satellite is disabled
     command: ~/desk/satellite.sh
