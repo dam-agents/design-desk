@@ -1974,7 +1974,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : mode === "when-awake" ? "It is on for this Desk while Design Desk is awake; when it sleeps, an agent hears that it is offline and tries again later."
       : "It is off for this Desk.";
     const setup = S.me?.role === "admin" ? `<p>To set it up (the Desk's owner):</p><ol>
-<li>In a terminal of your own, make a key that can only serve the Desk: <code>dam auth token create --name design-desk-satellite --scope satellites:serve</code>. It is shown once.</li>
+<li>In the app, open Settings → <b>API keys</b> → <b>New API key</b>. Name it <b>design-desk-satellite</b>, tick only <b>satellites:serve</b> under Satellites, and press Create. Copy the key: it is shown once.</li>
 <li>Open Design Desk's terminal in the app and save the key there: <code>install -m 600 /dev/stdin ~/work/desk/.satellite-key</code>, paste the key, then press Ctrl-D. Never paste it in a chat or on the Desk.</li>
 <li>Tell Design Desk in its chat to turn on the MCP server, <b>while awake</b> (free) or <b>always</b> (its machine never sleeps, which costs memory all day), and which role the agents get: developer (the default), PM or guest.</li>
 <li>Allow the platform's address when the app asks for it.</li>

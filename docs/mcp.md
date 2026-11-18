@@ -35,11 +35,11 @@ name a `## Desk people` row gives it (its role there is ignored).
 
 ## Turn it on (operator, in the direct session)
 
-1. **The key — operator-only.** The owner mints a key that can serve and nothing else
-   (`dam auth token create --name design-desk-satellite --scope satellites:serve`, in a
-   terminal of their own) and
-   writes it on this machine: `install -m 600 /dev/stdin "$HOME/work/desk/.satellite-key"`,
-   pasting it there. Never ask for it in chat.
+1. **The key — operator-only.** The owner makes a key that can serve and nothing else in the
+   app: Settings → API keys → New API key, name `design-desk-satellite`, only the scope
+   `satellites:serve` (under Satellites), Create; it is shown once. They
+   save it in this agent's terminal in the app: `install -m 600 /dev/stdin
+   "$HOME/work/desk/.satellite-key"`, paste, Ctrl-D. Never ask for it in chat.
 2. **Config** (`design config write`): `mcp_satellite: when-awake` or `always` (below),
    `mcp_server` (the platform's address; empty takes `DAM_SERVER`), and `mcp_role`.
 3. **Service.** `rc-service --user design-desk-satellite status`; missing (an agent created
@@ -50,7 +50,7 @@ name a `## Desk people` row gives it (its role there is ignored).
 5. **Grant — operator-only.** Configure agent → Connections → + New → MCP servers →
    `design-desk` → Add to agent, for each agent that may use the Desk. A running session sees
    the tools only after it restarts.
-6. Check with `dam satellite list` (as the owner) that `design-desk` is online.
+6. Check in the app that each granted agent lists `design-desk` under its Connections.
 
 ## Awake or not
 
