@@ -95,6 +95,31 @@ test("drawing every state of a part is a designer's, a PM's or a developer's, no
   assert.equal(again.status, 400, "one states item at a time per request");
 });
 
+test("taking a part from the product is a member's, not a guest's, and needs Design Desk's copy of the product", async (t) => {
+  const setUp = async (d) => {
+    const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "The agent card shouts." });
+    const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<div class=card>Agent</div>", encoding: "utf8" });
+    assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", shared_elements: [{ id: "card", name: "Agent card" }],
+      variants: [{ id: "v1", name: "Calm", asset: asset.id, elements: [{ id: "card", name: "Agent card", change: "changed", how: "Calmer.", selector: ".card" }] }] })).status, 200);
+    return card;
+  };
+  const ask = { action: "take-before", element: "card" };
+  const off = await desk(t);
+  const card = await setUp(off);
+  const refused = await off.viewer("bob@example.com", `/api/cards/${card.id}/actions`, ask);
+  assert.equal(refused.status, 400, "without the screens instance nobody may");
+  assert.match(refused.body.error, /own copy of it, which is not turned on yet/);
+  const on = await desk(t, "- screens: enabled\n");
+  const c2 = await setUp(on);
+  const guest = await on.viewer("guest@example.com", `/api/cards/${c2.id}/actions`, ask);
+  assert.equal(guest.status, 403, "a guest may not");
+  assert.match(guest.body.error, /take pictures from the product/);
+  const dev = await on.viewer("bob@example.com", `/api/cards/${c2.id}/actions`, ask);
+  assert.equal(dev.status, 200, "a developer may");
+  assert.deepEqual([dev.body.inbox.kind, dev.body.inbox.scope, dev.body.inbox.element], ["explore", "before", "card"]);
+  assert.equal((await on.viewer("alice@example.com", `/api/cards/${c2.id}/actions`, ask)).status, 400, "one at a time per part");
+});
+
 test("a request's author removes an option whatever their role; anyone else needs a designer's or an admin's", async (t) => {
   const d = await desk(t);
   const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" });

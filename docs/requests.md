@@ -231,7 +231,10 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   request changes **as it is in the product now**, without the change: one self-contained HTML
   file built the same way as an option (the product's own styles, sample data, its views wired),
   stored with `design desk asset <file> --kind variant --card R-<n>`, then `design desk upsert`
-  with `now: {asset, name}` (`name`: the screen in a few plain words; `null` clears it). It is
+  with `now: {asset, name, elements}` (`name`: the screen in a few plain words; `null` clears it;
+  `elements`: where each of the request's `shared_elements` that the product has today sits in
+  it, `[{id, selector, view, view_name}]`, so a part's dialog shows it as it was before — kept
+  while the asset stays the same). It is
   not an option: no vote, no notes, no version; the Desk sets it beside an option for people
   to compare. A `scope: "now"` item draws only this, changes nothing else on the card and
   leaves the status as it is; it blocks no person's work on the options (asking the team, adding
@@ -239,6 +242,13 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   sources & trust boundary), drawn without the decisions check: it is the product as it is, not
   a design ([desk.md](desk.md) → Decisions → The check). Redraw it when an explore or a revise
   finds the product's screen changed since it was drawn.
+- **The part before, from the product** (`explore` with `scope: "before"` and `element`, a
+  `shared_elements` id): a member pressed **Take it from the product** in a part's dialog. It
+  needs the screens instance (the button shows only with `screens: enabled`). Upsert the picture
+  as `before_shots: [{id, asset, source: "instance", ref, commit}]`, merged by part (`asset:
+  null` takes one off; a new `now` leaves them): one picture serves every option, and the dialog
+  shows it before the cut from `now`. Like `scope: "now"`, it changes nothing else on the card
+  and blocks no one's work; one waits per part.
 - **A person's own option** (`fidelity: picture`): **+ New option** → *Use my own pictures*
   puts their pictures on the card as an option as they are, with `by`; no item is queued and
   nothing is drawn. Keep it as it is (send it back with its `version`); change it only when a

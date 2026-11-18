@@ -57,6 +57,9 @@ export const LOOK_ROLES = ["admin", "designer", "lead-developer"];
 // The two tabs of Requests: whose call a request is (docs/desk.md → For Developers or For Designers).
 export const AUDIENCES = ["developers", "designers"];
 const BUSY = "Design Desk is already working on this. The result appears here.";
+// Explore items that draw beside a request's options and neither wait for nor hold up their work:
+// how the screen looks today, and a part as it is in the product (docs/requests.md).
+const SIDE_SCOPES = ["now", "before"];
 
 // Who may do what. The operator's roster assigns roles; the owner is always `admin`.
 // `prototypeRoles` comes from config (`prototype_requesters`).
@@ -68,6 +71,8 @@ export function can(role, action, prototypeRoles = ["designer", "pm", "admin"]) 
   switch (action) {
     case "read": case "ack": case "ask": case "comment": return true;
     case "vote": case "request": case "follow-up": case "screens": case "resolve": return member;
+    // Take a part of a request as it is in the product, on Design Desk's own copy of it.
+    case "before": return member;
     // Pictures of an issue: how it looks now and a sketch of how it could look (docs/issues.md).
     case "draw": return shaper || dev || pm;
     // A developer or a PM starts and changes everything a designer does; deciding stays a designer's.
@@ -108,7 +113,7 @@ export function forgetIdle(usage, now, writeWindowMs, max = 500) {
 }
 
 // Every action the page asks about: /api/me for its caller, /api/people for each role.
-export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "handle-small", "choose", "draw", "decide", "size", "skip", "people", "designs", "built", "resolve"];
+export const ACTIONS = ["ack", "ask", "comment", "vote", "request", "follow-up", "explore", "revise", "build", "approve", "close", "reopen", "refresh", "history", "queue", "change", "figma", "screens", "share", "add", "handle", "handle-small", "choose", "draw", "decide", "size", "skip", "people", "designs", "built", "resolve", "before"];
 export const abilities = (role, prototypeRoles) => Object.fromEntries(ACTIONS.map((a) => [a, can(role, a, prototypeRoles)]));
 
 // A role as written in `## Desk people` or `prototype_requesters`: lower case, inner spaces as
@@ -636,6 +641,12 @@ export class Store {
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
     return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
+  }
+
+  // The ids of a request's shared parts, as this upsert leaves them (docs/requests.md → The same elements in every option).
+  sharedIds(next, fields = {}) {
+    const list = fields.shared_elements !== undefined ? cleanSharedElements(fields.shared_elements) : next.shared_elements || [];
+    return new Set(list.map((s) => s.id));
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -1387,7 +1398,7 @@ export class Store {
     // A presented one too: the record says which design the meeting saw, and Undo queues it again.
     if (c.agenda?.status !== "removed" && c.agenda?.variant === v.id) throw bad(`${v.name} is on the presentation${c.agenda.status === "presented" ? " the team saw" : ""}. Take it off the presentation first.`);
     // How the screen looks today is no option: drawing it leaves the options free.
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind) && i.scope !== "now")) throw bad(BUSY);
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === c.id && ["explore", "revise", "states", "handoff"].includes(i.kind) && !SIDE_SCOPES.includes(i.scope))) throw bad(BUSY);
     c.variants = c.variants.filter((x) => x.id !== v.id);
     if (c.live_pick?.variant === v.id) delete c.live_pick;
     c.dropped_options = [...(c.dropped_options || []), { id: v.id, name: v.name, version: v.version || 1, by: person(who), at: this.clock() }].slice(-20);
@@ -1623,16 +1634,22 @@ export class Store {
     const closed = c.status === "declined" || c.status === "handed-off";
     // How the screen looks today, to set beside an option: once the request is checked.
     if (action === "draw-now" && !c.triage) throw bad("Design Desk is still checking this request. Ask for how it looks today once it is checked.");
+    // One shared part as it is in the product, taken on Design Desk's own copy of it
+    // (docs/requests.md → The part before, from the product).
+    const beforeOf = action === "take-before" ? (c.shared_elements || []).find((x) => x.id === String(element ?? "")) : null;
+    if (action === "take-before" && !beforeOf) throw bad("That part is not one of this request's parts.");
+    if (action === "take-before" && c.status === "declined") throw bad("This request is closed.");
     if (designLocked(c) && ["explore", "add-option", "revise", "alternatives", "pick-alternative", "drop-option", "build", "figma-import"].includes(action)) throw bad(LOCKED);
     // Only an admin reopens a request sent to developers; what went to GitHub stays there (docs/desk.md → Approved designs no longer change).
     if (action === "reopen" && designLocked(c) && !who?.agent && who?.role !== "admin") throw forbidden("Only an admin reopens a request sent to developers.");
     // Drawing every state of an approved design's element documents it and changes nothing of it,
     // so it stays open once the design went to developers (docs/requests.md → Every state of a part).
-    if (closed && action !== "reopen" && !(action === "states" && c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
+    // An approved design sent to developers still gets its states drawn and its parts taken from the product: they document it.
+    if (closed && action !== "reopen" && !(["states", "take-before"].includes(action) && c.status === "handed-off")) throw bad("This request is closed. Press Reopen first.");
     // A person picks one of the ways a part could look: it becomes the option's next version.
     if (action === "pick-alternative") return this.pickAlternative(c, who, variant, note);
     if (action === "drop-option") return this.dropOption(c, who, variant);
-    const kinds = { explore: "explore", "add-option": "explore", "draw-now": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "switch-off": "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
+    const kinds = { explore: "explore", "add-option": "explore", "draw-now": "explore", "take-before": "explore", revise: "revise", alternatives: "revise", states: "states", build: "build", approve: "handoff", close: "teardown", "switch-off": "teardown", "figma-export": "figma", "figma-import": "figma", "slack-share": "slack", "slack-send": "slack" };
     if (action === "figma-export" && !(c.variants || []).some((v) => v.id === note)) throw bad("Pick the design option to send to Figma.");
     // A person switches off a live prototype before its expiry; the request stays where it is (docs/prototype.md → Teardown).
     // Only while the request is still being designed, so Build it again can follow.
@@ -1713,7 +1730,7 @@ export class Store {
     const direct = who?.agent || can(who?.role, "skip");
     if (action === "approve") mustBeChecked(c, "Approve");
     // Before options are on the card, an approval does not race the drawing of them.
-    if (action === "approve" && ["triage", "variants"].includes(c.status) && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise"].includes(i.kind) && i.scope !== "now"))
+    if (action === "approve" && ["triage", "variants"].includes(c.status) && Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise"].includes(i.kind) && !SIDE_SCOPES.includes(i.scope)))
       throw bad("Design Desk is still drawing the options. Approve once they are here.");
     if (action === "approve" && !["testing", "feedback", "prototype", ...(direct ? ["triage", "variants"] : [])].includes(c.status))
       throw bad("There's nothing to approve yet. Wait for the design options.");
@@ -1731,7 +1748,8 @@ export class Store {
     if (against.length && !who?.agent && !can(who?.role, "approve")) throw forbidden(`This design goes against ${against.join(", ")}, so a designer approves it, even For Developers.`);
     if (against.length && !overrule) throw new DeskError(409, `This design goes against ${against.join(", ")}. Read why on the request, and approve it only if the team means to go against it.`);
     // How the screen looks today blocks only another ask for it; the options' own work goes on.
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action] && (action === "draw-now" || i.scope !== "now"))) throw bad(BUSY);
+    if (action === "take-before") { if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === "explore" && i.scope === "before" && i.element === beforeOf.id)) throw bad(BUSY); }
+    else if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && i.kind === kinds[action] && (action === "draw-now" ? i.scope !== "before" : !SIDE_SCOPES.includes(i.scope)))) throw bad(BUSY);
     // A closed request has nothing going live.
     if (action === "close") {
       c.status = "declined"; delete c.live_pick;
@@ -1757,6 +1775,7 @@ export class Store {
     c.updated = this.clock();
     const item = this.enqueue(kinds[action], cardId, null, who, optText(note, action === "add-option" ? LIMITS.optionAsk : 1000, "note"));
     if (action === "draw-now") item.scope = "now";
+    if (action === "take-before") { item.scope = "before"; item.element = beforeOf.id; }
     // Sent to Figma: the option it is, so the page shows Design Desk at work on it.
     if (action === "figma-export") item.variant = note;
     if (action === "add-option") {
@@ -1844,7 +1863,7 @@ export class Store {
   openFeedback(cardId, who) {
     const c = this.card(cardId);
     if (c.kind !== "request" || c.status !== "variants" || !(c.variants || []).length) throw bad("There are no drawn options to show the team yet.");
-    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind) && i.scope !== "now"))
+    if (Object.values(this.db.inbox).some((i) => i.state !== "done" && i.card === cardId && ["explore", "revise", "states"].includes(i.kind) && !SIDE_SCOPES.includes(i.scope)))
       throw bad("Design Desk is still drawing the options. Ask the team once they are here.");
     if (!can(who?.role, "revise") && !isAuthor(c, who)) throw forbidden("Only designers, PMs, developers, admins or the person who filed it ask the team for feedback.");
     c.status = "feedback";
@@ -2112,7 +2131,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "shared_elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix", "reminded", "translation"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "shared_elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "before_shots", "area", "fix", "reminded", "translation"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2250,13 +2269,31 @@ export class Store {
       else if (k === "now") {
         if (next.kind !== "request") throw bad("now belongs to a request");
         if (fields.now !== null && !own(this.db.assets, fields.now?.asset)) throw bad(`now: no asset ${fields.now?.asset}`);
-        next.now = fields.now === null ? null : { asset: fields.now.asset, name: optText(fields.now.name, 80, "now name") || null, at: this.clock() };
+        // Where each of the request's shared parts sits in it, so a part's dialog cuts it out as
+        // it was before the design: kept while the drawing is the same, gone with a new one.
+        const was = next.now, same = was && fields.now && was.asset === fields.now.asset;
+        const els = fields.now && fields.now.elements !== undefined ? cleanNowElements(fields.now.elements, this.sharedIds(next, fields))
+          : same && was.elements?.length ? was.elements : null;
+        next.now = fields.now === null ? null : { asset: fields.now.asset, name: optText(fields.now.name, 80, "now name") || null, at: this.clock(), ...(els?.length ? { elements: els } : {}) };
+      }
+      // A shared part as it is in the product, taken on Design Desk's own copy of it: one per part,
+      // merged by id; `asset: null` takes one off (docs/requests.md → The part before, from the product).
+      else if (k === "before_shots") {
+        if (next.kind !== "request") throw bad("before_shots belong to a request");
+        next.before_shots = mergeBeforeShots(next.before_shots || [], fields.before_shots, this.sharedIds(next, fields), this.db.assets, this.clock());
       }
       else if (k === "sheet") { if (fields.sheet !== null && !own(this.db.assets, fields.sheet)) throw bad(`sheet: no asset ${fields.sheet}`); next.sheet = fields.sheet; }
       else if (k === "states") next.states = cleanStates(fields.states);
       else if (k === "group") next.group = clean(fields.group, 60, "group");
       else if (k === "elements") { if (!Array.isArray(fields.elements)) throw bad("elements must be a list"); next.elements = fields.elements.slice(0, 30).map((id) => this.card(String(id)).id); }
-      else if (k === "shared_elements") { if (next.kind !== "request") throw bad("shared_elements belong to a request"); next.shared_elements = cleanSharedElements(fields.shared_elements); }
+      else if (k === "shared_elements") {
+        if (next.kind !== "request") throw bad("shared_elements belong to a request");
+        next.shared_elements = cleanSharedElements(fields.shared_elements);
+        // A part off the list takes its place in how it looks today and its picture from the product with it.
+        const ids = new Set(next.shared_elements.map((x) => x.id));
+        if (next.now?.elements) next.now = { ...next.now, elements: next.now.elements.filter((x) => ids.has(x.id)) };
+        if (next.before_shots) next.before_shots = next.before_shots.filter((x) => ids.has(x.id));
+      }
       else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets, this.db);
       else if (k === "origin") next.origin = cleanOrigin(fields.origin, this.db.cards);
       else if (k === "brief") {
@@ -3514,6 +3551,41 @@ function cleanSharedElements(list) {
     ids.add(id);
     return { id, name: clean(x?.name, 80, "element name"), how: optText(x?.how, 300, "how") };
   });
+}
+
+// Where each of a request's shared parts sits in its "how it looks today" drawing (`now.elements`).
+function cleanNowElements(list, shared) {
+  if (list === null) return [];
+  if (!Array.isArray(list) || list.length > LIMITS.optionElements) throw bad(`now.elements is a list of at most ${LIMITS.optionElements}`);
+  const ids = new Set();
+  return list.map((x, i) => {
+    const id = String(x?.id || "");
+    if (!shared.has(id)) throw bad(`now.elements ${i + 1}: ${id || "its id"} is not one of the request's shared_elements`);
+    if (ids.has(id)) throw bad(`now.elements ${i + 1}: ${id} is there twice`);
+    ids.add(id);
+    const view = x?.view === undefined || x?.view === null || x?.view === "" ? null : Number(x.view);
+    if (view !== null && !Number.isInteger(view)) throw bad(`now.elements ${i + 1}: view is a number`);
+    return { id, selector: clean(x?.selector, 500, "selector"), view, view_name: optText(x?.view_name, 80, "view_name") || null };
+  });
+}
+
+// The pictures of shared parts taken from the product, merged by part into those already there.
+function mergeBeforeShots(had, list, shared, assets, at) {
+  if (list === null) return [];
+  if (!Array.isArray(list) || list.length > LIMITS.optionElements) throw bad(`before_shots is a list of at most ${LIMITS.optionElements}`);
+  const out = new Map(had.filter((x) => shared.has(x.id)).map((x) => [x.id, x]));
+  for (const [i, x] of list.entries()) {
+    const id = String(x?.id || "");
+    if (!shared.has(id)) throw bad(`before_shots ${i + 1}: ${id || "its id"} is not one of the request's shared_elements`);
+    if (x?.asset === null) { out.delete(id); continue; }
+    const a = own(assets, x?.asset);
+    if (!a || !String(a.contentType).startsWith("image/")) throw bad(`before_shots ${i + 1}: ${x?.asset} is not a picture on the Desk`);
+    if ((x.source || "instance") !== "instance") throw bad(`before_shots ${i + 1}: source is "instance"`);
+    const commit = String(x?.commit || "").toLowerCase();
+    if (!/^[0-9a-f]{7,40}$/.test(commit)) throw bad(`before_shots ${i + 1}: commit is the product's commit, 7 to 40 hex characters`);
+    out.set(id, { id, asset: a.id, source: "instance", ref: clean(x?.ref, 80, "ref"), commit, at });
+  }
+  return [...out.values()];
 }
 // The request's elements an option leaves out, each with why: the exception, said out loud.
 function cleanLeftOut(list, n) {
