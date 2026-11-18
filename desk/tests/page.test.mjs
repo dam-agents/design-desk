@@ -3693,3 +3693,67 @@ test("Product → Kit is not on the page for a PM", (t) => open(t, withKit({ ...
   await desk.waitForSelector('[data-filter="productFilter:decisions"]');
   assert.equal(await desk.locator('[data-filter="productFilter:kit"]').count(), 0);
 }));
+
+// Simple mode's one list (docs/desk-page.md → A request's state in the list): requests and pull
+// request changes of the viewer's side, each Open, In dev or Closed, a closed one saying how it ended.
+const at = (h) => `2026-11-18T${String(h).padStart(2, "0")}:00:00Z`;
+const merged = { kind: "pr", pr: 7, url: "https://github.com/o/r/pull/7", merged_at: at(1) };
+const SIMPLE_CARDS = [
+  { id: "r-check", kind: "request", title: "Checking", status: "triage", updated: at(20) },
+  { id: "r-busy", kind: "request", title: "Drawing", status: "variants", busy: true, updated: at(19) },
+  { id: "r-draft", kind: "request", title: "Spec draft", status: "spec", spec: { review: "draft" }, updated: at(18) },
+  { id: "r-spec", kind: "request", title: "Approved", status: "spec", spec: { review: "sent" }, updated: at(17) },
+  { id: "r-sent", kind: "request", title: "Sent", status: "handed-off", updated: at(16) },
+  { id: "r-built", kind: "request", title: "Built", status: "handed-off", built: at(15), updated: at(15) },
+  { id: "r-declined", kind: "request", title: "Declined", status: "declined", updated: at(14) },
+  { id: "r-decided", kind: "request", title: "Decided", status: "declined", decided: at(13), updated: at(13) },
+  { id: "r-small", kind: "request", title: "For developers", status: "triage", for: "developers", updated: at(12) },
+  { id: "c-open", kind: "change", title: "To review", status: "new", attention: { level: "designer", reasons: ["New"] }, source: merged, updated: at(11) },
+  { id: "c-review", kind: "change", title: "Reviewed, not merged", status: "handled", handled: at(10), source: { ...merged, merged_at: null }, updated: at(10) },
+  { id: "c-shipped", kind: "change", title: "Reviewed, merged", status: "handled", handled: at(9), source: merged, updated: at(9) },
+  { id: "c-auto", kind: "change", title: "Nothing to review", status: "new", attention: { level: "fyi", reasons: [] }, source: merged, updated: at(8) },
+  { id: "c-gone", kind: "change", title: "Archived", status: "archived", source: merged, updated: at(7) },
+  { id: "c-small", kind: "change", title: "For a lead developer", status: "new", attention: { level: "developer", reasons: ["Copy"] }, source: merged, updated: at(6) },
+];
+const SIMPLE_ME = { role: "designer", email: "d@example.com", simple: true, spec_review: true, can: { request: true } };
+const rows = (desk) => desk.$$eval("#list [data-card]", (xs) => xs.map((x) => [x.dataset.card, x.querySelector(".spill")?.textContent || ""]));
+
+test("simple mode lists requests and changes of the viewer's side in one list, each in one state, and its menu has one entry", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  assert.equal((await desk.textContent("#nav")).replace(/\d+$/, "").trim(), "Requests & PRs", "one entry, no PR Changes");
+  assert.deepEqual(await rows(desk), [["r-check", ""], ["r-busy", ""], ["r-draft", ""], ["c-open", ""]], "Open by default, newest change first, no pill with one state");
+  assert.equal(await desk.locator('#list [data-card="r-busy"] .dd-spin').count(), 1, "Design Desk at work: the spinner, still Open");
+  await desk.click("details.sf > summary");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.click('[data-simf="states:closed"]');
+  assert.deepEqual(await rows(desk), [["r-check", "Open"], ["r-busy", "Open"], ["r-draft", "Open"], ["r-spec", "In dev"], ["r-sent", "In dev"], ["r-built", "Shipped"],
+    ["r-declined", "Closed"], ["r-decided", "Closed"], ["c-open", "Open"], ["c-review", "In dev"], ["c-shipped", "Shipped"], ["c-auto", "No review needed"]],
+    "every item one state; the other side's items and an archived change are not listed");
+  assert.equal(await desk.locator("details.sf[open]").count(), 1, "the menu stays open while ticking");
+}));
+
+test("simple mode's filter shows only what narrows the list, keeps one of each group and is kept in the browser", (t) => open(t, DESK(SIMPLE_ME, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-check"]');
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.trim())), ["Open"], "the default: one chip, no ×, no kind");
+  await desk.click("details.sf > summary");
+  assert.equal(await desk.getAttribute('[data-simf="states:open"]', "disabled"), "", "the last state cannot be unticked");
+  assert.match(await desk.textContent('[data-simf="states:closed"]'), /Closed\s*5/, "a count by what the kinds let through");
+  await desk.click('[data-simf="states:dev"]');
+  await desk.click('[data-simf="kinds:change"]');
+  assert.deepEqual(await desk.$$eval(".sf-chip", (xs) => xs.map((x) => x.textContent.replace("×", "").trim())), ["Open", "In dev", "Requests"], "a kind shows once it narrows");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "r-spec", "r-sent"]);
+  await desk.keyboard.press("Escape");
+  await desk.click('[data-simf-drop="states:open"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent"], "× drops it");
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="r-spec"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-spec", "r-sent"], "kept in this browser");
+  await desk.click("details.sf > summary");
+  await desk.click("[data-simf-reset]");
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-check", "r-busy", "r-draft", "c-open"], "Reset goes back to Open");
+}));
+
+test("simple mode lists a developer's side for a developer", (t) => open(t, DESK({ ...SIMPLE_ME, role: "developer" }, SIMPLE_CARDS), async (desk) => {
+  await desk.waitForSelector('#list [data-card="r-small"]');
+  assert.deepEqual((await rows(desk)).map(([id]) => id), ["r-small", "c-small"]);
+}));

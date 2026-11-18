@@ -16,7 +16,8 @@ Apply `/frontend-design` and `/copy`.
 
 1. **`simpleHead(c)`** in `desk/page.html`, used at the top of `renderRequest(c)` and
    `renderChange(c)` under `simple()` instead of the title, the chips line and the status box:
-   - the kind's icon and the title, its number grey after it;
+   - the kind's icon and the title, its number grey after it and the link icon that copies the
+     item's link (`num(c)`, `titleLink(c)`), as in full mode;
    - the state pill from `simpleState(c)` (always shown here), with `.dd-spin` and Design Desk's
      work in words while `atWork(c)`;
    - a change: its pull request number as a link to GitHub (`source.url`), the word only when it is
@@ -40,7 +41,7 @@ Apply `/frontend-design` and `/copy`.
 4. **The ⋯ menu** (one popover, like More today): a request — **Close…** (the existing close
    dialog: Just close it / Close it and record a decision) while not closed, **Reopen** when
    closed; a change — **Turn into a design request** (the existing Adjust the design); both —
-   **Copy link**, **Open on GitHub** when there is a URL. Nothing else: no vote buttons (a vote's
+   **Open on GitHub** when there is a URL (Copy link is the title's link icon, not repeated here). Nothing else: no vote buttons (a vote's
    result still shows in slice 03), no rename, no presentation, no For Developers move.
 5. **Docs**: `docs/desk-page.md` → The page → Simple mode: the header, its actions and the ⋯ menu;
    that Approve sends as soon as the spec is written and when it cannot. `docs/handoff.md` → Review
@@ -50,7 +51,7 @@ Apply `/frontend-design` and `/copy`.
 
 - `docs/desk-page.md`, `docs/handoff.md` as step 5.
 - `desk/tests/page.test.mjs` (`DESK(...)`, `simple: true`):
-  - a request's header: title, pill, author's short name, Approve and Request changes for a
+  - a request's header: title with its number and link icon, pill, author's short name, Approve and Request changes for a
     designer; none for a guest;
   - Approve posts `auto_send: true` and shows no send checkbox; Request changes posts `revise` with
     the note;
@@ -63,7 +64,8 @@ Apply `/frontend-design` and `/copy`.
 ## Acceptance criteria
 
 - [ ] In simple mode every request and change page opens with the sticky header: icon, title,
-      pill, PR link for a change, who and when, at most two buttons and ⋯.
+      pill, PR link for a change, who and when, at most two buttons and ⋯; the title carries the
+      item's number and the link icon that copies its link.
 - [ ] Approve on a request sends the spec as soon as it is written; where it cannot, the request is
       Open with Send to developers.
 - [ ] Request changes on a request starts a revise with the note; the request shows the spinner.

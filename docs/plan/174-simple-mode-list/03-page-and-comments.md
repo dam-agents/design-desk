@@ -41,7 +41,11 @@ Apply `/frontend-design` and `/copy`.
 4. **Docs**: `docs/desk-page.md` → The page → Simple mode: the page's order, What Design Desk found,
    the folds and the comments; the sentence that simple mode "only hides" is gone, and what it
    still hides stays listed. Size sweep (`wc -l` against `main`, `docs/self-modification.md` §9).
-5. **Manifest check**: nothing public changes (no trigger, label, marker or skill); say so in the
+5. **What went missing**: go through full mode's request and change pages and list what a
+   reviewer still needs that simple mode no longer shows (decision 10 in the README); keep it,
+   move it under ⋯, or drop it on purpose. Bring the list to the operator before the commit, and
+   name what was dropped in the PR body.
+6. **Manifest check**: nothing public changes (no trigger, label, marker or skill); say so in the
    PR body.
 
 ## Docs and tests
@@ -63,6 +67,8 @@ Apply `/frontend-design` and `/copy`.
 - [ ] Threads tell a designer from a developer, indent replies and fold when resolved.
 - [ ] `VERSION` is bumped once with its `CHANGELOG.md` **Upgrade** entry; `docs/desk-page.md` no
       longer says simple mode only hides and carries the state table.
+- [ ] Full mode's detail pages were reviewed for what simple mode lost; each item is kept, under ⋯,
+      or dropped with the operator's agreement and named in the PR body.
 - [ ] `bash scripts/validate-definition.sh .` and `bash scripts/tests/run.sh` pass.
 
 ## Smoke test

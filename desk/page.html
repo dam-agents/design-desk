@@ -235,6 +235,29 @@
   .row.item > .open { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
   .row.item > .open::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }
   .row.item:has(> .open:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; } .row.item > .open:focus-visible { outline: 0; }
+  /* Simple mode's row: the kind's icon, the title, then when it last changed and its state. */
+  .row.item.srow > .open { display: grid; grid-template-columns: 20px 1fr; column-gap: 8px; row-gap: 4px; align-items: start; }
+  .srow .kic { grid-row: span 2; color: var(--muted); padding-top: 2px; } .kic svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .srow .sline { display: flex; align-items: center; gap: 8px; font-size: var(--fs-meta); color: var(--muted); min-height: 20px; }
+  .srow .sline .spill { margin-left: auto; }
+  .spill { --p: var(--muted); display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 500; line-height: 20px; white-space: nowrap;
+    color: var(--p); background: color-mix(in srgb, var(--p) 14%, transparent); }
+  .spill[data-s="open"] { --p: var(--ok); } .spill[data-s="dev"] { --p: var(--accent); } .spill[data-s="shipped"] { --p: var(--live); }
+  .spill[data-s="none"] { --p: var(--muted); } .spill[data-s="closed"] { --p: var(--bad); }
+  /* Simple mode's filter: one button, its menu of ticks, and a chip for each thing it narrows by. */
+  .simfilter { align-items: center; } .simfilter details.sf > summary { display: inline-flex; align-items: center; gap: 4px; }
+  .simfilter details.sf > summary svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+  .simfilter .menu { min-width: 220px; }
+  .sf-h { padding: 4px 8px 0; font-size: var(--fs-micro); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .sf-opt { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px; border: 0; border-radius: var(--r-sm); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .sf-opt:hover:not(:disabled) { background: var(--soft); } .sf-opt:disabled { cursor: default; }
+  .sf-opt .box { width: 14px; height: 14px; border: 1px solid var(--muted); border-radius: var(--r-xs); flex: none; display: grid; place-items: center; }
+  .sf-opt[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); }
+  .sf-opt[aria-checked="true"] .box::after { content: ""; width: 6px; height: 3px; border: solid var(--accent-ink); border-width: 0 0 2px 2px; transform: rotate(-45deg) translate(1px, -1px); }
+  .sf-opt .n { margin-left: auto; color: var(--muted); font-size: var(--fs-meta); }
+  .sf-reset { margin-top: 4px; }
+  .sf-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-meta); line-height: 24px; }
+  .sf-chip .linkbtn { color: var(--muted); padding: 0 2px; }
   .prov { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: var(--fs-meta); color: var(--muted); }
   .prov .when { color: var(--ink); font-weight: 500; }
   .row .prov { margin-top: 4px; position: relative; z-index: 1; pointer-events: none; font-size: var(--fs-meta); }
@@ -2226,6 +2249,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!d.contains(e.target) || e.target.closest(".menu button:not([data-keep])")) d.open = false;
   }, true);
   const moreClose = () => { for (const d of document.querySelectorAll(FOLDS)) d.open = false; };
+  // Simple mode's filter menu stays open across the list's redraws until it is closed.
+  document.addEventListener("toggle", (e) => { if (e.target.matches?.("details.sf")) S.simMenu = e.target.open; }, true);
   // A move to another page closes what floated over the one left: a More, an open dialog. A dialog
   // with something typed, picked or added in it stays open, so nothing written is lost (formState below).
   const leaveClose = () => { moreClose(); for (const d of document.querySelectorAll("dialog[open]")) if (d._clean === undefined || formState(d) === d._clean) d.close("cancel"); };
@@ -2908,7 +2933,10 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const sep = `<span class="sep" aria-hidden="true"></span>`;
     // Designs only for developers and admins; a designer reaches one from a notification (docs/desk-page.md → Designs).
     const designs = can("designs") ? [[["designs", designCards("todo").length]]] : [];
-    const html = [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
+    // Simple mode: one entry for requests and pull request changes, current on either tab.
+    const opens = simple() ? simpleCards({ states: ["open"], kinds: SIM_KINDS.map(([k]) => k) }).length : 0;
+    const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} need a design decision">${opens}</span>` : ""}</button>`;
+    const html = simple() ? one : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
       .map((group) => group.filter(([k]) => !(simple() && SIMPLE_HIDES.includes(k)))).filter((group) => group.length)
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
@@ -3131,6 +3159,70 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     && !(Array.isArray(c.conflicts) ? c.conflicts.some((x) => x.status === "active") : (c.against || []).length));
   const requestCards = (filter, aud = reqFor()) => newestFirst(S.cards.filter((c) => c.kind === "request" && forOf(c) === aud
     && (filter === "all" ? true : filter === "unread" ? c.read === false || S.justRead.has(c.id) : filter === "turn" ? myTurn(c) : filter === "open" ? !closed(c) : closed(c))));
+  // Simple mode (docs/desk-page.md → A request's state in the list): requests and changes in one
+  // list, each on the viewer's side in one of three states, by who works on it — Open (it needs a
+  // design decision), In dev (approved and being built, or reviewed and not merged), Closed (nobody
+  // works on it) — and a closed one says how it ended. Design Desk at work is no state: Open, with a spinner.
+  const mySide = () => (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
+  // An approved request whose spec draft waits for a person to send it is theirs to move: Open.
+  const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && Boolean(S.me?.spec_review) && !c.approved?.auto_send;
+  function simpleState(c) {
+    if (!c || !["request", "change"].includes(c.kind) || forOf(c) !== mySide()) return null;
+    if (c.kind === "request") {
+      if (c.status === "declined") return { state: "closed", pill: "closed" };
+      if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
+      return c.status === "spec" && !specWaits(c) ? { state: "dev", pill: null } : { state: "open", pill: null };
+    }
+    if (c.status === "archived") return null;
+    if (!c.handled && !autoHandled(c)) return { state: "open", pill: null };
+    if (!c.source?.merged_at) return { state: "dev", pill: null };
+    return { state: "closed", pill: c.handled ? "shipped" : "none" };
+  }
+  const SIM_STATES = [["open", "Open"], ["dev", "In dev"], ["closed", "Closed"]];
+  const SIM_KINDS = [["request", "Requests"], ["change", "PR changes"]];
+  const SIM_PILL = { open: "Open", dev: "In dev", shipped: "Shipped", none: "No review needed", closed: "Closed" };
+  const SIM_TIP = { open: "It needs a design decision", dev: "Approved: developers are building it", shipped: "Approved by a person and shipped",
+    none: "Merged; Design Desk found nothing to review", closed: "Closed without being built" };
+  // The filter: states and kinds, any of each; kept in this browser (desk-simFilter).
+  const SIM_DEFAULT = () => ({ states: ["open"], kinds: ["request", "change"] });
+  S.simFilter = (() => {
+    try {
+      const v = JSON.parse(store.get("desk-simFilter") || "null"), ok = (xs, all) => Array.isArray(xs) && xs.filter((x) => all.some(([k]) => k === x));
+      const states = v && ok(v.states, SIM_STATES), kinds = v && ok(v.kinds, SIM_KINDS);
+      return states?.length && kinds?.length ? { states, kinds } : SIM_DEFAULT();
+    } catch { return SIM_DEFAULT(); }
+  })();
+  const simpleList = () => simple() && (S.tab === "requests" || S.tab === "new") && !presenting();
+  const lastChange = (c) => String(c.updated || dateOf(c));
+  const simpleCards = (f = S.simFilter) => S.cards.map((c) => [c, simpleState(c)])
+    .filter(([c, s]) => s && f.states.includes(s.state) && f.kinds.includes(c.kind)).map(([c]) => c)
+    .sort((a, b) => lastChange(b).localeCompare(lastChange(a)));
+  // A row's date: Today, Yesterday or the day, with the time; the year only when it is not this year.
+  const sWhen = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso), w = dayWord(iso), t = d.toLocaleTimeString("en", { hour: "numeric", minute: "2-digit" });
+    const date = w !== day(iso) ? w : d.toLocaleDateString("en", { weekday: "short", day: "numeric", month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+    return `${date}, ${t}`;
+  };
+  const simplePill = (c) => { const s = simpleState(c); const k = s?.pill || s?.state; return k ? `<span class="spill" data-s="${k}" title="${esc(SIM_TIP[k])}">${SIM_PILL[k]}</span>` : ""; };
+  const KIND_ICON = { request: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>`,
+    change: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V9a3 3 0 0 0-3-3h-4"/><path d="m13 4-2 2 2 2"/></svg>` };
+  const kindIcon = (c) => `<span class="kic" title="${c.kind === "change" ? "A pull request's change" : "A design request"}">${KIND_ICON[c.kind] || ""}</span>`;
+  // One filter for the list: a button whose menu ticks any of each group, its counts by what the
+  // other group lets through; beside it only what narrows the list, each a chip that drops it.
+  function simpleFilterBar() {
+    const f = S.simFilter, n = (states, kinds) => simpleCards({ states, kinds }).length;
+    const opt = (group, k, label, on, count) => `<button class="sf-opt" data-keep data-simf="${group}:${k}" role="menuitemcheckbox" aria-checked="${on}"${on && f[group].length === 1 ? ` disabled title="Keep at least one"` : ""}><span class="box" aria-hidden="true"></span><span>${label}</span><span class="n">${count}</span></button>`;
+    const states = SIM_STATES.map(([k, l]) => opt("states", k, l, f.states.includes(k), n([k], f.kinds))).join("");
+    const kinds = SIM_KINDS.map(([k, l]) => opt("kinds", k, l, f.kinds.includes(k), n(f.states, [k]))).join("");
+    const narrowed = JSON.stringify(f) !== JSON.stringify(SIM_DEFAULT());
+    const chip = (group, k, label) => `<span class="sf-chip">${label}${f[group].length > 1 ? `<button class="linkbtn" data-simf-drop="${group}:${k}" aria-label="Stop filtering by ${esc(label)}" title="Stop filtering by ${esc(label)}">×</button>` : ""}</span>`;
+    const chips = [...SIM_STATES.filter(([k]) => f.states.includes(k)).map(([k, l]) => chip("states", k, l)),
+      ...(f.kinds.length < SIM_KINDS.length ? SIM_KINDS.filter(([k]) => f.kinds.includes(k)).map(([k, l]) => chip("kinds", k, l)) : [])].join("");
+    return `<div class="listhead"><div class="filterbar simfilter"><details class="more sf"${S.simMenu ? " open" : ""}><summary class="btn small" aria-haspopup="menu" title="Filter the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>Filter</summary>
+      <div class="menu" role="menu"><div class="sf-h">State</div>${states}<div class="sf-h">Kind</div>${kinds}${narrowed ? `<button class="btn small sf-reset" data-simf-reset>Reset to default</button>` : ""}</div></details>${chips}</div></div>`;
+  }
+  const setSimFilter = (f) => { S.simFilter = f; store.set("desk-simFilter", JSON.stringify(f)); };
   // Your turn: an open request whose next move is the viewer's own, by what they may do — answer
   // Design Desk, start the options, ask the team, vote, approve, read and send the spec, build
   // the prototype again; never while Design Desk works (docs/desk-page.md → Pages and filters). A
@@ -3178,6 +3270,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // An earlier record of a reopened request: the request as it is, with what that send had.
   const sendOf = (id) => { const m = /^([A-Z]-\d+)~(\d+)$/.exec(String(id || "")); return m ? { base: m[1], k: Number(m[2]) } : null; };
   function visibleCards() {
+    if (simpleList()) return simpleCards();
     if (S.tab === "new") return newCards(S.newFilter);
     if (S.tab === "designs") return designCards(S.designFilter);
     // History: the weekly digests, the newest week first (docs/digest.md).
@@ -3292,7 +3385,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     main.classList.toggle("wide", S.tab === "guide" || S.tab === "people");
     // Another tab, page or filter starts the list again at LIST_PAGE rows; it is
     // set before every early return, so a list that returns early still counts as another view.
-    const view = [S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
+    const view = [simpleList() && JSON.stringify(S.simFilter), S.tab, S.productFilter, S.histBy, S.reqFilter, reqFor(), S.newFilter, S.designFilter, S.issueFilter, S.figFilter, S.elFilter].join("|");
     if (S.listView !== view) { S.listView = view; S.listLimit = LIST_PAGE; }
     if (S.tab === "guide" || S.tab === "people") { list.innerHTML = ""; return; }
     // Differences kept from an earlier visit leaves once Figma is off, for the Desk or this person.
@@ -3322,7 +3415,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       : S.tab === "issues" ? seg("issueFilter", Object.entries({ all: "All", ...BUCKET, handled: "Handled" }).map(([k, l]) => [k, l, issueCards(k).length]))
       : S.tab === "product" && S.productFilter === "differences" ? seg("figFilter", [["differs", "Differs from Figma", figmaCards("differs").length], ["matches", "Matches", figmaCards("matches").length], ...(figmaCards("closed").length ? [["closed", "Closed", figmaCards("closed").length]] : []), ["all", "All", figmaCards("all").length]])
       : S.tab === "product" && S.productFilter === "elements" && S.cards.some((c) => c.kind === "element" && c.design) ? seg("elFilter", [["all", "All"], ["product", "In the product", S.cards.filter((c) => c.kind === "element" && !c.design).length], ["design", "✎ From approved designs", S.cards.filter((c) => c.kind === "element" && c.design).length]]) : "";
-    const filters = `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
+    const filters = simpleList() ? simpleFilterBar() : `<div class="listhead">${head}${filter ? `<div class="filterbar">${filter}</div>` : ""}</div>`;
     requestAnimationFrame(() => markScrolls(list));
     if (S.tab === "product" && S.productFilter === "decisions") { renderDecisionList(head); return; }
     if (S.tab === "product" && S.productFilter === "kit") { renderKitList(head); return; }
@@ -3339,7 +3432,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
         : (S.productFilter === "elements" ? "No elements yet. Design Desk draws the product's main parts after it is set up; they appear here within a day."
         : "No screens yet. Design Desk maps the product's screens on its own copy of the product; they appear here once it runs.") + (can("add") ? " Missing one? Press + Add." : ""),
     }[S.tab];
-    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(empty)}</div>`; return; }
+    const simpleEmpty = () => { const f = S.simFilter.states; return f.length === 1 && f[0] === "open" ? "Nothing needs a design decision right now." : f.length === 1 && f[0] === "dev" ? "Nothing is being built right now." : f.length === 1 && f[0] === "closed" ? "Nothing is closed yet." : "Nothing here."; };
+    if (!cards.length) { list.innerHTML = filters + `<div class="empty">${esc(simpleList() ? simpleEmpty() : empty)}</div>`; return; }
     // Every list says where each item came from, without a description, Product included.
     const sourced = S.tab === "new" || S.tab === "requests" || S.tab === "designs" || S.tab === "issues" || S.tab === "product";
     // The list draws LIST_PAGE rows and LIST_PAGE more each time its end scrolls into view
@@ -3349,7 +3443,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (at >= S.listLimit) S.listLimit = Math.ceil((at + 1) / LIST_PAGE) * LIST_PAGE;
     const all = S.pf && S.pf.view === pfView();
     const drawn = all ? cards : cards.slice(0, S.listLimit);
-    list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
+    // Simple mode's row: its kind, its title, when it last changed, and its state; the pill only
+    // when the filter shows more than one state, the spinner while Design Desk works on it.
+    const pills = S.simFilter.states.length > 1;
+    const simpleRow = (c) => `<div class="row item srow${c.read === false ? " unread" : ""}">
+      <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}">${kindIcon(c)}<span class="t"><span>${esc(c.title)}</span></span>
+      <span class="sline"><span class="when">${esc(sWhen(lastChange(c)))}</span>${atWork(c) ? `<span class="dd-spin" title="Design Desk is working on it"></span>` : ""}${pills ? simplePill(c) : ""}</span></button></div>`;
+    if (simpleList()) list.innerHTML = filters + drawn.map(simpleRow).join("") + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
+    else list.innerHTML = filters + drawn.map((c) => `<div class="row item${overdue(c) ? " overdue" : ""}${c.design ? " fromdesign" : ""}${c.read === false ? " unread" : ""}">
       <button class="open" data-card="${esc(c.id)}" aria-current="${S.card?.id === c.id}"><div class="t"><span>${esc(c.title)}</span>${onDiffs() ? figNum(c) : S.tab === "designs" ? designNum(c) : num(c)}${S.tab === "designs" ? "" : rowDot(c)}</div>${againstDot(c)}</button>
       ${S.tab === "product" && S.productFilter === "differences" ? figmaFacts(c) : sourced ? origin(c) : c.summary ? `<div class="s">${esc(c.summary)}</div>` : ""}</div>`).join("")
       + (drawn.length < cards.length ? `<div class="list-more" data-list-more>Loading more…</div>` : "");
@@ -7523,6 +7624,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       const el = document.getElementById(`ag-${ds.jump}`);
       if (el) { el.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); }
       return;
+    }
+    // Simple mode's filter: a tick toggles one state or kind (never the last of its group); a
+    // chip's × drops one; Reset goes back to Open. The open item stays open.
+    if (ds.simf || ds.simfDrop || "simfReset" in ds) {
+      const f = S.simFilter, all = { states: SIM_STATES, kinds: SIM_KINDS };
+      if ("simfReset" in ds) { setSimFilter(SIM_DEFAULT()); S.simMenu = false; }
+      else {
+        const [g, k] = (ds.simf || ds.simfDrop).split(":"), on = f[g].includes(k);
+        const next = ds.simfDrop || on ? f[g].filter((x) => x !== k) : [...f[g], k];
+        if (!next.length) return;
+        setSimFilter({ ...f, [g]: all[g].map(([x]) => x).filter((x) => next.includes(x)) });
+      }
+      renderList(); renderNav(); return;
     }
     if (ds.filter) {
       // Presentation sits beside For Designers and For Developers; either of those leaves it.

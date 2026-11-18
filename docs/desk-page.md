@@ -172,13 +172,25 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   them to every device; the browser keeps a copy named for them only to open without a flash, marked unsaved until
   the server takes it, and sent again on the next load.
   **Simple mode**, a switch in the menu under the person's name (an on/off switch beside its
-  words, in the accent when on), only hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
+  words, in the accent when on), is review-first. The menu has one entry, **Requests & PRs**
+  (current on Requests and PR Changes, its count the Open items), and **+ New request**; its one
+  list holds the requests and the pull request changes of the viewer's own side — For Developers
+  for a developer or a lead developer, For Designers for everyone else, with no switch — each in
+  one state ([A request's state in the list](#a-requests-state-in-the-list)), the newest change
+  first. A row is the kind's icon, the title, when it last changed (Today, Yesterday or the
+  day, with the time; the year only when it is not this year), the Desk's spinner while Design
+  Desk works on it, and its state's pill, left out while the filter shows one state only. The
+  filter is one **Filter** button: its menu ticks any of State (**Open**, **In dev**,
+  **Closed**) and Kind (**Requests**, **PR changes**), each with its count, at least one of each
+  ticked, and **Reset to default** (Open, both kinds); beside the button only what narrows the
+  list, a chip each, × dropping it (a kind's chip only while one kind is ticked). This browser
+  keeps it (`desk-simFilter`). There is no Your turn, Unread or Needs a designer filter, and no
+  For Designers / For Developers switch. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** section (the design workspace keeps it
   in its side panel). An option's design (the mockup) and All elements start open, as in full mode. A
-  list's filters stay as they are drawn and filter as in full mode, **Needs a designer** among them.
-  A row's source line leaves out `from:` (the system it came in through), and the rest
+  row of a list a link opens (Product's, say) keeps its filters, and its source line leaves out `from:` (the system it came in through), and the rest
   (`created:`, `by:`, `based on:`) is only words: none of it filters, opens or links; a click
   on it opens the row.
   Nothing else names a role a request needs: no **Needs a designer** line or heading. A request offers no rename. Switching the mode
@@ -348,6 +360,17 @@ violet, one grey on every page, the green the same as Approved): a change's pull
 request **Draft** (grey), **Open** (green) or **Merged** (purple, `source.draft`, `source.merged_at`);
 an issue **Open** (green) or **Designed** (purple, once its design went to developers). Whether a
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
+**In simple mode** an item has one of three states, by who works on it, and no dot. **Open**
+(green): it needs a design decision — a request at any step before it is approved (Design Desk
+at work included: the spinner says so), one approved whose spec draft waits for a person to send
+it, a change nobody marked handled that is not auto handled. **In dev** (the accent): it is
+approved and developers build it — a request writing its spec or sent to developers and not yet
+built, a change handled or auto handled whose pull request is not merged. **Closed**: nobody
+works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled
+change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
+request closed, with a decision or without. An archived change, and anything on the other side,
+is not listed.
+
 On a wide window the list folds away with an arrow halfway down its edge and comes back with
 it; each browser remembers it (`desk-list-folded` in local storage). Dragging the edge makes
 the list smoothly wider or narrower, at most 30 px either way from its usual width; the arrow

@@ -78,13 +78,17 @@ Taken with the operator while planning:
 6. A change's header offers **Approve** (marks it handled, as today). **Request changes** and a
    review posted to GitHub are #175's, not this issue's.
 7. The ⋯ menu: **Close…** (with "record a decision") and **Reopen** on a request, **Turn into a
-   design request** (today's Adjust the design) on a change, **Copy link** and **Open on GitHub**
-   where there is a link. Simple mode drops voting (a vote's result still shows), rename and the
+   design request** (today's Adjust the design) on a change, and **Open on GitHub** where there is
+   a link. The item's number and the link icon that copies its link stay in the title, as in full
+   mode. Simple mode drops voting (a vote's result still shows), rename and the
    presentation.
 8. A person with no name on the roster shows as the part of their address before the `@`, never the
    whole address.
 9. The menu shows one entry, **Requests & PRs**, for both tabs (`requests` and `new`), and
    **+ New request**.
+10. **Nothing important goes missing.** Before the PR is ready, the simple detail page is reviewed
+    against full mode's for what a reviewer still needs (the number and the link icon were the
+    first found); each one is kept, moved under ⋯, or dropped on purpose and listed in the PR.
 
 ### Open question, not in scope
 
@@ -95,7 +99,7 @@ Should every Design Desk request be a pull request — a draft pull request with
 
 | #  | Title | Scope | Depends on | Done |
 |----|-------|-------|------------|------|
-| 01 | States and the merged list | `simpleState`, the one list, the filter menu, the rows, the menu entry | — | [ ] |
+| 01 | States and the merged list | `simpleState`, the one list, the filter menu, the rows, the menu entry | — | [[x] |
 | 02 | The item header and its actions | sticky header, Approve / Request changes / Send to developers, the ⋯ menu | 01 | [ ] |
 | 03 | The calmer page and comments | lead, designs or changes, What Design Desk found, folds, threads; version and changelog | 02 | [ ] |
 
