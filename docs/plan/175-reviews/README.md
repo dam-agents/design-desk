@@ -67,7 +67,7 @@ Taken with the operator before planning:
 
 | #  | Title | Scope | Depends on | Done |
 |----|-------|-------|------------|------|
-| 01 | Drafts on the server | Store + API: add, list, remove a person's drafts on a card | — | [ ] |
+| 01 | Drafts on the server | Store + API: add, list, remove a person's drafts on a card | — | [x] |
 | 02 | Sending a review | Store + API: verdicts, threads tagged with the review, `responsible` | 01 | [ ] |
 | 03 | The review on GitHub | `review` inbox item and due key, PR head commit in the GitHub copy, the agent posts it | 02 | [ ] |
 | 04 | Simple mode: drafts and the review dialog | Comment boxes, Your review, header button, the dialog | 02 | [ ] |

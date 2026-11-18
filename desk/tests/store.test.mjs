@@ -2935,3 +2935,37 @@ test("a request in another language keeps its English beside the asker's words",
   s.upsertCard({ id: card.id, translation: null });
   assert.equal(s.card(card.id).translation, null);
 });
+
+test("drafts: a person's comments not sent yet are theirs alone, on every device, and in no read", () => {
+  const s = fresh();
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer list" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: a.id }] });
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  const one = s.addDraft(req.id, alice, { text: "Tighter rows", anchor: { variant: "v1", label: "Row" } }).draft;
+  s.addDraft(req.id, alice, { text: "Whole thing" });
+  s.addDraft(chg.id, alice, { text: "The chip", change: "Spend list" });
+  assert.deepEqual(s.drafts(req.id, alice).drafts.map((d) => [d.text, d.anchor?.variant || null]), [["Tighter rows", "v1"], ["Whole thing", null]]);
+  assert.equal(s.drafts(chg.id, alice).drafts[0].change, "Spend list");
+  assert.deepEqual(s.drafts(req.id, bob).drafts, [], "another person sees none");
+  assert.throws(() => s.drafts(req.id, { agent: true }), /Only a person/);
+  // Kept across a reload; in no card read, list or notification.
+  const again = new Store(s.dir, { needsApproval: everyCounts });
+  assert.equal(again.drafts(req.id, alice).drafts.length, 2);
+  assert.doesNotMatch(JSON.stringify([again.getCard(req.id, { viewer: "alice@example.com" }), again.listCards({}), again.notifications(bob)]), /Tighter rows/);
+  // Checked as the comment it becomes; at most so many per person and item.
+  assert.throws(() => s.addDraft(req.id, alice, { text: "x", anchor: { variant: "v9" } }), /not on this request/);
+  assert.throws(() => s.addDraft(req.id, alice, { text: " " }), /text/);
+  const dec = s.upsertCard({ kind: "digest", title: "Week" }).card;
+  assert.throws(() => s.addDraft(dec.id, alice, { text: "x" }), /request or a pull request/);
+  s.removeDraft(req.id, alice, one.id);
+  assert.deepEqual(s.drafts(req.id, alice).drafts.map((d) => d.text), ["Whole thing"]);
+  assert.throws(() => s.removeDraft(req.id, bob, one.id), /no draft/);
+  for (let i = s.drafts(chg.id, alice).drafts.length; i < LIMITS.draftsPerCard; i++) s.addDraft(chg.id, alice, { text: `n${i}` });
+  assert.throws(() => s.addDraft(chg.id, alice, { text: "one more" }), /At most/);
+  // A deleted request takes its drafts with it.
+  s.act(req.id, alice, "close", "Not now");
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  s.deleteRequest(req.id, alice);
+  assert.equal(Object.values(s.db.drafts).some((mine) => Object.hasOwn(mine, req.id)), false);
+});

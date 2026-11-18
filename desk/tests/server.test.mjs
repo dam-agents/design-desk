@@ -618,3 +618,18 @@ test("a redraw uploaded with --option carries the notes' names; a note whose par
   await d.agent("/agent/cards", { id: card.id, variants: [{ id: "v1", name: "Lists", asset: v3, version: 2 }] });
   assert.equal((await d.agent(`/agent/cards/${card.id}`)).body.card.threads.find((x) => x.id === c).anchor.gone, undefined, "a name the new version has again clears it");
 });
+
+test("drafts: a person adds, reads and removes their own draft comments; nobody else sees them", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
+  const add = await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`, { text: "Bigger, please" });
+  assert.equal(add.status, 201, "whoever may comment keeps drafts");
+  assert.equal((await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`)).body.drafts[0].text, "Bigger, please");
+  assert.deepEqual((await d.viewer("alice@example.com", `/api/cards/${card.id}/drafts`)).body.drafts, [], "another person sees none");
+  assert.doesNotMatch(JSON.stringify((await d.viewer("alice@example.com", `/api/cards/${card.id}`)).body), /Bigger, please/);
+  assert.equal((await d.agent(`/api/cards/${card.id}/drafts`)).status >= 400, true, "the agent keeps none");
+  const del = (email, id) => fetch(`http://127.0.0.1:${d.env.DESK_PORT}/api/cards/${card.id}/drafts/${id}`, { method: "DELETE", headers: { "x-platform-caller-role": "viewer", "x-platform-caller-email": email } });
+  assert.equal((await del("alice@example.com", add.body.draft.id)).status, 404, "nobody removes another person's draft");
+  assert.equal((await del("guest@example.com", add.body.draft.id)).status, 200);
+  assert.deepEqual((await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`)).body.drafts, []);
+});

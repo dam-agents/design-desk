@@ -226,6 +226,8 @@ async function viewerRoute(req, res, url, who) {
   // Who is on the Desk and what each role may do; only people the owner shared the Desk with get here.
   if (m === "GET" && p[1] === "people") { const ppl = roster(); return send(res, 200, { people: ppl, activity: store.peopleActivity(ppl), roles: Object.fromEntries(ROLES.map((r) => [r, canAll(r, s)])), asks: store.peopleAsks(), addable: ADDABLE_ROLES }); }
   if (m === "GET" && p[1] === "cards" && !p[2]) return send(res, 200, { cards: store.listCards({ kind: url.searchParams.get("kind") || undefined, status: url.searchParams.get("status") || undefined, viewer: who.email || who.sub, who: actor }) });
+  // A person's own draft comments on an item, for them alone (docs/desk.md → Reviews).
+  if (m === "GET" && p[1] === "cards" && p[2] && p[3] === "drafts" && !p[4]) return send(res, 200, store.drafts(p[2], actor));
   if (m === "GET" && p[1] === "cards" && p[2]) {
     const card = store.getCard(p[2], { viewer: who.email || who.sub || null });
     // Each conversation says what this reader may do in it, so the page shows only the controls
@@ -290,6 +292,8 @@ async function viewerRoute(req, res, url, who) {
     const dev = b.dev === true && can(who.deskRole, "designs", s.prototypeRoles);
     return send(res, 201, withPing(store.openThread(p[2], actor, { kind, text, anchor, dev }), s, who));
   }
+  if (m === "POST" && p[1] === "cards" && p[3] === "drafts" && !p[4]) { need("comment"); return send(res, 201, store.addDraft(p[2], actor, { text: b.text, anchor: b.anchor || null, change: typeof b.change === "string" ? b.change : null })); }
+  if (m === "DELETE" && p[1] === "cards" && p[3] === "drafts" && p[4]) return send(res, 200, store.removeDraft(p[2], actor, p[4]));
   if (m === "POST" && p[1] === "private") { need("ask"); return send(res, 201, withPing(store.openPrivate(actor, { text: b.text, starter: typeof b.starter === "string" ? b.starter : null, context: b.context }), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need(store.threadNeed(p[2], actor)); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "answers") { need(store.threadNeed(p[2], actor)); return send(res, 200, withPing(store.answerForm(p[2], actor, b.answers), s, who)); }

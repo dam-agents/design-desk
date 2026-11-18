@@ -27,8 +27,8 @@ device, and seen by nobody else. No UI yet: slice 04 uses this API.
 
 ## Docs and tests
 
-- `docs/desk-page.md` → The page: one short paragraph on drafts (private, kept on the Desk,
-  every device) — slice 04 extends it with the UI.
+- `docs/desk.md` → Reviews (new, the one home): drafts (private, kept on the Desk, every
+  device); slice 02 adds the review, slice 04 links the page's side from `docs/desk-page.md`.
 - `desk/tests/store.test.mjs`: add, list, remove, limit, another person sees none, a card read
   carries none, a deleted card drops them.
 - `desk/tests/server.test.mjs`: the three routes, a guest without `comment` refused, another

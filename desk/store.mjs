@@ -3,6 +3,7 @@
 // persists it after every change (tmp + rename), so a crash never leaves half a file.
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 
 export const LIMITS = {
   // The decisions one check reads at most; past it the read says it is cut (docs/desk.md → Decisions → The check).
@@ -25,6 +26,8 @@ export const LIMITS = {
   // What a person writes a new option should look like and have.
   optionAsk: 2000,
   messagesPerThread: 200,
+  // One person's draft comments on one item, not sent yet (docs/desk.md → Reviews).
+  draftsPerCard: 50,
   // An answer to a change shows before and after pictures: a pair or two (light, dark), each with its diff.
   changeShots: 6,
   // A relayed body is capped at 1 MiB both ways; base64 adds a third, the JSON a little.
@@ -277,7 +280,7 @@ function cleanCount(v, fallback = 3) {
 export const LETTERS = { change: "P", request: "R", issue: "I", screen: "S", element: "E", digest: "W", figma: "F", design: "G", item: "Q", poll: "V", council: "K" };
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {}, drafts: {} };
 }
 
 // The bell's events that fold into one row per item and day, with their count.
@@ -758,6 +761,50 @@ export class Store {
     if (t.kind !== "private") this.card(t.card).updated = this.clock();
     this.save();
     return { thread: t, inbox: item };
+  }
+
+  // ---------- drafts (docs/desk.md → Reviews) ----------
+
+  // A person's comments on an item not sent yet: theirs alone, on every device, and in no card
+  // read, list, notification or count. Each is checked as the comment it becomes would be.
+  draftsFor(who) {
+    const key = viewerKey(who);
+    if (!key) throw bad("Only a person keeps draft comments.");
+    return key;
+  }
+  drafts(cardId, who) {
+    const c = this.card(cardId), key = this.draftsFor(who);
+    return { drafts: structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []) };
+  }
+  addDraft(cardId, who, { text, anchor = null, change = null } = {}) {
+    const c = this.card(cardId), key = this.draftsFor(who);
+    if (!["request", "change"].includes(c.kind)) throw bad("Draft comments are kept on a request or a pull request's change.");
+    const mine = own(this.db.drafts, key) || {}, list = own(mine, c.id) || [];
+    if (list.length >= LIMITS.draftsPerCard) throw bad(`At most ${LIMITS.draftsPerCard} draft comments wait on one item. Send your review first.`);
+    const a = anchor ? cleanAnchor(anchor) : null;
+    if (a?.variant && !(c.variants || []).some((v) => v.id === a.variant)) throw bad("That design option is not on this request.");
+    if (a?.state && !(c.variants || []).find((v) => v.id === a.variant)?.states?.some((x) => x.id === a.state)) throw bad("That state is not drawn for this option.");
+    const d = { id: randomUUID().slice(0, 8), text: clean(text, LIMITS.text, "text"), anchor: a, ...(change ? { change: clean(String(change), 120, "change") } : {}), at: this.clock() };
+    Object.defineProperty(mine, c.id, { value: [...list, d], enumerable: true, writable: true, configurable: true });
+    Object.defineProperty(this.db.drafts, key, { value: mine, enumerable: true, writable: true, configurable: true });
+    this.save();
+    return { draft: d, drafts: structuredClone(mine[c.id]) };
+  }
+  removeDraft(cardId, who, id) {
+    const c = this.card(cardId), key = this.draftsFor(who);
+    const mine = own(this.db.drafts, key), list = mine && own(mine, c.id);
+    if (!list?.some((d) => d.id === id)) throw missing(`no draft ${id}`);
+    this.setDrafts(key, c.id, list.filter((d) => d.id !== id));
+    this.save();
+    return { drafts: structuredClone(own(own(this.db.drafts, key) || {}, c.id) || []) };
+  }
+  // Without saving: the caller saves with the rest of its write.
+  setDrafts(key, cardId, list) {
+    const mine = own(this.db.drafts, key);
+    if (!mine) return;
+    if (list.length) Object.defineProperty(mine, cardId, { value: list, enumerable: true, writable: true, configurable: true });
+    else delete mine[cardId];
+    if (!Object.keys(mine).length) delete this.db.drafts[key];
   }
 
   // ---------- GitHub on the Desk ----------
@@ -2593,6 +2640,7 @@ export class Store {
     for (const [id, i] of Object.entries(this.db.inbox)) if (i.card === cardId) delete this.db.inbox[id];
     for (const [id, a] of Object.entries(this.db.assets)) if (a.card === cardId) { try { unlinkSync(join(this.assetDir, a.file)); } catch {} delete this.db.assets[id]; }
     for (const mine of Object.values(this.db.reads)) if (mine && typeof mine === "object") delete mine[cardId];
+    for (const key of Object.keys(this.db.drafts)) this.setDrafts(key, cardId, []);
     delete this.db.cards[cardId];
     this.save();
     return { deleted: cardId };
