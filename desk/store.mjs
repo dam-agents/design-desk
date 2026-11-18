@@ -171,6 +171,7 @@ const isConcern = (v) => Boolean(v?.concern || v?.vote === "concern");
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "private"];
 // What a review says of the item it is sent on (docs/desk.md → Reviews).
 const REVIEW_VERDICTS = ["request-changes", "approve", "comment"];
+const REVIEW_WORDS = { "request-changes": "Changes requested", approve: "Approved", comment: "Comments" };
 // The five starters a private ask may begin with; each one's full brief for the agent is in
 // docs/desk.md → Private asks. The page shows a short label, the agent reads the key.
 const STARTERS = ["explain", "why", "fixed", "options", "ask-team"];
@@ -946,6 +947,10 @@ export class Store {
         // A pull request's head commit: a review that asked for changes waits for it to move (docs/desk.md → Reviews).
         ...(x.kind === "pr" && /^[0-9a-f]{40}$/.test(String(x.head || "")) ? { head: String(x.head) } : x.kind === "pr" && was?.head ? { head: was.head } : {}),
       };
+      // New commits on a pull request a review asked changes of: the developer's next version arrived.
+      const head = this.db.github[key].head;
+      if (head && was?.head && head !== was.head)
+        for (const r of Object.values(this.db.reviews)) if (r.verdict === "request-changes" && r.sha === was.head && !r.next_at && this.cardsOf(key).includes(r.card)) r.next_at = this.clock();
       if (own(this.db.gh_failed, key)) delete this.db.gh_failed[key];
       if (added.length) fresh.push({ key, cards: this.cardsOf(key), comments: added });
     }
@@ -1092,6 +1097,13 @@ export class Store {
       if (c.spec?.at) push(c.spec.at, "spec", it, c.spec.by || { agent: true }, {}, yours);
       if (c.decided?.at) push(c.decided.at, "decided", it, c.decided.by, {}, yours);
       if (c.built?.at) push(c.built.at, "built", it, c.built.by, { designs: true }, yours);
+      // A review sent, and a pull request's new commits after one asked for changes (docs/desk.md → Reviews).
+      for (const rid of c.reviews || []) {
+        const r = own(this.db.reviews, rid);
+        if (!r) continue;
+        push(r.at, "review", it, r.by, { detail: [REVIEW_WORDS[r.verdict], r.note].filter(Boolean).join(": ").replace(/\s+/g, " ").slice(0, 140), review: r.id }, yours);
+        if (r.next_at) push(r.next_at, "new-version", it, { agent: true }, { review: r.id }, yours || isMine(r.by));
+      }
       // A developer's question on Designs is for the designer who approved it, else for every designer (docs/desk-page.md → Designs).
       const designer = ["designer", "admin"].includes(c.approved?.by?.role) ? isMine(c.approved.by) : ["designer", "admin"].includes(who?.role);
       for (const tid of c.threads || []) {

@@ -204,7 +204,9 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   button, and **Approve** opens the review too. Both open one dialog: the drafts, the verdicts the
   viewer may send (**Request changes**, **Approve**, **Comment only**, the one they pressed
   picked) and a note for the whole review. Approving a request there is the usual approval first,
-  its own questions included, then the review. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
+  its own questions included, then the review. A sent review shows in Comments, in both modes, as
+  one block: who, the verdict (**Changes requested** amber, **Approved** green, **Comments**), when,
+  **On GitHub ↗** once posted, the note, then each of its comments with its replies. ⋯ holds **Close…** or **Reopen** on a request, **Turn into a design request** on a
   change (and **Undo approval** on one approved), and **Open on GitHub** where there is a link. No vote buttons, rename or For Developers
   move. Under the head the page reads one way for both kinds: a short lead (a request's first
   paragraph, a change's summary), **The request in full** folded, the designs (a request's
@@ -400,7 +402,10 @@ person has seen an item is its bold title alone ([Read and unread](#read-and-unr
 at work on it included: the spinner says so), one approved whose spec draft waits for a person to send
 it, a change nobody marked handled that is not auto handled. **In dev** (the accent): it is
 approved and developers build it — a request writing its spec or sent to developers and not yet
-built, a change handled or auto handled whose pull request is not merged. **Closed**: nobody
+built, a change handled or auto handled whose pull request is not merged, and a change a review asked
+changes of until new commits arrive (its head says **Changes requested · developer**; a request a
+review asked changes of stays Open, its head saying **Changes requested · Design Desk**,
+[desk.md](desk.md) → Reviews). **Closed**: nobody
 works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled
 change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
 request closed, with a decision or without. An archived change, and anything on the other side,
@@ -439,6 +444,7 @@ private ask only its owner: Design Desk's answers to it are theirs alone, and fo
 | Feedback asked | a person hands the drawn options to the team (**Ask for feedback**); For you for every `developer` and `lead-developer` |
 | New decision, Decision revoked | a decision is added or revoked |
 | Developer asks, Marked done | a developer asks a design's designer, or marks it done ([Designs](#designs)) |
+| Review sent, New version | a person sends a review; new commits arrive on a pull request a review asked changes of ([desk.md](desk.md) → Reviews) |
 
 Every row is at most three lines, each cut short with … when long, and says the same things in the same places: an icon and what happened, who (when known),
 how long ago, the item's kind in grey (Request:, PR change:, Decision: …), its title and number, and for a message or a vote one

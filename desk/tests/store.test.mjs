@@ -3044,3 +3044,19 @@ test("reviews on GitHub: a pull request's review is queued for the agent to post
   const posted = s.reviewPosted(r.review.id, { url: "https://github.com/acme/widgets/pull/7#pullrequestreview-1", sha: "b".repeat(40) }).review;
   assert.deepEqual([posted.posted.url.endsWith("review-1"), posted.sha], [true, "a".repeat(40)]);
 });
+
+test("reviews in the bell: a review sent, and a pull request's new commits after one asked for changes", () => {
+  const s = fresh();
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "a".repeat(40), comments: [] }]);
+  s.addDraft(chg.id, alice, { text: "Too loud" });
+  const r = s.sendReview(chg.id, alice, { verdict: "request-changes", note: "One thing." }).review;
+  const lead = { email: "lee@example.com", role: "admin" };
+  const sent = s.notifications(lead).items.find((x) => x.event === "review");
+  assert.deepEqual([sent.item, sent.review, sent.detail], [chg.id, r.id, "Changes requested: One thing."]);
+  assert.equal(s.notifications(alice).items.some((x) => x.event === "review"), false, "never your own doings");
+  s.putGithub([{ key: "acme/widgets#7", kind: "pr", title: "Spend", head: "b".repeat(40), comments: [] }]);
+  const next = s.notifications(alice).items.find((x) => x.event === "new-version");
+  assert.deepEqual([next.item, next.for_you], [chg.id, true], "the reviewer hears the next version arrived");
+  assert.equal(s.getCard(chg.id).responsible, null);
+});

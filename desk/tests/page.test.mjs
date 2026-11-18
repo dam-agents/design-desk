@@ -3921,6 +3921,35 @@ test("simple mode: a change's review offers Request changes and Approve to who m
   assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/P-3/reviews").body)).verdict, "comment");
 }));
 
+// A sent review (docs/desk.md → Reviews): one block, its comments under it, in both modes.
+const reviewed = { ...prChange, id: "P-8", title: "Reviewed", responsible: { who: "developer", review: "N-1", since: "2026-11-18T10:00:00Z" },
+  reviews: [{ id: "N-1", by: { email: "d.k@example.com", name: "Dana Kim", role: "designer" }, at: "2026-11-18T10:00:00Z", verdict: "request-changes", note: "Two things.", threads: ["T-21", "T-22"], posted: { url: "https://github.com/o/r/pull/812#pullrequestreview-1" } }],
+  threads: [
+    { id: "T-21", kind: "comment", review: "N-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Toggle too loud." }] },
+    { id: "T-22", kind: "comment", review: "N-1", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "d.k@example.com", role: "designer" }, at: "2026-11-18T10:00:00Z", text: "Label shorter." }] },
+    { id: "T-23", kind: "comment", state: "open", may: { reply: true, resolve: true }, messages: [{ by: { email: "pat@example.com", role: "pm" }, at: "2026-11-18T09:00:00Z", text: "Unrelated." }] }] };
+
+test("simple mode: a sent review is one block with its comments; a change that waits for its developer is In dev and says so", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simFilter: null }, [reviewed]), async (desk) => {
+  await desk.evaluate(() => localStorage.setItem("desk-simFilter", JSON.stringify({ states: ["open", "dev", "closed"], kinds: ["request", "change"] })));
+  await desk.reload();
+  await desk.waitForSelector('#list [data-card="P-8"]');
+  await desk.click('#list [data-card="P-8"]');
+  await desk.waitForSelector("#detail .rvw");
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /In dev/);
+  assert.match(await desk.textContent("#detail .sh-line"), /Changes requested · developer/);
+  assert.equal(await desk.locator("#detail .rvw .sthread").count(), 2, "its two comments inside it");
+  assert.match(await desk.textContent("#detail .rvw .rv-h"), /Dana Kim[\s\S]*Changes requested[\s\S]*On GitHub/);
+  assert.match(await desk.textContent("#detail .rvw .rv-note"), /Two things\./);
+  assert.equal(await desk.locator("#detail .sthreads > .sthread").count(), 1, "the other comment stays on its own");
+}));
+
+test("full mode shows a sent review as one block in the conversation", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [{ ...reviewed, status: "new" }]), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#P-8"; });
+  await desk.waitForSelector("#detail .rvw", { state: "attached" });
+  assert.equal(await desk.locator("#detail .rvw .thread").count(), 2);
+  assert.match(await desk.textContent("#detail .rvw .rv-v"), /Changes requested/);
+}));
+
 test("simple mode: a guest's review is Comment only", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, role: "guest", can: { comment: true } }, [prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="P-3"]');
   await desk.click('#list [data-card="P-3"]');
