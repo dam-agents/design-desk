@@ -451,7 +451,7 @@
   .eltile:hover { border-color: var(--accent); }
   .eltile .elopen { display: grid; grid-template-rows: auto auto 1fr; gap: 8px; text-align: left; padding: 8px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; min-width: 0; }
   .eltile .elcat { padding: 0 8px 8px; } .eltile .elcat .anchor { font-size: var(--fs-meta); }
-  .eltile .elpic { display: block; height: 192px; padding: 12px; box-sizing: border-box; overflow: hidden; border-radius: var(--r-sm); background: #fff; border: 1px solid var(--line); }
+  .eltile .elpic { position: relative; display: block; height: 192px; padding: 12px; box-sizing: border-box; overflow: hidden; border-radius: var(--r-sm); background: #fff; border: 1px solid var(--line); }
   .eltile .elpic img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .eltile .elpic iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .eltile .elname { font-weight: 600; font-size: var(--fs-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -489,6 +489,21 @@
   dialog.eldlg { width: min(1040px, calc(100% - 32px)); max-height: calc(100vh - 48px); }
   dialog.eldlg > div { padding: 20px 20px 20px; }
   .elbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  /* An element's dialog: the part before (the product) beside after (the design), or one picture when it is new. */
+  .elbar .el-acts { display: flex; gap: 8px; align-items: center; flex: none; }
+  .el-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0 16px; }
+  .el-pair.one { grid-template-columns: minmax(0, 1fr); max-width: 640px; }
+  .el-col { display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .el-lab { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .el-pic { position: relative; height: 260px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+  .el-pic[data-zoom], .el-pic[data-zoom-snip] { cursor: zoom-in; } .el-pic[data-zoom]:hover, .el-pic[data-zoom-snip]:hover { border-color: var(--accent); }
+  .el-pic img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 12px; box-sizing: border-box; }
+  .el-pic > iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
+  .el-pic.el-none { display: grid; place-items: center; text-align: center; padding: 16px; box-sizing: border-box; background: none; border-style: dashed; color: var(--muted); font-size: var(--fs-ui); }
+  .el-from { font-size: var(--fs-meta); color: var(--muted); margin: 0; }
+  .el-take { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .el-take .working { margin: 0; }
+  @media (max-width: 560px) { .el-pair { grid-template-columns: minmax(0, 1fr); } }
   .elbar h2 { margin: 0 0 4px; font-size: var(--fs-head); }
   /* What comes from an approved design, not from the product: a dashed edge and its own ink. */
   .row.item.fromdesign { border-left: 3px dashed var(--waiting); }
@@ -1874,7 +1889,7 @@
   };
   const TYPE = { feature: "From a GitHub issue", adjustment: "Touch-up of a developer's change", proposal: "Suggested by Design Desk" };
   // What Design Desk does, in a few words, after the step's Wait.
-  const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options", now: "Drawing how it looks today",
+  const WORK_SHORT = { request: "Reading the screen and its history", "follow-up": "Reading the screen and its history", explore: "Drawing the options", now: "Drawing how it looks today", before: "Taking a part from the product",
     decision: "Recording a decision", "decision-check": "Checking the decisions", revise: "Changing the design", alternatives: "Drawing other ways",
     states: "Drawing every state", build: "Building the prototype, up to an hour", handoff: "Writing the spec", "spec-revise": "Changing the spec",
     deliver: "Sending to developers", teardown: "Switching off the prototype", figma: "Working with Figma", agenda: "Writing the brief",
@@ -1885,6 +1900,7 @@
     "follow-up": "Design Desk looks at how the screen works, who else is changing it, and what a design change can do.",
     explore: "Drawing the design options.",
     now: "Drawing the screen as it looks in the product today, to set beside an option.",
+    before: "Taking this part as it is in the product, on Design Desk's own copy of it. It appears here as Before.",
     decision: "Recording a decision from a comment, with who said it and a link back to it.",
     "decision-check": "Checking the design against the decisions in force; what it goes against shows here.",
     ci: "Setting Design Desk's check on the pull request to follow the handled mark.",
@@ -2583,7 +2599,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
   const typeOf = (c) => (c.request?.type === "bug" ? "bug" : "idea");
   const closed = (c) => c.status === "handed-off" || c.status === "declined";
-  const workKind = (w) => (w.scope === "history" ? "catalog-history" : w.kind === "explore" && w.scope === "now" ? "now" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind);
+  const workKind = (w) => (w.scope === "history" ? "catalog-history" : w.kind === "explore" && w.scope === "now" ? "now" : w.kind === "explore" && w.scope === "before" ? "before" : w.kind === "map" && w.scope === "refresh" ? "map-refresh" : w.scope === "send" ? "slack-send" : w.kind === "handoff" && ["spec-revise", "deliver"].includes(w.scope) ? w.scope : w.kind);
   // A request's own item checks it, then draws its options: once an option was drawn after the
   // item was filed, that item's work is done for the person, and its line leaves. An item filed
   // after the newest option (a reopened request, checked again) keeps saying it checks.
@@ -2634,7 +2650,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // Text from a record goes into a script: `<` is escaped so no text can end the script early.
   const js = (v) => JSON.stringify(v).replace(/</g, "\\u003c");
   // grow: a part found by comparing pages may be one word; show it with enough around it to read.
-  const SNIP_SCRIPT = (sel, text, grow) => `<script>(()=>{const S=${js(sel)},T=${js(text)},G=${grow ? 1 : 0},b=document.body,d=document.documentElement;
+  // `tight`: a part with no box of its own (no fill, border or shadow) is fitted by what it holds, so a
+  // short line in a wide block is not drawn tiny (a wide frame lays blocks out at a desktop width).
+  const SNIP_SCRIPT = (sel, text, grow, cap = 2.5, tight = false) => `<script>(()=>{const S=${js(sel)},T=${js(text)},G=${grow ? 1 : 0},C=${Number(cap) || 2.5},X=${tight ? 1 : 0},b=document.body,d=document.documentElement;
     let e=null;try{e=S&&document.querySelector(S)}catch{}
     if(!e&&T){const w=document.createTreeWalker(b,1);for(let n;(n=w.nextNode());)if(n.children.length===0&&n.textContent.trim()===T){e=n;break}}
     // A preview never shows the review bar, nor the outline its Show hotspots switch draws; a part on another view opens that view first.
@@ -2648,7 +2666,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // Measured afresh each time, with the design back in place: the frame may not have its size yet.
     const fit=()=>{const W=innerWidth,H=innerHeight;if(!W||!H)return;b.style.transform="none";scrollTo(0,0);
       if(G){b.style.visibility="visible";while(e.parentElement&&e.parentElement!==b){const q=e.getBoundingClientRect();if(q.width>=320&&q.height>=90)break;e=e.parentElement}b.style.visibility="hidden";e.style.visibility="visible"}
-      const r=e.getBoundingClientRect(),p=12;if(!r.width&&!r.height)return;const k=Math.min(W/(r.width+2*p),H/(r.height+2*p),2.5);
+      let r=e.getBoundingClientRect();const p=12;if(!r.width&&!r.height)return;
+      if(X){const cs=getComputedStyle(e),bare=cs.backgroundColor==="rgba(0, 0, 0, 0)"&&cs.backgroundImage==="none"&&cs.boxShadow==="none"&&!["Top","Right","Bottom","Left"].some((k)=>parseFloat(cs["border"+k+"Width"]));if(bare){const q=document.createRange();q.selectNodeContents(e);const c=q.getBoundingClientRect();if(c.width&&c.height)r=c}}const k=Math.min(W/(r.width+2*p),H/(r.height+2*p),C);
       const x=r.left-(W/k-r.width)/2,y=r.top-(H/k-r.height)/2;b.style.transform="scale("+k+") translate("+(-x)+"px,"+(-y)+"px)"};
     fit();addEventListener("load",fit);addEventListener("resize",fit);document.fonts&&document.fonts.ready.then(fit)})();<\/script>`;
   // Where a state's page differs from its option's: the smallest element holding every change, as a
@@ -2666,7 +2685,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     }
     return b === B ? "" : `body > ${path.join(" > ")}`;
   }
-  const snipDoc = (html, sel, text, grow) => { const sc = SNIP_SCRIPT(sel, text, grow); return html.includes("</body>") ? html.replace("</body>", `${sc}</body>`) : html + sc; };
+  const snipDoc = (html, sel, text, grow, cap, tight) => { const sc = SNIP_SCRIPT(sel, text, grow, cap, tight); return html.includes("</body>") ? html.replace("</body>", `${sc}</body>`) : html + sc; };
   async function peekOf(el) {
     // A page research cites: its section and the words in it (docs/requests.md → Research).
     if (el.dataset.doc !== undefined) return { kind: "doc", title: el.dataset.docTitle, what: el.dataset.docKind, section: el.dataset.docSection, excerpt: el.dataset.docExcerpt };
@@ -6030,7 +6049,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   function elementPic(v, e) {
     if (e.shot) return `<img alt="" data-asset="${esc(e.shot)}" />`;
     const page = e.derived ? e.asset : v.asset;
-    return page ? `<iframe sandbox="allow-scripts" loading="lazy" tabindex="-1" aria-hidden="true" data-snip-asset="${esc(page)}" data-snip-sel="${esc(e.selector || "")}" data-snip-base="${esc(e.selector ? "" : v.asset || "")}"></iframe>` : "";
+    return page ? `<iframe sandbox="allow-scripts" loading="lazy" tabindex="-1" aria-hidden="true" data-snip-asset="${esc(page)}" data-snip-sel="${esc(e.selector || "")}" data-snip-base="${esc(e.selector ? "" : v.asset || "")}"${e.selector ? " data-snip-wide" : ""}></iframe>` : "";
   }
   // An element of the approved option goes to the design catalog on its own; once there, a link to it.
   function catalogButton(c, v, e) {
@@ -6076,6 +6095,39 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (e.key !== "Escape" || !d.open || d.contains(document.activeElement) || document.querySelector("dialog[open]:not(#element-dialog)")) return;
     e.preventDefault(); const z = $("#element-dialog .zoom"); if (z) z.remove(); else d.close();
   }, true);
+  // A part as it was before the design (docs/requests.md → The part before, from the product): its
+  // picture from the product, else cut from the request's "how it looks today", else none. Only a
+  // part of the request's shared list has one; a part the option adds has none to have.
+  const sharedPart = (c, e) => !e.derived && e.change !== "new" && (c.shared_elements || []).some((x) => x.id === e.id);
+  function beforeOf(c, e) {
+    if (!sharedPart(c, e)) return null;
+    const shot = (c.before_shots || []).find((x) => x.id === e.id);
+    if (shot) return { shot: shot.asset, source: "instance", ref: shot.ref, commit: shot.commit, at: shot.at };
+    const at = c.now?.asset ? (c.now.elements || []).find((x) => x.id === e.id) : null;
+    return at ? { asset: c.now.asset, selector: at.selector, source: "now", at: c.now.at } : null;
+  }
+  const takingBefore = (c, e) => (c.waiting || []).some((w) => w.kind === "explore" && w.scope === "before" && w.element === e.id);
+  // One picture of a part in the dialog: an uploaded picture, or the part cut live from a page, drawn wide.
+  function elPic(x, base, label) {
+    const inner = x.shot ? `<img alt="${esc(label)}" data-asset="${esc(x.shot)}" />`
+      : `<iframe sandbox="allow-scripts" tabindex="-1" title="${esc(label)}" data-snip-asset="${esc(x.asset)}" data-snip-sel="${esc(x.selector || "")}" data-snip-base="${esc(x.selector ? "" : base || "")}"${x.selector ? " data-snip-wide" : ""}></iframe>`;
+    return `<div class="el-pic"${zoomAttrs(x, base, label)}>${inner}</div>`;
+  }
+  function elementPair(c, v, e, look) {
+    const after = (lab) => `<div class="el-col"><span class="el-lab">${lab}</span>${elPic(look, v.asset, `${e.name}: in the design`)}<p class="el-from">As ${esc(v.name)} draws it, version ${esc(v.version || 1)}.</p></div>`;
+    if (e.change === "new") return `<div class="el-pair one">${after("New")}</div>`;
+    const bf = beforeOf(c, e), shared = sharedPart(c, e);
+    const pic = bf ? elPic(bf, "", `${e.name}: before`) : `<div class="el-pic el-none">No picture from before</div>`;
+    const from = bf?.source === "instance" ? `The product at ${esc(bf.ref)} (${esc(String(bf.commit).slice(0, 7))}), with made-up data${bf.at ? ` · ${esc(when(bf.at))}` : ""}.`
+      : bf ? `Redrawn from the code by Design Desk${bf.at ? ` · ${esc(when(bf.at))}` : ""}.`
+      : shared ? "Design Desk has not drawn it as it is in the product yet."
+      : "This part is not on the request's list of parts, so there is no picture of it from before.";
+    // Taking it from the product needs Design Desk's own copy of it (docs/screens.md); a member asks, never a guest.
+    const take = !shared || S.el?.look || !S.me?.screens || !can("before") || c.status === "declined" ? ""
+      : takingBefore(c, e) ? `<div class="working"><span class="spin"></span><div>${esc(WORK.before)}</div></div>`
+      : `<button class="btn small" data-act="take-before" title="Design Desk takes ${esc(e.name)} as it is in the product, on its own copy of the product with made-up data. One picture serves every option.">${bf?.source === "instance" ? "Take it again" : "Take it from the product"}</button>`;
+    return `<div class="el-pair"><div class="el-col"><span class="el-lab">Before</span>${pic}<p class="el-from">${from}</p>${take ? `<div class="el-take">${take}</div>` : ""}</div>${after(e.change === "changed" || bf ? "After" : "In the design")}</div>`;
+  }
   // `look`: only to look through the states drawn (from the design workspace): nothing is drawn or added from it.
   function openElement(variant, key, { look = false } = {}) { S.el = { card: S.card?.id, variant, key, look }; renderElementDialog(); const d = $("#element-dialog"); if (!d.open) d.showModal(); }
   function renderElementDialog() {
@@ -6087,25 +6139,24 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     // An approved design's element still gets its states drawn once it went to developers: they document it.
     const may = can("revise") && c.status !== "declined" && !busy && !S.el.look;
     const stale = e.states.filter((x) => (x.of || 1) < (v.version || 1));
-    // Without states, the first card is the element as the design draws it (one of its states
-    // shows it once they are drawn); the last card draws them.
+    // The part as the design draws it, beside it as it is in the product before the design; a new part alone.
     const look = { shot: e.shot, asset: e.shot ? null : e.derived ? e.asset : v.asset, selector: e.selector };
-    const lookPic = look.shot ? `<figure class="shot"><img alt="${esc(e.name)}" data-asset="${esc(look.shot)}" /></figure>`
-      : `<div class="snipbox"><iframe sandbox="allow-scripts" tabindex="-1" title="${esc(e.name)}" data-snip-asset="${esc(look.asset)}" data-snip-sel="${esc(look.selector || "")}" data-snip-base="${esc(look.selector ? "" : v.asset || "")}"></iframe></div>`;
-    const first = `<li${zoomAttrs(look, v.asset, `${e.name}: in the design`)}>${lookPic}<div><b>In the design</b><p class="hint">As the option draws it now.</p></div></li>`;
+    const pair = elementPair(c, v, e, look);
     // Every state drawn for the option's latest version: nothing is left to draw, so the
     // card says so and offers no button. A change to the option makes them stale and the
     // button comes back to redraw them.
     const more = S.el.look ? "" : busy ? `<li class="addstate"><div class="working"><span class="spin"></span><div>${esc(WORK.states)}</div></div></li>`
       : statesComplete(v, e) ? `<li class="addstate done"><div><b>✓ Every state is drawn</b><p class="hint">${plural(e.states.length, "state", "states")} of ${esc(e.name)} for version ${esc(v.version || 1)}: there is nothing more to draw. To change one, comment on it in the design workspace.</p></div></li>`
       : may ? `<li class="addstate"><button data-el-states title="Design Desk draws ${esc(e.name)} in every state it can be in: hovered, disabled, loading, empty, with an error, with a long text…">+ ${e.states.length ? "Draw the states again" : "Draw every state"}<span class="hint">${e.states.length ? "for the option's latest version" : "hovered, disabled, loading, empty, an error, a long text…"}</span></button></li>` : "";
+    const toWs = S.el.look ? "" : `<button class="btn primary small" data-el-ws title="Opens the design at this part, to comment on it or ask for a change">Open in design workspace</button>`;
     $("#el-body").innerHTML = `<div class="elbar"><div><h2>${esc(e.name)}</h2>
         <div class="sub">${ch ? `<span class="chip ${ch[1]}" title="${esc(ch[2])}">${ch[0]}</span>` : ""}<span class="chip" title="The design option this element is part of"><span class="ono">${vs.indexOf(v) + 1}</span> ${esc(v.name)} · version ${esc(v.version || 1)}</span>${approvedOption(c)?.id === v.id ? `<span class="chip ok" title="The option that was approved">✓ Approved</span>` : ""}</div></div>
-        <button class="btn small" data-el-close aria-label="Close">✕ Close</button></div>
+        <div class="el-acts">${toWs}<button class="btn small" data-el-close aria-label="Close">✕ Close</button></div></div>
       ${e.how ? `<p style="max-width:var(--measure)">${txt(e.how)}</p>` : ""}
       ${catalogButton(c, v, e) && !S.el.look ? `<div class="actions" style="margin:0 0 8px">${catalogButton(c, v, e)}</div>` : ""}
       ${stale.length ? `<p class="hint"><span class="chip warn" title="These states show the option before its latest change">${plural(stale.length, "state", "states")} drawn for an earlier version</span> Design Desk redraws them when it changes the option.</p>` : ""}
-      <div class="catalog"><ol>${e.states.length ? "" : first}${e.states.map((x) => catalogItem(c, v, x)).join("")}${more}</ol></div>`
+      ${pair}
+      ${e.states.length || more ? `<div class="catalog"><ol>${e.states.map((x) => catalogItem(c, v, x)).join("")}${more}</ol></div>` : ""}`
       // A lazy frame in a modal dialog never loads: the browser does not see it come into view.
       .replaceAll(' loading="lazy"', "");
     loadPictures(dlg).catch(() => {});
@@ -7225,6 +7276,22 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   }
 
   // ---------- rendering the detail ----------
+  // A part drawn live in a narrow box squeezes: the design lays itself out at the box's width.
+  // A wide frame lays it out at a desktop width, as the product's own pictures are taken
+  // (design capture's 1440), and is scaled down into its box, so a part looks as it does on a
+  // screen and its before and after compare like with like (docs/desk-page.md → The element dialog).
+  const WIDE = 1440;
+  const wideBoxes = new ResizeObserver((es) => { for (const x of es) { const f = x.target.querySelector(":scope > iframe[data-snip-wide]"); if (f) widen(f); } });
+  function widen(f) {
+    const box = f.parentElement, st = getComputedStyle(box);
+    const pl = parseFloat(st.paddingLeft) || 0, pt = parseFloat(st.paddingTop) || 0;
+    const W = box.clientWidth - pl - (parseFloat(st.paddingRight) || 0), H = box.clientHeight - pt - (parseFloat(st.paddingBottom) || 0);
+    if (!f.dataset.wideSeen) { f.dataset.wideSeen = "1"; wideBoxes.observe(box); }
+    if (W <= 0 || H <= 0) return 1;
+    const k = Math.min(1, W / WIDE);
+    Object.assign(f.style, { position: "absolute", left: `${pl}px`, top: `${pt}px`, width: `${W / k}px`, height: `${H / k}px`, transform: `scale(${k})`, transformOrigin: "0 0" });
+    return k;
+  }
   async function loadPictures(root) {
     // A state with no picture of its part: drawn live from the state's page, cut to the part when its path is known.
     for (const f of root.querySelectorAll("iframe[data-snip-asset]")) {
@@ -7233,7 +7300,9 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       try {
         const html = decode(await asset(f.dataset.snipAsset)), base = f.dataset.snipBase;
         const sel = f.dataset.snipSel || (base ? diffPath(decode(await asset(base)), html) : "");
-        f.srcdoc = snipDoc(html, sel, "", !f.dataset.snipSel && !!sel);
+        const k = f.hasAttribute("data-snip-wide") ? widen(f) : 1;
+        const wide = f.hasAttribute("data-snip-wide");
+        f.srcdoc = snipDoc(html, sel, "", !f.dataset.snipSel && !!sel, 2.5 / k, wide);
       } catch {}
     }
     for (const img of root.querySelectorAll("img[data-asset]")) {
@@ -7589,6 +7658,14 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (!res) return;
     }
     if (name === "add-option") { res = await addOption(c); if (!res) return; }
+    // A part as it is in the product, from its dialog (docs/requests.md → The part before, from the product).
+    if (name === "take-before") {
+      const v = (c.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
+      if (!e) return;
+      res = await post("", { element: e.id });
+      toast("Design Desk is taking it from the product; it appears here as Before.");
+      await refreshList(); await openCard(c.id); return;
+    }
     if (name === "explore") {
       const n = c.request?.options || 3;
       res = await ask({ title: "Draw design options", body: "Design Desk draws genuinely different directions, each built into the real screen on sample data. It takes a few minutes; the options appear here.", ok: "Draw them",
@@ -8048,6 +8125,16 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     if (ds.el) { openElement(S.variant, ds.el); return; }
     if (ds.wsStatesOf) { const v = wsVariant(S.card); if (v) openElement(v.id, ds.wsStatesOf, { look: true }); return; }
     if ("elClose" in ds) { $("#element-dialog").close(); return; }
+    // The design workspace on the element's option, the part picked (docs/desk-page.md → The element dialog).
+    if ("elWs" in ds) {
+      const c = S.card, v = (c?.variants || []).find((x) => x.id === S.el?.variant), e = v && elementsOf(v).find((x) => x.key === S.el.key);
+      if (!e) return;
+      $("#element-dialog").close();
+      S.variant = v.id;
+      S.ws = { ...S.ws, open: true, check: false, version: null, state: null, alt: null, edit: null, note: null, pop: null, why: false, reason: null,
+        mode: e.selector ? "select" : "off", ...(e.selector ? { panel: "props" } : {}), selected: e.selector ? { selector: e.selector, text: "", tag: "", label: e.name, view: e.view || null, view_name: e.view_name || null } : null };
+      renderDetail(); renderWorkspace(); return;
+    }
     if ("elStates" in ds) { await act("states"); return; }
     if (ds.elGoto) { $("#element-dialog").close(); await goTo(target(ds.elGoto)); return; }
     if (ds.addCatalog) {

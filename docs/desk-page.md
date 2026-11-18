@@ -293,6 +293,25 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   on, its jump to the part and Reopen. The order
   stays newest first.
 
+## The element dialog
+
+A part under **All elements** opens in one dialog, the same in simple and full mode:
+
+- **Before** beside **After**. After is the part as the option draws it. Before is the part as
+  it is in the product: its picture taken from Design Desk's copy of the product, else cut from
+  the request's *how it looks today*; the line under it says which ("The product at main
+  (<commit>), with made-up data" or "Redrawn from the code by Design Desk", with when). A part
+  with neither says **No picture from before**; a part the option adds shows one picture,
+  **New**. Where both come from: [requests.md](requests.md) → The part before, from the product.
+- **Take it from the product** (**Take it again** once there is one) under Before: for members,
+  only while `screens` is enabled; Design Desk at work on it shows in its place.
+- A part cut live from a page is laid out at a desktop width (1440 px, as the product's pictures
+  are taken) and scaled into its box, so a narrow box never squeezes it; a part with no fill,
+  border or shadow of its own is fitted by what it holds. The tiles under All elements are drawn
+  the same way.
+- **Open in design workspace** opens the option with the part selected, on its Properties.
+- Its states follow, with the button that draws them.
+
 ## Product → Kit
 
 The product's kit as `design kit` last read it ([requests.md](requests.md) → Smart controls),

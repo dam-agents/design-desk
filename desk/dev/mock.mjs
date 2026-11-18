@@ -22,7 +22,7 @@ const CAN = Object.fromEntries(ROLES.map((r) => [r, abilities(r)]));
 function shim() {
   const q = new URLSearchParams(location.search);
   const role = q.get("role") || "designer";
-  const me = { role, email: "alice@example.com", emails: ["alice@example.com", "alice@slack.example.com"], names: { "alice@example.com": "Alice Novak", "alice@slack.example.com": "Alice Novak", "pat@example.com": "Pat Lee" }, name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
+  const me = { role, email: "alice@example.com", emails: ["alice@example.com", "alice@slack.example.com"], names: { "alice@example.com": "Alice Novak", "alice@slack.example.com": "Alice Novak", "pat@example.com": "Pat Lee" }, name: "Alice Novak", my_name: "Alice Novak", can: CAN[role] || CAN.designer, figma: true, screens: q.get("screens") !== "0", theme: q.get("theme") || "light", due_days: 21, auto_days: 14 };
   me.link = "https://desk.example.com/a/mock"; // the Desk's own link: the title's link icon copies an item's link from it
   if (q.get("simple")) me.simple = q.get("simple") === "1";
   const cards = structuredClone(CARDS), notes = structuredClone(NOTES);
@@ -88,6 +88,13 @@ function shim() {
       const c = card(x[1]);
       if (body.action === "pick-alternative") { const v = c.variants.find((y) => y.id === body.variant), a = v.alternatives.find((y) => y.id === body.note); v.history = [{ version: v.version, asset: v.asset, at: now() }, ...(v.history || [])]; v.version++; v.asset = a.asset; v.alternatives = []; }
       if (body.action === "drop-option") c.variants = c.variants.filter((y) => y.id !== body.variant);
+      // A part from the product: waits, then comes back as its picture before (docs/requests.md → The part before, from the product).
+      if (body.action === "take-before") {
+        const w = { kind: "explore", scope: "before", element: body.element, state: "queued", created: now() };
+        c.waiting.push(w);
+        setTimeout(() => { c.waiting = c.waiting.filter((y) => y !== w); c.before_shots = [...(c.before_shots || []).filter((y) => y.id !== body.element), { id: body.element, asset: "A-before-change", source: "instance", ref: "main", commit: "4286de5", at: now() }]; }, 6000);
+        return { inbox: w };
+      }
       return {};
     }
     return {};

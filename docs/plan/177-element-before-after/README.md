@@ -116,7 +116,7 @@ Taken with the operator before planning:
 |----|-------|-------|------------|------|
 | 01 | Store and server | `now.elements`, `before_shots`, the `take-before` action and its ability | — | [x] |
 | 02 | Capture and the agent's procedure | `design capture` crops a shot to an element; `requests.md` says how `now.elements` and `scope: "before"` are done | 01 | [x] |
-| 03 | The dialog: before and after | Before / After or New, where each picture came from, the button, Open in design workspace, same-width drawing | 01 | [ ] |
+| 03 | The dialog: before and after | Before / After or New, where each picture came from, the button, Open in design workspace, same-width drawing | 01 | [x] |
 | 04 | The dialog: comments on the part; release | The part's notes, a box, Comment; `VERSION` and `CHANGELOG.md` | 03 | [ ] |
 
 02 and 03 both need only 01, in either order.

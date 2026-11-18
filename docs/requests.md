@@ -374,7 +374,9 @@ Compare with the product); a note from **Work into the design** is a `revise` li
   (`design shot --element`, `--kind image`); `element` the product's element card it changes
   (`E-<n>`, [catalog.md](catalog.md)), when the catalog has one; `controls` its smart controls
   ([Smart controls](#smart-controls)); `only_here` why only this option has it (next item). The page shows them above the
-  option's design as **All elements**; one opens in a dialog with its states. A part picked in the design workspace
+  option's design as **All elements**; one opens in a dialog: the part **Before** and **After**
+  (one picture, **New**, for a part it adds), **Open in design workspace** at the part, and its
+  states ([desk-page.md](desk-page.md) → The element dialog). A part picked in the design workspace
   that is (or sits inside) an element with states drawn offers **See every state**: the same
   dialog, only to look through them, with no button that draws or adds. A state belongs to the
   element its `element` names, else to the one named as its `part`. An entry without `elements`
