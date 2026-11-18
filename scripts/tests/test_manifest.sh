@@ -12,6 +12,7 @@ cat > "$WORK_DIR/CONFIG.md" <<'CFG'
 - digest: desk
 - watch_paths: *
 - work_repo: "acme/internal-config"
+- mcp_satellite_name: design-desk
 CFG
 card="$SANDBOX/manifest.json"
 cp "$ROOT/scripts/tests/fixtures/manifest.json" "$card"

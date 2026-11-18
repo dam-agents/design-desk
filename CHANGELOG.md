@@ -7,6 +7,13 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.98.1 — 2026-11-18
+
+**Upgrade:**
+Nothing — `scripts/manifest-check.sh` is re-read per run. `mcp_satellite_name` (default
+`design-desk`, the agent's own name) is on its `PUBLIC_KEYS` list, so the manifest scan no longer
+fails on the name `design-desk` that a card carries in its definition link.
+
 ## 1.98.0 — 2026-11-18
 
 **Upgrade:**
