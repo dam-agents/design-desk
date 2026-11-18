@@ -212,8 +212,8 @@ worklist does not need it; what a run does on the Desk is in [desk.md](desk.md).
   done folds to one line (who wrote it and how it starts, who resolved it and when) that opens on
   a click. Reply, Mark done, Work it in and Reopen work as in full mode. With nothing open, the pane shows
   instead of the Requests intro three boxes, **Open**, **In dev** and **Closed**: how many items of
-  the viewer's side are in each (Open and In dev by kind, Closed as how many shipped in the last
-  7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
+  the viewer's side are in each (Open and In dev with their kinds, Closed with how many of them
+  shipped in the last 7 days); a click on one filters the list to that state. Otherwise it hides: **Designs**, **Issues**, **Product** and **People** leave the menu (a sent
   request offers no **Show the design**), Product's pages their bar, the presentation leaves Requests (its page, its buttons on a card and in an intro), a
   request offers no **Build a live prototype** (a prototype already up still shows), and an
   option shows no **Why it looks like this** section (the design workspace keeps it
@@ -390,14 +390,15 @@ an issue **Open** (green) or **Designed** (purple, once its design went to devel
 person has seen an item is its bold title alone ([Read and unread](#read-and-unread)).
 **In simple mode** an item has one of three states, by who works on it, and no dot. **Open**
 (green): it needs a design decision — a request at any step before it is approved (Design Desk
-at work included: the spinner says so), one approved whose spec draft waits for a person to send
+at work on it included: the spinner says so), one approved whose spec draft waits for a person to send
 it, a change nobody marked handled that is not auto handled. **In dev** (the accent): it is
 approved and developers build it — a request writing its spec or sent to developers and not yet
 built, a change handled or auto handled whose pull request is not merged. **Closed**: nobody
 works on it, and its pill says how it ended — **Shipped** (purple) a request built or a handled
 change merged, **No review needed** (grey) an auto handled change merged, **Closed** (red) a
 request closed, with a decision or without. An archived change, and anything on the other side,
-is not listed.
+is not listed. Issues, screens, elements and decisions have no
+simple state: simple mode lists none of them, and a link to one opens its full page.
 
 On a wide window the list folds away with an arrow halfway down its edge and comes back with
 it; each browser remembers it (`desk-list-folded` in local storage). Dragging the edge makes

@@ -3791,14 +3791,14 @@ test("simple mode lists a developer's side for a developer", (t) => open(t, DESK
 
 // Simple mode's head of an item (docs/desk-page.md → Simple mode): what it is, where it stands,
 // who and when, at most two moves and ⋯ for the rest.
-const HEAD_DESK = (me, cards) => `<script>
+const HEAD_DESK = (me, cards, asks = []) => `<script>
 window.posts = [];
 const cards = ${JSON.stringify(cards)};
 window.platform = { async request({ method, path, body }) {
   if (method === "POST") { posts.push({ path, body: JSON.parse(body || "{}") }); return { status: 200, contentType: "application/json", body: JSON.stringify({ thread: { id: "T-9" } }) }; }
   const answer = path === "/api/me" ? ${JSON.stringify(me)}
     : path === "/api/cards" ? { cards } : path.startsWith("/api/cards/") ? { card: cards.find((c) => c.id === decodeURIComponent(path.split("/")[3])) }
-    : path === "/api/agenda" ? { agenda: [] } : path === "/api/notifications" ? { seen: null, unread: 0, items: [] } : {};
+    : path === "/api/agenda" ? { agenda: [] } : path === "/api/notifications" ? { seen: null, unread: 0, items: [] } : path === "/api/private" ? { asks: ${JSON.stringify(asks)} } : {};
   return { status: 200, contentType: "application/json", body: JSON.stringify(answer) };
 } };
 try { localStorage.setItem("desk-guide-seen", "1"); } catch {}
@@ -3959,11 +3959,13 @@ test("simple mode's head keeps to the store's rules", (t) => open(t, HEAD_DESK({
 }));
 
 // Simple mode's private ask is its lock alone; its tooltip says the rest (docs/desk-page.md → The look).
-test("simple mode's Ask privately is its lock alone, named for a screen reader and in its tooltip", (t) => open(t, HEAD_DESK({ ...HEAD_ME, can: { ...HEAD_ME.can, ask: true } }, [drawn]), async (desk) => {
+test("simple mode's Ask privately is its lock alone, named for a screen reader and in its tooltip", (t) => open(t, HEAD_DESK({ ...HEAD_ME, can: { ...HEAD_ME.can, ask: true } }, [drawn],
+  [{ id: "T-40", kind: "private", state: "answered", context: { card: "R-5", label: "R-5 Calmer limits" }, messages: [{ by: { email: "d@example.com" }, at: "2026-11-18T09:00:00Z", text: "Why?" }, { by: { agent: true }, at: "2026-11-18T09:01:00Z", text: "Because." }] }]), async (desk) => {
   await desk.waitForSelector('#list [data-card="R-5"]');
   await desk.click('#list [data-card="R-5"]');
   await desk.waitForSelector(".ask-fab.compact");
-  assert.equal(await desk.getAttribute(".ask-fab", "aria-label"), "Ask privately about this request", "its name stays for a screen reader");
+  await desk.waitForSelector(".ask-fab .ask-count");
+  assert.equal(await desk.getAttribute(".ask-fab", "aria-label"), "Ask privately about this request, 2 messages so far", "its name, with its count, for a screen reader");
   assert.equal(await desk.locator(".ask-fab .ask-lbl").isHidden(), true, "only the lock");
   assert.match(await desk.getAttribute(".ask-fab", "data-tip"), /Ask Design Desk privately about R-5/, "its tooltip says what it asks about");
 }));

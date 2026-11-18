@@ -2393,7 +2393,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   })();
   // You opened a request's parts for a developer (Contact a developer): its step moves on, for you.
   const devAsked = (c) => store.get(`desk-dev-asked:${c.id}`) === "1";
-  // Simple mode (a switch in your menu, kept for you on the Desk) only hides: Designs, People,
+  // Simple mode (a switch in your menu, kept for you on the Desk) is review-first: one list of
+  // requests and changes with three states (simpleState, below). Besides, it hides: Designs, People,
   // Product and Issues leave the tabs, a sent request its Show the design, Product's pages their bar, the presentation its page and buttons,
   // and a request its buttons that build a live prototype and an option its Why it looks like
   // this strip (the design workspace keeps it). A link to anything in them still opens it: a D-3 in a request opens the decision.
@@ -4577,7 +4578,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     askDrawn = JSON.stringify(S.ask.asks);
     if (!S.ask.open) {
       // In simple mode only its lock shows; its tooltip says what it asks about.
-      root.innerHTML = `<button class="ask-fab${simple() ? " compact" : ""}" data-ask-open aria-label="Ask privately about this ${askWhat(ctx)}" title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="ask-lbl">Ask privately about this ${askWhat(ctx)}</span>${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
+      root.innerHTML = `<button class="ask-fab${simple() ? " compact" : ""}" data-ask-open aria-label="Ask privately about this ${askWhat(ctx)}${said ? `, ${plural(said, "message", "messages")} so far` : ""}${waiting ? ", Design Desk is answering" : ""}" title="Ask Design Desk privately about ${esc(ctx.label)}. Only you see it.${said ? ` ${plural(said, "message", "messages")} here so far.` : ""}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="ask-lbl">Ask privately about this ${askWhat(ctx)}</span>${said ? `<span class="ask-count" aria-label="${plural(said, "message", "messages")}">${said}</span>` : ""}${waiting ? `<span class="spin"></span>` : ""}</button>`;
       if (was.open) root.querySelector(".ask-fab")?.classList.add("enter");
       return;
     }

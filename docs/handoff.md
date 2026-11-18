@@ -52,7 +52,8 @@ sent; the developer or coding agent gets only answers.
 3. Upload it (`design desk asset spec.md --kind spec`) and set `spec: {asset, acceptance,
    review: "draft"}`; the card shows it under **The developer spec**. With `spec_review:
    disabled`, or the card's `approved.auto_send` (the approver ticked **Send it as soon as the
-   spec is written**; the store never sets it on a request from Slack), write `review: "sent"`, except for a request with a Slack `origin` or a `from_pr`, which always
+   spec is written**, or approved in simple mode, which asks for it; the store never sets it on a
+   request from Slack or from an open pull request), write `review: "sent"`, except for a request with a Slack `origin` or a `from_pr`, which always
    waits (until a person's Send to developers, the store refuses `review: "sent"` and
    `status: handed-off` on it, and reads the stored `origin`, not the one a write gives): a
    spec without it waits for a person.
