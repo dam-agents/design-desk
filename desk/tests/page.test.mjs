@@ -1710,6 +1710,33 @@ test("an option says why it looks as it does: its decisions on the request and i
   assert.equal(await desk.locator("#ws-side .why").count(), 1);
 }));
 
+// Two options of one request against the request's elements: one draws both and a part only it
+// has, the other leaves one out and says why (docs/requests.md → The same elements in every option).
+const BRIDGE_SHARED = BRIDGE_STORIES
+  .replace('{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }] };', `{ id: "v2", name: "Badge", asset: "A-1", fidelity: "mockup" }],
+  shared_elements: [{ id: "banner", name: "Limit banner" }, { id: "card", name: "Provider card" }] };
+request.variants[0].elements = [{ id: "banner", name: "Limit banner", change: "new", selector: "#spend" }, { id: "card", name: "Provider card", change: "changed", selector: "#spend" }, { id: "chart", name: "Trend chart", change: "new", selector: "#spend", only_here: "Only this option draws the trend." }];
+request.variants[1].elements = [{ id: "card", name: "Provider card", change: "changed", selector: "#spend" }];
+request.variants[1].left_out = [{ id: "banner", why: "The limit sits in each row instead." }];
+request.variants[1].states = [{ id: "near", name: "Close to the limit", part: "Limit banner", element: "banner", asset: "A-1", selector: "#spend", version: 1, of: 1 }, { id: "hover", name: "Hovered", part: "Limit banner", asset: "A-1", selector: "#spend", version: 1, of: 1 }];`);
+
+test("the options of a request line up: the same elements in one order, a part left out keeps its place and says why", (t) => open(t, BRIDGE_SHARED, async (desk) => {
+  await desk.click('[data-tab="requests"]');
+  await desk.click('[data-card="r7"]');
+  await desk.waitForSelector("#detail .elements .eltile");
+  const tiles = () => desk.$$eval("#detail .elements .eltile", (ts) => ts.map((t) => t.querySelector(".elname").textContent + (t.classList.contains("elgap") ? " ✕" : "")));
+  assert.deepEqual(await tiles(), ["Limit banner", "Provider card", "Trend chart"]);
+  assert.equal(await desk.textContent('#detail [data-el="chart"] .elmeta [data-tip="Only this option has it: Only this option draws the trend."]'), "Only in this option");
+  assert.equal(await desk.locator('#detail [data-el="card"] .elmeta [data-tip^="Only this option"]').count(), 0, "a part of the request says nothing");
+  assert.match(await desk.textContent("#detail .elements > summary"), /All elements\s*3/);
+  await desk.click('.vtabs [data-variant="v2"]');
+  await desk.waitForFunction(() => document.querySelectorAll("#detail .elements .eltile").length === 2);
+  assert.deepEqual(await tiles(), ["Limit banner ✕", "Provider card"], "the part left out keeps its place, and states drawn of it before show no second tile");
+  assert.match(await desk.textContent("#detail .elements .elgap"), /Not in this option\s*Limit banner\s*The limit sits in each row instead\./);
+  assert.equal(await desk.locator("#detail .elements .elgap button").count(), 0, "it opens nothing");
+  assert.match(await desk.textContent("#detail .elements > summary"), /All elements\s*1/, "the count is of the parts drawn");
+}));
+
 // The same option with nested parts: D-3 shaped the table and its Spend cell, the revoked D-4 its row.
 const BRIDGE_WHY_NESTED = BRIDGE_WHY.replace('parts: [{ selector: "#spend", label: "Spend column" }] }, { decision: "D-4", how: "The total is bold.", parts: [] }',
   'parts: [{ selector: "#spend", label: "Spend column" }, { selector: "table", label: "Table" }] }, { decision: "D-4", how: "The total is bold.", parts: [{ selector: "tr", label: "Row" }] }');

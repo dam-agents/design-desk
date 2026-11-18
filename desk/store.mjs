@@ -1195,7 +1195,7 @@ export class Store {
       const picked = [...new Set(carry.map(String))];
       const vs = picked.map((vid) => (source.variants || []).find((v) => v.id === vid) || (() => { throw bad(`${source.id} has no option ${vid}`); })());
       c.variants = vs.map((v) => ({ id: v.id, name: v.name, purpose: v.purpose, rationale: v.rationale, fidelity: v.fidelity, asset: v.asset, figma_url: v.figma_url || null,
-        stories: v.stories || null, reasons: v.reasons || null, states: structuredClone(v.states || []), elements: structuredClone(v.elements || []), version: 1,
+        stories: v.stories || null, reasons: v.reasons || null, states: structuredClone(v.states || []), elements: structuredClone(v.elements || []), left_out: structuredClone(v.left_out || []), version: 1,
         carried: { card: source.id, variant: v.id, version: v.version || 1 } }));
       request.carry = c.variants.map((v) => v.id);
       // Carried options are changed right after triage, as new ones would be drawn.
@@ -2112,7 +2112,7 @@ export class Store {
   // request). Only the listed fields are the agent's; people's acks, votes and threads
   // are never overwritten.
   upsertCard(fields) {
-    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix", "reminded", "translation"];
+    const AGENT_FIELDS = ["title", "summary", "sections", "screens", "source", "status", "triage", "variants", "prototype", "spec", "labels", "sheet", "states", "group", "elements", "shared_elements", "research", "brief", "origin", "impact", "instance", "environment", "shotlist", "path", "how", "concepts", "changes", "period", "attention", "bucket", "needs", "sketches", "style", "draw", "issue_brief", "grill", "decisions", "conflicts", "design_check", "decision_check", "figma_check", "figma_search", "dev_summary", "ci", "now", "area", "fix", "reminded", "translation"];
     let c = fields.id ? own(this.db.cards, fields.id) : null, goneLive = null;
     if (fields.id && !c) throw missing(`no card ${fields.id}`);
     if (!c && !["change", "request", "element", "screen", "digest", "issue"].includes(fields.kind)) throw bad("a new card needs kind change, request, element, screen, digest or issue");
@@ -2256,6 +2256,7 @@ export class Store {
       else if (k === "states") next.states = cleanStates(fields.states);
       else if (k === "group") next.group = clean(fields.group, 60, "group");
       else if (k === "elements") { if (!Array.isArray(fields.elements)) throw bad("elements must be a list"); next.elements = fields.elements.slice(0, 30).map((id) => this.card(String(id)).id); }
+      else if (k === "shared_elements") { if (next.kind !== "request") throw bad("shared_elements belong to a request"); next.shared_elements = cleanSharedElements(fields.shared_elements); }
       else if (k === "research") next.research = cleanResearch(fields.research, this.db.assets, this.db);
       else if (k === "origin") next.origin = cleanOrigin(fields.origin, this.db.cards);
       else if (k === "brief") {
@@ -2284,6 +2285,9 @@ export class Store {
     if (waits && !c?.spec?.sent && ((fields.spec !== undefined && next.spec && (next.spec.review === "sent" || next.spec.sent)) || (next.status === "handed-off" && c?.status !== "handed-off")))
       throw bad("a request from Slack or from an open pull request waits for a person's Send to developers: write its spec with review \"draft\", and hand it off only after that send (docs/handoff.md step 3)");
     if (!next.title) throw bad("a card needs a title");
+    // Every option of a request shows the request's elements, or says why not (docs/requests.md → The same elements in every option).
+    if (next.kind === "request" && next.shared_elements?.length && (fields.variants !== undefined || fields.shared_elements !== undefined))
+      next.variants = (next.variants || []).map((v, i) => alignOption(v, next.shared_elements, i + 1));
     // One card per screen and per element: a card a person added that turns out to be one
     // already on the Desk is dropped with a pointer to it, never filled in as a second copy.
     const twin = next.status !== "dropped" && Object.values(this.db.cards).find((x) => x.id !== next.id && x.kind === next.kind && x.status !== "dropped"
@@ -3092,7 +3096,7 @@ function versioned(list, before, at, removed = []) {
     const alternatives = given.alternatives ? given.alternatives.map((x) => ({ ...x, of: now, drawn: at })) : old && old.asset === given.asset ? old.alternatives || [] : [];
     // A person's own option keeps who added it through every run's upsert.
     // An option carried over from an approved request keeps saying so through every version.
-    const v = { ...given, ...(old?.by ? { by: old.by } : {}), ...(old?.carried ? { carried: old.carried } : {}), stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
+    const v = { ...given, ...(old?.by ? { by: old.by } : {}), ...(old?.carried ? { carried: old.carried } : {}), stories: given.stories || old?.stories || null, reasons: given.reasons || old?.reasons || null, elements: given.elements ?? old?.elements ?? [], left_out: given.left_out ?? old?.left_out ?? [], states: versionedStates(given.states ?? old?.states ?? [], old?.states || [], at, now, was, given.name || given.id), alternatives };
     if (!old) return { ...v, version: 1, history: [], drawn: at };
     const figma = v.figma_url || old.figma_url || null;
     if (old.asset === v.asset) return { ...v, version: was, history: old.history || [], drawn: old.drawn || at, figma_url: figma };
@@ -3441,7 +3445,9 @@ function cleanVariants(list, assets, decisions = {}, before = [], cards = {}) {
       // Leaving `states` out keeps the option's states from before; [] removes them.
       ...(v.states === undefined ? {} : { states: cleanOptionStates(v.states, assets, i + 1) }),
       // Leaving `elements` out keeps the option's elements from before; [] removes them.
+      // Its exceptions (`left_out`) go with it: sent alone they replace the ones from before; elements sent without them clear them.
       ...(v.elements === undefined ? {} : { elements: cleanOptionElements(v.elements, assets, cards, i + 1) }),
+      ...(v.left_out !== undefined ? { left_out: cleanLeftOut(v.left_out, i + 1) } : v.elements !== undefined ? { left_out: [] } : {}),
       // Leaving `alternatives` out keeps the ones from before while the option is unchanged.
       ...(v.alternatives === undefined ? {} : { alternatives: cleanAlternatives(v.alternatives, assets, i + 1) }),
     };
@@ -3491,8 +3497,53 @@ function cleanOptionElements(list, assets, cards, n) {
     if (of && (own(cards, of)?.kind !== "element" || own(cards, of).design)) throw bad(`variant ${n}, element ${i + 1}: ${of} is not an element of the product`);
     return { id, name: clean(x.name, 80, "element name"), change: x.change, how: optText(x.how, 300, "how"), selector, shot: x.shot ?? null,
       ...(x.view ? { view: String(x.view).slice(0, 40), view_name: optText(x.view_name, 120, "view name") } : {}), element: of,
-      ...(x.controls == null ? {} : { controls: cleanControls(x.controls, selector, `variant ${n}, element ${i + 1}`) }) };
+      ...(x.controls == null ? {} : { controls: cleanControls(x.controls, selector, `variant ${n}, element ${i + 1}`) }),
+      ...(x.only_here == null || x.only_here === "" ? {} : { only_here: clean(x.only_here, 300, "why only this option has it") }) };
   });
+}
+
+// The same elements in every option (docs/requests.md): the parts the request's brief touches,
+// each drawn by every option of it, in this order and under these names.
+function cleanSharedElements(list) {
+  if (list === null) return [];
+  if (!Array.isArray(list) || list.length > LIMITS.optionElements) throw bad(`shared_elements is a list of at most ${LIMITS.optionElements}`);
+  const ids = new Set();
+  return list.map((x, i) => {
+    const id = String(x?.id || "");
+    if (!STATE_ID.test(id) || ids.has(id)) throw bad(`shared element ${i + 1}: its id must be short and its own`);
+    ids.add(id);
+    return { id, name: clean(x?.name, 80, "element name"), how: optText(x?.how, 300, "how") };
+  });
+}
+// The request's elements an option leaves out, each with why: the exception, said out loud.
+function cleanLeftOut(list, n) {
+  if (list == null) return [];
+  if (!Array.isArray(list) || list.length > LIMITS.optionElements) throw bad(`variant ${n}: left_out is a list of at most ${LIMITS.optionElements}`);
+  const ids = new Set();
+  return list.map((x, i) => {
+    const id = String(x?.id || "");
+    if (!STATE_ID.test(id) || ids.has(id)) throw bad(`variant ${n}, left_out ${i + 1}: the id of one of the request's shared elements, once`);
+    ids.add(id);
+    return { id, why: clean(x?.why, 300, "why it is left out") };
+  });
+}
+// An option against the request's elements: each one drawn (its name the request's, in the
+// request's order) or left out with why, and a part only this option has says why, after them.
+// Exempt: a person's own picture, and an option that lists no elements at all (drawn before).
+function alignOption(v, shared, n) {
+  const els = v.elements || [], out = v.left_out || [];
+  if (v.fidelity === "picture" || (!els.length && !out.length)) return v;
+  const byId = new Map(els.map((e) => [e.id, e])), of = new Map(shared.map((s) => [s.id, s]));
+  const at = `variant ${n} (${v.name})`;
+  for (const e of els) if (!of.has(e.id) && !e.only_here) throw bad(`${at}: ${e.id} (${e.name}) is not one of the request's elements (${[...of.keys()].join(", ")}): use the id of the one it is, or say why only this option has it (only_here)`);
+  for (const x of out) {
+    if (!of.has(x.id)) throw bad(`${at}: left_out ${x.id} is not one of the request's elements`);
+    if (byId.has(x.id)) throw bad(`${at}: ${x.id} is both drawn and left out`);
+  }
+  const missing = shared.filter((s) => !byId.has(s.id) && !out.some((x) => x.id === s.id));
+  if (missing.length) throw bad(`${at}: the request's ${missing.map((s) => `${s.id} (${s.name})`).join(", ")} ${missing.length > 1 ? "are" : "is"} not in this option: draw ${missing.length > 1 ? "them" : "it"}, or say why ${missing.length > 1 ? "they are" : "it is"} left out (left_out: [{id, why}])`);
+  const drawn = shared.filter((s) => byId.has(s.id)).map((s) => { const { only_here: _, ...e } = byId.get(s.id); return { ...e, name: s.name }; });
+  return { ...v, elements: [...drawn, ...els.filter((e) => !of.has(e.id))], left_out: shared.flatMap((s) => out.filter((x) => x.id === s.id)) };
 }
 
 // An element's smart controls (docs/requests.md → Smart controls): the choices its product

@@ -1971,6 +1971,49 @@ test("an option's elements: listed, their states under them, then into the desig
   assert.deepEqual([d.card, d.variant, d.elements.map((e) => [e.key, e.file])], [card.id, "v1", [["provider", "src/Provider.tsx"], ["banner", null], ["part-raise-button", null]]]);
 });
 
+test("the same elements in every option: the request's list, in its order and names, each left out or added only with why", () => {
+  const s = fresh();
+  const html = (t) => s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from(`<p>${t}</p>`).toString("base64") }).asset.id;
+  const a = html("A"), b = html("B");
+  const { card } = s.createRequest(alice, { title: "Daily limits", problem: "People do not see the limit." });
+  const shared = [{ id: "banner", name: "Limit banner", how: "Says how much is left." }, { id: "card", name: "Provider card" }];
+  const el = (id, x = {}) => ({ id, name: `${id} as drawn`, change: "changed", selector: `#${id}`, ...x });
+  assert.throws(() => s.upsertCard({ id: card.id, shared_elements: [{ id: "banner", name: "A" }, { id: "banner", name: "B" }] }), /its own/);
+  // A part of the list an option does not draw, nor leave out, is refused; so is one not on the list without why.
+  assert.throws(() => s.upsertCard({ id: card.id, shared_elements: shared, variants: [{ id: "v1", name: "Limits", asset: a, elements: [el("card")] }] }), /Limit banner\) is not in this option[\s\S]*left_out/);
+  assert.throws(() => s.upsertCard({ id: card.id, shared_elements: shared, variants: [{ id: "v1", name: "Limits", asset: a, elements: [el("card"), el("banner"), el("chart")] }] }), /chart .* is not one of the request's elements[\s\S]*only_here/);
+  assert.throws(() => s.upsertCard({ id: card.id, shared_elements: shared, variants: [{ id: "v1", name: "Limits", asset: a, elements: [el("card"), el("banner")], left_out: [{ id: "card", why: "x" }] }] }), /both drawn and left out/);
+  assert.throws(() => s.upsertCard({ id: card.id, shared_elements: shared, variants: [{ id: "v1", name: "Limits", asset: a, elements: [el("card")], left_out: [{ id: "banner" }] }] }), /why it is left out/);
+  // Said out loud, it is stored: the request's order and names first, the option's own part after them.
+  s.upsertCard({ id: card.id, shared_elements: shared, variants: [
+    { id: "v1", name: "Limits", asset: a, elements: [el("chart", { change: "new", only_here: "Only this option draws the trend." }), el("card"), el("banner")] },
+    { id: "v2", name: "Rows", asset: b, elements: [el("card")], left_out: [{ id: "banner", why: "The limit sits in each row instead." }] }] });
+  const [v1, v2] = s.getCard(card.id).variants;
+  assert.deepEqual(v1.elements.map((e) => [e.id, e.name]), [["banner", "Limit banner"], ["card", "Provider card"], ["chart", "chart as drawn"]]);
+  assert.equal(v1.elements[2].only_here, "Only this option draws the trend.");
+  assert.deepEqual(v2.left_out, [{ id: "banner", why: "The limit sits in each row instead." }]);
+  // Leaving elements out keeps them and their exceptions, still checked against the list.
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b }] });
+  assert.deepEqual(s.getCard(card.id).variants[1].left_out.map((x) => x.id), ["banner"]);
+  // Its exceptions sent alone replace the ones from before; a request started from it carries them over.
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b, left_out: [{ id: "banner", why: "Each row says it." }] }] });
+  assert.equal(s.getCard(card.id).variants[1].left_out[0].why, "Each row says it.");
+  assert.throws(() => s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b, left_out: [] }] }), /Limit banner\) is not in this option/);
+  const carried = s.createRequest(alice, { title: "Daily limits, again", problem: "Still.", from: card.id, carry: ["v2"], options: 0 }).card;
+  assert.deepEqual(carried.variants[0].left_out, [{ id: "banner", why: "Each row says it." }]);
+  assert.throws(() => s.upsertCard({ id: card.id, shared_elements: [...shared, { id: "total", name: "Total" }] }), /Total\) is not in this option/);
+  // A person's own picture, and an option that lists no elements, are not held to it.
+  s.upsertCard({ id: card.id, variants: [{ id: "v1", version: 1, name: "Limits", asset: a }, { id: "v2", version: 1, name: "Rows", asset: b }, { id: "v3", name: "Sketch", asset: a, fidelity: "picture", elements: [] }, { id: "v4", name: "Old", asset: b }] });
+  assert.deepEqual(s.getCard(card.id).variants.map((v) => v.elements.length), [3, 1, 0, 0]);
+  // A request without the list (one drawn before it) is as it was: each option its own elements.
+  const { card: old } = s.createRequest(alice, { title: "Old one", problem: "Drawn before." });
+  s.upsertCard({ id: old.id, variants: [{ id: "v1", name: "A", asset: a, elements: [el("x")] }, { id: "v2", name: "B", asset: b, elements: [el("y"), el("z")] }] });
+  assert.deepEqual(s.getCard(old.id).variants.map((v) => v.elements.map((e) => e.id)), [["x"], ["y", "z"]]);
+  // Only a request has the list.
+  const { card: change } = s.upsertCard({ kind: "change", title: "A change", summary: "It changed." });
+  assert.throws(() => s.upsertCard({ id: change.id, shared_elements: shared }), /belong to a request/);
+});
+
 test("a shipped change read against its approved design: what differs waits for a designer", () => {
   const s = fresh();
   const a = s.addAsset({ kind: "variant", contentType: "text/html", data: Buffer.from("<p>A</p>").toString("base64") }).asset.id;
