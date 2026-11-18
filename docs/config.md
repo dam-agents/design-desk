@@ -47,6 +47,10 @@ file is unchanged; exit 3 means another writer came first (an admin's roster row
 - `run_model` (`default`), `dispatch` (`enabled`), `work_repo` (`none`; env
   `GITHUB_REPO_WORK` wins), `audit_report` (`enabled`), `agent_manifest` (`dam`: publish the
   public agent manifest in `docs/manifest.md`; `off`: keep it local), `log_level` (`info` | `debug`).
+- `mcp_satellite` (`disabled`) — `when-awake` | `always`: the owner's other agents read the Desk and
+  put work on it over MCP, while this machine is awake or keeping it awake ([mcp.md](mcp.md));
+  `mcp_role` (`developer`; `guest` | `pm`) — what they may do there; `mcp_server` (empty: `DAM_SERVER`)
+  — the platform's address; `mcp_satellite_name` (`design-desk`), never asked.
 - `decisions_page` (`off`) — `dam`: every decision on the Desk, without names, on one public
   text page for coding agents, republished daily when it changed ([decisions-page.md](decisions-page.md)).
 - `screens` (`disabled`) — `enabled`: the agent keeps its own install of the product for

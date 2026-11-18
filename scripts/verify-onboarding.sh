@@ -62,7 +62,7 @@ warn() { WARNS=$((WARNS+1)); printf 'warn %s — %s\n' "$1" "$2"; }
 
 # Everything the mid-onboarding `--config` run must not reach — it checks state
 # that later ONBOARDING steps create (schedules, work/VERSION, the sentinel).
-KNOWN_KEYS="display_name ci_gate ci_gate_unsourced change_auto_handled_days repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters spec_review max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports qa_bot watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest decisions_page log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days pr_environment_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min slack_stale_days issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings"
+KNOWN_KEYS="display_name ci_gate ci_gate_unsourced change_auto_handled_days repos watch_since watch_paths max_changes_per_run profile default_style prototype_requesters spec_review max_prototypes prototype_expiry_days prototype_remote handoff desk_ping desk_artifact desk_link bug_reports qa_bot watch_open_prs issue_label proposals max_proposals_per_week implementer implementer_mention issue_writeback notify run_model dispatch work_repo audit_report agent_manifest decisions_page log_level model_alert_threshold classifier_alert_threshold heartbeat_gap_min change_due_days pr_environment_days request_skills figma figma_file screens max_screen_prs slack_polls slack_poll_channel slack_send digest slack_council council_sync_min slack_stale_days issue_news issue_sprint issue_next_sprint issue_news_label max_issue_drawings mcp_satellite mcp_role mcp_server mcp_satellite_name"
 
 if [ "$STRUCTURE" = 1 ]; then
   # ------------------------------------------------------------- definition
@@ -146,6 +146,12 @@ else
   enum slack_council enabled disabled
   enum digest desk slack disabled
   enum issue_news enabled disabled
+  enum mcp_satellite disabled when-awake always
+  enum mcp_role developer pm guest
+  ms="$(cfg mcp_server)"; [ -z "$ms" ] || printf '%s' "$ms" | grep -qE '^https://[^[:space:]/]+/?$' || fail config_mcp_server "mcp_server is '$ms'" "the platform's address, like https://dam.example.com, or empty"
+  if [ "$(cfg mcp_satellite)" = when-awake ] || [ "$(cfg mcp_satellite)" = always ]; then
+    [ -s "$WORK/desk/.satellite-key" ] && ok mcp_key "the Satellite's serve key is on this machine" || fail mcp_key "mcp_satellite is on but work/desk/.satellite-key is missing" "the owner writes it (docs/mcp.md → Turn it on)"
+  fi
   ff="$(cfg figma_file)"; [ -z "$ff" ] || printf '%s' "$ff" | grep -qE '^https://([a-z0-9-]+\.)?figma\.com/' || fail config_figma_file "figma_file is '$ff'" "a link to a Figma file, or empty"
   dl="$(cfg desk_link)"; [ -z "$dl" ] || printf '%s' "$dl" | grep -qE '^https?://[^[:space:]#]+$' || fail config_desk_link "desk_link is '$dl'" "the Desk's share link, without #…, or empty"
   if grep -qx '## Skills' "$CONFIG"; then

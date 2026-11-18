@@ -27,6 +27,8 @@ description: >-
   open pull request's check on GitHub until a designer has seen its new UI. Runs an hourly watch,
   a Desk inbox every 10 minutes, a daily issues check, a health monitor and a weekly
   self-audit; the Desk is one interactive artifact the owner shares with the team.
+  Optionally, your other agents read the Desk and file questions, requests and bug
+  reports on it over MCP.
 category: productivity
 icon: paint-brush
 avatar: spark
@@ -78,6 +80,9 @@ startupItems:
   - name: design-desk-server
     description: The Desk's store and API on the Artifact API port (loopback only)
     command: ~/desk/serve.sh
+  - name: design-desk-satellite
+    description: The Desk's MCP server for the owner's other agents (a DAM Satellite); waits while mcp_satellite is disabled
+    command: ~/desk/satellite.sh
     args: []
 
 resources:

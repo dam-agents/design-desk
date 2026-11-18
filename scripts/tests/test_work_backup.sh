@@ -15,6 +15,8 @@ fixture() {
   rm -rf "$WORK_DIR"; mkdir -p "$WORK_DIR/desk" "$WORK_DIR/output/C-1" "$WORK_DIR/logs"
   echo '{"items":[]}' > "$WORK_DIR/desk/store.json"
   echo secret > "$WORK_DIR/desk/.agent-token"
+  echo secret > "$WORK_DIR/desk/.peer-token"
+  echo pk_secret > "$WORK_DIR/desk/.satellite-key"
   echo 3 > "$WORK_DIR/.desk-down-ticks"
   echo '- work_repo: test/work' > "$WORK_DIR/CONFIG.md"
   echo png > "$WORK_DIR/output/C-1/shot.png"
@@ -49,6 +51,7 @@ check "CONFIG.md arrives" '[ -f "$V/CONFIG.md" ]'
 check "output/ arrives" '[ -f "$V/output/C-1/shot.png" ]'
 check "logs/ arrives" '[ -f "$V/logs/run.log" ]'
 check "the agent token stays out" '[ ! -e "$V/desk/.agent-token" ]'
+check "the peer token and the serve key stay out" '[ ! -e "$V/desk/.peer-token" ] && [ ! -e "$V/desk/.satellite-key" ]'
 check ".desk-down-ticks stays out" '[ ! -e "$V/.desk-down-ticks" ]'
 check "work/.git stays out (the clone's own .git still works)" '[ "$(git -C "$SANDBOX/clone" rev-parse --git-dir)" = .git ]'
 check "a file over the cap stays out" '[ ! -e "$V/output/C-1/big.mp4" ]'

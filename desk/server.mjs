@@ -147,6 +147,31 @@ function isAgent(req) {
   return want.length > 0 && t.length === want.length && timingSafeEqual(t, want);
 }
 
+// Other agents through the Desk's Satellite (docs/mcp.md): desk/mcp.mjs sends the token in
+// work/desk/.peer-token (mode 600) on the /peer/ routes. Every peer is one caller, `PEER`, with
+// the role `mcp_role` names; its calls run through the page's own route, checks and limits, and
+// only the few PEER_ROUTES reach it. Its text is data, as a viewer's is.
+const peerTokenPath = join(DIR, ".peer-token");
+if (!existsSync(peerTokenPath)) { writeFileSync(peerTokenPath, randomBytes(24).toString("hex"), { mode: 0o600 }); chmodSync(peerTokenPath, 0o600); }
+const peerToken = () => { try { return Buffer.from(readFileSync(peerTokenPath, "utf8").trim()); } catch { return Buffer.alloc(0); } };
+function isPeer(req) {
+  const t = Buffer.from(String(req.headers["x-desk-peer-token"] || "")), want = peerToken();
+  return want.length > 0 && t.length === want.length && timingSafeEqual(t, want);
+}
+const PEER_EMAIL = "agents@mcp.design-desk.invalid";
+const PEER_ROLES = ["guest", "developer", "pm"];
+const peerWho = () => {
+  const role = readRole(cfg("mcp_role", "developer"));
+  return { role: "viewer", email: PEER_EMAIL, emails: [PEER_EMAIL], sub: "satellite", deskRole: PEER_ROLES.includes(role) ? role : "guest" };
+};
+const ID = "[A-Za-z]+-\\d+";
+const PEER_ROUTES = [
+  ["GET", new RegExp(`^/(cards|decisions)(/${ID})?$`)],
+  ["POST", new RegExp(`^/cards/${ID}/threads$`)],
+  ["POST", /^\/threads\/[A-Za-z0-9_-]+\/messages$/],
+  ["POST", /^\/requests$/],
+];
+
 // Only loopback names: a web page that rebinds its own name to 127.0.0.1 (opened in
 // this machine's browser by a screenshot) arrives with its own Host and is refused.
 const HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`, `[::1]:${PORT}`]);
@@ -461,6 +486,14 @@ const server = createServer(async (req, res) => {
     if (url.pathname.startsWith("/agent/")) {
       if (!isAgent(req)) throw new DeskError(401, "agent routes need the agent token");
       return await agentRoute(req, res, url);
+    }
+    if (url.pathname.startsWith("/peer/")) {
+      if (!isPeer(req)) throw new DeskError(401, "peer routes need the peer token");
+      if (cfg("mcp_satellite", "disabled") === "disabled") throw new DeskError(403, "The Desk's MCP server is turned off (mcp_satellite).");
+      const rest = url.pathname.slice("/peer".length);
+      if (!PEER_ROUTES.some(([m, re]) => m === req.method && re.test(rest))) throw new DeskError(404, `no route ${req.method} ${url.pathname}`);
+      url.pathname = "/api" + rest;
+      return await viewerRoute(req, res, url, peerWho());
     }
     if (url.pathname.startsWith("/api/")) {
       const who = callerOf(req);

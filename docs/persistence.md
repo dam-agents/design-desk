@@ -46,7 +46,7 @@ retries with a fresh snapshot. Never force-push; a push that fails all retries i
 and retried next run — not a run failure, because the data is safe on `work/`.
 
 The whole of `work/` is backed up — `output/` and `logs/` too — except `.git`, the Desk's
-`agent-token` and `.desk-down-ticks`, in two pushes. The first push holds the state: all of
+`.agent-token`, `.peer-token` and `.satellite-key`, and `.desk-down-ticks`, in two pushes. The first push holds the state: all of
 `work/` but `output/` and `logs/`, the Desk store included. The second push holds `output/`
 and `logs/` on their own, so a failure there never blocks the state. In the second push, a
 file over 50 MB (`WORK_BACKUP_MAX_FILE_MB`) stays out, and `output/` and `logs/` stay out
