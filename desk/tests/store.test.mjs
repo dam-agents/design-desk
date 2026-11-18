@@ -2969,3 +2969,57 @@ test("drafts: a person's comments not sent yet are theirs alone, on every device
   s.deleteRequest(req.id, alice);
   assert.equal(Object.values(s.db.drafts).some((mine) => Object.hasOwn(mine, req.id)), false);
 });
+
+test("reviews: drafts go out as one review; each verdict does what the Desk already does; who makes the next version", () => {
+  let t = 0;
+  const s = new Store(mkdtempSync(join(tmpdir(), "desk-store-")), { needsApproval: everyCounts, clock: () => new Date(Date.UTC(2026, 10, 18, 10, 0, t++)).toISOString().replace(/\.\d{3}Z$/, "Z") });
+  const a = s.addAsset({ kind: "variant", name: "v1", contentType: "text/html", data: "<p>v</p>", encoding: "utf8" }).asset;
+  const req = s.upsertCard({ kind: "request", title: "Calmer list" }).card;
+  s.upsertCard({ id: req.id, status: "feedback", triage: { verdict: "design", reasons: ["Only the look."] }, variants: [{ id: "v1", name: "Quiet", asset: a.id }, { id: "v2", name: "Bold", asset: a.id }] });
+  for (const i of Object.values(s.db.inbox)) i.state = "done";
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "comment" }), /Write a comment/);
+  s.addDraft(req.id, alice, { text: "Rows tighter", anchor: { variant: "v2", label: "Row" } });
+  s.addDraft(req.id, alice, { text: "Overall calmer" });
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "nope" }), /verdict/);
+  const r = s.sendReview(req.id, alice, { verdict: "request-changes", note: "Close, two things.", variant: "v1" });
+  assert.match(r.review.id, /^N-\d+$/);
+  const threads = r.review.threads.map((id) => s.thread(id));
+  assert.deepEqual(threads.map((x) => [x.kind, x.anchor?.variant, x.review]), [["change", "v2", r.review.id], ["change", "v1", r.review.id]], "change notes, the unanchored one on the option shown");
+  assert.equal(Object.values(s.db.inbox).filter((i) => i.card === req.id && i.kind === "revise" && i.state === "open").length, 1, "one revise for the whole review");
+  assert.deepEqual(s.drafts(req.id, alice).drafts, [], "the drafts are gone");
+  const read = s.getCard(req.id);
+  assert.deepEqual([read.reviews.length, read.reviews[0].note, read.responsible.who], [1, "Close, two things.", "design-desk"]);
+  assert.equal(s.listCards({}).find((x) => x.id === req.id).responsible.who, "design-desk");
+  // A new version of an option arrives: nobody else is making it any more.
+  s.card(req.id).variants.find((x) => x.id === "v2").drawn = s.clock();
+  assert.equal(s.getCard(req.id).responsible, null);
+  // Approve on a request goes with the person's own approval, never instead of it.
+  s.addDraft(req.id, alice, { text: "Good now" });
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "approve" }), /Approve the request first/);
+  // Comment only changes nothing but the conversation.
+  const status = s.card(req.id).status;
+  const plain = s.sendReview(req.id, alice, { verdict: "comment" });
+  assert.deepEqual([s.thread(plain.review.threads[0]).kind, s.card(req.id).status, plain.inbox], ["comment", status, null]);
+
+  // A pull request's change: the developer makes the next version, until its head moves on.
+  const chg = s.upsertCard({ kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } }).card;
+  s.db.github["acme/widgets#7"] = { key: "acme/widgets#7", kind: "pr", head: "a".repeat(40), comments: [] };
+  s.addDraft(chg.id, alice, { text: "The chip is too loud", change: "Spend list" });
+  assert.throws(() => s.sendReview(chg.id, bob, { verdict: "request-changes" }), /Only designers/);
+  const rc = s.sendReview(chg.id, alice, { verdict: "request-changes" });
+  assert.deepEqual([rc.review.sha, s.thread(rc.review.threads[0]).change, s.card(chg.id).status], ["a".repeat(40), "Spend list", "new"]);
+  assert.equal(s.getCard(chg.id).responsible.who, "developer");
+  s.db.github["acme/widgets#7"].head = "b".repeat(40);
+  assert.equal(s.getCard(chg.id).responsible, null, "new commits: Open again");
+  // Approve marks it handled.
+  s.addDraft(chg.id, alice, { text: "Fine" });
+  s.sendReview(chg.id, alice, { verdict: "approve" });
+  assert.equal(s.card(chg.id).status, "handled");
+
+  // A refused draft leaves everything as it was.
+  s.addDraft(req.id, alice, { text: "On a state", anchor: { variant: "v1" } });
+  s.card(req.id).variants = [];
+  const before = JSON.stringify(s.db);
+  assert.throws(() => s.sendReview(req.id, alice, { verdict: "request-changes" }), /options are drawn/);
+  assert.equal(JSON.stringify(s.db), before);
+});

@@ -266,7 +266,7 @@ async function viewerRoute(req, res, url, who) {
   if (m !== "GET") {
     if (store.full()) throw new DeskError(507, `The Desk is full and can't save anything new. Tell ${s.contact}; they can archive old changes.`);
     spend(who.email || who.sub, "write");
-    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec", "text"].includes(p[3]))) spend(who.email || who.sub, "item");
+    if ((p[1] === "cards" && p[3] === "threads" && ["question", "change"].includes(b.kind)) || p[1] === "private" || (p[1] === "threads" && ["messages", "answers", "decision"].includes(p[3])) || p[1] === "requests" || p[1] === "product" || p[1] === "people" || (p[1] === "cards" && ["actions", "screens", "work-in", "decide", "spec", "text"].includes(p[3])) || (p[1] === "cards" && p[3] === "reviews" && b.verdict !== "comment")) spend(who.email || who.sub, "item");
   }
   // A person's own day or night mode and simple mode, kept for them on every device
   // (docs/desk-page.md → The menu); only the keys sent change.
@@ -294,6 +294,15 @@ async function viewerRoute(req, res, url, who) {
   }
   if (m === "POST" && p[1] === "cards" && p[3] === "drafts" && !p[4]) { need("comment"); return send(res, 201, store.addDraft(p[2], actor, { text: b.text, anchor: b.anchor || null, change: typeof b.change === "string" ? b.change : null })); }
   if (m === "DELETE" && p[1] === "cards" && p[3] === "drafts" && p[4]) return send(res, 200, store.removeDraft(p[2], actor, p[4]));
+  // A review: the person's drafts sent with a verdict (docs/desk.md → Reviews). Changes asked of a
+  // request are change notes; a change's verdict is the one who may mark it handled (the store checks the rest).
+  if (m === "POST" && p[1] === "cards" && p[3] === "reviews" && !p[4]) {
+    const c = store.card(p[2]), verdict = String(b.verdict || "");
+    if (verdict === "comment" || (c.kind === "request" && verdict === "approve")) need("comment");
+    else if (c.kind === "request") need("change");
+    else if (!can(who.deskRole, "handle-small", s.prototypeRoles)) need("handle");
+    return send(res, 201, withPing(store.sendReview(p[2], actor, { verdict, note: b.note, variant: typeof b.variant === "string" ? b.variant : null }), s, who));
+  }
   if (m === "POST" && p[1] === "private") { need("ask"); return send(res, 201, withPing(store.openPrivate(actor, { text: b.text, starter: typeof b.starter === "string" ? b.starter : null, context: b.context }), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "messages") { need(store.threadNeed(p[2], actor)); return send(res, 201, withPing(store.reply(p[2], actor, b.text), s, who)); }
   if (m === "POST" && p[1] === "threads" && p[3] === "answers") { need(store.threadNeed(p[2], actor)); return send(res, 200, withPing(store.answerForm(p[2], actor, b.answers), s, who)); }

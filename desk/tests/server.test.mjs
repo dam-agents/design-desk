@@ -633,3 +633,24 @@ test("drafts: a person adds, reads and removes their own draft comments; nobody 
   assert.equal((await del("guest@example.com", add.body.draft.id)).status, 200);
   assert.deepEqual((await d.viewer("guest@example.com", `/api/cards/${card.id}/drafts`)).body.drafts, []);
 });
+
+test("reviews: a guest sends Comment only; asking changes of a request takes the change ability, of a change who may mark it handled", async (t) => {
+  const d = await desk(t);
+  const { body: { card } } = await d.viewer("alice@example.com", "/api/requests", { problem: "People miss the upload button." });
+  const { body: { asset } } = await d.agent("/agent/assets", { kind: "variant", name: "v1", contentType: "text/html", data: "<button>Upload</button>", encoding: "utf8" });
+  assert.equal((await d.agent("/agent/cards", { id: card.id, status: "feedback", variants: [{ id: "v1", name: "Big", asset: asset.id }] })).status, 200);
+  const chg = (await d.agent("/agent/cards", { kind: "change", title: "Spend", source: { repo: "acme/widgets", pr: 7 } })).body.card.id;
+  const review = (email, id, verdict) => d.viewer(email, `/api/cards/${id}/reviews`, { verdict, note: "A note." });
+  assert.equal((await review("guest@example.com", card.id, "request-changes")).status, 403);
+  const guest = await review("guest@example.com", card.id, "comment");
+  assert.equal(guest.status, 201);
+  assert.equal(guest.body.review.verdict, "comment");
+  const pm = await review("pat@example.com", card.id, "request-changes");
+  assert.equal(pm.status, 201, "a PM asks Design Desk for the next version");
+  assert.equal(pm.body.inbox.kind, "revise");
+  assert.equal((await review("bob@example.com", chg, "request-changes")).status, 403, "a developer does not hold a change For Designers");
+  const designer = await review("alice@example.com", chg, "approve");
+  assert.equal(designer.status, 201);
+  const read = (await d.viewer("alice@example.com", `/api/cards/${chg}`)).body;
+  assert.deepEqual([(read.card || read).status, (read.card || read).reviews.length], ["handled", 1]);
+});

@@ -169,6 +169,8 @@ const SCREEN_SOURCES = ["pr", "issue", "instance", "person", "prototype", "rebui
 // A person's ⚠ on an option: the flag beside their thumb, or an old entry that was one.
 const isConcern = (v) => Boolean(v?.concern || v?.vote === "concern");
 const THREAD_KINDS = ["question", "comment", "concern", "change", "asks", "private"];
+// What a review says of the item it is sent on (docs/desk.md → Reviews).
+const REVIEW_VERDICTS = ["request-changes", "approve", "comment"];
 // The five starters a private ask may begin with; each one's full brief for the agent is in
 // docs/desk.md → Private asks. The page shows a short label, the agent reads the key.
 const STARTERS = ["explain", "why", "fixed", "options", "ask-team"];
@@ -277,10 +279,10 @@ function cleanCount(v, fallback = 3) {
 // item). Items made before 1.78.0 keep their numbers: a card's `C-12`, an inbox item's `I-4`, a
 // Slack vote's `P-2`, a council's `S-1`. A letter an older series used (P, I, S) goes on past its
 // highest number there, so no number is ever given twice.
-export const LETTERS = { change: "P", request: "R", issue: "I", screen: "S", element: "E", digest: "W", figma: "F", design: "G", item: "Q", poll: "V", council: "K" };
+export const LETTERS = { change: "P", request: "R", issue: "I", screen: "S", element: "E", digest: "W", figma: "F", design: "G", item: "Q", poll: "V", council: "K", review: "N" };
 
 export function emptyDb() {
-  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {}, drafts: {} };
+  return { version: 1, seq: { card: 0, thread: 0, asset: 0, item: 0, decision: 0, poll: 0, council: 0 }, cards: {}, threads: {}, assets: {}, inbox: {}, decisions: {}, github: {}, gh_failed: {}, prefs: {}, reads: {}, seen: {}, noted: {}, opened: {}, drafts: {}, reviews: {} };
 }
 
 // The bell's events that fold into one row per item and day, with their count.
@@ -507,6 +509,8 @@ export class Store {
         busy: Object.values(this.db.inbox).some((i) => i.card === c.id && i.state !== "done" && i.kind !== "question"),
         asks: (c.threads || []).some((t) => this.db.threads[t]?.kind === "asks" && this.db.threads[t]?.state === "open"),
         in_progress: c.kind === "change" && Boolean(c.source?.pr) && !c.source?.merged_at,
+        // Who makes the next version after a review asked for changes (docs/desk.md → Reviews).
+        responsible: this.responsibleOf(c),
         automated: Boolean(c.origin?.automated),
         // Where it came from and who: the page's source label (docs/desk.md → Where a card came from).
         origin: c.origin || null, by: c.created_by || null, from: c.request?.from || null,
@@ -638,7 +642,7 @@ export class Store {
     // Each decision the card cites, with its words and whether it is still in force.
     const cited = Object.fromEntries([...(c.decisions || []), ...(c.impact?.decisions || []).map((x) => x.id).filter(Boolean), ...shapedBy(c)]
       .map((id) => { const d = own(this.db.decisions, id); return [id, { text: d?.text || "", status: d?.status || "revoked" }]; }));
-    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
+    return { ...c, conflicts, cited, attention: this.attentionOf(c), ...(["request", "change", "issue"].includes(c.kind) ? { for: this.forOf(c) } : {}), ...(c.kind === "request" ? { from_pr: this.fromPr(c) } : {}), designed: this.designedOf(c), sent_card: this.sentCardOf(c), builds: this.buildsOf(c), reviews: this.reviewsOf(c), responsible: this.responsibleOf(c), threads: (c.threads || []).map((t) => this.db.threads[t]).filter((t) => sees(t, viewer)), waiting: this.waitingFor(c.id, viewer) };
   }
 
   // Work the agent has been asked for on a card and not finished, oldest first.
@@ -681,12 +685,7 @@ export class Store {
   handle(cardId, who, on = true) {
     const c = this.card(cardId);
     if (!["change", "issue"].includes(c.kind)) throw bad("only a change or an issue is marked handled");
-    // A lead developer marks a change For Developers handled; one that goes against a decision
-    // in force stays a designer's (docs/desk.md → For Developers or For Designers).
-    if (!who?.agent && !can(who?.role, "handle")) {
-      if (!can(who?.role, "handle-small") || this.forOf(c) !== "developers") throw forbidden("Only designers can mark this handled. A lead developer marks a change or an issue For Developers handled.");
-      if (this.activeConflicts(c).length) throw forbidden(`This ${c.kind} goes against a decision in force: a designer marks it handled.`);
-    }
+    this.mayHandle(c, who);
     // An issue keeps its status, which its run sets: handled only takes it off the Desk's lists
     // and out of drawing (docs/issues.md → On the Desk).
     if (c.kind === "issue") { if (on) c.handled = { by: person(who), at: this.clock() }; else delete c.handled; }
@@ -697,6 +696,14 @@ export class Store {
     if (c.kind === "change" && ["failing", "passing"].includes(c.ci?.state)) this.pendingOrNew("ci", c.id, who, on ? "Marked handled: pass the check." : "Marked not handled: hold the check again.");
     this.save();
     return { card: c };
+  }
+
+  // A lead developer marks a change For Developers handled; one that goes against a decision
+  // in force stays a designer's (docs/desk.md → For Developers or For Designers).
+  mayHandle(c, who) {
+    if (who?.agent || can(who?.role, "handle")) return;
+    if (!can(who?.role, "handle-small") || this.forOf(c) !== "developers") throw forbidden("Only designers can mark this handled. A lead developer marks a change or an issue For Developers handled.");
+    if (this.activeConflicts(c).length) throw forbidden(`This ${c.kind} goes against a decision in force: a designer marks it handled.`);
   }
 
   // A developer marks an approved design built, or takes it back (docs/desk-page.md → Designs).
@@ -806,6 +813,80 @@ export class Store {
     else delete mine[cardId];
     if (!Object.keys(mine).length) delete this.db.drafts[key];
   }
+
+  // ---------- reviews (docs/desk.md → Reviews) ----------
+
+  // A person's drafts sent together with a verdict: each draft becomes its own conversation,
+  // tagged with the review, so it keeps its own replies; the verdict does what the Desk already
+  // does for it. Who may send which verdict is the server's check, and `handle`'s own.
+  sendReview(cardId, who, { verdict, note = "", variant = null } = {}) {
+    const c = this.card(cardId), key = this.draftsFor(who);
+    if (!REVIEW_VERDICTS.includes(verdict)) throw bad(`verdict must be one of ${REVIEW_VERDICTS.join(", ")}`);
+    if (!["request", "change"].includes(c.kind)) throw bad("A review is sent on a request or a pull request's change.");
+    if (c.kind === "change" && verdict !== "comment") this.mayHandle(c, who);
+    const drafts = own(own(this.db.drafts, key) || {}, c.id) || [];
+    const words = optText(note, LIMITS.text, "note");
+    if (!drafts.length && !words) throw bad("Write a comment or a note first.");
+    const request = c.kind === "request", changes = verdict === "request-changes";
+    if (request && changes && !(c.variants || []).length) throw bad("Changes are asked of a design once its options are drawn.");
+    if (request && verdict === "approve" && !(c.approved && addressesOf(who).includes(String(c.approved.by?.email || "").toLowerCase())))
+      throw bad("Approve the request first; the review then goes with your approval.");
+    // Every draft is checked before anything is written, so a refused one changes nothing.
+    const first = variant && (c.variants || []).some((v) => v.id === variant) ? variant : c.variants?.[0]?.id || null;
+    const kindOf = (d) => (request && changes && (d.anchor?.variant || first) ? "change" : "comment");
+    const plan = drafts.map((d) => ({ d, kind: kindOf(d), anchor: kindOf(d) === "change" && !d.anchor?.variant ? { ...(d.anchor || {}), variant: first } : d.anchor }));
+    for (const x of plan) if (x.anchor?.state && !(c.variants || []).find((v) => v.id === x.anchor.variant)?.states?.some((st) => st.id === x.anchor.state)) throw bad("A draft is about a state that is no longer drawn. Remove it and write it again.");
+    if ((c.threads || []).length + plan.length + (request && changes && !plan.length ? 1 : 0) > LIMITS.threadsPerCard) throw bad("This page holds at most 300 conversations. Mark some as done first.");
+    const save = this.save; this.save = () => {};
+    const id = this.nextOf("review"), threads = [];
+    let item = null;
+    try {
+      for (const x of plan) {
+        const r = this.openThread(c.id, who, { kind: x.kind, text: x.d.text, anchor: x.anchor });
+        r.thread.review = id;
+        if (x.d.change) r.thread.change = x.d.change;
+        threads.push(r.thread.id);
+        item = r.inbox || item;
+      }
+      // Changes asked with a note alone: the note is the change note Design Desk draws from.
+      if (request && changes && !plan.length) { const r = this.openThread(c.id, who, { kind: "change", text: words, anchor: { variant: first } }); r.thread.review = id; threads.push(r.thread.id); item = r.inbox; }
+      if (!request && verdict === "approve") this.handle(c.id, who, true);
+      const head = !request ? this.headOf(c) : null;
+      this.db.reviews[id] = { id, card: c.id, by: person(who), at: this.clock(), verdict, note: words, threads, ...(head ? { sha: head } : {}) };
+      c.reviews = [...(c.reviews || []), id];
+      c.updated = this.clock();
+      this.setDrafts(key, c.id, []);
+    } catch (e) { this.save = save; this.load(); throw e; }
+    this.save = save;
+    this.save();
+    return { review: structuredClone(this.db.reviews[id]), inbox: item };
+  }
+
+  // The head commit of a change's pull request, as the GitHub copy last read it.
+  headOf(c) {
+    if (c.kind !== "change" || !c.source?.repo || !c.source?.pr) return null;
+    return own(this.db.github, `${String(c.source.repo).toLowerCase()}#${c.source.pr}`)?.head || null;
+  }
+
+  // Who makes the next version after the newest review that asked for changes, until it
+  // arrives: Design Desk on a request, until an option is drawn again after the review; the
+  // developer on a change, until its pull request's head moves on from the one the review saw.
+  responsibleOf(c) {
+    const reviews = (c.reviews || []).map((id) => own(this.db.reviews, id)).filter(Boolean);
+    const last = reviews.filter((r) => r.verdict === "request-changes").at(-1);
+    if (!last || reviews.some((r) => r.verdict === "approve" && r.at >= last.at)) return null;
+    if (c.kind === "request") {
+      if (["declined", "handed-off"].includes(c.status) || c.approved?.at >= last.at) return null;
+      if ((c.variants || []).some((v) => v.drawn && v.drawn > last.at)) return null;
+      return { who: "design-desk", review: last.id, since: last.at };
+    }
+    if (c.status === "archived" || c.source?.merged_at || c.handled?.at >= last.at) return null;
+    const head = this.headOf(c);
+    if (last.sha && head && head !== last.sha) return null;
+    return { who: "developer", review: last.id, since: last.at };
+  }
+
+  reviewsOf(c) { return (c.reviews || []).map((id) => own(this.db.reviews, id)).filter(Boolean).map((r) => structuredClone(r)); }
 
   // ---------- GitHub on the Desk ----------
 

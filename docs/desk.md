@@ -464,6 +464,23 @@ device; nobody else sees them, the agent included, and no card read, list, count
 notification carries one. A draft is checked as the comment it becomes (its option and state
 exist), at most 50 wait per person and item, and a deleted request takes its drafts with it.
 
+**Sending** them (`POST /api/cards/<id>/reviews {verdict, note, variant}`) makes a **review**
+(`N-<n>`, on the card's `reviews`: who, when, the verdict, the note, its conversations): each
+draft becomes its own conversation tagged `review`, all or none. The verdicts:
+
+- **Request changes** — on a request, by whoever may write a change note: the drafts are
+  change notes (one without an option goes on the option shown), queued as one `revise`; a
+  note alone becomes one. On a change, by whoever may mark it handled: the drafts are comments,
+  and the review keeps the pull request's head commit (`sha`) the Desk last read.
+- **Approve** — on a change, by whoever may mark it handled: it is marked handled. On a request,
+  only after the same person approved it: the review goes with that approval.
+- **Comment only** — by whoever may comment: comments, nothing else changes.
+
+A card read carries `responsible` after the newest review that asked for changes, until the
+next version: `design-desk` on a request until an option is drawn after it, `developer` on a
+change until its pull request's head is no longer `sha` (a later approval, a merge or the
+handled mark ends it too). A review never sets Design Desk's check on GitHub.
+
 ## GitHub on the Desk
 
 The Desk keeps a copy of every issue and pull request its cards point at — the card's
