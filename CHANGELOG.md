@@ -22,6 +22,13 @@ authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
    questions, requests and bug reports over MCP ([docs/mcp.md](docs/mcp.md) → Turn it on; its key
    and grant are **operator-only**).
 
+## 1.97.2 — 2026-11-18
+
+**Upgrade:**
+Nothing — skills are re-read per run. A spec's pictures reach GitHub on the pushed bundle
+(`handoff-github` → The pictures); **operator-only:** without `prototype_remote` they fall back
+to `gh … --attach`, which a DAM sandbox cannot upload, so set `prototype_remote` to the delivery repository for them.
+
 ## 1.97.1 — 2026-11-16
 
 **Upgrade:**
