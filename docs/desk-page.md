@@ -310,6 +310,9 @@ A part under **All elements** opens in one dialog, the same in simple and full m
   border or shadow of its own is fitted by what it holds. The tiles under All elements are drawn
   the same way.
 - **Open in design workspace** opens the option with the part selected, on its Properties.
+- **Comments**: the part's open comments (a click opens one in the design workspace) and a box;
+  **Comment** adds one on the part at once, as **Just comment** does in the workspace. Not on a
+  closed request.
 - Its states follow, with the button that draws them.
 
 ## Product → Kit

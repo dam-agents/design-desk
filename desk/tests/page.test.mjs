@@ -2051,7 +2051,11 @@ const request = { id: "r7", kind: "request", title: "Agent card", status: "feedb
     { id: "card", name: "Agent card", change: "changed", how: "Calmer.", selector: "#card", view: "1", view_name: "Agents" },
     { id: "label", name: "Limit label", change: "changed", how: "Shorter.", selector: "#label", view: "1", view_name: "Agents" },
     { id: "added", name: "Added note", change: "new", how: "Says which limit stops first.", selector: "#added", view: "1", view_name: "Agents" }] }],
-  threads: [], waiting: [] };
+  threads: [
+    { id: "T-1", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#label", label: "Limit label" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Shorter still?" }, { by: { agent: true }, at, text: "Yes." }] },
+    { id: "T-2", kind: "comment", state: "open", anchor: { variant: "v1", selector: "#card", label: "Agent card" }, messages: [{ by: { name: "Pat Lee" }, at, text: "On the card." }] },
+    { id: "T-3", kind: "comment", state: "resolved", anchor: { variant: "v1", selector: "#label", label: "Limit label" }, messages: [{ by: { name: "Pat Lee" }, at, text: "Done long ago." }] }],
+  waiting: [] };
 window.platform = { async request({ method, path, body }) {
   calls.push({ method, path, body });
   const answer = path === "/api/me" ? { ${me} }
@@ -2102,6 +2106,33 @@ test("an element's dialog shows the part before and after, says where before cam
     await desk.waitForSelector("#ws-frame");
     assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "the dialog closes");
     await desk.waitForFunction(() => /Selected\s*Added note/.test(document.querySelector("#ws-side")?.textContent || ""));
+  } finally {
+    await run.close();
+  }
+});
+
+test("an element's dialog lists the part's open comments and comments on the part", async (t) => {
+  const run = await launch(t, bridgeBefore());
+  if (!run) return;
+  const { desk, posts } = run;
+  try {
+    await desk.click('[data-card="r7"]');
+    await desk.click('#detail [data-el="label"]');
+    await desk.waitForSelector("#element-dialog[open] .el-talk");
+    const talk = await desk.textContent("#element-dialog .el-talk");
+    assert.match(talk, /Comments · 1[\s\S]*Pat Lee[\s\S]*Shorter still\?[\s\S]*1 reply/);
+    assert.doesNotMatch(talk, /On the card|Done long ago/, "not another part's, nor one marked done");
+    await desk.click("#element-dialog [data-el-comment]");
+    assert.equal((await posts("/api/cards/r7/threads")).length, 0, "nothing written, nothing sent");
+    await desk.fill("#el-text", "Make the label shorter");
+    await desk.click("#element-dialog [data-el-comment]");
+    await desk.waitForFunction(() => calls.some((c) => c.method === "POST" && c.path === "/api/cards/r7/threads"));
+    const body = JSON.parse((await posts("/api/cards/r7/threads"))[0].body);
+    assert.deepEqual([body.kind, body.text, body.anchor.variant, body.anchor.selector, body.anchor.label, body.anchor.view, body.anchor.view_name], ["comment", "Make the label shorter", "v1", "#label", "Limit label", "1", "Agents"]);
+    // A note in the list opens the design workspace at it.
+    await desk.click('#element-dialog [data-goto="T-1"]');
+    await desk.waitForSelector("#ws-frame");
+    assert.equal(await desk.locator("#element-dialog[open]").count(), 0, "the dialog closes");
   } finally {
     await run.close();
   }
