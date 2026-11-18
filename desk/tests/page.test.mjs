@@ -3932,3 +3932,28 @@ test("simple mode's head says, muted, who approved it and where it went; a bug s
   assert.match(await desk.textContent("#detail .sh-after"), /Approved by you/);
   assert.equal(await desk.locator('#detail .sh-more [data-handle="0"]').count(), 1, "Undo approval under ⋯");
 }));
+
+// The head keeps to the store's rules (review of #184): an archived change opens, a draft waits
+// whatever spec_review says, no send past an open question, Reopen as full mode allows it, a
+// send's issue or pull request by its number, and an item's kept name.
+test("simple mode's head keeps to the store's rules", (t) => open(t, HEAD_DESK({ ...HEAD_ME, spec_review: false, can: { ...HEAD_ME.can, reopen: true } }, [
+  { ...prChange, id: "P-9", title: "Archived one", status: "archived", source: { ...prChange.source, draft: false, merged_at: "2026-11-01T00:00:00Z" } },
+  { ...slackDraft, id: "R-9", title: "Draft, no review", origin: { channel: "slack", reporter: "Sam Lee" } },
+  { ...slackDraft, id: "R-10", title: "Draft with a question", threads: [{ id: "T-9", kind: "asks", state: "open", may: { reply: true }, messages: [{ by: { agent: true }, at: "2026-11-18T09:00:00Z", text: "Which label?" }] }] },
+  { ...drawn, id: "R-11", title: "Sent, built", status: "handed-off", built: { at: "2026-11-18T09:00:00Z" }, approved: { by: { email: "d@example.com" }, at: "2026-11-17T09:00:00Z" }, spec: { pr_url: "https://github.com/o/r/pull/7#issuecomment-123" } },
+  { ...drawn, id: "R-12", title: "Declined", status: "declined" }]), async (desk) => {
+  await desk.waitForSelector("#list");
+  const go = async (id, title) => { await desk.evaluate((h) => { location.hash = h; }, `#${id}`); await desk.waitForFunction((x) => (document.querySelector("#detail .shead h2")?.textContent || "").includes(x), title); };
+  await go("P-9", "Archived one");
+  assert.match(await desk.textContent("#detail .sh-line .spill"), /No review needed/, "an archived change opens, Closed");
+  await go("R-9", "Draft, no review");
+  assert.deepEqual(await desk.$$eval("#detail .sh-acts > .btn", (xs) => xs.map((x) => x.textContent.trim())), ["Send to developers"], "a draft waits with spec_review off too");
+  assert.match(await desk.textContent("#detail .sh-line"), /Sam Lee/, "the name the request keeps");
+  await go("R-10", "Draft with a question");
+  assert.equal(await desk.locator("#detail [data-spec-send]").count(), 0, "no send past Design Desk's open question");
+  await go("R-11", "Sent, built");
+  assert.match(await desk.textContent("#detail .sh-after"), /Sent to #7 /, "the pull request's number, not the comment's");
+  assert.equal(await desk.locator('#detail .sh-more [data-act="reopen"]').count(), 0, "a sent request reopens for an admin alone");
+  await go("R-12", "Declined");
+  assert.equal(await desk.locator('#detail .sh-more [data-act="reopen"]').count(), 1, "a declined one for who may reopen");
+}));

@@ -2981,7 +2981,6 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const opens = simple() ? simpleCards({ states: ["open"], kinds: SIM_KINDS.map(([k]) => k) }).length : 0;
     const one = `<button data-tab="requests" aria-current="${S.tab === "requests" || S.tab === "new"}" class="main">Requests &amp; PRs${opens ? `<span class="count" title="${opens} need a design decision">${opens}</span>` : ""}</button>`;
     const html = simple() ? one : [[["requests", open.length, asks && plural(asks, "request waits", "requests wait") + " for an answer"]], ...designs, [["new", unseen], ["issues", openIssues]], [["product"], ["people"]]]
-      .map((group) => group.filter(([k]) => !(simple() && SIMPLE_HIDES.includes(k)))).filter((group) => group.length)
       .map((group) => group.map(tab).join("")).join(sep);
     // The poll redraws the menu every few seconds: an unchanged menu is left as it is, so a
     // tooltip stays open and keyboard focus stays where it was.
@@ -3210,7 +3209,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
   // works on it) — and a closed one says how it ended. Design Desk at work is no state: Open, with a spinner.
   const mySide = () => (DEVELOPERS.includes(S.me?.role) ? "developers" : "designers");
   // An approved request whose spec draft waits for a person to send it is theirs to move: Open.
-  const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && Boolean(S.me?.spec_review) && !c.approved?.auto_send;
+  // As full mode reads it: a spec draft waits until a person sends it, unless its approver asked it to go by itself.
+  const specWaits = (c) => c.status === "spec" && c.spec?.review === "draft" && !c.approved?.auto_send;
   function simpleState(c, anySide = false) {
     if (!c || !["request", "change"].includes(c.kind) || (!anySide && forOf(c) !== mySide())) return null;
     if (c.kind === "request") {
@@ -3218,7 +3218,8 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       if (c.status === "handed-off") return c.built ? { state: "closed", pill: "shipped" } : { state: "dev", pill: null };
       return c.status === "spec" && !specWaits(c) ? { state: "dev", pill: null } : { state: "open", pill: null };
     }
-    if (c.status === "archived") return null;
+    // An archived change is never listed, but its link still opens it: nobody works on it.
+    if (c.status === "archived") return anySide ? { state: "closed", pill: c.source?.merged_at ? (c.handled ? "shipped" : "none") : "closed" } : null;
     if (!c.handled && !autoHandled(c)) return { state: "open", pill: null };
     if (!c.source?.merged_at) return { state: "dev", pill: null };
     return { state: "closed", pill: c.handled ? "shipped" : "none" };
@@ -3265,7 +3266,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const chips = [...SIM_STATES.filter(([k]) => f.states.includes(k)).map(([k, l]) => chip("states", k, l)),
       ...(f.kinds.length < SIM_KINDS.length ? SIM_KINDS.filter(([k]) => f.kinds.includes(k)).map(([k, l]) => chip("kinds", k, l)) : [])].join("");
     return `<div class="listhead"><div class="filterbar simfilter"><details class="more sf"${S.simMenu ? " open" : ""}><summary class="btn small" aria-haspopup="menu" title="Filter the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>Filter</summary>
-      <div class="menu" role="menu"><div class="sf-h">State</div>${states}<div class="sf-h">Kind</div>${kinds}${narrowed ? `<button class="btn small sf-reset" data-simf-reset>Reset to default</button>` : ""}</div></details>${chips}</div></div>`;
+      <div class="menu" role="menu"><div class="sf-h" role="presentation">State</div>${states}<div class="sf-h" role="presentation">Kind</div>${kinds}${narrowed ? `<button class="btn small sf-reset" role="menuitem" data-simf-reset>Reset to default</button>` : ""}</div></details>${chips}</div></div>`;
   }
   // A person by their name on the roster, else the part of their address before the @, never the whole address.
   const shortName = (e, name = "") => !e ? name : isMe(e) ? "you" : S.me?.names?.[String(e).toLowerCase()] || name || (String(e).includes("@") ? String(e).split("@")[0] : String(e));
@@ -3276,7 +3277,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const work = atWork(c) ? `<span class="sh-work"><span class="dd-spin"></span>${esc(working(c).map((w) => WORK_SHORT[w] || "Working on it").join(", ") || "Design Desk is working on it")}</span>` : "";
     const pr = change && src.pr ? `<a class="sh-pr" href="${safeUrl(src.url || "")}" target="_blank" rel="noopener noreferrer" title="Open the pull request on GitHub">#${esc(src.pr)}${src.merged_at ? " Merged" : src.draft ? " Draft" : ""} ↗</a>` : "";
     const o = c.origin || {}, by = c.by || c.created_by || {};
-    const who = change ? src.author || "" : by.agent ? "Design Desk" : shortName(o.email || by.email || o.reporter);
+    const who = change ? src.author || "" : by.agent ? "Design Desk" : shortName(o.email || by.email, by.name || o.reporter);
     const at = change ? src.merged_at || c.created : c.created;
     const facts = [pr, who ? `<span>${esc(who)}</span>` : "", at ? `<span title="${esc(when(at))}">${esc(sWhen(at))}</span>` : ""].filter(Boolean).join(`<span class="sep">·</span>`);
     const bug = !change && (c.request?.type || c.type) === "bug" ? `<span class="chip bad" title="Someone reported something broken on a screen">Bug${c.origin?.severity ? ` · ${esc(c.origin.severity)}` : ""}</span>` : "";
@@ -3284,19 +3285,19 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const ap = change ? c.handled?.by : c.approved?.by, sent = !change && (c.spec?.issue_url || c.spec?.pr_url);
     const built = !change && (c.built?.at || (typeof c.built === "string" ? c.built : ""));
     const after = [ap ? `Approved by ${esc(ap.agent ? "Design Desk" : shortName(ap.email, ap.name))}${(change ? c.handled?.at : c.approved?.at) ? `, ${esc(sWhen(change ? c.handled.at : c.approved.at))}` : ""}` : "",
-      sent ? `Sent to <a href="${safeUrl(sent)}" target="_blank" rel="noopener noreferrer">#${esc(String(sent).match(/(\d+)\/?$/)?.[1] || "")} ↗</a>` : "",
+      sent ? `Sent to <a href="${safeUrl(sent)}" target="_blank" rel="noopener noreferrer">#${esc(String(sent).match(/\/(?:issues|pull)\/(\d+)/)?.[1] || "")} ↗</a>` : "",
       built ? `Shipped ${esc(sWhen(built))}` : ""].filter(Boolean).join(" · ");
     // At most two moves, only while it needs a design decision and only the viewer's own.
     const btn = (attr, label, primary = false) => `<button class="btn${primary ? " primary" : ""}" ${attr}>${label}</button>`;
     const open = s.state === "open";
     const moves = change ? (open && mayHandle(c) ? btn('data-handle="1"', "Approve", true) : "")
       : !open ? ""
-      : specWaits(c) ? (canApprove(c) ? btn("data-spec-send", "Send to developers", true) : "")
+      : specWaits(c) ? (canApprove(c) && !(c.threads || []).some((th) => th.kind === "asks" && th.state === "open") ? btn("data-spec-send", "Send to developers", true) : "")
       : (can("revise") && (c.variants || []).length && !locked(c) ? btn('data-act="request-changes"', "Request changes") : "")
         + (canApprove(c) && (c.triage || (c.variants || []).length) ? btn('data-act="approve"', "Approve", true) : "");
     const url = change ? src.url : c.spec?.issue_url || c.spec?.pr_url || "";
     const items = [change ? (can("follow-up") && !hasRequest(c) ? btn("data-adjust", "Turn into a design request") : "") + (handledAt(c) && mayHandle(c) ? btn('data-handle="0"', "Undo approval") : "")
-        : closed(c) ? (can("close") ? btn('data-act="reopen"', "Reopen") : "") : (can("close") || can("skip") ? btn('data-act="close"', "Close…") : ""),
+        : closed(c) ? ((c.status === "handed-off" ? S.me?.role === "admin" : can("reopen")) ? btn('data-act="reopen"', "Reopen") : "") : (can("close") || can("skip") ? btn('data-act="close"', "Close…") : ""),
       url ? `<a class="btn" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">Open on GitHub ↗</a>` : ""].join("");
     const more = items ? `<details class="more sh-more"><summary class="btn" aria-label="More" title="More">⋯</summary><div class="menu">${items}</div></details>` : "";
     return `<div class="shead"><div class="sh-main"><h2>${kindIcon(c)}<span>${txt(c.title)}</span>${num(c)}${titleLink(c)}</h2>
