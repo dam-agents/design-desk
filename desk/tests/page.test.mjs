@@ -3435,7 +3435,7 @@ test("Questions and comments starts open, keeps how it was left, and reopens whe
   assert.match(page, /if \(ds\.post\) \{ S\.convoOpen = true; S\.sect\.talk = true;/, "a post opens it");
   assert.match(page, /const talk = t\.closest\("details\.talk"\); S\.sect\.talk = true; if \(talk\) talk\.open = true;\s*S\.concern = /, "a concern opens it before the box is filled");
   assert.match(page, /const talk = pub\.closest\("details\.talk"\); S\.sect\.talk = true; if \(talk\) talk\.open = true;\s*pub\.value = briefFrom\(th\)/, "a brief opens it before the box is filled");
-  assert.match(page, /if \(x\.thread && !x\.private\) \{ S\.convoOpen = true; S\.sect\.talk = true; \}/, "a thread's notification opens it");
+  assert.match(page, /if \(\(x\.thread \|\| x\.review\) && !x\.private\) \{ S\.convoOpen = true; S\.sect\.talk = true; \}/, "a thread's or a review's notification opens it");
   const run = await launch(t, BRIDGE);
   if (!run) return;
   const { desk, close } = run;
