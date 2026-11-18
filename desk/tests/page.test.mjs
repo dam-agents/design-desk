@@ -3950,6 +3950,21 @@ test("full mode shows a sent review as one block in the conversation", (t) => op
   assert.match(await desk.textContent("#detail .rvw .rv-v"), /Changes requested/);
 }));
 
+test("full mode collects drafts under an option and sends them from Your review with the same dialog", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, simple: false }, [drawn]), async (desk) => {
+  await desk.evaluate(() => { location.hash = "#R-5"; });
+  await desk.waitForSelector("#detail .rbox");
+  await desk.fill("#detail .rbox textarea", "Calmer bar.");
+  await desk.click("#detail .rbox [data-draft-add]");
+  await desk.waitForSelector("#detail .talk .yreview .dbub");
+  assert.match(await desk.textContent("#detail .talk .yreview"), /Your review · 1[\s\S]*Calmer bar\./);
+  await desk.click('#detail .yreview [data-review=""]');
+  assert.deepEqual(await desk.$$eval("#cf-choices input", (xs) => xs.map((x) => x.value)), ["request-changes", "approve", "comment"]);
+  await desk.click('#cf-choices input[value="comment"]');
+  await desk.click("#cf-ok");
+  await desk.waitForFunction(() => posts.some((p) => p.path === "/api/cards/R-5/reviews"));
+  assert.equal((await desk.evaluate(() => posts.find((p) => p.path === "/api/cards/R-5/reviews").body)).verdict, "comment");
+}));
+
 test("simple mode: a guest's review is Comment only", (t) => open(t, REVIEW_DESK({ ...HEAD_ME, role: "guest", can: { comment: true } }, [prChange]), async (desk) => {
   await desk.waitForSelector('#list [data-card="P-3"]');
   await desk.click('#list [data-card="P-3"]');

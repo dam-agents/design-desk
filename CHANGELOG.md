@@ -7,6 +7,16 @@ why lives in the PR and commit history, not here. Consumed by the version check
 ([docs/persistence.md](docs/persistence.md) → **Definition version & upgrade**);
 authoring rules: [docs/self-modification.md](docs/self-modification.md) §12.
 
+## 1.101.0 — 2026-11-18
+
+**Upgrade:**
+1. Restart the Desk server ([desk.md](docs/desk.md) → Server) and republish the page
+   ([desk.md](docs/desk.md) → Publishing the page): people keep draft comments and send them as
+   one review with a verdict ([desk.md](docs/desk.md) → Reviews). The store starts `drafts` and
+   `reviews` empty; no data migration.
+2. Nothing else to do: the inbox pre-flight lists a pull request's review as `reviews_due`, and
+   the next watch run's GitHub read records each pull request's head commit.
+
 ## 1.100.0 — 2026-11-18
 
 **Upgrade:**

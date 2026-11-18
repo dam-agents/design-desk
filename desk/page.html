@@ -3356,7 +3356,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     return items.sort((a, b) => rank(a) - rank(b) || b.at - a.at).map((x) => x.html()).join("");
   }
   function reviewBlock(c, r, rows) {
-    const who = r.by?.agent ? "Design Desk" : shortName(r.by?.email, r.by?.name) || "someone";
+    const who = ((n) => (n === "you" ? "You" : n))(r.by?.agent ? "Design Desk" : shortName(r.by?.email, r.by?.name) || "someone");
     const gh = r.posted?.url ? `<a class="rv-gh" href="${safeUrl(r.posted.url)}" target="_blank" rel="noopener noreferrer" title="This review on the pull request">On GitHub ↗</a>` : "";
     return `<article class="rvw" id="rv-${esc(r.id)}" data-v="${esc(r.verdict)}"><div class="rv-h"><b>${esc(who)}</b>${r.by?.role ? `<span class="hint">${esc(roleLabel(r.by.role))}</span>` : ""}<span class="rv-v" title="What this review says">${esc(REVIEW_SAYS[r.verdict] || r.verdict)}</span><span class="hint" title="${esc(when(r.at))}">${esc(sWhen(r.at))}</span>${gh}</div>
       ${r.note ? `<div class="rv-note">${md(r.note)}</div>` : ""}${rows}</article>`;
@@ -3396,6 +3396,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       <textarea maxlength="4000" placeholder="${esc(what ? `A comment on ${what}…` : "A comment…")}" aria-label="${esc(what ? `A comment on ${what}` : "A comment")}"></textarea>
       <div class="bar"><button class="btn small" data-draft-add>Add to review</button><button class="btn small" data-draft-now>Comment now</button></div></div>`;
   }
+  const optionBox = (c) => { const v = (c.variants || []).find((x) => x.id === S.variant) || (c.variants || [])[0]; return v ? reviewBox(c, { anchor: { variant: v.id }, what: `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` }) : ""; };
   // The verdicts a viewer may send on an item (docs/desk.md → Reviews).
   function verdictsFor(c) {
     const open = simpleState(c, true)?.state === "open" || Boolean(c.responsible);
@@ -4633,6 +4634,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
     const convo = threads.length ? `<details class="convo" data-convo${S.convoOpen ? " open" : ""}><summary>Show the conversation <span class="cnt">${plural(threads.length, "thread", "threads")}${open ? ` · ${open} open` : ""}</span></summary><div class="threads">${rows}</div></details>` : "";
     // The whole part folds with +/−; it starts open for everyone and keeps how the person left it.
     return `<details class="talk" data-sect="talk"${S.sect.talk === false ? "" : " open"}><summary><h3>Questions and comments</h3></summary>
+      ${yourReview(c)}
       <div class="composer" id="composer">
         <textarea id="composer-text" maxlength="4000" placeholder="Ask anything: why it works this way, what could change… or leave a comment for the team."></textarea>
         <div class="bar"><button class="btn primary" data-post="comment">Comment</button><button class="btn" data-post="question">Ask Design Desk</button></div></div>${convo}</details>
@@ -4854,6 +4856,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${againstBox(c)}${designCheckBox(c)}${followsLine(c)}
       ${working(c).map((k) => `<div class="working" style="max-width:var(--measure)"><span class="spin"></span><div>${esc(WORK[k] || "Design Desk is working on this.")}</div></div>`).join("")}
       <h3>Screens</h3>${(c.screens || []).length ? shots(c.screens) : ""}
+      ${reviewBox(c, { what: "the changes" })}
       ${!c.instance && can("screens") ? `<div class="actions"><button class="btn" data-add-shots>Add screenshots</button></div>` : ""}
       ${renderEnvironment(c)}
       ${renderInstance(c)}
@@ -5765,7 +5768,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       return `${yourReview(c)}<div class="slead">${md(lead)}${tr ? langLink(tr, en) : ""}</div>
       <details class="fold big sfold"><summary><h3>The request in full</h3></summary><div class="section">${renderLinked(c)}${bug ? `<h4>What happens</h4>` : ""}${md(r.problem)}${r.vision ? `<h4>How they picture it</h4>${md(r.vision)}` : ""}${more}${shots(given)}</div></details>
       ${live(c) ? `<details class="fold"><summary>The design options</summary>${renderOptions(c)}</details>` : `${renderOptions(c)}${renderPrototype(c)}`}
-      ${(() => { const v = (c.variants || []).find((x) => x.id === S.variant) || (c.variants || [])[0]; return v ? reviewBox(c, { anchor: { variant: v.id }, what: `Option ${(c.variants || []).indexOf(v) + 1} · ${v.name}` }) : ""; })()}
+      ${optionBox(c)}
       ${simpleFound(c)}
       ${known ? `<details class="fold big sfold"><summary><h3>What's already known</h3></summary><div class="section">${known}</div></details>` : ""}
       ${(c.sections || []).length ? `<details class="fold big sfold"><summary><h3>Details</h3></summary>${sections(c)}</details>` : ""}
@@ -5786,7 +5789,7 @@ ${full(`<li>The first live prototype: up to an hour; later ones are faster.</li>
       ${shots(found)}
       </div>${briefToggle(S.folds.made, "made")}</div></div>
       ${live(c) ? `<details class="fold"><summary>The design options — open to change the design and build the prototype again</summary>${renderOptions(c)}${canBuild() ? `<div class="actions"><button class="btn" data-act="build">Build the live prototype again…</button></div>` : ""}</details>`
-        : `${renderOptions(c)}${renderPrototype(c)}`}
+        : `${renderOptions(c)}${optionBox(c)}${renderPrototype(c)}`}
       ${renderImpact(c.impact)}
       ${c.spec?.asset && !(c.status === "spec" && c.spec?.review === "draft") ? specPanel(c) : ""}
       ${(c.sections || []).length ? `<h3>Details</h3>${sections(c)}` : ""}
