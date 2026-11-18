@@ -512,4 +512,5 @@ Every change to the page keeps to one scale; `desk/tests/page.test.mjs` fails on
   initial and the menu says who. A list's page tabs never wrap: they scroll, faded at the cut, and
   Product's **+ Add** is a **+** at their right end.
 - **Ask privately** stays at the bottom right; every scrolling view leaves room under its end
-  (`.detail`'s bottom padding) so it covers nothing at the end of a page.
+  (`.detail`'s bottom padding) so it covers nothing at the end of a page. In simple mode it is
+  its lock alone (with its count and spinner); its tooltip says what it asks about.

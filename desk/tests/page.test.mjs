@@ -3957,3 +3957,13 @@ test("simple mode's head keeps to the store's rules", (t) => open(t, HEAD_DESK({
   await go("R-12", "Declined");
   assert.equal(await desk.locator('#detail .sh-more [data-act="reopen"]').count(), 1, "a declined one for who may reopen");
 }));
+
+// Simple mode's private ask is its lock alone; its tooltip says the rest (docs/desk-page.md → The look).
+test("simple mode's Ask privately is its lock alone, named for a screen reader and in its tooltip", (t) => open(t, HEAD_DESK({ ...HEAD_ME, can: { ...HEAD_ME.can, ask: true } }, [drawn]), async (desk) => {
+  await desk.waitForSelector('#list [data-card="R-5"]');
+  await desk.click('#list [data-card="R-5"]');
+  await desk.waitForSelector(".ask-fab.compact");
+  assert.equal(await desk.getAttribute(".ask-fab", "aria-label"), "Ask privately about this request", "its name stays for a screen reader");
+  assert.equal(await desk.locator(".ask-fab .ask-lbl").isHidden(), true, "only the lock");
+  assert.match(await desk.getAttribute(".ask-fab", "data-tip"), /Ask Design Desk privately about R-5/, "its tooltip says what it asks about");
+}));
